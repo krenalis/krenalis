@@ -12,6 +12,7 @@ import (
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/core/internal/unified"
 	"github.com/krenalis/krenalis/tools/errors"
+	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
 )
 
@@ -113,4 +114,43 @@ func TestUnifiedPrepare(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected unsupported evidence model, got success")
 	}
+}
+
+// TestUnifiedPrepareProfileRecord binds without an occurrence source.
+func TestUnifiedPrepareProfileRecord(t *testing.T) {
+
+	at := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
+	condition := &state.WhereCondition{Property: []string{"event"}, Operator: state.OpIs, Values: []any{"Refund"}}
+	rule := unified.Rule{Record: condition}
+	source := unified.SourceBinding{
+		Profiles: warehouses.ProfileSource{Table: "profiles", Key: warehouses.Column{Name: "_kpid", Type: types.UUID()}},
+		ProfileRecord: func(where *state.Where) (warehouses.Expr, error) {
+			return convertWhere(where, map[string]warehouses.Column{"event": {Name: "profile_event",
+				Type: types.String(), Nullable: true}})
+		},
+	}
+	filter, err := unified.Prepare(&rule, unified.Bindings{}, at, source)
+	if err != nil {
+		t.Fatalf("expected prepared profile Record, got %v", err)
+	}
+	expr := filter.Root.(*warehouses.RecordFilter).Expr.(*warehouses.MultiExpr).Operands[0].(*warehouses.BaseExpr)
+	if expr.Column.Name != "profile_event" || expr.Operator != warehouses.OpIs || expr.Values[0] != "Refund" {
+		t.Fatalf("expected population binding and exact operands, got %+v", expr)
+	}
+
+	for _, change := range []func(*unified.SourceBinding){
+		func(s *unified.SourceBinding) { s.ProfileRecord = nil },
+		func(s *unified.SourceBinding) { s.Profiles.Table = "" },
+		func(s *unified.SourceBinding) {
+			s.ProfileRecord = func(where *state.Where) (warehouses.Expr, error) { return convertWhere(where, nil) }
+		},
+	} {
+		binding := source
+		change(&binding)
+		_, err := unified.Prepare(&rule, unified.Bindings{}, at, binding)
+		if err == nil {
+			t.Fatal("expected missing profile binding error, got success")
+		}
+	}
+
 }

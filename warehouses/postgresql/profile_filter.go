@@ -15,17 +15,17 @@ import (
 	"github.com/krenalis/krenalis/warehouses/internal/profilefilter"
 )
 
-// profileFilterVerified gates the Count subset pending real-database tests.
+// profileFilterVerified gates Record/Count pending real-database tests.
 const profileFilterVerified = true
 
-// ProfileFilterVerified reports verification of this backend's Count subset.
+// ProfileFilterVerified reports backend verification of Record/Count.
 func (warehouse *PostgreSQL) ProfileFilterVerified() bool {
 	return profileFilterVerified
 }
 
-// ProfileOutcomes evaluates the prepared Count filter and returns a complete
-// ordered page and exact ternary totals from one statement. Source contract,
-// execution, cancellation, scan and Close failures return no partial result.
+// ProfileOutcomes returns a complete Record/Count page and exact ternary
+// totals from one statement. Source, execution, cancellation, scan and Close
+// failures return no partial result.
 func (warehouse *PostgreSQL) ProfileOutcomes(ctx context.Context, filter warehouses.Filter, request warehouses.ProfileOutcomeRequest) (*warehouses.ProfileOutcomes, error) {
 	err := warehouses.ValidateProfileFilter(filter, request)
 	if err != nil {

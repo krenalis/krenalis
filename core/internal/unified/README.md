@@ -1,4 +1,4 @@
-# Internal Unified Count vertical
+# Internal Unified Record and Count vertical
 
 This package implements the first backend subset of the B architecture consolidated
 in `filtering/14-confronto-architetture-interrogazione-unified-fase-4b.md`. The
@@ -9,14 +9,19 @@ now an internal detail of the warehouse implementation.
 
 ## Executable path
 
-`Workspace.unifiedRecordProfiles` reuses `prepareFilter` with the Event schema.
+`Workspace.unifiedProfiles` prepares its internal recursive request using
+`prepareFilter`: profile predicates use the workspace Profile schema; Count
+qualification uses the Event schema. Every prepared profile condition becomes
+one Record leaf in the common canonical AND/OR tree. Groups, including singleton
+groups, remain visible to its four-level/100-descendant validation. The request
+is a Go service input, not a second public filter or persistence format.
 `datastore.Store.UnifiedProfiles` fixes the evaluation input T, validates the
 supported canonical shape and calls `unified.Prepare` with resolved source
-metadata and the existing `convertWhere` Record binder.
+metadata and the existing `convertWhere` Record binders for the two subjects.
 
-`Prepare` returns `warehouses.Filter`: Count sources, mature absolute periods,
-local qualifications and normalized accepted integer ranges. It produces no SQL
-and receives no dialect callbacks. T remains in core because maturity and all
+`Prepare` returns `warehouses.Filter`: profile Record leaves, Count sources,
+mature absolute periods, local qualifications and normalized accepted integer
+ranges. It produces no SQL and receives no dialect callbacks. T remains in core because maturity and all
 periods have already been resolved before the warehouse call.
 
 Both drivers implement `ProfileFilterWarehouse.ProfileOutcomes`. They use the
@@ -28,13 +33,27 @@ Adding a backend does not require backend-specific branches in core.
 `RowQuery`, `Expr`, `core.Filter`, `FilterCondition`, `state.Where`, their JSON
 representations and equality are unchanged. The prepared filter has no public
 wire or persistence format, relational IR, optimizer or generic expression
-language. Root Record conditions will be added with their producer in a later
-increment; the current entry still accepts only Count and outer groups.
+language. `RecordFilter` reads only the profile population row;
+`RecordQualification` reads only an occurrence row. Neither can express a
+property-reference comparison or a governed current-profile dependency.
 
 ## Admitted subset and evidence contract
 
-- Root Count conditions and external AND/OR: at most four groups including the
-  root, 100 descendant nodes. Nil root is AllProfiles.
+- Profile Record conditions and Count share the root AND/OR tree: at most four
+  groups including the root and 100 descendant nodes excluding the root. A Record
+  subtree is expanded into these same groups and leaves, not an opaque body with
+  a separate root budget. Nil root is AllProfiles.
+- Profile Record reuses the existing 26 operators, schema validation, typed
+  literals and paths. SQL NULL becomes UNKNOWN before outer composition; the
+  six explicit data-state operators keep their original results. Ordinary
+  profile properties are not Nullable in the schema: `is null` remains invalid
+  for them, unlike a JSON path. Missing ordinary values remain SQL NULL.
+- For the current flattened SQL profile layout, object `exists` is TRUE when
+  at least one descendant column is not SQL NULL; `does not exist` is its
+  two-valued complement. A JSON null in a descendant column is present. The
+  existing binder supplies this interpretation, also used for event objects.
+  It cannot distinguish an unmaterialized empty object from an absent object;
+  no equivalence with an original Go object representation is certified.
 - `Direct(Count(scope), literal test)`: equality, inequality, ordered comparisons
   and inclusive integer intervals; optional occurrence sample minimum. Absence
   is `Count = 0`, existence is `Count >= 1`. There are no new public operators.
@@ -110,10 +129,18 @@ segment policy or a public diagnostic API. The totals always refer to the full
 profile population, independently of the page and its projection. Empty pages
 have a metadata-only row, explicitly distinguished from a profile.
 
+The population projection reads only its profile table, before any Count join.
+Record leaves are projected without filtering or coalescing their NULL results.
+Its internal identity and leaf aliases contain `$`, which profile property names
+cannot contain, including on dialects supporting lateral SELECT aliases. The
+selected identity is joined to Count results only after this projection.
+
 Profile totals use checked signed 64-bit values. Pages contain at most 1,000
 profiles; offset is bounded to signed 32-bit range. Output UUID text is bounded
 at the query source and validated by the existing scanner and decoder. Generated
-statements are limited to 1 MiB, 100 columns and 1,000 typed arguments. The
+statements are limited to 1 MiB, 100 columns and 1,000 typed arguments. The entire
+prepared filter shares a 16,384-node physical expression budget, distinct from
+its 100 semantic descendants: object presence may expand into many columns. The
 internal argument adapter admits text and UTC DateTime; it never uses float for
 Count bounds or existing Record Decimal/JSON operands.
 
@@ -139,16 +166,20 @@ The following existing public Record input retains its current round-trip:
 Within `core`, a programmatic request can reuse it without defining a new wire tag:
 
 ```go
-rule, err := prepareUnifiedRecordCount(scope, recordFilter,
-    unified.CountTest{Operator: unified.Equal, Value: 0})
-// After handling err:
-result, err := store.UnifiedProfiles(ctx, &rule, unified.Bindings{}, at,
-    unified.Page{Limit: 50, MatchingOnly: true})
+result, err := workspace.unifiedProfiles(ctx, unifiedQuery{
+    Root: &unifiedRule{Operator: OpAnd, Rules: []unifiedRule{
+        {Profile: profileFilter},
+        {Count: &unifiedCount{Scope: scope, Where: recordFilter,
+            Test: unified.CountTest{Operator: unified.Equal, Value: 0}}},
+    }},
+    At: at, Page: unified.Page{Limit: 50, MatchingOnly: true},
+})
 ```
 
-The existing JSON expresses the occurrence predicate; it does not express the
-Count, period or result request. A concrete unresolved exposure is how to embed
-this Count-of-Purchase, with that exact Record predicate and Count=0, as a new
+Both `profileFilter` and `recordFilter` use existing public Record JSON and are
+prepared against their respective schemas inside the service. That JSON does
+not express the Count, mixed tree, period or result request. A concrete unresolved
+exposure is how to embed this Count-of-Purchase, with that exact Record predicate and Count=0, as a new
 `core.FilterRule`, and how to load/save it without changing existing
 `FilterCondition` payloads or `state.Where.Equal`. No Count JSON tag, marshaler,
 database format or migration is chosen here. `TestPrepareUnifiedRecordCount`
@@ -157,9 +188,11 @@ of that decision. Internal Rule/Bindings structs are not a serialization contrac
 
 ## Verification and activation
 
-`TestUnifiedWorkspacePostgreSQL` decodes the existing public Record JSON and
+`TestUnifiedWorkspacePostgreSQL` decodes existing public Record JSON and
 executes the complete service/datastore/warehouse path against a disposable
-application database and warehouse schema.
+application database and warehouse schema, for Count, profile Record and mixed
+AND/OR. Core tests preserve Record round-trip/equality and exercise the combined
+semantic depth/node boundaries after expanding the Record tree.
 
 `TestUnifiedProfilesPostgreSQL` exercises the real Go datastore/compiler/Record
 renderer/compiled transport/scanner/decoder against PostgreSQL 18.6. It covers
@@ -169,6 +202,14 @@ Kleene composition, name uncertainty, microsecond bounds against timestamp(3),
 membership and empty pages, a separate exhaustive completion oracle for 27
 three-occurrence histories, reused typed JSON fixtures including literal dotted
 keys, shared-fact rejection, SQL/scan errors and in-flight cancellation.
+
+`TestUnifiedProfileRecordPostgreSQL` checks all nine Record/Count Kleene pairs,
+MATCH pages and empty-page totals, and compares pure Record membership with the
+existing `store.Profiles` listing. It covers JSON null/missing/negative/state
+operators, exact Decimal and JSON numbers, literal JSON key segments, profile
+properties named `profile_id` and `event`, and deepest object-presence leaves.
+An all-FALSE Record does not mask a Count source error. Pure Record still runs
+without an event table; empty populations preserve the totals protocol.
 
 `TestUnifiedSourcePostgreSQL` uses a separate source without a primary key to
 exercise duplicate identities, conflicting qualification, attribution (including
@@ -182,7 +223,13 @@ These probes do not demonstrate Snowflake runtime behavior or production scale.
 metadata, duplicate/oversize pages, bad output types, overflow and cancellation.
 Adapter tests on both packages reuse `warehouseexpr.ValueCases` and `JSONCases`
 and verify coverage of all 26 operators against each original renderer. They
-also check typed binds, schema errors and malformed prepared expressions.
+also check typed binds, schema errors and malformed prepared expressions, and
+isolate profile Record rendering from event qualifications with collision-free
+aliases. The source binders and population request share one ProfileSource.
+
+The service schema and datastore column map follow the existing Profiles
+binding path. Concurrent schema publication is not newly coordinated here;
+coherence between those views remains an integration assumption to verify.
 
 PostgreSQL is enabled for this internal subset. Snowflake has the mirrored
 physical adapter and transport implementation, shared-compiler/local tests and
@@ -196,12 +243,12 @@ Example targeted commands, with Docker available and dependencies vendored:
 ```sh
 GOTOOLCHAIN=local GOPROXY=off GOSUMDB=off KRENALIS_SKIP_SNOWFLAKE_TESTS=true \
 go test -mod=vendor ./core ./core/internal/datastore \
-  -run '^(TestUnifiedWorkspacePostgreSQL|TestUnifiedProfiles.*|TestUnifiedSourcePostgreSQL)$' -count=1
+  -run '^(TestUnifiedWorkspacePostgreSQL|TestUnifiedProfiles.*|TestUnifiedSourcePostgreSQL|TestUnifiedProfileRecordPostgreSQL)$' -count=1
 
 GOTOOLCHAIN=local GOPROXY=off GOSUMDB=off \
 go test -mod=vendor ./core ./core/internal/unified ./core/internal/datastore \
   ./warehouses ./warehouses/internal/profilefilter ./warehouses/postgresql ./warehouses/snowflake \
-  -run '^(TestPrepareUnifiedRecordCount|TestRead|TestValidate|TestUnifiedPrepare|TestAcceptedCountRanges|TestValidateProfileFilter|TestProfileFilterDialect|TestProfileFilterSQL|TestStatementValues)$' -count=1
+  -run '^(TestPrepareUnified.*|TestRead|TestValidate.*|TestUnifiedPrepare.*|TestAcceptedCountRanges|TestValidateProfileFilter|TestProfileFilterDialect|TestProfileFilterSQL|TestProfileRecordSQL|TestStatementValues)$' -count=1
 ```
 
 API/Admin/destination activation additionally requires a decided and verified

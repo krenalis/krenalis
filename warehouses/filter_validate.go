@@ -14,24 +14,24 @@ import (
 
 // ValidateProfileFilter checks the prepared Profiles subset and request. Core
 // still owns normative admissibility and evidence contracts. Expanded Record
-// expressions have a separate structural budget because object presence may
-// expand a single public condition into many physical-column predicates.
+// expressions share a whole-filter budget because object presence may expand
+// a single public condition into many physical-column predicates.
 func ValidateProfileFilter(filter Filter, request ProfileOutcomeRequest) error {
 	if request.Limit < 1 || request.Limit > 1000 || request.First < 0 || int64(request.First) > math.MaxInt32 {
 		return fmt.Errorf("warehouses: invalid profile outcome page")
 	}
-	p := request.Population
-	if !IsValidIdentifier(p.Table) || !IsValidIdentifier(p.Key.Name) || !p.Key.Type.IsUUID() || p.Key.Nullable {
-		return fmt.Errorf("warehouses: invalid profile population")
+	err := request.Population.Validate()
+	if err != nil {
+		return err
 	}
 	if filter.Root == nil {
 		return nil
 	}
-	nodes := 0
-	return validateFilterCondition(filter.Root, 0, &nodes)
+	nodes, physical := 0, 0
+	return validateFilterCondition(filter.Root, 0, &nodes, &physical)
 }
 
-func validateFilterCondition(node FilterCondition, depth int, nodes *int) error {
+func validateFilterCondition(node FilterCondition, depth int, nodes, physical *int) error {
 	*nodes++
 	if *nodes > 101 {
 		return fmt.Errorf("warehouses: prepared filter exceeds node budget")
@@ -42,11 +42,16 @@ func validateFilterCondition(node FilterCondition, depth int, nodes *int) error 
 			return fmt.Errorf("warehouses: invalid prepared filter group")
 		}
 		for _, child := range n.Children {
-			err := validateFilterCondition(child, depth+1, nodes)
+			err := validateFilterCondition(child, depth+1, nodes, physical)
 			if err != nil {
 				return err
 			}
 		}
+	case *RecordFilter:
+		if n == nil {
+			return fmt.Errorf("warehouses: nil profile Record condition")
+		}
+		return validateRecordQualification(n.Expr, 1, physical)
 	case *IndependentOccurrenceCount:
 		if n == nil {
 			return fmt.Errorf("warehouses: nil prepared Count")
@@ -79,8 +84,7 @@ func validateFilterCondition(node FilterCondition, depth int, nodes *int) error 
 			}
 		}
 		if n.Qualification != nil {
-			budget := 0
-			return validateQualification(n.Qualification, 1, &budget)
+			return validateQualification(n.Qualification, 1, physical)
 		}
 	default:
 		return fmt.Errorf("warehouses: unexpected prepared filter node %T", node)

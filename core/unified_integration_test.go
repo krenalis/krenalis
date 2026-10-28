@@ -83,11 +83,13 @@ func TestUnifiedWorkspacePostgreSQL(t *testing.T) {
 	// The application state and warehouse live in separate schemas of this
 	// disposable database. All evidence is published before the service call.
 	_, err = database.Exec(t.Context(), `CREATE SCHEMA unified_v;
-CREATE TABLE unified_v.profiles (_kpid uuid PRIMARY KEY);
+CREATE TABLE unified_v.profiles (_kpid uuid PRIMARY KEY,country text,profile_id text,event text);
 CREATE TABLE unified_v.krenalis_events (kpid uuid,message_id text PRIMARY KEY,
  event text,timestamp timestamp(3) NOT NULL,properties jsonb);
-INSERT INTO unified_v.profiles
+INSERT INTO unified_v.profiles (_kpid)
  SELECT ('00000000-0000-0000-0000-'||lpad(n::text,12,'0'))::uuid FROM generate_series(1,4) n;
+UPDATE unified_v.profiles SET event='Refund',profile_id='customer-'||right(_kpid::text,1),
+ country=CASE right(_kpid::text,1) WHEN '1' THEN 'IT' WHEN '2' THEN 'FR' WHEN '4' THEN 'IT' END;
 INSERT INTO unified_v.krenalis_events VALUES
 ('00000000-0000-0000-0000-000000000002','e2','Purchase','2026-01-15','{"currency":"EUR"}'),
 ('00000000-0000-0000-0000-000000000003','e3','Purchase','2026-01-15','{"currency":null}'),
@@ -103,7 +105,12 @@ INSERT INTO unified_v.krenalis_events VALUES
 	warehouse := warehouses.Registered("PostgreSQL").New(unifiedTestSettings{settings}, nil).(*postgresql.PostgreSQL)
 	platform := fmt.Sprintf("UnifiedCountTest%d", unifiedWarehouseNumber.Add(1))
 	warehouses.Register(warehouses.Platform{Name: platform}, func(warehouses.SettingsLoader, warehouses.DialWith) *postgresql.PostgreSQL { return warehouse })
-	schema, err := types.Object([]types.Property{{Name: "email", Type: types.String(), ReadOptional: true}}).MarshalJSON()
+	schema, err := types.Object([]types.Property{
+		{Name: "email", Type: types.String(), ReadOptional: true},
+		{Name: "country", Type: types.String(), ReadOptional: true},
+		{Name: "profile_id", Type: types.String(), ReadOptional: true},
+		{Name: "event", Type: types.String(), ReadOptional: true},
+	}).MarshalJSON()
 	if err != nil {
 		t.Fatalf("expected profile schema encoding, got %v", err)
 	}
@@ -128,7 +135,11 @@ INSERT INTO unified_v.krenalis_events VALUES
 	if !ok {
 		t.Fatal("expected workspace store, got none")
 	}
-	workspace := &Workspace{core: &Core{}, store: store}
+	ws, ok := st.Workspace("111111111111")
+	if !ok {
+		t.Fatal("expected workspace state, got none")
+	}
+	workspace := &Workspace{core: &Core{}, store: store, workspace: ws}
 	var filter Filter
 	err = json.Unmarshal([]byte(`{"operator":"and","rules":[`+
 		`{"property":"properties.currency","operator":"is","values":["EUR"]}]}`), &filter)
@@ -136,9 +147,12 @@ INSERT INTO unified_v.krenalis_events VALUES
 		t.Fatalf("expected existing public Record filter decoding, got %v", err)
 	}
 	at := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
-	result, err := workspace.unifiedRecordProfiles(t.Context(), unifiedRecordQuery{
+	count := unifiedRule{Count: &unifiedCount{
 		Scope: unified.Scope{Event: "Purchase", Grain: "registered-message", Start: at.AddDate(0, -1, 0), End: at},
-		Where: &filter, Test: unified.CountTest{Operator: unified.Equal}, At: at, Page: unified.Page{Limit: 10},
+		Where: &filter, Test: unified.CountTest{Operator: unified.Equal},
+	}}
+	result, err := workspace.unifiedProfiles(t.Context(), unifiedQuery{
+		Root: &count, At: at, Page: unified.Page{Limit: 10},
 	})
 	if err != nil {
 		t.Fatalf("expected complete service/datastore/warehouse query, got %v", err)
@@ -151,6 +165,44 @@ INSERT INTO unified_v.krenalis_events VALUES
 		if profile.Truth != want[i] {
 			t.Fatalf("expected profile %d truth %d, got %+v", i, want[i], profile)
 		}
+	}
+
+	profile := &Filter{Operator: OpAnd, Rules: []FilterRule{
+		&FilterCondition{Property: "country", Operator: OpIs, Values: filterValues("IT")},
+	}}
+	for _, test := range []struct {
+		op   FilterLogical
+		want []unified.Truth
+	}{
+		{OpAnd, []unified.Truth{unified.Match, unified.NoMatch, unified.Unknown, unified.Unknown}},
+		{OpOr, []unified.Truth{unified.Match, unified.NoMatch, unified.Match, unified.Match}},
+	} {
+		t.Run(string(test.op), func(t *testing.T) {
+			result, err := workspace.unifiedProfiles(t.Context(), unifiedQuery{
+				Root: &unifiedRule{Operator: test.op, Rules: []unifiedRule{{Profile: profile}, count}},
+				At:   at, Page: unified.Page{Limit: 10},
+			})
+			if err != nil {
+				t.Fatalf("expected composed service query, got %v", err)
+			}
+			if len(result.Profiles) != len(test.want) {
+				t.Fatalf("expected four profiles, got %+v", result)
+			}
+			for i, outcome := range result.Profiles {
+				if outcome.Truth != test.want[i] {
+					t.Fatalf("expected profile %d truth %d, got %+v", i, test.want[i], outcome)
+				}
+			}
+		})
+	}
+	result, err = workspace.unifiedProfiles(t.Context(), unifiedQuery{
+		Root: &unifiedRule{Profile: profile}, At: at, Page: unified.Page{Limit: 10, MatchingOnly: true},
+	})
+	if err != nil {
+		t.Fatalf("expected pure Record service query, got %v", err)
+	}
+	if len(result.Profiles) != 2 || result.Match != 2 || result.NoMatch != 1 || result.Unknown != 1 {
+		t.Fatalf("expected pure Record totals 2/1/1 and two members, got %+v", result)
 	}
 
 }

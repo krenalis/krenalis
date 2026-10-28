@@ -13,28 +13,24 @@ import (
 	"github.com/krenalis/krenalis/warehouses"
 )
 
-// SourceBinding contains resolved event metadata and the existing Record binder.
+// SourceBinding contains resolved source metadata and existing Record binders.
 // It contains no SQL, dialect callback or backend name. Properties is the
 // bound JSON column used by the currently supported NativeCurrency revisions.
+// ProfileRecord binds only columns of Profiles; Record binds Occurrences.
 type SourceBinding struct {
-	Occurrences warehouses.OccurrenceSource
-	Properties  warehouses.Column
-	Record      func(*state.Where) (warehouses.Expr, error)
+	Profiles      warehouses.ProfileSource
+	ProfileRecord func(*state.Where) (warehouses.Expr, error)
+	Occurrences   warehouses.OccurrenceSource
+	Properties    warehouses.Column
+	Record        func(*state.Where) (warehouses.Expr, error)
 }
 
-// Prepare resolves and specializes the supported Count subset for execution.
+// Prepare resolves and specializes the Record and Count subset for execution.
 // It returns *UnsupportedError for valid-language forms outside this subset.
 // The supplied bindings already determine source meaning and evidence model;
 // NativeCurrency retains its current verbatim known-JSON-String reading.
 func Prepare(root *Rule, bindings Bindings, at time.Time, source SourceBinding) (warehouses.Filter, error) {
 	err := validateFilter(root, at)
-	if err != nil {
-		return warehouses.Filter{}, err
-	}
-	if source.Record == nil {
-		return warehouses.Filter{}, fmt.Errorf("core/internal/unified: missing Record binder")
-	}
-	err = source.Occurrences.Validate()
 	if err != nil {
 		return warehouses.Filter{}, err
 	}
@@ -102,6 +98,21 @@ func acceptedCountRanges(test CountTest, minimum uint64) []warehouses.CountRange
 }
 
 func prepareRule(rule Rule, bindings Bindings, source SourceBinding) (warehouses.FilterCondition, error) {
+	if rule.Record != nil {
+		if source.ProfileRecord == nil {
+			return nil, fmt.Errorf("core/internal/unified: missing profile Record binder")
+		}
+		err := source.Profiles.Validate()
+		if err != nil {
+			return nil, err
+		}
+		expr, err := source.ProfileRecord(&state.Where{Operator: state.OpAnd,
+			Rules: []state.WhereRule{rule.Record}})
+		if err != nil {
+			return nil, err
+		}
+		return &warehouses.RecordFilter{Expr: expr}, nil
+	}
 	if rule.Count == nil {
 		var operator warehouses.LogicalOperator
 		switch rule.Operator {
@@ -121,6 +132,13 @@ func prepareRule(rule Rule, bindings Bindings, source SourceBinding) (warehouses
 			group.Children[i] = prepared
 		}
 		return group, nil
+	}
+	if source.Record == nil {
+		return nil, fmt.Errorf("core/internal/unified: missing occurrence Record binder")
+	}
+	err := source.Occurrences.Validate()
+	if err != nil {
+		return nil, err
 	}
 	c := rule.Count
 	selector, err := source.Record(&state.Where{Operator: state.OpAnd, Rules: []state.WhereRule{

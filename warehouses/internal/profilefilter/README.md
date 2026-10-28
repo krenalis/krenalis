@@ -2,14 +2,28 @@
 
 This MIT package is shared by the warehouse drivers. `core` supplies a prepared
 `warehouses.Filter`; it does not supply SQL or dialect functions. The initial
-subset is independent occurrence Count and outer AND/OR. The source, typed
-Record operands, known-JSON-String reads, mature period and accepted cardinalities
+subset is profile Record, independent occurrence Count and outer AND/OR. The
+source, typed Record operands, known-JSON-String reads, mature period and accepted cardinalities
 are already determined. Each Count closes its own evidence before composition.
 
 `Build` emits one statement for an ordered UUID page and exact MATCH, NO_MATCH
 and UNKNOWN totals. Empty pages still carry totals in a marked metadata row.
 `Statement` and `Dialect` are internal physical implementation details. Existing
 Record renderers own the 26 operations; this package does not reinterpret them.
+
+Each profile Record leaf is projected only in the population-table SELECT,
+without joins, a prefilter or NULL coalescing. The resulting nullable columns
+are combined with closed Count outcomes in the shared AND/OR tree. Aliases for
+this projection contain `$`, outside the property namespace, to avoid collisions
+also on backends with lateral SELECT aliases. Only these internal columns are
+carried into the Count joins, never `SELECT *` from the profile source.
+
+Semantic groups and leaves share the four-level/100-descendant contract.
+Expanded Record expressions have a separate, whole-filter 16,384-node budget,
+so many object-presence expansions cannot each reset their validation budget.
+A root Record leaf has only its one condition's binder expansion, not a hidden
+user boolean tree. ProfileSource supplies both the binding context and the
+outcome request population. Pure Record requires no occurrence source.
 
 The Count procedure groups by identity, not by `(profile,identity,qualification)`.
 For every identity with a copy in the period, it inspects all copies of that

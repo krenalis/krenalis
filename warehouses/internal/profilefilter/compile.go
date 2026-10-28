@@ -19,6 +19,7 @@ type compiler struct {
 	ctes      []string
 	joins     []string
 	faults    []string
+	records   []string
 	arguments []Argument
 	counts    int
 }
@@ -80,7 +81,7 @@ func (c *compiler) count(node *warehouses.IndependentOccurrenceCount) (string, e
  +(SELECT COUNT(*) FROM `+table+" WHERE "+within+" AND "+profile+" IS NOT NULL AND "+id+" IS NULL) AS failures)")
 	c.faults = append(c.faults, "fault"+n)
 	alias := "v" + n
-	c.joins = append(c.joins, "LEFT JOIN cnt"+n+" "+alias+" ON "+alias+".profile_id=p.profile_id")
+	c.joins = append(c.joins, "LEFT JOIN cnt"+n+" "+alias+" ON "+alias+".profile_id=p."+q("$profile_id"))
 
 	return decision(node.Accept, "COALESCE("+alias+".lo,0)", "COALESCE("+alias+".hi,0)"), nil
 }
@@ -130,6 +131,14 @@ func (c *compiler) qualification(node warehouses.RowQualification) (string, erro
 
 func (c *compiler) rule(node warehouses.FilterCondition) (string, error) {
 	switch n := node.(type) {
+	case *warehouses.RecordFilter:
+		text, err := c.dialect.Record(n.Expr)
+		if err != nil {
+			return "", err
+		}
+		alias := c.dialect.QuoteIdentifier("$record" + strconv.Itoa(len(c.records)))
+		c.records = append(c.records, "("+text+") AS "+alias)
+		return "p." + alias, nil
 	case *warehouses.IndependentOccurrenceCount:
 		return c.count(n)
 	case *warehouses.FilterGroup:
@@ -171,11 +180,19 @@ func Build(filter warehouses.Filter, request warehouses.ProfileOutcomeRequest, d
 		}
 	}
 	q := dialect.QuoteIdentifier
+	projection := ""
+	if len(c.records) > 0 {
+		projection = "," + strings.Join(c.records, ",")
+	}
+	// Record columns resolve only against the population table. Internal aliases
+	// cannot be property names, including on dialects with lateral SELECT aliases.
 	c.ctes = append(c.ctes,
-		"population AS (SELECT CAST("+q(request.Population.Key.Name)+" AS VARCHAR(36)) AS profile_id FROM "+
+		"population AS (SELECT CAST("+q(request.Population.Key.Name)+" AS VARCHAR(36)) AS "+
+			q("$profile_id")+projection+" FROM "+
 			q(request.Population.Table)+")")
 	c.ctes = append(c.ctes,
-		"evaluated AS (SELECT p.profile_id,("+truth+") AS truth FROM population p "+strings.Join(c.joins, " ")+")")
+		"evaluated AS (SELECT p."+q("$profile_id")+" AS profile_id,("+truth+") AS truth FROM population p "+
+			strings.Join(c.joins, " ")+")")
 	c.ctes = append(c.ctes, `totals AS (SELECT
  COALESCE(SUM(CASE WHEN truth=TRUE THEN 1 ELSE 0 END),0) AS m,
  COALESCE(SUM(CASE WHEN truth=FALSE THEN 1 ELSE 0 END),0) AS f,

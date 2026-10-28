@@ -82,3 +82,57 @@ func TestValidate(t *testing.T) {
 		t.Fatal("expected precision rejection, got success")
 	}
 }
+
+// TestValidateProfileRecord checks the leaf union and mixed structural limits.
+func TestValidateProfileRecord(t *testing.T) {
+
+	at := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
+	record := Rule{Record: &state.WhereCondition{Property: []string{"country"}, Operator: state.OpIs,
+		Values: []any{"IT"}}}
+	count := Rule{Count: &Count{Scope: Scope{Event: "Purchase", Grain: "registered-message",
+		Start: at.AddDate(0, -1, 0), End: at}, Test: CountTest{Operator: Equal}}}
+
+	for _, rule := range []Rule{
+		{Record: record.Record, Count: count.Count},
+		{Record: record.Record, Children: []Rule{count}},
+		{Record: &state.WhereCondition{Operator: state.OpExists}},
+		{Record: &state.WhereCondition{Property: []string{"country"}, Operator: -1}},
+	} {
+		err := Validate(&rule, at, Page{Limit: 1})
+		if err == nil {
+			t.Fatal("expected invalid Record leaf rejection, got success")
+		}
+	}
+
+	rule := record
+	for range 4 {
+		rule = Rule{Operator: state.OpOr, Children: []Rule{rule}}
+	}
+	err := Validate(&rule, at, Page{Limit: 1})
+	if err != nil {
+		t.Fatalf("expected four Record group levels, got %v", err)
+	}
+	rule = Rule{Operator: state.OpAnd, Children: []Rule{rule, count}}
+	err = Validate(&rule, at, Page{Limit: 1})
+	if err == nil {
+		t.Fatal("expected fifth mixed level rejection, got success")
+	}
+
+	rule = Rule{Operator: state.OpAnd, Children: make([]Rule, 100)}
+	for i := range rule.Children {
+		rule.Children[i] = record
+		if i%2 == 0 {
+			rule.Children[i] = count
+		}
+	}
+	err = Validate(&rule, at, Page{Limit: 1})
+	if err != nil {
+		t.Fatalf("expected 100 mixed descendant nodes, got %v", err)
+	}
+	rule.Children = append(rule.Children, record)
+	err = Validate(&rule, at, Page{Limit: 1})
+	if err == nil {
+		t.Fatal("expected 101 mixed descendant rejection, got success")
+	}
+
+}

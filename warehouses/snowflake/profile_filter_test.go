@@ -106,7 +106,9 @@ func TestProfileFilterSQL(t *testing.T) {
 				Keys: []string{"currency"}, Value: "EUR"},
 		}}}
 	filter := warehouses.Filter{Root: &warehouses.FilterGroup{Operator: warehouses.OpOr,
-		Children: []warehouses.FilterCondition{count, count}}}
+		Children: []warehouses.FilterCondition{count, count,
+			&warehouses.RecordFilter{Expr: warehouses.NewBaseExpr(
+				warehouses.Column{Name: "event", Type: types.String(), Nullable: true}, warehouses.OpIs, "Refund")}}}}
 	dialect := profileFilterDialect()
 	query, err := profilefilter.Build(filter, request, dialect)
 	if err != nil {
@@ -131,4 +133,42 @@ func TestProfileFilterSQL(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected missing dialect error, got success")
 	}
+}
+
+// TestProfileRecordSQL projects leaves only within the population table.
+func TestProfileRecordSQL(t *testing.T) {
+
+	dialect := profileFilterDialect()
+	leaf := &warehouses.RecordFilter{Expr: warehouses.NewBaseExpr(
+		warehouses.Column{Name: "profile_id", Type: types.String(), Nullable: true}, warehouses.OpIs, "customer")}
+	filter := warehouses.Filter{Root: &warehouses.FilterGroup{Operator: warehouses.OpOr,
+		Children: []warehouses.FilterCondition{leaf, leaf}}}
+	request := warehouses.ProfileOutcomeRequest{Population: warehouses.ProfileSource{Table: "profiles",
+		Key: warehouses.Column{Name: "_kpid", Type: types.UUID()}}, Limit: 10}
+
+	query, err := profilefilter.Build(filter, request, dialect)
+	if err != nil {
+		t.Fatalf("expected profile Record SQL, got %v", err)
+	}
+	values, err := query.Values()
+	if err != nil {
+		t.Fatalf("expected no Record parameter conversion, got %v", err)
+	}
+
+	begin := strings.Index(query.SQL, "population AS (")
+	end := strings.Index(query.SQL, "evaluated AS (")
+	if begin < 0 || end <= begin {
+		t.Fatalf("expected isolated population projection, got %s", query.SQL)
+	}
+	population := query.SQL[begin:end]
+	rest := query.SQL[end:]
+	if len(values) != 0 || !strings.Contains(population, "AS "+quoteIdent("$profile_id")) ||
+		!strings.Contains(population, quoteIdent("profile_id")+" = 'customer'") ||
+		!strings.Contains(population, "AS "+quoteIdent("$record0")) ||
+		!strings.Contains(rest, "p."+quoteIdent("$record1")) ||
+		strings.Contains(population, "WHERE") || strings.Contains(population, "JOIN") ||
+		strings.Contains(rest, "'customer'") || strings.Contains(query.SQL, "SELECT *") {
+		t.Fatalf("expected isolated nullable leaves and collision-free aliases, got %s and %v", query.SQL, values)
+	}
+
 }

@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Elastic License 2.0
 // that can be found in the LICENSE file.
 
-// Package unified implements the internal Count subset of Unified filtering.
+// Package unified implements the internal Record and Count Unified subset.
 // It has no public JSON or persistence representation.
 package unified
 
@@ -105,9 +105,11 @@ type Result struct {
 	At       time.Time
 }
 
-// Rule is either a Count or an outer AND/OR group. Root nil means AllProfiles.
+// Rule is a profile Record condition, Count or AND/OR group.
+// Root nil means AllProfiles. Record contains schema-prepared operands.
 // Validation is separate from canonicalization and never mutates state.Where.
 type Rule struct {
+	Record   *state.WhereCondition
 	Count    *Count
 	Operator state.WhereLogical
 	Children []Rule
@@ -179,6 +181,16 @@ func validateRule(rule Rule, at time.Time, depth int, nodes *int) error {
 	*nodes++
 	if *nodes > 101 {
 		return fmt.Errorf("Unified root exceeds 100 descendant nodes")
+	}
+	if rule.Record != nil {
+		if rule.Count != nil || rule.Operator != 0 || len(rule.Children) != 0 {
+			return fmt.Errorf("profile Record condition cannot contain other rules")
+		}
+		c := rule.Record
+		if len(c.Property) == 0 || c.Operator < state.OpIs || c.Operator > state.OpDoesNotExist {
+			return fmt.Errorf("invalid prepared profile Record condition")
+		}
+		return nil
 	}
 	if rule.Count == nil {
 		if depth >= 4 || (rule.Operator != state.OpAnd && rule.Operator != state.OpOr) || len(rule.Children) == 0 {

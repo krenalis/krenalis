@@ -13,7 +13,7 @@ import (
 // Filter is a backend-independent filter prepared by core. It has no wire or
 // persistence format. A nil Root matches every profile in the requested
 // population.
-// The initial execution subset contains independent Count and AND/OR groups.
+// The execution subset contains profile Record, independent Count and AND/OR.
 type Filter struct {
 	Root FilterCondition
 }
@@ -30,6 +30,15 @@ type FilterGroup struct {
 }
 
 func (*FilterGroup) filterCondition() {}
+
+// RecordFilter evaluates one prepared Record condition on the population row.
+// Its columns belong to ProfileOutcomeRequest.Population, not an event source.
+// Expr may include the binder's physical expansion of that one condition.
+type RecordFilter struct {
+	Expr Expr
+}
+
+func (*RecordFilter) filterCondition() {}
 
 // IndependentOccurrenceCount counts determined identities with independent,
 // row-local qualification uncertainty in the mature period [Start,End).
@@ -118,6 +127,14 @@ func (*QualificationGroup) rowQualification() {}
 type ProfileSource struct {
 	Table string
 	Key   Column
+}
+
+// Validate checks the profile population's table and determined UUID key.
+func (s ProfileSource) Validate() error {
+	if !IsValidIdentifier(s.Table) || !IsValidIdentifier(s.Key.Name) || !s.Key.Type.IsUUID() || s.Key.Nullable {
+		return fmt.Errorf("warehouses: invalid profile population")
+	}
+	return nil
 }
 
 // ProfileOutcomeRequest selects an internal outcome page, independent of the
