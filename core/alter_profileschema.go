@@ -297,8 +297,8 @@ func validatePropertyRoles(schema types.Type, roles PropertyRoles) error {
 		role string
 		path string
 	}{
-		{role: "first_name", path: roles.FirstName},
-		{role: "last_name", path: roles.LastName},
+		{role: "firstName", path: roles.FirstName},
+		{role: "lastName", path: roles.LastName},
 		{role: "email", path: roles.Email},
 		{role: "country", path: roles.Country},
 		{role: "photo", path: roles.Photo},
@@ -321,7 +321,7 @@ func validatePropertyRoles(schema types.Type, roles PropertyRoles) error {
 		compatible := false
 		singleValue := property.Type.Kind() != types.ArrayKind && property.Type.Kind() != types.MapKind
 		switch assignment.role {
-		case "first_name", "last_name":
+		case "firstName", "lastName":
 			compatible = property.Type.Kind() == types.StringKind && property.Type.Semantics() == types.NoSemantics
 		case "email":
 			compatible = singleValue && property.Type.Semantics() == types.EmailSemantics
