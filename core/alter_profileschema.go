@@ -20,18 +20,20 @@ import (
 )
 
 // AlterProfileSchema alters the profile schema, property roles and primary
-// sources of the workspace. schema must be a valid schema.
+// sources of the workspace. profileSchema.Schema must be a valid schema.
 //
 // The properties within profile schema cannot specify a prefilled value, cannot
 // be required for creation or update, must be read optional and cannot be
 // nullable; there are also limits on types, which are documented in
 // "datastore/README.md".
 //
-// propertyRoles maps roles to property paths.
+// profileSchema.PropertyRoles maps roles to property paths.
+// profileSchema.PrimarySources cannot specify a primary source for a property
+// which has kind object or array.
 //
-// Moreover, schema cannot contain conflicting properties, meaning properties
-// whose representations as columns in the data warehouse would have the same
-// column name.
+// Moreover, profileSchema.Schema cannot contain conflicting properties,
+// meaning properties whose representations as columns in the data warehouse
+// would have the same column name.
 //
 // rePaths is a mapping containing the renamed property paths, where the key is
 // the new property path and its value is the old property path. In case of new
@@ -47,8 +49,9 @@ import (
 //   - InspectionMode, if the data warehouse is in inspection mode.
 //   - InvalidAlterSchema, if the alter schema is invalid.
 //   - OperationAlreadyExecuting, if another operation is already executing.
-func (this *Workspace) AlterProfileSchema(ctx context.Context, schema types.Type, propertyRoles PropertyRoles, primarySources map[string]string, rePaths map[string]any) error {
+func (this *Workspace) AlterProfileSchema(ctx context.Context, profileSchema ProfileSchema, rePaths map[string]any) error {
 	this.core.mustBeOpen()
+	schema, primarySources := profileSchema.Schema, profileSchema.PrimarySources
 	if primarySources == nil {
 		primarySources = map[string]string{}
 	}
@@ -77,7 +80,7 @@ func (this *Workspace) AlterProfileSchema(ctx context.Context, schema types.Type
 	if err != nil {
 		return errors.Unprocessable(InvalidAlterSchema, "cannot alter the schema as specified: %s", err)
 	}
-	if err := validatePropertyRoles(schema, propertyRoles); err != nil {
+	if err := validatePropertyRoles(schema, profileSchema.PropertyRoles); err != nil {
 		return errors.BadRequest("%s", err)
 	}
 	for _, s := range primarySources {
@@ -95,7 +98,8 @@ func (this *Workspace) AlterProfileSchema(ctx context.Context, schema types.Type
 	if this.workspace.IR.ID != nil || this.workspace.AlterProfileSchema.ID != nil {
 		return errors.Unprocessable(OperationAlreadyExecuting, "another operation is already executing")
 	}
-	err = this.core.startAlterProfileSchema(ctx, this.workspace.ID, schema, propertyRoles, primarySources, operations)
+	err = this.core.startAlterProfileSchema(ctx, this.workspace.ID, schema, profileSchema.PropertyRoles,
+		primarySources, operations)
 	return err
 }
 
@@ -296,8 +300,8 @@ func validatePropertyRoles(schema types.Type, roles PropertyRoles) error {
 		role string
 		path string
 	}{
-		{role: "first_name", path: roles.FirstName},
-		{role: "last_name", path: roles.LastName},
+		{role: "firstName", path: roles.FirstName},
+		{role: "lastName", path: roles.LastName},
 		{role: "email", path: roles.Email},
 		{role: "country", path: roles.Country},
 		{role: "photo", path: roles.Photo},
@@ -320,7 +324,7 @@ func validatePropertyRoles(schema types.Type, roles PropertyRoles) error {
 		compatible := false
 		singleValue := property.Type.Kind() != types.ArrayKind && property.Type.Kind() != types.MapKind
 		switch assignment.role {
-		case "first_name", "last_name":
+		case "firstName", "lastName":
 			compatible = property.Type.Kind() == types.StringKind && property.Type.Semantics() == types.NoSemantics
 		case "email":
 			compatible = singleValue && property.Type.Semantics() == types.EmailSemantics

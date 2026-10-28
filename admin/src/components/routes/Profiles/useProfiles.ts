@@ -204,7 +204,7 @@ const useProfiles = () => {
 			const executionID = ++executionRef.current;
 			const { filter, queryKey, request } = createProfilesExecution(
 				selectedWorkspace,
-				workspaces.find((candidate) => candidate.id === selectedWorkspace)?.propertyRoles,
+				workspaces.find((candidate) => candidate.id === selectedWorkspace)?.profileSchema.propertyRoles,
 				profileProperties,
 				schema,
 				pageSize,
@@ -247,7 +247,7 @@ const useProfiles = () => {
 
 		let schema: ObjectType;
 		try {
-			schema = await api.workspaces.profileSchema();
+			schema = (await api.workspaces.profileSchema()).schema;
 		} catch (error) {
 			if (executionRef.current === schemaExecutionID) {
 				applySequenceAction({ type: 'initialFailed', executionID: schemaExecutionID });
@@ -465,7 +465,7 @@ const useProfiles = () => {
 			const pageSize = sequenceRef.current.pageSize;
 			const { filter, queryKey, request } = createProfilesExecution(
 				selectedWorkspace,
-				workspaces.find((candidate) => candidate.id === selectedWorkspace)?.propertyRoles,
+				workspaces.find((candidate) => candidate.id === selectedWorkspace)?.profileSchema.propertyRoles,
 				profileProperties,
 				profileSchema,
 				pageSize,
@@ -612,7 +612,7 @@ const useProfiles = () => {
 				updateProperties();
 			}
 
-			const propertyRoles = workspaces.find((candidate) => candidate.id === selectedWorkspace)?.propertyRoles;
+			const propertyRoles = workspaces.find((candidate) => candidate.id === selectedWorkspace)?.profileSchema.propertyRoles;
 			const requestedProjection = profileProjection(properties, propertyRoles);
 			if (requestedProjection.every((root) => loadedRoots.has(root))) {
 				cancelGridReplacement();

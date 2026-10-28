@@ -21,8 +21,7 @@ import Workspace, {
 	CreateWorkspaceResponse,
 	LatestIdentityResolution,
 	LatestAlterProfileSchema,
-	PrimarySources,
-	ProfilePropertyRoles,
+	ProfileSchema,
 	EventConsentLocation,
 	ProfileConsentLocation,
 } from './types/workspace';
@@ -708,18 +707,14 @@ class Workspaces {
 
 	create = async (
 		name: string,
-		profileSchema: ObjectType,
-		propertyRoles: ProfilePropertyRoles,
+		profileSchema: ProfileSchema,
 		warehousePlatform: string,
 		warehouseMode: WarehouseMode,
 		warehouseSettings: WarehouseSettings,
 	): Promise<CreateWorkspaceResponse> => {
 		return await call(`${this.apiURL}/workspaces`, http.POST, null, {
 			name: name,
-			profiles: {
-				schema: profileSchema,
-				propertyRoles: propertyRoles,
-			},
+			profileSchema,
 			warehouse: {
 				platform: warehousePlatform,
 				mode: warehouseMode,
@@ -730,18 +725,14 @@ class Workspaces {
 
 	testCreation = async (
 		name: string,
-		profileSchema: ObjectType,
-		propertyRoles: ProfilePropertyRoles,
+		profileSchema: ProfileSchema,
 		warehousePlatform: string,
 		warehouseMode: WarehouseMode,
 		warehouseSettings: WarehouseSettings,
 	): Promise<void> => {
 		return await call(`${this.apiURL}/workspaces/test`, http.POST, null, {
 			name: name,
-			profiles: {
-				schema: profileSchema,
-				propertyRoles: propertyRoles,
-			},
+			profileSchema,
 			warehouse: {
 				platform: warehousePlatform,
 				mode: warehouseMode,
@@ -764,7 +755,7 @@ class Workspaces {
 		return await call(`${this.apiURL}/workspaces/current`, http.DELETE, this.workspaceID);
 	};
 
-	profileSchema = async (): Promise<ObjectType> => {
+	profileSchema = async (): Promise<ProfileSchema> => {
 		return await call(`${this.apiURL}/profiles/schema`, http.GET, this.workspaceID);
 	};
 
@@ -851,16 +842,9 @@ class Workspaces {
 		return await call(`${this.apiURL}/identity-resolution/start`, http.POST, this.workspaceID);
 	};
 
-	alterProfileSchema = async (
-		schema: ObjectType,
-		propertyRoles: ProfilePropertyRoles,
-		primarySources: PrimarySources,
-		rePaths: RePaths,
-	): Promise<void> => {
+	alterProfileSchema = async (profileSchema: ProfileSchema, rePaths: RePaths): Promise<void> => {
 		return await call(`${this.apiURL}/profiles/schema`, http.PUT, this.workspaceID, {
-			schema,
-			propertyRoles,
-			primarySources,
+			...profileSchema,
 			rePaths,
 		});
 	};

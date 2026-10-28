@@ -53,16 +53,14 @@ func (workspace workspace) AlterProfileSchema(_ http.ResponseWriter, r *http.Req
 		return nil, err
 	}
 	var body struct {
-		Schema         types.Type         `json:"schema"`
-		PropertyRoles  core.PropertyRoles `json:"propertyRoles"`
-		PrimarySources map[string]string  `json:"primarySources"`
-		RePaths        map[string]any     `json:"rePaths"`
+		core.ProfileSchema
+		RePaths map[string]any `json:"rePaths"`
 	}
 	err = json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	err = ws.AlterProfileSchema(r.Context(), body.Schema, body.PropertyRoles, body.PrimarySources, body.RePaths)
+	err = ws.AlterProfileSchema(r.Context(), body.ProfileSchema, body.RePaths)
 	return nil, err
 }
 

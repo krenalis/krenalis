@@ -55,7 +55,7 @@ const PropertyRoleSelector = ({
 					data-property-role-option='none'
 					value='none'
 				>
-					Assign a role
+					No role
 					{propertyRole == null && <SlIcon slot='suffix' name='check-lg' />}
 				</SlMenuItem>
 				<SlDivider />

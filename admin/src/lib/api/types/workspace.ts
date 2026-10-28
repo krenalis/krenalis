@@ -1,4 +1,5 @@
 import { Identifiers } from './identifiers';
+import { ObjectType } from './types';
 import { WarehouseMode } from './warehouse';
 
 type PrimarySources = Record<string, string>;
@@ -14,12 +15,17 @@ interface ProfilePropertyRoles {
 }
 
 interface Workspace {
-	propertyRoles: ProfilePropertyRoles;
+	profileSchema: ProfileSchema;
 	id: string;
 	name: string;
 	resolveIdentitiesOnBatchImport: boolean;
 	identifiers: Identifiers;
 	warehouseMode: WarehouseMode;
+}
+
+interface ProfileSchema {
+	schema: ObjectType;
+	propertyRoles: ProfilePropertyRoles;
 	primarySources: PrimarySources;
 }
 
@@ -63,6 +69,7 @@ export type {
 	ConsentPurpose,
 	ProfilePropertyRoles,
 	ProfilePropertyRoleID,
+	ProfileSchema,
 	EventConsentLocation,
 	ProfileConsentLocation,
 };

@@ -104,8 +104,7 @@ const WorkspaceCreate = () => {
 			try {
 				await api.workspaces.testCreation(
 					name,
-					InitialSchema as ObjectType,
-					InitialPropertyRoles,
+					{ schema: InitialSchema as ObjectType, propertyRoles: InitialPropertyRoles, primarySources: {} },
 					warehouse,
 					'Normal',
 					settings,
@@ -130,8 +129,7 @@ const WorkspaceCreate = () => {
 			try {
 				const res = await api.workspaces.create(
 					name,
-					InitialSchema as ObjectType,
-					InitialPropertyRoles,
+					{ schema: InitialSchema as ObjectType, propertyRoles: InitialPropertyRoles, primarySources: {} },
 					warehouse,
 					'Normal',
 					settings,

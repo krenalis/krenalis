@@ -1,7 +1,7 @@
 import { test, expect, type Locator } from '@playwright/test';
 import { login, logout, adminURL, logValidationErrors } from './utils';
 import Type, { ObjectType, Property } from '../src/lib/api/types/types';
-import { ConsentPurpose, PrimarySources, ProfilePropertyRoles } from '../src/lib/api/types/workspace';
+import { ConsentPurpose, PrimarySources, ProfilePropertyRoles, ProfileSchema } from '../src/lib/api/types/workspace';
 
 const createConsentPurpose = (id: string, name: string, property: string, jsonKey?: string): ConsentPurpose => ({
 	id,
@@ -51,7 +51,7 @@ const mockProfilePropertyRoles = async (page, propertyRoles: ProfilePropertyRole
 		const response = await route.fetch();
 		const body = await response.json();
 		for (const workspace of body.workspaces) {
-			workspace.propertyRoles = propertyRoles;
+			workspace.profileSchema.propertyRoles = propertyRoles;
 		}
 		await route.fulfill({ response, json: body });
 	});
@@ -61,7 +61,9 @@ const mockProfilePropertyRoles = async (page, propertyRoles: ProfilePropertyRole
 			return;
 		}
 		const response = await route.fetch();
-		const schema = (await response.json()) as ObjectType;
+		const profileSchema = (await response.json()) as ProfileSchema;
+		profileSchema.propertyRoles = propertyRoles;
+		const schema = profileSchema.schema;
 		const firstName = schema.properties.find((property) => property.name === 'first_name');
 		const preferredName = structuredClone(firstName);
 		preferredName.name = 'preferred_name';
@@ -78,7 +80,7 @@ const mockProfilePropertyRoles = async (page, propertyRoles: ProfilePropertyRole
 		active.name = 'active';
 		active.type = { kind: 'boolean' };
 		schema.properties.push(preferredName, avatarURL, semanticEmail, semanticCountry, active);
-		await route.fulfill({ response, json: schema });
+		await route.fulfill({ response, json: profileSchema });
 	});
 	await page.route('**/v1/profiles/schema/preview', async (route) => {
 		await route.fulfill({ json: { queries: [] } });
@@ -164,13 +166,14 @@ test(`Show, paginate, and refresh consent purposes on profile schema properties`
 	};
 	await page.route('**/v1/profiles/schema', async (route) => {
 		const response = await route.fetch();
-		const schema = (await response.json()) as ObjectType;
+		const profileSchema = (await response.json()) as ProfileSchema;
+		const schema = profileSchema.schema;
 		schema.properties.push(
 			createSchemaProperty('consent_boolean', { kind: 'boolean' }),
 			createSchemaProperty('consent_json', { kind: 'json' }),
 			createSchemaProperty('consent_string', { kind: 'string' }),
 		);
-		await route.fulfill({ response, json: schema });
+		await route.fulfill({ response, json: profileSchema });
 	});
 
 	await page.goto(`${adminURL}/profile-unification/schema`);
@@ -320,13 +323,14 @@ test(`Update consent associations while editing profile schema properties`, asyn
 	});
 	await page.route('**/v1/profiles/schema', async (route) => {
 		const response = await route.fetch();
-		const schema = (await response.json()) as ObjectType;
+		const profileSchema = (await response.json()) as ProfileSchema;
+		const schema = profileSchema.schema;
 		schema.properties.push(
 			createSchemaProperty('property_to_rename', { kind: 'boolean' }),
 			createSchemaProperty('unassociated_property', { kind: 'boolean' }),
 			createSchemaProperty('replacement_property', { kind: 'boolean' }),
 		);
-		await route.fulfill({ response, json: schema });
+		await route.fulfill({ response, json: profileSchema });
 	});
 
 	await page.goto(`${adminURL}/profile-unification/schema`);
@@ -470,12 +474,18 @@ for (const { scenario, shouldObserveAltering, shouldDelayPreview, initialStartTi
 			schemaRequestCount++;
 			await route.fulfill({
 				json: {
-					kind: 'object',
-					properties: [
-						createSchemaProperty('first_name', { kind: 'string' }),
-						createSchemaProperty('last_name', { kind: 'string' }),
-						...(hasExternalChanges ? [createSchemaProperty('changed_elsewhere', { kind: 'string' })] : []),
-					],
+					schema: {
+						kind: 'object',
+						properties: [
+							createSchemaProperty('first_name', { kind: 'string' }),
+							createSchemaProperty('last_name', { kind: 'string' }),
+							...(hasExternalChanges
+								? [createSchemaProperty('changed_elsewhere', { kind: 'string' })]
+								: []),
+						],
+					},
+					propertyRoles: { firstName: '', lastName: '', email: '', country: '', photo: '' },
+					primarySources: {},
 				},
 			});
 		});
@@ -580,7 +590,13 @@ for (const shouldFailSave of [false, true]) {
 				return;
 			}
 			if (isAlterComplete) {
-				await route.fulfill({ json: submittedSchema });
+				await route.fulfill({
+					json: {
+						schema: submittedSchema,
+						propertyRoles: { firstName: '', lastName: '', email: '', country: '', photo: '' },
+						primarySources: {},
+					},
+				});
 				return;
 			}
 			await route.continue();
@@ -740,7 +756,7 @@ for (const {
 			const response = await route.fetch();
 			const body = await response.json();
 			for (const workspace of body.workspaces) {
-				workspace.primarySources = primarySources;
+				workspace.profileSchema.primarySources = primarySources;
 			}
 			await route.fulfill({ response, json: body });
 		});
@@ -753,7 +769,13 @@ for (const {
 			}
 			schemaRequestCount++;
 			if (isAlterComplete) {
-				await route.fulfill({ json: submittedSchemas[0] });
+				await route.fulfill({
+					json: {
+						schema: submittedSchemas[0],
+						propertyRoles: { firstName: '', lastName: '', email: '', country: '', photo: '' },
+						primarySources: submittedSources[0],
+					},
+				});
 				return;
 			}
 			await route.continue();
@@ -978,7 +1000,8 @@ test(`Keep keyboard hints fixed and show disabled reorder handles while filterin
 test(`Expand nested object properties while viewing and editing`, async ({ page }) => {
 	await page.route('**/v1/profiles/schema', async (route) => {
 		const response = await route.fetch();
-		const schema = (await response.json()) as ObjectType;
+		const profileSchema = (await response.json()) as ProfileSchema;
+		const schema = profileSchema.schema;
 		const property = schema.properties[0];
 		schema.properties.push({ ...property, name: 'reference_property', type: { kind: 'string' } });
 		schema.properties.push({
@@ -999,7 +1022,7 @@ test(`Expand nested object properties while viewing and editing`, async ({ page 
 				],
 			},
 		});
-		await route.fulfill({ response, json: schema });
+		await route.fulfill({ response, json: profileSchema });
 	});
 
 	const getExpandControl = (row) => row.locator('xpath=..').locator(':scope > .grid__row-expand');
@@ -1102,7 +1125,8 @@ test(`Expand nested object properties while viewing and editing`, async ({ page 
 test(`Keep profile schema search selection and expansion consistent`, async ({ page }) => {
 	await page.route('**/v1/profiles/schema', async (route) => {
 		const response = await route.fetch();
-		const schema = (await response.json()) as ObjectType;
+		const profileSchema = (await response.json()) as ProfileSchema;
+		const schema = profileSchema.schema;
 		schema.properties.push({
 			name: 'search_object',
 			prefilled: '',
@@ -1129,7 +1153,7 @@ test(`Keep profile schema search selection and expansion consistent`, async ({ p
 			displayName: '',
 			description: '',
 		});
-		await route.fulfill({ response, json: schema });
+		await route.fulfill({ response, json: profileSchema });
 	});
 
 	await page.goto(`${adminURL}/profile-unification/schema`);
@@ -1289,7 +1313,8 @@ test(`Keep an object expanded when reordering it`, async ({ page }) => {
 	});
 	await page.route('**/v1/profiles/schema', async (route) => {
 		const response = await route.fetch();
-		const schema = (await response.json()) as ObjectType;
+		const profileSchema = (await response.json()) as ProfileSchema;
+		const schema = profileSchema.schema;
 		schema.properties.push(
 			{
 				name: 'expanded_object',
@@ -1329,7 +1354,7 @@ test(`Keep an object expanded when reordering it`, async ({ page }) => {
 				description: '',
 			},
 		);
-		await route.fulfill({ response, json: schema });
+		await route.fulfill({ response, json: profileSchema });
 	});
 
 	await page.goto(`${adminURL}/profile-unification/schema`);
@@ -1515,7 +1540,8 @@ test(`Keep an unsaved property visible while filtering`, async ({ page }) => {
 test(`Keep property details aligned and selected while viewing and editing`, async ({ page }) => {
 	await page.route('**/v1/profiles/schema', async (route) => {
 		const response = await route.fetch();
-		const schema = (await response.json()) as ObjectType;
+		const profileSchema = (await response.json()) as ProfileSchema;
+		const schema = profileSchema.schema;
 		const email = schema.properties.find((property) => property.name === 'email');
 		if (email != null) {
 			email.displayName = 'Email address';
@@ -1546,7 +1572,7 @@ test(`Keep property details aligned and selected while viewing and editing`, asy
 			displayName: '',
 			description: '',
 		});
-		await route.fulfill({ response, json: schema });
+		await route.fulfill({ response, json: profileSchema });
 	});
 
 	await page.goto(`${adminURL}/profile-unification/schema`);
@@ -1744,7 +1770,8 @@ test(`Show identifier order and renumber identifiers after removing a property`,
 test(`Keep object types unchanged after canceling the schema review`, async ({ page }) => {
 	await page.route('**/v1/profiles/schema', async (route) => {
 		const response = await route.fetch();
-		const schema = (await response.json()) as ObjectType;
+		const profileSchema = (await response.json()) as ProfileSchema;
+		const schema = profileSchema.schema;
 		schema.properties.push({
 			name: 'review_object',
 			prefilled: '',
@@ -1771,7 +1798,7 @@ test(`Keep object types unchanged after canceling the schema review`, async ({ p
 			displayName: '',
 			description: '',
 		});
-		await route.fulfill({ response, json: schema });
+		await route.fulfill({ response, json: profileSchema });
 	});
 	await page.route('**/v1/profiles/schema/preview', async (route) => {
 		await route.fulfill({ json: { queries: [] } });
@@ -1891,7 +1918,8 @@ test(`Keep the schema review open while applying changes`, async ({ page }) => {
 test(`Preserve create-required on top-level properties in the schema preview`, async ({ page }) => {
 	await page.route('**/v1/profiles/schema', async (route) => {
 		const response = await route.fetch();
-		const schema = (await response.json()) as ObjectType;
+		const profileSchema = (await response.json()) as ProfileSchema;
+		const schema = profileSchema.schema;
 		schema.properties.push({
 			name: 'create_required_property',
 			prefilled: '',
@@ -1903,7 +1931,7 @@ test(`Preserve create-required on top-level properties in the schema preview`, a
 			displayName: '',
 			description: '',
 		});
-		await route.fulfill({ response, json: schema });
+		await route.fulfill({ response, json: profileSchema });
 	});
 	await page.route('**/v1/profiles/schema/preview', async (route) => {
 		await route.fulfill({ json: { queries: [] } });
@@ -2517,9 +2545,19 @@ for (const finalType of ['url', 'object']) {
 
 		const changeTypeDialog = page.locator('.alert-dialog', { hasText: 'Change type?' });
 		await panel.locator('.property-type-selector__structure-trigger').click();
+		await panel.locator('[data-structure-option="array"]').click();
+		await selectPropertyType(page, 'email');
+		await expect(changeTypeDialog).toContainText(
+			'Changing the type to array of email will remove this role: Email.',
+		);
+		await changeTypeDialog.getByRole('button', { name: 'Cancel' }).click();
+		await expect(changeTypeDialog).toBeHidden();
+		await panel.locator('.property-panel__cancel').click();
+		await openProperty(page, 'details');
+		await panel.locator('.property-type-selector__structure-trigger').click();
 		await panel.locator('[data-structure-option="one"]').click();
 		await selectPropertyType(page, 'string');
-		await expect(changeTypeDialog).toContainText('will remove these roles: Email');
+		await expect(changeTypeDialog).toContainText('will remove this role: Email');
 		await changeTypeDialog.getByRole('button', { name: 'Change type' }).click();
 		await expect(changeTypeDialog).toBeHidden();
 		await selectProfilePropertyRole(page, 'firstName');
@@ -2595,6 +2633,7 @@ test(`Show only compatible property roles and remove one when cardinality change
 	await editSchema(page);
 	await page.locator('.schema-edit__add-property').click();
 	const panel = page.locator('.property-panel');
+	const changeTypeDialog = page.locator('.alert-dialog', { hasText: 'Change type?' });
 	await panel.locator('.property-form__name-input input').fill('new_avatar_url');
 	await selectPropertyType(page, 'string');
 	await panel.locator('.property-role-selector__trigger').click();
@@ -2614,7 +2653,16 @@ test(`Show only compatible property roles and remove one when cardinality change
 			.locator('[data-property-role-option]')
 			.evaluateAll((options) => options.map((option) => option.getAttribute('data-property-role-option'))),
 	).toEqual(['none', 'email']);
-	await panel.locator('[data-property-role-option="none"]').click();
+	await panel.locator('[data-property-role-option="email"]').click();
+	await panel.locator('.property-type-selector__structure-trigger').click();
+	await panel.locator('[data-structure-option="map"]').click();
+	await expect(changeTypeDialog).toContainText(
+		'Changing the type to map of email will remove the Email role from this property.',
+	);
+	await changeTypeDialog.getByRole('button', { name: 'Cancel' }).click();
+	await expect(changeTypeDialog).toBeHidden();
+	await expect(panel.locator('.property-role-selector__trigger')).toHaveText('Email');
+	await selectProfilePropertyRole(page, 'none');
 	await selectPropertyType(page, 'country');
 	await panel.locator('.property-role-selector__trigger').click();
 	expect(
@@ -2635,7 +2683,6 @@ test(`Show only compatible property roles and remove one when cardinality change
 
 	await panel.locator('.property-type-selector__structure-trigger').click();
 	await panel.locator('[data-structure-option="array"]').click();
-	const changeTypeDialog = page.locator('.alert-dialog', { hasText: 'Change type?' });
 	await expect(changeTypeDialog).toContainText(
 		'Changing this property to an array will remove the Photo role from this property.',
 	);
@@ -2672,7 +2719,8 @@ test(`Keep applied property types read-only and preserve their configuration`, a
 	};
 	await page.route('**/v1/profiles/schema', async (route) => {
 		const response = await route.fetch();
-		const schema = (await response.json()) as ObjectType;
+		const profileSchema = (await response.json()) as ProfileSchema;
+		const schema = profileSchema.schema;
 		const email = schema.properties.find((property) => property.name === 'email');
 		email.type = appliedTypes.email;
 		for (const [name, type] of Object.entries(appliedTypes)) {
@@ -2680,7 +2728,7 @@ test(`Keep applied property types read-only and preserve their configuration`, a
 				schema.properties.push({ ...structuredClone(email), name, type });
 			}
 		}
-		await route.fulfill({ response, json: schema });
+		await route.fulfill({ response, json: profileSchema });
 	});
 	await page.route('**/v1/profiles/schema/preview', async (route) => {
 		await route.fulfill({ json: { queries: [] } });
@@ -2783,7 +2831,8 @@ test(`Render array and map property types and preserve their semantics`, async (
 		const request = route.request();
 		if (request.method() === 'GET') {
 			const response = await route.fetch();
-			const schema = (await response.json()) as ObjectType;
+			const profileSchema = (await response.json()) as ProfileSchema;
+			const schema = profileSchema.schema;
 			const arrayProperty = schema.properties.find((property) => property.name === 'phone_numbers');
 			const plainArrayProperty = structuredClone(arrayProperty);
 			plainArrayProperty.name = 'plain_phone_numbers';
@@ -2795,7 +2844,7 @@ test(`Render array and map property types and preserve their semantics`, async (
 			phoneSemanticsMapProperty.name = 'phone_numbers_by_kind';
 			phoneSemanticsMapProperty.type = { kind: 'map', elementType: { kind: 'string', semantics: 'phone' } };
 			schema.properties.push(plainArrayProperty, plainMapProperty, phoneSemanticsMapProperty);
-			await route.fulfill({ response, json: schema });
+			await route.fulfill({ response, json: profileSchema });
 			return;
 		}
 		if (request.method() === 'PUT') {
@@ -3270,7 +3319,8 @@ test(`Edit schema property`, async ({ page }) => {
 test(`Restore the original property name without leaving pending changes`, async ({ page }) => {
 	await page.route('**/v1/profiles/schema', async (route) => {
 		const response = await route.fetch();
-		const schema = (await response.json()) as ObjectType;
+		const profileSchema = (await response.json()) as ProfileSchema;
+		const schema = profileSchema.schema;
 		schema.properties.push({
 			name: 'original_property_name',
 			prefilled: '',
@@ -3282,7 +3332,7 @@ test(`Restore the original property name without leaving pending changes`, async
 			displayName: '',
 			description: '',
 		});
-		await route.fulfill({ response, json: schema });
+		await route.fulfill({ response, json: profileSchema });
 	});
 
 	await page.goto(`${adminURL}/profile-unification/schema`);
@@ -3328,7 +3378,8 @@ test(`Restore the original property name without leaving pending changes`, async
 test(`Remove a renamed property without sending its stale RePath`, async ({ page }) => {
 	await page.route('**/v1/profiles/schema', async (route) => {
 		const response = await route.fetch();
-		const schema = (await response.json()) as ObjectType;
+		const profileSchema = (await response.json()) as ProfileSchema;
+		const schema = profileSchema.schema;
 		schema.properties.push({
 			name: 'property_to_rename_and_remove',
 			prefilled: '',
@@ -3340,7 +3391,7 @@ test(`Remove a renamed property without sending its stale RePath`, async ({ page
 			displayName: '',
 			description: '',
 		});
-		await route.fulfill({ response, json: schema });
+		await route.fulfill({ response, json: profileSchema });
 	});
 
 	await page.goto(`${adminURL}/profile-unification/schema`);
@@ -3369,7 +3420,8 @@ test(`Remove a replacement property without sending its stale RePath`, async ({ 
 			return;
 		}
 		const response = await route.fetch();
-		const schema = (await response.json()) as ObjectType;
+		const profileSchema = (await response.json()) as ProfileSchema;
+		const schema = profileSchema.schema;
 		schema.properties.push({
 			name: 'property_to_replace_and_remove',
 			prefilled: '',
@@ -3381,7 +3433,7 @@ test(`Remove a replacement property without sending its stale RePath`, async ({ 
 			displayName: '',
 			description: '',
 		});
-		await route.fulfill({ response, json: schema });
+		await route.fulfill({ response, json: profileSchema });
 	});
 
 	await page.goto(`${adminURL}/profile-unification/schema`);
@@ -3415,7 +3467,8 @@ test(`Remove a replacement property without sending its stale RePath`, async ({ 
 test(`Do not show modified field indicators on a replacement property`, async ({ page }) => {
 	await page.route('**/v1/profiles/schema', async (route) => {
 		const response = await route.fetch();
-		const schema = (await response.json()) as ObjectType;
+		const profileSchema = (await response.json()) as ProfileSchema;
+		const schema = profileSchema.schema;
 		schema.properties.push({
 			name: 'property_to_replace',
 			prefilled: '',
@@ -3427,7 +3480,7 @@ test(`Do not show modified field indicators on a replacement property`, async ({
 			displayName: '',
 			description: 'Original description',
 		});
-		await route.fulfill({ response, json: schema });
+		await route.fulfill({ response, json: profileSchema });
 	});
 
 	await page.goto(`${adminURL}/profile-unification/schema`);
@@ -3448,7 +3501,8 @@ test(`Do not show modified field indicators on a replacement property`, async ({
 test(`Rename an existing property to a deleted property's name`, async ({ page }) => {
 	await page.route('**/v1/profiles/schema', async (route) => {
 		const response = await route.fetch();
-		const schema = (await response.json()) as ObjectType;
+		const profileSchema = (await response.json()) as ProfileSchema;
+		const schema = profileSchema.schema;
 		schema.properties.push(
 			{
 				name: 'property_to_rename',
@@ -3473,7 +3527,7 @@ test(`Rename an existing property to a deleted property's name`, async ({ page }
 				description: '',
 			},
 		);
-		await route.fulfill({ response, json: schema });
+		await route.fulfill({ response, json: profileSchema });
 	});
 
 	await page.goto(`${adminURL}/profile-unification/schema`);
@@ -3566,7 +3620,8 @@ test(`Check that RePaths are sent correctly`, async ({ page }) => {
 test(`Reuse a property name more than once before applying schema changes`, async ({ page }) => {
 	await page.route('**/v1/profiles/schema', async (route) => {
 		const response = await route.fetch();
-		const schema = (await response.json()) as ObjectType;
+		const profileSchema = (await response.json()) as ProfileSchema;
+		const schema = profileSchema.schema;
 		schema.properties.push({
 			name: 'reused_property_name',
 			prefilled: '',
@@ -3578,7 +3633,7 @@ test(`Reuse a property name more than once before applying schema changes`, asyn
 			displayName: '',
 			description: '',
 		});
-		await route.fulfill({ response, json: schema });
+		await route.fulfill({ response, json: profileSchema });
 	});
 
 	await page.goto(`${adminURL}/profile-unification/schema`);
@@ -3612,7 +3667,8 @@ test(`Reuse a property name more than once before applying schema changes`, asyn
 test(`Remove a replacement property's RePath when renaming it`, async ({ page }) => {
 	await page.route('**/v1/profiles/schema', async (route) => {
 		const response = await route.fetch();
-		const schema = (await response.json()) as ObjectType;
+		const profileSchema = (await response.json()) as ProfileSchema;
+		const schema = profileSchema.schema;
 		schema.properties.push({
 			name: 'replacement_name',
 			prefilled: '',
@@ -3624,7 +3680,7 @@ test(`Remove a replacement property's RePath when renaming it`, async ({ page })
 			displayName: '',
 			description: '',
 		});
-		await route.fulfill({ response, json: schema });
+		await route.fulfill({ response, json: profileSchema });
 	});
 
 	await page.goto(`${adminURL}/profile-unification/schema`);
@@ -3657,7 +3713,8 @@ test(`Remove a replacement property's RePath when renaming it`, async ({ page })
 test(`Allow matching property names under different object parents`, async ({ page }) => {
 	await page.route('**/v1/profiles/schema', async (route) => {
 		const response = await route.fetch();
-		const schema = (await response.json()) as ObjectType;
+		const profileSchema = (await response.json()) as ProfileSchema;
+		const schema = profileSchema.schema;
 		const createProperty = (name: string, type: Property['type']): Property => ({
 			name,
 			prefilled: '',
@@ -3687,7 +3744,7 @@ test(`Allow matching property names under different object parents`, async ({ pa
 				],
 			}),
 		);
-		await route.fulfill({ response, json: schema });
+		await route.fulfill({ response, json: profileSchema });
 	});
 
 	await page.goto(`${adminURL}/profile-unification/schema`);
@@ -3727,7 +3784,8 @@ test(`Allow matching property names under different object parents`, async ({ pa
 test(`Support hasOwnProperty as a profile schema property name`, async ({ page }) => {
 	await page.route('**/v1/profiles/schema', async (route) => {
 		const response = await route.fetch();
-		const schema = (await response.json()) as ObjectType;
+		const profileSchema = (await response.json()) as ProfileSchema;
+		const schema = profileSchema.schema;
 		const createProperty = (name: string, type: Property['type']): Property => ({
 			name,
 			prefilled: '',
@@ -3746,7 +3804,7 @@ test(`Support hasOwnProperty as a profile schema property name`, async ({ page }
 				properties: [createProperty('existing_child', { kind: 'string' })],
 			}),
 		);
-		await route.fulfill({ response, json: schema });
+		await route.fulfill({ response, json: profileSchema });
 	});
 	await page.route('**/v1/profiles/schema/preview', async (route) => {
 		await route.fulfill({ json: { queries: [] } });
@@ -3777,7 +3835,8 @@ test(`Support hasOwnProperty as a profile schema property name`, async ({ page }
 test(`Ignore inherited primary sources for prototype property names`, async ({ page }) => {
 	await page.route('**/v1/profiles/schema', async (route) => {
 		const response = await route.fetch();
-		const schema = (await response.json()) as ObjectType;
+		const profileSchema = (await response.json()) as ProfileSchema;
+		const schema = profileSchema.schema;
 		schema.properties.push({
 			name: 'toString',
 			prefilled: '',
@@ -3789,7 +3848,7 @@ test(`Ignore inherited primary sources for prototype property names`, async ({ p
 			displayName: '',
 			description: '',
 		});
-		await route.fulfill({ response, json: schema });
+		await route.fulfill({ response, json: profileSchema });
 	});
 
 	await page.goto(`${adminURL}/profile-unification/schema`);
@@ -3972,7 +4031,8 @@ test(`Remove nested properties when changing a new object to another type`, asyn
 test(`Reject descendant changes while renaming an object property`, async ({ page }) => {
 	await page.route('**/v1/profiles/schema', async (route) => {
 		const response = await route.fetch();
-		const schema = (await response.json()) as ObjectType;
+		const profileSchema = (await response.json()) as ProfileSchema;
+		const schema = profileSchema.schema;
 		schema.properties.push({
 			name: 'object_to_rename',
 			prefilled: '',
@@ -3999,7 +4059,7 @@ test(`Reject descendant changes while renaming an object property`, async ({ pag
 			displayName: '',
 			description: '',
 		});
-		await route.fulfill({ response, json: schema });
+		await route.fulfill({ response, json: profileSchema });
 	});
 	let previewRequests = 0;
 	await page.route('**/v1/profiles/schema/preview', async (route) => {
@@ -4059,7 +4119,8 @@ test(`Reject a new object property without sub-properties`, async ({ page }) => 
 test(`Reject an existing object property after removing all its sub-properties`, async ({ page }) => {
 	await page.route('**/v1/profiles/schema', async (route) => {
 		const response = await route.fetch();
-		const schema = (await response.json()) as ObjectType;
+		const profileSchema = (await response.json()) as ProfileSchema;
+		const schema = profileSchema.schema;
 		schema.properties.push(
 			{
 				name: 'object_to_empty',
@@ -4099,7 +4160,7 @@ test(`Reject an existing object property after removing all its sub-properties`,
 				description: '',
 			},
 		);
-		await route.fulfill({ response, json: schema });
+		await route.fulfill({ response, json: profileSchema });
 	});
 	let previewRequests = 0;
 	await page.route('**/v1/profiles/schema/preview', async (route) => {
@@ -4123,7 +4184,8 @@ test(`Reject an existing object property after removing all its sub-properties`,
 test(`Count an object removal once after changing its children`, async ({ page }) => {
 	await page.route('**/v1/profiles/schema', async (route) => {
 		const response = await route.fetch();
-		const schema = (await response.json()) as ObjectType;
+		const profileSchema = (await response.json()) as ProfileSchema;
+		const schema = profileSchema.schema;
 		schema.properties.push({
 			name: 'object_with_replaced_child',
 			prefilled: '',
@@ -4161,7 +4223,7 @@ test(`Count an object removal once after changing its children`, async ({ page }
 			displayName: '',
 			description: '',
 		});
-		await route.fulfill({ response, json: schema });
+		await route.fulfill({ response, json: profileSchema });
 	});
 
 	await page.goto(`${adminURL}/profile-unification/schema`);

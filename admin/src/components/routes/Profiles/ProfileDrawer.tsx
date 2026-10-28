@@ -88,10 +88,10 @@ const ProfileDrawer = () => {
 
 	const summary = profiles.find((profile) => profile.kpid === activeProfileID);
 	const displayedAttributes = isProfileMissing ? undefined : (attributes ?? summary?.attributes);
-	const profilePhoto = getProfileAttributeString(displayedAttributes, workspace?.propertyRoles.photo ?? '');
-	const profileFirstName = getProfileAttributeString(displayedAttributes, workspace?.propertyRoles.firstName ?? '');
-	const profileLastName = getProfileAttributeString(displayedAttributes, workspace?.propertyRoles.lastName ?? '');
-	const profileEmail = getProfileAttributeString(displayedAttributes, workspace?.propertyRoles.email ?? '');
+	const profilePhoto = getProfileAttributeString(displayedAttributes, workspace?.profileSchema.propertyRoles.photo ?? '');
+	const profileFirstName = getProfileAttributeString(displayedAttributes, workspace?.profileSchema.propertyRoles.firstName ?? '');
+	const profileLastName = getProfileAttributeString(displayedAttributes, workspace?.profileSchema.propertyRoles.lastName ?? '');
+	const profileEmail = getProfileAttributeString(displayedAttributes, workspace?.profileSchema.propertyRoles.email ?? '');
 
 	const spinner = (
 		<SlSpinner

@@ -49,22 +49,22 @@ func Test_validateProfilePropertyRoles(t *testing.T) {
 		{
 			name:        "Invalid path",
 			assignments: PropertyRoles{FirstName: "invalid-path"},
-			err:         `property role "first_name" has invalid property path "invalid-path"`,
+			err:         `property role "firstName" has invalid property path "invalid-path"`,
 		},
 		{
 			name:        "Missing property",
 			assignments: PropertyRoles{FirstName: "missing"},
-			err:         `property role "first_name" refers to property "missing", which does not exist`,
+			err:         `property role "firstName" refers to property "missing", which does not exist`,
 		},
 		{
 			name:        "Two roles on one property",
 			assignments: PropertyRoles{FirstName: "given_name", LastName: "given_name"},
-			err:         `property "given_name" is assigned to both roles "first_name" and "last_name"`,
+			err:         `property "given_name" is assigned to both roles "firstName" and "lastName"`,
 		},
 		{
 			name:        "Name with semantic",
 			assignments: PropertyRoles{FirstName: "email"},
-			err:         `property "email" is not compatible with role "first_name"`,
+			err:         `property "email" is not compatible with role "firstName"`,
 		},
 		{
 			name:        "String email",

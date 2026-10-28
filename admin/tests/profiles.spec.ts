@@ -140,12 +140,12 @@ const mockProfiles = async (
 		const response = await route.fetch();
 		const body = await response.json();
 		for (const workspace of body.workspaces) {
-			workspace.propertyRoles = roleAssignments;
+			workspace.profileSchema.propertyRoles = roleAssignments;
 		}
 		await route.fulfill({ response, json: body });
 	});
 	await page.route('**/v1/profiles/schema', async (route) => {
-		await route.fulfill({ json: schema });
+		await route.fulfill({ json: { schema, propertyRoles: roleAssignments, primarySources: {} } });
 	});
 	await page.route('**/v1/profiles/count*', async (route) => {
 		const url = new URL(route.request().url());
@@ -2489,7 +2489,7 @@ test('Refresh keeps filter arguments and reloads the schema only after reset con
 	const requests: URL[] = [];
 	await page.route('**/v1/profiles/schema', async (route) => {
 		schemaReads++;
-		await route.fulfill({ json: profileSchema });
+		await route.fulfill({ json: { schema: profileSchema, propertyRoles, primarySources: {} } });
 	});
 	await page.route('**/v1/profiles?*', async (route) => {
 		const url = new URL(route.request().url());

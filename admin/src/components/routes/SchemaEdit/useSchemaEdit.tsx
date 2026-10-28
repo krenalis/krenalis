@@ -145,9 +145,9 @@ const useSchemaEdit = (
 		setIsQueriesLoading(false);
 	}, [isSchemaOutdated, isConfirmChangesLoading]);
 
-	const primarySources = useRef<PrimarySources>(copyPrimarySources(workspace.primarySources));
+	const primarySources = useRef<PrimarySources>(copyPrimarySources(workspace.profileSchema.primarySources));
 	const [propertyRoles, setPropertyRoles] = useState<ProfilePropertyRoles>(() =>
-		copyProfilePropertyRoles(workspace.propertyRoles),
+		copyProfilePropertyRoles(workspace.profileSchema.propertyRoles),
 	);
 	const rePaths = useRef<RePaths>({});
 	const deletedAppliedKeys = useRef<string[]>([]);
@@ -321,7 +321,7 @@ const useSchemaEdit = (
 		deletedAppliedKeys.current = [];
 		resetMoveHistory();
 		const editable = transformSchema(s);
-		const roles = copyProfilePropertyRoles(workspace.propertyRoles);
+		const roles = copyProfilePropertyRoles(workspace.profileSchema.propertyRoles);
 		initialEditableSchema.current = structuredClone(editable);
 		initialPrimarySources.current = copyPrimarySources(primarySources.current);
 		initialPropertyRoles.current = copyProfilePropertyRoles(roles);
@@ -662,7 +662,10 @@ const useSchemaEdit = (
 		setIsConfirmChangesLoading(true);
 		const s = normalizeSchema(structuredClone(editableSchema));
 		try {
-			await api.workspaces.alterProfileSchema(s, propertyRolePaths, sources, rePaths.current);
+			await api.workspaces.alterProfileSchema(
+				{ schema: s, propertyRoles: propertyRolePaths, primarySources: sources },
+				rePaths.current,
+			);
 		} catch (err) {
 			setTimeout(() => {
 				setQueries(null);

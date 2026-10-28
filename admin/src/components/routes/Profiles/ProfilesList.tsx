@@ -57,7 +57,7 @@ const ProfilesList = () => {
 		updateProfilesProperties,
 	} = useContext(ProfilesContext);
 	const propertyRoles = useMemo(
-		() => workspaces.find((workspace) => workspace.id === selectedWorkspace)?.propertyRoles,
+		() => workspaces.find((workspace) => workspace.id === selectedWorkspace)?.profileSchema.propertyRoles,
 		[workspaces, selectedWorkspace],
 	);
 	const countryType = profileSchemaProperties[propertyRoles?.country ?? '']?.type;

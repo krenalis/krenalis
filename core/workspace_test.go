@@ -76,8 +76,8 @@ func TestWorkspaceEncodeJSON(t *testing.T) {
 		{
 			name: "empty collections",
 			workspace: Workspace{
-				PrimarySources: map[string]string{},
-				Identifiers:    []string{},
+				ProfileSchema: ProfileSchema{PrimarySources: map[string]string{}},
+				Identifiers:   []string{},
 			},
 			wantPrimarySources: "{}",
 			wantIdentifiers:    "[]",
@@ -91,7 +91,17 @@ func TestWorkspaceEncodeJSON(t *testing.T) {
 				t.Fatalf("json.Encode() error = %v", err)
 			}
 			value := json.Value(encoded.Bytes())
-			primarySources, ok := value.Get([]string{"primarySources"})
+			for _, field := range []string{"schema", "propertyRoles", "primarySources"} {
+				if _, ok := value.Get([]string{"profileSchema", field}); !ok {
+					t.Fatalf("expected profileSchema.%s, got missing field", field)
+				}
+			}
+			for _, field := range []string{"propertyRoles", "primarySources"} {
+				if _, ok := value.Get([]string{field}); ok {
+					t.Fatalf("expected %s only inside profileSchema, got a top-level field", field)
+				}
+			}
+			primarySources, ok := value.Get([]string{"profileSchema", "primarySources"})
 			if !ok {
 				t.Fatal("json.Encode() omitted PrimarySources")
 			}
@@ -107,33 +117,4 @@ func TestWorkspaceEncodeJSON(t *testing.T) {
 			}
 		})
 	}
-}
-
-// TestWorkspaceMarshalJSON verifies that json.Marshal encodes nil Workspace
-// collection fields as null.
-func TestWorkspaceMarshalJSON(t *testing.T) {
-
-	value, err := json.Marshal(Workspace{})
-	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
-	}
-
-	tests := []struct {
-		name string
-		want string
-	}{
-		{name: "primarySources", want: "null"},
-		{name: "identifiers", want: "null"},
-	}
-
-	for _, test := range tests {
-		got, ok := value.Get([]string{test.name})
-		if !ok {
-			t.Fatalf("expected JSON field %q, got missing field", test.name)
-		}
-		if string(got) != test.want {
-			t.Fatalf("expected %s to be %q, got %q", test.name, test.want, got)
-		}
-	}
-
 }

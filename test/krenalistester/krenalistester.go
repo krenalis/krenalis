@@ -578,13 +578,13 @@ func init() {
 }
 
 func (k *Krenalis) createWorkspace(name string, profileSchema types.Type) (string, error) {
-	profilesBody := map[string]any{"schema": profileSchema}
+	profileSchemaBody := map[string]any{"schema": profileSchema}
 	if k.propertyRoles != nil {
-		profilesBody["propertyRoles"] = *k.propertyRoles
+		profileSchemaBody["propertyRoles"] = *k.propertyRoles
 	}
 	req := map[string]any{
-		"name":     name,
-		"profiles": profilesBody,
+		"name":          name,
+		"profileSchema": profileSchemaBody,
 		"warehouse": map[string]any{
 			"platform": testsSettings.WarehousePlatform,
 			"settings": testsSettings.Warehouse,

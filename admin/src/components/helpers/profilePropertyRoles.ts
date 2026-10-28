@@ -91,4 +91,4 @@ export {
 	getProfilePropertyRole,
 	isProfilePropertyRoleCompatible,
 };
-export type { ProfilePropertyRoleDefinition, PropertyRoleTarget };
+export type { PropertyRoleTarget };

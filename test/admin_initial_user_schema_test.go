@@ -64,8 +64,8 @@ func TestAdminInitialProfileSchema(t *testing.T) {
 
 	workspace := k.Workspace()
 	t.Run("property roles", func(t *testing.T) {
-		if workspace.PropertyRoles != expectedRoles {
-			t.Errorf("expected property roles %#v, got %#v", expectedRoles, workspace.PropertyRoles)
+		if workspace.ProfileSchema.PropertyRoles != expectedRoles {
+			t.Errorf("expected property roles %#v, got %#v", expectedRoles, workspace.ProfileSchema.PropertyRoles)
 		}
 	})
 
@@ -83,7 +83,7 @@ func TestAdminInitialProfileSchema(t *testing.T) {
 		}
 	})
 
-	got := workspace.ProfileSchema
+	got := workspace.ProfileSchema.Schema
 	if !got.IsObject() {
 		t.Fatalf("expected object profile schema, got %#v", got)
 	}
