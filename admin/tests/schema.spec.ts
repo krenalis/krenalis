@@ -2517,9 +2517,19 @@ for (const finalType of ['url', 'object']) {
 
 		const changeTypeDialog = page.locator('.alert-dialog', { hasText: 'Change type?' });
 		await panel.locator('.property-type-selector__structure-trigger').click();
+		await panel.locator('[data-structure-option="array"]').click();
+		await selectPropertyType(page, 'email');
+		await expect(changeTypeDialog).toContainText(
+			'Changing the type to array of email will remove this role: Email.',
+		);
+		await changeTypeDialog.getByRole('button', { name: 'Cancel' }).click();
+		await expect(changeTypeDialog).toBeHidden();
+		await panel.locator('.property-panel__cancel').click();
+		await openProperty(page, 'details');
+		await panel.locator('.property-type-selector__structure-trigger').click();
 		await panel.locator('[data-structure-option="one"]').click();
 		await selectPropertyType(page, 'string');
-		await expect(changeTypeDialog).toContainText('will remove these roles: Email');
+		await expect(changeTypeDialog).toContainText('will remove this role: Email');
 		await changeTypeDialog.getByRole('button', { name: 'Change type' }).click();
 		await expect(changeTypeDialog).toBeHidden();
 		await selectProfilePropertyRole(page, 'firstName');
@@ -2595,6 +2605,7 @@ test(`Show only compatible property roles and remove one when cardinality change
 	await editSchema(page);
 	await page.locator('.schema-edit__add-property').click();
 	const panel = page.locator('.property-panel');
+	const changeTypeDialog = page.locator('.alert-dialog', { hasText: 'Change type?' });
 	await panel.locator('.property-form__name-input input').fill('new_avatar_url');
 	await selectPropertyType(page, 'string');
 	await panel.locator('.property-role-selector__trigger').click();
@@ -2614,7 +2625,16 @@ test(`Show only compatible property roles and remove one when cardinality change
 			.locator('[data-property-role-option]')
 			.evaluateAll((options) => options.map((option) => option.getAttribute('data-property-role-option'))),
 	).toEqual(['none', 'email']);
-	await panel.locator('[data-property-role-option="none"]').click();
+	await panel.locator('[data-property-role-option="email"]').click();
+	await panel.locator('.property-type-selector__structure-trigger').click();
+	await panel.locator('[data-structure-option="map"]').click();
+	await expect(changeTypeDialog).toContainText(
+		'Changing the type to map of email will remove the Email role from this property.',
+	);
+	await changeTypeDialog.getByRole('button', { name: 'Cancel' }).click();
+	await expect(changeTypeDialog).toBeHidden();
+	await expect(panel.locator('.property-role-selector__trigger')).toHaveText('Email');
+	await selectProfilePropertyRole(page, 'none');
 	await selectPropertyType(page, 'country');
 	await panel.locator('.property-role-selector__trigger').click();
 	expect(
@@ -2635,7 +2655,6 @@ test(`Show only compatible property roles and remove one when cardinality change
 
 	await panel.locator('.property-type-selector__structure-trigger').click();
 	await panel.locator('[data-structure-option="array"]').click();
-	const changeTypeDialog = page.locator('.alert-dialog', { hasText: 'Change type?' });
 	await expect(changeTypeDialog).toContainText(
 		'Changing this property to an array will remove the Photo role from this property.',
 	);

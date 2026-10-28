@@ -36,8 +36,8 @@ import {
 } from '../../helpers/profilePropertyRoles';
 import {
 	DURATION_UNIT_OPTIONS,
+	getProfileSchemaTypePresentation,
 	getPropertyValueType,
-	getTypeSemantics,
 	isSuitableAsIdentifier,
 	replacePropertyValueType,
 	UNIT_OF_MEASURE_OPTIONS,
@@ -382,7 +382,7 @@ const PropertyForm = ({
 			return;
 		}
 
-		const typeLabel = getTypeSemantics(getPropertyValueType(type)) || type.kind;
+		const typeLabel = getProfileSchemaTypePresentation(type).primary;
 		let description: React.ReactNode;
 		if (uniqueRolesToUnassign.length === 1 && uniqueRolesToUnassign[0] === propertyRole) {
 			const role = getProfilePropertyRole(uniqueRolesToUnassign[0]);
@@ -402,7 +402,8 @@ const PropertyForm = ({
 			const roleLabels = uniqueRolesToUnassign.map((role) => getProfilePropertyRole(role).label).join(', ');
 			description = (
 				<>
-					Changing the type to <code>{typeLabel}</code> will remove these roles: {roleLabels}.
+					Changing the type to <code>{typeLabel}</code> will remove{' '}
+					{uniqueRolesToUnassign.length === 1 ? 'this role' : 'these roles'}: {roleLabels}.
 				</>
 			);
 		}
