@@ -148,6 +148,7 @@ func TestConvert(t *testing.T) {
 		{types.Int(8).Unsigned(), types.Decimal(3, 0), uint(math.MaxUint8), decimal.MustInt(math.MaxUint8), true, nil},
 		{types.Float(64), types.Decimal(16, 5), 3.918347105316932e+10, decimal.MustParse("39183471053.16932"), true, nil},
 		{types.Float(32), types.Decimal(15, 11), float64(float32(6316.0513)), decimal.MustParse("6316.05126953125"), true, nil},
+		{types.Float(64), types.Decimal(5, 2), 1234.5, nil, true, errRangeConversion},
 		{types.String(), types.Decimal(20, 10), "1048294.202936601", decimal.MustParse("1048294.202936601"), true, nil},
 		{types.JSON(), types.Decimal(20, 10), json.Value("1048294.202936601"), decimal.MustParse("1048294.202936601"), true, nil},
 
