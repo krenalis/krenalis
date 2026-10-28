@@ -702,15 +702,13 @@ func (workspace workspace) Attributes(_ http.ResponseWriter, r *http.Request) (a
 	var schema types.Type
 	err = json.Unmarshal([]byte(r.URL.Query().Get("schema")), &schema)
 	if err != nil {
-		return nil, errors.BadRequest("invalid schema")
+		return nil, errors.BadRequest("invalid schema: %s", err)
 	}
 	attributes, err := ws.Attributes(r.Context(), kpid, schema)
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{
-		"attributes": attributes,
-	}, nil
+	return map[string]any{"attributes": attributes}, nil
 }
 
 // Update updates the name of a workspace.
@@ -923,10 +921,18 @@ func (workspace workspace) Profiles(w http.ResponseWriter, r *http.Request) (any
 
 	// Read and parse the parameters from the query string.
 	q := r.URL.Query()
+
+	var schema types.Type
+	err = json.Unmarshal([]byte(q.Get("schema")), &schema)
+	if err != nil {
+		return nil, errors.BadRequest("invalid schema: %s", err)
+	}
+
 	properties := splitQueryParameters(q["properties"])
 	if _, present := q["properties"]; present && properties == nil {
 		properties = []string{}
 	}
+
 	var filter *core.Filter
 	if f := q.Get("filter"); f != "" {
 		err := json.Unmarshal([]byte(f), &filter)
@@ -937,8 +943,10 @@ func (workspace workspace) Profiles(w http.ResponseWriter, r *http.Request) (any
 			return nil, errors.BadRequest("filter cannot be null")
 		}
 	}
+
 	order := q.Get("order")
 	orderDesc := q.Get("orderDesc") == "true"
+
 	var first int
 	if f := q.Get("first"); f != "" {
 		first, err = strconv.Atoi(f)
@@ -946,6 +954,7 @@ func (workspace workspace) Profiles(w http.ResponseWriter, r *http.Request) (any
 			return nil, errors.BadRequest("invalid first")
 		}
 	}
+
 	var limit int
 	if l := q.Get("limit"); l != "" {
 		limit, err = strconv.Atoi(l)
@@ -956,16 +965,12 @@ func (workspace workspace) Profiles(w http.ResponseWriter, r *http.Request) (any
 		limit = 100
 	}
 
-	var schema types.Type
-	err = json.Unmarshal([]byte(q.Get("schema")), &schema)
-	if err != nil {
-		return nil, errors.BadRequest("invalid schema")
-	}
-	profiles, total, hasNext, err := ws.Profiles(
-		r.Context(), schema, properties, filter, order, orderDesc, first, limit)
+	profiles, total, hasNext, err := ws.Profiles(r.Context(),
+		schema, properties, filter, order, orderDesc, first, limit)
 	if err != nil {
 		return nil, err
 	}
+
 	w.Header().Set("Content-Type", "application/json")
 	b := newBodyWriter(w)
 	b.writeString(`{"profiles":[`)
