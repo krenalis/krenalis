@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -30,6 +31,105 @@ const (
 	testPassword = "krenalis"
 	testSchema   = "public"
 )
+
+// TestQueryWithNonConformingStrings verifies that string and JSON literals
+// are handled correctly when the database defaults to
+// standard_conforming_strings = off.
+func TestQueryWithNonConformingStrings(t *testing.T) {
+
+	container, err := postgres.Run(t.Context(), testimages.PostgreSQL,
+		postgres.WithDatabase(testDatabase), postgres.WithUsername(testUser), postgres.WithPassword(testPassword),
+		postgres.BasicWaitStrategies())
+	if err != nil {
+		t.Fatalf("expected PostgreSQL container, got %v", err)
+	}
+	t.Cleanup(func() {
+		err := testcontainers.TerminateContainer(container)
+		if err != nil {
+			t.Errorf("expected container cleanup, got %v", err)
+		}
+	})
+	host, err := container.Host(t.Context())
+	if err != nil {
+		t.Fatalf("expected PostgreSQL host, got %v", err)
+	}
+	port, err := container.MappedPort(t.Context(), "5432/tcp")
+	if err != nil {
+		t.Fatalf("expected PostgreSQL port, got %v", err)
+	}
+	connector, err := testconnector.NewDatabase[*PostgreSQL]("postgresql", innerSettings{
+		Host: host, Port: int(port.Num()), Database: testDatabase, Username: testUser, Password: testPassword,
+		Schema: testSchema,
+	})
+	if err != nil {
+		t.Fatalf("expected PostgreSQL connector, got %v", err)
+	}
+	t.Cleanup(func() {
+		err := connector.Close()
+		if err != nil {
+			t.Errorf("expected connector cleanup, got %v", err)
+		}
+	})
+	err = connector.openDB(t.Context())
+	if err != nil {
+		t.Fatalf("expected connector pool, got %v", err)
+	}
+
+	_, err = connector.pool.Exec(t.Context(), "CREATE TABLE quoted_values (id integer, value text, document jsonb)")
+	if err != nil {
+		t.Fatalf("expected fixture table, got %v", err)
+	}
+	text := `\' OR TRUE --`
+	document := json.Value(`{"value":"a\\b"}`)
+	_, err = connector.pool.Exec(t.Context(), "INSERT INTO quoted_values VALUES (1, $1, $2), (2, $3, $4)",
+		"safe", `{"value":"safe"}`, text, string(document))
+	if err != nil {
+		t.Fatalf("expected fixture values, got %v", err)
+	}
+	_, err = connector.pool.Exec(t.Context(),
+		"ALTER DATABASE "+quoteIdent(testDatabase)+" SET standard_conforming_strings = off")
+	if err != nil {
+		t.Fatalf("expected database default to change, got %v", err)
+	}
+	connector.pool.Reset()
+
+	for _, test := range []struct {
+		name   string
+		column string
+		value  any
+		typ    types.Type
+	}{
+		{"string", "value", text, types.String()},
+		{"JSON", "document", document, types.JSON()},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			query := "SELECT id FROM quoted_values WHERE " + quoteIdent(test.column) + " = " +
+				connector.SQLLiteral(test.value, test.typ)
+			rows, _, err := connector.Query(t.Context(), query)
+			if err != nil {
+				t.Fatalf("expected query execution, got %v", err)
+			}
+			defer rows.Close()
+			var ids []int
+			for rows.Next() {
+				var id int
+				err = rows.Scan(&id)
+				if err != nil {
+					t.Fatalf("expected row scan, got %v", err)
+				}
+				ids = append(ids, id)
+			}
+			err = rows.Err()
+			if err != nil {
+				t.Fatalf("expected complete query results, got %v", err)
+			}
+			if !slices.Equal(ids, []int{2}) {
+				t.Fatalf("expected matching IDs [2], got %v", ids)
+			}
+		})
+	}
+
+}
 
 // Test_Merge_Query tests the Merge and Query methods on supported types. It
 // creates a table, inserts a row, and retrieves the data, verifying that the
