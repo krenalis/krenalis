@@ -24,17 +24,20 @@ const PROFILE_ID = '00000000-0000-4000-8000-000000000001';
 const workspace: Workspace = {
 	id: 'workspace111',
 	name: 'Test workspace',
-	propertyRoles: {
-		firstName: 'person.given',
-		lastName: 'person.family',
-		email: 'contact.mail',
-		country: '',
-		photo: 'media.avatar',
+	profileSchema: {
+		schema: { kind: 'object', properties: [] },
+		primarySources: {},
+		propertyRoles: {
+			firstName: 'person.given',
+			lastName: 'person.family',
+			email: 'contact.mail',
+			country: '',
+			photo: 'media.avatar',
+		},
 	},
 	resolveIdentitiesOnBatchImport: false,
 	identifiers: [],
 	warehouseMode: 'Normal',
-	primarySources: {},
 };
 const api = new API('https://example.test', workspace.id);
 api.workspaces.profiles.attributes = async () => ({ attributes: window.profileDrawerAttributes });

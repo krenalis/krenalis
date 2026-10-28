@@ -42,14 +42,19 @@ type Workspace struct {
 	core                           *Core
 	store                          *datastore.Store
 	workspace                      *state.Workspace
-	ID                             string            `json:"id"`
-	Name                           string            `json:"name"`
-	ProfileSchema                  types.Type        `json:"profileSchema"`
-	PropertyRoles                  PropertyRoles     `json:"propertyRoles"`
-	PrimarySources                 map[string]string `json:"primarySources"`
-	ResolveIdentitiesOnBatchImport bool              `json:"resolveIdentitiesOnBatchImport"`
-	Identifiers                    []string          `json:"identifiers"`
-	WarehouseMode                  WarehouseMode     `json:"warehouseMode"`
+	ID                             string        `json:"id"`
+	Name                           string        `json:"name"`
+	ProfileSchema                  ProfileSchema `json:"profileSchema"`
+	ResolveIdentitiesOnBatchImport bool          `json:"resolveIdentitiesOnBatchImport"`
+	Identifiers                    []string      `json:"identifiers"`
+	WarehouseMode                  WarehouseMode `json:"warehouseMode"`
+}
+
+// ProfileSchema contains the profile properties, roles and primary sources.
+type ProfileSchema struct {
+	Schema         types.Type        `json:"schema"`
+	PropertyRoles  PropertyRoles     `json:"propertyRoles"`
+	PrimarySources map[string]string `json:"primarySources"`
 }
 
 // PropertyRoles maps each property role to its property's path.

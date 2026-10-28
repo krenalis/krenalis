@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/krenalis/krenalis/test/krenalistester"
+	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 )
 
@@ -28,8 +29,8 @@ func TestProfilePropertyRoles(t *testing.T) {
 	defer k.Stop()
 
 	workspace := k.Workspace()
-	if workspace.PropertyRoles != (krenalistester.PropertyRoles{}) {
-		t.Fatalf("expected no property roles when omitted at creation, got %#v", workspace.PropertyRoles)
+	if workspace.ProfileSchema.PropertyRoles != (krenalistester.PropertyRoles{}) {
+		t.Fatalf("expected no property roles when omitted at creation, got %#v", workspace.ProfileSchema.PropertyRoles)
 	}
 	var initialWorkspaceCount int
 	k.QueryRowTestDatabase(t.Context(), &initialWorkspaceCount, "SELECT COUNT(*) FROM workspaces")
@@ -41,20 +42,23 @@ func TestProfilePropertyRoles(t *testing.T) {
 
 		for _, endpoint := range []string{"/v1/workspaces", "/v1/workspaces/test"} {
 			for _, test := range []struct {
-				name        string
-				assignments krenalistester.PropertyRoles
-				message     string
+				name           string
+				assignments    krenalistester.PropertyRoles
+				primarySources map[string]string
+				message        string
 			}{
-				{"missing property", krenalistester.PropertyRoles{FirstName: "missing"}, "does not exist"},
-				{"incompatible property", krenalistester.PropertyRoles{Email: "first_name"}, "not compatible"},
-				{"duplicate property", krenalistester.PropertyRoles{FirstName: "first_name", LastName: "first_name"}, "assigned to both roles"},
+				{"missing property", krenalistester.PropertyRoles{FirstName: "missing"}, nil, "does not exist"},
+				{"incompatible property", krenalistester.PropertyRoles{Email: "first_name"}, nil, "not compatible"},
+				{"duplicate property", krenalistester.PropertyRoles{FirstName: "first_name", LastName: "first_name"}, nil, "assigned to both roles"},
+				{"primary sources", krenalistester.PropertyRoles{}, map[string]string{"first_name": "9zQ4Tn7B3mS6"}, "primary sources cannot be specified when creating a workspace"},
 			} {
 				t.Run(endpoint+"/"+test.name, func(t *testing.T) {
 					body := map[string]any{
 						"name": "Invalid roles",
-						"profiles": map[string]any{
-							"schema":        workspace.ProfileSchema,
-							"propertyRoles": test.assignments,
+						"profileSchema": map[string]any{
+							"schema":         workspace.ProfileSchema.Schema,
+							"propertyRoles":  test.assignments,
+							"primarySources": test.primarySources,
 						},
 						"warehouse": map[string]any{
 							"platform": "PostgreSQL",
@@ -88,7 +92,7 @@ func TestProfilePropertyRoles(t *testing.T) {
 		t.Fatalf("expected %d workspaces after rejected creations, got %d", initialWorkspaceCount, workspaceCount)
 	}
 
-	properties := workspace.ProfileSchema.Properties().Slice()
+	properties := workspace.ProfileSchema.Schema.Properties().Slice()
 	properties = append(properties, types.Property{
 		Name:         "photo_url",
 		Type:         types.String().AsURL(),
@@ -117,16 +121,56 @@ func TestProfilePropertyRoles(t *testing.T) {
 	k.AlterProfileSchemaWithPropertyRolesAndWait(schema, propertyRoles, nil, nil)
 
 	workspace = k.Workspace()
-	if workspace.PropertyRoles != propertyRoles {
-		t.Fatalf("expected property roles %#v, got %#v", propertyRoles, workspace.PropertyRoles)
+	if workspace.ProfileSchema.PropertyRoles != propertyRoles {
+		t.Fatalf("expected property roles %#v, got %#v", propertyRoles, workspace.ProfileSchema.PropertyRoles)
 	}
+
+	t.Run("profile schema responses", func(t *testing.T) {
+		for _, endpoint := range []string{"/v1/workspaces/current", "/v1/workspaces", "/v1/profiles/schema"} {
+			var response json.Value
+			headers := http.Header{}
+			if endpoint == "/v1/workspaces" {
+				headers["Krenalis-Workspace"] = nil
+			}
+			k.Call(http.MethodGet, endpoint, headers, nil, &response)
+			path := []string{"profileSchema"}
+			if endpoint == "/v1/workspaces" {
+				workspaces, ok := response.Get([]string{"workspaces"})
+				if !ok || !workspaces.IsArray() || workspaces.NumElement() != 1 {
+					t.Fatalf("expected one workspace, got %s", response)
+				}
+				for _, workspace := range workspaces.Elements() {
+					response = workspace
+				}
+			}
+			if endpoint == "/v1/profiles/schema" {
+				path = nil
+			}
+			value := response
+			if path != nil {
+				var ok bool
+				value, ok = response.Get(path)
+				if !ok {
+					t.Fatalf("expected profile schema from %s, got %s", endpoint, response)
+				}
+			}
+			var got krenalistester.ProfileSchema
+			err := json.Unmarshal(value, &got)
+			if err != nil {
+				t.Fatalf("expected valid profile schema from %s, got %v", endpoint, err)
+			}
+			if !types.Equal(got.Schema, schema) || got.PropertyRoles != propertyRoles || len(got.PrimarySources) != 0 {
+				t.Errorf("expected matching schema, roles and primary sources from %s, got %#v", endpoint, got)
+			}
+		}
+	})
 
 	// Reassign roles without changing the warehouse schema.
 	propertyRoles.FirstName, propertyRoles.LastName = propertyRoles.LastName, propertyRoles.FirstName
 	k.AlterProfileSchemaWithPropertyRolesAndWait(schema, propertyRoles, nil, nil)
 	workspace = k.Workspace()
-	if workspace.PropertyRoles != propertyRoles {
-		t.Fatalf("expected reassigned roles %#v, got %#v", propertyRoles, workspace.PropertyRoles)
+	if workspace.ProfileSchema.PropertyRoles != propertyRoles {
+		t.Fatalf("expected reassigned roles %#v, got %#v", propertyRoles, workspace.ProfileSchema.PropertyRoles)
 	}
 
 	// Omitting propertyRoles clears the applied assignments.
@@ -141,11 +185,12 @@ func TestProfilePropertyRoles(t *testing.T) {
 	schema = types.Object(properties)
 	k.AlterProfileSchemaAndWait(schema, nil, nil)
 	workspace = k.Workspace()
-	if workspace.PropertyRoles != (krenalistester.PropertyRoles{}) {
-		t.Fatalf("expected omitted property roles to clear all assignments, got %#v", workspace.PropertyRoles)
+	if workspace.ProfileSchema.PropertyRoles != (krenalistester.PropertyRoles{}) {
+		t.Fatalf("expected omitted property roles to clear all assignments, got %#v",
+			workspace.ProfileSchema.PropertyRoles)
 	}
-	if !types.Equal(workspace.ProfileSchema, schema) {
-		t.Fatalf("expected updated schema %#v, got %#v", schema.Properties().Slice(), workspace.ProfileSchema)
+	if !types.Equal(workspace.ProfileSchema.Schema, schema) {
+		t.Fatalf("expected updated schema %#v, got %#v", schema.Properties().Slice(), workspace.ProfileSchema.Schema)
 	}
 	k.AlterProfileSchemaWithPropertyRolesAndWait(schema, propertyRoles, nil, nil)
 
@@ -187,11 +232,13 @@ func TestProfilePropertyRoles(t *testing.T) {
 			if err != nil {
 				t.Fatalf("expected workspace after rejected update, got %v", err)
 			}
-			if after.PropertyRoles != propertyRoles {
-				t.Errorf("expected unchanged property roles %#v, got %#v", propertyRoles, after.PropertyRoles)
+			if after.ProfileSchema.PropertyRoles != propertyRoles {
+				t.Errorf("expected unchanged property roles %#v, got %#v", propertyRoles,
+					after.ProfileSchema.PropertyRoles)
 			}
-			if !types.Equal(after.ProfileSchema, schema) {
-				t.Errorf("expected unchanged schema %#v, got %#v", schema.Properties().Slice(), after.ProfileSchema)
+			if !types.Equal(after.ProfileSchema.Schema, schema) {
+				t.Errorf("expected unchanged schema %#v, got %#v", schema.Properties().Slice(),
+					after.ProfileSchema.Schema)
 			}
 		})
 	}
@@ -214,23 +261,24 @@ func TestProfilePropertyRoles(t *testing.T) {
 		t.Fatal("expected dangling Photo assignment error, got nil")
 	}
 	workspace = k.Workspace()
-	if workspace.PropertyRoles != propertyRoles {
+	if workspace.ProfileSchema.PropertyRoles != propertyRoles {
 		t.Fatalf("expected rejected assignments to leave %#v unchanged, got %#v",
-			propertyRoles, workspace.PropertyRoles)
+			propertyRoles, workspace.ProfileSchema.PropertyRoles)
 	}
-	if !types.Equal(workspace.ProfileSchema, schema) {
-		t.Fatalf("expected unchanged schema %#v, got %#v", schema.Properties().Slice(), workspace.ProfileSchema)
+	if !types.Equal(workspace.ProfileSchema.Schema, schema) {
+		t.Fatalf("expected unchanged schema %#v, got %#v", schema.Properties().Slice(), workspace.ProfileSchema.Schema)
 	}
 
 	propertyRoles.Photo = ""
 	k.AlterProfileSchemaWithPropertyRolesAndWait(schemaWithoutPhoto, propertyRoles, nil, nil)
 	workspace = k.Workspace()
-	if workspace.PropertyRoles != propertyRoles {
-		t.Fatalf("expected property roles %#v after deleting photo, got %#v", propertyRoles, workspace.PropertyRoles)
+	if workspace.ProfileSchema.PropertyRoles != propertyRoles {
+		t.Fatalf("expected property roles %#v after deleting photo, got %#v", propertyRoles,
+			workspace.ProfileSchema.PropertyRoles)
 	}
-	if !types.Equal(workspace.ProfileSchema, schemaWithoutPhoto) {
+	if !types.Equal(workspace.ProfileSchema.Schema, schemaWithoutPhoto) {
 		t.Fatalf("expected schema without photo %#v, got %#v",
-			schemaWithoutPhoto.Properties().Slice(), workspace.ProfileSchema)
+			schemaWithoutPhoto.Properties().Slice(), workspace.ProfileSchema.Schema)
 	}
 	var persistedRoles []string
 	k.QueryRowTestDatabase(t.Context(), &persistedRoles, `SELECT ARRAY[

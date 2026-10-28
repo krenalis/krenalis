@@ -910,7 +910,7 @@ func (k *Krenalis) TestWorkspaceCreation(name string, profileSchema types.Type, 
 	}
 	body := map[string]any{
 		"name": name,
-		"profiles": map[string]any{
+		"profileSchema": map[string]any{
 			"schema":        profileSchema,
 			"propertyRoles": PropertyRoles{},
 		},

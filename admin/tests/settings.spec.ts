@@ -45,22 +45,26 @@ test(`Select the profile property of a consent purpose`, async ({ page }) => {
 	await page.route('**/v1/profiles/schema', async (route) => {
 		await route.fulfill({
 			json: {
-				kind: 'object',
-				properties: [
-					{ name: 'accepted', type: { kind: 'boolean' } },
-					{
-						name: 'nested',
-						type: {
-							kind: 'object',
-							properties: [
-								{ name: 'ignored', type: { kind: 'string' } },
-								{ name: 'metadata', type: { kind: 'json' } },
-								{ name: 'allowed', type: { kind: 'boolean' } },
-							],
+				schema: {
+					kind: 'object',
+					properties: [
+						{ name: 'accepted', type: { kind: 'boolean' } },
+						{
+							name: 'nested',
+							type: {
+								kind: 'object',
+								properties: [
+									{ name: 'ignored', type: { kind: 'string' } },
+									{ name: 'metadata', type: { kind: 'json' } },
+									{ name: 'allowed', type: { kind: 'boolean' } },
+								],
+							},
 						},
-					},
-					{ name: 'attributes', type: { kind: 'json' } },
-				],
+						{ name: 'attributes', type: { kind: 'json' } },
+					],
+				},
+				propertyRoles: { firstName: '', lastName: '', email: '', country: '', photo: '' },
+				primarySources: {},
 			},
 		});
 	});
@@ -189,7 +193,13 @@ test(`Add and remove purpose codes of a consent purpose`, async ({ page }) => {
 		await route.fulfill({ json: { purposes: [] } });
 	});
 	await page.route('**/v1/profiles/schema', async (route) => {
-		await route.fulfill({ json: { kind: 'object', properties: [] } });
+		await route.fulfill({
+			json: {
+				schema: { kind: 'object', properties: [] },
+				propertyRoles: { firstName: '', lastName: '', email: '', country: '', photo: '' },
+				primarySources: {},
+			},
+		});
 	});
 	await page.goto(`${adminURL}/settings/consent-management`);
 	await page.getByRole('button', { name: 'Add consent purpose' }).click();
@@ -293,7 +303,11 @@ test(`Edit a consent purpose without setting the initial focus`, async ({ page }
 	});
 	await page.route('**/v1/profiles/schema', async (route) => {
 		await route.fulfill({
-			json: { kind: 'object', properties: [{ name: 'accepted', type: { kind: 'boolean' } }] },
+			json: {
+				schema: { kind: 'object', properties: [{ name: 'accepted', type: { kind: 'boolean' } }] },
+				propertyRoles: { firstName: '', lastName: '', email: '', country: '', photo: '' },
+				primarySources: {},
+			},
 		});
 	});
 	await page.goto(`${adminURL}/settings/consent-management`);
@@ -351,7 +365,11 @@ test(`Validate existing consent locations and allow clearing an invalid profile 
 	});
 	await page.route('**/v1/profiles/schema', async (route) => {
 		await route.fulfill({
-			json: { kind: 'object', properties: [{ name: 'consents', type: { kind: 'json' } }] },
+			json: {
+				schema: { kind: 'object', properties: [{ name: 'consents', type: { kind: 'json' } }] },
+				propertyRoles: { firstName: '', lastName: '', email: '', country: '', photo: '' },
+				primarySources: {},
+			},
 		});
 	});
 	await page.goto(`${adminURL}/settings/consent-management`);
@@ -389,7 +407,13 @@ test(`Validate authored consent keys and save literal JSON keys separately`, asy
 		await route.fulfill({ json: { purposes: [] } });
 	});
 	await page.route('**/v1/profiles/schema', async (route) => {
-		await route.fulfill({ json: { kind: 'object', properties: [{ name: 'consents', type: { kind: 'json' } }] } });
+		await route.fulfill({
+			json: {
+				schema: { kind: 'object', properties: [{ name: 'consents', type: { kind: 'json' } }] },
+				propertyRoles: { firstName: '', lastName: '', email: '', country: '', photo: '' },
+				primarySources: {},
+			},
+		});
 	});
 	await page.goto(`${adminURL}/settings/consent-management`);
 	await page.getByRole('button', { name: 'Add consent purpose' }).click();
@@ -461,8 +485,12 @@ test(`Validate changed API JSON keys and clear the profile property`, async ({ p
 	await page.route('**/v1/profiles/schema', async (route) => {
 		await route.fulfill({
 			json: {
-				kind: 'object',
-				properties: ['consents', 'other'].map((name) => ({ name, type: { kind: 'json' } })),
+				schema: {
+					kind: 'object',
+					properties: ['consents', 'other'].map((name) => ({ name, type: { kind: 'json' } })),
+				},
+				propertyRoles: { firstName: '', lastName: '', email: '', country: '', photo: '' },
+				primarySources: {},
 			},
 		});
 	});

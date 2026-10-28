@@ -51,8 +51,8 @@ const useSchemaGrid = (
 		}
 		return getRows(
 			schema,
-			workspace.primarySources,
-			workspace.propertyRoles,
+			workspace.profileSchema.primarySources,
+			workspace.profileSchema.propertyRoles,
 			connections,
 			identifierPositions,
 			consentPurposesByPropertyPath,
@@ -83,10 +83,10 @@ const useSchemaGrid = (
 			return null;
 		}
 		return {
-			propertyRole: getPropertyRole(workspace.propertyRoles, selectedPropertyPath),
+			propertyRole: getPropertyRole(workspace.profileSchema.propertyRoles, selectedPropertyPath),
 			identifierPosition: identifierPositions.get(selectedPropertyPath),
 			path: selectedPropertyPath,
-			primarySource: getPrimarySource(selectedPropertyPath, workspace.primarySources, connections),
+			primarySource: getPrimarySource(selectedPropertyPath, workspace.profileSchema.primarySources, connections),
 			property,
 		};
 	}, [connections, identifierPositions, schema, selectedPropertyPath, workspace]);

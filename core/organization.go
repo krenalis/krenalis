@@ -31,7 +31,6 @@ import (
 	"github.com/krenalis/krenalis/core/internal/util"
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
-	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
 
 	"github.com/jordan-wright/email"
@@ -518,7 +517,8 @@ type Warehouse struct {
 // Returns the identifier of the workspace that has been created.
 // name must be between 1 and 100 runes long.
 //
-// warehouse.Mode specifies the initial mode of the workspace's data warehouse.
+// profileSchema.PrimarySources must be empty because the new workspace has no
+// connections. warehouse.Mode specifies the initial mode of its data warehouse.
 //
 // It returns an errors.UnprocessableError error with code:
 //
@@ -527,17 +527,17 @@ type Warehouse struct {
 //   - WarehousePlatformNotExist, if a warehouse platform does not exist.
 //   - WarehouseNotInitializable, if the warehouse is not initializable.
 //   - WorkspacesLimitReached, if the organization cannot have more workspaces.
-func (this *Organization) CreateWorkspace(ctx context.Context, name string, profileSchema types.Type, propertyRoles PropertyRoles, warehouse Warehouse) (string, error) {
+func (this *Organization) CreateWorkspace(ctx context.Context, name string, profileSchema ProfileSchema, warehouse Warehouse) (string, error) {
 
 	this.core.mustBeOpen()
 
-	settings, err := this.validateWorkspaceCreation(ctx, name, profileSchema, propertyRoles, warehouse)
+	settings, err := this.validateWorkspaceCreation(ctx, name, profileSchema, warehouse)
 	if err != nil {
 		return "", err
 	}
 
 	// Initialize the data warehouse.
-	err = this.core.datastore.Initialize(ctx, this.organization.ID, warehouse.Platform, settings, profileSchema)
+	err = this.core.datastore.Initialize(ctx, this.organization.ID, warehouse.Platform, settings, profileSchema.Schema)
 	if err != nil {
 		if err, ok := err.(*datastore.UnavailableError); ok {
 			return "", errors.Unavailable("%s", err)
@@ -552,8 +552,8 @@ func (this *Organization) CreateWorkspace(ctx context.Context, name string, prof
 	n := state.CreateWorkspace{
 		Organization:                   this.organization.ID,
 		Name:                           name,
-		ProfileSchema:                  profileSchema,
-		PropertyRoles:                  state.PropertyRoles(propertyRoles),
+		ProfileSchema:                  profileSchema.Schema,
+		PropertyRoles:                  state.PropertyRoles(profileSchema.PropertyRoles),
 		ResolveIdentitiesOnBatchImport: true,
 	}
 	n.Warehouse.Platform = warehouse.Platform
@@ -1263,6 +1263,7 @@ INNER JOIN updated_pipelines AS p ON ended_runs.pipeline = p.id
 
 // TestWorkspaceCreation tests workspace creation, including the profile schema
 // and property roles, and checks that the data warehouse can be initialized.
+// profileSchema.PrimarySources must be empty.
 //
 // It returns an errors.UnprocessableError error with code:
 //
@@ -1271,9 +1272,9 @@ INNER JOIN updated_pipelines AS p ON ended_runs.pipeline = p.id
 //   - WarehouseNotInitializable, if the warehouse intended for connection is
 //     not initializable.
 //   - WorkspacesLimitReached, if the organization cannot have more workspaces.
-func (this *Organization) TestWorkspaceCreation(ctx context.Context, name string, profileSchema types.Type, propertyRoles PropertyRoles, warehouse Warehouse) error {
+func (this *Organization) TestWorkspaceCreation(ctx context.Context, name string, profileSchema ProfileSchema, warehouse Warehouse) error {
 	this.core.mustBeOpen()
-	_, err := this.validateWorkspaceCreation(ctx, name, profileSchema, propertyRoles, warehouse)
+	_, err := this.validateWorkspaceCreation(ctx, name, profileSchema, warehouse)
 	return err
 }
 
@@ -1434,14 +1435,16 @@ func (this *Organization) Workspace(id string) (*Workspace, error) {
 		return nil, errors.NotFound("workspace %s does not exist", id)
 	}
 	workspace := Workspace{
-		core:                           this.core,
-		store:                          store,
-		workspace:                      ws,
-		ID:                             ws.ID,
-		Name:                           ws.Name,
-		ProfileSchema:                  ws.ProfileSchema,
-		PropertyRoles:                  PropertyRoles(ws.PropertyRoles),
-		PrimarySources:                 maps.Clone(ws.PrimarySources),
+		core:      this.core,
+		store:     store,
+		workspace: ws,
+		ID:        ws.ID,
+		Name:      ws.Name,
+		ProfileSchema: ProfileSchema{
+			Schema:         ws.ProfileSchema,
+			PropertyRoles:  PropertyRoles(ws.PropertyRoles),
+			PrimarySources: maps.Clone(ws.PrimarySources),
+		},
 		ResolveIdentitiesOnBatchImport: ws.ResolveIdentitiesOnBatchImport,
 		Identifiers:                    ws.Identifiers,
 		WarehouseMode:                  WarehouseMode(ws.Warehouse.Mode),
@@ -1460,14 +1463,16 @@ func (this *Organization) Workspaces() []*Workspace {
 			continue
 		}
 		workspace := Workspace{
-			core:                           this.core,
-			store:                          store,
-			workspace:                      ws,
-			ID:                             ws.ID,
-			Name:                           ws.Name,
-			ProfileSchema:                  ws.ProfileSchema,
-			PropertyRoles:                  PropertyRoles(ws.PropertyRoles),
-			PrimarySources:                 maps.Clone(ws.PrimarySources),
+			core:      this.core,
+			store:     store,
+			workspace: ws,
+			ID:        ws.ID,
+			Name:      ws.Name,
+			ProfileSchema: ProfileSchema{
+				Schema:         ws.ProfileSchema,
+				PropertyRoles:  PropertyRoles(ws.PropertyRoles),
+				PrimarySources: maps.Clone(ws.PrimarySources),
+			},
 			ResolveIdentitiesOnBatchImport: ws.ResolveIdentitiesOnBatchImport,
 			Identifiers:                    ws.Identifiers,
 			WarehouseMode:                  WarehouseMode(ws.Warehouse.Mode),
@@ -1517,13 +1522,13 @@ func (this *Organization) filterMetricsSelection(workspace string, selection *Me
 //     not initializable.
 //   - WarehousePlatformNotExist, if a warehouse platform does not exist.
 //   - WorkspacesLimitReached, if the organization cannot have more workspaces.
-func (this *Organization) validateWorkspaceCreation(ctx context.Context, name string, profileSchema types.Type, propertyRoles PropertyRoles, warehouse Warehouse) (json.Value, error) {
+func (this *Organization) validateWorkspaceCreation(ctx context.Context, name string, profileSchema ProfileSchema, warehouse Warehouse) (json.Value, error) {
 
 	// Validate the parameters.
 	if err := util.ValidateStringField("name", name, 100); err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	if !profileSchema.Valid() {
+	if !profileSchema.Schema.Valid() {
 		return nil, errors.BadRequest("profile schema is invalid")
 	}
 	if warehouse.Platform == "" {
@@ -1536,14 +1541,17 @@ func (this *Organization) validateWorkspaceCreation(ctx context.Context, name st
 	}
 
 	// Perform additional checks on the compliance of the profile schema.
-	if err := checkAllowedPropertyProfileSchema(profileSchema); err != nil {
+	if err := checkAllowedPropertyProfileSchema(profileSchema.Schema); err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	if err := datastore.CheckConflictingProperties("profile", profileSchema); err != nil {
+	if err := datastore.CheckConflictingProperties("profile", profileSchema.Schema); err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	if err := validatePropertyRoles(profileSchema, propertyRoles); err != nil {
+	if err := validatePropertyRoles(profileSchema.Schema, profileSchema.PropertyRoles); err != nil {
 		return nil, errors.BadRequest("%s", err)
+	}
+	if len(profileSchema.PrimarySources) > 0 {
+		return nil, errors.BadRequest("primary sources cannot be specified when creating a workspace")
 	}
 
 	// Validate the warehouse settings.
