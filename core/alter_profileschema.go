@@ -27,7 +27,8 @@ import (
 // nullable; there are also limits on types, which are documented in
 // "datastore/README.md".
 //
-// propertyRoles maps roles to property paths.
+// propertyRoles maps roles to property paths. primarySources cannot specify a
+// primary source for a property which has kind object or array.
 //
 // Moreover, schema cannot contain conflicting properties, meaning properties
 // whose representations as columns in the data warehouse would have the same
