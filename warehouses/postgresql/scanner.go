@@ -208,7 +208,7 @@ func (s *scanner) scanArray(src any) ([]any, error) {
 		size = int(int32(binary.BigEndian.Uint32(data[12 : 12+4])))
 		p += 8
 	}
-	if s.maxBytes > 0 && (size < 0 || size > (len(data)-p)/4) {
+	if size < 0 || size > (len(data)-p)/4 {
 		return nil, errInvalidData
 	}
 	values := make([]any, size)
