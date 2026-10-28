@@ -7,7 +7,8 @@ package core
 import (
 	"bytes"
 	"fmt"
-	"math/big"
+	"math"
+	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -200,10 +201,10 @@ func (duration *FilterDuration) UnmarshalJSON(data []byte) error {
 }
 
 // elapsed returns exact nanoseconds, before applying execution range limits.
-func (duration FilterDuration) elapsed() (*big.Int, error) {
+func (duration FilterDuration) elapsed() (filterCountInteger, error) {
 	value, err := parseFilterCountInteger(duration.Value)
 	if err != nil {
-		return nil, fmt.Errorf("invalid elapsed duration value: %w", err)
+		return "", fmt.Errorf("invalid elapsed duration value: %w", err)
 	}
 	var unit time.Duration
 	switch duration.Unit {
@@ -222,9 +223,9 @@ func (duration FilterDuration) elapsed() (*big.Int, error) {
 	case "week":
 		unit = 7 * 24 * time.Hour
 	default:
-		return nil, errors.New("invalid fixed elapsed duration unit")
+		return "", errors.New("invalid fixed elapsed duration unit")
 	}
-	return value.Mul(value, big.NewInt(int64(unit))), nil
+	return value.scaled(uint64(unit)), nil
 }
 
 // FilterPeriod describes an absoluteHalfOpen, elapsedLookback or elapsedAgoBand
@@ -254,16 +255,9 @@ func (period *FilterPeriod) UnmarshalJSON(data []byte) error {
 			if !value.IsString() || len(value) > 80 {
 				return errors.New("period instant must be an RFC 3339 string")
 			}
-			// Reject excess fractional digits before time.Time can truncate them.
-			text := value.String()
-			if separator := strings.IndexAny(text, ".,"); separator >= 0 {
-				end := separator + 1
-				for end < len(text) && text[end] >= '0' && text[end] <= '9' {
-					end++
-				}
-				if end-separator-1 > 9 {
-					return errors.New("period instant has more than nine fractional digits")
-				}
+			_, err := parseFilterInstant(value.String())
+			if err != nil {
+				return err
 			}
 		case "kind", "duration", "older", "newer":
 			if value.IsNull() {
@@ -295,7 +289,7 @@ func (period FilterPeriod) scope(source FilterCountSource) (unified.Scope, error
 		return unified.Scope{}, errors.New("invalid recorded event selector")
 	}
 	scope := unified.Scope{Event: source.Name, Grain: source.Grain}
-	var older, newer *big.Int
+	var older, newer filterCountInteger
 	switch period.Kind {
 	case "absoluteHalfOpen":
 		if period.Start == nil || period.End == nil || period.Duration != nil ||
@@ -321,7 +315,7 @@ func (period FilterPeriod) scope(source FilterCountSource) (unified.Scope, error
 		if err != nil {
 			return unified.Scope{}, err
 		}
-		newer = &big.Int{}
+		newer = "0"
 	case "elapsedAgoBand":
 		if period.Older == nil || period.Newer == nil || period.Start != nil ||
 			period.End != nil || period.Duration != nil {
@@ -339,36 +333,100 @@ func (period FilterPeriod) scope(source FilterCountSource) (unified.Scope, error
 	default:
 		return unified.Scope{}, errors.New("invalid Count period kind")
 	}
-	if older != nil {
-		if older.Cmp(newer) <= 0 {
+	if older != "" {
+		if older.compare(newer) <= 0 {
 			return unified.Scope{}, errors.New("invalid elapsed observation period")
 		}
-		if !older.IsInt64() || !newer.IsInt64() {
+		old, ook := older.uint64()
+		recent, rok := newer.uint64()
+		if !ook || !rok || old > math.MaxInt64 || recent > math.MaxInt64 {
 			return unified.Scope{}, &unified.UnsupportedError{Capability: "elapsed duration beyond time.Duration range"}
 		}
-		scope.Elapsed = &unified.ElapsedPeriod{Older: time.Duration(older.Int64()), Newer: time.Duration(newer.Int64())}
+		scope.Elapsed = &unified.ElapsedPeriod{Older: time.Duration(old), Newer: time.Duration(recent)}
 	}
 	return scope, nil
 }
 
-// parseFilterCountInteger reads the same integer JSON spelling as Record Int
-// operands, without narrowing the value before checking semantic validity.
-func parseFilterCountInteger(value json.Value) (*big.Int, error) {
+// filterCountInteger is a canonical natural decimal with linear comparisons.
+type filterCountInteger string
+
+func (n filterCountInteger) compare(other filterCountInteger) int {
+	if len(n) < len(other) {
+		return -1
+	}
+	if len(n) > len(other) {
+		return 1
+	}
+	return strings.Compare(string(n), string(other))
+}
+
+// scaled multiplies a natural by a fixed elapsed unit, in linear time.
+// The unit is at most one week in nanoseconds, so each carry fits uint64.
+func (n filterCountInteger) scaled(unit uint64) filterCountInteger {
+	result := make([]byte, len(n)+16)
+	position := len(result)
+	var carry uint64
+	for i := len(n) - 1; i >= 0; i-- {
+		value := uint64(n[i]-'0')*unit + carry
+		position--
+		result[position] = byte(value%10) + '0'
+		carry = value / 10
+	}
+	for carry > 0 {
+		position--
+		result[position] = byte(carry%10) + '0'
+		carry /= 10
+	}
+	return filterCountInteger(result[position:])
+}
+
+func (n filterCountInteger) uint64() (uint64, bool) {
+	value, err := strconv.ParseUint(string(n), 10, 64)
+	if err != nil {
+		return 0, false
+	}
+	return value, true
+}
+
+// parseFilterCountInteger validates the lexical natural before range limits.
+func parseFilterCountInteger(value json.Value) (filterCountInteger, error) {
 	if !json.Valid(value) || !value.IsNumber() {
-		return nil, errors.New("Count operand must be a nonnegative JSON integer")
+		return "", errors.New("Count operand must be a nonnegative JSON integer")
 	}
 	value = json.TrimSpace(value)
 	if bytes.Equal(value, []byte("-0")) {
-		return &big.Int{}, nil
+		return "0", nil
 	}
 	if value[0] == '-' || bytes.ContainsAny(value, ".eE") {
-		return nil, errors.New("Count operand must be a nonnegative JSON integer")
+		return "", errors.New("Count operand must be a nonnegative JSON integer")
 	}
-	n, ok := (&big.Int{}).SetString(string(value), 10)
-	if !ok {
-		return nil, errors.New("Count operand must be a nonnegative JSON integer")
+	return filterCountInteger(value), nil
+}
+
+// parseFilterInstant reads an exact RFC 3339 instant without truncating digits.
+func parseFilterInstant(text string) (time.Time, error) {
+	if len(text) > 80 {
+		return time.Time{}, errors.New("invalid timestamp")
 	}
-	return n, nil
+	if separator := strings.IndexAny(text, ".,"); separator >= 0 {
+		end := separator + 1
+		for end < len(text) && text[end] >= '0' && text[end] <= '9' {
+			end++
+		}
+		if end-separator-1 > 9 {
+			return time.Time{}, errors.New("timestamp has more than nine fractional digits")
+		}
+	}
+	quoted, err := json.Quote([]byte(text))
+	if err != nil {
+		return time.Time{}, errors.New("invalid timestamp")
+	}
+	var instant time.Time
+	err = json.Unmarshal(quoted, &instant)
+	if err != nil {
+		return time.Time{}, errors.New("invalid RFC 3339 timestamp")
+	}
+	return instant, nil
 }
 
 func prepareFilterCount(condition *FilterCountCondition) (unified.Rule, error) {
@@ -412,30 +470,30 @@ func prepareFilterCount(condition *FilterCountCondition) (unified.Rule, error) {
 	if err != nil {
 		return unified.Rule{}, err
 	}
-	upper := &big.Int{}
+	upper := filterCountInteger("0")
 	if arity == 2 {
 		upper, err = parseFilterCountInteger(condition.Values[1])
 		if err != nil {
 			return unified.Rule{}, err
 		}
-		if upper.Cmp(value) < 0 {
+		if upper.compare(value) < 0 {
 			return unified.Rule{}, errors.New("invalid Count terminal")
 		}
 	}
-	minimum := &big.Int{}
+	minimum := filterCountInteger("0")
 	if condition.Count.Minimum != nil {
 		minimum, err = parseFilterCountInteger(condition.Count.Minimum)
 		if err != nil {
 			return unified.Rule{}, errors.New("Count sample minimum must be a positive JSON integer")
 		}
-		if minimum.Sign() == 0 {
+		if minimum == "0" {
 			return unified.Rule{}, errors.New("Count sample minimum must be positive")
 		}
 	}
-	if minimum.Sign() > 0 && ((operator == unified.Equal && value.Cmp(minimum) < 0) ||
-		(operator == unified.Less && value.Cmp(minimum) <= 0) ||
-		(operator == unified.LessOrEqual && value.Cmp(minimum) < 0) ||
-		(operator == unified.Between && upper.Cmp(minimum) < 0)) {
+	if minimum != "0" && ((operator == unified.Equal && value.compare(minimum) < 0) ||
+		(operator == unified.Less && value.compare(minimum) <= 0) ||
+		(operator == unified.LessOrEqual && value.compare(minimum) < 0) ||
+		(operator == unified.Between && upper.compare(minimum) < 0)) {
 		return unified.Rule{}, errors.New("Count sample minimum and terminal are statically incompatible")
 	}
 
@@ -453,11 +511,14 @@ func prepareFilterCount(condition *FilterCountCondition) (unified.Rule, error) {
 	if periodErr != nil {
 		return unified.Rule{}, periodErr
 	}
-	if !value.IsUint64() || !upper.IsUint64() || !minimum.IsUint64() {
+	v, vok := value.uint64()
+	u, uok := upper.uint64()
+	m, mok := minimum.uint64()
+	if !vok || !uok || !mok {
 		return unified.Rule{}, &unified.UnsupportedError{Capability: "Count integer beyond 64-bit representation"}
 	}
-	rule.Count.Test = unified.CountTest{Operator: operator, Value: value.Uint64(), Upper: upper.Uint64()}
-	rule.Count.Minimum = minimum.Uint64()
+	rule.Count.Test = unified.CountTest{Operator: operator, Value: v, Upper: u}
+	rule.Count.Minimum = m
 
 	return rule, nil
 }

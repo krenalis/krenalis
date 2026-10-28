@@ -184,15 +184,30 @@ func Build(filter warehouses.Filter, request warehouses.ProfileOutcomeRequest, d
 	if len(c.records) > 0 {
 		projection = "," + strings.Join(c.records, ",")
 	}
-	// Record columns resolve only against the population table. Internal aliases
-	// cannot be property names, including on dialects with lateral SELECT aliases.
+	projected, evaluated, selected := "", "", ""
+	for i, column := range request.Columns {
+		alias := q("$value" + strconv.Itoa(i))
+		projected += "," + q(column.Name) + " AS " + alias
+		evaluated += ",p." + alias
+		selected += "," + alias
+	}
+	order := "profile_id"
+	if len(request.OrderBy) > 0 {
+		projected += "," + q(request.OrderBy[0].Name) + " AS " + q("$sort")
+		evaluated += ",p." + q("$sort")
+		selected += "," + q("$sort")
+		order = q("$sort")
+		if request.OrderDesc {
+			order += " DESC"
+		}
+		order += " NULLS LAST,profile_id"
+	}
 	c.ctes = append(c.ctes,
 		"population AS (SELECT CAST("+q(request.Population.Key.Name)+" AS VARCHAR(36)) AS "+
-			q("$profile_id")+projection+" FROM "+
-			q(request.Population.Table)+")")
+			q("$profile_id")+projection+projected+" FROM "+q(request.Population.Table)+")")
 	c.ctes = append(c.ctes,
-		"evaluated AS (SELECT p."+q("$profile_id")+" AS profile_id,("+truth+") AS truth FROM population p "+
-			strings.Join(c.joins, " ")+")")
+		"evaluated AS (SELECT p."+q("$profile_id")+" AS profile_id,("+truth+") AS truth"+evaluated+
+			" FROM population p "+strings.Join(c.joins, " ")+")")
 	c.ctes = append(c.ctes, `totals AS (SELECT
  COALESCE(SUM(CASE WHEN truth=TRUE THEN 1 ELSE 0 END),0) AS m,
  COALESCE(SUM(CASE WHEN truth=FALSE THEN 1 ELSE 0 END),0) AS f,
@@ -210,12 +225,39 @@ func Build(filter warehouses.Filter, request warehouses.ProfileOutcomeRequest, d
 	if request.MatchingOnly {
 		selection = " WHERE truth=TRUE"
 	}
-	c.ctes = append(c.ctes, "outcome_page AS (SELECT profile_id,truth,TRUE AS is_profile FROM evaluated"+selection+
-		" ORDER BY profile_id LIMIT "+strconv.Itoa(request.Limit)+" OFFSET "+strconv.Itoa(request.First)+")")
+	c.ctes = append(c.ctes, "outcome_page AS (SELECT profile_id,truth,TRUE AS is_profile"+selected+
+		" FROM evaluated"+selection+" ORDER BY "+order+" LIMIT "+strconv.Itoa(request.Limit)+
+		" OFFSET "+strconv.Itoa(request.First)+")")
+	fields, size := "", "0"
+	if len(request.Columns) > 0 && dialect.ValueSize == nil {
+		return Statement{}, fmt.Errorf("warehouses/internal/profilefilter: missing projection dialect")
+	}
+	for i := range request.Columns {
+		ref := "b." + q("$value"+strconv.Itoa(i))
+		size += "+COALESCE(" + dialect.ValueSize(ref) + ",0)"
+	}
+	c.ctes = append(c.ctes, "page_size AS (SELECT COALESCE(SUM("+size+
+		"),0) AS bytes FROM outcome_page b)")
+	for i := range request.Columns {
+		ref := "b." + q("$value"+strconv.Itoa(i))
+		fields += ",CASE WHEN z.bytes<=" + strconv.Itoa(warehouses.MaxProfilePageBytes) +
+			" THEN " + ref + " ELSE NULL END"
+	}
+	finalOrder := "b.profile_id"
+	if len(request.OrderBy) > 0 {
+		finalOrder = "b." + q("$sort")
+		if request.OrderDesc {
+			finalOrder += " DESC"
+		}
+		finalOrder += " NULLS LAST,b.profile_id"
+	}
 	result := Statement{
-		SQL: "WITH " + strings.Join(c.ctes, ",\n") + `
-SELECT b.profile_id,b.truth,COALESCE(b.is_profile,FALSE),a.m,a.f,a.u,e.failures
-FROM totals a CROSS JOIN failures e LEFT JOIN outcome_page b ON TRUE ORDER BY b.profile_id`,
+		SQL: "WITH " + strings.Join(c.ctes, ",\n") +
+			"\nSELECT b.profile_id,b.truth,COALESCE(b.is_profile,FALSE),a.m,a.f,a.u," +
+			"e.failures+CASE WHEN z.bytes>" + strconv.Itoa(warehouses.MaxProfilePageBytes) +
+			" THEN 1 ELSE 0 END" + fields +
+			" FROM totals a CROSS JOIN failures e CROSS JOIN page_size z LEFT JOIN outcome_page b ON TRUE" +
+			" ORDER BY " + finalOrder,
 		Arguments: c.arguments,
 		Columns: []warehouses.Column{
 			{Name: "profile_id", Type: types.UUID(), Nullable: true},
@@ -226,6 +268,10 @@ FROM totals a CROSS JOIN failures e LEFT JOIN outcome_page b ON TRUE ORDER BY b.
 			{Name: "unknown_count", Type: types.Int(64)},
 			{Name: "source_failures", Type: types.Int(64)},
 		},
+	}
+	for _, column := range request.Columns {
+		column.Nullable = true
+		result.Columns = append(result.Columns, column)
 	}
 	return result, nil
 }

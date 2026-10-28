@@ -8,8 +8,10 @@ import (
 	"context"
 	"errors"
 	"math"
+	"strings"
 	"testing"
 
+	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
 )
 
@@ -84,6 +86,8 @@ func TestRead(t *testing.T) {
 			warehouses.ProfileOutcomeRequest{Limit: 1}, true},
 		{"matching only", &outcomeRows{rows: [][]any{row}}, warehouses.ProfileOutcomeRequest{Limit: 1,
 			MatchingOnly: true}, true},
+		{"matching page exceeds total", &outcomeRows{rows: [][]any{{row[0], true, true, 0, 0, 0, 0}}},
+			warehouses.ProfileOutcomeRequest{Limit: 1, MatchingOnly: true}, true},
 		{"metadata mixed", &outcomeRows{rows: [][]any{{nil, nil, false, 1, 0, 0, 0}, row}},
 			warehouses.ProfileOutcomeRequest{Limit: 2}, true},
 	}
@@ -112,5 +116,57 @@ func TestRead(t *testing.T) {
 	result, err := Read(ctx, rows, warehouses.ProfileOutcomeRequest{Limit: 1})
 	if err == nil || result != nil || !rows.closed {
 		t.Fatalf("expected canceled read with no result and closed rows, got %+v, %v, %v", result, err, rows.closed)
+	}
+}
+
+// TestReadProjection preserves sorted projections and rejects partial payloads.
+func TestReadProjection(t *testing.T) {
+	columns := []warehouses.Column{{Name: "name", Type: types.String()}}
+	row := func(id, name string) []any { return []any{id, true, true, 2, 1, 1, 0, name} }
+	first := row("00000000-0000-0000-0000-000000000002", "A")
+	second := row("00000000-0000-0000-0000-000000000001", "Z")
+	for _, test := range []struct {
+		name   string
+		rows   [][]any
+		sorted bool
+		fail   bool
+	}{
+		{"property order", [][]any{first, second}, true, false},
+		{"UUID order", [][]any{second, first}, false, false},
+		{"wrong UUID order", [][]any{first, second}, false, true},
+		{"duplicate in sorted page", [][]any{first, first}, true, true},
+		{"required value missing", [][]any{{first[0], true, true, 2, 1, 1, 0, nil}}, true, true},
+		{"oversized value", [][]any{row(first[0].(string), strings.Repeat("x", warehouses.MaxProfilePageBytes+1))}, true, true},
+		{"page byte budget", [][]any{row(first[0].(string), strings.Repeat("x", warehouses.MaxProfilePageBytes/2+1)),
+			row(second[0].(string), strings.Repeat("x", warehouses.MaxProfilePageBytes/2+1))}, true, true},
+		{"empty page", [][]any{{nil, nil, false, 2, 1, 1, 0, nil}}, true, false},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			request := warehouses.ProfileOutcomeRequest{Columns: columns, Limit: 2, MatchingOnly: true}
+			if test.sorted {
+				request.OrderBy = columns
+			}
+			rows := &outcomeRows{rows: test.rows}
+			result, err := Read(t.Context(), rows, request)
+			if err != nil {
+				if !test.fail || result != nil {
+					t.Fatalf("expected fail=%t without partial result, got %+v, %v", test.fail, result, err)
+				}
+			}
+			if test.fail && err == nil {
+				t.Fatal("expected projection failure, got success")
+			}
+			if err == nil {
+				if result.Match != 2 || result.NoMatch != 1 || result.Unknown != 1 {
+					t.Fatalf("expected totals 2/1/1, got %+v", result)
+				}
+				if len(result.Profiles) > 0 && result.Profiles[0].Values[0] != test.rows[0][7] {
+					t.Fatalf("expected projected first value, got %+v", result.Profiles)
+				}
+			}
+			if !rows.closed {
+				t.Fatal("expected closed cursor, got open rows")
+			}
+		})
 	}
 }

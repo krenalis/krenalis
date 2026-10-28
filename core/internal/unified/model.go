@@ -98,13 +98,20 @@ type NativeCurrency struct {
 // membership; otherwise every profile is listed with its ternary outcome.
 // Neither choice changes the filter or its totals.
 type Page struct {
+	Properties   []string
+	OrderBy      string
+	OrderDesc    bool
 	First        int
 	Limit        int
 	MatchingOnly bool
 }
 
 // Profile is one internal profile outcome.
-type Profile = warehouses.ProfileOutcome
+type Profile struct {
+	ID         string
+	Truth      Truth
+	Attributes map[string]any
+}
 
 // Result is complete only when the operation returned no error.
 type Result struct {

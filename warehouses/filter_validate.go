@@ -24,6 +24,20 @@ func ValidateProfileFilter(filter Filter, request ProfileOutcomeRequest) error {
 	if err != nil {
 		return err
 	}
+	if len(request.Columns) > 90 || len(request.OrderBy) > 1 {
+		return fmt.Errorf("warehouses: profile projection or ordering exceeds limits")
+	}
+	for _, column := range request.Columns {
+		if !IsValidIdentifier(column.Name) || !column.Type.Valid() || column.Type.IsObject() {
+			return fmt.Errorf("warehouses: invalid profile projection column")
+		}
+	}
+	for _, column := range request.OrderBy {
+		if !IsValidIdentifier(column.Name) || !column.Type.Valid() || column.Type.IsJSON() ||
+			column.Type.IsArray() || column.Type.IsMap() || column.Type.IsObject() {
+			return fmt.Errorf("warehouses: invalid profile ordering column")
+		}
+	}
 	if filter.Root == nil {
 		return nil
 	}

@@ -39,6 +39,39 @@ type FilterRule interface {
 	filterRule()
 }
 
+// HasCount reports whether a Count occurs within the admitted main-tree bounds.
+// It does not validate the filter; malformed trees still require preparation.
+func (filter *Filter) HasCount() bool {
+	type entry struct {
+		group *Filter
+		depth int
+	}
+	stack := []entry{{filter, 1}}
+	nodes := 0
+	for len(stack) > 0 {
+		current := stack[len(stack)-1]
+		stack = stack[:len(stack)-1]
+		if current.group == nil || current.depth > maxFilterDepth {
+			continue
+		}
+		for _, rule := range current.group.Rules {
+			nodes++
+			if nodes > maxFilterRuleCount {
+				return false
+			}
+			switch rule := rule.(type) {
+			case *FilterCountCondition:
+				return true
+			case *Filter:
+				stack = append(stack, entry{rule, current.depth + 1})
+			default:
+				// Record leaves and invalid rules are handled by preparation.
+			}
+		}
+	}
+	return false
+}
+
 // MarshalJSON returns the JSON representation of filter.
 func (filter *Filter) MarshalJSON() ([]byte, error) {
 	if filter == nil {

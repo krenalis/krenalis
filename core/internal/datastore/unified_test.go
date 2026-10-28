@@ -380,7 +380,14 @@ func TestUnifiedProfilesSnowflakeGate(t *testing.T) {
 	store.wh.Store(dw)
 	result, err := store.UnifiedProfiles(t.Context(), nil, unified.Bindings{}, time.Date(2026, 1, 1, 0, 0, 0, 0,
 		time.UTC), unified.Page{Limit: 1})
-	assertUnifiedUnsupported(t, err)
+	if err != nil {
+		if !errors.Is(err, ErrUnifiedUnavailable) {
+			t.Fatalf("expected unavailable backend, got %v", err)
+		}
+	}
+	if err == nil {
+		t.Fatal("expected unavailable backend error, got success")
+	}
 	if result != nil {
 		t.Fatalf("expected no semantic result, got %+v", result)
 	}

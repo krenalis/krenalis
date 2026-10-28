@@ -18,11 +18,13 @@ import (
 // scanner implements the warehouses.Rows interface to read and normalize the rows
 // read from Snowflake.
 type scanner struct {
-	columns []warehouses.Column
-	rows    *sql.Rows
-	values  []any
-	dest    []any
-	index   int
+	maxBytes  int // zero disables the cumulative cursor byte budget
+	readBytes int
+	columns   []warehouses.Column
+	rows      *sql.Rows
+	values    []any
+	dest      []any
+	index     int
 }
 
 // newScanner returns a new scanner.
@@ -160,12 +162,31 @@ func (sv scanValue) Scan(v any) error {
 	c := sv.s.columns[sv.s.index]
 	var err error
 	if v != nil {
+		if sv.s.maxBytes > 0 {
+			size := 0
+			switch raw := v.(type) {
+			case string:
+				size = len(raw)
+			case []byte:
+				size = len(raw)
+			default:
+				// Native scalar values need no variable-size decoding.
+			}
+			if size > sv.s.maxBytes-sv.s.readBytes {
+				sv.s.index = 0
+				return fmt.Errorf("profile payload exceeds transport limit")
+			}
+			sv.s.readBytes += size
+		}
 		v, err = sv.s.normalize(c.Name, c.Type, v)
 	} else if !c.Nullable {
 		return fmt.Errorf("column %s is non-nullable, but Snowflake returned a NULL value", c.Name)
 	}
 	if err != nil {
 		sv.s.index = 0
+		if sv.s.maxBytes > 0 {
+			return fmt.Errorf("invalid profile value for column %s", c.Name)
+		}
 		return err
 	}
 	sv.s.dest[sv.s.index] = v

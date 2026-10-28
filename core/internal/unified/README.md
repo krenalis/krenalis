@@ -2,14 +2,15 @@
 
 This package implements the first backend subset of the B architecture consolidated
 in `filtering/14-confronto-architetture-interrogazione-unified-fase-4b.md`. The
-normative baseline remains 06/07/08 version 1.2. This is an internal Go entry;
-Admin, API and destination connections do not expose it yet. The prepared-filter
+normative baseline remains 06/07/08 version 1.2. Count is exposed by the existing
+Profiles HTTP endpoint on the verified backend; Admin and destination connections
+do not expose it yet. The prepared-filter
 boundary refines the SQL transport described in report 14 §5.4: generated SQL is
 now an internal detail of the warehouse implementation.
 
 ## Executable path
 
-`Workspace.unifiedProfiles` now receives one `core.Filter`, decoded using the
+`Workspace.QueryProfiles` receives one `core.Filter`, decoded using the
 public Record/Count JSON contract below. The temporary private `unifiedRule` and
 `unifiedCount` input trees have been removed. Profile predicates reuse
 `prepareFilter` with the workspace Profile schema; Count qualification uses the
@@ -17,7 +18,7 @@ Event schema. Every prepared profile condition becomes one Record leaf in the
 common canonical AND/OR tree. The temporary AND wrapper used to validate a
 single Record condition does not enter that tree. Explicit groups, including
 singletons, retain their four-level/100-descendant budget. T and pagination
-remain an internal operation request, separate from the filter document.
+remain operation parameters, separate from the filter document.
 `datastore.Store.UnifiedProfiles` fixes the evaluation input T, validates the
 supported canonical shape and calls `unified.Prepare` with resolved source
 metadata and the existing `convertWhere` Record binders for the two subjects.
@@ -257,13 +258,13 @@ including `-00:00`; it does not impose the Record DateTime parser's offset rules
 The numeric limits of the executable backend remain capability errors.
 An older decoder rejects the unknown `count` member.
 
-The existing Record-only preparer explicitly rejects Count. This increment
-connects the public document to the internal Unified service; it does not
-activate Unified in the existing Profiles HTTP handler, Admin editor or
-export pipeline. No new public result/UNKNOWN diagnostic contract is implied.
-Validation currently parses exact natural literals with big.Int. Very long
-literals still need a resource bound or a less costly exact comparison before
-API activation; no public digit limit is defined here.
+The existing Record-only preparer explicitly rejects Count outside the admitted
+Profiles path. Natural literals are validated and compared as decimal strings;
+fixed elapsed-unit multiplication is linear in their digit count. This preserves
+exact validation and invalid-before-unsupported precedence without large-integer
+arithmetic on unbounded public values. There is no semantic digit limit. The
+HTTP handler bounds Count filter documents to 500 KiB; valid literals beyond the
+backend representation still receive a capability error.
 
 The application currently persists pipeline Record filters as `state.Where`,
 using the existing schema-aware codec and equality. That format, its database
@@ -387,7 +388,56 @@ go test -mod=vendor ./core ./core/internal/unified ./core/internal/datastore \
   -run '^(TestPrepareUnified.*|TestRead|TestValidate.*|TestUnifiedPrepare.*|TestAcceptedCountRanges|TestValidateProfileFilter|TestProfileFilterDialect|TestProfileFilterSQL|TestProfileRecordSQL|TestStatementValues)$' -count=1
 ```
 
-API/Admin/destination activation additionally requires a decided and verified
-public/persisted representation, real source-meaning bindings and admission,
-required warning/diagnostic consumption, and the coherent-source guarantees of
-the respective release. This change implements a backend vertical, not all 1.2.
+## Profiles HTTP entry
+
+`GET /v1/profiles` uses `Workspace.QueryProfiles`. A request without Count delegates
+to the existing Record query and writer: no evaluation object, added warehouse
+query or changed response encoding. Requests containing Count return only MATCH
+profiles with the requested projection. `total` is the exact MATCH count. An
+additional object describes that request's complete evaluation, for example:
+
+```json
+{"evaluation":{"at":"2026-02-01T00:00:00Z","match":2,"noMatch":1,"unknown":1}}
+```
+
+All three counts refer to the full population, before pagination, and share one
+SQL evaluation with the page and its attributes. Count of occurrences remains
+separate from these profile totals. An empty page still returns the totals.
+UNKNOWN profiles are excluded from membership without being relabelled NO_MATCH.
+The existing raw JSON contract remains: a present JSON null compared with the
+String `"EUR"` is FALSE; a missing raw JSON path is NULL. No governed currency
+binding or shared latent fact is inferred from either value. Governed
+NativeCurrency remains an internal, explicitly bound capability.
+
+`at` optionally anchors Count periods. It is an RFC 3339 instant, not in the
+future, exactly representable at microsecond precision; omission fixes T once
+for the request. Empty, malformed, over-precise or future values are HTTP 400.
+`at` is rejected without Count. Reusing the returned instant on later pages
+avoids drift of relative periods, but does not freeze data or select a historical
+Profiles/identity snapshot. Profile sorting uses the requested scalar column
+(default `_updated_at`), NULLS LAST, then UUID ascending as a deterministic
+tie-break. Only the Count path gains this explicit tie-break.
+
+Invalid filters are HTTP 400. Missing properties and invalid sort properties
+retain their existing 422 codes. Valid-language capabilities not implemented
+return 422 `FilterCapabilityNotImplemented`; an unverified workspace backend
+returns 422 `UnifiedFilteringUnavailable`. Maintenance and execution failure use
+the existing MaintenanceMode/Unavailable responses; warehouse-supplied failure
+text is not exposed by this new API path. There is no Record fallback,
+error-to-UNKNOWN conversion or successful partial page. All Count attributes are
+encoded before the HTTP response is started.
+
+The physical projection is limited to 90 flattened columns and its SQL text-size
+budget to 1 MiB per page. The normalized cursor additionally bounds cumulative
+raw text/binary input to 8 MiB before variable-size decoding, allowing for
+physical encoding overhead; the handler bounds encoded attributes to 10 MiB.
+Exceeding a resource limit fails the operation. The legacy Record path is not
+subject to these new transport limits. Both drivers implement this projection
+and ordering, but Snowflake remains gated until the runtime probes pass.
+
+This increment does not define mixed-filter persistence, per-profile explanations,
+Admin editing or destination execution. Aggregate ternary counts are not a
+replacement for the per-profile evidence/diagnostics required by the complete
+1.2 contract. Source-meaning registries and the deferred coherent-source release
+guarantees remain separate work. This is the admitted Record/Count subset, not
+all Unified capabilities.

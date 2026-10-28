@@ -172,3 +172,45 @@ func TestProfileRecordSQL(t *testing.T) {
 	}
 
 }
+
+// TestProfileProjectionSQL checks the common projection and stable page shape.
+func TestProfileProjectionSQL(t *testing.T) {
+	column := warehouses.Column{Name: "profile_id", Type: types.String(), Nullable: true}
+	for _, desc := range []bool{false, true} {
+		request := warehouses.ProfileOutcomeRequest{Population: warehouses.ProfileSource{Table: "profiles",
+			Key: warehouses.Column{Name: "_kpid", Type: types.UUID()}}, Limit: 2, First: 1, MatchingOnly: true,
+			Columns: []warehouses.Column{column}, OrderBy: []warehouses.Column{column}, OrderDesc: desc}
+		dialect := profileFilterDialect()
+		query, err := profilefilter.Build(warehouses.Filter{}, request, dialect)
+		if err != nil {
+			t.Fatalf("expected projected SQL, got %v", err)
+		}
+		_, err = query.Values()
+		if err != nil {
+			t.Fatalf("expected projected transport, got %v", err)
+		}
+		q := dialect.QuoteIdentifier
+		order := q("$sort")
+		if desc {
+			order += " DESC"
+		}
+		for _, fragment := range []string{
+			q("profile_id") + " AS " + q("$value0"),
+			"ORDER BY " + order + " NULLS LAST,profile_id LIMIT 2 OFFSET 1",
+			"ORDER BY b." + order + " NULLS LAST,b.profile_id",
+			"page_size AS", dialect.ValueSize("b." + q("$value0")), "WHERE truth=TRUE",
+		} {
+			if !strings.Contains(query.SQL, fragment) {
+				t.Fatalf("expected projection fragment %s, got %s", fragment, query.SQL)
+			}
+		}
+		if len(query.Columns) != 8 || !query.Columns[7].Nullable || !types.Equal(query.Columns[7].Type, column.Type) {
+			t.Fatalf("expected nullable projected metadata-row column, got %+v", query.Columns)
+		}
+		dialect.ValueSize = nil
+		_, err = profilefilter.Build(warehouses.Filter{}, request, dialect)
+		if err == nil {
+			t.Fatal("expected missing projection adapter failure, got success")
+		}
+	}
+}

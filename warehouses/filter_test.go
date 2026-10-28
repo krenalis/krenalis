@@ -187,3 +187,36 @@ func TestValidateProfileRecord(t *testing.T) {
 	}
 
 }
+
+// TestValidateProfileProjection validates physical projection and ordering.
+func TestValidateProfileProjection(t *testing.T) {
+	for _, test := range []struct {
+		name   string
+		change func(*ProfileOutcomeRequest)
+		fail   bool
+	}{
+		{"projection", func(r *ProfileOutcomeRequest) { r.Columns = []Column{{Name: "document", Type: types.JSON()}} }, false},
+		{"sort", func(r *ProfileOutcomeRequest) { r.OrderBy = []Column{{Name: "amount", Type: types.Decimal(38, 10)}} }, false},
+		{"injected projection", func(r *ProfileOutcomeRequest) { r.Columns = []Column{{Name: "bad.column", Type: types.String()}} }, true},
+		{"object", func(r *ProfileOutcomeRequest) {
+			r.Columns = []Column{{Name: "document", Type: types.Object([]types.Property{{Name: "value", Type: types.String()}})}}
+		}, true},
+		{"undefined", func(r *ProfileOutcomeRequest) { r.Columns = []Column{{Name: "document"}} }, true},
+		{"wide", func(r *ProfileOutcomeRequest) { r.Columns = make([]Column, 91) }, true},
+		{"multiple sort", func(r *ProfileOutcomeRequest) { r.OrderBy = make([]Column, 2) }, true},
+		{"JSON sort", func(r *ProfileOutcomeRequest) { r.OrderBy = []Column{{Name: "document", Type: types.JSON()}} }, true},
+		{"array sort", func(r *ProfileOutcomeRequest) {
+			r.OrderBy = []Column{{Name: "tags", Type: types.Array(types.String())}}
+		}, true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			r := ProfileOutcomeRequest{Population: ProfileSource{Table: "profiles",
+				Key: Column{Name: "_kpid", Type: types.UUID()}}, Limit: 1}
+			test.change(&r)
+			err := ValidateProfileFilter(Filter{}, r)
+			if (err != nil) != test.fail {
+				t.Fatalf("expected projection failure %t, got %v", test.fail, err)
+			}
+		})
+	}
+}

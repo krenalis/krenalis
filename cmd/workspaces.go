@@ -877,8 +877,8 @@ func (workspace workspace) ProfileSchema(_ http.ResponseWriter, r *http.Request)
 	return ws.ProfileSchema, nil
 }
 
-// Profiles returns the profiles, the profile schema of a workspace, and an
-// estimate of their total number without applying first and limit.
+// Profiles returns the profiles, the profile schema of a workspace, and the
+// total number without applying first and limit.
 func (workspace workspace) Profiles(w http.ResponseWriter, r *http.Request) (any, error) {
 
 	ws, err := workspace.admitWorkspaceRequest(r, x1)
@@ -894,6 +894,9 @@ func (workspace workspace) Profiles(w http.ResponseWriter, r *http.Request) (any
 		err := json.Unmarshal([]byte(f), &filter)
 		if err != nil {
 			return nil, errors.BadRequest("invalid filter")
+		}
+		if filter.HasCount() && len(f) > maxRequestSize {
+			return nil, errors.BadRequest("filter exceeds maximum request size")
 		}
 		if filter == nil {
 			return nil, errors.BadRequest("filter cannot be null")
@@ -918,9 +921,36 @@ func (workspace workspace) Profiles(w http.ResponseWriter, r *http.Request) (any
 		limit = 100
 	}
 
-	profiles, schema, total, err := ws.Profiles(r.Context(), properties, filter, order, orderDesc, first, limit)
+	at := q.Get("at")
+	if q.Has("at") && at == "" {
+		return nil, errors.BadRequest("invalid at")
+	}
+	result, err := ws.QueryProfiles(r.Context(), core.ProfileQuery{Properties: properties, Filter: filter,
+		Order: order, OrderDesc: orderDesc, First: first, Limit: limit, At: at})
 	if err != nil {
 		return nil, err
+	}
+	profiles, schema, total := result.Profiles, result.Schema, result.Total
+	var attributes [][]byte
+	var evaluation []byte
+	if result.Evaluation != nil {
+		attributes = make([][]byte, len(profiles))
+		bytes := 0
+		for i, profile := range profiles {
+			encoded, marshalErr := types.Marshal(profile.Attributes, schema)
+			if marshalErr != nil {
+				return nil, errors.New("cannot encode profile attributes")
+			}
+			if len(encoded) > 10*1024*1024-bytes {
+				return nil, errors.New("profile response exceeds size limit")
+			}
+			attributes[i] = encoded
+			bytes += len(encoded)
+		}
+		evaluation, err = json.Marshal(result.Evaluation)
+		if err != nil {
+			return nil, errors.New("cannot encode profile evaluation")
+		}
 	}
 	w.Header().Set("Content-Type", "application/json")
 	b := newBodyWriter(w)
@@ -935,8 +965,12 @@ func (workspace workspace) Profiles(w http.ResponseWriter, r *http.Request) (any
 		buf := b.availableBuffer()
 		b.write(profile.UpdatedAt.AppendFormat(buf, time.RFC3339Nano))
 		b.writeString(`","attributes":`)
-		s, _ := types.Marshal(profile.Attributes, schema)
-		b.write(s)
+		if result.Evaluation == nil {
+			s, _ := types.Marshal(profile.Attributes, schema)
+			b.write(s)
+		} else {
+			b.write(attributes[i])
+		}
 		b.writeByte('}')
 	}
 	b.writeString(`],"schema":`)
@@ -945,6 +979,10 @@ func (workspace workspace) Profiles(w http.ResponseWriter, r *http.Request) (any
 	b.writeString(`,"total":`)
 	buf = b.availableBuffer()
 	b.write(strconv.AppendInt(buf, int64(total), 10))
+	if result.Evaluation != nil {
+		b.writeString(`,"evaluation":`)
+		b.write(evaluation)
+	}
 	b.writeByte('}')
 	b.flush()
 

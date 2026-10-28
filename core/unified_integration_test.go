@@ -8,6 +8,8 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"reflect"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -18,11 +20,13 @@ import (
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/core/internal/unified"
 	"github.com/krenalis/krenalis/test/testimages"
+	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/kms"
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
 	"github.com/krenalis/krenalis/warehouses/postgresql"
+	"github.com/krenalis/krenalis/warehouses/snowflake"
 
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
@@ -83,13 +87,17 @@ func TestUnifiedWorkspacePostgreSQL(t *testing.T) {
 	// The application state and warehouse live in separate schemas of this
 	// disposable database. All evidence is published before the service call.
 	_, err = database.Exec(t.Context(), `CREATE SCHEMA unified_v;
-CREATE TABLE unified_v.profiles (_kpid uuid PRIMARY KEY,country text,profile_id text,event text);
+CREATE TABLE unified_v.profiles (_kpid uuid PRIMARY KEY,country text,profile_id text,event text,
+ _updated_at timestamp(6) NOT NULL DEFAULT '2026-01-31 12:00:00.123456',document jsonb,amount numeric(38,10),
+ settings_value text,tags text[]);
 CREATE TABLE unified_v.krenalis_events (kpid uuid,message_id text PRIMARY KEY,
  event text,timestamp timestamp(3) NOT NULL,properties jsonb);
 INSERT INTO unified_v.profiles (_kpid)
  SELECT ('00000000-0000-0000-0000-'||lpad(n::text,12,'0'))::uuid FROM generate_series(1,4) n;
 UPDATE unified_v.profiles SET event='Refund',profile_id='customer-'||right(_kpid::text,1),
  country=CASE right(_kpid::text,1) WHEN '1' THEN 'IT' WHEN '2' THEN 'FR' WHEN '4' THEN 'IT' END;
+UPDATE unified_v.profiles SET document='{"currency":null}',amount=9007199254740993.0000000001,
+ settings_value='nested',tags=ARRAY['first','second'];
 INSERT INTO unified_v.krenalis_events VALUES
 ('00000000-0000-0000-0000-000000000002','e2','Purchase','2026-01-15','{"currency":"EUR"}'),
 ('00000000-0000-0000-0000-000000000003','e3','Purchase','2026-01-15','{"currency":null}'),
@@ -106,10 +114,16 @@ INSERT INTO unified_v.krenalis_events VALUES
 	platform := fmt.Sprintf("UnifiedCountTest%d", unifiedWarehouseNumber.Add(1))
 	warehouses.Register(warehouses.Platform{Name: platform}, func(warehouses.SettingsLoader, warehouses.DialWith) *postgresql.PostgreSQL { return warehouse })
 	schema, err := types.Object([]types.Property{
-		{Name: "email", Type: types.String(), ReadOptional: true},
+
 		{Name: "country", Type: types.String(), ReadOptional: true},
 		{Name: "profile_id", Type: types.String(), ReadOptional: true},
 		{Name: "event", Type: types.String(), ReadOptional: true},
+		{Name: "document", Type: types.JSON(), ReadOptional: true},
+		{Name: "amount", Type: types.Decimal(38, 10), ReadOptional: true},
+		{Name: "settings", ReadOptional: true, Type: types.Object([]types.Property{
+			{Name: "value", Type: types.String(), ReadOptional: true},
+		})},
+		{Name: "tags", Type: types.Array(types.String()), ReadOptional: true},
 	}).MarshalJSON()
 	if err != nil {
 		t.Fatalf("expected profile schema encoding, got %v", err)
@@ -120,6 +134,18 @@ INSERT INTO unified_v.krenalis_events VALUES
  SELECT '111111111111',id,'Unified Count',$1,'Normal','','','',$2,ARRAY[]::text[] FROM organizations`, platform, schema)
 	if err != nil {
 		t.Fatalf("expected workspace state fixture, got %v", err)
+	}
+	unverified := warehouses.Registered("Snowflake").New(unifiedTestSettings{json.Value(`{}`)}, nil).(*snowflake.Snowflake)
+	unverifiedPlatform := platform + "Unverified"
+	warehouses.Register(warehouses.Platform{Name: unverifiedPlatform},
+		func(warehouses.SettingsLoader, warehouses.DialWith) *snowflake.Snowflake { return unverified })
+	_, err = database.Exec(t.Context(), `INSERT INTO workspaces
+ (id,organization,name,warehouse_name,warehouse_mode,warehouse_settings,
+ kms_encrypted_warehouse_settings_key,kms_encrypted_warehouse_mcp_settings_key,profile_schema,identifiers)
+ SELECT '222222222222',id,'Unverified Count',$1,'Normal','','','',$2,ARRAY[]::text[]
+ FROM organizations`, unverifiedPlatform, schema)
+	if err != nil {
+		t.Fatalf("expected unverified backend fixture, got %v", err)
 	}
 	st, err := state.New(t.Context(), database, manager, nil, false)
 	if err != nil {
@@ -166,6 +192,28 @@ INSERT INTO unified_v.krenalis_events VALUES
 	at := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
 	count := document.Rules[0].(*FilterCountCondition)
 	countRoot := &document
+	t.Run("unverified backend API error", func(t *testing.T) {
+		store, ok := ds.Store("222222222222")
+		if !ok {
+			t.Fatal("expected unverified workspace store, got none")
+		}
+		ws, ok := st.Workspace("222222222222")
+		if !ok {
+			t.Fatal("expected unverified workspace state, got none")
+		}
+		unverified := &Workspace{core: &Core{}, store: store, workspace: ws}
+		result, err := unverified.QueryProfiles(t.Context(), ProfileQuery{Filter: countRoot,
+			At: at.Format(time.RFC3339Nano), Limit: 10})
+		if err != nil {
+			failure, ok := errors.AsType[*errors.UnprocessableError](err)
+			if !ok || failure.Code != UnifiedFilteringUnavailable {
+				t.Fatalf("expected Unprocessable UnifiedFilteringUnavailable, got %T: %v", err, err)
+			}
+		}
+		if err == nil || result != nil {
+			t.Fatalf("expected unavailable backend without semantic result, got %+v, %v", result, err)
+		}
+	})
 	result, err := workspace.unifiedProfiles(t.Context(), unifiedQuery{
 		Root: countRoot, At: at, Page: unified.Page{Limit: 10},
 	})
@@ -327,5 +375,129 @@ INSERT INTO unified_v.krenalis_events VALUES
 	if len(result.Profiles) != 2 || result.Match != 2 || result.NoMatch != 1 || result.Unknown != 1 {
 		t.Fatalf("expected pure Record totals 2/1/1 and two members, got %+v", result)
 	}
+
+	// The public service entry projects attributes and orders the membership
+	// page in the same SQL evaluation as all three totals.
+	t.Run("projected QueryProfiles", func(t *testing.T) {
+
+		query := ProfileQuery{Filter: &document, Order: "country", Limit: 10, At: at.Format(time.RFC3339Nano)}
+		result, err := workspace.QueryProfiles(t.Context(), query)
+		if err != nil {
+			t.Fatalf("expected projected service result, got %v", err)
+		}
+		if result.Total != 2 || result.Evaluation == nil || result.Evaluation.Match != 2 ||
+			result.Evaluation.NoMatch != 1 || result.Evaluation.Unknown != 1 || !result.Evaluation.At.Equal(at) {
+			t.Fatalf("expected exact totals 2/1/1 at T, got %+v", result)
+		}
+		if len(result.Profiles) != 2 || result.Profiles[0].KPID != "00000000-0000-0000-0000-000000000001" ||
+			result.Profiles[1].KPID != "00000000-0000-0000-0000-000000000003" {
+			t.Fatalf("expected IT profile then NULL-country profile, got %+v", result.Profiles)
+		}
+		for _, profile := range result.Profiles {
+			encoded, err := types.Marshal(profile.Attributes, result.Schema)
+			if err != nil {
+				t.Fatalf("expected typed projected attributes, got %v", err)
+			}
+			if !strings.Contains(string(encoded), `"amount":9007199254740993.0000000001`) ||
+				!strings.Contains(string(encoded), `"settings":{"value":"nested"}`) ||
+				!strings.Contains(string(encoded), `"document":{"currency":null}`) ||
+				!reflect.DeepEqual(profile.Attributes["tags"], []any{"first", "second"}) ||
+				profile.UpdatedAt.Format(time.RFC3339Nano) != "2026-01-31T12:00:00.123456Z" {
+				t.Fatalf("expected exact decimal, JSON, nested, array and timestamp values, got %s / %s",
+					encoded, profile.UpdatedAt)
+			}
+		}
+
+		nulls := query
+		nulls.OrderDesc = true
+		nullPage, err := workspace.QueryProfiles(t.Context(), nulls)
+		if err != nil {
+			t.Fatalf("expected descending nullable order, got %v", err)
+		}
+		if len(nullPage.Profiles) != 2 || nullPage.Profiles[0].KPID != result.Profiles[0].KPID {
+			t.Fatalf("expected NULLS LAST also in descending order, got %+v", nullPage)
+		}
+		for _, desc := range []bool{false, true} {
+			ordered := query
+			ordered.Properties, ordered.Order, ordered.OrderDesc = []string{"event"}, "profile_id", desc
+			got, err := workspace.QueryProfiles(t.Context(), ordered)
+			if err != nil {
+				t.Fatalf("expected scalar ordering outside the projection, got %v", err)
+			}
+			wantFirst := "00000000-0000-0000-0000-000000000001"
+			if desc {
+				wantFirst = "00000000-0000-0000-0000-000000000003"
+			}
+			if len(got.Profiles) != 2 || got.Profiles[0].KPID != wantFirst || len(got.Profiles[0].Attributes) != 1 {
+				t.Fatalf("expected requested scalar order desc=%t, got %+v", desc, got)
+			}
+		}
+
+		// Equal update timestamps need a UUID tie-break in either direction.
+		for _, desc := range []bool{false, true} {
+			for i, id := range []string{"00000000-0000-0000-0000-000000000001", "00000000-0000-0000-0000-000000000003"} {
+				page := query
+				page.Order, page.OrderDesc, page.First, page.Limit = "", desc, i, 1
+				page.Properties = []string{"profile_id", "event"}
+				got, err := workspace.QueryProfiles(t.Context(), page)
+				if err != nil {
+					t.Fatalf("expected ordered projected page, got %v", err)
+				}
+				if len(got.Profiles) != 1 || got.Profiles[0].KPID != id || len(got.Profiles[0].Attributes) != 2 {
+					t.Fatalf("expected stable UUID %s and requested projection, got %+v", id, got)
+				}
+			}
+		}
+		query.First = 99
+		empty, err := workspace.QueryProfiles(t.Context(), query)
+		if err != nil {
+			t.Fatalf("expected empty page with totals, got %v", err)
+		}
+		if len(empty.Profiles) != 0 || empty.Total != 2 || *empty.Evaluation != *result.Evaluation {
+			t.Fatalf("expected empty page and unchanged evaluation totals, got %+v", empty)
+		}
+		query.First, query.At = 0, ""
+		current, err := workspace.QueryProfiles(t.Context(), query)
+		if err != nil {
+			t.Fatalf("expected automatic T, got %v", err)
+		}
+		if current.Evaluation.At.After(time.Now()) || current.Evaluation.At.Nanosecond()%1000 != 0 {
+			t.Fatalf("expected fixed nonfuture microsecond T, got %s", current.Evaluation.At)
+		}
+
+		for _, filter := range []*Filter{nil, profile} {
+			legacy, legacySchema, total, err := workspace.Profiles(t.Context(), []string{"country"},
+				filter, "country", false, 0, 10)
+			if err != nil {
+				t.Fatalf("expected legacy Record result, got %v", err)
+			}
+			got, err := workspace.QueryProfiles(t.Context(), ProfileQuery{Properties: []string{"country"},
+				Filter: filter, Order: "country", Limit: 10})
+			if err != nil {
+				t.Fatalf("expected delegated Record query, got %v", err)
+			}
+			if got.Evaluation != nil || got.Total != total || !types.Equal(got.Schema, legacySchema) ||
+				!reflect.DeepEqual(got.Profiles, legacy) {
+				t.Fatalf("expected identical legacy Record result without metadata, got %+v", got)
+			}
+		}
+
+		// A payload exceeding the page budget fails before the public result is
+		// assembled. It cannot become missing data or a partial success.
+		_, err = database.Exec(t.Context(), `UPDATE unified_v.profiles SET document=to_jsonb(repeat('x',1048577))`)
+		if err != nil {
+			t.Fatalf("expected oversized fixture publication, got %v", err)
+		}
+		failed, err := workspace.QueryProfiles(t.Context(), query)
+		if err != nil {
+			if _, ok := errors.AsType[*errors.UnavailableError](err); !ok {
+				t.Fatalf("expected unavailable payload operation, got %T: %v", err, err)
+			}
+		}
+		if err == nil || failed != nil {
+			t.Fatalf("expected complete failure without partial page, got %+v, %v", failed, err)
+		}
+
+	})
 
 }

@@ -7,6 +7,8 @@ package core
 import (
 	"bytes"
 	"fmt"
+	"math/big"
+	"math/rand/v2"
 	"strings"
 	"testing"
 	"time"
@@ -304,6 +306,67 @@ func TestFilterCountInvalidBeforeUnsupported(t *testing.T) {
 			continue
 		}
 		t.Fatal("expected invalid Record sibling rejection, got success")
+	}
+
+}
+
+// TestFilterCountIntegerArithmetic compares linear decimal operations with an
+// independent big-integer oracle, including operands much larger than int64.
+func TestFilterCountIntegerArithmetic(t *testing.T) {
+
+	random := rand.New(rand.NewPCG(41, 89))
+	for _, digits := range []int{1, 2, 18, 19, 20, 31, 100, 1000, 65536} {
+		text := make([]byte, digits)
+		for i := range text {
+			text[i] = byte(random.IntN(10)) + '0'
+		}
+		text[0] = '9'
+		n, err := parseFilterCountInteger(json.Value(text))
+		if err != nil {
+			t.Fatalf("expected exact natural, got %v", err)
+		}
+		oracle, ok := new(big.Int).SetString(string(text), 10)
+		if !ok {
+			t.Fatal("expected independent integer oracle, got invalid fixture")
+		}
+		for _, unit := range []uint64{
+			1, 1000, 1000000, 1000000000, 60000000000, 3600000000000, 86400000000000, 604800000000000,
+		} {
+			want := new(big.Int).Mul(oracle, new(big.Int).SetUint64(unit)).String()
+			if got := n.scaled(unit); string(got) != want {
+				t.Fatalf("expected exact product for %d digits and unit %d, got unequal value", digits, unit)
+			}
+		}
+		for _, other := range []string{
+			"0", "1", "9223372036854775807", "18446744073709551616", string(text), string(text) + "0",
+		} {
+			otherOracle, _ := new(big.Int).SetString(other, 10)
+			if got, want := n.compare(filterCountInteger(other)), oracle.Cmp(otherOracle); got != want {
+				t.Fatalf("expected comparison %d for %d digits, got %d", want, digits, got)
+			}
+		}
+	}
+
+	// The size of a valid literal is not itself a semantic invalidity. Retain
+	// validation precedence over unsupported execution ranges.
+	for _, invalid := range []bool{false, true} {
+		c := countFilterCondition()
+		c.Operator = OpIsBetween
+		large := strings.Repeat("9", 100000)
+		c.Values = []json.Value{json.Value(large), json.Value(large)}
+		if invalid {
+			c.Values[1] = json.Value("1")
+		}
+		_, err := prepareFilterCount(c)
+		if err != nil {
+			_, unsupported := errors.AsType[*unified.UnsupportedError](err)
+			if unsupported == invalid {
+				t.Fatalf("expected invalid=%t before execution range, got %v", invalid, err)
+			}
+		}
+		if err == nil {
+			t.Fatal("expected range or validation error, got success")
+		}
 	}
 
 }

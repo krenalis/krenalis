@@ -28,11 +28,13 @@ var errInvalidData = errors.New("PostgreSQL has returned invalid data")
 // scanner implements the warehouses.Rows interface to read and normalize the
 // rows read from PostgreSQL.
 type scanner struct {
-	columns []warehouses.Column
-	rows    pgx.Rows
-	values  []any
-	dest    []any
-	index   int
+	maxBytes  int // zero disables the cumulative cursor byte budget
+	readBytes int
+	columns   []warehouses.Column
+	rows      pgx.Rows
+	values    []any
+	dest      []any
+	index     int
 }
 
 // newScanner returns a new scanner.
@@ -205,6 +207,9 @@ func (s *scanner) scanArray(src any) ([]any, error) {
 		}
 		size = int(int32(binary.BigEndian.Uint32(data[12 : 12+4])))
 		p += 8
+	}
+	if s.maxBytes > 0 && (size < 0 || size > (len(data)-p)/4) {
+		return nil, errInvalidData
 	}
 	values := make([]any, size)
 	switch oid {
@@ -445,12 +450,31 @@ func (sv scanValue) Scan(v any) error {
 	c := sv.s.columns[sv.s.index]
 	var err error
 	if v != nil {
+		if sv.s.maxBytes > 0 {
+			size := 0
+			switch raw := v.(type) {
+			case string:
+				size = len(raw)
+			case []byte:
+				size = len(raw)
+			default:
+				// Native scalar values need no variable-size decoding.
+			}
+			if size > sv.s.maxBytes-sv.s.readBytes {
+				sv.s.index = 0
+				return fmt.Errorf("profile payload exceeds transport limit")
+			}
+			sv.s.readBytes += size
+		}
 		v, err = sv.s.normalize(c.Name, c.Type, v)
 	} else if !c.Nullable {
 		return fmt.Errorf("column %s is non-nullable, but PostgreSQL returned a NULL value", c.Name)
 	}
 	if err != nil {
 		sv.s.index = 0
+		if sv.s.maxBytes > 0 {
+			return fmt.Errorf("invalid profile value for column %s", c.Name)
+		}
 		return err
 	}
 	sv.s.dest[sv.s.index] = v

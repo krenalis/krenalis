@@ -6,8 +6,8 @@ subset is profile Record, independent occurrence Count and outer AND/OR. The
 source, typed Record operands, known-JSON-String reads, mature period and accepted cardinalities
 are already determined. Each Count closes its own evidence before composition.
 
-`Build` emits one statement for an ordered UUID page and exact MATCH, NO_MATCH
-and UNKNOWN totals. Empty pages still carry totals in a marked metadata row.
+`Build` emits one statement for a projected, ordered profile page and exact
+MATCH, NO_MATCH and UNKNOWN totals. Empty pages still carry totals in a marked metadata row.
 `Statement` and `Dialect` are internal physical implementation details. Existing
 Record renderers own the 26 operations; this package does not reinterpret them.
 
@@ -17,6 +17,17 @@ are combined with closed Count outcomes in the shared AND/OR tree. Aliases for
 this projection contain `$`, outside the property namespace, to avoid collisions
 also on backends with lateral SELECT aliases. Only these internal columns are
 carried into the Count joins, never `SELECT *` from the profile source.
+Requested attribute columns and the optional scalar sort key use separate
+internal aliases. Sorting is NULLS LAST with UUID ascending as a tie-break;
+without a requested key the page retains UUID order. Empty pages have nullable
+projection slots on the metadata row, not a fabricated profile.
+
+Projection is bounded to 90 physical columns and 1 MiB of SQL text-sized page
+values before transport. Dialects supply only the value-size operation; the
+common composer guards the projected fields and reports an over-budget page as
+a technical failure. The driver scanner additionally limits cumulative raw
+text/binary input to 8 MiB before normalizing JSON, arrays or maps. Existing
+Record queries do not enable these new scanner limits.
 
 Semantic groups and leaves share the four-level/100-descendant contract.
 Expanded Record expressions have a separate, whole-filter 16,384-node budget,

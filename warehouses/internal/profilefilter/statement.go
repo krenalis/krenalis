@@ -62,6 +62,7 @@ type Argument struct {
 
 // Dialect supplies physical operations used only below the warehouse boundary.
 type Dialect struct {
+	ValueSize       func(string) string
 	QuoteIdentifier func(string) string
 	Record          func(warehouses.Expr) (string, error)
 	KnownText       func(warehouses.Column, []string) (string, error)

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"math"
 
+	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/warehouses"
 )
 
@@ -32,11 +33,13 @@ func Read(ctx context.Context, rows warehouses.Rows, request warehouses.ProfileO
 	result = &warehouses.ProfileOutcomes{Profiles: []warehouses.ProfileOutcome{}}
 	seen, metadata := 0, false
 	var previous string
+	identities := map[string]bool{}
+	bytesRead := 0
 	for rows.Next() {
 		if seen > request.Limit {
 			return nil, fmt.Errorf("warehouses/internal/profilefilter: result row limit exceeded")
 		}
-		values := make([]any, 7)
+		values := make([]any, 7+len(request.Columns))
 		err := rows.Scan(values...)
 		if err != nil {
 			return nil, err
@@ -46,7 +49,8 @@ func Read(ctx context.Context, rows warehouses.Rows, request warehouses.ProfileO
 			return nil, fmt.Errorf("warehouses/internal/profilefilter: invalid source diagnostic")
 		}
 		if failures != 0 {
-			return nil, fmt.Errorf("warehouses/internal/profilefilter: occurrence source violates the prepared Count contract")
+			return nil, fmt.Errorf("warehouses/internal/profilefilter: occurrence source violates " +
+				"the prepared Count contract or profile payload exceeds its limit")
 		}
 		m, mok := values[3].(int)
 		f, fok := values[4].(int)
@@ -76,7 +80,8 @@ func Read(ctx context.Context, rows warehouses.Rows, request warehouses.ProfileO
 			if err != nil {
 				return nil, err
 			}
-			if id <= previous || len(result.Profiles) >= request.Limit {
+			if (len(request.OrderBy) == 0 && id <= previous) || identities[id] ||
+				len(result.Profiles) >= request.Limit {
 				return nil, fmt.Errorf("warehouses/internal/profilefilter: invalid profile page order or size")
 			}
 			truth := warehouses.FilterUnknown
@@ -93,7 +98,25 @@ func Read(ctx context.Context, rows warehouses.Rows, request warehouses.ProfileO
 			if request.MatchingOnly && truth != warehouses.FilterMatch {
 				return nil, fmt.Errorf("warehouses/internal/profilefilter: unexpected non-matching profile")
 			}
-			result.Profiles = append(result.Profiles, warehouses.ProfileOutcome{ID: id, Truth: truth})
+			for i, value := range values[7:] {
+				if value == nil && !request.Columns[i].Nullable {
+					return nil, fmt.Errorf("warehouses/internal/profilefilter: missing required profile value")
+				}
+				switch value := value.(type) {
+				case string:
+					bytesRead += len(value)
+				case json.Value:
+					bytesRead += len(value)
+				default:
+					// Other normalized values are bounded by their scalar/schema type.
+				}
+				if bytesRead > warehouses.MaxProfilePageBytes {
+					return nil, fmt.Errorf("warehouses/internal/profilefilter: profile payload exceeds limit")
+				}
+			}
+			result.Profiles = append(result.Profiles, warehouses.ProfileOutcome{ID: id, Truth: truth,
+				Values: values[7:]})
+			identities[id] = true
 			previous = id
 		}
 		seen++
@@ -107,6 +130,9 @@ func Read(ctx context.Context, rows warehouses.Rows, request warehouses.ProfileO
 	}
 	if seen == 0 {
 		return nil, fmt.Errorf("warehouses/internal/profilefilter: missing profile totals")
+	}
+	if request.MatchingOnly && int64(len(result.Profiles)) > result.Match {
+		return nil, fmt.Errorf("warehouses/internal/profilefilter: matching page exceeds its total")
 	}
 
 	return result, nil

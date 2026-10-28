@@ -58,11 +58,13 @@ func (warehouse *Snowflake) ProfileOutcomes(ctx context.Context, filter warehous
 		_ = rows.Close()
 		return nil, fmt.Errorf("warehouses/snowflake: profile outcome schema mismatch")
 	}
-	return profilefilter.Read(ctx, newScanner(query.Columns, rows), request)
+	scanner := newScanner(query.Columns, rows)
+	scanner.maxBytes = 8 * warehouses.MaxProfilePageBytes
+	return profilefilter.Read(ctx, scanner, request)
 }
 
 func profileFilterDialect() profilefilter.Dialect {
-	return profilefilter.Dialect{QuoteIdentifier: quoteIdent, Record: profileRecord,
+	return profilefilter.Dialect{ValueSize: profileValueSize, QuoteIdentifier: quoteIdent, Record: profileRecord,
 		KnownText: profileKnownText, Parameter: profileParameter}
 }
 
@@ -116,4 +118,8 @@ func profileRecord(expr warehouses.Expr) (text string, err error) {
 		return "", err
 	}
 	return b.String(), nil
+}
+
+func profileValueSize(expression string) string {
+	return "OCTET_LENGTH(TO_VARCHAR(" + expression + "))"
 }

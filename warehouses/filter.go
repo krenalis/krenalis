@@ -10,6 +10,9 @@ import (
 	"time"
 )
 
+// MaxProfilePageBytes bounds variable-size values in a Unified profile page.
+const MaxProfilePageBytes = 1 << 20
+
 // Filter is a backend-independent filter prepared by core. It has no wire or
 // persistence format. A nil Root matches every profile in the requested
 // population.
@@ -139,18 +142,25 @@ func (s ProfileSource) Validate() error {
 
 // ProfileOutcomeRequest selects an internal outcome page, independent of the
 // filter. MatchingOnly selects segment membership; all three totals always
-// describe the whole population. Neither ordering nor page freezes later reads.
+// describe the whole population. Columns projects flat population fields;
+// OrderBy admits one scalar key, NULLS LAST, then UUID ascending. Without a
+// key the order is UUID ascending. Neither ordering nor page freezes later reads.
 type ProfileOutcomeRequest struct {
 	Population   ProfileSource
+	Columns      []Column
+	OrderBy      []Column
+	OrderDesc    bool
 	First        int
 	Limit        int
 	MatchingOnly bool
 }
 
-// ProfileOutcome contains one profile's semantic result.
+// ProfileOutcome contains one profile's semantic result and its projected
+// values in request-column order.
 type ProfileOutcome struct {
-	ID    string
-	Truth FilterTruth
+	ID     string
+	Truth  FilterTruth
+	Values []any
 }
 
 // ProfileOutcomes is complete only when the operation returns no error.
