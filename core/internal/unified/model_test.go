@@ -25,7 +25,9 @@ func TestValidate(t *testing.T) {
 	}{
 		{"shared g", func(c *Count) { c.Shared = &SharedBoolean{Fact: "g", EqualTo: true} }, true},
 		{"shared false comparison", func(c *Count) { c.Shared = &SharedBoolean{Fact: "g", EqualTo: false} }, true},
-		{"unknown grain", func(c *Count) { c.Scope.Grain = "business-order" }, true},
+		{"unknown grain", func(c *Count) { c.Scope.Grain = "business-order" }, false},
+		{"arbitrary grain", func(c *Count) { c.Scope.Grain = "banana" }, false},
+		{"missing grain", func(c *Count) { c.Scope.Grain = "" }, false},
 		{"too large", func(c *Count) { c.Test.Value = 1 << 63 }, true},
 		{"invalid period", func(c *Count) { c.Scope.FullHistory = false; c.Scope.Start = at; c.Scope.End = at }, false},
 		{"history bounds", func(c *Count) { c.Scope.FullHistory = true }, false},
@@ -133,28 +135,40 @@ func TestValidateElapsedPeriod(t *testing.T) {
 // TestValidateInvalidBeforeUnsupported gives shape errors precedence across
 // the canonical tree, including unavailable earlier siblings and T precision.
 func TestValidateInvalidBeforeUnsupported(t *testing.T) {
+
+	at := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
+	unavailable := Count{Scope: Scope{Event: "Purchase", Grain: "registered-message",
+		Start: at.Add(-time.Hour), End: at}, Shared: &SharedBoolean{Fact: "g"}}
+	err := Validate(&Rule{Count: &unavailable}, at, Page{Limit: 1})
+	if err != nil {
+		if _, unsupported := errors.AsType[*UnsupportedError](err); !unsupported {
+			t.Fatalf("expected an unsupported sibling fixture, got %v", err)
+		}
+	}
+	if err == nil {
+		t.Fatal("expected an unsupported sibling fixture, got success")
+	}
+
 	for _, test := range []struct {
 		name   string
 		change func(*Count)
 	}{
-		{"event", func(c *Count) { c.Scope.Event = ""; c.Scope.Grain = "business-order" }},
+		{"event", func(c *Count) { c.Scope.Event = ""; c.Shared = &SharedBoolean{Fact: "g"} }},
+		{"grain", func(c *Count) { c.Scope.Grain = "business-order"; c.Shared = &SharedBoolean{Fact: "g"} }},
 		{"between", func(c *Count) { c.Test = CountTest{Operator: Between, Value: 1 << 63, Upper: 1} }},
 		{"operator", func(c *Count) { c.Test = CountTest{Operator: 255, Value: 1 << 63} }},
 		{"minimum", func(c *Count) { c.Minimum = 1 << 63 }},
 		{"period", func(c *Count) { c.Scope.Start = c.Scope.End; c.Shared = &SharedBoolean{Fact: "g"} }},
 		{"period precision", func(c *Count) { c.Scope.Start = c.Scope.End.Add(time.Nanosecond); c.Scope.End = c.Scope.Start }},
-		{"qualification", func(c *Count) { c.Where = &state.Where{Operator: state.OpAnd}; c.Scope.Grain = "business-order" }},
+		{"qualification", func(c *Count) { c.Where = &state.Where{Operator: state.OpAnd}; c.Shared = &SharedBoolean{Fact: "g"} }},
 		{"currency", func(c *Count) { c.Currency = &NativeCurrency{}; c.Where = &state.Where{Operator: state.OpAnd} }},
 	} {
 		for _, reversed := range []bool{false, true} {
 			for _, nanos := range []time.Duration{0, time.Nanosecond} {
 				t.Run(fmt.Sprintf("%s/reversed=%v/T+%s", test.name, reversed, nanos), func(t *testing.T) {
-					at := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
 					c := Count{Scope: Scope{Event: "Purchase", Grain: "registered-message",
 						Start: at.Add(-time.Hour), End: at}}
 					test.change(&c)
-					unavailable := Count{Scope: Scope{Event: "Purchase", Grain: "business-order",
-						Start: at.Add(-time.Hour), End: at}}
 					children := []Rule{{Count: &unavailable}, {Count: &c}}
 					if reversed {
 						children[0], children[1] = children[1], children[0]
@@ -171,12 +185,11 @@ func TestValidateInvalidBeforeUnsupported(t *testing.T) {
 			}
 		}
 	}
+
 	for _, size := range []int{100, 101} {
-		at := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
 		root := Rule{Operator: state.OpAnd, Children: make([]Rule, size)}
 		for i := range root.Children {
-			root.Children[i].Count = &Count{Scope: Scope{Event: "Purchase", Grain: "business-order",
-				Start: at.Add(-time.Hour), End: at}}
+			root.Children[i] = Rule{Count: &unavailable}
 		}
 		err := Validate(&root, at, Page{Limit: 1})
 		if err != nil {
@@ -188,6 +201,7 @@ func TestValidateInvalidBeforeUnsupported(t *testing.T) {
 		}
 		t.Fatal("expected canonical budget or capability error, got success")
 	}
+
 }
 
 // TestValidateProfileRecord checks the leaf union and mixed structural limits.

@@ -287,6 +287,9 @@ func validateRule(rule Rule, at time.Time, depth int, nodes *int) error {
 		return fmt.Errorf("Count cannot contain outer rules")
 	}
 	c := rule.Count
+	if c.Scope.Grain != "registered-message" {
+		return fmt.Errorf("invalid recorded event grain")
+	}
 	if len(c.Scope.Event) == 0 || len(c.Scope.Event) > 1024 ||
 		!utf8.ValidString(c.Scope.Event) || strings.ContainsRune(c.Scope.Event, 0) {
 		return fmt.Errorf("invalid recorded event selector")
@@ -325,9 +328,6 @@ func validateRule(rule Rule, at time.Time, depth int, nodes *int) error {
 	}
 	if c.Shared != nil {
 		return &UnsupportedError{Capability: "shared governed qualification facts"}
-	}
-	if c.Scope.Grain != "registered-message" {
-		return &UnsupportedError{Capability: "occurrence identity/grain other than registered-message"}
 	}
 	if c.Minimum > math.MaxInt64 || c.Test.Value > math.MaxInt64 || c.Test.Upper > math.MaxInt64 {
 		return &UnsupportedError{Capability: "Count bounds beyond signed 64-bit range"}

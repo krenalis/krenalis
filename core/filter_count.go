@@ -287,8 +287,8 @@ func (period FilterPeriod) scope(source FilterCountSource) (unified.Scope, error
 	if source.Kind != "recordedEvents" {
 		return unified.Scope{}, errors.New("invalid Count source kind")
 	}
-	if source.Grain == "" {
-		return unified.Scope{}, errors.New("Count source must declare its grain")
+	if source.Grain != "registered-message" {
+		return unified.Scope{}, errors.New("invalid recorded event grain")
 	}
 	if len(source.Name) == 0 || len(source.Name) > 1024 ||
 		!utf8.ValidString(source.Name) || strings.ContainsRune(source.Name, 0) {

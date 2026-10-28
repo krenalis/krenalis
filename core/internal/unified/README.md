@@ -202,8 +202,13 @@ Italy with no recorded Purchase in the previous 30 elapsed days:
 ```
 
 - Source kind is `recordedEvents`; `name` is a raw event name. `grain` is
-  mandatory: this increment executes only `registered-message`. No source
-  ontology or governed currency definition is inferred from raw names/paths.
+  mandatory and admits only the built-in `registered-message` projection.
+  Other names are invalid input in both the public preparer and internal
+  model, not unavailable capabilities. A bare string cannot identify a
+  governed grain definition and revision. Future governed references must
+  distinguish unresolved definitions from known unavailable capabilities.
+  No source ontology or governed currency definition is inferred from raw
+  names/paths.
 - `operator` admits exactly `is`, `is not`, `is less than`,
   `is less than or equal to`, `is greater than`, `is greater than or equal to`,
   and `is between`. There are no Count membership, data-state or generic NOT
@@ -227,6 +232,16 @@ Italy with no recorded Purchase in the previous 30 elapsed days:
   Values are multiplied with checked integer arithmetic; months/years are not
   elapsed units. Relative periods retain their kind, offsets and units on the
   wire instead of becoming bounds resolved against one T.
+
+Required Count configuration members must be present and non-null. Omitting
+`minimum` means no extra sample guard; `minimum:null` is invalid. Omitting
+`where` or supplying `where:null` means no additional qualification, and the
+encoder omits it. This is a filter-specific absence convention, not a general
+default for optional members. Fields from another temporal variant are invalid
+even when null. Count `values:null` and `values:[null]` are invalid; Record
+literal JSON null and existing Record omission/null behavior stay unchanged.
+The absence of a root filter keeps each endpoint's existing contract, including
+the rejection of `filter=null` in query strings.
 
 Encoding/decoding is distinct from semantic validation, as for existing Record
 conditions. Unknown/duplicate members and ambiguous shapes are rejected;
@@ -263,9 +278,8 @@ that internal storage is chosen here. The canonical/internal `Rule` and
 JSONB retains natural numeric values but normalizes member order and some
 number spellings, including `-0` and exponent notation. Syntax and semantic
 validation must precede any future save; byte-identical storage is not implied.
-Unknown nonempty grain names and the treatment of null members still need an
-explicit storage contract before persisting valid-but-unavailable documents;
-this change preserves their existing admission behavior.
+Saving valid but unavailable filters or unresolved governed references as
+drafts still requires a product decision when persistence is implemented.
 
 ## Verification and activation
 

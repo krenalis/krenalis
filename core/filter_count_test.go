@@ -219,6 +219,7 @@ func TestFilterCountInvalidBeforeUnsupported(t *testing.T) {
 		{"source", func(c *FilterCountCondition) { c.Count.Source.Kind = "SQL" }},
 		{"event", func(c *FilterCountCondition) { c.Count.Source.Name = "" }},
 		{"grain", func(c *FilterCountCondition) { c.Count.Source.Grain = "" }},
+		{"unknown grain", func(c *FilterCountCondition) { c.Count.Source.Grain = "business-order" }},
 		{"minimum", func(c *FilterCountCondition) {
 			c.Values = filterValues(0)
 			c.Count.Minimum = json.Value(`18446744073709551616`)
@@ -349,6 +350,93 @@ func TestFilterCountLimits(t *testing.T) {
 	}
 }
 
+// TestFilterCountNulls distinguishes missing configuration from JSON literals.
+func TestFilterCountNulls(t *testing.T) {
+
+	type testCase struct {
+		name, condition string
+		valid           bool
+	}
+	cases := []testCase{
+		{"optional fields omitted", countConditionJSON, true},
+		{"where null", strings.Replace(countConditionJSON, `"source":`, `"where":null,"source":`, 1), true},
+		{"minimum null", strings.Replace(countConditionJSON, `"source":`, `"minimum":null,"source":`, 1), false},
+		{"Count null literal", strings.Replace(countConditionJSON, `"values":[0]`, `"values":[null]`, 1), false},
+		{"foreign temporal null", strings.Replace(countConditionJSON, `"kind":"elapsedLookback"`, `"kind":"elapsedLookback","older":null`, 1), false},
+		{"Record membership null literal", strings.Replace(countConditionJSON, `"source":`, `"where":{"operator":"and","rules":[{"property":"properties.currency","operator":"is one of","values":[null]}]},"source":`, 1), true},
+		{"Record comparison null literal", strings.Replace(countConditionJSON, `"source":`, `"where":{"operator":"and","rules":[{"property":"properties.currency","operator":"is","values":[null]}]},"source":`, 1), false},
+	}
+	for _, path := range [][]string{
+		{"count"}, {"operator"}, {"values"}, {"count", "source"}, {"count", "period"},
+		{"count", "source", "kind"}, {"count", "source", "name"}, {"count", "source", "grain"},
+		{"count", "period", "kind"}, {"count", "period", "duration"},
+		{"count", "period", "duration", "value"}, {"count", "period", "duration", "unit"},
+	} {
+		value, ok := json.Value(countConditionJSON).Get(path)
+		if !ok {
+			t.Fatalf("expected required member %v in the fixture, got none", path)
+		}
+		key := `"` + path[len(path)-1] + `":`
+		member := key + string(value)
+		omitted := strings.Replace(countConditionJSON, member+",", "", 1)
+		if omitted == countConditionJSON {
+			omitted = strings.Replace(countConditionJSON, ","+member, "", 1)
+		}
+		cases = append(cases,
+			testCase{strings.Join(path, ".") + " omitted", omitted, false},
+			testCase{strings.Join(path, ".") + " null", strings.Replace(countConditionJSON, member, key+"null", 1), false})
+	}
+
+	schema := types.Object([]types.Property{{Name: "country", Type: types.String()}})
+	for _, test := range cases {
+		t.Run(test.name, func(t *testing.T) {
+			if !json.Valid([]byte(test.condition)) {
+				t.Fatalf("expected valid fixture JSON, got %s", test.condition)
+			}
+			var filter Filter
+			err := json.Unmarshal([]byte(`{"operator":"and","rules":[`+test.condition+`]}`), &filter)
+			var prepared unified.Rule
+			if err == nil {
+				nodes := 0
+				prepared, err = prepareUnifiedRule(&filter, schema, 0, &nodes)
+			}
+			if err == nil {
+				err = unified.Validate(&prepared, time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC), unified.Page{Limit: 1})
+			}
+			if err != nil {
+				if test.valid {
+					t.Fatalf("expected admitted null/omission semantics, got %v", err)
+				}
+				if _, unsupported := errors.AsType[*unified.UnsupportedError](err); unsupported {
+					t.Fatalf("expected invalid configuration, got %v", err)
+				}
+				return
+			}
+			if !test.valid {
+				t.Fatal("expected invalid null or missing member, got success")
+			}
+			if prepared.Children[0].Count.Minimum != 0 {
+				t.Fatalf("expected no extra sample minimum, got %d", prepared.Children[0].Count.Minimum)
+			}
+			encoded, err := json.Marshal(&filter)
+			if err != nil {
+				t.Fatalf("expected admitted filter encoding, got %v", err)
+			}
+			count := filter.Rules[0].(*FilterCountCondition)
+			if count.Count.Where == nil {
+				if strings.Contains(string(encoded), `"where"`) {
+					t.Fatalf("expected omitted unfiltered where, got %s", encoded)
+				}
+			}
+			if strings.Contains(test.condition, `"values":[null]`) &&
+				!strings.Contains(string(encoded), `"values":[null]`) {
+				t.Fatalf("expected preserved Record JSON null literal, got %s", encoded)
+			}
+		})
+	}
+
+}
+
 // TestFilterCountPeriodRanges checks both sides of each duration boundary.
 func TestFilterCountPeriodRanges(t *testing.T) {
 	for _, test := range []struct {
@@ -411,7 +499,7 @@ func TestFilterCountPeriods(t *testing.T) {
 		{"years", func(c *FilterCountCondition) { c.Count.Period.Duration.Unit = "year" }, false},
 		{"duration overflow", func(c *FilterCountCondition) { c.Count.Period.Duration.Value = json.Value(`106752`) }, true},
 		{"missing grain", func(c *FilterCountCondition) { c.Count.Source.Grain = "" }, false},
-		{"other grain", func(c *FilterCountCondition) { c.Count.Source.Grain = "business-order" }, true},
+		{"other grain", func(c *FilterCountCondition) { c.Count.Source.Grain = "business-order" }, false},
 		{"unknown source", func(c *FilterCountCondition) { c.Count.Source.Kind = "SQL" }, false},
 		{"missing instant", func(c *FilterCountCondition) { c.Count.Period = FilterPeriod{Kind: "absoluteHalfOpen"} }, false},
 		{"conflicting fields", func(c *FilterCountCondition) { c.Count.Period.Older = &FilterDuration{} }, false},
