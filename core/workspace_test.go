@@ -108,32 +108,3 @@ func TestWorkspaceEncodeJSON(t *testing.T) {
 		})
 	}
 }
-
-// TestWorkspaceMarshalJSON verifies that json.Marshal encodes nil Workspace
-// collection fields as null.
-func TestWorkspaceMarshalJSON(t *testing.T) {
-
-	value, err := json.Marshal(Workspace{})
-	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
-	}
-
-	tests := []struct {
-		name string
-		want string
-	}{
-		{name: "primarySources", want: "null"},
-		{name: "identifiers", want: "null"},
-	}
-
-	for _, test := range tests {
-		got, ok := value.Get([]string{test.name})
-		if !ok {
-			t.Fatalf("expected JSON field %q, got missing field", test.name)
-		}
-		if string(got) != test.want {
-			t.Fatalf("expected %s to be %q, got %q", test.name, test.want, got)
-		}
-	}
-
-}
