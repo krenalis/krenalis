@@ -237,6 +237,17 @@ It also checks NativeCurrency Boolean/Number/Object/Array and verbatim Strings.
 checks that the current aggregate expressions have bigint result metadata.
 These probes do not demonstrate Snowflake runtime behavior or production scale.
 
+`TestUnifiedWritersPostgreSQL` starts from schema-decoded inputs and uses the
+real batch/event identity writers and EventWriter, their flattening and
+asynchronous flushers, PostgreSQL COPY/merge, and a completed Identity Resolution
+publication/attribution before querying Unified. Eighteen profiles from two
+connections cover no events, missing JSON, JSON null, empty objects, nested
+values, exact JSON integers above 2^53, ordinary String values, raw/governed
+currency and mixed Record/Count conditions. Missing and JSON null remain
+distinct; an empty flattened object has no present descendant, as in the
+existing Profiles layout. The fixture has no concurrent writers or Identity
+Resolution; it does not establish a concurrent read guarantee.
+
 `TestUnifiedPreparedBudget` builds a semantically valid 99-condition tree on a
 170-field object. Its deterministic physical-budget error is returned before
 warehouse execution and is not classified as `UnavailableError`.
@@ -258,9 +269,9 @@ physical adapter and transport implementation, shared-compiler/local tests and
 an explicit **inactive Unified gate**. No Snowflake credentials were configured
 for this work; no remote query, scanner, precision/overflow, timestamp, NULL,
 subquery or count/page conformance is claimed. Real Snowflake probes and the
-common runtime fixtures must pass before changing that gate. The JSON-null
-fixtures currently write SQL directly: writer round-trips still need checking
-on both platforms before product activation. Snowflake activation also requires
+common runtime fixtures must pass before changing that gate. PostgreSQL writer
+round-trips are verified by the fixture above; Snowflake writer/CSV round-trips
+remain unverified. Snowflake activation also requires
 resolving the declared ordinary-text collation and Float/NaN questions.
 
 Example targeted commands, with Docker available and dependencies vendored:
@@ -268,7 +279,7 @@ Example targeted commands, with Docker available and dependencies vendored:
 ```sh
 GOTOOLCHAIN=local GOPROXY=off GOSUMDB=off KRENALIS_SKIP_SNOWFLAKE_TESTS=true \
 go test -mod=vendor ./core ./core/internal/datastore \
-  -run '^(TestUnifiedWorkspacePostgreSQL|TestUnifiedProfiles.*|TestUnifiedSourcePostgreSQL|TestUnifiedProfileRecordPostgreSQL)$' -count=1
+  -run '^(TestUnifiedWorkspacePostgreSQL|TestUnifiedProfiles.*|TestUnifiedSourcePostgreSQL|TestUnifiedProfileRecordPostgreSQL|TestUnifiedWritersPostgreSQL)$' -count=1
 
 GOTOOLCHAIN=local GOPROXY=off GOSUMDB=off \
 go test -mod=vendor ./core ./core/internal/unified ./core/internal/datastore \
