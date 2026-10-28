@@ -27,6 +27,8 @@ Keep declarations in a predictable order. Place exported type groups before unex
 3. Its exported methods, sorted alphabetically.
 4. Its unexported methods, sorted alphabetically.
 
+As an exception, a type with no methods declared on it that appears in the declaration of another type, and is otherwise used only by that type's constructors and methods, may be declared immediately after it, before its constructors and methods. Several such types follow in the order of their first use.
+
 After the type groups, place package-level functions in alphabetical order.
 
 Place package-level constants and variables at the beginning of the file when they have broad relevance. When one is specific to a single function or method, or is otherwise of secondary importance, declare it immediately before the function or method that uses it.
