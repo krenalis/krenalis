@@ -2047,9 +2047,7 @@ func (core *Core) removeMCPWarehouse(ws string) {
 //     profile schema update) is already running.
 //   - ConnectionNotExist, if a connection referred in the primary sources does
 //     not exist.
-func (core *Core) startAlterProfileSchema(ctx context.Context, ws string, schema types.Type,
-	assignedRoles ProfileRoleAssignments, primarySources map[string]string,
-	operations []warehouses.AlterOperation) error {
+func (core *Core) startAlterProfileSchema(ctx context.Context, ws string, schema types.Type, propertyRoles PropertyRoles, primarySources map[string]string, operations []warehouses.AlterOperation) error {
 	core.mustBeOpen()
 	opID := uuid.New()
 	n := state.StartAlterProfileSchema{
@@ -2057,7 +2055,7 @@ func (core *Core) startAlterProfileSchema(ctx context.Context, ws string, schema
 		ID:             opID.String(),
 		StartTime:      time.Now().UTC(),
 		Schema:         schema,
-		AssignedRoles:  state.ProfileRoleAssignments(assignedRoles),
+		PropertyRoles:  state.PropertyRoles(propertyRoles),
 		PrimarySources: primarySources,
 		Operations:     operations,
 	}
@@ -2115,8 +2113,8 @@ func (core *Core) startAlterProfileSchema(ctx context.Context, ws string, schema
 			" alter_profile_schema_start_time = $10, alter_profile_schema_end_time = NULL," +
 			" alter_profile_schema_error = NULL WHERE id = $11"
 		_, err = tx.Exec(ctx, query, n.ID, n.Schema, n.PrimarySources, n.Operations,
-			n.AssignedRoles.FirstName, n.AssignedRoles.LastName, n.AssignedRoles.Email, n.AssignedRoles.Country,
-			n.AssignedRoles.Photo, n.StartTime, n.Workspace)
+			n.PropertyRoles.FirstName, n.PropertyRoles.LastName, n.PropertyRoles.Email, n.PropertyRoles.Country,
+			n.PropertyRoles.Photo, n.StartTime, n.Workspace)
 		if err != nil {
 			return nil, err
 		}

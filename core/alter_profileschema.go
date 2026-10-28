@@ -19,7 +19,7 @@ import (
 	"github.com/krenalis/krenalis/warehouses"
 )
 
-// AlterProfileSchema alters the profile schema, assigned roles and primary
+// AlterProfileSchema alters the profile schema, property roles and primary
 // sources of the workspace. schema must be a valid schema.
 //
 // The properties within profile schema cannot specify a prefilled value, cannot
@@ -27,7 +27,7 @@ import (
 // nullable; there are also limits on types, which are documented in
 // "datastore/README.md".
 //
-// assignedRoles contains the property paths assigned to Profile roles.
+// propertyRoles maps roles to property paths.
 //
 // Moreover, schema cannot contain conflicting properties, meaning properties
 // whose representations as columns in the data warehouse would have the same
@@ -47,7 +47,7 @@ import (
 //   - InspectionMode, if the data warehouse is in inspection mode.
 //   - InvalidAlterSchema, if the alter schema is invalid.
 //   - OperationAlreadyExecuting, if another operation is already executing.
-func (this *Workspace) AlterProfileSchema(ctx context.Context, schema types.Type, assignedRoles ProfileRoleAssignments, primarySources map[string]string, rePaths map[string]any) error {
+func (this *Workspace) AlterProfileSchema(ctx context.Context, schema types.Type, propertyRoles PropertyRoles, primarySources map[string]string, rePaths map[string]any) error {
 	this.core.mustBeOpen()
 	if primarySources == nil {
 		primarySources = map[string]string{}
@@ -77,7 +77,7 @@ func (this *Workspace) AlterProfileSchema(ctx context.Context, schema types.Type
 	if err != nil {
 		return errors.Unprocessable(InvalidAlterSchema, "cannot alter the schema as specified: %s", err)
 	}
-	if err := validateProfileRoleAssignments(schema, assignedRoles); err != nil {
+	if err := validatePropertyRoles(schema, propertyRoles); err != nil {
 		return errors.BadRequest("%s", err)
 	}
 	for _, s := range primarySources {
@@ -95,7 +95,7 @@ func (this *Workspace) AlterProfileSchema(ctx context.Context, schema types.Type
 	if this.workspace.IR.ID != nil || this.workspace.AlterProfileSchema.ID != nil {
 		return errors.Unprocessable(OperationAlreadyExecuting, "another operation is already executing")
 	}
-	err = this.core.startAlterProfileSchema(ctx, this.workspace.ID, schema, assignedRoles, primarySources, operations)
+	err = this.core.startAlterProfileSchema(ctx, this.workspace.ID, schema, propertyRoles, primarySources, operations)
 	return err
 }
 
@@ -288,33 +288,33 @@ func validatePrimarySources(schema types.Type, primarySources map[string]string)
 	return nil
 }
 
-// validateProfileRoleAssignments validates assignments against schema.
-func validateProfileRoleAssignments(schema types.Type, assignments ProfileRoleAssignments) error {
-
-	assignedProperties := map[string]string{}
+// validatePropertyRoles validates roles against schema.
+func validatePropertyRoles(schema types.Type, roles PropertyRoles) error {
+	propertyToRole := map[string]string{}
 	properties := schema.Properties()
 	for _, assignment := range [...]struct {
 		role string
 		path string
 	}{
-		{role: "first_name", path: assignments.FirstName},
-		{role: "last_name", path: assignments.LastName},
-		{role: "email", path: assignments.Email},
-		{role: "country", path: assignments.Country},
-		{role: "photo", path: assignments.Photo},
+		{role: "first_name", path: roles.FirstName},
+		{role: "last_name", path: roles.LastName},
+		{role: "email", path: roles.Email},
+		{role: "country", path: roles.Country},
+		{role: "photo", path: roles.Photo},
 	} {
 		if assignment.path == "" {
 			continue
 		}
 		if !types.IsValidPropertyPath(assignment.path) {
-			return fmt.Errorf("profile role %q has invalid property path %q", assignment.role, assignment.path)
+			return fmt.Errorf("property role %q has invalid property path %q", assignment.role, assignment.path)
 		}
 		property, err := properties.ByPath(assignment.path)
 		if err != nil {
-			return fmt.Errorf("profile role %q refers to property %q, which does not exist", assignment.role, assignment.path)
+			return fmt.Errorf("property role %q refers to property %q, which does not exist",
+				assignment.role, assignment.path)
 		}
-		if previousRole, ok := assignedProperties[assignment.path]; ok {
-			return fmt.Errorf("property %q is assigned to both profile roles %q and %q",
+		if previousRole, ok := propertyToRole[assignment.path]; ok {
+			return fmt.Errorf("property %q is assigned to both roles %q and %q",
 				assignment.path, previousRole, assignment.role)
 		}
 		compatible := false
@@ -328,13 +328,14 @@ func validateProfileRoleAssignments(schema types.Type, assignments ProfileRoleAs
 			compatible = singleValue && property.Type.Semantics() == types.CountrySemantics
 		case "photo":
 			compatible = singleValue && property.Type.Semantics() == types.URLSemantics
+		default:
+			return fmt.Errorf("core: unexpected property role %q", assignment.role)
 		}
 		if !compatible {
-			return fmt.Errorf("property %q is not compatible with profile role %q", assignment.path, assignment.role)
+			return fmt.Errorf("property %q is not compatible with role %q", assignment.path, assignment.role)
 		}
-		assignedProperties[assignment.path] = assignment.role
+		propertyToRole[assignment.path] = assignment.role
 	}
-
 	return nil
 }
 

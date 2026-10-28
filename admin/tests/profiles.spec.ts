@@ -1,7 +1,7 @@
 import { expect, Locator, Page, test } from '@playwright/test';
 import { CountryFormat, ObjectType, Property } from '../src/lib/api/types/types';
 import { ResponseProfile } from '../src/lib/api/types/responses';
-import { ProfileRoleAssignments } from '../src/lib/api/types/workspace';
+import { ProfilePropertyRoles } from '../src/lib/api/types/workspace';
 import { PROFILES_PROPERTIES_KEY } from '../src/constants/storage';
 import { adminURL, login, logout } from './utils';
 
@@ -54,7 +54,7 @@ const getProfileSchema = (countryFormat: CountryFormat): ObjectType => ({
 
 const profilePhoto = 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
 
-const assignedRoles: ProfileRoleAssignments = {
+const propertyRoles: ProfilePropertyRoles = {
 	firstName: 'first_name',
 	lastName: 'last_name',
 	email: 'email',
@@ -121,7 +121,7 @@ const profiles: ResponseProfile[] = [
 ];
 
 interface MockProfilesOptions {
-	assignedRoles?: ProfileRoleAssignments;
+	propertyRoles?: ProfilePropertyRoles;
 	profilesForRequest?: (url: URL) => ResponseProfile[];
 	responseProfiles?: ResponseProfile[];
 	schema?: ObjectType;
@@ -130,7 +130,7 @@ interface MockProfilesOptions {
 const mockProfiles = async (
 	page: Page,
 	{
-		assignedRoles: roleAssignments = assignedRoles,
+		propertyRoles: roleAssignments = propertyRoles,
 		profilesForRequest,
 		responseProfiles = profiles,
 		schema = profileSchema,
@@ -140,7 +140,7 @@ const mockProfiles = async (
 		const response = await route.fetch();
 		const body = await response.json();
 		for (const workspace of body.workspaces) {
-			workspace.assignedRoles = roleAssignments;
+			workspace.propertyRoles = roleAssignments;
 		}
 		await route.fulfill({ response, json: body });
 	});
@@ -2122,8 +2122,8 @@ test(`Resolve only known country codes in the alpha-3 format declared by the sch
 
 test(`Omit unassigned profile roles and use the remaining name for initials`, async ({ page }) => {
 	await mockProfiles(page, {
-		assignedRoles: {
-			...assignedRoles,
+		propertyRoles: {
+			...propertyRoles,
 			firstName: '',
 			country: '',
 			photo: '',

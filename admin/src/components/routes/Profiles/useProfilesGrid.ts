@@ -3,14 +3,14 @@ import { GridColumn, GridRow } from '../../base/Grid/Grid.types';
 import { ProfileProperty } from './Profiles.types';
 import { ResponseProfile } from '../../../lib/api/types/responses';
 import { CountryFormat } from '../../../lib/api/types/types';
-import { ProfileRoleAssignments } from '../../../lib/api/types/workspace';
+import { ProfilePropertyRoles } from '../../../lib/api/types/workspace';
 import { ProfileCell } from './ProfileCell';
 
 const useProfilesGrid = (
 	profiles: ResponseProfile[],
 	profilesProperties: ProfileProperty[],
 	profilesProjection: string[],
-	assignedRoles: ProfileRoleAssignments | undefined,
+	propertyRoles: ProfilePropertyRoles | undefined,
 	countryFormat: CountryFormat | undefined,
 	activeProfileID: string,
 	onProfileClick: (kpid: string) => void,
@@ -48,7 +48,7 @@ const useProfilesGrid = (
 				onClick: () => onProfileClick(profile.kpid),
 				cells: [
 					createElement(ProfileCell, {
-						assignedRoles,
+						propertyRoles,
 						attributes,
 						countryFormat,
 						profileID: profile.kpid,
@@ -62,7 +62,7 @@ const useProfilesGrid = (
 			rows.push(row);
 		}
 		return rows;
-	}, [profiles, profilesProperties, projectedRoots, assignedRoles, countryFormat, activeProfileID, onProfileClick]);
+	}, [profiles, profilesProperties, projectedRoots, propertyRoles, countryFormat, activeProfileID, onProfileClick]);
 
 	const profileColumns = useMemo(() => {
 		// compute the columns for the grid component.

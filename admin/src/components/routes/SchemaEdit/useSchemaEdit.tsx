@@ -18,21 +18,21 @@ import TransformedConnection from '../../../lib/core/connection';
 import {
 	ConsentPurpose,
 	PrimarySources,
-	ProfileRoleAssignments,
-	ProfileRoleID,
+	ProfilePropertyRoles,
+	ProfilePropertyRoleID,
 } from '../../../lib/api/types/workspace';
 import { SchemaContext } from '../../../context/SchemaContext';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
 import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
 import {
-	copyProfileRoleAssignments,
-	getAssignedProfileRole,
-	getProfileRole,
-	isProfileRoleCompatible,
-	PROFILE_ROLES,
-} from '../../helpers/profileRoles';
+	copyProfilePropertyRoles,
+	getPropertyRole,
+	getProfilePropertyRole,
+	isProfilePropertyRoleCompatible,
+	PROFILE_PROPERTY_ROLES,
+} from '../../helpers/profilePropertyRoles';
 import { SchemaPropertyIdentifierBadge, SchemaPropertyName } from '../Schema/SchemaPropertyGrid';
-import { getSchemaPropertyTypePresentation, SchemaPropertyType } from '../Schema/SchemaPropertyType';
+import { getProfileSchemaTypePresentation } from '../../helpers/types';
 import { SchemaPropertyConsent } from '../Schema/SchemaPropertyConsent';
 import { getConsentPurposesByPropertyPath } from '../Schema/SchemaPropertyConsent.helpers';
 
@@ -86,7 +86,7 @@ interface PropertyFieldChanges {
 	displayName: boolean;
 	description: boolean;
 	primarySource: boolean;
-	profileRole: boolean;
+	propertyRole: boolean;
 }
 
 type SelectProperty = (propertyKey: string, property: EditableProperty, options?: SelectPropertyOptions) => void;
@@ -129,21 +129,31 @@ const useSchemaEdit = (
 
 	const gridRef = useRef<GridRef>(null);
 
-	const { api, handleError, workspaces, selectedWorkspace, connections, setIsLoadingWorkspaces } =
-		useContext(AppContext);
+	const { api, handleError, workspaces, selectedWorkspace, connections } = useContext(AppContext);
 	const workspace = workspaces.find((candidate) => candidate.id === selectedWorkspace);
 
-	const { consentPurposes, setIsAltering } = useContext(SchemaContext);
+	const { consentPurposes, isAltering, setIsAltering, latestAlterStartTime } = useContext(SchemaContext);
+	const initialAlterStartTime = useRef(latestAlterStartTime);
+	const isSchemaOutdated = isAltering || latestAlterStartTime !== initialAlterStartTime.current;
+
+	useEffect(() => {
+		if (!isSchemaOutdated || isConfirmChangesLoading) {
+			return;
+		}
+		previewRequestSequence.current++;
+		setQueries(null);
+		setIsQueriesLoading(false);
+	}, [isSchemaOutdated, isConfirmChangesLoading]);
 
 	const primarySources = useRef<PrimarySources>(copyPrimarySources(workspace.primarySources));
-	const [assignedRoles, setAssignedRoles] = useState<ProfileRoleAssignments>(() =>
-		copyProfileRoleAssignments(workspace.assignedRoles),
+	const [propertyRoles, setPropertyRoles] = useState<ProfilePropertyRoles>(() =>
+		copyProfilePropertyRoles(workspace.propertyRoles),
 	);
 	const rePaths = useRef<RePaths>({});
 	const deletedAppliedKeys = useRef<string[]>([]);
 	const initialEditableSchema = useRef<EditableSchema>();
 	const initialPrimarySources = useRef<PrimarySources>();
-	const initialAssignedRoles = useRef<ProfileRoleAssignments>();
+	const initialPropertyRoles = useRef<ProfilePropertyRoles>();
 	const initialSchemaEditStateKey = useRef<string>();
 	const { onSortRow, reorderedPropertyKeys, resetMoveHistory } = usePropertyReordering({
 		editableSchema,
@@ -178,11 +188,11 @@ const useSchemaEdit = (
 			return null;
 		}
 		try {
-			return buildSchemaEditStateKey(editableSchema, assignedRoles, primarySources.current, rePaths.current);
+			return buildSchemaEditStateKey(editableSchema, propertyRoles, primarySources.current, rePaths.current);
 		} catch {
 			return null;
 		}
-	}, [assignedRoles, editableSchema]);
+	}, [propertyRoles, editableSchema]);
 
 	const hasSchemaChanges =
 		initialSchemaEditStateKey.current != null && schemaEditStateKey !== initialSchemaEditStateKey.current;
@@ -193,11 +203,11 @@ const useSchemaEdit = (
 			initialEditableSchema.current,
 			primarySources.current,
 			initialPrimarySources.current,
-			assignedRoles,
-			initialAssignedRoles.current,
+			propertyRoles,
+			initialPropertyRoles.current,
 			reorderedPropertyKeys,
 		);
-	}, [assignedRoles, editableSchema, reorderedPropertyKeys]);
+	}, [propertyRoles, editableSchema, reorderedPropertyKeys]);
 	const selectedPropertyFieldChanges = useMemo(() => {
 		if (selectedPropertyKey == null) {
 			return undefined;
@@ -212,10 +222,10 @@ const useSchemaEdit = (
 			initialProperty,
 			primarySources.current[selectedPropertyKey],
 			initialPrimarySources.current?.[selectedPropertyKey],
-			getAssignedProfileRole(assignedRoles, selectedPropertyKey),
-			getAssignedProfileRole(initialAssignedRoles.current, selectedPropertyKey),
+			getPropertyRole(propertyRoles, selectedPropertyKey),
+			getPropertyRole(initialPropertyRoles.current, selectedPropertyKey),
 		);
-	}, [assignedRoles, editableSchema, selectedPropertyKey]);
+	}, [propertyRoles, editableSchema, selectedPropertyKey]);
 	const { objectCount, propertyCount } = useMemo(() => {
 		const properties = Object.values(editableSchema || {});
 		const objectCount = properties.filter((property) => property.type.kind === 'object').length;
@@ -243,13 +253,13 @@ const useSchemaEdit = (
 		return getVisiblePropertyKeys(
 			editableSchema,
 			propertyStatuses,
-			assignedRoles,
+			propertyRoles,
 			search,
 			showOnlyChanged,
 			keepSelectedPropertyVisible ? selectedPropertyKey : undefined,
 		);
 	}, [
-		assignedRoles,
+		propertyRoles,
 		editableSchema,
 		keepSelectedPropertyVisible,
 		propertyStatuses,
@@ -273,7 +283,7 @@ const useSchemaEdit = (
 		return getRows(
 			editableSchema,
 			primarySources.current,
-			assignedRoles,
+			propertyRoles,
 			connections,
 			identifierPositions,
 			consentPurposesByPropertyPath,
@@ -285,7 +295,7 @@ const useSchemaEdit = (
 		);
 	}, [
 		connections,
-		assignedRoles,
+		propertyRoles,
 		consentPurposesByPropertyPath,
 		editableSchema,
 		identifierPositions,
@@ -311,17 +321,17 @@ const useSchemaEdit = (
 		deletedAppliedKeys.current = [];
 		resetMoveHistory();
 		const editable = transformSchema(s);
-		const roles = copyProfileRoleAssignments(workspace.assignedRoles);
+		const roles = copyProfilePropertyRoles(workspace.propertyRoles);
 		initialEditableSchema.current = structuredClone(editable);
 		initialPrimarySources.current = copyPrimarySources(primarySources.current);
-		initialAssignedRoles.current = copyProfileRoleAssignments(roles);
+		initialPropertyRoles.current = copyProfilePropertyRoles(roles);
 		initialSchemaEditStateKey.current = buildSchemaEditStateKey(
 			editable,
 			roles,
 			primarySources.current,
 			rePaths.current,
 		);
-		setAssignedRoles(roles);
+		setPropertyRoles(roles);
 		setEditableSchema(editable);
 		const propertyKey =
 			initialPropertyKey != null && editable[initialPropertyKey] != null
@@ -335,7 +345,7 @@ const useSchemaEdit = (
 	const onAddProperty = (
 		property: PropertyToEdit,
 		primarySource: string | null,
-		assignedRole: ProfileRoleID | null,
+		propertyRole: ProfilePropertyRoleID | null,
 		selectedPropertyKey?: string,
 	) => {
 		if (isMetaProperty(property.name)) {
@@ -415,7 +425,7 @@ const useSchemaEdit = (
 		if (insertionAnchorKey == null) {
 			updatedSchema[k] = addedProperty;
 		}
-		setAssignedRoles((current) => updateProfileRoleAssignment(current, k, assignedRole));
+		setPropertyRoles((current) => updateProfilePropertyRoleAssignment(current, k, propertyRole));
 		setEditableSchema(updatedSchema);
 		if (property.indentation > 0) {
 			setTimeout(() => {
@@ -430,8 +440,8 @@ const useSchemaEdit = (
 	const onEditProperty = (
 		property: PropertyToEdit,
 		primarySource: string | null,
-		assignedRole: ProfileRoleID | null,
-		rolesToUnassign: readonly ProfileRoleID[],
+		propertyRole: ProfilePropertyRoleID | null,
+		rolesToUnassign: readonly ProfilePropertyRoleID[],
 	) => {
 		const key = property.key;
 		const s = { ...editableSchema };
@@ -539,8 +549,8 @@ const useSchemaEdit = (
 				delete primarySources.current[descendantKey];
 			}
 		}
-		setAssignedRoles((currentAssignments) =>
-			updateProfileRoleAssignment(currentAssignments, key, assignedRole, rolesToUnassign),
+		setPropertyRoles((currentAssignments) =>
+			updateProfilePropertyRoleAssignment(currentAssignments, key, propertyRole, rolesToUnassign),
 		);
 		setEditableSchema(s);
 	};
@@ -588,20 +598,23 @@ const useSchemaEdit = (
 		if (primarySources.current[propertyKey]) {
 			delete primarySources.current[propertyKey];
 		}
-		setAssignedRoles((current) => clearProfileRoleAssignments(current, propertyKey));
+		setPropertyRoles((current) => clearProfilePropertyRoles(current, propertyKey));
 		delete schema[propertyKey];
 		setEditableSchema(schema);
 		return nextProperty;
 	};
 
 	const onApplyChanges = async () => {
+		if (isSchemaOutdated) {
+			return;
+		}
 		const requestSequence = ++previewRequestSequence.current;
 		let request: SchemaPreviewRequest;
 		try {
 			request = buildSchemaPreviewRequest(
 				editableSchema,
 				initialEditableSchema.current,
-				assignedRoles,
+				propertyRoles,
 				rePaths.current,
 			);
 		} catch (err) {
@@ -636,17 +649,20 @@ const useSchemaEdit = (
 	};
 
 	const onConfirmChanges = async () => {
+		if (isSchemaOutdated) {
+			return;
+		}
 		// compute the real paths of the primary sources (currently they
 		// are based on the editable schema keys).
 		const sources: PrimarySources = {};
 		for (const k in primarySources.current) {
 			sources[getEditablePropertyPath(editableSchema, k)] = primarySources.current[k];
 		}
-		const assignedRolePaths = getAssignedRolePaths(editableSchema, assignedRoles);
+		const propertyRolePaths = getPropertyRolePaths(editableSchema, propertyRoles);
 		setIsConfirmChangesLoading(true);
 		const s = normalizeSchema(structuredClone(editableSchema));
 		try {
-			await api.workspaces.alterProfileSchema(s, assignedRolePaths, sources, rePaths.current);
+			await api.workspaces.alterProfileSchema(s, propertyRolePaths, sources, rePaths.current);
 		} catch (err) {
 			setTimeout(() => {
 				setQueries(null);
@@ -658,7 +674,6 @@ const useSchemaEdit = (
 		setTimeout(() => {
 			setQueries(null);
 			setIsConfirmChangesLoading(false);
-			setIsLoadingWorkspaces(true);
 			setIsAltering(true);
 			onClose();
 		}, 300);
@@ -680,6 +695,7 @@ const useSchemaEdit = (
 		firstVisibleProperty,
 		isFiltered,
 		isSchemaReady: editableSchema != null,
+		isSchemaOutdated,
 		isSelectedPropertyVisible,
 		identifierPositions,
 		objectCount,
@@ -688,7 +704,7 @@ const useSchemaEdit = (
 		propertyParents,
 		selectedPropertyFieldChanges,
 		propertyStatuses,
-		assignedRoles,
+		propertyRoles,
 		propertyPaths,
 		primarySources: primarySources.current,
 		queries,
@@ -708,26 +724,23 @@ const useSchemaEdit = (
 
 const buildSchemaEditStateKey = (
 	editableSchema: EditableSchema,
-	assignedRoles: ProfileRoleAssignments,
+	propertyRoles: ProfilePropertyRoles,
 	primarySources: PrimarySources,
 	rePaths: RePaths,
 ): string => {
 	const schema = normalizeSchema(editableSchema);
 	const sortedPrimarySources = Object.entries(primarySources).sort(([a], [b]) => a.localeCompare(b));
 	const sortedRePaths = Object.entries(rePaths).sort(([a], [b]) => a.localeCompare(b));
-	return JSON.stringify({ assignedRoles, schema, primarySources: sortedPrimarySources, rePaths: sortedRePaths });
+	return JSON.stringify({ propertyRoles, schema, primarySources: sortedPrimarySources, rePaths: sortedRePaths });
 };
 
 const copyPrimarySources = (primarySources: PrimarySources): PrimarySources => {
 	return Object.assign(Object.create(null), primarySources);
 };
 
-const clearProfileRoleAssignments = (
-	assignments: ProfileRoleAssignments,
-	propertyKey: string,
-): ProfileRoleAssignments => {
-	const next = copyProfileRoleAssignments(assignments);
-	for (const role of PROFILE_ROLES) {
+const clearProfilePropertyRoles = (assignments: ProfilePropertyRoles, propertyKey: string): ProfilePropertyRoles => {
+	const next = copyProfilePropertyRoles(assignments);
+	for (const role of PROFILE_PROPERTY_ROLES) {
 		if (next[role.id] === propertyKey || next[role.id].startsWith(`${propertyKey}.`)) {
 			next[role.id] = '';
 		}
@@ -735,9 +748,9 @@ const clearProfileRoleAssignments = (
 	return next;
 };
 
-const getAssignedRolePaths = (schema: EditableSchema, assignments: ProfileRoleAssignments): ProfileRoleAssignments => {
-	const paths = copyProfileRoleAssignments(assignments);
-	for (const role of PROFILE_ROLES) {
+const getPropertyRolePaths = (schema: EditableSchema, assignments: ProfilePropertyRoles): ProfilePropertyRoles => {
+	const paths = copyProfilePropertyRoles(assignments);
+	for (const role of PROFILE_PROPERTY_ROLES) {
 		if (paths[role.id] !== '') {
 			paths[role.id] = getEditablePropertyPath(schema, paths[role.id]);
 		}
@@ -763,27 +776,27 @@ const getEditablePropertyPaths = (schema: EditableSchema | undefined): Record<st
 	return paths;
 };
 
-const updateProfileRoleAssignment = (
-	assignments: ProfileRoleAssignments,
+const updateProfilePropertyRoleAssignment = (
+	assignments: ProfilePropertyRoles,
 	propertyKey: string,
-	assignedRole: ProfileRoleID | null,
-	rolesToUnassign: readonly ProfileRoleID[] = [],
-): ProfileRoleAssignments => {
-	const next = copyProfileRoleAssignments(assignments);
-	for (const role of PROFILE_ROLES) {
+	propertyRole: ProfilePropertyRoleID | null,
+	rolesToUnassign: readonly ProfilePropertyRoleID[] = [],
+): ProfilePropertyRoles => {
+	const next = copyProfilePropertyRoles(assignments);
+	for (const role of PROFILE_PROPERTY_ROLES) {
 		if (next[role.id] === propertyKey || rolesToUnassign.includes(role.id)) {
 			next[role.id] = '';
 		}
 	}
-	if (assignedRole != null) {
-		next[assignedRole] = propertyKey;
+	if (propertyRole != null) {
+		next[propertyRole] = propertyKey;
 	}
 	return next;
 };
 
-const validateProfileRoleAssignments = (schema: EditableSchema, assignments: ProfileRoleAssignments): void => {
+const validateProfilePropertyRoles = (schema: EditableSchema, assignments: ProfilePropertyRoles): void => {
 	const assignedPropertyKeys = new Set<string>();
-	for (const role of PROFILE_ROLES) {
+	for (const role of PROFILE_PROPERTY_ROLES) {
 		const propertyKey = assignments[role.id];
 		if (propertyKey === '') {
 			continue;
@@ -793,11 +806,9 @@ const validateProfileRoleAssignments = (schema: EditableSchema, assignments: Pro
 			throw new Error(`${role.label} is assigned to a property that no longer exists`);
 		}
 		if (assignedPropertyKeys.has(propertyKey)) {
-			throw new Error(
-				`Property “${getEditablePropertyPath(schema, propertyKey)}” has more than one Profile role`,
-			);
+			throw new Error(`Property “${getEditablePropertyPath(schema, propertyKey)}” has more than one role`);
 		}
-		if (!isProfileRoleCompatible(role.id, property)) {
+		if (!isProfilePropertyRoleCompatible(role.id, property)) {
 			throw new Error(
 				`Property “${getEditablePropertyPath(schema, propertyKey)}” is not compatible with ${role.label}`,
 			);
@@ -811,8 +822,8 @@ const getPropertyChangeStatuses = (
 	initialSchema: EditableSchema,
 	primarySources: PrimarySources,
 	initialPrimarySources: PrimarySources,
-	assignedRoles: ProfileRoleAssignments,
-	initialAssignedRoles: ProfileRoleAssignments,
+	propertyRoles: ProfilePropertyRoles,
+	initialPropertyRoles: ProfilePropertyRoles,
 	reorderedPropertyKeys: ReadonlySet<string>,
 ): Record<string, PropertyChangeStatus> => {
 	const statuses: Record<string, PropertyChangeStatus> = {};
@@ -830,8 +841,8 @@ const getPropertyChangeStatuses = (
 			initialProperty,
 			primarySources[key],
 			initialPrimarySources[key],
-			getAssignedProfileRole(assignedRoles, key),
-			getAssignedProfileRole(initialAssignedRoles, key),
+			getPropertyRole(propertyRoles, key),
+			getPropertyRole(initialPropertyRoles, key),
 		);
 		const hasPropertyChanges = Object.values(fieldChanges).some((changed) => changed);
 		if (hasPropertyChanges) {
@@ -848,8 +859,8 @@ const getPropertyFieldChanges = (
 	initialProperty: EditableProperty,
 	primarySource: string | null | undefined,
 	initialPrimarySource: string | null | undefined,
-	assignedRole: ProfileRoleID | null,
-	initialAssignedRole: ProfileRoleID | null,
+	propertyRole: ProfilePropertyRoleID | null,
+	initialPropertyRole: ProfilePropertyRoleID | null,
 ): PropertyFieldChanges => {
 	return {
 		name: property.name !== initialProperty.name,
@@ -857,7 +868,7 @@ const getPropertyFieldChanges = (
 		displayName: (property.displayName || '') !== (initialProperty.displayName || ''),
 		description: (property.description || '') !== (initialProperty.description || ''),
 		primarySource: primarySource !== initialPrimarySource,
-		profileRole: assignedRole !== initialAssignedRole,
+		propertyRole: propertyRole !== initialPropertyRole,
 	};
 };
 
@@ -935,7 +946,7 @@ const getPropertyParents = (schema: EditableSchema): PropertyParent[] => {
 const getVisiblePropertyKeys = (
 	schema: EditableSchema,
 	statuses: Record<string, PropertyChangeStatus>,
-	assignedRoles: ProfileRoleAssignments,
+	propertyRoles: ProfilePropertyRoles,
 	search: string | undefined,
 	showOnlyChanged: boolean | undefined,
 	alwaysVisiblePropertyKey?: string,
@@ -946,8 +957,8 @@ const getVisiblePropertyKeys = (
 	}
 	const term = search?.trim().toLocaleLowerCase() || '';
 	for (const [key, property] of Object.entries(schema)) {
-		const typePresentation = getSchemaPropertyTypePresentation(property.type, 'grid');
-		const assignedRole = getAssignedProfileRole(assignedRoles, key);
+		const typePresentation = getProfileSchemaTypePresentation(property.type);
+		const propertyRole = getPropertyRole(propertyRoles, key);
 		const matchesSearch =
 			term === '' ||
 			[
@@ -956,7 +967,7 @@ const getVisiblePropertyKeys = (
 				property.description,
 				typePresentation.primary,
 				typePresentation.metadata,
-				assignedRole == null ? null : getProfileRole(assignedRole).label,
+				propertyRole == null ? null : getProfilePropertyRole(propertyRole).label,
 			]
 				.filter(Boolean)
 				.join(' ')
@@ -992,15 +1003,15 @@ const getVisiblePropertyKeys = (
 const buildSchemaPreviewRequest = (
 	editableSchema: EditableSchema,
 	initialEditableSchema: EditableSchema | undefined,
-	assignedRoles: ProfileRoleAssignments,
+	propertyRoles: ProfilePropertyRoles,
 	rePaths: RePaths,
 ): SchemaPreviewRequest => {
 	validateEditableSchema(editableSchema, initialEditableSchema, rePaths);
-	validateProfileRoleAssignments(editableSchema, assignedRoles);
+	validateProfilePropertyRoles(editableSchema, propertyRoles);
 	const schema = normalizeSchema(editableSchema);
 	const currentRePaths = { ...rePaths };
 	return {
-		key: JSON.stringify({ assignedRoles, schema, rePaths: currentRePaths }),
+		key: JSON.stringify({ propertyRoles, schema, rePaths: currentRePaths }),
 		schema,
 		rePaths: currentRePaths,
 	};
@@ -1009,7 +1020,7 @@ const buildSchemaPreviewRequest = (
 const getRows = (
 	schema: EditableSchema,
 	primarySources: PrimarySources,
-	assignedRoles: ProfileRoleAssignments,
+	propertyRoles: ProfilePropertyRoles,
 	connections: TransformedConnection[],
 	identifierPositions: ReadonlyMap<string, number>,
 	consentPurposesByPropertyPath: ReadonlyMap<string, ConsentPurpose[]>,
@@ -1029,7 +1040,7 @@ const getRows = (
 			primarySourceConnection = connections.find((c) => c.id === primarySources[propertyKey]);
 		}
 		const property = schema[propertyKey];
-		const assignedRole = getAssignedProfileRole(assignedRoles, propertyKey);
+		const propertyRole = getPropertyRole(propertyRoles, propertyKey);
 		const propertyPath = propertyKey
 			.split('.')
 			.map((_, index, fragments) => schema[fragments.slice(0, index + 1).join('.')].name)
@@ -1054,7 +1065,7 @@ const getRows = (
 					property,
 					primarySourceConnection,
 					identifierPositions.get(propertyKey),
-					assignedRole,
+					propertyRole,
 					consentPurposes,
 					propertyStatuses[propertyKey],
 					selectedPropertyKey === propertyKey,
@@ -1069,7 +1080,7 @@ const getRows = (
 					property,
 					primarySourceConnection,
 					identifierPositions.get(propertyKey),
-					assignedRole,
+					propertyRole,
 					consentPurposes,
 					propertyStatuses[propertyKey],
 					selectedPropertyKey === propertyKey,
@@ -1086,7 +1097,7 @@ const getRows = (
 					property,
 					primarySourceConnection,
 					identifierPositions.get(propertyKey),
-					assignedRole,
+					propertyRole,
 					consentPurposes,
 					propertyStatuses[propertyKey],
 					selectedPropertyKey === propertyKey,
@@ -1101,7 +1112,7 @@ const getRows = (
 					property,
 					primarySourceConnection,
 					identifierPositions.get(propertyKey),
-					assignedRole,
+					propertyRole,
 					consentPurposes,
 					propertyStatuses[propertyKey],
 					selectedPropertyKey === propertyKey,
@@ -1121,7 +1132,7 @@ const buildRow = (
 	property: EditableProperty,
 	primarySourceConnection: TransformedConnection,
 	identifierPosition: number | undefined,
-	assignedRole: ProfileRoleID | null,
+	propertyRole: ProfilePropertyRoleID | null,
 	consentPurposes: ConsentPurpose[] | undefined,
 	status: PropertyChangeStatus | undefined,
 	selected: boolean,
@@ -1132,9 +1143,23 @@ const buildRow = (
 	const actions = (
 		<div className='schema-edit__property-actions'>{status != null && <PropertyStatusBadge status={status} />}</div>
 	);
+	const { primary, metadata } = getProfileSchemaTypePresentation(property.type);
 	const typeCell: ReactNode = (
 		<>
-			<SchemaPropertyType context='grid' type={property.type} />
+			<span
+				className='schema-property-grid__type'
+				title={metadata == null ? primary : `${primary} · ${metadata}`}
+			>
+				<span className='schema-property-grid__type-label'>{primary}</span>
+				{metadata != null && (
+					<span className='schema-property-grid__type-metadata'>
+						<span className='schema-property-grid__type-separator' aria-hidden='true'>
+							{' · '}
+						</span>
+						<span className='schema-property-grid__type-physical'>{metadata}</span>
+					</span>
+				)}
+			</span>
 			<SchemaPropertyConsent purposes={consentPurposes} />
 		</>
 	);
@@ -1156,7 +1181,7 @@ const buildRow = (
 			<SchemaPropertyName property={property} />,
 			typeCell,
 			identifierPosition == null ? null : <SchemaPropertyIdentifierBadge position={identifierPosition} />,
-			assignedRole == null ? null : getProfileRole(assignedRole).label,
+			propertyRole == null ? null : getProfilePropertyRole(propertyRole).label,
 			primarySourceCell,
 			actions,
 		],

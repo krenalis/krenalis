@@ -3,9 +3,9 @@ import { WarehouseMode } from './warehouse';
 
 type PrimarySources = Record<string, string>;
 
-type ProfileRoleID = 'firstName' | 'lastName' | 'email' | 'country' | 'photo';
+type ProfilePropertyRoleID = 'firstName' | 'lastName' | 'email' | 'country' | 'photo';
 
-interface ProfileRoleAssignments {
+interface ProfilePropertyRoles {
 	firstName: string;
 	lastName: string;
 	email: string;
@@ -14,7 +14,7 @@ interface ProfileRoleAssignments {
 }
 
 interface Workspace {
-	assignedRoles: ProfileRoleAssignments;
+	propertyRoles: ProfilePropertyRoles;
 	id: string;
 	name: string;
 	resolveIdentitiesOnBatchImport: boolean;
@@ -61,8 +61,8 @@ export type {
 	LatestIdentityResolution,
 	LatestAlterProfileSchema,
 	ConsentPurpose,
-	ProfileRoleAssignments,
-	ProfileRoleID,
+	ProfilePropertyRoles,
+	ProfilePropertyRoleID,
 	EventConsentLocation,
 	ProfileConsentLocation,
 };

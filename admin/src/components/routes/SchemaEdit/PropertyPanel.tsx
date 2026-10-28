@@ -4,7 +4,7 @@ import SlAnimation from '@shoelace-style/shoelace/dist/react/animation/index.js'
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
 import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
-import { PrimarySources, ProfileRoleAssignments, ProfileRoleID } from '../../../lib/api/types/workspace';
+import { PrimarySources, ProfilePropertyRoles, ProfilePropertyRoleID } from '../../../lib/api/types/workspace';
 import { PropertyPanelLayout } from '../Schema/PropertyPanelLayout';
 import { PropertyForm } from './PropertyForm';
 import {
@@ -16,8 +16,8 @@ import {
 } from './useSchemaEdit';
 
 interface PropertyPanelProps {
-	assignedRole: ProfileRoleID | null;
-	assignedRoles: ProfileRoleAssignments;
+	propertyRole: ProfilePropertyRoleID | null;
+	propertyRoles: ProfilePropertyRoles;
 	animateActions: boolean;
 	dirty: boolean;
 	fieldChanges?: PropertyFieldChanges;
@@ -34,14 +34,14 @@ interface PropertyPanelProps {
 	onSave: (
 		property: PropertyToEdit,
 		primarySource: string | null,
-		assignedRole: ProfileRoleID | null,
-		rolesToUnassign: readonly ProfileRoleID[],
+		propertyRole: ProfilePropertyRoleID | null,
+		rolesToUnassign: readonly ProfilePropertyRoleID[],
 	) => void;
 }
 
 const PropertyPanel = ({
-	assignedRole,
-	assignedRoles,
+	propertyRole,
+	propertyRoles,
 	animateActions,
 	dirty,
 	fieldChanges,
@@ -120,8 +120,8 @@ const PropertyPanel = ({
 					titleAdornment={status != null && <PropertyStatusBadge status={status} />}
 				>
 					<PropertyForm
-						assignedRole={assignedRole}
-						assignedRoles={assignedRoles}
+						propertyRole={propertyRole}
+						propertyRoles={propertyRoles}
 						key={property.key ?? '__new__'}
 						fieldChanges={fieldChanges}
 						formID={formID}

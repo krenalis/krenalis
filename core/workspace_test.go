@@ -115,7 +115,7 @@ func TestWorkspaceMarshalJSON(t *testing.T) {
 
 	value, err := json.Marshal(Workspace{})
 	if err != nil {
-		t.Fatalf("json.Marshal() error = %v", err)
+		t.Fatalf("expected no error, got %v", err)
 	}
 
 	tests := []struct {
@@ -129,10 +129,10 @@ func TestWorkspaceMarshalJSON(t *testing.T) {
 	for _, test := range tests {
 		got, ok := value.Get([]string{test.name})
 		if !ok {
-			t.Fatalf("json.Marshal() omitted %s", test.name)
+			t.Fatalf("expected JSON field %q, got missing field", test.name)
 		}
 		if string(got) != test.want {
-			t.Fatalf("json.Marshal() %s = %q, want %q", test.name, got, test.want)
+			t.Fatalf("expected %s to be %q, got %q", test.name, test.want, got)
 		}
 	}
 

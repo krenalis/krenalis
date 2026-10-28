@@ -63,12 +63,12 @@ func (k *Krenalis) AlterProfileSchemaAndWait(schema types.Type, primarySources m
 	k.alterProfileSchemaAndWait(req)
 }
 
-// AlterProfileSchemaWithAssignedRolesAndWait alters the profile schema and its
-// assigned roles and waits for the operation to complete before returning.
-func (k *Krenalis) AlterProfileSchemaWithAssignedRolesAndWait(schema types.Type, assignedRoles ProfileRoleAssignments, primarySources map[string]string, rePaths map[string]any) {
+// AlterProfileSchemaWithPropertyRolesAndWait alters the profile schema and its
+// property roles and waits for the operation to complete before returning.
+func (k *Krenalis) AlterProfileSchemaWithPropertyRolesAndWait(schema types.Type, propertyRoles PropertyRoles, primarySources map[string]string, rePaths map[string]any) {
 	req := map[string]any{
 		"schema":         schema,
-		"assignedRoles":  assignedRoles,
+		"propertyRoles":  propertyRoles,
 		"primarySources": primarySources,
 		"rePaths":        rePaths,
 	}
@@ -86,12 +86,12 @@ func (k *Krenalis) TryAlterProfileSchema(schema types.Type, primarySources map[s
 	return k.TryCall("PUT", "/v1/profiles/schema", nil, req, nil)
 }
 
-// TryAlterProfileSchemaWithAssignedRoles alters the profile schema and its
-// assigned roles, returning an error if it fails.
-func (k *Krenalis) TryAlterProfileSchemaWithAssignedRoles(schema types.Type, assignedRoles ProfileRoleAssignments, primarySources map[string]string, rePaths map[string]any) error {
+// TryAlterProfileSchemaWithPropertyRoles alters the profile schema and its
+// property roles, returning an error if it fails.
+func (k *Krenalis) TryAlterProfileSchemaWithPropertyRoles(schema types.Type, propertyRoles PropertyRoles, primarySources map[string]string, rePaths map[string]any) error {
 	req := map[string]any{
 		"schema":         schema,
-		"assignedRoles":  assignedRoles,
+		"propertyRoles":  propertyRoles,
 		"primarySources": primarySources,
 		"rePaths":        rePaths,
 	}
@@ -920,8 +920,11 @@ func (k *Krenalis) TestWorkspaceCreation(name string, profileSchema types.Type, 
 		"Krenalis-Workspace": nil,
 	}
 	body := map[string]any{
-		"name":          name,
-		"profileSchema": profileSchema,
+		"name": name,
+		"profiles": map[string]any{
+			"schema":        profileSchema,
+			"propertyRoles": PropertyRoles{},
+		},
 		"warehouse": map[string]any{
 			"platform": whPlatform,
 			"mode":     mode,

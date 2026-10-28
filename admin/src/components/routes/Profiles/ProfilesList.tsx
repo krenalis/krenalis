@@ -56,11 +56,11 @@ const ProfilesList = () => {
 		setProfilesPageSize,
 		updateProfilesProperties,
 	} = useContext(ProfilesContext);
-	const assignedRoles = useMemo(
-		() => workspaces.find((workspace) => workspace.id === selectedWorkspace)?.assignedRoles,
+	const propertyRoles = useMemo(
+		() => workspaces.find((workspace) => workspace.id === selectedWorkspace)?.propertyRoles,
 		[workspaces, selectedWorkspace],
 	);
-	const countryType = profileSchemaProperties[assignedRoles?.country ?? '']?.type;
+	const countryType = profileSchemaProperties[propertyRoles?.country ?? '']?.type;
 	const countryFormat =
 		countryType?.kind === 'string' && countryType.semantics === 'country' ? countryType.format : undefined;
 	const gridRef = useRef<GridRef>(null);
@@ -69,7 +69,7 @@ const ProfilesList = () => {
 		profiles,
 		profilesProperties,
 		profilesProjection,
-		assignedRoles,
+		propertyRoles,
 		countryFormat,
 		activeProfileID,
 		setActiveProfileID,

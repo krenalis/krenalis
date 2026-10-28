@@ -16,7 +16,7 @@ Apply review rules to code introduced or modified by the change under review. Do
 
 ## Line length
 
-Allow Go code lines to be up to 120 characters long without wrapping. A line may exceed 120 characters when a more specific convention requires it, notably the rule that keeps exported signatures on one line. In `_test.go` files, the limit does not apply to the table of cases of a table-driven test, whose lines may be as long as needed; the rest of a test file follows the limit like any other code.
+Allow Go code lines to be up to 120 characters long without wrapping. Count each tab as 4 characters when measuring line length. A line may exceed 120 characters when a more specific convention requires it, notably the rule that keeps exported signatures on one line. In `_test.go` files, the limit does not apply to the table of cases of a table-driven test, whose lines may be as long as needed; the rest of a test file follows the limit like any other code.
 
 ## File organization
 
@@ -459,3 +459,7 @@ Every exported method in `core` that is called by `cmd` must execute `<receiver>
 ## Pipeline specifications
 
 `core/Pipelines.md` documents, as part of the code, the rules that pipelines follow for each combination of connection role, connector type, and target. Whenever a change in `core` or in the Admin alters these rules, update the file in the same change.
+
+## Database upgrades
+
+Write, restore, or remove the database updater only as a step of the release procedure. When a change requires an existing Krenalis PostgreSQL database to be upgraded, including a change to the format of stored data that leaves the schema unchanged, record it in `core/internal/initdb/RELEASE-UPGRADE.md` in the same change, following `.agents/skills/release-upgrade/SKILL.md`.

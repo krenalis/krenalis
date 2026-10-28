@@ -11,7 +11,7 @@ import { PostgreSQLSettings } from '../../base/PostgreSQLSettings/PostgreSQLSett
 import { SnowflakeSettings } from '../../base/SnowflakeSettings/SnowflakeSettings';
 import { WarehouseSettings } from '../../../lib/api/types/warehouse';
 import InitialSchema from './InitialSchema.json';
-import InitialRoleAssignments from './InitialRoleAssignments.json';
+import InitialPropertyRoles from './InitialPropertyRoles.json';
 import * as icons from '../../../constants/icons';
 import { IS_DOCKER_KEY } from '../../../constants/storage';
 import { ExternalLogo } from '../ExternalLogo/ExternalLogo';
@@ -105,7 +105,7 @@ const WorkspaceCreate = () => {
 				await api.workspaces.testCreation(
 					name,
 					InitialSchema as ObjectType,
-					InitialRoleAssignments,
+					InitialPropertyRoles,
 					warehouse,
 					'Normal',
 					settings,
@@ -131,7 +131,7 @@ const WorkspaceCreate = () => {
 				const res = await api.workspaces.create(
 					name,
 					InitialSchema as ObjectType,
-					InitialRoleAssignments,
+					InitialPropertyRoles,
 					warehouse,
 					'Normal',
 					settings,

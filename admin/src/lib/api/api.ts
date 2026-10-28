@@ -22,7 +22,7 @@ import Workspace, {
 	LatestIdentityResolution,
 	LatestAlterProfileSchema,
 	PrimarySources,
-	ProfileRoleAssignments,
+	ProfilePropertyRoles,
 	EventConsentLocation,
 	ProfileConsentLocation,
 } from './types/workspace';
@@ -709,15 +709,17 @@ class Workspaces {
 	create = async (
 		name: string,
 		profileSchema: ObjectType,
-		assignedRoles: ProfileRoleAssignments,
+		propertyRoles: ProfilePropertyRoles,
 		warehousePlatform: string,
 		warehouseMode: WarehouseMode,
 		warehouseSettings: WarehouseSettings,
 	): Promise<CreateWorkspaceResponse> => {
 		return await call(`${this.apiURL}/workspaces`, http.POST, null, {
 			name: name,
-			profileSchema: profileSchema,
-			assignedRoles: assignedRoles,
+			profiles: {
+				schema: profileSchema,
+				propertyRoles: propertyRoles,
+			},
 			warehouse: {
 				platform: warehousePlatform,
 				mode: warehouseMode,
@@ -729,15 +731,17 @@ class Workspaces {
 	testCreation = async (
 		name: string,
 		profileSchema: ObjectType,
-		assignedRoles: ProfileRoleAssignments,
+		propertyRoles: ProfilePropertyRoles,
 		warehousePlatform: string,
 		warehouseMode: WarehouseMode,
 		warehouseSettings: WarehouseSettings,
 	): Promise<void> => {
 		return await call(`${this.apiURL}/workspaces/test`, http.POST, null, {
 			name: name,
-			profileSchema: profileSchema,
-			assignedRoles: assignedRoles,
+			profiles: {
+				schema: profileSchema,
+				propertyRoles: propertyRoles,
+			},
 			warehouse: {
 				platform: warehousePlatform,
 				mode: warehouseMode,
@@ -849,13 +853,13 @@ class Workspaces {
 
 	alterProfileSchema = async (
 		schema: ObjectType,
-		assignedRoles: ProfileRoleAssignments,
+		propertyRoles: ProfilePropertyRoles,
 		primarySources: PrimarySources,
 		rePaths: RePaths,
 	): Promise<void> => {
 		return await call(`${this.apiURL}/profiles/schema`, http.PUT, this.workspaceID, {
 			schema,
-			assignedRoles,
+			propertyRoles,
 			primarySources,
 			rePaths,
 		});

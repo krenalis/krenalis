@@ -655,7 +655,7 @@ type CreateWorkspace struct {
 	Organization                   string
 	Name                           string
 	ProfileSchema                  types.Type
-	AssignedRoles                  ProfileRoleAssignments
+	PropertyRoles                  PropertyRoles
 	ResolveIdentitiesOnBatchImport bool
 	Warehouse                      struct {
 		Platform       string
@@ -680,7 +680,7 @@ func (state *State) createWorkspace(n notification) string {
 		organization:                   organization,
 		Name:                           e.Name,
 		ProfileSchema:                  e.ProfileSchema,
-		AssignedRoles:                  e.AssignedRoles,
+		PropertyRoles:                  e.PropertyRoles,
 		PrimarySources:                 map[string]string{},
 		accounts:                       map[int]*Account{},
 		consentPurposes:                map[string]*ConsentPurpose{},
@@ -1133,7 +1133,7 @@ func (state *State) endAlterProfileSchema(n notification) string {
 			// These fields should be updated only in case of success,
 			// otherwise, in case of error, the current ones should be left.
 			w.ProfileSchema = w.AlterProfileSchema.Schema
-			w.AssignedRoles = w.AlterProfileSchema.AssignedRoles
+			w.PropertyRoles = w.AlterProfileSchema.PropertyRoles
 			w.PrimarySources = w.AlterProfileSchema.PrimarySources
 			w.Identifiers = e.Identifiers
 		}
@@ -1141,7 +1141,7 @@ func (state *State) endAlterProfileSchema(n notification) string {
 		w.AlterProfileSchema.EndTime = &e.EndTime
 		w.AlterProfileSchema.Err = &e.Err
 		w.AlterProfileSchema.Schema = types.Type{}
-		w.AlterProfileSchema.AssignedRoles = ProfileRoleAssignments{}
+		w.AlterProfileSchema.PropertyRoles = PropertyRoles{}
 		w.AlterProfileSchema.PrimarySources = nil
 		w.AlterProfileSchema.Operations = nil
 	})
@@ -1498,7 +1498,7 @@ type StartAlterProfileSchema struct {
 	Workspace      string
 	ID             string
 	Schema         types.Type
-	AssignedRoles  ProfileRoleAssignments
+	PropertyRoles  PropertyRoles
 	PrimarySources map[string]string // always != nil.
 	Operations     []warehouses.AlterOperation
 	StartTime      time.Time
@@ -1511,7 +1511,7 @@ func (state *State) startAlterProfileSchema(n notification) string {
 	ws := state.replaceWorkspace(e.Workspace, func(w *Workspace) {
 		w.AlterProfileSchema.ID = &e.ID
 		w.AlterProfileSchema.Schema = e.Schema
-		w.AlterProfileSchema.AssignedRoles = e.AssignedRoles
+		w.AlterProfileSchema.PropertyRoles = e.PropertyRoles
 		w.AlterProfileSchema.PrimarySources = e.PrimarySources
 		w.AlterProfileSchema.Operations = e.Operations
 		w.AlterProfileSchema.StartTime = &e.StartTime

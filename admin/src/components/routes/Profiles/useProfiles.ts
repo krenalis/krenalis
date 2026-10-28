@@ -7,6 +7,7 @@ import { ProfileProperty, ProfileSchemaProperties } from './Profiles.types';
 import { ObjectType } from '../../../lib/api/types/types';
 import { Filter } from '../../../lib/api/types/pipeline';
 import { CountProfilesResponse, FindProfilesResponse } from '../../../lib/api/types/responses';
+import { ProfilePropertyRoles } from '../../../lib/api/types/workspace';
 import { flattenSchema } from '../../../lib/core/pipeline';
 import { PROFILES_PROPERTIES_KEY } from '../../../constants/storage';
 import { getProfilePropertyPathLabel } from './Profiles.helpers';
@@ -203,7 +204,7 @@ const useProfiles = () => {
 			const executionID = ++executionRef.current;
 			const { filter, queryKey, request } = createProfilesExecution(
 				selectedWorkspace,
-				workspaces.find((candidate) => candidate.id === selectedWorkspace)?.assignedRoles,
+				workspaces.find((candidate) => candidate.id === selectedWorkspace)?.propertyRoles,
 				profileProperties,
 				schema,
 				pageSize,
@@ -464,7 +465,7 @@ const useProfiles = () => {
 			const pageSize = sequenceRef.current.pageSize;
 			const { filter, queryKey, request } = createProfilesExecution(
 				selectedWorkspace,
-				workspaces.find((candidate) => candidate.id === selectedWorkspace)?.assignedRoles,
+				workspaces.find((candidate) => candidate.id === selectedWorkspace)?.propertyRoles,
 				profileProperties,
 				profileSchema,
 				pageSize,
@@ -611,8 +612,8 @@ const useProfiles = () => {
 				updateProperties();
 			}
 
-			const assignedRoles = workspaces.find((candidate) => candidate.id === selectedWorkspace)?.assignedRoles;
-			const requestedProjection = profileProjection(properties, assignedRoles);
+			const propertyRoles = workspaces.find((candidate) => candidate.id === selectedWorkspace)?.propertyRoles;
+			const requestedProjection = profileProjection(properties, propertyRoles);
 			if (requestedProjection.every((root) => loadedRoots.has(root))) {
 				cancelGridReplacement();
 				return;
@@ -748,7 +749,7 @@ const profileMetadata = (schema: ObjectType) => {
 
 const profileProjection = (
 	properties: ProfileProperty[],
-	assignedRoles: { firstName: string; lastName: string; email: string; country: string; photo: string } | undefined,
+	propertyRoles: ProfilePropertyRoles | undefined,
 ): string[] => {
 	const roots = new Set<string>();
 	for (const property of properties) {
@@ -756,8 +757,8 @@ const profileProjection = (
 			roots.add(property.name.split('.')[0]);
 		}
 	}
-	if (assignedRoles != null) {
-		for (const path of Object.values(assignedRoles)) {
+	if (propertyRoles != null) {
+		for (const path of Object.values(propertyRoles)) {
 			if (path !== '') {
 				roots.add(path.split('.')[0]);
 			}
@@ -768,7 +769,7 @@ const profileProjection = (
 
 const createProfilesExecution = (
 	workspace: string,
-	assignedRoles: { firstName: string; lastName: string; email: string; country: string; photo: string } | undefined,
+	propertyRoles: ProfilePropertyRoles | undefined,
 	properties: ProfileProperty[],
 	schema: ObjectType,
 	pageSize: number,
@@ -776,7 +777,7 @@ const createProfilesExecution = (
 	requestedProjection?: string[],
 ) => {
 	const filter = requestedFilter == null ? null : structuredClone(requestedFilter);
-	const projection = requestedProjection ?? profileProjection(properties, assignedRoles);
+	const projection = requestedProjection ?? profileProjection(properties, propertyRoles);
 	const identity: ProfilesQueryIdentity = {
 		workspace,
 		search: '',

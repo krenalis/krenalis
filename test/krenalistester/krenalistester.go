@@ -70,11 +70,11 @@ type Krenalis struct {
 	assetsGenerated      chan struct{}
 
 	// Options.
-	fileSystemRoot         string
-	natsAckWait            string
-	overrideProfileSchema  *types.Type
-	populateProfileSchema  bool
-	profileRoleAssignments *ProfileRoleAssignments
+	fileSystemRoot        string
+	natsAckWait           string
+	overrideProfileSchema *types.Type
+	populateProfileSchema bool
+	propertyRoles         *PropertyRoles
 }
 
 var assetsAlreadyGenerated bool
@@ -91,7 +91,7 @@ func (k *Krenalis) Addr() string {
 //
 // After initializing an instance, its options can be set (via
 // [PopulateProfileSchema], [SetFileSystemRoot], [SetNATSAckWait],
-// [SetProfileRoleAssignments], and [SetProfileSchema]) before calling [Start].
+// [SetPropertyRoles], and [SetProfileSchema]) before calling [Start].
 func NewKrenalisInstance(t *testing.T) *Krenalis {
 
 	if !launchKrenalisExternally {
@@ -179,12 +179,6 @@ func (k *Krenalis) SetNATSAckWait(duration string) {
 	k.natsAckWait = duration
 }
 
-// SetProfileRoleAssignments sets the roles used to create the initial
-// workspace. Call it before [Start].
-func (k *Krenalis) SetProfileRoleAssignments(assignments ProfileRoleAssignments) {
-	k.profileRoleAssignments = &assignments
-}
-
 // SetProfileSchema sets the schema used to create the initial workspace.
 // Call it before [Start]. It overrides [PopulateProfileSchema] and panics if
 // schema is not a valid object type.
@@ -193,6 +187,12 @@ func (k *Krenalis) SetProfileSchema(schema types.Type) {
 		panic("test/krenalistester: profile schema must be a valid object type")
 	}
 	k.overrideProfileSchema = &schema
+}
+
+// SetPropertyRoles sets the property roles used to create the initial
+// workspace. Call it before [Start].
+func (k *Krenalis) SetPropertyRoles(assignments PropertyRoles) {
+	k.propertyRoles = &assignments
 }
 
 // Start starts the Krenalis instance.
@@ -578,16 +578,17 @@ func init() {
 }
 
 func (k *Krenalis) createWorkspace(name string, profileSchema types.Type) (string, error) {
+	profilesBody := map[string]any{"schema": profileSchema}
+	if k.propertyRoles != nil {
+		profilesBody["propertyRoles"] = *k.propertyRoles
+	}
 	req := map[string]any{
-		"name":          name,
-		"profileSchema": profileSchema,
+		"name":     name,
+		"profiles": profilesBody,
 		"warehouse": map[string]any{
 			"platform": testsSettings.WarehousePlatform,
 			"settings": testsSettings.Warehouse,
 		},
-	}
-	if k.profileRoleAssignments != nil {
-		req["assignedRoles"] = *k.profileRoleAssignments
 	}
 	var response struct {
 		ID string `json:"id"`

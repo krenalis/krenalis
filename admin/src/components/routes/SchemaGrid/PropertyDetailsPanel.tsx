@@ -1,26 +1,30 @@
 import React, { ReactNode } from 'react';
+import './PropertyDetailsPanel.css';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
-import { getCompatibleProfileRoles, getProfileRole } from '../../helpers/profileRoles';
+import { getCompatibleProfilePropertyRoles, getProfilePropertyRole } from '../../helpers/profilePropertyRoles';
 import {
 	DURATION_UNIT_OPTIONS,
 	getPropertyValueType,
+	getTypeSemantics,
 	isSuitableAsIdentifier,
+	toKrenalisStringType,
+	toSemanticsLabel,
 	UNIT_OF_MEASURE_OPTIONS,
 } from '../../helpers/types';
 import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
 import { Property } from '../../../lib/api/types/types';
-import { ProfileRoleID } from '../../../lib/api/types/workspace';
+import { ProfilePropertyRoleID } from '../../../lib/api/types/workspace';
 import TransformedConnection from '../../../lib/core/connection';
 import { PropertyPanelLayout } from '../Schema/PropertyPanelLayout';
 import {
 	SchemaPropertyIdentifierLabel,
 	SchemaPropertyIdentifierValue,
+	SchemaPropertyInfoTooltip,
 	SchemaPropertyPrimarySourceLabel,
 } from '../Schema/SchemaPropertyGrid';
-import { SchemaPropertyType } from '../Schema/SchemaPropertyType';
 
 interface PropertyDetailsPanelProps {
-	assignedRole: ProfileRoleID | null;
+	propertyRole: ProfilePropertyRoleID | null;
 	identifierPosition?: number;
 	onClose: () => void;
 	primarySource: TransformedConnection | null;
@@ -34,13 +38,21 @@ interface PropertyDetailProps {
 }
 
 const PropertyDetailsPanel = ({
-	assignedRole,
+	propertyRole,
 	identifierPosition,
 	onClose,
 	primarySource,
 	property,
 }: PropertyDetailsPanelProps) => {
-	const semanticDetail = getSemanticDetail(property);
+	const semanticsDetail = getSemanticsDetail(property);
+	const physicalType = toKrenalisStringType(property.type);
+	const valueType = getPropertyValueType(property.type);
+	const semantics = getTypeSemantics(valueType);
+	let semanticsLabel = semantics == null ? null : toSemanticsLabel(semantics);
+	if (semantics === 'country') {
+		const letters = valueType.kind === 'string' && valueType.format === 'alpha-2' ? 2 : 3;
+		semanticsLabel += ` (${letters}-letter)`;
+	}
 
 	return (
 		<PropertyPanelLayout className='property-details-panel' closeLabel='Close property details' onClose={onClose}>
@@ -48,21 +60,43 @@ const PropertyDetailsPanel = ({
 				<div className='property-details-panel__section'>
 					<PropertyDetail label='Name'>{property.name}</PropertyDetail>
 					<PropertyDetail label='Type'>
-						<SchemaPropertyType context='details' type={property.type} />
+						<span
+							className='property-details-panel__type'
+							title={semanticsLabel == null ? physicalType : `${physicalType}\n${semanticsLabel}`}
+						>
+							<span className='property-details-panel__physical-type'>{physicalType}</span>
+							{semanticsLabel != null && (
+								<span className='property-details-panel__semantics'>{semanticsLabel}</span>
+							)}
+						</span>
 					</PropertyDetail>
-					{semanticDetail != null && (
-						<PropertyDetail label={semanticDetail.label}>
-							{semanticDetail.value || <span className='property-details-panel__empty-value'>—</span>}
+					{semanticsDetail != null && (
+						<PropertyDetail label={semanticsDetail.label}>
+							{semanticsDetail.value != null && semanticsDetail.value !== '' ? (
+								semanticsDetail.value
+							) : (
+								<span className='property-details-panel__empty-value'>—</span>
+							)}
 						</PropertyDetail>
 					)}
 				</div>
 				<div className='property-details-panel__section property-details-panel__section--metadata'>
-					{getCompatibleProfileRoles(property).length > 0 && (
-						<PropertyDetail label='Role'>
-							{assignedRole == null ? (
+					{getCompatibleProfilePropertyRoles(property).length > 0 && (
+						<PropertyDetail
+							label={
+								<span className='schema-property-grid__label-content'>
+									Role
+									<SchemaPropertyInfoTooltip
+										content='Specifies which profile concept this property represents.'
+										label='About roles'
+									/>
+								</span>
+							}
+						>
+							{propertyRole == null ? (
 								<span className='property-details-panel__empty-value'>—</span>
 							) : (
-								getProfileRole(assignedRole).label
+								getProfilePropertyRole(propertyRole).label
 							)}
 						</PropertyDetail>
 					)}
@@ -95,7 +129,7 @@ const PropertyDetailsPanel = ({
 	);
 };
 
-const getSemanticDetail = (property: Property): { label: string; value?: string } | null => {
+const getSemanticsDetail = (property: Property): { label: string; value?: string } | null => {
 	const type = getPropertyValueType(property.type);
 	if (type?.kind === 'decimal' && type.semantics === 'money') {
 		return { label: 'Currency', value: type.currency };

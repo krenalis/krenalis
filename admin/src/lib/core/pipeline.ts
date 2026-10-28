@@ -2245,7 +2245,7 @@ const validateFilterConditionValues = (type: Type, values: string[], propertyNam
 	const throwIfInvalid = (isValid: boolean, typeKind: string, unsigned?: boolean) => {
 		if (!isValid) {
 			throw new Error(
-				`The filter value on the property "${propertyName}" is not a valid${unsigned === true ? 'unsigned ' : ''} ${typeKind}`,
+				`The filter value on the property "${propertyName}" is not a valid${unsigned === true ? ' unsigned' : ''} ${typeKind}`,
 			);
 		}
 	};
