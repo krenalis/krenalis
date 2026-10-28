@@ -98,7 +98,7 @@ func TestUnifiedWritersPostgreSQL(t *testing.T) {
 		func(warehouses.SettingsLoader, warehouses.DialWith) warehouses.Warehouse { return warehouse })
 
 	schema := types.Object([]types.Property{
-		{Name: "fixture", Type: types.String()},
+		{Name: "fixture", Type: types.String(), ReadOptional: true},
 		{Name: "plain", Type: types.String(), ReadOptional: true},
 		{Name: "value", Type: types.JSON(), ReadOptional: true},
 		{Name: "object", ReadOptional: true, Type: types.Object([]types.Property{
@@ -303,7 +303,7 @@ func TestUnifiedWritersPostgreSQL(t *testing.T) {
 		Currency: &unified.NativeCurrency{Definition: "NativeCurrency", Revision: "1", Value: "EUR"}}}
 
 	kinds := []string{"value present", "value null", "object present", "plain different", "exact JSON number",
-		"raw absence", "governed absence", "mixed"}
+		"raw absence", "governed absence", "mixed", "event once", "event properties null", "event exact number"}
 	for _, kind := range kinds {
 		t.Run(kind, func(t *testing.T) {
 
@@ -336,6 +336,23 @@ func TestUnifiedWritersPostgreSQL(t *testing.T) {
 					{Record: &state.WhereCondition{Property: []string{"object"}, Operator: state.OpExists}}}}
 			case "governed absence":
 				// The governed absence retains the fixture Count.
+			case "event once", "event properties null", "event exact number":
+				c := *count.Count
+				c.Currency = nil
+				switch kind {
+				case "event once":
+					c.Test.Value = 1
+				case "event properties null":
+					c.Where = &state.Where{Operator: state.OpAnd, Rules: []state.WhereRule{&state.WhereCondition{
+						Property: []string{"properties"}, Operator: state.OpIsNull}}}
+				case "event exact number":
+					c.Where = &state.Where{Operator: state.OpAnd, Rules: []state.WhereRule{&state.WhereCondition{
+						Property: []string{"properties", "currency"}, Operator: state.OpIs,
+						Values: []any{json.Value(`9007199254740993`)}}}}
+				default:
+					t.Fatalf("expected known event query kind, got %q", kind)
+				}
+				rule = unified.Rule{Count: &c}
 			default:
 				t.Fatalf("expected known query kind, got %q", kind)
 			}
@@ -391,6 +408,26 @@ func TestUnifiedWritersPostgreSQL(t *testing.T) {
 						}
 					case "governed absence":
 						truth = fixture.governedAbsence
+					case "event once":
+						// Keep the expected history independent of the writer's hasEvent gate.
+						if fixture.name != "no-event" {
+							truth = unified.Match
+						}
+					case "event properties null":
+						truth = unified.Match
+						if fixture.name == "json-null" {
+							truth = unified.NoMatch
+						}
+					case "event exact number":
+						switch fixture.name {
+						case "number":
+							truth = unified.NoMatch
+						case "missing", "json-null", "empty-object":
+							truth = unified.Unknown
+						default:
+							// Empty histories and different present JSON values qualify no events.
+							truth = unified.Match
+						}
 					default:
 						t.Fatalf("expected known query kind, got %q", kind)
 					}

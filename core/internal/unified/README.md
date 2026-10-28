@@ -244,9 +244,13 @@ publication/attribution before querying Unified. Eighteen profiles from two
 connections cover no events, missing JSON, JSON null, empty objects, nested
 values, exact JSON integers above 2^53, ordinary String values, raw/governed
 currency and mixed Record/Count conditions. Missing and JSON null remain
-distinct; an empty flattened object has no present descendant, as in the
-existing Profiles layout. The fixture has no concurrent writers or Identity
-Resolution; it does not establish a concurrent read guarantee.
+distinct on profiles and events; an empty flattened object has no present
+descendant, as in the existing Profiles layout. Separate event queries require
+one Purchase per event fixture, distinguish root `properties` JSON null from
+missing, and compare the exact JSON integer. This fixture exercises `user_id`
+attribution only. Anonymous-ID attribution and writer timestamp boundaries,
+precision and timezone behavior are not covered. It has no concurrent writers
+or Identity Resolution; it does not establish a concurrent read guarantee.
 
 `TestUnifiedPreparedBudget` builds a semantically valid 99-condition tree on a
 170-field object. Its deterministic physical-budget error is returned before
