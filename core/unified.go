@@ -12,6 +12,7 @@ import (
 	"github.com/krenalis/krenalis/core/internal/schemas"
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/core/internal/unified"
+	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/types"
 )
 
@@ -39,9 +40,14 @@ func (this *Workspace) unifiedProfiles(ctx context.Context, query unifiedQuery) 
 
 // prepareUnifiedRecordCount reuses the existing schema-aware event preparer.
 func prepareUnifiedRecordCount(scope unified.Scope, filter *Filter, test unified.CountTest) (unified.Rule, error) {
-	where, _, err := prepareFilter(filter, schemas.Event)
-	if err != nil {
-		return unified.Rule{}, err
+	var where *state.Where
+	if filter != nil {
+		validation := filterValidation{maxDepth: 2, properties: schemas.Event.Properties()}
+		var err error
+		where, err = prepareFilterGroup(filter, &validation, 1)
+		if err != nil {
+			return unified.Rule{}, err
+		}
 	}
 	return unified.Rule{Count: &unified.Count{Scope: scope, Where: where, Test: test}}, nil
 }
@@ -59,12 +65,20 @@ func prepareUnifiedRule(rule FilterRule, schema types.Type, depth int, nodes *in
 		}
 		result := unified.Rule{Operator: convertLogicalToWhere(rule.Operator),
 			Children: make([]unified.Rule, len(rule.Rules))}
+		var unavailable error
 		for i, child := range rule.Rules {
 			prepared, err := prepareUnifiedRule(child, schema, depth+1, nodes)
 			if err != nil {
-				return unified.Rule{}, err
+				if _, unsupported := errors.AsType[*unified.UnsupportedError](err); !unsupported {
+					return unified.Rule{}, err
+				}
+				unavailable = err
+				continue
 			}
 			result.Children[i] = prepared
+		}
+		if unavailable != nil {
+			return unified.Rule{}, unavailable
 		}
 		return result, nil
 	case *FilterCondition:

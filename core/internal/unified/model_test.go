@@ -5,6 +5,7 @@
 package unified
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -126,6 +127,66 @@ func TestValidateElapsedPeriod(t *testing.T) {
 			}
 			t.Fatal("expected rejected elapsed period, got success")
 		})
+	}
+}
+
+// TestValidateInvalidBeforeUnsupported gives shape errors precedence across
+// the canonical tree, including unavailable earlier siblings and T precision.
+func TestValidateInvalidBeforeUnsupported(t *testing.T) {
+	for _, test := range []struct {
+		name   string
+		change func(*Count)
+	}{
+		{"event", func(c *Count) { c.Scope.Event = ""; c.Scope.Grain = "business-order" }},
+		{"between", func(c *Count) { c.Test = CountTest{Operator: Between, Value: 1 << 63, Upper: 1} }},
+		{"operator", func(c *Count) { c.Test = CountTest{Operator: 255, Value: 1 << 63} }},
+		{"minimum", func(c *Count) { c.Minimum = 1 << 63 }},
+		{"period", func(c *Count) { c.Scope.Start = c.Scope.End; c.Shared = &SharedBoolean{Fact: "g"} }},
+		{"period precision", func(c *Count) { c.Scope.Start = c.Scope.End.Add(time.Nanosecond); c.Scope.End = c.Scope.Start }},
+		{"qualification", func(c *Count) { c.Where = &state.Where{Operator: state.OpAnd}; c.Scope.Grain = "business-order" }},
+		{"currency", func(c *Count) { c.Currency = &NativeCurrency{}; c.Where = &state.Where{Operator: state.OpAnd} }},
+	} {
+		for _, reversed := range []bool{false, true} {
+			for _, nanos := range []time.Duration{0, time.Nanosecond} {
+				t.Run(fmt.Sprintf("%s/reversed=%v/T+%s", test.name, reversed, nanos), func(t *testing.T) {
+					at := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
+					c := Count{Scope: Scope{Event: "Purchase", Grain: "registered-message",
+						Start: at.Add(-time.Hour), End: at}}
+					test.change(&c)
+					unavailable := Count{Scope: Scope{Event: "Purchase", Grain: "business-order",
+						Start: at.Add(-time.Hour), End: at}}
+					children := []Rule{{Count: &unavailable}, {Count: &c}}
+					if reversed {
+						children[0], children[1] = children[1], children[0]
+					}
+					err := Validate(&Rule{Operator: state.OpAnd, Children: children}, at.Add(nanos), Page{Limit: 1})
+					if err != nil {
+						if _, unsupported := errors.AsType[*UnsupportedError](err); unsupported {
+							t.Fatalf("expected invalid canonical shape before unavailable capability, got %v", err)
+						}
+						return
+					}
+					t.Fatal("expected invalid canonical input, got success")
+				})
+			}
+		}
+	}
+	for _, size := range []int{100, 101} {
+		at := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
+		root := Rule{Operator: state.OpAnd, Children: make([]Rule, size)}
+		for i := range root.Children {
+			root.Children[i].Count = &Count{Scope: Scope{Event: "Purchase", Grain: "business-order",
+				Start: at.Add(-time.Hour), End: at}}
+		}
+		err := Validate(&root, at, Page{Limit: 1})
+		if err != nil {
+			_, unsupported := errors.AsType[*UnsupportedError](err)
+			if unsupported != (size == 100) {
+				t.Fatalf("expected unsupported=%v for %d descendants, got %v", size == 100, size, err)
+			}
+			continue
+		}
+		t.Fatal("expected canonical budget or capability error, got success")
 	}
 }
 

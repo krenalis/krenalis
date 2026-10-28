@@ -98,6 +98,163 @@ func TestFilterCountEncoding(t *testing.T) {
 
 }
 
+// TestFilterCountInstants rejects excess precision before time.Time decoding.
+func TestFilterCountInstants(t *testing.T) {
+	for _, test := range []struct {
+		fraction string
+		nanos    int
+		valid    bool
+	}{
+		{".1234567891", 0, false}, {".0000000001", 0, false}, {".0000010009", 0, false},
+		{".0000000000000000000001", 0, false}, {".0000000000", 0, false},
+		{".123456789", 123456789, true}, {".000001000", 1000, true}, {".000001", 1000, true},
+	} {
+		for _, bound := range []string{"start", "end"} {
+			t.Run(bound+test.fraction, func(t *testing.T) {
+				start, end := "2026-01-01T00:00:00Z", "2026-01-02T00:00:00Z"
+				if bound == "start" {
+					start = strings.TrimSuffix(start, "Z") + test.fraction + "Z"
+				} else {
+					end = strings.TrimSuffix(end, "Z") + test.fraction + "Z"
+				}
+				var period FilterPeriod
+				err := json.Unmarshal([]byte(fmt.Sprintf(`{"kind":"absoluteHalfOpen","start":%q,"end":%q}`,
+					start, end)), &period)
+				if err != nil {
+					if test.valid {
+						t.Fatalf("expected representable timestamp, got %v", err)
+					}
+					return
+				}
+				if !test.valid {
+					t.Fatal("expected excess fractional digits rejected before truncation, got success")
+				}
+				instant := period.Start
+				if bound == "end" {
+					instant = period.End
+				}
+				if instant.Nanosecond() != test.nanos {
+					t.Fatalf("expected %d nanoseconds, got %d", test.nanos, instant.Nanosecond())
+				}
+				count := countFilterCondition()
+				count.Count.Period = period
+				rule, err := prepareFilterCount(count)
+				if err != nil {
+					t.Fatalf("expected exact Count preparation, got %v", err)
+				}
+				err = unified.Validate(&rule, time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC), unified.Page{Limit: 1})
+				if err != nil {
+					if _, unsupported := errors.AsType[*unified.UnsupportedError](err); !unsupported || test.nanos%1000 == 0 {
+						t.Fatalf("expected only submicrosecond precision unsupported, got %v", err)
+					}
+					return
+				}
+				if test.nanos%1000 != 0 {
+					t.Fatal("expected unsupported submicrosecond precision, got success")
+				}
+			})
+		}
+	}
+}
+
+// TestFilterCountInvalidBeforeUnsupported checks the complete document even
+// when another rule or another field exceeds an execution limit.
+func TestFilterCountInvalidBeforeUnsupported(t *testing.T) {
+
+	schema := types.Object([]types.Property{{Name: "country", Type: types.String()}})
+	for _, test := range []struct {
+		name   string
+		change func(*FilterCountCondition)
+	}{
+		{"unit", func(c *FilterCountCondition) {
+			c.Count.Period.Duration.Unit = "fortnight"
+			c.Count.Period.Duration.Value = json.Value(`18446744073709551616`)
+		}},
+		{"between above int64", func(c *FilterCountCondition) { c.Operator = OpIsBetween; c.Values = filterValues(uint64(1<<63), 1) }},
+		{"between above uint64", func(c *FilterCountCondition) {
+			c.Operator = OpIsBetween
+			c.Values = []json.Value{json.Value(`18446744073709551616`), json.Value(`1`)}
+		}},
+		{"invalid second operand", func(c *FilterCountCondition) {
+			c.Operator = OpIsBetween
+			c.Values = []json.Value{json.Value(`18446744073709551616`), json.Value(`-1`)}
+		}},
+		{"period", func(c *FilterCountCondition) { c.Count.Period.Kind = "calendarMonth" }},
+		{"source", func(c *FilterCountCondition) { c.Count.Source.Kind = "SQL" }},
+		{"event", func(c *FilterCountCondition) { c.Count.Source.Name = "" }},
+		{"grain", func(c *FilterCountCondition) { c.Count.Source.Grain = "" }},
+		{"minimum", func(c *FilterCountCondition) {
+			c.Values = filterValues(0)
+			c.Count.Minimum = json.Value(`18446744073709551616`)
+		}},
+		{"where", func(c *FilterCountCondition) {
+			c.Count.Where = &Filter{Operator: OpAnd, Rules: []FilterRule{
+				&FilterCondition{Property: "absent", Operator: OpExists}}}
+		}},
+		{"deep where", func(c *FilterCountCondition) {
+			c.Count.Where = &Filter{Operator: OpAnd, Rules: []FilterRule{
+				&FilterCondition{Property: "event", Operator: OpIs, Values: filterValues("Purchase")}}}
+			for range 2 {
+				c.Count.Where = &Filter{Operator: OpAnd, Rules: []FilterRule{c.Count.Where}}
+			}
+		}},
+		{"ago band ordering", func(c *FilterCountCondition) {
+			c.Count.Period = FilterPeriod{Kind: "elapsedAgoBand",
+				Older: &FilterDuration{Value: json.Value(`18446744073709551616`), Unit: "day"},
+				Newer: &FilterDuration{Value: json.Value(`18446744073709551616`), Unit: "week"}}
+		}},
+		{"absolute ordering", func(c *FilterCountCondition) {
+			end := time.Date(2026, 1, 1, 0, 0, 0, 1, time.UTC)
+			c.Count.Period = FilterPeriod{Kind: "absoluteHalfOpen", Start: &end, End: &end}
+		}},
+	} {
+		for _, reversed := range []bool{false, true} {
+			t.Run(fmt.Sprintf("%s/reversed=%v", test.name, reversed), func(t *testing.T) {
+				invalid := countFilterCondition()
+				invalid.Values = []json.Value{json.Value(`18446744073709551616`)}
+				test.change(invalid)
+				unavailable := countFilterCondition()
+				unavailable.Values = []json.Value{json.Value(`18446744073709551616`)}
+				rules := []FilterRule{unavailable, &Filter{Operator: OpOr, Rules: []FilterRule{invalid}}}
+				if reversed {
+					rules[0], rules[1] = rules[1], rules[0]
+				}
+				nodes := 0
+				rule, err := prepareUnifiedRule(&Filter{Operator: OpAnd, Rules: rules}, schema, 0, &nodes)
+				if err == nil {
+					err = unified.Validate(&rule, time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC), unified.Page{Limit: 1})
+				}
+				if err != nil {
+					if _, unsupported := errors.AsType[*unified.UnsupportedError](err); unsupported {
+						t.Fatalf("expected invalidity before unavailable capability, got %v", err)
+					}
+					return
+				}
+				t.Fatal("expected invalid Count document, got success")
+			})
+		}
+	}
+
+	for _, reversed := range []bool{false, true} {
+		unavailable := countFilterCondition()
+		unavailable.Values = []json.Value{json.Value(`18446744073709551616`)}
+		rules := []FilterRule{unavailable, &FilterCondition{Property: "absent", Operator: OpExists}}
+		if reversed {
+			rules[0], rules[1] = rules[1], rules[0]
+		}
+		nodes := 0
+		_, err := prepareUnifiedRule(&Filter{Operator: OpAnd, Rules: rules}, schema, 0, &nodes)
+		if err != nil {
+			if _, unsupported := errors.AsType[*unified.UnsupportedError](err); unsupported {
+				t.Fatalf("expected invalid Record sibling in either order, got %v", err)
+			}
+			continue
+		}
+		t.Fatal("expected invalid Record sibling rejection, got success")
+	}
+
+}
+
 // TestFilterCountLimits keeps main and occurrence-body budgets independent.
 func TestFilterCountLimits(t *testing.T) {
 	for _, test := range []struct {
@@ -135,6 +292,37 @@ func TestFilterCountLimits(t *testing.T) {
 			}
 			if !test.valid {
 				t.Fatal("expected exceeded budget rejection, got success")
+			}
+		})
+	}
+}
+
+// TestFilterCountPeriodRanges checks both sides of each duration boundary.
+func TestFilterCountPeriodRanges(t *testing.T) {
+	for _, test := range []struct {
+		unit  string
+		value string
+		valid bool
+	}{
+		{"day", "106751", true}, {"day", "106752", false},
+		{"week", "15250", true}, {"week", "15251", false},
+		{"microsecond", "9223372036854775", true}, {"microsecond", "9223372036854776", false},
+	} {
+		t.Run(test.unit+"/"+test.value, func(t *testing.T) {
+			count := countFilterCondition()
+			count.Count.Period.Duration = &FilterDuration{Value: json.Value(test.value), Unit: test.unit}
+			rule, err := prepareFilterCount(count)
+			if err == nil {
+				err = unified.Validate(&rule, time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC), unified.Page{Limit: 1})
+			}
+			if err != nil {
+				if _, unsupported := errors.AsType[*unified.UnsupportedError](err); !unsupported || test.valid {
+					t.Fatalf("expected valid=%v at duration boundary, got %v", test.valid, err)
+				}
+				return
+			}
+			if !test.valid {
+				t.Fatal("expected duration range limit, got success")
 			}
 		})
 	}

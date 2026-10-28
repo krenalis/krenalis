@@ -14,6 +14,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/krenalis/krenalis/core/internal/state"
+	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/warehouses"
 )
 
@@ -143,6 +144,7 @@ type Scope struct {
 func (s Scope) bounds(at time.Time) (time.Time, time.Time, error) {
 
 	start, end := s.Start, s.End
+	var unavailable error
 	if s.Elapsed != nil {
 		if s.FullHistory || !start.IsZero() || !end.IsZero() {
 			return time.Time{}, time.Time{}, fmt.Errorf("elapsed period cannot have explicit bounds or FullHistory")
@@ -152,7 +154,7 @@ func (s Scope) bounds(at time.Time) (time.Time, time.Time, error) {
 			return time.Time{}, time.Time{}, fmt.Errorf("invalid elapsed observation period")
 		}
 		if p.Older%time.Microsecond != 0 || p.Newer%time.Microsecond != 0 {
-			return time.Time{}, time.Time{}, &UnsupportedError{
+			unavailable = &UnsupportedError{
 				Capability: "elapsed duration precision greater than one microsecond"}
 		}
 		start, end = at.Add(-p.Older), at.Add(-p.Newer)
@@ -170,11 +172,17 @@ func (s Scope) bounds(at time.Time) (time.Time, time.Time, error) {
 				return time.Time{}, time.Time{}, &UnsupportedError{
 					Capability: "elapsed period outside supported timestamp range"}
 			}
-			return time.Time{}, time.Time{}, err
+			if _, unsupported := errors.AsType[*UnsupportedError](err); !unsupported {
+				return time.Time{}, time.Time{}, err
+			}
+			unavailable = err
 		}
 	}
 	if !start.Before(end) {
 		return time.Time{}, time.Time{}, fmt.Errorf("invalid absolute observation period")
+	}
+	if unavailable != nil {
+		return time.Time{}, time.Time{}, unavailable
 	}
 	if end.After(at) {
 		return time.Time{}, time.Time{}, &UnsupportedError{Capability: "unmatured event windows"}
@@ -222,14 +230,26 @@ func Validate(root *Rule, at time.Time, page Page) error {
 
 // validateFilter checks semantic shape independently of the result request.
 func validateFilter(root *Rule, at time.Time) error {
-	if err := validateTime(at); err != nil {
-		return err
+	timeErr := validateTime(at)
+	if timeErr != nil {
+		if _, unsupported := errors.AsType[*UnsupportedError](timeErr); !unsupported {
+			return timeErr
+		}
 	}
 	if root == nil {
-		return nil
+		return timeErr
 	}
 	nodes := 0
-	return validateRule(*root, at, 0, &nodes)
+	err := validateRule(*root, at, 0, &nodes)
+	if err != nil {
+		if _, unsupported := errors.AsType[*UnsupportedError](err); !unsupported {
+			return err
+		}
+	}
+	if timeErr != nil {
+		return timeErr
+	}
+	return err
 }
 
 func validateRule(rule Rule, at time.Time, depth int, nodes *int) error {
@@ -251,40 +271,28 @@ func validateRule(rule Rule, at time.Time, depth int, nodes *int) error {
 		if depth >= 4 || (rule.Operator != state.OpAnd && rule.Operator != state.OpOr) || len(rule.Children) == 0 {
 			return fmt.Errorf("invalid Unified boolean group")
 		}
+		var unavailable error
 		for _, child := range rule.Children {
 			err := validateRule(child, at, depth+1, nodes)
 			if err != nil {
-				return err
+				if _, unsupported := errors.AsType[*UnsupportedError](err); !unsupported {
+					return err
+				}
+				unavailable = err
 			}
 		}
-		return nil
+		return unavailable
 	}
 	if len(rule.Children) != 0 || rule.Operator != 0 {
 		return fmt.Errorf("Count cannot contain outer rules")
 	}
 	c := rule.Count
-	if c.Shared != nil {
-		return &UnsupportedError{Capability: "shared governed qualification facts"}
-	}
-	if c.Scope.Grain != "registered-message" {
-		return &UnsupportedError{Capability: "occurrence identity/grain other than registered-message"}
-	}
 	if len(c.Scope.Event) == 0 || len(c.Scope.Event) > 1024 ||
 		!utf8.ValidString(c.Scope.Event) || strings.ContainsRune(c.Scope.Event, 0) {
 		return fmt.Errorf("invalid recorded event selector")
 	}
-	_, _, err := c.Scope.bounds(at)
-	if err != nil {
-		return err
-	}
-	if c.Minimum > math.MaxInt64 || c.Test.Value > math.MaxInt64 || c.Test.Upper > math.MaxInt64 {
-		return &UnsupportedError{Capability: "Count bounds beyond signed 64-bit range"}
-	}
 	if c.Test.Operator > Between || (c.Test.Operator == Between && c.Test.Upper < c.Test.Value) {
 		return fmt.Errorf("invalid Count terminal")
-	}
-	if c.Test.Operator == Greater && c.Test.Value == math.MaxInt64 {
-		return &UnsupportedError{Capability: "Count threshold requiring values beyond signed 64-bit range"}
 	}
 	if c.Minimum > 0 && ((c.Test.Operator == Equal && c.Test.Value < c.Minimum) ||
 		(c.Test.Operator == Less && c.Test.Value <= c.Minimum) ||
@@ -294,9 +302,6 @@ func validateRule(rule Rule, at time.Time, depth int, nodes *int) error {
 	}
 	if c.Currency != nil {
 		p := c.Currency
-		if c.Where != nil {
-			return &UnsupportedError{Capability: "mixed governed and raw occurrence predicates"}
-		}
 		if p.Definition == "" || p.Revision == "" || len(p.Definition) > 256 || len(p.Revision) > 256 ||
 			len(p.Value) != 3 {
 			return fmt.Errorf("invalid resolved NativeCurrency predicate")
@@ -309,7 +314,29 @@ func validateRule(rule Rule, at time.Time, depth int, nodes *int) error {
 	}
 	if c.Where != nil {
 		nodes := 0
-		return validateWhere(c.Where, 1, &nodes)
+		err := validateWhere(c.Where, 1, &nodes)
+		if err != nil {
+			return err
+		}
+	}
+	_, _, err := c.Scope.bounds(at)
+	if err != nil {
+		return err
+	}
+	if c.Shared != nil {
+		return &UnsupportedError{Capability: "shared governed qualification facts"}
+	}
+	if c.Scope.Grain != "registered-message" {
+		return &UnsupportedError{Capability: "occurrence identity/grain other than registered-message"}
+	}
+	if c.Minimum > math.MaxInt64 || c.Test.Value > math.MaxInt64 || c.Test.Upper > math.MaxInt64 {
+		return &UnsupportedError{Capability: "Count bounds beyond signed 64-bit range"}
+	}
+	if c.Test.Operator == Greater && c.Test.Value == math.MaxInt64 {
+		return &UnsupportedError{Capability: "Count threshold requiring values beyond signed 64-bit range"}
+	}
+	if c.Currency != nil && c.Where != nil {
+		return &UnsupportedError{Capability: "mixed governed and raw occurrence predicates"}
 	}
 	return nil
 }

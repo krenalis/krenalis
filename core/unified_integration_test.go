@@ -157,7 +157,7 @@ INSERT INTO unified_v.krenalis_events VALUES
 	var storedDocument []byte
 	err = database.QueryRow(t.Context(), "SELECT $1::jsonb", string(encodedDocument)).Scan(&storedDocument)
 	if err != nil {
-		t.Fatalf("expected exact JSONB document round-trip, got %v", err)
+		t.Fatalf("expected JSONB document reloading, got %v", err)
 	}
 	err = json.Unmarshal(storedDocument, &document)
 	if err != nil {

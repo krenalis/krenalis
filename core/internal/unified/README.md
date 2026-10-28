@@ -231,8 +231,14 @@ Italy with no recorded Purchase in the previous 30 elapsed days:
 Encoding/decoding is distinct from semantic validation, as for existing Record
 conditions. Unknown/duplicate members and ambiguous shapes are rejected;
 operator/type/cardinality/source/period checks occur during preparation and
-canonical admission. The numeric limits of the executable backend remain
-capability errors. An older decoder rejects the unknown `count` member.
+canonical admission. Invalidity takes precedence over unavailable capabilities
+throughout the document, independently of rule order. Natural operands, sample
+minimums and elapsed offsets are checked exactly before execution range limits,
+including inverted intervals beyond uint64. Absolute instants with more than
+nine fractional digits are rejected before decoding into time.Time; admitted
+nanoseconds retain the existing microsecond execution capability check.
+The numeric limits of the executable backend remain capability errors.
+An older decoder rejects the unknown `count` member.
 
 The existing Record-only preparer explicitly rejects Count. This increment
 connects the public document to the internal Unified service; it does not
@@ -249,6 +255,12 @@ grain, relative periods, applicable future meaning revisions and public grouping
 it must not save resolved T bounds or `warehouses.Filter`. No format/version for
 that internal storage is chosen here. The canonical/internal `Rule` and
 `Bindings` remain execution inputs rather than serialization contracts.
+JSONB retains natural numeric values but normalizes member order and some
+number spellings, including `-0` and exponent notation. Syntax and semantic
+validation must precede any future save; byte-identical storage is not implied.
+Unknown nonempty grain names and the treatment of null members still need an
+explicit storage contract before persisting valid-but-unavailable documents;
+this change preserves their existing admission behavior.
 
 ## Verification and activation
 
@@ -256,7 +268,8 @@ that internal storage is chosen here. The canonical/internal `Rule` and
 executes the complete service/datastore/warehouse path against a disposable
 application database and warehouse schema, for all seven Count comparisons,
 sample minimum, absolute/lookback/ago-band periods, profile Record and mixed
-AND/OR. The `TestFilterCount*` tests check strict syntax, exact round-trips,
+AND/OR. Its JSONB reload checks execution after normalization, not byte identity.
+The `TestFilterCount*` tests check strict syntax, exact numeric literals,
 Record-context rejection and independent main/occurrence budgets. Core tests preserve Record round-trip/equality and exercise the combined
 semantic depth/node boundaries after expanding the Record tree, including
 Record/Count siblings at four levels and 100 descendants. Tests for a complete

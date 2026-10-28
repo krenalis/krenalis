@@ -7,13 +7,16 @@ package core
 import (
 	"bytes"
 	"fmt"
-	"math"
-	"strconv"
+	"math/big"
+	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/krenalis/krenalis/core/internal/unified"
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
+
+	"github.com/relvacode/iso8601"
 )
 
 // FilterCount describes the occurrence population counted by a condition.
@@ -64,9 +67,10 @@ func (count *FilterCount) UnmarshalJSON(data []byte) error {
 			} else {
 				var rule FilterRule
 				rule, _, err = unmarshalFilterRule(dec, 1, expectFilterGroup, true)
-				if err == nil {
-					decoded.Where = rule.(*Filter)
+				if err != nil {
+					return errors.New(err.Error())
 				}
+				decoded.Where = rule.(*Filter)
 			}
 		default:
 			return errors.New("unknown count property")
@@ -139,7 +143,10 @@ type FilterCountSource struct {
 
 // UnmarshalJSON decodes a source and rejects unknown members.
 func (source *FilterCountSource) UnmarshalJSON(data []byte) error {
-	if source == nil || !json.Valid(data) || !json.Value(data).IsObject() {
+	if source == nil {
+		return errors.New("core: cannot unmarshal a Count source into nil")
+	}
+	if !json.Valid(data) || !json.Value(data).IsObject() {
 		return errors.New("Count source must be an object")
 	}
 	for name := range json.Value(data).Properties() {
@@ -161,7 +168,7 @@ func (source *FilterCountSource) UnmarshalJSON(data []byte) error {
 }
 
 // FilterDuration is a nonnegative integer JSON value in a fixed elapsed unit:
-// microsecond, millisecond, second, minute, hour, day or week. A day is 24 hours.
+// microsecond, millisecond, second, minute, hour, day or week. A day is 24h.
 // Window widths must be positive; the newer offset of an ago band may be zero.
 type FilterDuration struct {
 	Value json.Value `json:"value"`
@@ -170,7 +177,10 @@ type FilterDuration struct {
 
 // UnmarshalJSON decodes an elapsed duration and rejects unknown members.
 func (duration *FilterDuration) UnmarshalJSON(data []byte) error {
-	if duration == nil || !json.Valid(data) || !json.Value(data).IsObject() {
+	if duration == nil {
+		return errors.New("core: cannot unmarshal a filter duration into nil")
+	}
+	if !json.Valid(data) || !json.Value(data).IsObject() {
 		return errors.New("filter duration must be an object")
 	}
 	for name := range json.Value(data).Properties() {
@@ -191,10 +201,11 @@ func (duration *FilterDuration) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func (duration FilterDuration) elapsed() (time.Duration, error) {
+// elapsed returns exact nanoseconds, before applying execution range limits.
+func (duration FilterDuration) elapsed() (*big.Int, error) {
 	value, err := parseFilterCountInteger(duration.Value)
 	if err != nil {
-		return 0, err
+		return nil, fmt.Errorf("invalid elapsed duration value: %w", err)
 	}
 	var unit time.Duration
 	switch duration.Unit {
@@ -213,12 +224,9 @@ func (duration FilterDuration) elapsed() (time.Duration, error) {
 	case "week":
 		unit = 7 * 24 * time.Hour
 	default:
-		return 0, errors.New("invalid fixed elapsed duration unit")
+		return nil, errors.New("invalid fixed elapsed duration unit")
 	}
-	if value > uint64(math.MaxInt64/int64(unit)) {
-		return 0, &unified.UnsupportedError{Capability: "elapsed duration beyond time.Duration range"}
-	}
-	return time.Duration(value) * unit, nil
+	return value.Mul(value, big.NewInt(int64(unit))), nil
 }
 
 // FilterPeriod describes an absoluteHalfOpen, elapsedLookback or elapsedAgoBand
@@ -236,7 +244,10 @@ type FilterPeriod struct {
 
 // UnmarshalJSON decodes a period and rejects unknown or null fields.
 func (period *FilterPeriod) UnmarshalJSON(data []byte) error {
-	if period == nil || !json.Valid(data) || !json.Value(data).IsObject() {
+	if period == nil {
+		return errors.New("core: cannot unmarshal a filter period into nil")
+	}
+	if !json.Valid(data) || !json.Value(data).IsObject() {
 		return errors.New("filter period must be an object")
 	}
 	for name, value := range json.Value(data).Properties() {
@@ -244,6 +255,11 @@ func (period *FilterPeriod) UnmarshalJSON(data []byte) error {
 		case "start", "end":
 			if !value.IsString() || len(value) > 80 {
 				return errors.New("period instant must be an RFC 3339 string")
+			}
+			// Reject excess fractional digits before time.Time can truncate them.
+			_, err := iso8601.ParseString(value.String())
+			if err != nil {
+				return errors.New("period instant must be a valid datetime")
 			}
 		case "kind", "duration", "older", "newer":
 			if value.IsNull() {
@@ -270,7 +286,12 @@ func (period FilterPeriod) scope(source FilterCountSource) (unified.Scope, error
 	if source.Grain == "" {
 		return unified.Scope{}, errors.New("Count source must declare its grain")
 	}
+	if len(source.Name) == 0 || len(source.Name) > 1024 ||
+		!utf8.ValidString(source.Name) || strings.ContainsRune(source.Name, 0) {
+		return unified.Scope{}, errors.New("invalid recorded event selector")
+	}
 	scope := unified.Scope{Event: source.Name, Grain: source.Grain}
+	var older, newer *big.Int
 	switch period.Kind {
 	case "absoluteHalfOpen":
 		if period.Start == nil || period.End == nil || period.Duration != nil ||
@@ -278,62 +299,83 @@ func (period FilterPeriod) scope(source FilterCountSource) (unified.Scope, error
 			return unified.Scope{}, errors.New("absolute period requires only start and end")
 		}
 		scope.Start, scope.End = *period.Start, *period.End
+		for _, bound := range []time.Time{scope.Start, scope.End} {
+			if bound.IsZero() || bound.UTC().Year() < 1 || bound.UTC().Year() > 9999 {
+				return unified.Scope{}, errors.New("invalid Unified timestamp")
+			}
+		}
+		if !scope.Start.Before(scope.End) {
+			return unified.Scope{}, errors.New("invalid absolute observation period")
+		}
 	case "elapsedLookback":
 		if period.Duration == nil || period.Start != nil || period.End != nil ||
 			period.Older != nil || period.Newer != nil {
 			return unified.Scope{}, errors.New("elapsed lookback requires only duration")
 		}
-		older, err := period.Duration.elapsed()
+		var err error
+		older, err = period.Duration.elapsed()
 		if err != nil {
 			return unified.Scope{}, err
 		}
-		scope.Elapsed = &unified.ElapsedPeriod{Older: older}
+		newer = &big.Int{}
 	case "elapsedAgoBand":
 		if period.Older == nil || period.Newer == nil || period.Start != nil ||
 			period.End != nil || period.Duration != nil {
 			return unified.Scope{}, errors.New("elapsed ago band requires only older and newer")
 		}
-		older, err := period.Older.elapsed()
+		var err error
+		older, err = period.Older.elapsed()
 		if err != nil {
 			return unified.Scope{}, err
 		}
-		newer, err := period.Newer.elapsed()
+		newer, err = period.Newer.elapsed()
 		if err != nil {
 			return unified.Scope{}, err
 		}
-		scope.Elapsed = &unified.ElapsedPeriod{Older: older, Newer: newer}
 	default:
 		return unified.Scope{}, errors.New("invalid Count period kind")
+	}
+	if older != nil {
+		if older.Cmp(newer) <= 0 {
+			return unified.Scope{}, errors.New("invalid elapsed observation period")
+		}
+		if !older.IsInt64() || !newer.IsInt64() {
+			return unified.Scope{}, &unified.UnsupportedError{Capability: "elapsed duration beyond time.Duration range"}
+		}
+		scope.Elapsed = &unified.ElapsedPeriod{Older: time.Duration(older.Int64()), Newer: time.Duration(newer.Int64())}
 	}
 	return scope, nil
 }
 
 // parseFilterCountInteger reads the same integer JSON spelling as Record Int
-// operands, retaining out-of-range natural literals as unsupported capability.
-func parseFilterCountInteger(value json.Value) (uint64, error) {
+// operands, without narrowing the value before checking semantic validity.
+func parseFilterCountInteger(value json.Value) (*big.Int, error) {
 	if !json.Valid(value) || !value.IsNumber() {
-		return 0, errors.New("Count operand must be a nonnegative JSON integer")
+		return nil, errors.New("Count operand must be a nonnegative JSON integer")
 	}
-	if bytes.Equal(json.TrimSpace(value), []byte("-0")) {
-		return 0, nil
+	value = json.TrimSpace(value)
+	if bytes.Equal(value, []byte("-0")) {
+		return &big.Int{}, nil
 	}
-	n, err := strconv.ParseUint(string(json.TrimSpace(value)), 10, 64)
-	if err != nil {
-		if errors.Is(err, strconv.ErrRange) {
-			return 0, &unified.UnsupportedError{Capability: "Count integer beyond 64-bit representation"}
-		}
-		return 0, errors.New("Count operand must be a nonnegative JSON integer")
+	if value[0] == '-' || bytes.ContainsAny(value, ".eE") {
+		return nil, errors.New("Count operand must be a nonnegative JSON integer")
+	}
+	n, ok := (&big.Int{}).SetString(string(value), 10)
+	if !ok {
+		return nil, errors.New("Count operand must be a nonnegative JSON integer")
 	}
 	return n, nil
 }
 
 func prepareFilterCount(condition *FilterCountCondition) (unified.Rule, error) {
+
 	if condition == nil {
 		return unified.Rule{}, errors.New("filter count condition cannot be nil")
 	}
 	if len(condition.Operator) > 64 {
 		return unified.Rule{}, errors.New("invalid Count operator")
 	}
+	// Validate the operator and arity.
 	var operator unified.Comparison
 	switch condition.Operator {
 	case OpIs:
@@ -360,33 +402,58 @@ func prepareFilterCount(condition *FilterCountCondition) (unified.Rule, error) {
 	if len(condition.Values) != arity {
 		return unified.Rule{}, fmt.Errorf("Count operator requires %d operands", arity)
 	}
+
+	// Validate exact operands and the sample minimum before execution limits.
 	value, err := parseFilterCountInteger(condition.Values[0])
 	if err != nil {
 		return unified.Rule{}, err
 	}
-	test := unified.CountTest{Operator: operator, Value: value}
+	upper := &big.Int{}
 	if arity == 2 {
-		test.Upper, err = parseFilterCountInteger(condition.Values[1])
+		upper, err = parseFilterCountInteger(condition.Values[1])
 		if err != nil {
 			return unified.Rule{}, err
 		}
+		if upper.Cmp(value) < 0 {
+			return unified.Rule{}, errors.New("invalid Count terminal")
+		}
 	}
-	scope, err := condition.Count.Period.scope(condition.Count.Source)
-	if err != nil {
-		return unified.Rule{}, err
-	}
-	rule, err := prepareUnifiedRecordCount(scope, condition.Count.Where, test)
-	if err != nil {
-		return unified.Rule{}, err
-	}
+	minimum := &big.Int{}
 	if condition.Count.Minimum != nil {
-		rule.Count.Minimum, err = parseFilterCountInteger(condition.Count.Minimum)
+		minimum, err = parseFilterCountInteger(condition.Count.Minimum)
 		if err != nil {
-			return unified.Rule{}, err
+			return unified.Rule{}, errors.New("Count sample minimum must be a positive JSON integer")
 		}
-		if rule.Count.Minimum == 0 {
+		if minimum.Sign() == 0 {
 			return unified.Rule{}, errors.New("Count sample minimum must be positive")
 		}
 	}
+	if minimum.Sign() > 0 && ((operator == unified.Equal && value.Cmp(minimum) < 0) ||
+		(operator == unified.Less && value.Cmp(minimum) <= 0) ||
+		(operator == unified.LessOrEqual && value.Cmp(minimum) < 0) ||
+		(operator == unified.Between && upper.Cmp(minimum) < 0)) {
+		return unified.Rule{}, errors.New("Count sample minimum and terminal are statically incompatible")
+	}
+
+	// Validate the period, source and Record qualification before availability.
+	scope, periodErr := condition.Count.Period.scope(condition.Count.Source)
+	if periodErr != nil {
+		if _, unsupported := errors.AsType[*unified.UnsupportedError](periodErr); !unsupported {
+			return unified.Rule{}, periodErr
+		}
+	}
+	rule, err := prepareUnifiedRecordCount(scope, condition.Count.Where, unified.CountTest{})
+	if err != nil {
+		return unified.Rule{}, err
+	}
+	if periodErr != nil {
+		return unified.Rule{}, periodErr
+	}
+	if !value.IsUint64() || !upper.IsUint64() || !minimum.IsUint64() {
+		return unified.Rule{}, &unified.UnsupportedError{Capability: "Count integer beyond 64-bit representation"}
+	}
+	rule.Count.Test = unified.CountTest{Operator: operator, Value: value.Uint64(), Upper: upper.Uint64()}
+	rule.Count.Minimum = minimum.Uint64()
+
 	return rule, nil
 }

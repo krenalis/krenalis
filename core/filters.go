@@ -180,6 +180,7 @@ var operators = [...]FilterOperator{
 
 // filterValidation contains the state shared while validating a filter tree.
 type filterValidation struct {
+	maxDepth   int
 	paths      []string
 	properties types.Properties
 	ruleCount  int
@@ -545,7 +546,7 @@ func prepareFilter(filter *Filter, schema types.Type) (*state.Where, []string, e
 	if !schema.Valid() || !schema.IsObject() {
 		return nil, nil, errors.New("filter schema must be an object")
 	}
-	validation := filterValidation{properties: schema.Properties()}
+	validation := filterValidation{maxDepth: maxFilterDepth, properties: schema.Properties()}
 	where, err := prepareFilterGroup(filter, &validation, 1)
 	if err != nil {
 		return nil, nil, err
@@ -760,8 +761,8 @@ func prepareFilterCondition(cond *FilterCondition, validation *filterValidation)
 // prepareFilterGroup validates and prepares a group and its descendant rules.
 func prepareFilterGroup(filter *Filter, validation *filterValidation, depth int) (*state.Where, error) {
 
-	if depth > maxFilterDepth {
-		return nil, fmt.Errorf("filter exceeds maximum depth of %d", maxFilterDepth)
+	if depth > validation.maxDepth {
+		return nil, fmt.Errorf("filter exceeds maximum depth of %d", validation.maxDepth)
 	}
 	if op := filter.Operator; op != OpAnd && op != OpOr {
 		return nil, fmt.Errorf("invalid logical operator %q", op)
