@@ -18,9 +18,9 @@
 
 .identity-dashboard__page-header {
 	display: flex;
+	flex-wrap: wrap;
 	align-items: center;
-	justify-content: space-between;
-	gap: 24px;
+	gap: 40px 24px;
 	margin-bottom: 32px;
 }
 
@@ -40,7 +40,9 @@
 .identity-dashboard__page-actions {
 	display: flex;
 	align-items: center;
+	justify-content: flex-end;
 	flex-shrink: 0;
+	margin-left: auto;
 }
 
 .identity-dashboard__section {
