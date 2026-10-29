@@ -996,6 +996,14 @@ func (this *Workspace) Events(ctx context.Context, properties []string, filter *
 	return evts, nil
 }
 
+// HasWarehouseMCPSettings reports whether MCP warehouse settings are configured.
+// Their presence enables MCP profile queries on the main connection; their
+// credentials and permissions apply only to the SQL tool.
+func (this *Workspace) HasWarehouseMCPSettings() bool {
+	this.core.mustBeOpen()
+	return this.workspace.HasWarehouseMCPSettings()
+}
+
 // Identities returns the identities for the provided KPID, and an estimate of
 // their total number without applying first and limit.
 //

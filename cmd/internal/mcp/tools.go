@@ -36,7 +36,9 @@ const warehouseInformationResultFormat = "This workspace has a %s data warehouse
 const queryDataWarehouseToolDescription = "Execute a read-only query on the data warehouse connected to the workspace and return the results for analysis." +
 	" The warehouse is managed by Krenalis and must not be modified through direct SQL." +
 	" Only read-only analytical SELECT queries are allowed through this tool." +
-	" This is the only permitted warehouse access path exposed by this Krenalis MCP server." +
+	" Use query-profiles for questions about profiles and segments." +
+	" This SQL tool remains available for data discovery and other analysis." +
+	" Do not use SQL to emulate or complete Unified filtering capabilities that query-profiles does not support." +
 	" If a user wants to change data, schema, or configuration, explain that these changes must be made only through the Krenalis Admin console or the Krenalis APIs." +
 	" Do not use it for INSERT, UPDATE, DELETE, MERGE, TRUNCATE, DDL statements, locking or maintenance commands, or any other operation that could modify data, schema, permissions, or produce side effects." +
 	" Avoid read-only queries that are unnecessarily expensive, abusive, or likely to place avoidable operational strain on the warehouse." +
@@ -46,6 +48,7 @@ const queryDataWarehouseQueryDescription = "Read-only SQL query to execute again
 	" Only read-only analytical SELECT queries are allowed." +
 	" If the user asks for writes or schema changes, explain that the Krenalis data warehouse is managed by Krenalis and that user-driven changes must be done only through the Krenalis Admin console or the Krenalis APIs." +
 	" Avoid queries that are unnecessarily expensive, abusive, or likely to place avoidable operational strain on the warehouse." +
+	" Use query-profiles for profiles and segments, without SQL fallback for unsupported Unified filters." +
 	" Do not attempt alternative direct warehouse access."
 
 var tools = []server.ServerTool{
@@ -106,6 +109,9 @@ var tools = []server.ServerTool{
 		},
 	},
 
+	queryProfilesTool,
+	profileFilterDocumentationTool,
+
 	// Tool that exposes the profile schema.
 	{
 		Tool: mcp.NewTool("profile-schema",
@@ -113,6 +119,7 @@ var tools = []server.ServerTool{
 				"Return the profile schema (with details of all its properties and the corresponding data warehouse columns) related to the Krenalis workspace."+
 					" Information is returned about the properties of the profile schema in Krenalis (with their types),"+
 					" and about the corresponding column of the 'profiles' view in the data warehouse (along with its column type), where the user information is actually stored."+
+					" Use profileSchemaProperty.path in query-profiles filters, not profileViewColumn.name."+
 					" All profile schema properties in Krenalis are always nullable, as any of them can be omitted."+
 					" Unlike the event schema, which is fixed for each workspace, the profile schema can be modified and thus change over time.",
 			),
@@ -146,6 +153,7 @@ var tools = []server.ServerTool{
 				"Return the event schema (with details of all its properties and the corresponding data warehouse columns)."+
 					" Information is returned about the properties of the event schema in Krenalis (with their types),"+
 					" and about the corresponding column of the 'events' table in the data warehouse (along with its column type), where the profile information is actually stored."+
+					" Use eventSchemaProperty.path in Count where filters, not eventTableColumn.name."+
 					" Unlike the workspace profile schema, which can be modified, the event schema is the same for every workspace and is never modified.",
 			),
 			mcp.WithTitleAnnotation("Event schema"),

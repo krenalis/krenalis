@@ -109,7 +109,9 @@ const warehouseSectionTexts = {
 	mcp: {
 		title: 'Read-only credentials',
 		description:
-			"Read-only credentials used for AI querying of the data warehouse through Krenalis's built-in MCP integration.",
+			"Credentials used by the MCP SQL tool. Configuring them also enables query-profiles on Krenalis's main connection. " +
+			'Permissions on the separate MCP user do not restrict profile queries or their event conditions. ' +
+			'Snowflake uses the main virtual warehouse for query-profiles; Count is currently unavailable.',
 	},
 };
 

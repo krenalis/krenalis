@@ -3,8 +3,8 @@
 This package implements the first backend subset of the B architecture consolidated
 in `filtering/14-confronto-architetture-interrogazione-unified-fase-4b.md`. The
 normative baseline remains 06/07/08 version 1.2. Count is exposed by the existing
-Profiles HTTP endpoint on the verified backend; Admin and destination connections
-do not expose it yet. The prepared-filter
+Profiles HTTP endpoint and MCP `query-profiles` tool on the verified backend;
+Admin and destination connections do not expose it yet. The prepared-filter
 boundary refines the SQL transport described in report 14 §5.4: generated SQL is
 now an internal detail of the warehouse implementation.
 
@@ -453,3 +453,15 @@ replacement for the per-profile evidence/diagnostics required by the complete
 1.2 contract. Source-meaning registries and the deferred coherent-source release
 guarantees remain separate work. This is the admitted Record/Count subset, not
 all Unified capabilities.
+
+## MCP entry
+
+`query-profiles` reuses `Workspace.QueryProfiles` and the same JSON filter text
+as the HTTP query parameter. MCP warehouse settings must be present, but the
+query runs on the main datastore connection. The separate MCP user's database
+permissions do not limit the profile or event properties read by this path.
+Snowflake uses the main virtual warehouse; its Count gate remains closed.
+The SQL tool stays available for discovery/other analysis, with instructions
+prohibiting fallback to SQL for unsupported Unified features. See
+[`cmd/internal/mcp/README.md`](../../../cmd/internal/mcp/README.md) and the
+model-facing `profile-filter-doc` tool for transport, limits and examples.

@@ -17,6 +17,15 @@ import (
 )
 
 const serverInstructions = "Krenalis MCP tools must be used only through this MCP server." +
+	" For profiles and segments, use query-profiles." +
+	" Read profile-filter-doc before constructing a filter." +
+	" query-data-warehouse is retained for discovering event names, inspecting JSON properties and other analysis." +
+	" Never use SQL to emulate an unsupported Unified capability." +
+	" Report unsupported capabilities explicitly and do not reinterpret them as empty results or UNKNOWN." +
+	" query-profiles requires configured MCP settings but uses the main Krenalis warehouse connection." +
+	" The separate MCP credentials do not restrict its data access." +
+	" On Snowflake it uses the main virtual warehouse, not the MCP virtual warehouse." +
+	" Count remains unavailable on Snowflake until its backend gate is enabled." +
 	" The workspace data warehouse is managed directly by Krenalis." +
 	" Writes and schema changes for Krenalis-managed tables and views must be performed only by Krenalis itself." +
 	" If a user wants to modify data, schema, or configuration, explain clearly and professionally that user-driven changes must be done only through the Krenalis Admin console or the Krenalis APIs, not through direct SQL on the warehouse." +
