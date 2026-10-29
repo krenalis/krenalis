@@ -132,6 +132,13 @@
 	min-width: 0;
 }
 
+.identity-dashboard__card[aria-busy='true']
+	:is(.recharts-surface, .identity-dashboard__state-title, .identity-dashboard__state-description),
+.identity-dashboard__kpi-comparison[aria-busy='true'] {
+	opacity: 0.5;
+	transition: opacity 0.15s 0.15s;
+}
+
 .identity-dashboard__card-heading {
 	display: flex;
 	align-items: center;

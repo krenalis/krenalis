@@ -138,6 +138,17 @@ const IdentityOverview = () => {
 		displayRange: loadedDisplayRange = displayRange,
 	} = dashboardData ?? {};
 	const isInitialLoading = isLoading && dashboardData == null;
+	const selectedDisplayRange =
+		selectedDateRange === 'Custom' || latestIdentityMetric == null
+			? displayRange
+			: displayRangeForPreset(selectedDateRange, instantToDateKey(latestIdentityMetric.observedAt));
+	const isReloading = isLoading && dashboardData != null;
+	const isRangeReloading =
+		isReloading &&
+		(selectedDisplayRange.start !== loadedDisplayRange.start ||
+			selectedDisplayRange.end !== loadedDisplayRange.end);
+	const isIdentityHistoryReloading =
+		isReloading && (isRangeReloading || selectedIdentityConnection !== loadedIdentityConnection);
 	const chartError = dashboardData == null ? dashboardError : undefined;
 	const sourceConnectionCatalogKey = useMemo(
 		() =>
@@ -545,6 +556,7 @@ const IdentityOverview = () => {
 							title='Unified profiles'
 							value={latestResolution == null ? '—' : formatNumber(latestResolution.profiles.total)}
 							comparison={unifiedProfilesComparison}
+							isComparisonReloading={isRangeReloading}
 							loading={isInitialLoading}
 						/>
 						<KpiCard
@@ -553,6 +565,7 @@ const IdentityOverview = () => {
 							info='Average number of identities linked to each unified profile, based on the latest successful identity resolution run.'
 							value={formatNullableRatio(latestResolution?.identitiesPerProfile ?? null)}
 							comparison={identitiesPerProfileComparison}
+							isComparisonReloading={isRangeReloading}
 							loading={isInitialLoading}
 						/>
 						<KpiCard
@@ -561,6 +574,7 @@ const IdentityOverview = () => {
 							info='Share of identities that are part of a unified profile with multiple identities, based on the latest successful identity resolution run.'
 							value={latestResolution == null ? '—' : formatRate(latestResolution.linkedIdentitiesRate)}
 							comparison={identityLinkRateComparison}
+							isComparisonReloading={isRangeReloading}
 							loading={isInitialLoading}
 						/>
 					</div>
@@ -575,17 +589,19 @@ const IdentityOverview = () => {
 					{shouldShowResolutionStructure ? (
 						<>
 							{!isInitialLoading && chartError == null && !hasResolutionInPeriod ? (
-								<ResolutionPeriodEmptyState />
+								<ResolutionPeriodEmptyState isReloading={isRangeReloading} />
 							) : (
 								<ResolutionEffectivenessChart
 									data={resolutionEffectivenessData}
 									loading={isInitialLoading}
+									isReloading={isRangeReloading}
 									error={chartError}
 								/>
 							)}
 							<ProfilesChart
 								days={unifiedProfileHistoryData}
 								loading={isInitialLoading}
+								isReloading={isRangeReloading}
 								error={chartError}
 							/>
 							<ProfileComposition
@@ -665,6 +681,7 @@ const IdentityOverview = () => {
 					<IdentitiesChart
 						days={identityChartDays}
 						loading={isInitialLoading}
+						isReloading={isIdentityHistoryReloading}
 						error={chartError}
 						connectionOptions={identityConnectionOptions}
 						selectedConnection={selectedIdentityConnection}

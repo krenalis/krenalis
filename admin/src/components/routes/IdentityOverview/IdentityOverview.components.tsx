@@ -106,12 +106,24 @@ interface DashboardCardProps {
 	info?: string;
 	headerAction?: ReactNode;
 	className?: string;
+	isReloading?: boolean;
 	children: ReactNode;
 }
 
-const DashboardCard = ({ title, temporalLabel, info, headerAction, className, children }: DashboardCardProps) => {
+const DashboardCard = ({
+	title,
+	temporalLabel,
+	info,
+	headerAction,
+	className,
+	isReloading,
+	children,
+}: DashboardCardProps) => {
 	return (
-		<div className={`identity-dashboard__card${className != null && className !== '' ? ` ${className}` : ''}`}>
+		<div
+			className={`identity-dashboard__card${className != null && className !== '' ? ` ${className}` : ''}`}
+			aria-busy={isReloading || undefined}
+		>
 			{title && (
 				<div className='identity-dashboard__card-heading'>
 					<h3>{title}</h3>
@@ -290,6 +302,7 @@ interface KpiCardProps {
 	secondary?: ReactNode;
 	loading: boolean;
 	sparklinePoints?: IdentityTrend['points'];
+	isComparisonReloading?: boolean;
 	subtleBackground?: boolean;
 	info?: string;
 	comparison?: {
@@ -305,6 +318,7 @@ const KpiCard = ({
 	secondary,
 	loading,
 	sparklinePoints,
+	isComparisonReloading,
 	subtleBackground,
 	info,
 	comparison,
@@ -334,7 +348,10 @@ const KpiCard = ({
 						<div className='identity-dashboard__kpi-value'>{value}</div>
 						{secondary != null && <div className='identity-dashboard__kpi-secondary'>{secondary}</div>}
 						{comparison && (
-							<div className='identity-dashboard__kpi-comparison'>
+							<div
+								className='identity-dashboard__kpi-comparison'
+								aria-busy={isComparisonReloading || undefined}
+							>
 								<span>{comparison.delta}</span>
 								<span>from {comparison.referenceDate}</span>
 							</div>
@@ -448,6 +465,7 @@ interface RecognizedAnonymousHistoryChartProps {
 	recognizedColor: string;
 	anonymousColor: string;
 	loading: boolean;
+	isReloading?: boolean;
 	error?: string;
 	errorTitle: string;
 	emptyTitle: string;
@@ -461,6 +479,7 @@ const RecognizedAnonymousHistoryChart = ({
 	recognizedColor,
 	anonymousColor,
 	loading,
+	isReloading,
 	error,
 	errorTitle,
 	emptyTitle,
@@ -477,7 +496,13 @@ const RecognizedAnonymousHistoryChart = ({
 		1,
 	);
 	return (
-		<DashboardCard title={title} info={info} headerAction={headerAction} className='identity-dashboard__chart-card'>
+		<DashboardCard
+			title={title}
+			info={info}
+			headerAction={headerAction}
+			className='identity-dashboard__chart-card'
+			isReloading={isReloading}
+		>
 			{loading ? (
 				<CardLoading chart={true} />
 			) : error != null ? (
@@ -565,6 +590,7 @@ const RecognizedAnonymousHistoryChart = ({
 interface IdentitiesChartProps {
 	days: IdentityMetricChartDay[];
 	loading: boolean;
+	isReloading?: boolean;
 	error?: string;
 	connectionOptions: IdentityConnectionOption[];
 	selectedConnection: string;
@@ -574,6 +600,7 @@ interface IdentitiesChartProps {
 const IdentitiesChart = ({
 	days,
 	loading,
+	isReloading,
 	error,
 	connectionOptions,
 	selectedConnection,
@@ -614,6 +641,7 @@ const IdentitiesChart = ({
 			recognizedColor={CHART_COLOR}
 			anonymousColor={CONNECTION_ANONYMOUS_COLOR}
 			loading={loading}
+			isReloading={isReloading}
 			error={error}
 			errorTitle='Identity metrics could not be loaded'
 			emptyTitle='No identity data in this period'
@@ -624,10 +652,11 @@ const IdentitiesChart = ({
 interface ProfilesChartProps {
 	days: RecognizedAnonymousHistoryPoint[];
 	loading: boolean;
+	isReloading?: boolean;
 	error?: string;
 }
 
-const ProfilesChart = ({ days, loading, error }: ProfilesChartProps) => {
+const ProfilesChart = ({ days, loading, isReloading, error }: ProfilesChartProps) => {
 	return (
 		<RecognizedAnonymousHistoryChart
 			title='Profiles over time (daily)'
@@ -636,6 +665,7 @@ const ProfilesChart = ({ days, loading, error }: ProfilesChartProps) => {
 			recognizedColor={UNIFIED_PROFILES_RECOGNIZED_COLOR}
 			anonymousColor={UNIFIED_PROFILES_ANONYMOUS_COLOR}
 			loading={loading}
+			isReloading={isReloading}
 			error={error}
 			errorTitle='Unified profile metrics could not be loaded'
 			emptyTitle='No unified profile data in this period'
@@ -852,10 +882,11 @@ const ConnectionsChart = ({ data, totalIdentities, observedLabel, loading, error
 interface ResolutionEffectivenessChartProps {
 	data: ResolutionEffectivenessPoint[];
 	loading: boolean;
+	isReloading?: boolean;
 	error?: string;
 }
 
-const ResolutionEffectivenessChart = ({ data, loading, error }: ResolutionEffectivenessChartProps) => {
+const ResolutionEffectivenessChart = ({ data, loading, isReloading, error }: ResolutionEffectivenessChartProps) => {
 	const identityLinkRateCount = data.filter((day) => day.linkedIdentitiesRatePercent != null).length;
 	const identitiesPerProfileCount = data.filter((day) => day.identitiesPerProfile != null).length;
 	const hasIdentityLinkRate = identityLinkRateCount > 0;
@@ -870,6 +901,7 @@ const ResolutionEffectivenessChart = ({ data, loading, error }: ResolutionEffect
 		<DashboardCard
 			title='Resolution effectiveness over time (daily)'
 			className='identity-dashboard__chart-card identity-dashboard__resolution-chart-card'
+			isReloading={isReloading}
 		>
 			{loading ? (
 				<CardLoading chart={true} />
@@ -1279,9 +1311,13 @@ const GoToRun = () => {
 	);
 };
 
-const ResolutionPeriodEmptyState = () => {
+interface ResolutionPeriodEmptyStateProps {
+	isReloading?: boolean;
+}
+
+const ResolutionPeriodEmptyState = ({ isReloading }: ResolutionPeriodEmptyStateProps) => {
 	return (
-		<DashboardCard className='identity-dashboard__period-empty-card'>
+		<DashboardCard className='identity-dashboard__period-empty-card' isReloading={isReloading}>
 			<StateMessage
 				variant='empty'
 				title='No identity resolution completed in this period'

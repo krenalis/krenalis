@@ -493,6 +493,7 @@ for (const endpoint of LOAD_ENDPOINTS) {
 		await expect(page.locator('.identity-dashboard__kpi-value')).toHaveCount(0);
 		await expect(page.locator('.recharts-surface')).toHaveCount(0);
 		await expect(page.locator('.identity-dashboard__history-status')).toHaveCount(0);
+		await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
 
 		await page.evaluate(() => window.identityOverviewPending[0]());
 		await expect(page.getByText('Dashboard data could not be loaded', { exact: true })).toBeVisible();
@@ -524,6 +525,11 @@ for (const shouldFail of [false, true]) {
 		}, shouldFail);
 		await page.getByRole('button', { name: 'Last 90 days', exact: true }).click();
 		await expect.poll(() => page.evaluate(() => window.identityOverviewPending.length)).toBe(1);
+		await expect(page.locator('.identity-dashboard__card[aria-busy="true"] h3')).toHaveText([
+			'Resolution effectiveness over time (daily)',
+			'Profiles over time (daily)',
+			'Identities over time (daily)',
+		]);
 		expect(await dashboardSnapshot(page)).toEqual(previous);
 		await page.evaluate(() => {
 			window.identityOverviewHold = undefined;
@@ -531,10 +537,12 @@ for (const shouldFail of [false, true]) {
 		});
 		await page.getByRole('button', { name: 'Last 7 days', exact: true }).click();
 		await expect.poll(() => dashboardSnapshot(page)).not.toEqual(previous);
+		await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
 		const current = await dashboardSnapshot(page);
 		await page.evaluate(() => window.identityOverviewPending[0]());
 		expect(await dashboardSnapshot(page)).toEqual(current);
 		await expect(page.getByRole('alert')).toHaveCount(0);
+		await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
 	});
 }
 
@@ -570,6 +578,7 @@ test('keeps cached snapshots and represented ranges after a failed range change'
 	});
 	await page.getByRole('button', { name: 'Last 90 days', exact: true }).click();
 	await expect(page.getByText('Dashboard data could not be loaded', { exact: true })).toBeVisible();
+	await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
 	expect(await dashboardSnapshot(page)).toEqual(previous);
 	await page.evaluate(() => {
 		window.identityOverviewRevision = 0;
@@ -612,10 +621,14 @@ test('keeps the requested connection selected and allows leaving it after a fail
 	await page.getByRole('option', { name: 'Removed connections' }).click();
 	await expect.poll(() => page.evaluate(() => window.identityOverviewPending.length)).toBe(1);
 	await expect(select).toHaveJSProperty('value', 'deleted');
+	await expect(page.locator('.identity-dashboard__card[aria-busy="true"] h3')).toHaveText([
+		'Identities over time (daily)',
+	]);
 	expect(await dashboardSnapshot(page)).toEqual(previous);
 	await page.evaluate(() => window.identityOverviewPending[0]());
 	await expect(page.getByText('Dashboard data could not be loaded', { exact: true })).toBeVisible();
 	await expect(select).toHaveJSProperty('value', 'deleted');
+	await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
 	expect(await dashboardSnapshot(page)).toEqual(previous);
 	await select.click();
 	await page.getByRole('option', { name: 'All connections', exact: true }).click();
