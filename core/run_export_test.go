@@ -156,9 +156,8 @@ func TestConvertToExternalStringConstraintsWithSemantics(t *testing.T) {
 
 }
 
-// TestConvertToExternalOneSidedSemantics checks that, when only one of the
-// matching types has semantics, values are validated and normalized according
-// to the semantics of the external type and the constraints of a string type.
+// TestConvertToExternalOneSidedSemantics checks the conversion of matching
+// values when only one of the internal and external types has semantics.
 func TestConvertToExternalOneSidedSemantics(t *testing.T) {
 
 	countryAlpha2 := types.String().AsCountry(types.ISO3166Alpha2)
@@ -172,18 +171,26 @@ func TestConvertToExternalOneSidedSemantics(t *testing.T) {
 		want    string
 		wantErr bool
 	}{
-		{"country to string", countryAlpha2, types.String(), "IT", "IT", false},
-		{"country to string with max length exceeded", countryAlpha3, types.String().WithMaxLength(2), "ITA", "", true},
-		{"string to alpha-2 country", types.String(), countryAlpha2, "IT", "IT", false},
-		{"string to alpha-3 country", types.String(), countryAlpha3, "ITA", "ITA", false},
-		{"string to alpha-2 country with alpha-3 value", types.String(), countryAlpha2, "ITA", "", true},
-		{"string to alpha-2 country with invalid value", types.String(), countryAlpha2, "ZZ", "", true},
-		{"phone to string", phone, types.String(), "+390236618300", "+390236618300", false},
-		{"phone to string with max length exceeded", phone, types.String().WithMaxLength(5), "+390236618300", "", true},
-		{"string to phone is normalized", types.String(), phone, "+39 02 3661 8300", "+390236618300", false},
-		{"string to phone with invalid value", types.String(), phone, "not a phone", "", true},
-		{"email to string", types.String().AsEmail(), types.String(), "bob@example.com", "bob@example.com", false},
-		{"string to email", types.String(), types.String().AsEmail(), "bob@example.com", "bob@example.com", false},
+		// Only the external type has semantics.
+		{"string to alpha-2 country accepts a valid code", types.String(), countryAlpha2, "IT", "IT", false},
+		{"string to alpha-2 country rejects an alpha-3 code", types.String(), countryAlpha2, "ITA", "", true},
+		{"string to alpha-2 country rejects an unknown code", types.String(), countryAlpha2, "ZZ", "", true},
+		{"string to alpha-2 country rejects a lowercase code", types.String(), countryAlpha2, "it", "", true},
+		{"string to alpha-3 country accepts a valid code", types.String(), countryAlpha3, "ITA", "ITA", false},
+		{"string to alpha-3 country rejects an alpha-2 code", types.String(), countryAlpha3, "IT", "", true},
+		{"string to phone keeps an E.164 number", types.String(), phone, "+390236618300", "+390236618300", false},
+		{"string to phone normalizes a formatted number", types.String(), phone, "+39 02 3661 8300", "+390236618300", false},
+		{"string to phone rejects a number without country code", types.String(), phone, "02 3661 8300", "", true},
+		{"string to phone rejects a value that is not a number", types.String(), phone, "not a phone", "", true},
+		{"string to email does not validate the value", types.String(), types.String().AsEmail(), "not an email", "not an email", false},
+
+		// Only the internal type has semantics.
+		{"country to string keeps the value", countryAlpha2, types.String(), "IT", "IT", false},
+		{"country to string applies max length", countryAlpha3, types.String().WithMaxLength(2), "ITA", "", true},
+		{"phone to string keeps the value", phone, types.String(), "+390236618300", "+390236618300", false},
+		{"phone to string applies max length", phone, types.String().WithMaxLength(5), "+390236618300", "", true},
+		{"phone to string applies pattern", phone, types.String().WithPattern(regexp.MustCompile(`^\+1`)), "+390236618300", "", true},
+		{"email to string applies values", types.String().AsEmail(), types.String().WithValues("alice@example.com"), "bob@example.com", "", true},
 	}
 
 	for _, test := range tests {
