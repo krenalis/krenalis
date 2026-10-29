@@ -20,7 +20,6 @@ import (
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/core/internal/transformers"
 	"github.com/krenalis/krenalis/tools/types"
-	"github.com/krenalis/krenalis/tools/validation"
 )
 
 // exportProfiles exports the profiles for the pipeline.
@@ -349,13 +348,6 @@ func (this *Pipeline) syncDestinationProfiles(ctx context.Context) error {
 	}
 	defer records.Close()
 
-	// If only the input matching property has phone semantics, normalize the
-	// output matching values to E.164, so they can match the input values.
-	matchingIn, _ := this.pipeline.InSchema.Properties().ByPath(this.pipeline.Matching.In)
-	matchingOut, _ := this.pipeline.OutSchema.Properties().ByPath(this.pipeline.Matching.Out)
-	normalizePhone := matchingIn.Type.Semantics() == types.PhoneSemantics &&
-		matchingOut.Type.Semantics() == types.NoSemantics
-
 	var profiles []datastore.DestinationProfile
 
 	for profile := range records.All(ctx) {
@@ -368,16 +360,9 @@ func (this *Pipeline) syncDestinationProfiles(ctx context.Context) error {
 		// Store the profile only if the attributes contain a value for
 		// the output matching property and that value is non-nil.
 		if v, ok := getAttribute(profile.Attributes, this.pipeline.Matching.Out); ok && v != nil {
-			value := stringifyMatchingValue(v)
-			if normalizePhone {
-				// A value that cannot be normalized is kept as is, and does not match.
-				if phone, ok := types.NormalizePhone(value); ok {
-					value = phone
-				}
-			}
 			profiles = append(profiles, datastore.DestinationProfile{
 				ExternalID:       profile.ID,
-				OutMatchingValue: value,
+				OutMatchingValue: stringifyMatchingValue(v),
 			})
 		}
 
@@ -438,14 +423,12 @@ func errMatchingPropertyConversion(in, ex string) error {
 //   - string to int, uuid, and string
 //   - uuid to uuid and string
 //
-// If only ex has phone semantics, the value is normalized to E.164.
-//
 // It panics if v is nil, the types in and ex both have semantics but not the
 // same semantics and options, or they are not conforming to these supported
 // conversions.
 //
-// It returns an error if the converted value does not satisfy the semantics or
-// the constraints of the ex type.
+// It returns an error if the converted value does not satisfy the constraints
+// of the ex type.
 func convertToExternal(v any, in, ex types.Type, inPath, outPath string) (any, error) {
 	if v == nil {
 		panic(fmt.Sprintf("core: unexpected value nil for internal kind %s", in.Kind()))
@@ -468,31 +451,9 @@ func convertToExternal(v any, in, ex types.Type, inPath, outPath string) (any, e
 		default:
 			panic(fmt.Sprintf("core: unexpected value of type %T for internal kind %s ", v, in.Kind()))
 		}
-		// Validate that v matches the external property's semantics, if only the
-		// external property has them. Country and phone types have no constraints.
-		switch ex.Semantics() {
-		case types.CountrySemantics:
-			if in.Semantics() == types.NoSemantics {
-				valid := validation.IsValidCountryCodeAlpha3(s)
-				if ex.CountryFormat() == types.ISO3166Alpha2 {
-					valid = validation.IsValidCountryCodeAlpha2(s)
-				}
-				if !valid {
-					return nil, errMatchingPropertyConversion(inPath, outPath)
-				}
-			}
+		// Country and phone types have no constraints.
+		if ex.Semantics() == types.CountrySemantics || ex.Semantics() == types.PhoneSemantics {
 			return s, nil
-		case types.PhoneSemantics:
-			if in.Semantics() == types.NoSemantics {
-				var ok bool
-				s, ok = types.NormalizePhone(s)
-				if !ok {
-					return nil, errMatchingPropertyConversion(inPath, outPath)
-				}
-			}
-			return s, nil
-		default:
-			// The external property's constraints are validated below.
 		}
 		// Validate that v matches the external property's constraints.
 		if n, ok := ex.MaxBytes(); ok && len(s) > n {
