@@ -3793,8 +3793,8 @@ func TestMatchingPropertySemantics(t *testing.T) {
 			"country with different formats", types.String().AsCountry(types.ISO3166Alpha2),
 			types.String().AsCountry(types.ISO3166Alpha3), CreateOrUpdate, "input matching property has country format alpha-2, but output matching property requires alpha-3",
 		},
-		{"country semantics on input only", types.String().AsCountry(types.ISO3166Alpha2), types.String(), CreateOrUpdate, ""},
-		{"country semantics on output only", types.String(), types.String().AsCountry(types.ISO3166Alpha2), CreateOrUpdate, ""},
+		{"input country only", types.String().AsCountry(types.ISO3166Alpha2), types.String(), CreateOrUpdate, ""},
+		{"output country only", types.String(), types.String().AsCountry(types.ISO3166Alpha2), CreateOrUpdate, ""},
 		{
 			"duration with different constraints", types.Int(64).AsDuration(types.Second),
 			types.Int(32).AsDuration(types.Second), CreateOrUpdate, "",

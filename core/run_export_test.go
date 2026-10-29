@@ -160,8 +160,8 @@ func TestConvertToExternalStringConstraintsWithSemantics(t *testing.T) {
 // values when only one of the internal and external types has semantics.
 func TestConvertToExternalOneSidedSemantics(t *testing.T) {
 
-	countryAlpha2 := types.String().AsCountry(types.ISO3166Alpha2)
-	countryAlpha3 := types.String().AsCountry(types.ISO3166Alpha3)
+	country := types.String().AsCountry(types.ISO3166Alpha2)
+	email := types.String().AsEmail()
 	phone := types.String().AsPhone()
 
 	tests := []struct {
@@ -171,17 +171,19 @@ func TestConvertToExternalOneSidedSemantics(t *testing.T) {
 		wantErr bool
 	}{
 		// Only the external type has semantics.
-		{"string to country does not validate the value", types.String(), countryAlpha2, "ITA", false},
+		{"string to country does not validate the value", types.String(), country, "ITA", false},
 		{"string to phone does not normalize the value", types.String(), phone, "+39 02 3661 8300", false},
-		{"string to email does not validate the value", types.String(), types.String().AsEmail(), "not an email", false},
+		{"string to email does not validate the value", types.String(), email, "not an email", false},
 
 		// Only the internal type has semantics.
-		{"country to string keeps the value", countryAlpha2, types.String(), "IT", false},
-		{"country to string applies max length", countryAlpha3, types.String().WithMaxLength(2), "ITA", true},
+		{"country to string keeps the value", country, types.String(), "IT", false},
+		{"country to string exceeding max length", country, types.String().WithMaxLength(1), "IT", true},
 		{"phone to string keeps the value", phone, types.String(), "+390236618300", false},
-		{"phone to string applies max length", phone, types.String().WithMaxLength(5), "+390236618300", true},
-		{"phone to string applies pattern", phone, types.String().WithPattern(regexp.MustCompile(`^\+1`)), "+390236618300", true},
-		{"email to string applies values", types.String().AsEmail(), types.String().WithValues("alice@example.com"), "bob@example.com", true},
+		{"phone to string within max length", phone, types.String().WithMaxLength(13), "+390236618300", false},
+		{"phone to string exceeding max length", phone, types.String().WithMaxLength(12), "+390236618300", true},
+		{"phone to string matching pattern", phone, types.String().WithPattern(regexp.MustCompile(`^\+39`)), "+390236618300", false},
+		{"phone to string not matching pattern", phone, types.String().WithPattern(regexp.MustCompile(`^\+1`)), "+390236618300", true},
+		{"email to string not in values", email, types.String().WithValues("alice@example.com"), "bob@example.com", true},
 	}
 
 	for _, test := range tests {
