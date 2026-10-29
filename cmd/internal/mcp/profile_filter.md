@@ -51,6 +51,10 @@ means reduce the page/projection; `ProfileProjectionTooWide` means request fewer
 properties. `FilterCapabilityNotImplemented` and `UnifiedFilteringUnavailable`
 must be reported to the user, not replaced with another query language.
 
+The MCP adapter also uses `InvalidArguments` for invalid requests/filters and
+`MCPNotConfigured` when MCP warehouse settings have not been configured. These
+are MCP diagnostic prefixes, not additional core error codes.
+
 ## Filter syntax and supported subset
 
 The root is `{"operator":"and"|"or","rules":[...]}`. Rules are Record

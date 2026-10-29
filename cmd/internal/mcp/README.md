@@ -48,6 +48,12 @@ limit/projection; no rows are truncated. The underlying HTTP/core/warehouse
 budgets are unchanged. The response budget is not a new warehouse scan budget
 for the legacy Record path.
 
+The argument limit is checked after the SDK has read and decoded the HTTP body;
+it is not an HTTP ingress limit. Attribute byte checks follow each call to
+`types.Marshal`, so the response budget does not bound the allocation used to
+encode one profile's attributes. The legacy Record page is already loaded before
+that step.
+
 Record attributes use `types.Marshal`, preserving Decimal, Int64 and raw JSON
 encoding. Count returns only MATCH profiles, plus `evaluation` with all three
 totals and T. Empty pages use `profiles: []` and retain totals. Reusing `at`

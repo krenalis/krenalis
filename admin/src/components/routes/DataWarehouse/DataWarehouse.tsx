@@ -111,7 +111,7 @@ const warehouseSectionTexts = {
 		description:
 			"Credentials used by the MCP SQL tool. Configuring them also enables query-profiles on Krenalis's main connection. " +
 			'Permissions on the separate MCP user do not restrict profile queries or their event conditions. ' +
-			'Snowflake uses the main virtual warehouse for query-profiles; Count is currently unavailable.',
+			'Snowflake uses the main virtual warehouse for query-profiles; Count is currently unavailable on Snowflake.',
 	},
 };
 
