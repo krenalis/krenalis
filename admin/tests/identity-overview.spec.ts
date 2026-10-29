@@ -595,7 +595,7 @@ test('accepts empty resolution data and a zero identity snapshot', async ({ page
 	await expect(page.getByRole('alert')).toHaveCount(0);
 });
 
-test('retries a failed connection selection without reloading the complete histories', async ({ page }) => {
+test('keeps the requested connection selected and allows leaving it after a failure', async ({ page }) => {
 	await page.evaluate(() => {
 		window.identityOverviewScenario = 'atomic';
 	});
@@ -605,34 +605,35 @@ test('retries a failed connection selection without reloading the complete histo
 	await page.evaluate(() => {
 		window.identityOverviewRequests = [];
 		window.identityOverviewFailure = '?connection=deleted';
+		window.identityOverviewHold = '?connection=deleted';
 	});
 	const select = page.locator('sl-select[aria-label="Connection"]');
 	await select.click();
 	await page.getByRole('option', { name: 'Removed connections' }).click();
+	await expect.poll(() => page.evaluate(() => window.identityOverviewPending.length)).toBe(1);
+	await expect(select).toHaveJSProperty('value', 'deleted');
+	expect(await dashboardSnapshot(page)).toEqual(previous);
+	await page.evaluate(() => window.identityOverviewPending[0]());
 	await expect(page.getByText('Dashboard data could not be loaded', { exact: true })).toBeVisible();
+	await expect(select).toHaveJSProperty('value', 'deleted');
+	expect(await dashboardSnapshot(page)).toEqual(previous);
+	await select.click();
+	await page.getByRole('option', { name: 'All connections', exact: true }).click();
 	await expect(select).toHaveJSProperty('value', '');
+	await expect(page.getByRole('alert')).toHaveCount(0);
 	expect(await dashboardSnapshot(page)).toEqual(previous);
 	await page.evaluate(() => {
-		window.identityOverviewFailure = undefined;
+		window.identityOverviewHold = undefined;
 	});
-	await select.click();
-	await page.getByRole('option', { name: 'Removed connections' }).click();
-	await expect(select).toHaveJSProperty('value', 'deleted');
+	await page.getByRole('button', { name: 'Last 7 days', exact: true }).click();
+	await expect.poll(() => dashboardSnapshot(page)).not.toEqual(previous);
+	await expect(select).toHaveJSProperty('value', '');
 	await expect(page.getByRole('alert')).toHaveCount(0);
 	const requests = await page.evaluate(() =>
 		window.identityOverviewRequests.filter((url) => url.startsWith('https://example.test/')),
 	);
-	expect(requests).toHaveLength(2);
-	for (const url of requests) expect(url).toContain('?connection=deleted');
-	await select.click();
-	await page.getByRole('option', { name: 'All connections', exact: true }).click();
-	await expect(select).toHaveJSProperty('value', '');
-	expect(await dashboardSnapshot(page)).toEqual(previous);
-	expect(
-		await page.evaluate(() =>
-			window.identityOverviewRequests.filter((url) => url.startsWith('https://example.test/')),
-		),
-	).toEqual(requests);
+	expect(requests).toHaveLength(3);
+	expect(requests.filter((url) => url.includes('?connection=deleted'))).toHaveLength(1);
 });
 
 test('does not publish or cache a superseded latest response', async ({ page }) => {

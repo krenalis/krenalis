@@ -667,7 +667,7 @@ const IdentityOverview = () => {
 						loading={isInitialLoading}
 						error={chartError}
 						connectionOptions={identityConnectionOptions}
-						selectedConnection={loadedIdentityConnection}
+						selectedConnection={selectedIdentityConnection}
 						onConnectionChange={onIdentityConnectionChange}
 					/>
 					<ConnectionsChart
