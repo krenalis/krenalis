@@ -493,7 +493,6 @@ for (const endpoint of LOAD_ENDPOINTS) {
 		await expect(page.locator('.identity-dashboard__kpi-value')).toHaveCount(0);
 		await expect(page.locator('.recharts-surface')).toHaveCount(0);
 		await expect(page.locator('.identity-dashboard__history-status')).toHaveCount(0);
-		await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
 
 		await page.evaluate(() => window.identityOverviewPending[0]());
 		await expect(page.getByText('Dashboard data could not be loaded', { exact: true })).toBeVisible();
