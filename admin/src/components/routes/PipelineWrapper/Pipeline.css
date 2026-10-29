@@ -125,20 +125,15 @@
 }
 
 .pipeline__header-close-transformation {
-	background-color: transparent;
-	border: 0;
-	padding: 0;
-	font-size: 60px;
-	font-weight: 300;
-	color: rgb(202 202 202);
-	transition: color 0.3s;
-	cursor: pointer;
-	position: relative;
-	top: -6px;
-	right: -10px;
+	font-size: 28px;
 }
 
-.pipeline__header-close-transformation:hover {
+.pipeline__header-close-transformation::part(base) {
+	color: rgb(202 202 202);
+	transition: color 0.3s;
+}
+
+.pipeline__header-close-transformation::part(base):hover {
 	color: var(--sl-color-neutral-600);
 }
 
