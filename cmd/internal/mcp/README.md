@@ -48,11 +48,18 @@ limit/projection; no rows are truncated. The underlying HTTP/core/warehouse
 budgets are unchanged. The response budget is not a new warehouse scan budget
 for the legacy Record path.
 
-The argument limit is checked after the SDK has read and decoded the HTTP body;
-it is not an HTTP ingress limit. Attribute byte checks follow each call to
-`types.Marshal`, so the response budget does not bound the allocation used to
-encode one profile's attributes. The legacy Record page is already loaded before
-that step.
+Every MCP POST has a separate **1 MiB HTTP body limit**, including the JSON-RPC
+envelope. A declared length above that limit is rejected before reading; actual
+bytes are bounded with `http.MaxBytesReader`, including unknown/chunked lengths.
+Oversize returns HTTP 413 before SDK parsing or tool execution. Other body read
+failures return opaque HTTP 400; malformed JSON within the limit is still handled
+by the SDK. GET/DELETE/HEAD handling is unchanged. The admitted body is buffered
+and replayed to the SDK, so both reads are bounded; this is not a zero-copy path.
+
+The tool's 500 KiB argument limit is still checked after SDK decoding. Attribute
+byte checks follow each call to `types.Marshal`, so the response budget does not
+bound the allocation used to encode one profile's attributes. The legacy Record
+page is already loaded before that step.
 
 Record attributes use `types.Marshal`, preserving Decimal, Int64 and raw JSON
 encoding. Count returns only MATCH profiles, plus `evaluation` with all three

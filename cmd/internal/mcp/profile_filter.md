@@ -28,7 +28,9 @@ String, JSON `null`, unknown arguments and explicit null arguments are invalid.
 Other arguments: optional `properties` (top-level property names; omission requests
 all), `order` (a sortable profile property), `orderDesc` (default false), `first`
 (default 0), `limit` (default 20, range 1–1000), and `at` (Count only).
-Arguments are limited to 500 KiB. The complete result JSON is limited to 128 KiB.
+Arguments are limited to 500 KiB. The full HTTP POST, including its JSON-RPC
+envelope, is limited to 1 MiB; oversize is HTTP 413 before the tool runs.
+The complete result JSON is limited to 128 KiB.
 An oversized result is an error: reduce `limit` or request fewer `properties`.
 Rows are never silently dropped to fit that budget.
 

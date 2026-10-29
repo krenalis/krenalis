@@ -5,7 +5,9 @@
 package mcp
 
 import (
+	"bytes"
 	"context"
+	"io"
 	"net/http"
 	"strings"
 
@@ -77,6 +79,8 @@ func (mcp *MCPServer) Close(ctx context.Context) error {
 	return mcp.server.Shutdown(ctx)
 }
 
+const maxRequestBytes = 1024 * 1024 // 1 MiB; includes the JSON-RPC envelope
+
 // ServeHTTP serves HTTP requests from MCP clients.
 func (mcp *MCPServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
@@ -88,6 +92,28 @@ func (mcp *MCPServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Bound the whole POST before the SDK reads and decodes it.
+	if r.Method == http.MethodPost {
+		if r.ContentLength > maxRequestBytes {
+			http.Error(w, "MCP request body exceeds 1 MiB", http.StatusRequestEntityTooLarge)
+			return
+		}
+		if r.Body != nil {
+			limited := http.MaxBytesReader(w, r.Body, maxRequestBytes)
+			defer limited.Close()
+			body, err := io.ReadAll(limited)
+			if err != nil {
+				if _, ok := errors.AsType[*http.MaxBytesError](err); ok {
+					http.Error(w, "MCP request body exceeds 1 MiB", http.StatusRequestEntityTooLarge)
+					return
+				}
+				http.Error(w, "cannot read MCP request body", http.StatusBadRequest)
+				return
+			}
+			r.Body = io.NopCloser(bytes.NewReader(body))
+		}
+	}
+
 	// Inject the MCP token and the Krenalis core into the request's context, so
 	// it is made available to the MCP tools.
 	ctx := r.Context()
@@ -96,6 +122,7 @@ func (mcp *MCPServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	r = r.Clone(ctx)
 
 	mcp.server.ServeHTTP(w, r)
+
 }
 
 type mcpContextKey string
