@@ -204,6 +204,7 @@ func (h *assetsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		result := watcher.Rebuild()
 		if result.Errors != nil {
 			msg := "cannot generate assets when making vendor:"
+			unresolvedPackages := false
 			for _, err := range result.Errors {
 				if len(result.Errors) == 1 {
 					msg += " "
@@ -214,6 +215,16 @@ func (h *assetsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				if loc := err.Location; loc != nil {
 					msg += fmt.Sprintf(" at %s %d:%d", loc.File, loc.Line, loc.Column)
 				}
+				// Relative imports start with ".", so they do not refer to packages.
+				if p, ok := strings.CutPrefix(err.Text, `Could not resolve "`); ok && !strings.HasPrefix(p, ".") {
+					unresolvedPackages = true
+				}
+			}
+			if unresolvedPackages {
+				msg = "===========================================================================\n" +
+					"Run \"npm install\" in the \"admin\" directory, then reload this page.\n" +
+					"Some packages could not be resolved: they are not installed or out of date.\n" +
+					"===========================================================================\n\n" + msg
 			}
 			http.Error(w, msg, http.StatusInternalServerError)
 			return
