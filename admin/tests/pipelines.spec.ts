@@ -438,7 +438,7 @@ test.describe('Matching semantics', () => {
 
 	for (const scenario of [
 		{
-			in: 'firstName',
+			in: 'country',
 			out: 'phone',
 			hasRequiredPhone: false,
 			error: 'Input and output matching properties do not have the same semantics and options',
@@ -477,6 +477,35 @@ test.describe('Matching semantics', () => {
 			await expect(page.locator('.pipeline__header')).toBeAttached();
 		});
 	}
+
+	test('Accept matching semantics on the destination side only', async ({ page }) => {
+		await openPipeline(page);
+		const exportMode = page.locator('.pipeline__export-mode sl-select');
+		await exportMode.locator('[part="display-input"]').click();
+		await exportMode.locator('sl-option[value="UpdateOnly"]').click();
+		await expect(exportMode.locator('sl-option[value="UpdateOnly"]')).toBeHidden();
+		const matching = page.locator('.pipeline__matching-properties');
+		await matching.locator('[data-id="in"] input').fill('firstName');
+		await page.keyboard.press('Escape');
+		await matching.locator('[data-id="out"] input').fill('phone');
+		await page.keyboard.press('Escape');
+		await page.locator('.pipeline__transformation .combobox[data-id="firstName"] input').fill('firstName');
+		await page.keyboard.press('Escape');
+		await page.route('**/v1/pipelines', async (route) => {
+			await route.fulfill({ json: { id: 'semantics-pipeline' } });
+		});
+		const requestPromise = page.waitForRequest(
+			(request) => request.url().endsWith('/v1/pipelines') && request.method() === 'POST',
+		);
+		await page.locator('.pipeline__header-save button').click();
+		const body = (await requestPromise).postDataJSON();
+		expect(body.matching).toEqual({ in: 'firstName', out: 'phone' });
+		const inProperty = body.inSchema.properties.find((property: Property) => property.name === 'firstName');
+		expect(inProperty?.type).toEqual({ kind: 'string' });
+		const outProperty = body.outSchema.properties.find((property: Property) => property.name === 'phone');
+		expect(outProperty?.type).toEqual({ kind: 'string', semantics: 'phone' });
+		await expect(page.locator('.pipeline__header')).toHaveCount(0);
+	});
 });
 
 test(`Add "Send Add to Cart" pipeline on Dummy`, async ({ page }) => {
