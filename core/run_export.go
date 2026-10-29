@@ -474,7 +474,7 @@ func convertToExternal(v any, in, ex types.Type, inPath, outPath string) (any, e
 					return nil, errMatchingPropertyConversion(inPath, outPath)
 				}
 			default:
-				// Other semantics do not restrict the value.
+				// No semantics, or semantics that do not restrict the value.
 			}
 		}
 		// Validate that v matches the external property's constraints.
