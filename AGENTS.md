@@ -27,7 +27,7 @@ Keep declarations in a predictable order. Place exported type groups before unex
 3. Its exported methods, sorted alphabetically.
 4. Its unexported methods, sorted alphabetically.
 
-As an exception, a type with no methods declared on it that appears in the declaration of another type, and is otherwise used only by that type's constructors and methods, may be declared immediately after it, before its constructors and methods. Several such types follow in the order of their first use.
+As an exception, a type with no methods declared on it that appears in the declaration of exactly one other defined type may be declared immediately after that type, before its constructors and methods. Several such types follow in the order of their first use.
 
 After the type groups, place package-level functions in alphabetical order.
 
