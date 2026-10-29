@@ -672,8 +672,6 @@
 	gap: 8px;
 	min-height: 0;
 	margin-bottom: 14px;
-	border: 1px solid var(--sl-color-neutral-200);
-	border-radius: var(--radius);
 	padding: 16px 12px 14px;
 }
 
