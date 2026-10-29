@@ -865,6 +865,10 @@
 	flex-flow: row;
 }
 
+.identity-dashboard__history-grid .grid__no-rows-text sl-icon {
+	font-size: 1em;
+}
+
 .identity-dashboard__history-grid .grid__loading sl-spinner {
 	font-size: 2rem !important;
 }
