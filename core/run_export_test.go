@@ -160,7 +160,8 @@ func TestConvertToExternalStringConstraintsWithSemantics(t *testing.T) {
 // values when only one of the internal and external types has semantics.
 func TestConvertToExternalOneSidedSemantics(t *testing.T) {
 
-	country := types.String().AsCountry(types.ISO3166Alpha2)
+	countryAlpha2 := types.String().AsCountry(types.ISO3166Alpha2)
+	countryAlpha3 := types.String().AsCountry(types.ISO3166Alpha3)
 	email := types.String().AsEmail()
 	phone := types.String().AsPhone()
 
@@ -171,13 +172,19 @@ func TestConvertToExternalOneSidedSemantics(t *testing.T) {
 		wantErr bool
 	}{
 		// Only the external type has semantics.
-		{"string to country does not validate the value", types.String(), country, "ITA", false},
-		{"string to phone does not normalize the value", types.String(), phone, "+39 02 3661 8300", false},
+		{"string to alpha-2 country", types.String(), countryAlpha2, "IT", false},
+		{"string to alpha-2 country with alpha-3 code", types.String(), countryAlpha2, "ITA", true},
+		{"string to alpha-2 country with unassigned code", types.String(), countryAlpha2, "ZZ", true},
+		{"string to alpha-3 country", types.String(), countryAlpha3, "ITA", false},
+		{"string to alpha-3 country with alpha-2 code", types.String(), countryAlpha3, "IT", true},
+		{"string to phone in canonical form", types.String(), phone, "+390236618300", false},
+		{"string to phone not in canonical form", types.String(), phone, "+39 02 3661 8300", true},
+		{"string to phone with invalid number", types.String(), phone, "not a phone", true},
 		{"string to email does not validate the value", types.String(), email, "not an email", false},
 
 		// Only the internal type has semantics.
-		{"country to string keeps the value", country, types.String(), "IT", false},
-		{"country to string exceeding max length", country, types.String().WithMaxLength(1), "IT", true},
+		{"country to string keeps the value", countryAlpha2, types.String(), "IT", false},
+		{"country to string exceeding max length", countryAlpha2, types.String().WithMaxLength(1), "IT", true},
 		{"phone to string keeps the value", phone, types.String(), "+390236618300", false},
 		{"phone to string within max length", phone, types.String().WithMaxLength(13), "+390236618300", false},
 		{"phone to string exceeding max length", phone, types.String().WithMaxLength(12), "+390236618300", true},
