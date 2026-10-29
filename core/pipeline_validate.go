@@ -341,19 +341,13 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 				return errors.BadRequest("input matching property cannot be converted to the output matching property")
 			}
 		}
-		// Check the semantics.
-		if !types.EqualSemantics(in.Type, out.Type) {
-			if in.Type.Semantics() != out.Type.Semantics() {
-				inSemantics, outSemantics := in.Type.Semantics().String(), out.Type.Semantics().String()
-				if in.Type.Semantics() == types.NoSemantics {
-					inSemantics = "no"
-				}
-				if out.Type.Semantics() == types.NoSemantics {
-					outSemantics = "no"
-				}
+		// Check the semantics, if both properties have them.
+		inSem, outSem := in.Type.Semantics(), out.Type.Semantics()
+		if inSem != types.NoSemantics && outSem != types.NoSemantics && !types.EqualSemantics(in.Type, out.Type) {
+			if inSem != outSem {
 				return errors.BadRequest(
 					"input matching property has %s semantics, but output matching property requires %s semantics",
-					inSemantics, outSemantics)
+					inSem, outSem)
 			}
 			option := "semantics option"
 			switch in.Type.Semantics() {

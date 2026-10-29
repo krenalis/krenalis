@@ -3795,11 +3795,11 @@ func TestMatchingPropertySemantics(t *testing.T) {
 		},
 		{
 			"country semantics on input only", types.String().AsCountry(types.ISO3166Alpha2), types.String(),
-			CreateOrUpdate, "input matching property has country semantics, but output matching property requires no semantics",
+			CreateOrUpdate, "",
 		},
 		{
 			"country semantics on output only", types.String(), types.String().AsCountry(types.ISO3166Alpha2),
-			CreateOrUpdate, "input matching property has no semantics, but output matching property requires country semantics",
+			CreateOrUpdate, "",
 		},
 		{
 			"duration with different constraints", types.Int(64).AsDuration(types.Second),
@@ -3807,19 +3807,19 @@ func TestMatchingPropertySemantics(t *testing.T) {
 		},
 		{
 			"input phone only", types.String().AsPhone(), types.String(), CreateOnly,
-			"input matching property has phone semantics, but output matching property requires no semantics",
+			"",
 		},
 		{
 			"output phone only", types.String(), types.String().AsPhone(), UpdateOnly,
-			"input matching property has no semantics, but output matching property requires phone semantics",
+			"",
 		},
 		{
 			"input email only", types.String().AsEmail(), types.String(), CreateOnly,
-			"input matching property has email semantics, but output matching property requires no semantics",
+			"",
 		},
 		{
 			"output email only", types.String(), types.String().AsEmail(), UpdateOnly,
-			"input matching property has no semantics, but output matching property requires email semantics",
+			"",
 		},
 		{
 			"different semantics", types.String().AsEmail(), types.String().AsPhone(), CreateOrUpdate,

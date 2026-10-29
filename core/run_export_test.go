@@ -156,6 +156,61 @@ func TestConvertToExternalStringConstraintsWithSemantics(t *testing.T) {
 
 }
 
+// TestConvertToExternalOneSidedSemantics checks that, when only one of the
+// matching types has semantics, values are validated and normalized according
+// to the semantics of the external type and the constraints of a string type.
+func TestConvertToExternalOneSidedSemantics(t *testing.T) {
+
+	countryAlpha2 := types.String().AsCountry(types.ISO3166Alpha2)
+	countryAlpha3 := types.String().AsCountry(types.ISO3166Alpha3)
+	phone := types.String().AsPhone()
+
+	tests := []struct {
+		name    string
+		in, ex  types.Type
+		value   string
+		want    string
+		wantErr bool
+	}{
+		{"country to string", countryAlpha2, types.String(), "IT", "IT", false},
+		{"country to string with max length exceeded", countryAlpha3, types.String().WithMaxLength(2), "ITA", "", true},
+		{"string to alpha-2 country", types.String(), countryAlpha2, "IT", "IT", false},
+		{"string to alpha-3 country", types.String(), countryAlpha3, "ITA", "ITA", false},
+		{"string to alpha-2 country with alpha-3 value", types.String(), countryAlpha2, "ITA", "", true},
+		{"string to alpha-2 country with invalid value", types.String(), countryAlpha2, "ZZ", "", true},
+		{"phone to string", phone, types.String(), "+390236618300", "+390236618300", false},
+		{"phone to string with max length exceeded", phone, types.String().WithMaxLength(5), "+390236618300", "", true},
+		{"string to phone is normalized", types.String(), phone, "+39 02 3661 8300", "+390236618300", false},
+		{"string to phone with invalid value", types.String(), phone, "not a phone", "", true},
+		{"email to string", types.String().AsEmail(), types.String(), "bob@example.com", "bob@example.com", false},
+		{"string to email", types.String(), types.String().AsEmail(), "bob@example.com", "bob@example.com", false},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, err := convertToExternal(test.value, test.in, test.ex, "in", "ex")
+			if err != nil {
+				if !test.wantErr {
+					t.Fatalf("expected no error, got %v", err)
+				}
+				wantErr := errMatchingPropertyConversion("in", "ex")
+				if !reflect.DeepEqual(wantErr, err) {
+					t.Fatalf("expected error %#v, got %#v", wantErr, err)
+				}
+				return
+			}
+			if test.wantErr {
+				wantErr := errMatchingPropertyConversion("in", "ex")
+				t.Fatalf("expected error %#v, got nil", wantErr)
+			}
+			if got != test.want {
+				t.Fatalf("expected %#v, got %#v", test.want, got)
+			}
+		})
+	}
+
+}
+
 func TestGetAttribute(t *testing.T) {
 	cases := []struct {
 		name       string
