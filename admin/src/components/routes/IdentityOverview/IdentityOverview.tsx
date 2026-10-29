@@ -50,7 +50,6 @@ import {
 	formatResolutionUTCTimestamp,
 	formatSignedIntegerDelta,
 	formatTrendPercent,
-	formatUTCTimestamp,
 	hasResolutionDataInRange,
 	instantToDateKey,
 	pickerDateToDateKey,
@@ -444,7 +443,7 @@ const IdentityOverview = () => {
 			: undefined;
 	const shouldShowResolutionStructure = isInitialLoading || chartError != null || latestResolution != null;
 	const resolutionDistributionTemporalLabel =
-		latestResolution == null ? '' : `Completed ${formatUTCTimestamp(latestResolution.observedAt)} UTC`;
+		latestResolutionUTCTimestamp == null ? '' : `Completed ${latestResolutionUTCTimestamp}`;
 	const processedTypeDistribution =
 		latestResolution == null
 			? undefined

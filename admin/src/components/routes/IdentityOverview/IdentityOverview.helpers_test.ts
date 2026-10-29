@@ -50,7 +50,6 @@ import {
 	formatSharePercent,
 	formatSignedIntegerDelta,
 	formatTrendPercent,
-	formatUTCTimestamp,
 	hasResolutionDataInRange,
 	identityLinkRateChartDomain,
 	ratioChartDomain,
@@ -962,16 +961,15 @@ const tests: { name: string; run: () => void | Promise<void> }[] = [
 		},
 	},
 	{
-		name: 'UTC timestamps use the approved dashboard format',
-		run: () => {
-			equal(formatUTCTimestamp('2026-08-10T02:15:00Z'), 'Aug 10, 2026 02:15 AM', 'UTC timestamp');
-		},
-	},
-	{
 		name: 'last successful resolution shows canonical UTC and the complete browser-local date and time',
 		run: () => {
 			const instant = '2026-08-10T02:00:00Z';
 			equal(formatResolutionUTCTimestamp(instant), 'Aug 10, 2026 · 02:00 UTC', 'canonical UTC timestamp');
+			equal(
+				formatResolutionUTCTimestamp('2026-08-10T14:15:00Z'),
+				'Aug 10, 2026 · 14:15 UTC',
+				'afternoon UTC timestamp',
+			);
 			equal(
 				formatResolutionLocalTimestamp(instant, 'Europe/Rome', 'it-IT'),
 				'Aug 10, 2026 · 04:00 CEST',

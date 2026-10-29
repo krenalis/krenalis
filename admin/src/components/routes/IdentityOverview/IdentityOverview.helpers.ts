@@ -592,20 +592,6 @@ const formatComparisonDate = (referenceDay: string, currentDay: string): string 
 
 const formatChartDate = (dateKey: string): string => formatDate(dateKey, false);
 
-const formatUTCTimestamp = (instant: string): string => {
-	return new Intl.DateTimeFormat('en-US', {
-		timeZone: 'UTC',
-		month: 'short',
-		day: 'numeric',
-		year: 'numeric',
-		hour: '2-digit',
-		minute: '2-digit',
-		hour12: true,
-	})
-		.format(new Date(instant))
-		.replace(/, (?=\d{2}:\d{2})/, ' ');
-};
-
 const formatTimestampInTimeZone = (instant: string, timeZone?: string, includeYear = true): string => {
 	const parts = new Intl.DateTimeFormat('en-US', {
 		timeZone,
@@ -754,7 +740,6 @@ export {
 	formatSharePercent,
 	formatSignedIntegerDelta,
 	formatTrendPercent,
-	formatUTCTimestamp,
 	hasResolutionDataInRange,
 	identityLinkRateChartDomain,
 	instantToDateKey,
