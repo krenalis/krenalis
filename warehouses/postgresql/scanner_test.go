@@ -15,6 +15,27 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+// TestScanArrayInvalidElementLength keeps negative element lengths invalid.
+func TestScanArrayInvalidElementLength(t *testing.T) {
+	for _, length := range []int32{-1, -2} {
+		data, err := pgtype.NewMap().Encode(pgtype.TextArrayOID, pgtype.BinaryFormatCode, []string{"x"}, nil)
+		if err != nil {
+			t.Fatalf("expected binary array fixture, got %v", err)
+		}
+		binary.BigEndian.PutUint32(data[20:], uint32(length))
+		s := &scanner{}
+		_, err = s.normalize("value", types.Array(types.String()), data)
+		if err != nil {
+			if !errors.Is(err, errInvalidData) {
+				t.Fatalf("expected invalid-data error for length %d, got %v", length, err)
+			}
+		}
+		if err == nil {
+			t.Fatalf("expected invalid-data error for length %d, got success", length)
+		}
+	}
+}
+
 // TestScanArrayRecord bounds binary lengths without a Unified byte budget and
 // preserves the existing treatment of ordinary arrays and SQL NULL elements.
 func TestScanArrayRecord(t *testing.T) {
@@ -61,6 +82,38 @@ func TestScanArrayRecord(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got, test.want) {
 				t.Fatalf("expected decoded array %v, got %v", test.want, got)
+			}
+		})
+	}
+}
+
+// TestScanStringArray preserves empty String elements and their positions.
+func TestScanStringArray(t *testing.T) {
+	for _, test := range []struct {
+		name   string
+		values []any
+	}{
+		{"empty array", []any{}},
+		{"nonempty elements", []any{"first", "second"}},
+		{"empty element", []any{""}},
+		{"empty first element", []any{"", "x"}},
+		{"empty last element", []any{"x", ""}},
+		{"only empty elements", []any{"", ""}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			for _, oid := range []uint32{pgtype.TextArrayOID, pgtype.BPCharArrayOID, pgtype.VarcharArrayOID} {
+				data, err := pgtype.NewMap().Encode(oid, pgtype.BinaryFormatCode, test.values, nil)
+				if err != nil {
+					t.Fatalf("expected binary String array for OID %d, got %v", oid, err)
+				}
+				s := &scanner{}
+				got, err := s.normalize("value", types.Array(types.String()), data)
+				if err != nil {
+					t.Fatalf("expected String array for OID %d, got %v", oid, err)
+				}
+				if !reflect.DeepEqual(got, test.values) {
+					t.Fatalf("expected String array %#v for OID %d, got %#v", test.values, oid, got)
+				}
 			}
 		})
 	}

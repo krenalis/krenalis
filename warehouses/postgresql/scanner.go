@@ -309,7 +309,7 @@ func (s *scanner) scanArray(src any) ([]any, error) {
 		25,   // text
 		1042, // bpchar
 		1043: // varchar
-		if len(data) < p+5*size {
+		if len(data) < p+4*size {
 			return nil, errInvalidData
 		}
 		for i := range values {
@@ -317,7 +317,7 @@ func (s *scanner) scanArray(src any) ([]any, error) {
 				return nil, errInvalidData
 			}
 			l := int(int32(binary.BigEndian.Uint32(data[p:])))
-			if l <= 0 {
+			if l < 0 {
 				return nil, errInvalidData
 			}
 			p += 4
