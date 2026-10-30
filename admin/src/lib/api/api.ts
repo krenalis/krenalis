@@ -20,6 +20,8 @@ import { WarehouseMode, WarehouseResponse, WarehouseSettings } from './types/war
 import Workspace, {
 	CreateWorkspaceResponse,
 	LatestIdentityResolution,
+	IdentityResolutionRunsResponse,
+	IdentityResolutionRunStatus,
 	LatestAlterProfileSchema,
 	ProfileSchema,
 	EventConsentLocation,
@@ -64,7 +66,12 @@ import {
 	ConsentPurposesResponse,
 } from './types/responses';
 import { AccessKeyType } from './types/organization';
-import { IdentityMetric, IdentityMetricDay } from './types/metrics';
+import {
+	IdentityMetric,
+	IdentityMetricDay,
+	IdentityResolutionMetric,
+	IdentityResolutionMetricDay,
+} from './types/metrics';
 
 const API_BASE_PATH = '/v1';
 
@@ -739,8 +746,16 @@ class Workspaces {
 		return await call(`${this.apiURL}/metrics/identities/latest`, http.GET, this.workspaceID);
 	};
 
-	refreshIdentityMetrics = async (): Promise<void> => {
-		return await call(`${this.apiURL}/metrics/identities/refresh`, http.POST, this.workspaceID);
+	identityResolutionMetricsPerDate = async (start: string, end: string): Promise<IdentityResolutionMetricDay[]> => {
+		return await call(
+			`${this.apiURL}/metrics/identity-resolution/dates/${encodeURIComponent(start)}/${encodeURIComponent(end)}`,
+			http.GET,
+			this.workspaceID,
+		);
+	};
+
+	latestIdentityResolutionMetric = async (): Promise<IdentityResolutionMetric | null> => {
+		return await call(`${this.apiURL}/metrics/identity-resolution/latest`, http.GET, this.workspaceID);
 	};
 
 	createConnection = async (connection: ConnectionToAdd, authToken: string): Promise<string> => {
@@ -932,6 +947,16 @@ class Workspaces {
 
 	latestIdentityResolution = async (): Promise<LatestIdentityResolution> => {
 		return await call(`${this.apiURL}/identity-resolution/latest`, http.GET, this.workspaceID);
+	};
+
+	identityResolutionRuns = async (
+		first = 0,
+		limit = 100,
+		status?: IdentityResolutionRunStatus,
+	): Promise<IdentityResolutionRunsResponse> => {
+		const query = new URLSearchParams({ first: String(first), limit: String(limit) });
+		if (status != null) query.set('status', status);
+		return await call(`${this.apiURL}/identity-resolution/runs?${query}`, http.GET, this.workspaceID);
 	};
 
 	LatestAlterProfileSchema = async (): Promise<LatestAlterProfileSchema> => {
