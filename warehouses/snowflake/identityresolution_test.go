@@ -5,6 +5,7 @@
 package snowflake
 
 import (
+	"context"
 	"strings"
 	"testing"
 	"time"
@@ -65,6 +66,54 @@ func Test_finalizeIdentityResolutionPreservesPersistedSuccess(t *testing.T) {
 	}
 	if operationError != "" {
 		t.Fatalf("expected successful operation to remain successful, got error %q", operationError)
+	}
+
+}
+
+// Test_finalizeIdentityResolutionMarksCanceledOperationAsFailed verifies that
+// an operation whose context has been canceled, as happens on shutdown, is
+// still marked as failed, with an error that reports the cancellation cause.
+func Test_finalizeIdentityResolutionMarksCanceledOperationAsFailed(t *testing.T) {
+
+	warehouse, db := newTestSnowflakeWarehouse(t)
+	_, err := db.ExecContext(t.Context(), createOperationsTable)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	const opID = "a44731d8-d89d-44b9-ac87-a8ce1a8770d1"
+	_, err = db.ExecContext(t.Context(), `INSERT INTO "KRENALIS_SYSTEM_OPERATIONS"
+		("ID", "OPERATION_TYPE") VALUES (?, ?)`, opID, identityResolution)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	ctx, cancel := context.WithCancelCause(t.Context())
+	cancel(errors.New("Krenalis was shut down"))
+	err = warehouse.finalizeIdentityResolution(ctx, db, opID, ctx.Err())
+	if err != nil {
+		_, ok := errors.AsType[*warehouses.OperationError](err)
+		if !ok {
+			t.Fatalf("expected *warehouses.OperationError, got %T: %v", err, err)
+		}
+	}
+	if err == nil {
+		t.Fatal("expected *warehouses.OperationError, got nil")
+	}
+	var completedAt *time.Time
+	var operationError string
+	err = db.QueryRowContext(t.Context(),
+		`SELECT "COMPLETED_AT", "ERROR" FROM "KRENALIS_SYSTEM_OPERATIONS" WHERE "ID" = ?`, opID).
+		Scan(&completedAt, &operationError)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if completedAt == nil {
+		t.Fatal("expected operation to be completed, got uncompleted operation")
+	}
+	const expectedError = "operation interrupted: Krenalis was shut down"
+	if operationError != expectedError {
+		t.Fatalf("expected operation error %q, got %q", expectedError, operationError)
 	}
 
 }

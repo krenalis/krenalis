@@ -5,16 +5,105 @@
 package postgresql
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"reflect"
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
 )
+
+// TestAlterProfileSchemaMarksInterruptedOperationAsFailed verifies that an
+// alteration interrupted by the cancellation of its context, as happens on
+// shutdown, is still marked as failed, with an error that reports the
+// cancellation cause.
+func TestAlterProfileSchemaMarksInterruptedOperationAsFailed(t *testing.T) {
+
+	warehouse, pool := newTestPostgreSQLWarehouse(t)
+	profileColumns := []warehouses.Column{{Name: "email", Type: types.String(), Nullable: true}}
+	err := warehouse.Initialize(t.Context(), profileColumns)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Lock the profiles table, so that the alteration waits for the lock until
+	// its context is canceled.
+	lockTx, err := pool.Begin(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer lockTx.Rollback(t.Context())
+	_, err = lockTx.Exec(t.Context(), `LOCK TABLE "krenalis_profiles_0" IN ACCESS EXCLUSIVE MODE`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	newProfileColumns := append([]warehouses.Column{}, profileColumns...)
+	newProfileColumns = append(newProfileColumns, warehouses.Column{
+		Name:     "phone",
+		Type:     types.String(),
+		Nullable: true,
+	})
+	alterOperations := []warehouses.AlterOperation{{
+		Operation: warehouses.OperationAddColumn,
+		Column:    "phone",
+		Type:      types.String(),
+	}}
+	const opID = "a44731d8-d89d-44b9-ac87-a8ce1a8770dc"
+	ctx, cancel := context.WithCancelCause(t.Context())
+	defer cancel(nil)
+	done := make(chan error, 1)
+	go func() {
+		done <- warehouse.AlterProfileSchema(ctx, opID, newProfileColumns, alterOperations)
+	}()
+
+	// Cancel the context once the alteration waits for the lock.
+	for isWaiting := false; !isWaiting; {
+		select {
+		case err := <-done:
+			t.Fatalf("expected alteration to wait for the lock, got return with error %v", err)
+		case <-time.After(10 * time.Millisecond):
+		}
+		err = pool.QueryRow(t.Context(), `SELECT EXISTS (SELECT FROM pg_locks WHERE NOT granted)`).Scan(&isWaiting)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	cancel(errors.New("Krenalis was shut down"))
+	err = <-done
+	if err != nil {
+		_, ok := errors.AsType[*warehouses.OperationError](err)
+		if !ok {
+			t.Fatalf("expected *warehouses.OperationError, got %T: %v", err, err)
+		}
+	}
+	if err == nil {
+		t.Fatal("expected *warehouses.OperationError, got nil")
+	}
+
+	var completedAt *time.Time
+	var operationError string
+	err = pool.QueryRow(t.Context(),
+		`SELECT "completed_at", "error" FROM "krenalis_system_operations" WHERE "id" = $1`, opID).
+		Scan(&completedAt, &operationError)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if completedAt == nil {
+		t.Fatal("expected operation to be completed, got uncompleted operation")
+	}
+	const expectedError = "operation interrupted: Krenalis was shut down"
+	if operationError != expectedError {
+		t.Fatalf("expected operation error %q, got %q", expectedError, operationError)
+	}
+
+}
 
 // Test_alterProfileSchemaQueries checks that alterProfileSchema generates the
 // expected set of SQL statements for a variety of operations.

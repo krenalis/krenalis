@@ -38,8 +38,13 @@ func (warehouse *PostgreSQL) AlterProfileSchema(ctx context.Context, opID string
 	var operationErr *warehouses.OperationError
 	err = warehouse.alterProfileSchema(ctx, columns, operations)
 	if err != nil {
+		if ctx.Err() != nil {
+			err = fmt.Errorf("operation interrupted: %w", context.Cause(ctx))
+		}
 		operationErr = warehouses.NewOperationError(err)
 	}
+	ctx, cancel := finalizationContext(ctx)
+	defer cancel()
 	bo := backoff.New(200)
 	bo.SetCap(time.Second)
 	for bo.Next(ctx) {
