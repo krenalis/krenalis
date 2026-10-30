@@ -681,7 +681,7 @@ const IdentityOverview = () => {
 						days={identityChartDays}
 						loading={isInitialLoading}
 						isReloading={isIdentityHistoryReloading}
-						error={chartError}
+						error={selectedIdentityConnection !== loadedIdentityConnection ? dashboardError : chartError}
 						connectionOptions={identityConnectionOptions}
 						selectedConnection={selectedIdentityConnection}
 						onConnectionChange={onIdentityConnectionChange}

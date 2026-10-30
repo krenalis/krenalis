@@ -628,7 +628,9 @@ test('keeps the requested connection selected and allows leaving it after a fail
 	await expect(page.getByText('Dashboard data could not be loaded', { exact: true })).toBeVisible();
 	await expect(select).toHaveJSProperty('value', 'deleted');
 	await expect(page.locator('[aria-busy="true"]')).toHaveCount(0);
-	expect(await dashboardSnapshot(page)).toEqual(previous);
+	const chart = page.locator('.identity-dashboard__chart-card').filter({ hasText: 'Identities over time (daily)' });
+	await expect(chart.getByRole('alert')).toContainText('Identity metrics could not be loaded');
+	await expect(chart.locator('.recharts-surface')).toHaveCount(0);
 	await select.click();
 	await page.getByRole('option', { name: 'All connections', exact: true }).click();
 	await expect(select).toHaveJSProperty('value', '');
