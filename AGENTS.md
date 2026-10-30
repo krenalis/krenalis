@@ -129,9 +129,9 @@ Decide the spacing of every brace-delimited block on its own, from the inside ou
 2. Padding: if step 1 left any internal blank line, add one after the opening brace and one before the closing brace; otherwise add none.
 3. Final `return`: in a padded block ending with `return`, the closing pad goes before the `return`, which is followed directly by the brace. A `return` in a nested block is not the enclosing block's final statement.
 
-So a block is either compact, with no blank lines at all, or separated, with internal blank lines and both pads, the closing one above a final `return`.
+So a block is either compact, with no blank lines between its statements or at its boundaries, or separated, with internal blank lines and both pads, the closing one above a final `return`.
 
-Each nested block is decided independently, in both directions; a function literal (subtest, goroutine, HTTP handler) is decided like a function body. A control-flow block may be separated inside a compact block that is only a thin frame around it, such as declaring a result, filling it in a loop, and returning it.
+Each nested block is decided independently: it neither inherits nor imposes the shape of its enclosing block. A function literal (subtest, goroutine, HTTP handler) is decided like a function body. A control-flow block may be separated inside a compact block that is only a thin frame around it, such as declaring a result, filling it in a loop, and returning it.
 
 Separate the construct owning a block from surrounding code with blank lines, keeping declaration comments attached. Exception: a variable may be initialized in its own block placed directly after its declaration:
 
@@ -200,7 +200,7 @@ A short same-line comment on a package-level variable or constant starts lowerca
 
 ## Error messages
 
-Never begin an error message with `the`.
+Never begin an error message with the article `the`.
 
 Prefix every panic message, and every error reporting an unexpected situation, with the producing package's import path relative to the module path, followed by `: `, as in `core/internal/transformers/lambda: invalid function name`. Do not repeat the prefix when wrapping an error from the same package; re-panic with a `recover` value unchanged; when passing on another package's error, as in `panic(err)`, add the prefix only if its message does not show where the problem occurred.
 
@@ -245,9 +245,9 @@ Apply this only to code introduced or modified by the change; do not add or remo
 
 Treat every value from a user-controlled data warehouse as untrusted, including values from tables managed by Krenalis. This boundary protects Krenalis, its resources, and isolation between workspaces, not the integrity of the owning workspace's data. Do not infer from an invalid value whether the user, the warehouse, an attacker, or Krenalis caused it.
 
-Validate every property needed to use warehouse data safely in application state, metrics, resource sizing, control flow, or user-visible output. Fail closed on values that could harm Krenalis: bound payload sizes and row counts at the query source when possible and always before allocation or decoding, reject values outside representable or safety-relevant limits, prevent arithmetic overflow, and do not copy unbounded or unsanitized values into errors or logs. Require structural consistency only when its violation could harm Krenalis, exhaust resources, corrupt Krenalis-owned state, or break workspace isolation.
+Validate every property needed to use warehouse data safely in application state, metrics, resource sizing, control flow, or user-visible output. Fail closed on values that could harm Krenalis: bound payload sizes and row counts at the query source when possible and always before allocation or decoding, reject values outside representable or safety-relevant semantic limits, prevent arithmetic overflow, and do not copy unbounded or unsanitized values into errors or logs. Require structural consistency only when its violation could harm Krenalis, consume excessive resources, corrupt Krenalis-owned state, or break workspace isolation.
 
-A compromised warehouse can return false or inconsistent values that are still safe: accept them, and do not add validation solely to detect or correct them or to protect the owning workspace, since truthfulness requires an independent integrity mechanism. Exception: validation may reject values that violate a relationship their meaning guarantees, such as a subset count exceeding the count of its set, so callers can rely on it.
+A compromised warehouse can return false or inconsistent values that are still safe and representable: accept them, and do not add validation solely to detect or correct them or to protect the owning workspace, since truthfulness requires an independent integrity mechanism. Exception: validation may reject values that violate a relationship their meaning guarantees, such as a subset count exceeding the count of its set, so callers can rely on it.
 
 # Uniformity across data warehouses
 
