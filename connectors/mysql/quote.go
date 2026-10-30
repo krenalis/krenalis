@@ -38,13 +38,9 @@ func quoteValue(b *strings.Builder, v any, t types.Type) error {
 	case nil:
 		b.WriteString("NULL")
 	case string:
-		b.WriteByte('"')
-		if t.IsString() {
-			quoteString(b, v)
-		} else {
-			b.WriteString(v)
-		}
-		b.WriteByte('"')
+		b.WriteByte('\'')
+		quoteString(b, v)
+		b.WriteByte('\'')
 	case int:
 		b.WriteString(strconv.FormatInt(int64(v), 10))
 	case uint:
@@ -54,7 +50,7 @@ func quoteValue(b *strings.Builder, v any, t types.Type) error {
 	case decimal.Decimal:
 		b.WriteString(v.String())
 	case time.Time:
-		b.WriteByte('"')
+		b.WriteByte('\'')
 		switch t.Kind() {
 		case types.DateTimeKind:
 			b.WriteString(v.Format("2006-01-02 15:04:05.999999"))
@@ -63,11 +59,11 @@ func quoteValue(b *strings.Builder, v any, t types.Type) error {
 		case types.TimeKind:
 			b.WriteString(v.Format("15:04:05.999999"))
 		}
-		b.WriteByte('"')
+		b.WriteByte('\'')
 	case json.Value:
-		b.WriteByte('"')
+		b.WriteByte('\'')
 		quoteString(b, string(v))
-		b.WriteByte('"')
+		b.WriteByte('\'')
 	// TODO(marco): SET can be implemented as an array(T), but the driver only returns the first element of the set.
 	//case []any:
 	//	b.WriteByte('"')
