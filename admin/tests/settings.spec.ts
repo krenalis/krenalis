@@ -45,22 +45,26 @@ test(`Select the profile property of a consent purpose`, async ({ page }) => {
 	await page.route('**/v1/profiles/schema', async (route) => {
 		await route.fulfill({
 			json: {
-				kind: 'object',
-				properties: [
-					{ name: 'accepted', type: { kind: 'boolean' } },
-					{
-						name: 'nested',
-						type: {
-							kind: 'object',
-							properties: [
-								{ name: 'ignored', type: { kind: 'string' } },
-								{ name: 'metadata', type: { kind: 'json' } },
-								{ name: 'allowed', type: { kind: 'boolean' } },
-							],
+				schema: {
+					kind: 'object',
+					properties: [
+						{ name: 'accepted', type: { kind: 'boolean' } },
+						{
+							name: 'nested',
+							type: {
+								kind: 'object',
+								properties: [
+									{ name: 'ignored', type: { kind: 'string' } },
+									{ name: 'metadata', type: { kind: 'json' } },
+									{ name: 'allowed', type: { kind: 'boolean' } },
+								],
+							},
 						},
-					},
-					{ name: 'attributes', type: { kind: 'json' } },
-				],
+						{ name: 'attributes', type: { kind: 'json' } },
+					],
+				},
+				propertyRoles: { firstName: '', lastName: '', email: '', country: '', photo: '' },
+				primarySources: {},
 			},
 		});
 	});
@@ -189,7 +193,13 @@ test(`Add and remove purpose codes of a consent purpose`, async ({ page }) => {
 		await route.fulfill({ json: { purposes: [] } });
 	});
 	await page.route('**/v1/profiles/schema', async (route) => {
-		await route.fulfill({ json: { kind: 'object', properties: [] } });
+		await route.fulfill({
+			json: {
+				schema: { kind: 'object', properties: [] },
+				propertyRoles: { firstName: '', lastName: '', email: '', country: '', photo: '' },
+				primarySources: {},
+			},
+		});
 	});
 	await page.goto(`${adminURL}/settings/consent-management`);
 	await page.getByRole('button', { name: 'Add consent purpose' }).click();
@@ -293,7 +303,11 @@ test(`Edit a consent purpose without setting the initial focus`, async ({ page }
 	});
 	await page.route('**/v1/profiles/schema', async (route) => {
 		await route.fulfill({
-			json: { kind: 'object', properties: [{ name: 'accepted', type: { kind: 'boolean' } }] },
+			json: {
+				schema: { kind: 'object', properties: [{ name: 'accepted', type: { kind: 'boolean' } }] },
+				propertyRoles: { firstName: '', lastName: '', email: '', country: '', photo: '' },
+				primarySources: {},
+			},
 		});
 	});
 	await page.goto(`${adminURL}/settings/consent-management`);
@@ -351,7 +365,11 @@ test(`Validate existing consent locations and allow clearing an invalid profile 
 	});
 	await page.route('**/v1/profiles/schema', async (route) => {
 		await route.fulfill({
-			json: { kind: 'object', properties: [{ name: 'consents', type: { kind: 'json' } }] },
+			json: {
+				schema: { kind: 'object', properties: [{ name: 'consents', type: { kind: 'json' } }] },
+				propertyRoles: { firstName: '', lastName: '', email: '', country: '', photo: '' },
+				primarySources: {},
+			},
 		});
 	});
 	await page.goto(`${adminURL}/settings/consent-management`);
@@ -389,7 +407,13 @@ test(`Validate authored consent keys and save literal JSON keys separately`, asy
 		await route.fulfill({ json: { purposes: [] } });
 	});
 	await page.route('**/v1/profiles/schema', async (route) => {
-		await route.fulfill({ json: { kind: 'object', properties: [{ name: 'consents', type: { kind: 'json' } }] } });
+		await route.fulfill({
+			json: {
+				schema: { kind: 'object', properties: [{ name: 'consents', type: { kind: 'json' } }] },
+				propertyRoles: { firstName: '', lastName: '', email: '', country: '', photo: '' },
+				primarySources: {},
+			},
+		});
 	});
 	await page.goto(`${adminURL}/settings/consent-management`);
 	await page.getByRole('button', { name: 'Add consent purpose' }).click();
@@ -461,8 +485,12 @@ test(`Validate changed API JSON keys and clear the profile property`, async ({ p
 	await page.route('**/v1/profiles/schema', async (route) => {
 		await route.fulfill({
 			json: {
-				kind: 'object',
-				properties: ['consents', 'other'].map((name) => ({ name, type: { kind: 'json' } })),
+				schema: {
+					kind: 'object',
+					properties: ['consents', 'other'].map((name) => ({ name, type: { kind: 'json' } })),
+				},
+				propertyRoles: { firstName: '', lastName: '', email: '', country: '', photo: '' },
+				primarySources: {},
 			},
 		});
 	});
@@ -517,35 +545,6 @@ test(`Change the workspace name`, async ({ page }) => {
 	await page.reload();
 	await expect(page.locator('.general-settings__name >> input')).toHaveValue('Workspace');
 	await expect(page.locator('.workspace-selector__value')).toContainText('Workspace');
-});
-
-test(`Change the UI user profile properties`, async ({ page }) => {
-	await page.goto(`${adminURL}/settings/general`);
-
-	const userProfileFirstName = page.locator('.general-settings__user-profile-first-name sl-input >> input');
-	const userProfileLastName = page.locator('.general-settings__user-profile-last-name sl-input >> input');
-	const userProfileAdditionalLine = page.locator('.general-settings__user-profile-extra sl-input >> input');
-	const userProfileImage = page.locator('.general-settings__profile-image sl-input >> input');
-
-	await userProfileFirstName.fill('first_name');
-	await userProfileLastName.fill('last_name');
-	await userProfileAdditionalLine.fill('email');
-	await userProfileImage.fill('dummy_id'); // Currently in the default schema we don't have any property for the image.
-
-	await page.click('.general-settings__save-workspace-button');
-
-	await expect(userProfileFirstName).toHaveValue('first_name');
-	await expect(userProfileLastName).toHaveValue('last_name');
-	await expect(userProfileAdditionalLine).toHaveValue('email');
-	await expect(userProfileImage).toHaveValue('dummy_id');
-
-	await page.waitForTimeout(2000); // Add a timeout to ensure that the saving was completed.
-	await page.reload();
-
-	await expect(userProfileFirstName).toHaveValue('first_name');
-	await expect(userProfileLastName).toHaveValue('last_name');
-	await expect(userProfileAdditionalLine).toHaveValue('email');
-	await expect(userProfileImage).toHaveValue('dummy_id');
 });
 
 test(`Change the automatic execution of the identity resolution`, async ({ page }) => {

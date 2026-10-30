@@ -14,34 +14,10 @@
 	font-weight: 400;
 }
 
-.general-settings__profile-properties {
-	margin: 30px 0 50px 0;
-}
-
-.general-settings__profile-properties-title {
-	font-size: 18px;
-	font-weight: 600;
-}
-
-.general-settings__profile-properties-description {
-	margin-bottom: 25px;
-}
-
-.general-settings__profile-properties-fields {
-	max-width: 70%;
-}
-
-.general-settings__profile-properties-fields .combobox-input {
-	margin-bottom: 20px;
-}
-
-.general-settings__profile-image {
-	margin-top: 5px;
-}
-
 .general-settings__save-workspace-button {
 	display: block;
 	max-width: 200px;
+	margin-top: 30px;
 	margin-left: auto;
 }
 

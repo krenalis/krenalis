@@ -3,9 +3,15 @@ import { ObjectType, Property } from '../../../lib/api/types/types';
 import { GridColumn, GridRow, StandardGridRow } from '../../base/Grid/Grid.types';
 import AppContext from '../../../context/AppContext';
 import TransformedConnection from '../../../lib/core/connection';
-import { ConsentPurpose, PrimarySources } from '../../../lib/api/types/workspace';
+import {
+	ConsentPurpose,
+	PrimarySources,
+	ProfilePropertyRoles,
+	ProfilePropertyRoleID,
+} from '../../../lib/api/types/workspace';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
 import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
+import { getPropertyRole, getProfilePropertyRole } from '../../helpers/profilePropertyRoles';
 import { SchemaPropertyIdentifierBadge, SchemaPropertyName } from '../Schema/SchemaPropertyGrid';
 import { getProfileSchemaTypePresentation } from '../../helpers/types';
 import { SchemaContext } from '../../../context/SchemaContext';
@@ -16,6 +22,7 @@ const SCHEMA_COLUMNS: GridColumn[] = [
 	{ name: 'Property' },
 	{ name: 'Type' },
 	{ name: 'Identifier', alignment: 'center' },
+	{ name: 'Role' },
 	{ name: 'Primary source' },
 ];
 
@@ -44,7 +51,8 @@ const useSchemaGrid = (
 		}
 		return getRows(
 			schema,
-			workspace.primarySources,
+			workspace.profileSchema.primarySources,
+			workspace.profileSchema.propertyRoles,
 			connections,
 			identifierPositions,
 			consentPurposesByPropertyPath,
@@ -75,9 +83,10 @@ const useSchemaGrid = (
 			return null;
 		}
 		return {
+			propertyRole: getPropertyRole(workspace.profileSchema.propertyRoles, selectedPropertyPath),
 			identifierPosition: identifierPositions.get(selectedPropertyPath),
 			path: selectedPropertyPath,
-			primarySource: getPrimarySource(selectedPropertyPath, workspace.primarySources, connections),
+			primarySource: getPrimarySource(selectedPropertyPath, workspace.profileSchema.primarySources, connections),
 			property,
 		};
 	}, [connections, identifierPositions, schema, selectedPropertyPath, workspace]);
@@ -97,6 +106,7 @@ const useSchemaGrid = (
 const getRows = (
 	schema: ObjectType,
 	primarySources: PrimarySources,
+	propertyRoles: ProfilePropertyRoles,
 	connections: TransformedConnection[],
 	identifierPositions: ReadonlyMap<string, number>,
 	consentPurposesByPropertyPath: ReadonlyMap<string, ConsentPurpose[]>,
@@ -110,6 +120,7 @@ const getRows = (
 	for (const property of schema.properties || []) {
 		const path = parent == null ? property.name : `${parent}.${property.name}`;
 		const typePresentation = getProfileSchemaTypePresentation(property.type);
+		const propertyRole = getPropertyRole(propertyRoles, path);
 		const matches =
 			includeAll ||
 			search === '' ||
@@ -119,6 +130,7 @@ const getRows = (
 				property.description,
 				typePresentation.primary,
 				typePresentation.metadata,
+				propertyRole == null ? null : getProfilePropertyRole(propertyRole).label,
 			]
 				.filter(Boolean)
 				.join(' ')
@@ -129,6 +141,7 @@ const getRows = (
 			nestedRows = getRows(
 				property.type,
 				primarySources,
+				propertyRoles,
 				connections,
 				identifierPositions,
 				consentPurposesByPropertyPath,
@@ -148,6 +161,7 @@ const getRows = (
 			property,
 			primarySource,
 			identifierPositions.get(path),
+			propertyRole,
 			consentPurposesByPropertyPath.get(path),
 			selectedPropertyPath === path,
 			search !== '',
@@ -167,6 +181,7 @@ const buildRow = (
 	property: Property,
 	primarySource: TransformedConnection | null,
 	identifierPosition: number | undefined,
+	propertyRole: ProfilePropertyRoleID | null,
 	consentPurposes: ConsentPurpose[] | undefined,
 	selected: boolean,
 	forceExpanded: boolean,
@@ -208,6 +223,7 @@ const buildRow = (
 			<SchemaPropertyName property={property} />,
 			typeCell,
 			identifierPosition == null ? null : <SchemaPropertyIdentifierBadge position={identifierPosition} />,
+			propertyRole == null ? null : getProfilePropertyRole(propertyRole).label,
 			primarySourceCell,
 		],
 		forceExpanded,
