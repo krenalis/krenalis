@@ -45,7 +45,11 @@ func TestAlterProfileSchemaMarksInterruptedOperationAsFailed(t *testing.T) {
 	}
 
 	newProfileColumns := append([]warehouses.Column{}, profileColumns...)
-	newProfileColumns = append(newProfileColumns, warehouses.Column{Name: "phone", Type: types.String(), Nullable: true})
+	newProfileColumns = append(newProfileColumns, warehouses.Column{
+		Name:     "phone",
+		Type:     types.String(),
+		Nullable: true,
+	})
 	alterOperations := []warehouses.AlterOperation{{
 		Operation: warehouses.OperationAddColumn,
 		Column:    "phone",
