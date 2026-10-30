@@ -787,6 +787,7 @@
 .identity-dashboard__state > sl-icon {
 	font-size: 17px;
 	color: var(--sl-color-neutral-500);
+	margin-top: 1px;
 }
 
 .identity-dashboard__state-title {
