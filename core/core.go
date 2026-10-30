@@ -550,8 +550,11 @@ func (core *Core) Close(ctx context.Context) {
 	if core.closed.Swap(true) {
 		panic("core already closed")
 	}
-	// Cancel pipeline runs initiated via the API.
+	// Cancel pipeline runs initiated via the API, freezing the state so that
+	// onRunPipeline cannot start new ones afterward.
+	core.state.Freeze()
 	core.close.cancelCtx()
+	core.state.Unfreeze()
 	// Close the pipeline scheduler.
 	core.pipelineScheduler.Close()
 	// Wait for the completion of pipelines initiated via API.
@@ -1430,6 +1433,10 @@ func (core *Core) onEndPipelineRun(n state.EndPipelineRun) {
 
 // onRunPipeline is called when a pipeline run starts.
 func (core *Core) onRunPipeline(n state.RunPipeline) {
+	// Do not start the run if Close has been called.
+	if core.close.ctx.Err() != nil {
+		return
+	}
 	p, _ := core.state.Pipeline(n.Pipeline)
 	run, _ := p.Run()
 	core.tryStartPipelineRun(run)
