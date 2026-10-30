@@ -227,7 +227,7 @@ test(`Render the profile grid and manage visible columns`, async ({ page }) => {
 	await expect(page.locator('.profiles-list__grid-summary')).toContainText('4 profiles');
 	await expect(page.locator('.profiles-list__grid-summary-content sl-icon')).toHaveAttribute('name', 'people');
 	await expect(page.getByRole('button', { name: 'Refine filters' })).toHaveCount(0);
-	await expect(page.locator('.profiles-list__identity-resolution-button')).toHaveText('Run Profile Unification');
+	await expect(page.locator('.profiles-list__identity-resolution-button')).toHaveText('Run identity resolution');
 	await expect(page.locator('.profiles-list__card')).toBeVisible();
 	await expect(page.locator('.profiles-list__footer')).toBeVisible();
 	await expect(page.locator('.profiles-list__pagination-range')).toHaveText('1–4 of 4');

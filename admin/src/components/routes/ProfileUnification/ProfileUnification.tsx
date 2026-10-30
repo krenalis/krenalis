@@ -25,6 +25,16 @@ const ProfileUnification = () => {
 	if (location.pathname.endsWith('profile-unification')) {
 		content = (
 			<div className='profile-unification__content'>
+				<Link path='profile-unification/overview'>
+					<ListTile
+						className='profile-unification__item'
+						icon={<SlIcon name='activity' />}
+						name='Identity dashboard'
+						description='Understand your identity state and resolution effectiveness'
+						showHover={true}
+						action={<SlIcon name='chevron-right' />}
+					/>
+				</Link>
 				<Link path='profile-unification/profiles'>
 					<ListTile
 						className='profile-unification__item'

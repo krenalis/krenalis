@@ -15,6 +15,7 @@ arrow-up-left-square.svg
 arrow-up-right-square.svg
 arrows-collapse.svg
 arrows-expand.svg
+arrows.svg
 backspace.svg
 bar-chart.svg
 bookmark-check.svg

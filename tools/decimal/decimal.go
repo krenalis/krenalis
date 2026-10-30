@@ -27,9 +27,10 @@
 //
 // The [Int], [Uint], [Parse], and [Binary] functions ensure the decimal fits
 // within the specified precision and scale, returning an error otherwise. The
-// [New] function accepts a mantissa and scale to create the decimal. [Float64]
-// rounds the given float to the specified scale and returns an error if it
-// exceeds the provided precision.
+// [New] function accepts a mantissa and scale to create the decimal.
+// [Float64] rounds the given floating-point number to the specified scale and
+// returns an error if the result cannot be represented with the specified
+// precision and scale.
 //
 // Each factory function, except [New], has a corresponding Must variant. These
 // Must functions do not impose any additional precision and scale limits beyond
@@ -355,10 +356,12 @@ func Binary(b []byte, precision, scale int) (Decimal, error) {
 	return n, nil
 }
 
-// Float64 returns the decimal representation of f, rounded down to "scale"
-// decimal places. Precision must be > 0 and scale <= precision. If the result
-// exceeds the specified precision, or if f is NaN, +Inf or -Inf, the function
-// returns 0 and [ErrRange].
+// Float64 returns the decimal representation of f, rounded to scale decimal
+// places using rounding to nearest with ties to even. Precision must be > 0
+// and scale <= precision. If the rounded value cannot be represented with the
+// specified precision and scale, or if f is NaN, +Inf or -Inf, Float64 returns
+// 0 and [ErrRange]. Rounding applies to the exact binary value of f. For
+// example, Float64(0.15, 5, 1) returns 0.1.
 func Float64(f float64, precision, scale int) (Decimal, error) {
 	if err := validPrecisionScale(precision, scale); err != nil {
 		return Decimal{}, err
@@ -371,9 +374,17 @@ func Float64(f float64, precision, scale int) (Decimal, error) {
 	}
 	x := Decimal{}
 	x.b.SetFloat64(f)
-	s := x.b.Precision() - x.b.Scale() + scale
-	x.b.Round(s)
-	if x.b.Precision() > precision {
+	// Avoid constructing a large power of ten when the value rounds to zero.
+	if x.b.Precision()-x.b.Scale()+scale < 0 {
+		return Decimal{}, nil
+	}
+	if x.b.Scale() > scale {
+		decimal.ContextUnlimited.Quantize(&x.b, scale)
+		if x.b.Sign() == 0 {
+			return Decimal{}, nil
+		}
+	}
+	if x.b.Precision()-x.b.Scale() > precision-scale {
 		return Decimal{}, ErrRange
 	}
 	return x, nil
@@ -518,8 +529,15 @@ func Parse[T ~string | ~[]byte](n T, precision, scale int) (Decimal, error) {
 			return Decimal{}, ErrSyntax
 		}
 	case '.':
+		if len(n) == 1 || n[1] < '0' || n[1] > '9' {
+			return Decimal{}, ErrSyntax
+		}
 		dot = -1
 		n = n[1:]
+	default:
+		if n[0] < '1' || n[0] > '9' {
+			return Decimal{}, ErrSyntax
+		}
 	}
 	zeros := 0
 	mantissa := mantissa{}
@@ -612,7 +630,7 @@ func Parse[T ~string | ~[]byte](n T, precision, scale int) (Decimal, error) {
 				factor *= 10
 			}
 		}
-		if overflow || s < MinScale || s > MaxScale {
+		if (overflow || s < MinScale || s > MaxScale) && !mantissa.isZero() {
 			return Decimal{}, ErrRange
 		}
 		if s == prev {

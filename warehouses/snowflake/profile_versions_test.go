@@ -303,7 +303,7 @@ func TestResolveIdentitiesProfileVersionBounds(t *testing.T) {
 		t.Run(strconv.Itoa(version), func(t *testing.T) {
 
 			responses := []checkReadOnlyQuery{
-				{match: `SELECT "COMPLETED_AT"`, cols: []string{"COMPLETED_AT", "ERROR"}},
+				{match: `SELECT "COMPLETED_AT"`, cols: []string{"COMPLETED_AT", "RESULT", "ERROR"}},
 				{match: `INSERT INTO "KRENALIS_SYSTEM_OPERATIONS"`},
 				{match: `MAX("VERSION")`, cols: []string{"VERSION"}, rows: [][]driver.Value{{int64(version)}}},
 			}
@@ -324,13 +324,13 @@ func TestResolveIdentitiesProfileVersionBounds(t *testing.T) {
 			responses = append(responses,
 				checkReadOnlyQuery{match: `UPDATE "KRENALIS_SYSTEM_OPERATIONS"`},
 				checkReadOnlyQuery{
-					match: `SELECT "COMPLETED_AT"`, cols: []string{"COMPLETED_AT", "ERROR"},
-					rows: [][]driver.Value{{time.Now().UTC(), message}},
+					match: `SELECT "COMPLETED_AT"`, cols: []string{"COMPLETED_AT", "RESULT", "ERROR"},
+					rows: [][]driver.Value{{time.Now().UTC(), nil, message}},
 				},
 			)
 			db, queries := newProfileVersionTestDB(t, responses)
 			defer db.Close()
-			err := (&Snowflake{db: db}).ResolveIdentities(t.Context(), "profile-version-boundary", nil, nil, nil)
+			_, err := (&Snowflake{db: db}).ResolveIdentities(t.Context(), "profile-version-boundary", nil, nil, nil)
 			if err != nil {
 				opError, ok := errors.AsType[*warehouses.OperationError](err)
 				if !ok || opError.Error() != message {

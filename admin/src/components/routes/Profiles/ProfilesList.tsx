@@ -222,7 +222,7 @@ const ProfilesList = () => {
 						) : (
 							<SlIcon slot='prefix' name='play' />
 						)}
-						{isIdentityResolutionRunning ? 'Identity Resolution' : 'Run Profile Unification'}
+						{isIdentityResolutionRunning ? 'Identity resolution' : 'Run identity resolution'}
 					</SlButton>
 					{(isIdentityResolutionRunning || latestIRExecutionEnd) && (
 						<div className='profiles-list__identity-resolution-progress'>
@@ -230,7 +230,7 @@ const ProfilesList = () => {
 								<div className='profiles-list__identity-resolution-since-start'>{`Progress: ${String(secondsSinceIRStart)}s`}</div>
 							) : (
 								<div className='profiles-list__identity-resolution-end-time'>
-									<span>Latest Identity Resolution:</span>
+									<span>Last run:</span>
 									<RelativeTime date={latestIRExecutionEnd} />
 								</div>
 							)}
@@ -403,7 +403,7 @@ const ProfilesList = () => {
 					<>
 						<SlButton onClick={() => setAskResolveIdentitiesConfirmation(false)}>Cancel</SlButton>
 						<SlButton variant='primary' onClick={onStartIdentityResolution}>
-							Run Profile Unification
+							Run identity resolution
 						</SlButton>
 					</>
 				}

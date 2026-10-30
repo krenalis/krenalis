@@ -77,8 +77,9 @@ func TestProfilesPagination(t *testing.T) {
 	k.WaitForRunsCompletion(run)
 	k.RunIdentityResolutionAndWait()
 
-	var requestSchema types.Type
-	k.Call("GET", "/v1/profiles/schema", nil, nil, &requestSchema)
+	var profileSchema krenalistester.ProfileSchema
+	k.Call("GET", "/v1/profiles/schema", nil, nil, &profileSchema)
+	requestSchema := profileSchema.Schema
 	schemaJSON, err := requestSchema.MarshalJSON()
 	if err != nil {
 		t.Fatal(err)
