@@ -49,7 +49,7 @@ Keep the receiver name the type already uses; the `core/` facade types (`Connect
 
 In `cmd`, `core`, and their subpackages, always import `github.com/krenalis/krenalis/tools/errors`, which exposes every standard `errors` name, instead of the standard `errors`. Elsewhere, prefer the standard `errors` and import `tools/errors` only for its repository-specific functionality; `tools/errors` itself and its compatibility tests use the standard package to avoid an import cycle.
 
-Use an import's default name unless an actual identifier conflict requires an alias; reusing the name for a variable, field, or selector is not a conflict. When a real conflict exists, weigh both names and keep the one more obvious to readers, rather than renaming the import by default.
+Use an import's default name unless an actual identifier conflict requires an alias; reusing the name for a variable, field, or selector is not a conflict when the language permits it. When a real conflict exists, weigh both names and keep the one more obvious to readers, rather than renaming the import by default.
 
 ## Maps and composite values
 
@@ -109,13 +109,13 @@ When a test reads a mapped port of a testcontainers container, its wait strategy
 
 ## Behavioral contracts
 
-Return a non-nil error whenever a function does not perform what its name, and secondarily its declaration comment, promise; never report success after skipping, failing, or partially completing the operation. An exception must be narrow, compelling, and stated in the name or declaration comment.
+Return a non-nil error whenever a function does not perform what its name, and secondarily its declaration comment, promises; never report success after skipping, failing, or partially completing the operation. An exception must be narrow, compelling, and stated in the name or declaration comment.
 
 ## Function extraction
 
 Do not extract code solely to unit-test it. Keep small or operation-specific steps inline; extract a helper only when it is a meaningful production abstraction.
 
-Extract a parser, validator, or converter only when it captures non-trivial, reusable rules inherent to a value or its representation; duplicated code alone is not enough. Prefer focused helpers for individual value concepts that callers compose over one function handling an operation's whole set of parameters or results. First check how comparable cases were handled in the same context before the change: stay inline if they are inline, otherwise match their granularity; if precedent is unclear, ask before introducing the function.
+Extract a parser, validator, or converter only when it captures non-trivial, reusable rules inherent to a value or its representation; duplicated code alone is not enough. Prefer focused helpers for individual value concepts that callers compose, rather than one function handling an operation's whole set of parameters or results. First check how comparable cases were handled in the same context before the change: stay inline if they are inline, otherwise match their granularity; if precedent is unclear, ask before introducing the function.
 
 When a parsing or validation sequence is dense and covers several distinct values or groups, precede each group with a short comment naming the operation and subject, such as `// Validate start and end.`, one per group rather than per condition. Add a blank line before it only when it clarifies the boundary. Skip this for single checks, short sequences, or comments that would restate the conditions.
 
@@ -184,7 +184,7 @@ func (c *cache) reset() {
 
 Every exported package-level declaration and exported method has a declaration comment in the style of the Go standard library, except as noted below. An unexported declaration needs one only when it is long, takes or returns several values, or is not obvious.
 
-Keep comments compact and do not restate the code. Comment lines starting in column 1 are at most 80 characters; end-of-line comments are exempt.
+Keep comments compact and do not restate the code. Declaration comment lines starting in column 1 are at most 80 characters; end-of-line comments are exempt.
 
 In a parenthesized `var` or `const` group whose members lack individual comments, do not comment just one member.
 
@@ -243,7 +243,7 @@ Treat every value from a user-controlled data warehouse as untrusted, including 
 
 Validate every property needed to use warehouse data safely in application state, metrics, resource sizing, control flow, or user-visible output. Fail closed on values that could harm Krenalis: bound payload sizes and row counts at the query source when possible and always before allocation or decoding, reject values outside representable or safety-relevant limits, prevent arithmetic overflow, and do not copy unbounded or unsanitized values into errors or logs. Require structural consistency only when its violation could harm Krenalis, exhaust resources, corrupt Krenalis-owned state, or break workspace isolation.
 
-A compromised warehouse can return false or inconsistent values that are still safe: accept them, and do not add validation solely to detect or correct them or to protect the owning workspace, since truthfulness requires an independent integrity mechanism. Exception: reject values that violate a relationship their meaning guarantees, such as a subset count exceeding the count of its set, so callers can rely on it.
+A compromised warehouse can return false or inconsistent values that are still safe: accept them, and do not add validation solely to detect or correct them or to protect the owning workspace, since truthfulness requires an independent integrity mechanism. Exception: validation may reject values that violate a relationship their meaning guarantees, such as a subset count exceeding the count of its set, so callers can rely on it.
 
 # Uniformity across data warehouses
 
