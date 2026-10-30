@@ -19,12 +19,11 @@ import { Connector, ConnectorDocumentation } from './types/connector';
 import { WarehouseMode, WarehouseResponse, WarehouseSettings } from './types/warehouse';
 import Workspace, {
 	CreateWorkspaceResponse,
-	UIPreferences,
 	LatestIdentityResolution,
 	IdentityResolutionRunsResponse,
 	IdentityResolutionRunStatus,
 	LatestAlterProfileSchema,
-	PrimarySources,
+	ProfileSchema,
 	EventConsentLocation,
 	ProfileConsentLocation,
 } from './types/workspace';
@@ -678,41 +677,37 @@ class Workspaces {
 
 	create = async (
 		name: string,
-		profileSchema: ObjectType,
+		profileSchema: ProfileSchema,
 		warehousePlatform: string,
 		warehouseMode: WarehouseMode,
 		warehouseSettings: WarehouseSettings,
-		uiPreferences: UIPreferences,
 	): Promise<CreateWorkspaceResponse> => {
 		return await call(`${this.apiURL}/workspaces`, http.POST, null, {
 			name: name,
-			profileSchema: profileSchema,
+			profileSchema,
 			warehouse: {
 				platform: warehousePlatform,
 				mode: warehouseMode,
 				settings: warehouseSettings,
 			},
-			uiPreferences: uiPreferences,
 		});
 	};
 
 	testCreation = async (
 		name: string,
-		profileSchema: ObjectType,
+		profileSchema: ProfileSchema,
 		warehousePlatform: string,
 		warehouseMode: WarehouseMode,
 		warehouseSettings: WarehouseSettings,
-		uiPreferences: UIPreferences,
 	): Promise<void> => {
 		return await call(`${this.apiURL}/workspaces/test`, http.POST, null, {
 			name: name,
-			profileSchema: profileSchema,
+			profileSchema,
 			warehouse: {
 				platform: warehousePlatform,
 				mode: warehouseMode,
 				settings: warehouseSettings,
 			},
-			uiPreferences: uiPreferences,
 		});
 	};
 
@@ -720,10 +715,9 @@ class Workspaces {
 		return await call(`${this.apiURL}/workspaces/current`, http.GET, this.workspaceID);
 	};
 
-	update = async (name: string, uiPreferences: UIPreferences): Promise<void> => {
+	update = async (name: string): Promise<void> => {
 		return await call(`${this.apiURL}/workspaces/current`, http.PUT, this.workspaceID, {
 			name,
-			uiPreferences,
 		});
 	};
 
@@ -731,7 +725,7 @@ class Workspaces {
 		return await call(`${this.apiURL}/workspaces/current`, http.DELETE, this.workspaceID);
 	};
 
-	profileSchema = async (): Promise<ObjectType> => {
+	profileSchema = async (): Promise<ProfileSchema> => {
 		return await call(`${this.apiURL}/profiles/schema`, http.GET, this.workspaceID);
 	};
 
@@ -826,14 +820,9 @@ class Workspaces {
 		return await call(`${this.apiURL}/identity-resolution/start`, http.POST, this.workspaceID);
 	};
 
-	alterProfileSchema = async (
-		schema: ObjectType,
-		primarySources: PrimarySources,
-		rePaths: RePaths,
-	): Promise<void> => {
+	alterProfileSchema = async (profileSchema: ProfileSchema, rePaths: RePaths): Promise<void> => {
 		return await call(`${this.apiURL}/profiles/schema`, http.PUT, this.workspaceID, {
-			schema,
-			primarySources,
+			...profileSchema,
 			rePaths,
 		});
 	};

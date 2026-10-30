@@ -53,15 +53,14 @@ func (workspace workspace) AlterProfileSchema(_ http.ResponseWriter, r *http.Req
 		return nil, err
 	}
 	var body struct {
-		Schema         types.Type        `json:"schema"`
-		PrimarySources map[string]string `json:"primarySources"`
-		RePaths        map[string]any    `json:"rePaths"`
+		core.ProfileSchema
+		RePaths map[string]any `json:"rePaths"`
 	}
 	err = json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	err = ws.AlterProfileSchema(r.Context(), body.Schema, body.PrimarySources, body.RePaths)
+	err = ws.AlterProfileSchema(r.Context(), body.ProfileSchema, body.RePaths)
 	return nil, err
 }
 
@@ -784,7 +783,7 @@ func (workspace workspace) Attributes(_ http.ResponseWriter, r *http.Request) (a
 	return map[string]any{"attributes": attributes}, nil
 }
 
-// Update updates the name and the displayed properties of a workspace.
+// Update updates the name of a workspace.
 func (workspace workspace) Update(_ http.ResponseWriter, r *http.Request) (any, error) {
 	if err := validateRequiredBody(r, false); err != nil {
 		return nil, err
@@ -794,14 +793,13 @@ func (workspace workspace) Update(_ http.ResponseWriter, r *http.Request) (any, 
 		return nil, err
 	}
 	var body struct {
-		Name          string             `json:"name"`
-		UIPreferences core.UIPreferences `json:"uiPreferences"`
+		Name string `json:"name"`
 	}
 	err = json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	err = ws.Update(r.Context(), body.Name, body.UIPreferences)
+	err = ws.Update(r.Context(), body.Name)
 	return nil, err
 }
 

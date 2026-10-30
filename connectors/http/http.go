@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 	"unicode/utf8"
 
@@ -72,6 +73,7 @@ type innerSettings struct {
 
 // AbsolutePath returns the absolute representation of the given path name.
 func (h *HTTP) AbsolutePath(ctx context.Context, name string) (string, error) {
+
 	if name[0] != '/' {
 		name = "/" + name
 	}
@@ -82,7 +84,7 @@ func (h *HTTP) AbsolutePath(ctx context.Context, name string) (string, error) {
 		if c == '#' || (!parsingQuery && (c < ' ' || c == 0x7f)) {
 			return "", connectors.InvalidPathErrorf("path cannot contains “#”, and control characters")
 		}
-		if c == '%' && (i+2 < len(name) || !ishex(name[i+1]) || !ishex(name[i+2])) {
+		if c == '%' && (i+2 >= len(name) || !ishex(name[i+1]) || !ishex(name[i+2])) {
 			return "", connectors.InvalidPathErrorf("path contains an invalid escape sequence")
 		}
 		if c == '?' && !parsingQuery {
@@ -90,6 +92,7 @@ func (h *HTTP) AbsolutePath(ctx context.Context, name string) (string, error) {
 			parsingQuery = true
 		}
 	}
+
 	var s innerSettings
 	err := h.env.Settings.Load(ctx, &s)
 	if err != nil {
@@ -105,6 +108,13 @@ func (h *HTTP) AbsolutePath(ctx context.Context, name string) (string, error) {
 		Path:     path,
 		RawQuery: query,
 	}
+	// Escape raw characters while preserving the validated percent escapes.
+	u.RawPath = strings.ReplaceAll(u.EscapedPath(), "%25", "%")
+	u.Path, err = url.PathUnescape(u.RawPath)
+	if err != nil {
+		return "", fmt.Errorf("connectors/http: cannot unescape validated path: %w", err)
+	}
+
 	return u.String(), nil
 }
 

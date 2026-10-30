@@ -1,27 +1,32 @@
 import { Identifiers } from './identifiers';
+import { ObjectType } from './types';
 import { WarehouseMode } from './warehouse';
 
 type PrimarySources = Record<string, string>;
 
-interface Profile {
-	image: string;
+type ProfilePropertyRoleID = 'firstName' | 'lastName' | 'email' | 'country' | 'photo';
+
+interface ProfilePropertyRoles {
 	firstName: string;
 	lastName: string;
-	extra: string;
-}
-
-interface UIPreferences {
-	profile: Profile;
+	email: string;
+	country: string;
+	photo: string;
 }
 
 interface Workspace {
+	profileSchema: ProfileSchema;
 	id: string;
 	name: string;
 	resolveIdentitiesOnBatchImport: boolean;
 	identifiers: Identifiers;
 	warehouseMode: WarehouseMode;
+}
+
+interface ProfileSchema {
+	schema: ObjectType;
+	propertyRoles: ProfilePropertyRoles;
 	primarySources: PrimarySources;
-	uiPreferences: UIPreferences;
 }
 
 interface CreateWorkspaceResponse {
@@ -72,8 +77,6 @@ interface ProfileConsentLocation {
 export default Workspace;
 export type {
 	CreateWorkspaceResponse,
-	UIPreferences,
-	Profile,
 	PrimarySources,
 	LatestIdentityResolution,
 	IdentityResolutionRun,
@@ -81,6 +84,9 @@ export type {
 	IdentityResolutionRunStatus,
 	LatestAlterProfileSchema,
 	ConsentPurpose,
+	ProfilePropertyRoles,
+	ProfilePropertyRoleID,
+	ProfileSchema,
 	EventConsentLocation,
 	ProfileConsentLocation,
 };

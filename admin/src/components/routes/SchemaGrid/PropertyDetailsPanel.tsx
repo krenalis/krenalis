@@ -1,6 +1,7 @@
 import React, { ReactNode } from 'react';
 import './PropertyDetailsPanel.css';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
+import { getCompatibleProfilePropertyRoles, getProfilePropertyRole } from '../../helpers/profilePropertyRoles';
 import {
 	DURATION_UNIT_OPTIONS,
 	getPropertyValueType,
@@ -12,15 +13,18 @@ import {
 } from '../../helpers/types';
 import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
 import { Property } from '../../../lib/api/types/types';
+import { ProfilePropertyRoleID } from '../../../lib/api/types/workspace';
 import TransformedConnection from '../../../lib/core/connection';
 import { PropertyPanelLayout } from '../Schema/PropertyPanelLayout';
 import {
 	SchemaPropertyIdentifierLabel,
 	SchemaPropertyIdentifierValue,
+	SchemaPropertyInfoTooltip,
 	SchemaPropertyPrimarySourceLabel,
 } from '../Schema/SchemaPropertyGrid';
 
 interface PropertyDetailsPanelProps {
+	propertyRole: ProfilePropertyRoleID | null;
 	identifierPosition?: number;
 	onClose: () => void;
 	primarySource: TransformedConnection | null;
@@ -33,7 +37,13 @@ interface PropertyDetailProps {
 	label: ReactNode;
 }
 
-const PropertyDetailsPanel = ({ identifierPosition, onClose, primarySource, property }: PropertyDetailsPanelProps) => {
+const PropertyDetailsPanel = ({
+	propertyRole,
+	identifierPosition,
+	onClose,
+	primarySource,
+	property,
+}: PropertyDetailsPanelProps) => {
 	const semanticsDetail = getSemanticsDetail(property);
 	const physicalType = toKrenalisStringType(property.type);
 	const valueType = getPropertyValueType(property.type);
@@ -71,6 +81,25 @@ const PropertyDetailsPanel = ({ identifierPosition, onClose, primarySource, prop
 					)}
 				</div>
 				<div className='property-details-panel__section property-details-panel__section--metadata'>
+					{getCompatibleProfilePropertyRoles(property).length > 0 && (
+						<PropertyDetail
+							label={
+								<span className='schema-property-grid__label-content'>
+									Role
+									<SchemaPropertyInfoTooltip
+										content='Specifies which profile concept this property represents.'
+										label='About roles'
+									/>
+								</span>
+							}
+						>
+							{propertyRole == null ? (
+								<span className='property-details-panel__empty-value'>—</span>
+							) : (
+								getProfilePropertyRole(propertyRole).label
+							)}
+						</PropertyDetail>
+					)}
 					<PropertyDetail label='Display name'>
 						{property.displayName || <span className='property-details-panel__empty-value'>—</span>}
 					</PropertyDetail>
@@ -83,7 +112,7 @@ const PropertyDetailsPanel = ({ identifierPosition, onClose, primarySource, prop
 						</PropertyDetail>
 					)}
 					<PropertyDetail
-						label={<SchemaPropertyPrimarySourceLabel hasPrimarySource={primarySource != null} />}
+						label={<SchemaPropertyPrimarySourceLabel primarySourceName={primarySource?.name ?? null} />}
 					>
 						{primarySource == null ? (
 							<span className='property-details-panel__empty-value'>—</span>
