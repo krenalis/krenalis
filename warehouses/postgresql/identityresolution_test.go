@@ -50,7 +50,7 @@ func Test_finalizeIdentityResolutionPreservesPersistedSuccess(t *testing.T) {
 
 // Test_finalizeIdentityResolutionMarksCanceledOperationAsFailed verifies that
 // an operation whose context has been canceled, as happens on shutdown, is
-// still marked as failed.
+// still marked as failed, with an error that reports the cancellation cause.
 func Test_finalizeIdentityResolutionMarksCanceledOperationAsFailed(t *testing.T) {
 
 	warehouse, pool := newTestPostgreSQLWarehouse(t)
@@ -66,8 +66,8 @@ func Test_finalizeIdentityResolutionMarksCanceledOperationAsFailed(t *testing.T)
 		t.Fatal(err)
 	}
 
-	ctx, cancel := context.WithCancel(t.Context())
-	cancel()
+	ctx, cancel := context.WithCancelCause(t.Context())
+	cancel(errors.New("Krenalis was shut down"))
 	err = warehouse.finalizeIdentityResolution(ctx, pool, opID, ctx.Err())
 	if err != nil {
 		_, ok := errors.AsType[*warehouses.OperationError](err)
@@ -89,8 +89,9 @@ func Test_finalizeIdentityResolutionMarksCanceledOperationAsFailed(t *testing.T)
 	if completedAt == nil {
 		t.Fatal("expected operation to be completed, got uncompleted operation")
 	}
-	if operationError == "" {
-		t.Fatal("expected operation to be failed, got successful operation")
+	const expectedError = "operation interrupted: Krenalis was shut down"
+	if operationError != expectedError {
+		t.Fatalf("expected operation error %q, got %q", expectedError, operationError)
 	}
 
 }

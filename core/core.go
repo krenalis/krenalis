@@ -78,7 +78,7 @@ type Core struct {
 	smtp              *SMTPConfig
 	close             struct {
 		ctx       context.Context
-		cancelCtx context.CancelFunc
+		cancelCtx context.CancelCauseFunc
 		sync.WaitGroup
 	}
 	closed atomic.Bool
@@ -380,7 +380,7 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 		}
 	}()
 
-	core.close.ctx, core.close.cancelCtx = context.WithCancel(context.Background())
+	core.close.ctx, core.close.cancelCtx = context.WithCancelCause(context.Background())
 
 	// Instantiate a warehouses.Warehouse, used by the MCP server, for every workspace.
 	core.mcp = map[string]warehouses.Warehouse{}
@@ -552,7 +552,7 @@ func (core *Core) Close(ctx context.Context) {
 	}
 	// Cancel pipeline runs initiated via the API, Identity Resolutions, and
 	// profile schema alterations.
-	core.close.cancelCtx()
+	core.close.cancelCtx(errors.New("Krenalis was shut down"))
 	// Close the pipeline scheduler.
 	core.pipelineScheduler.Close()
 	// Wait for the completion of pipelines initiated via API, Identity

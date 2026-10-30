@@ -290,6 +290,9 @@ func (warehouse *PostgreSQL) finalizeIdentityResolution(ctx context.Context, con
 	if operationErr == nil {
 		return nil
 	}
+	if ctx.Err() != nil {
+		operationErr = fmt.Errorf("operation interrupted: %w", context.Cause(ctx))
+	}
 	operationError := warehouses.NewOperationError(operationErr)
 
 	ctx, cancel := finalizationContext(ctx)
