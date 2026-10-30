@@ -37,7 +37,7 @@ Place a new `init` function right after the imports. Do not flag or move an exis
 
 ## Layout and naming
 
-An exported function may call another exported function of the same package only when it is solely a simpler wrapper for a common case; otherwise both call a shared unexported function.
+An exported function or method may call another exported function or method of the same package only when it is solely a simpler wrapper for a common case; otherwise both call a shared unexported function or method.
 
 Declare variables as close to their use as readability allows.
 
@@ -49,11 +49,11 @@ Keep the receiver name the type already uses; the `core/` facade types (`Connect
 
 In `cmd`, `core`, and their subpackages, always import `github.com/krenalis/krenalis/tools/errors`, which exposes every standard `errors` name, instead of the standard `errors`. Elsewhere, prefer the standard `errors` and import `tools/errors` only for its repository-specific functionality; `tools/errors` itself and its compatibility tests use the standard package to avoid an import cycle.
 
-Use an import's default name unless an actual identifier conflict requires an alias; reusing the name for a variable, field, or selector is not a conflict when the language permits it. When a real conflict exists, weigh both names and keep the one more obvious to readers, rather than renaming the import by default.
+Use an import's default name unless an actual identifier conflict requires disambiguation; reusing the name for a variable, field, or selector is not a conflict when the language permits it. When a real conflict exists, weigh both names and keep the one more obvious to readers, rather than renaming the import by default.
 
 ## Maps and composite values
 
-Initialize an empty map with `map[K]V{}`, or with `make(map[K]V, capacity)` when there is a meaningful capacity hint. Prefer `&T{}` to `new(T)`.
+Initialize an empty writable map with `map[K]V{}`, or with `make(map[K]V, capacity)` when there is a meaningful capacity hint. Prefer `&T{}` to `new(T)`.
 
 ## Switch statements
 
@@ -73,7 +73,7 @@ Keep every parameter list on one line, whatever its length; a list too long to r
 
 ## Contexts
 
-Functions whose execution time cannot be bounded in advance take a `context.Context` as first parameter; any exception must be explicit and justified. Assume the caller has just checked that the context is still live: do not start the callee with a `ctx.Err()` or `ctx.Done()` check.
+Functions whose execution time cannot be bounded in advance take a `context.Context` as first parameter; any exception must be compelling, explicit, and justified. Assume the caller has just checked that the context is still live: do not start the callee with a `ctx.Err()` or `ctx.Done()` check.
 
 ## Error handling
 
@@ -146,7 +146,7 @@ When reviewing in-scope code, apply step 1 ignoring boundary padding, and remove
 
 A function whose body is only a `synctest.Test` call stays compact even if the function passed to it is padded.
 
-Short bodies stay compact even when they perform distinct steps. The separated examples show only padding placement; real separated blocks are longer:
+Short bodies stay compact even when they perform distinct steps:
 
 ```go
 func sortedKeys(entries map[string]int) []string {
@@ -157,7 +157,11 @@ func sortedKeys(entries map[string]int) []string {
     slices.Sort(keys)
     return keys
 }
+```
 
+The separated examples below show only padding placement; real separated blocks are longer:
+
+```go
 func topKeys(entries map[string]int, n int) []string {
 
     keys := slices.Collect(maps.Keys(entries))
