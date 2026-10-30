@@ -10,7 +10,7 @@ Keep the diff minimal: touch only the lines the change needs, with no drive-by r
 
 Judge a change against the code as it was before the change; code introduced or altered by the change is not precedent.
 
-Apply review rules only to code the change introduces or modifies. Do not retrofit a new convention onto untouched code unless the user expands the scope or the change cannot be done correctly without it.
+Apply review rules only to code the change introduces or modifies. Do not retrofit a new convention onto untouched code unless the user explicitly expands the scope or the change cannot be done correctly without it.
 
 # Go conventions
 
@@ -142,7 +142,7 @@ var x int
 }
 ```
 
-When reviewing in-scope code, apply step 1 ignoring boundary padding, and remove padding that no longer separates anything.
+When reviewing in-scope code, apply step 1 ignoring boundary padding, including the pad before a final `return`, and remove the padding if no internal blank line remains.
 
 A function whose body is only a `synctest.Test` call stays compact even if the function passed to it is padded.
 
@@ -186,9 +186,9 @@ func (c *cache) reset() {
 
 ## Declaration comments
 
-Every exported package-level declaration and exported method has a declaration comment in the style of the Go standard library, except as noted below. An unexported declaration needs one only when it is long, takes or returns several values, or is not obvious.
+Every exported package-level declaration and exported method has a declaration comment in the style of the Go standard library, except as noted below. An unexported declaration needs one when it is long, takes or returns several values, or is not obvious.
 
-Keep comments compact and do not restate the code. Declaration comment lines starting in column 1 are at most 80 characters; end-of-line comments are exempt.
+Keep comments compact and do not restate the code. Declaration comment lines starting in column 1 are at most 80 characters, comment markers included; end-of-line comments are exempt.
 
 In a parenthesized `var` or `const` group whose members lack individual comments, do not comment just one member.
 
@@ -225,7 +225,7 @@ For the TypeScript and React code under `admin/`:
 
 # Reuse
 
-Before writing something new, look for it elsewhere in the repo and reuse or follow it. Prefer the standard library or a `tools/` helper to a hand-rolled version. When deleting something, remove what it leaves behind: callers, columns, fixtures, documentation, dead constants.
+Before writing something new, look for it elsewhere in the repo and reuse or follow it. Prefer the standard library or a `tools/` helper to a hand-rolled version. When deleting something, look for what it leaves behind: callers, columns, fixtures, documentation, dead constants.
 
 # Dependencies
 
