@@ -80,6 +80,15 @@ type DummySettings struct {
 	OperationDelay          string `json:"operationDelay,omitempty"`
 }
 
+// IdentityResolutionRun represents an Identity Resolution execution.
+type IdentityResolutionRun struct {
+	ID        string     `json:"id"`
+	Status    string     `json:"status"`
+	StartTime time.Time  `json:"startTime"`
+	EndTime   *time.Time `json:"endTime"`
+	Error     *string    `json:"error"`
+}
+
 type PipelineRun struct {
 	ID        string     `json:"id"`
 	Pipeline  string     `json:"pipeline"`
@@ -416,21 +425,27 @@ type Organization struct {
 
 // Workspace represents a workspace returned by the APIs.
 type Workspace struct {
-	ID                             string            `json:"id"`
-	Name                           string            `json:"name"`
-	ProfileSchema                  types.Type        `json:"profileSchema"`
-	PrimarySources                 map[string]string `json:"primarySources"`
-	ResolveIdentitiesOnBatchImport bool              `json:"resolveIdentitiesOnBatchImport"`
-	Identifiers                    []string          `json:"identifiers"`
-	WarehouseMode                  WarehouseMode     `json:"warehouseMode"`
-	UIPreferences                  UIPreferences     `json:"uiPreferences"`
+	ID                             string        `json:"id"`
+	Name                           string        `json:"name"`
+	ProfileSchema                  ProfileSchema `json:"profileSchema"`
+	ResolveIdentitiesOnBatchImport bool          `json:"resolveIdentitiesOnBatchImport"`
+	Identifiers                    []string      `json:"identifiers"`
+	WarehouseMode                  WarehouseMode `json:"warehouseMode"`
 }
 
-type UIPreferences struct {
-	Profile struct {
-		Image     string `json:"image"`
-		FirstName string `json:"firstName"`
-		LastName  string `json:"lastName"`
-		Extra     string `json:"extra"`
-	} `json:"profile"`
+// ProfileSchema contains the profile properties, roles and primary sources.
+type ProfileSchema struct {
+	Schema         types.Type        `json:"schema"`
+	PropertyRoles  PropertyRoles     `json:"propertyRoles"`
+	PrimarySources map[string]string `json:"primarySources"`
+}
+
+// PropertyRoles maps each property role to its property's path.
+// An empty path means no property is assigned to that role.
+type PropertyRoles struct {
+	FirstName string `json:"firstName"`
+	LastName  string `json:"lastName"`
+	Email     string `json:"email"`
+	Country   string `json:"country"`
+	Photo     string `json:"photo"`
 }

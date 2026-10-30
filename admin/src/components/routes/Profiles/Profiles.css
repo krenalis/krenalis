@@ -208,7 +208,7 @@
 	font-weight: 600;
 }
 
-.profile-drawer__information,
+.profile-drawer__email,
 .profile-drawer__kpid {
 	font-size: 14px;
 }
@@ -227,17 +227,6 @@
 
 .profile-drawer__kpid sl-tooltip::part(base__arrow) {
 	background-color: var(--sl-color-primary-500);
-}
-
-.profile-drawer__customize {
-	font-size: 13px;
-	font-weight: 600;
-}
-
-.profile-drawer__customize-link {
-	color: var(--sl-color-primary-600);
-	text-decoration: underline;
-	cursor: pointer;
 }
 
 .profile-drawer__kpid-value {

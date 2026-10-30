@@ -19,10 +19,11 @@ import { Connector, ConnectorDocumentation } from './types/connector';
 import { WarehouseMode, WarehouseResponse, WarehouseSettings } from './types/warehouse';
 import Workspace, {
 	CreateWorkspaceResponse,
-	UIPreferences,
 	LatestIdentityResolution,
+	IdentityResolutionRunsResponse,
+	IdentityResolutionRunStatus,
 	LatestAlterProfileSchema,
-	PrimarySources,
+	ProfileSchema,
 	EventConsentLocation,
 	ProfileConsentLocation,
 } from './types/workspace';
@@ -65,7 +66,12 @@ import {
 	ConsentPurposesResponse,
 } from './types/responses';
 import { AccessKeyType } from './types/organization';
-import { IdentityMetric, IdentityMetricDay } from './types/metrics';
+import {
+	IdentityMetric,
+	IdentityMetricDay,
+	IdentityResolutionMetric,
+	IdentityResolutionMetricDay,
+} from './types/metrics';
 
 const API_BASE_PATH = '/v1';
 
@@ -671,41 +677,37 @@ class Workspaces {
 
 	create = async (
 		name: string,
-		profileSchema: ObjectType,
+		profileSchema: ProfileSchema,
 		warehousePlatform: string,
 		warehouseMode: WarehouseMode,
 		warehouseSettings: WarehouseSettings,
-		uiPreferences: UIPreferences,
 	): Promise<CreateWorkspaceResponse> => {
 		return await call(`${this.apiURL}/workspaces`, http.POST, null, {
 			name: name,
-			profileSchema: profileSchema,
+			profileSchema,
 			warehouse: {
 				platform: warehousePlatform,
 				mode: warehouseMode,
 				settings: warehouseSettings,
 			},
-			uiPreferences: uiPreferences,
 		});
 	};
 
 	testCreation = async (
 		name: string,
-		profileSchema: ObjectType,
+		profileSchema: ProfileSchema,
 		warehousePlatform: string,
 		warehouseMode: WarehouseMode,
 		warehouseSettings: WarehouseSettings,
-		uiPreferences: UIPreferences,
 	): Promise<void> => {
 		return await call(`${this.apiURL}/workspaces/test`, http.POST, null, {
 			name: name,
-			profileSchema: profileSchema,
+			profileSchema,
 			warehouse: {
 				platform: warehousePlatform,
 				mode: warehouseMode,
 				settings: warehouseSettings,
 			},
-			uiPreferences: uiPreferences,
 		});
 	};
 
@@ -713,10 +715,9 @@ class Workspaces {
 		return await call(`${this.apiURL}/workspaces/current`, http.GET, this.workspaceID);
 	};
 
-	update = async (name: string, uiPreferences: UIPreferences): Promise<void> => {
+	update = async (name: string): Promise<void> => {
 		return await call(`${this.apiURL}/workspaces/current`, http.PUT, this.workspaceID, {
 			name,
-			uiPreferences,
 		});
 	};
 
@@ -724,7 +725,7 @@ class Workspaces {
 		return await call(`${this.apiURL}/workspaces/current`, http.DELETE, this.workspaceID);
 	};
 
-	profileSchema = async (): Promise<ObjectType> => {
+	profileSchema = async (): Promise<ProfileSchema> => {
 		return await call(`${this.apiURL}/profiles/schema`, http.GET, this.workspaceID);
 	};
 
@@ -745,8 +746,16 @@ class Workspaces {
 		return await call(`${this.apiURL}/metrics/identities/latest`, http.GET, this.workspaceID);
 	};
 
-	refreshIdentityMetrics = async (): Promise<void> => {
-		return await call(`${this.apiURL}/metrics/identities/refresh`, http.POST, this.workspaceID);
+	identityResolutionMetricsPerDate = async (start: string, end: string): Promise<IdentityResolutionMetricDay[]> => {
+		return await call(
+			`${this.apiURL}/metrics/identity-resolution/dates/${encodeURIComponent(start)}/${encodeURIComponent(end)}`,
+			http.GET,
+			this.workspaceID,
+		);
+	};
+
+	latestIdentityResolutionMetric = async (): Promise<IdentityResolutionMetric | null> => {
+		return await call(`${this.apiURL}/metrics/identity-resolution/latest`, http.GET, this.workspaceID);
 	};
 
 	createConnection = async (connection: ConnectionToAdd, authToken: string): Promise<string> => {
@@ -811,14 +820,9 @@ class Workspaces {
 		return await call(`${this.apiURL}/identity-resolution/start`, http.POST, this.workspaceID);
 	};
 
-	alterProfileSchema = async (
-		schema: ObjectType,
-		primarySources: PrimarySources,
-		rePaths: RePaths,
-	): Promise<void> => {
+	alterProfileSchema = async (profileSchema: ProfileSchema, rePaths: RePaths): Promise<void> => {
 		return await call(`${this.apiURL}/profiles/schema`, http.PUT, this.workspaceID, {
-			schema,
-			primarySources,
+			...profileSchema,
 			rePaths,
 		});
 	};
@@ -943,6 +947,16 @@ class Workspaces {
 
 	latestIdentityResolution = async (): Promise<LatestIdentityResolution> => {
 		return await call(`${this.apiURL}/identity-resolution/latest`, http.GET, this.workspaceID);
+	};
+
+	identityResolutionRuns = async (
+		first = 0,
+		limit = 100,
+		status?: IdentityResolutionRunStatus,
+	): Promise<IdentityResolutionRunsResponse> => {
+		const query = new URLSearchParams({ first: String(first), limit: String(limit) });
+		if (status != null) query.set('status', status);
+		return await call(`${this.apiURL}/identity-resolution/runs?${query}`, http.GET, this.workspaceID);
 	};
 
 	LatestAlterProfileSchema = async (): Promise<LatestAlterProfileSchema> => {

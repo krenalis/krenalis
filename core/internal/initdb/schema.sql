@@ -66,24 +66,42 @@ CREATE TABLE workspaces (
     alter_profile_schema_schema jsonb NOT NULL DEFAULT 'null'::jsonb,
     alter_profile_schema_primary_sources jsonb,
     alter_profile_schema_operations jsonb,
+    alter_profile_schema_role_first_name varchar NOT NULL DEFAULT '',
+    alter_profile_schema_role_last_name varchar NOT NULL DEFAULT '',
+    alter_profile_schema_role_email varchar NOT NULL DEFAULT '',
+    alter_profile_schema_role_country varchar NOT NULL DEFAULT '',
+    alter_profile_schema_role_photo varchar NOT NULL DEFAULT '',
     alter_profile_schema_start_time timestamp(3),
     alter_profile_schema_end_time timestamp(3),
     alter_profile_schema_error varchar,
     profile_schema jsonb NOT NULL DEFAULT 'null'::jsonb,
+    profile_role_first_name varchar NOT NULL DEFAULT '',
+    profile_role_last_name varchar NOT NULL DEFAULT '',
+    profile_role_email varchar NOT NULL DEFAULT '',
+    profile_role_country varchar NOT NULL DEFAULT '',
+    profile_role_photo varchar NOT NULL DEFAULT '',
     resolve_identities_on_batch_import boolean NOT NULL DEFAULT false,
     identifiers text[] NOT NULL DEFAULT '{}',
     ir_id uuid,
     ir_start_time timestamp(3),
     ir_end_time timestamp(3),
-    ui_profile_image varchar(100) NOT NULL DEFAULT '',
-    ui_profile_first_name varchar(100) NOT NULL DEFAULT '',
-    ui_profile_last_name varchar(100) NOT NULL DEFAULT '',
-    ui_profile_extra varchar(100) NOT NULL DEFAULT '',
     pipelines_to_purge varchar(12)[] NOT NULL DEFAULT '{}',
     PRIMARY KEY (id)
 );
 
 CREATE INDEX workspaces_organization_idx ON workspaces (organization);
+
+CREATE TABLE identity_resolution_runs (
+    id uuid NOT NULL,
+    workspace varchar(12) NOT NULL REFERENCES workspaces ON DELETE CASCADE,
+    start_time timestamp(3) NOT NULL,
+    end_time timestamp(3),
+    error varchar,
+    PRIMARY KEY (id)
+);
+
+CREATE INDEX identity_resolution_runs_workspace_start_idx
+    ON identity_resolution_runs (workspace, start_time DESC, id DESC);
 
 CREATE TABLE rate_limit_buckets (
     subject_kind varchar(12) NOT NULL CHECK (subject_kind IN ('platform', 'organization', 'workspace', 'events')),
@@ -353,6 +371,23 @@ CREATE TABLE usage_metrics (
 
 CREATE INDEX usage_metrics_organization_day_idx
     ON usage_metrics (organization, day);
+
+CREATE TABLE identity_resolution_metrics (
+    workspace varchar(12) NOT NULL REFERENCES workspaces ON DELETE CASCADE,
+    day date NOT NULL,
+    observed_at time without time zone NOT NULL,
+    profiles_anonymous bigint NOT NULL,
+    profiles_recognized bigint NOT NULL,
+    identities_anonymous bigint NOT NULL,
+    identities_recognized bigint NOT NULL,
+    composition_one bigint NOT NULL,
+    composition_two bigint NOT NULL,
+    composition_three bigint NOT NULL,
+    composition_four_to_ten bigint NOT NULL,
+    composition_eleven_to_twenty bigint NOT NULL,
+    composition_more_than_twenty bigint NOT NULL,
+    PRIMARY KEY (workspace, day)
+);
 
 CREATE TABLE identity_metrics (
     workspace varchar(12) NOT NULL REFERENCES workspaces ON DELETE CASCADE,
