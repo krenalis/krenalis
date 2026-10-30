@@ -554,7 +554,8 @@ func (core *Core) Close(ctx context.Context) {
 	core.close.cancelCtx()
 	// Close the pipeline scheduler.
 	core.pipelineScheduler.Close()
-	// Wait for the completion of pipelines initiated via API.
+	// Wait for the completion of pipelines initiated via API, Identity
+	// Resolutions, and profile schema alterations.
 	core.close.Wait()
 	// Close the pipeline cleaner.
 	core.pipelineCleaner.Close(context.Background())
@@ -1943,15 +1944,17 @@ func (core *Core) onElectLeader(n state.ElectLeader) {
 	workspaces := core.state.Workspaces()
 	for _, ws := range workspaces {
 		if ws.IR.ID != nil {
-			go core.executeIdentityResolution(ws.ID, *ws.IR.ID)
+			core.close.Go(func() { core.executeIdentityResolution(ws.ID, *ws.IR.ID) })
 			// At most only one operation between Identity Resolution and update
 			// profile schema can be started, so continue to the next workspace.
 			continue
 		}
 		if ws.AlterProfileSchema.ID != nil {
-			go core.executeAlterProfileSchema(ws.ID, *ws.AlterProfileSchema.ID,
-				ws.AlterProfileSchema.Schema, ws.AlterProfileSchema.PrimarySources,
-				ws.AlterProfileSchema.Operations)
+			core.close.Go(func() {
+				core.executeAlterProfileSchema(ws.ID, *ws.AlterProfileSchema.ID,
+					ws.AlterProfileSchema.Schema, ws.AlterProfileSchema.PrimarySources,
+					ws.AlterProfileSchema.Operations)
+			})
 		}
 	}
 }
@@ -1972,7 +1975,9 @@ func (core *Core) onStartAlterProfileSchema(n state.StartAlterProfileSchema) {
 	if !core.state.IsLeader() {
 		return
 	}
-	go core.executeAlterProfileSchema(n.Workspace, n.ID, n.Schema, n.PrimarySources, n.Operations)
+	core.close.Go(func() {
+		core.executeAlterProfileSchema(n.Workspace, n.ID, n.Schema, n.PrimarySources, n.Operations)
+	})
 }
 
 // onStartIdentityResolution is called when the identity resolution is started.
@@ -1980,7 +1985,7 @@ func (core *Core) onStartIdentityResolution(n state.StartIdentityResolution) {
 	if !core.state.IsLeader() {
 		return
 	}
-	go core.executeIdentityResolution(n.Workspace, n.ID)
+	core.close.Go(func() { core.executeIdentityResolution(n.Workspace, n.ID) })
 }
 
 // onUpdateWarehouse is called when a warehouse is updated.

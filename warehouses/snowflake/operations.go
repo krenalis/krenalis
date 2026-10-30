@@ -120,3 +120,21 @@ func (warehouse *Snowflake) setOperationAsCompleted(ctx context.Context, conn co
 
 	return snowflake(err)
 }
+
+const finalizationGracePeriod = 10 * time.Second
+
+// finalizationContext returns a context for recording the outcome of an
+// operation. It is canceled only finalizationGracePeriod after ctx is done, so
+// that an operation interrupted by a shutdown can still be marked as failed
+// instead of being waited on forever. The caller must call the returned cancel
+// function.
+func finalizationContext(ctx context.Context) (context.Context, context.CancelFunc) {
+	finalizationCtx, cancel := context.WithCancel(context.WithoutCancel(ctx))
+	stop := context.AfterFunc(ctx, func() {
+		time.AfterFunc(finalizationGracePeriod, cancel)
+	})
+	return finalizationCtx, func() {
+		stop()
+		cancel()
+	}
+}

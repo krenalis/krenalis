@@ -39,6 +39,8 @@ func (warehouse *Snowflake) AlterProfileSchema(ctx context.Context, opID string,
 	if err != nil {
 		operationErr = warehouses.NewOperationError(err)
 	}
+	ctx, cancel := finalizationContext(ctx)
+	defer cancel()
 	bo := backoff.New(200)
 	bo.SetCap(time.Second)
 	for bo.Next(ctx) {

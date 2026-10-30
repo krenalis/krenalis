@@ -398,6 +398,8 @@ func (warehouse *Snowflake) finalizeIdentityResolution(ctx context.Context, conn
 	}
 	operationError := warehouses.NewOperationError(operationErr)
 
+	ctx, cancel := finalizationContext(ctx)
+	defer cancel()
 	bo := backoff.New(200)
 	bo.SetCap(30 * time.Second)
 	for bo.Next(ctx) {
