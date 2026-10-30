@@ -1,7 +1,3 @@
-.connectors-list sl-breadcrumb::part(base) {
-	justify-content: center;
-}
-
 .connectors-list .route-content {
 	margin: auto;
 }
@@ -30,7 +26,7 @@
 	padding: 5px 16px;
 	font-size: 14px;
 	border-radius: 4px;
-	color: var(--sl-color-neutral-500);
+	color: var(--wa-color-neutral-50);
 	font-weight: 500;
 	background-color: #ebeff6;
 	cursor: pointer;
@@ -68,10 +64,10 @@
 	max-width: 1200px;
 	margin-left: auto;
 	margin-right: auto;
-	color: var(--sl-color-neutral-600);
+	color: var(--wa-color-neutral-40);
 }
 
-.connectors-list__no-connector sl-icon {
+.connectors-list__no-connector wa-icon {
 	font-size: 30px;
 }
 
@@ -89,9 +85,9 @@
 	background-color: var(--bg-primary);
 	padding: 50px;
 	border-radius: var(--radius);
-	box-shadow: var(--sl-shadow-small);
+	box-shadow: var(--wa-shadow-s);
 	text-align: center;
-	border: 1px solid var(--sl-color-neutral-200);
+	border: 1px solid var(--wa-color-neutral-80);
 	transition:
 		background-color 0.3s,
 		border 0.3s;
@@ -101,8 +97,8 @@
 }
 
 .connectors-list__card:hover {
-	background-color: var(--sl-color-primary-50);
-	border: 1px solid var(--sl-color-primary-200);
+	background-color: var(--wa-color-brand-95);
+	border: 1px solid var(--wa-color-brand-80);
 }
 
 .connectors-list__card-beta-label,
@@ -111,27 +107,27 @@
 	position: absolute;
 	right: 10px;
 	top: 10px;
-	border: 1px solid var(--sl-color-primary-300);
-	color: var(--sl-color-primary-400);
+	border: 1px solid var(--wa-color-brand-70);
+	color: var(--wa-color-brand-60);
 	padding: 0 12px;
 	font-size: 12px;
 	border-radius: 3px;
 }
 
 .connectors-list__card-coming-label {
-	border: 1px solid var(--sl-color-neutral-400);
-	color: var(--sl-color-neutral-500);
+	border: 1px solid var(--wa-color-neutral-60);
+	color: var(--wa-color-neutral-50);
 }
 
 .connectors-list__card-logo > img,
-.connectors-list__card-logo sl-icon {
+.connectors-list__card-logo wa-icon {
 	height: 70px;
 	width: auto;
 	padding: 5px;
 	margin: 0 auto 30px auto;
 }
 
-.connectors-list__card-logo sl-icon {
+.connectors-list__card-logo wa-icon {
 	height: 60px;
 }
 
@@ -170,26 +166,26 @@
 	margin-top: 10px;
 	font-size: 12px;
 	font-weight: 500;
-	color: var(--sl-color-neutral-500);
+	color: var(--wa-color-neutral-50);
 }
 
 .connectors-list__card-update-version {
-	color: var(--sl-color-danger-500);
+	color: var(--wa-color-danger-50);
 }
 
 .connectors-list__card--potential {
-	background-color: var(--sl-color-neutral-50);
+	background-color: var(--wa-color-neutral-95);
 	cursor: default;
 }
 
 .connectors-list__card--potential:hover {
-	background-color: var(--sl-color-neutral-50);
-	border: 1px solid var(--sl-color-neutral-200);
+	background-color: var(--wa-color-neutral-95);
+	border: 1px solid var(--wa-color-neutral-80);
 }
 
 .connectors-list__feedback {
-	border: 2px dashed var(--sl-color-neutral-200);
-	background-color: var(--sl-color-neutral-50);
+	border: 2px dashed var(--wa-color-neutral-80);
+	background-color: var(--wa-color-neutral-95);
 	border-radius: var(--radius);
 	display: flex;
 	justify-content: center;
@@ -198,11 +194,11 @@
 	padding: 50px;
 	flex-flow: column;
 	gap: 15px;
-	color: var(--sl-color-neutral-600);
+	color: var(--wa-color-neutral-40);
 	height: 315px;
 }
 
-.connectors-list__feedback sl-icon {
+.connectors-list__feedback wa-icon {
 	font-size: 40px;
 }
 
@@ -211,7 +207,7 @@
 }
 
 .connectors-list__feedback-message a {
-	color: var(--sl-color-primary-600);
+	color: var(--wa-color-brand-40);
 	text-decoration: underline;
 }
 
@@ -243,7 +239,7 @@
 	justify-content: space-between;
 }
 
-.connectors-list__documentation-drawer-label sl-button::part(base) {
+.connectors-list__documentation-drawer-label wa-button::part(button) {
 	min-width: 110px;
 }
 
@@ -269,11 +265,11 @@
 
 .connectors-list__oauth-not-configured {
 	margin: 0 12px;
-	color: var(--sl-color-danger-600);
+	color: var(--wa-color-danger-40);
 }
 
 .connectors-list__oauth-not-configured a {
-	color: var(--sl-color-neutral-600);
+	color: var(--wa-color-neutral-40);
 	text-decoration: underline;
 }
 

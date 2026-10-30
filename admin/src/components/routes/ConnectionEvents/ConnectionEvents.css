@@ -20,7 +20,7 @@
 .connection-events__events {
 	background-color: var(--bg-primary);
 	border-radius: var(--radius);
-	box-shadow: var(--sl-shadow-large);
+	box-shadow: var(--wa-shadow-l);
 }
 
 .connection-events__heading {
@@ -56,7 +56,7 @@
 	gap: 5px;
 	background-color: var(--bg-gray);
 	border-bottom: 1px solid var(--border-primary);
-	color: var(--sl-color-neutral-400);
+	color: var(--wa-color-neutral-60);
 }
 
 .connection-events__event-list {
@@ -103,7 +103,7 @@
 
 .connection-events__event:hover,
 .connection-events__event--selected {
-	background-color: var(--sl-color-primary-50);
+	background-color: var(--wa-color-brand-95);
 }
 
 .connection-events__event:hover,
@@ -112,7 +112,7 @@
 .connection-events__event--selected,
 .connection-events__event--selected .connection-events__event-type,
 .connection-events__event--selected .connection-events__event-time {
-	color: var(--sl-color-primary-900);
+	color: var(--wa-color-brand-10);
 }
 
 .connection-events__event--selected:last-child {
@@ -127,8 +127,8 @@
 	font-weight: 400;
 	white-space: nowrap;
 	margin-left: 7px;
-	background-color: var(--sl-color-primary-100);
-	color: var(--sl-color-primary-600);
+	background-color: var(--wa-color-brand-90);
+	color: var(--wa-color-brand-40);
 	border-radius: 3px;
 	padding: 3px 10px;
 	font-size: 12px;

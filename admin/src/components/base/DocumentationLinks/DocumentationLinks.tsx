@@ -1,5 +1,5 @@
 import React from 'react';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import './DocumentationLinks.css';
 
 const CONNECTOR_DISPLAY_NAMES: Record<string, string> = {
@@ -125,7 +125,7 @@ const DocumentationLinks = ({
 		<div className={`documentation-links${fade ? ' documentation-links--fade' : ''}`}>
 			{links.map((link) => (
 				<a key={link.url} href={link.url} target='_blank' rel='noopener'>
-					{showIcon && <SlIcon name='question-circle' />}
+					{showIcon && <WaIcon name='question-circle' />}
 					{link.label}
 				</a>
 			))}

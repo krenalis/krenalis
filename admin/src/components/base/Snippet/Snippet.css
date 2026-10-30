@@ -3,14 +3,14 @@
 	margin-top: 0;
 }
 
-.syntax-highlight--install-command + sl-copy-button {
+.syntax-highlight--install-command + wa-copy-button {
 	position: absolute;
 	width: max-content !important;
 	top: 10px;
 	right: 20px;
 }
 
-.syntax-highlight--snippet + sl-copy-button {
+.syntax-highlight--snippet + wa-copy-button {
 	margin-top: 20px;
 	position: absolute;
 	width: max-content !important;
@@ -18,13 +18,13 @@
 	right: 20px;
 }
 
-.snippet sl-copy-button::part(button) {
+.snippet wa-copy-button::part(button) {
 	gap: 8px;
 	background-color: transparent;
 	padding: 9px 13px;
 	margin-left: auto;
 	font-size: 12px;
-	border: 1px solid var(--sl-color-neutral-300);
+	border: 1px solid var(--wa-color-neutral-70);
 }
 
 .snippet .syntax-highlight pre::-webkit-scrollbar {
@@ -64,17 +64,17 @@
 }
 
 .snippet .syntax-highlight--install-command {
-	background-color: var(--sl-color-neutral-50);
+	background-color: var(--wa-color-neutral-95);
 	border-top-left-radius: 10px;
 	border-top-right-radius: 10px;
-	border: 1px solid var(--sl-color-primary-200);
-	border-bottom: 1px solid var(--sl-color-primary-200);
+	border: 1px solid var(--wa-color-brand-80);
+	border-bottom: 1px solid var(--wa-color-brand-80);
 }
 
 .snippet .syntax-highlight--snippet {
 	border-radius: 10px;
 	background-color: #f4f2fd !important;
-	border: 1px solid var(--sl-color-primary-200);
+	border: 1px solid var(--wa-color-brand-80);
 	display: grid;
 }
 

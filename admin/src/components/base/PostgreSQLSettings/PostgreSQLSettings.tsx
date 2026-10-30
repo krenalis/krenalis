@@ -1,7 +1,8 @@
 import React, { useEffect } from 'react';
 import './PostgreSQLSettings.css';
 import { WarehouseSettings } from '../../../lib/api/types/warehouse';
-import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
+import WaInput from '@awesome.me/webawesome/dist/react/input/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 
 interface settingsProps {
 	setSettings: React.Dispatch<React.SetStateAction<any>>;
@@ -37,66 +38,69 @@ const PostgreSQLSettings = ({ setSettings, settings, precompileDefault, inputRef
 
 	return (
 		<>
-			<SlInput
+			<WaInput
 				name='host'
 				label='Host'
 				placeholder='example.com'
 				minlength={1}
 				maxlength={253}
-				onSlInput={onSettingInput}
+				onInput={onSettingInput}
 				value={settings?.host || ''}
 			/>
-			<SlInput
+			<WaInput
 				name='port'
 				label='Port'
 				placeholder='5432'
 				type='number'
 				minlength={1}
 				maxlength={5}
-				onSlInput={onSettingInput}
+				onInput={onSettingInput}
 				value={settings?.port || ''}
-				noSpinButtons
+				withoutSpinButtons
 			/>
-			<SlInput
+			<WaInput
 				name='username'
 				label='Username'
 				placeholder='username'
 				type='text'
 				minlength={1}
 				maxlength={63}
-				onSlInput={onSettingInput}
+				onInput={onSettingInput}
 				value={settings?.username || ''}
 				ref={inputRef}
 			/>
-			<SlInput
+			<WaInput
 				name='password'
 				label='Password'
 				placeholder='password'
 				type='password'
 				minlength={1}
 				maxlength={100}
-				onSlInput={onSettingInput}
+				onInput={onSettingInput}
 				value={settings?.password || ''}
-				password-toggle
-			/>
-			<SlInput
+				passwordToggle
+			>
+				<WaIcon name='eye' slot='show-password-icon' />
+				<WaIcon name='eye-slash' slot='hide-password-icon' />
+			</WaInput>
+			<WaInput
 				name='database'
 				label='Database name'
 				placeholder='database'
 				type='text'
 				minlength={1}
 				maxlength={63}
-				onSlInput={onSettingInput}
+				onInput={onSettingInput}
 				value={settings?.database || ''}
 			/>
-			<SlInput
+			<WaInput
 				name='schema'
 				label='Schema'
 				placeholder='public'
 				type='text'
 				minlength={1}
 				maxlength={63}
-				onSlInput={onSettingInput}
+				onInput={onSettingInput}
 				value={settings?.schema || ''}
 			/>
 		</>

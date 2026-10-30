@@ -7,7 +7,7 @@ import AppContext from '../../../context/AppContext';
 import { Outlet } from 'react-router-dom';
 import ConnectionTabs from './ConnectionTabs';
 import { useConnection } from './useConnection';
-import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
+import WaSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
 
 const ConnectionWrapper = () => {
 	const { setTitle } = useContext(AppContext);
@@ -30,7 +30,7 @@ const ConnectionWrapper = () => {
 
 	if (isLoading) {
 		return (
-			<SlSpinner
+			<WaSpinner
 				style={
 					{
 						display: 'block',

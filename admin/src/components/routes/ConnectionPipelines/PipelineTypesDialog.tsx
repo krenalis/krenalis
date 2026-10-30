@@ -1,8 +1,8 @@
 import React, { ReactNode } from 'react';
 import ListTile from '../../base/ListTile/ListTile';
 import { PipelineType } from '../../../lib/api/types/pipeline';
-import SlDialog from '@shoelace-style/shoelace/dist/react/dialog/index.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import WaDialog from '@awesome.me/webawesome/dist/react/dialog/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import TransformedConnection from '../../../lib/core/connection';
 
 interface PipelineTypesDialogProps {
@@ -45,7 +45,7 @@ const PipelineTypesDialog = ({
 				onClick={() => {
 					onSelectPipelineType(type);
 				}}
-				action={<SlIcon name='chevron-right' />}
+				action={<WaIcon name='chevron-right' />}
 			/>
 		);
 		if (type.target === 'User' || type.target === 'Group') {
@@ -56,10 +56,15 @@ const PipelineTypesDialog = ({
 	}
 
 	return (
-		<SlDialog
+		<WaDialog
 			label='Add pipeline'
 			className='connection-pipelines__dialog'
-			onSlAfterHide={() => setIsOpen(false)}
+			lightDismiss
+			onWaAfterHide={(e) => {
+				if (e.target === e.currentTarget) {
+					setIsOpen(false);
+				}
+			}}
 			open={isOpen}
 			style={{ '--width': '600px' } as React.CSSProperties}
 		>
@@ -72,7 +77,7 @@ const PipelineTypesDialog = ({
 					</>
 				)}
 			</div>
-		</SlDialog>
+		</WaDialog>
 	);
 };
 

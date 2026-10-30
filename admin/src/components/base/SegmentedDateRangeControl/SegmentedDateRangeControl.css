@@ -3,14 +3,14 @@
 	align-items: center;
 }
 
-.segmented-date-range-control sl-button::part(base),
-.segmented-date-range-button::part(base) {
+.segmented-date-range-control wa-button::part(button),
+.segmented-date-range-button::part(button) {
 	padding-right: 15px;
 	padding-left: 15px;
 }
 
-.segmented-date-range-control sl-button[variant='default']::part(base),
-.segmented-date-range-button[variant='default']::part(base) {
+.segmented-date-range-control wa-button[appearance='outlined']::part(button),
+.segmented-date-range-button[appearance='outlined']::part(button) {
 	background: var(--bg-primary);
 }
 
@@ -24,7 +24,7 @@
 	z-index: 999;
 	visibility: hidden;
 	opacity: 0;
-	box-shadow: 0 0 18px 1px var(--sl-color-neutral-300);
+	box-shadow: 0 0 18px 1px var(--wa-color-neutral-70);
 	transition: opacity 0.3s;
 }
 

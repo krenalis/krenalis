@@ -1,7 +1,7 @@
 import React, { FormEvent, useState, useContext, useEffect } from 'react';
 import './Login.css';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
 import AppContext from '../../../context/AppContext';
 import { Link } from '../../base/Link/Link';
 import { useSearchParams } from 'react-router-dom';
@@ -126,7 +126,7 @@ const Login = () => {
 
 	if (isTryingPasswordlessLogin) {
 		return (
-			<SlSpinner
+			<WaSpinner
 				style={
 					{
 						display: 'block',
@@ -137,7 +137,7 @@ const Login = () => {
 						'--track-width': '6px',
 					} as React.CSSProperties
 				}
-			></SlSpinner>
+			></WaSpinner>
 		);
 	}
 
@@ -154,8 +154,9 @@ const Login = () => {
 					<h1>Sign-in to your account</h1>
 				</div>
 				<form className='login__form' onSubmit={onLogin}>
-					{/* Using standard inputs instead of Shoelace inputs as a 
-						workaround for Shoelace issue #269 */}
+					{/* Using standard inputs instead of Web Awesome inputs because
+						Firefox does not support autocompletion on inputs inside a shadow 
+						root (https://bugzilla.mozilla.org/show_bug.cgi?id=1629226). */}
 					<input
 						type='email'
 						className='login__email'
@@ -185,13 +186,13 @@ const Login = () => {
 
 					{/* This hidden submit input is needed to trigger the form 
 						submission when the user presses Enter while focusing 
-						one of the fields. The Shoelace button alone doesn’t 
+						one of the fields. The Web Awesome button alone doesn’t 
 						enable this behavior. */}
 					<input type='submit' style={{ display: 'none' }} />
 
-					<SlButton className='login__button' type='submit' variant='primary' loading={isLoading}>
+					<WaButton className='login__button' type='submit' variant='brand' loading={isLoading}>
 						Login
-					</SlButton>
+					</WaButton>
 				</form>
 			</div>
 		</div>

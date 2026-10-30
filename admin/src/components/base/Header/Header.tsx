@@ -1,12 +1,11 @@
-import React, { forwardRef, ReactNode, useContext, useEffect, useRef } from 'react';
+import React, { forwardRef, ReactNode, useContext, useEffect, useId, useRef } from 'react';
 import './Header.css';
-import SlAvatar from '@shoelace-style/shoelace/dist/react/avatar/index.js';
-import SlDropdown from '@shoelace-style/shoelace/dist/react/dropdown/index.js';
-import SlMenu from '@shoelace-style/shoelace/dist/react/menu/index.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
-import SlDivider from '@shoelace-style/shoelace/dist/react/divider/index.js';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
+import WaAvatar from '@awesome.me/webawesome/dist/react/avatar/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
+import WaDropdown from '@awesome.me/webawesome/dist/react/dropdown/index.js';
+import WaDivider from '@awesome.me/webawesome/dist/react/divider/index.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaTooltip from '@awesome.me/webawesome/dist/react/tooltip/index.js';
 import { Link } from '..//Link/Link';
 import appContext from '../../../context/AppContext';
 import { useLocation } from 'react-router-dom';
@@ -27,12 +26,16 @@ const Header = ({ title, member }: HeaderProps) => {
 
 	useEffect(() => {
 		if (isPasswordless && !isFullscreen) {
-			dropdownRef.current?.updateComplete.then(() => dropdownRef.current?.show());
+			dropdownRef.current?.updateComplete.then(() => {
+				dropdownRef.current.open = true;
+			});
 		}
 	}, []);
 
 	useEffect(() => {
-		dropdownRef.current?.hide();
+		if (dropdownRef.current != null) {
+			dropdownRef.current.open = false;
+		}
 	}, [location]);
 
 	const onLogout = async () => {
@@ -44,10 +47,12 @@ const Header = ({ title, member }: HeaderProps) => {
 		if (dropdownRef.current == null) {
 			return;
 		}
-		dropdownRef.current.hide();
+		dropdownRef.current.open = false;
 	};
 
 	const hasWorkOS = publicMetadata.workosClientID !== '';
+
+	const docsID = useId();
 
 	return (
 		<header>
@@ -60,18 +65,20 @@ const Header = ({ title, member }: HeaderProps) => {
 			<div className='header__title'>
 				<span>{title}</span>
 			</div>
-			<SlTooltip content='Krenalis documentation and API reference' placement='bottom'>
-				<a
-					className='header__docs'
-					href='https://www.krenalis.com/docs'
-					target='_blank'
-					rel='noreferrer'
-					aria-label='Documentation (opens in a new tab)'
-				>
-					<SlIcon className='header__docs-icon' name='question-circle' aria-hidden='true' />
-					Documentation
-				</a>
-			</SlTooltip>
+			<WaTooltip for={docsID} placement='bottom'>
+				Krenalis documentation and API reference
+			</WaTooltip>
+			<a
+				id={docsID}
+				className='header__docs'
+				href='https://www.krenalis.com/docs'
+				target='_blank'
+				rel='noreferrer'
+				aria-label='Documentation (opens in a new tab)'
+			>
+				<WaIcon className='header__docs-icon' name='question-circle' aria-hidden='true' />
+				Documentation
+			</a>
 			<div className='header__account'>
 				{hasWorkOS ? (
 					<WorkOSAccountDropdown
@@ -154,88 +161,90 @@ const AccountDropdown = forwardRef<any, AccountDropdownProps>(
 				: '';
 
 		return (
-			<SlDropdown distance={17} ref={ref}>
-				<SlAvatar slot='trigger' className='header__account-avatar' image={imageSrc} />
-				<SlMenu className='header__account-menu-wrapper'>
-					{isPasswordless && (
-						<div className='header__passwordless-tooltip'>
-							<div className='header__passwordless-tooltip-body' slot='content'>
-								<div className='header__passwordless-tooltip-title'>
-									You are signed in with default credentials
-								</div>
-								If you prefer, you can create a new account with your credentials instead of using the
-								default ones.
+			<WaDropdown className='header__account-menu-wrapper' distance={17} ref={ref}>
+				<WaAvatar slot='trigger' className='header__account-avatar' image={imageSrc}>
+					<WaIcon slot='icon' name='person-fill' />
+				</WaAvatar>
+				{isPasswordless && (
+					<div className='header__passwordless-tooltip'>
+						<div className='header__passwordless-tooltip-body' slot='content'>
+							<div className='header__passwordless-tooltip-title'>
+								You are signed in with default credentials
 							</div>
-							<Link path='organization/members/add'>
-								<SlButton className='header__passwordless-create-account' size='small'>
-									Create my account
-								</SlButton>
-							</Link>
+							If you prefer, you can create a new account with your credentials instead of using the
+							default ones.
 						</div>
-					)}
-					<div className='header__account-menu'>
-						<div className='header__account-menu-heading'>
-							<SlAvatar slot='trigger' className='header__account-menu-heading-avatar' image={imageSrc} />
-							<div className='header__account-menu-heading-text'>
-								<div className='header__account-menu-heading-name'>{account.name}</div>
-								<div className='header__account-menu-heading-email'>{account.email}</div>
-							</div>
-						</div>
-						<SlDivider style={{ '--spacing': '6px' } as React.CSSProperties} />
-						<Link
-							className='header__account-menu-item header__account-menu-item--profile'
-							path='organization/members/current'
-							onClick={closeMenu}
-						>
-							<SlIcon className='header__account-menu-item-icon' name='person' />
-							Your profile
+						<Link path='organization/members/add'>
+							<WaButton appearance='outlined' className='header__passwordless-create-account' size='s'>
+								Create my account
+							</WaButton>
 						</Link>
-						<Link className='header__account-menu-item' path='organization' onClick={closeMenu}>
-							<SlIcon className='header__account-menu-item-icon' name='building' />
-							Your organization
-						</Link>
-						{account.isWorkOS ? (
-							<WorkOSMembersLink closeMenu={closeMenu} />
-						) : (
-							<MembersLink closeMenu={closeMenu} />
-						)}
-						<Link className='header__account-menu-item' path='organization/access-keys' onClick={closeMenu}>
-							<SlIcon className='header__account-menu-item-icon' name='key' />
-							API and MCP keys
-						</Link>
-						<SlDivider style={{ '--spacing': '6px' } as React.CSSProperties} />
-						<a
-							className='header__account-menu-item'
-							href='https://github.com/krenalis/krenalis/issues'
-							target='_blank'
-							onClick={closeMenu}
-						>
-							<SlIcon className='header__account-menu-item-icon' name='bug' />
-							Report a bug
-						</a>
-						<a
-							className='header__account-menu-item'
-							href='https://github.com/krenalis/krenalis/discussions'
-							target='_blank'
-							onClick={closeMenu}
-						>
-							<SlIcon className='header__account-menu-item-icon' name='chat-dots' />
-							Ask for help
-						</a>
-						{!isPasswordless && (
-							<>
-								<SlDivider style={{ '--spacing': '6px' } as React.CSSProperties} />
-								<div className='header__account-menu-item' id='logout-button' onClick={onLogout}>
-									<SlIcon className='header__account-menu-item-icon' name='box-arrow-right' />
-									Logout
-								</div>
-							</>
-						)}
-						<SlDivider style={{ '--spacing': '6px' } as React.CSSProperties} />
-						<div className='header__account-menu-version'>Krenalis {publicMetadata.version}</div>
 					</div>
-				</SlMenu>
-			</SlDropdown>
+				)}
+				<div className='header__account-menu'>
+					<div className='header__account-menu-heading'>
+						<WaAvatar slot='trigger' className='header__account-menu-heading-avatar' image={imageSrc}>
+							<WaIcon slot='icon' name='person-fill' />
+						</WaAvatar>
+						<div className='header__account-menu-heading-text'>
+							<div className='header__account-menu-heading-name'>{account.name}</div>
+							<div className='header__account-menu-heading-email'>{account.email}</div>
+						</div>
+					</div>
+					<WaDivider style={{ '--spacing': '6px' } as React.CSSProperties} />
+					<Link
+						className='header__account-menu-item header__account-menu-item--profile'
+						path='organization/members/current'
+						onClick={closeMenu}
+					>
+						<WaIcon className='header__account-menu-item-icon' name='person' />
+						Your profile
+					</Link>
+					<Link className='header__account-menu-item' path='organization' onClick={closeMenu}>
+						<WaIcon className='header__account-menu-item-icon' name='building' />
+						Your organization
+					</Link>
+					{account.isWorkOS ? (
+						<WorkOSMembersLink closeMenu={closeMenu} />
+					) : (
+						<MembersLink closeMenu={closeMenu} />
+					)}
+					<Link className='header__account-menu-item' path='organization/access-keys' onClick={closeMenu}>
+						<WaIcon className='header__account-menu-item-icon' name='key' />
+						API and MCP keys
+					</Link>
+					<WaDivider style={{ '--spacing': '6px' } as React.CSSProperties} />
+					<a
+						className='header__account-menu-item'
+						href='https://github.com/krenalis/krenalis/issues'
+						target='_blank'
+						onClick={closeMenu}
+					>
+						<WaIcon className='header__account-menu-item-icon' name='bug' />
+						Report a bug
+					</a>
+					<a
+						className='header__account-menu-item'
+						href='https://github.com/krenalis/krenalis/discussions'
+						target='_blank'
+						onClick={closeMenu}
+					>
+						<WaIcon className='header__account-menu-item-icon' name='chat-dots' />
+						Ask for help
+					</a>
+					{!isPasswordless && (
+						<>
+							<WaDivider style={{ '--spacing': '6px' } as React.CSSProperties} />
+							<div className='header__account-menu-item' id='logout-button' onClick={onLogout}>
+								<WaIcon className='header__account-menu-item-icon' name='box-arrow-right' />
+								Logout
+							</div>
+						</>
+					)}
+					<WaDivider style={{ '--spacing': '6px' } as React.CSSProperties} />
+					<div className='header__account-menu-version'>Krenalis {publicMetadata.version}</div>
+				</div>
+			</WaDropdown>
 		);
 	},
 );
@@ -259,7 +268,7 @@ const WorkOSMembersLink = ({ closeMenu }: MembersLinkProps) => {
 const MembersLink = ({ closeMenu }: MembersLinkProps) => {
 	return (
 		<Link className='header__account-menu-item' path='organization/members' onClick={closeMenu}>
-			<SlIcon className='header__account-menu-item-icon' name='people' />
+			<WaIcon className='header__account-menu-item-icon' name='people' />
 			Team members
 		</Link>
 	);

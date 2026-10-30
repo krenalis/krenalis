@@ -226,11 +226,11 @@ const fillUserPipelineFilters = async (page: Page): Promise<void> => {
 	const rootFilter = page.locator('.pipeline__filters-group--root');
 	const rootRemoveConditionButton = rootFilter.getByRole('button', { name: 'Remove condition' });
 	const rootRemoveConditionTooltip = rootFilter.locator(
-		':scope > .pipeline__filters-group-rules > .pipeline__filters-rule:not(.pipeline__filters-rule--group) .pipeline__filters-remove-condition-wrapper > sl-tooltip',
+		':scope > .pipeline__filters-group-rules > .pipeline__filters-rule:not(.pipeline__filters-rule--group) .pipeline__filters-remove-condition-wrapper > wa-tooltip',
 	);
 	await expect(rootRemoveConditionButton).toHaveJSProperty('disabled', false);
 	await expect(rootRemoveConditionTooltip).toHaveCount(1);
-	await expect(rootRemoveConditionTooltip).toHaveJSProperty('content', 'Remove condition');
+	await expect(rootRemoveConditionTooltip).toHaveText('Remove condition');
 
 	await page.locator('.pipeline__filters-add-condition').click();
 	await page.locator('.pipeline__filters-add-condition').click();
@@ -249,14 +249,14 @@ const fillUserPipelineFilters = async (page: Page): Promise<void> => {
 		':scope > .pipeline__filters-group-rules > .pipeline__filters-rule--group > .pipeline__filters-rule-content > .pipeline__filters-group',
 	);
 	const nestedRemoveGroupTooltip = nestedGroup.locator(
-		':scope > .pipeline__filters-group-header .pipeline__filters-remove-group-wrapper > sl-tooltip',
+		':scope > .pipeline__filters-group-header .pipeline__filters-remove-group-wrapper > wa-tooltip',
 	);
 	const nestedRemoveConditionTooltips = nestedGroup.locator(
-		':scope > .pipeline__filters-group-rules > .pipeline__filters-rule:not(.pipeline__filters-rule--group) .pipeline__filters-remove-condition-wrapper > sl-tooltip',
+		':scope > .pipeline__filters-group-rules > .pipeline__filters-rule:not(.pipeline__filters-rule--group) .pipeline__filters-remove-condition-wrapper > wa-tooltip',
 	);
 	await expect(nestedGroup.locator('.pipeline__filters-logical')).toHaveJSProperty('value', 'or');
 	await expect(nestedRemoveGroupTooltip).toHaveCount(1);
-	await expect(nestedRemoveGroupTooltip).toHaveJSProperty('content', 'Remove group');
+	await expect(nestedRemoveGroupTooltip).toHaveText('Remove group');
 
 	const nestedRemoveConditionButtons = nestedGroup.locator(
 		':scope > .pipeline__filters-group-rules > .pipeline__filters-rule:not(.pipeline__filters-rule--group) .pipeline__filters-remove-condition',
@@ -270,14 +270,14 @@ const fillUserPipelineFilters = async (page: Page): Promise<void> => {
 	await expect(nestedRemoveConditionButtons.first()).toHaveJSProperty('disabled', false);
 	await expect(nestedRemoveConditionButtons.nth(1)).toHaveJSProperty('disabled', false);
 	await expect(nestedRemoveConditionTooltips).toHaveCount(2);
-	await expect(nestedRemoveConditionTooltips.first()).toHaveJSProperty('content', 'Remove condition');
-	await expect(nestedRemoveConditionTooltips.nth(1)).toHaveJSProperty('content', 'Remove condition');
+	await expect(nestedRemoveConditionTooltips.first()).toHaveText('Remove condition');
+	await expect(nestedRemoveConditionTooltips.nth(1)).toHaveText('Remove condition');
 
 	await nestedRemoveConditionButtons.nth(1).click();
 	await expect(nestedRemoveConditionButtons).toHaveCount(1);
 	await expect(nestedRemoveConditionButtons.first()).toHaveJSProperty('disabled', true);
 	await nestedGroup.locator('.pipeline__filters-add-group').click();
-	await expect(nestedRemoveGroupTooltip).toHaveJSProperty('content', 'Remove groups');
+	await expect(nestedRemoveGroupTooltip).toHaveText('Remove groups');
 	await expect(nestedRemoveConditionButtons.first()).toHaveJSProperty('disabled', false);
 	await nestedRemoveConditionButtons.first().click();
 
@@ -291,11 +291,11 @@ const fillUserPipelineFilters = async (page: Page): Promise<void> => {
 	await expect(childGroup).toHaveCount(0);
 	await expect(nestedRemoveConditionButtons).toHaveCount(1);
 	await expect(nestedRemoveConditionButtons.first()).toHaveJSProperty('disabled', true);
-	await expect(nestedGroup.locator('.pipeline__filters-property sl-input')).toHaveJSProperty('value', '');
-	await expect(nestedRemoveGroupTooltip).toHaveJSProperty('content', 'Remove group');
+	await expect(nestedGroup.locator('.pipeline__filters-property wa-input')).toHaveJSProperty('value', '');
+	await expect(nestedRemoveGroupTooltip).toHaveText('Remove group');
 
 	await nestedGroup.locator('.pipeline__filters-add-group').click();
-	await expect(nestedRemoveGroupTooltip).toHaveJSProperty('content', 'Remove groups');
+	await expect(nestedRemoveGroupTooltip).toHaveText('Remove groups');
 	await nestedGroup
 		.first()
 		.locator(':scope > .pipeline__filters-group-header')
@@ -304,9 +304,9 @@ const fillUserPipelineFilters = async (page: Page): Promise<void> => {
 
 	const filters = page.locator('.pipeline__filters-filter');
 
-	await filters.nth(0).locator('.pipeline__filters-property sl-input').click();
-	await filters.nth(0).locator('sl-menu-item .schema-combobox-item__name', { hasText: 'email' }).click();
-	await filters.nth(0).locator('.pipeline__filters-operator sl-option[value="10"]').click(); // option is "is one of".
+	await filters.nth(0).locator('.pipeline__filters-property wa-input').click();
+	await filters.nth(0).locator('.combobox-list__item .schema-combobox-item__name', { hasText: 'email' }).click();
+	await filters.nth(0).locator('.pipeline__filters-operator wa-option[value="10"]').click(); // option is "is one of".
 	await filters.nth(0).locator('.pipeline__filters-add-value').click();
 	await filters.nth(0).locator('.pipeline__filters-add-value').click();
 
@@ -332,12 +332,12 @@ const fillUserPipelineFilters = async (page: Page): Promise<void> => {
 		.click(); // remove the last value.
 
 	await page.locator('.pipeline__filters-logical').click();
-	await page.locator('.pipeline__filters-logical sl-option[value="or"]').click();
+	await page.locator('.pipeline__filters-logical wa-option[value="or"]').click();
 	await expect(connectors).toHaveText(['or', 'or']);
 
-	await filters.nth(1).locator('.pipeline__filters-property sl-input').click();
-	await filters.nth(1).locator('sl-menu-item .schema-combobox-item__name', { hasText: 'dummy_id' }).click();
-	await filters.nth(1).locator('.pipeline__filters-operator sl-option[value="6"]').click(); // option is "is between".
+	await filters.nth(1).locator('.pipeline__filters-property wa-input').click();
+	await filters.nth(1).locator('.combobox-list__item .schema-combobox-item__name', { hasText: 'dummy_id' }).click();
+	await filters.nth(1).locator('.pipeline__filters-operator wa-option[value="6"]').click(); // option is "is between".
 	await filters.nth(1).locator('.pipeline__filters-value-input:nth-child(2) >> input').fill('1200');
 	await page.waitForTimeout(2000);
 	await filters.nth(1).locator('.pipeline__filters-value-input:nth-child(4) >> input').fill('1800');

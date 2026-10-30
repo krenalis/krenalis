@@ -2,7 +2,7 @@
 	text-align: left;
 	margin-top: 20px;
 	padding-top: 20px;
-	border-top: 1px solid var(--sl-color-neutral-200);
+	border-top: 1px solid var(--wa-color-neutral-80);
 }
 
 .confirm-by-typing__instruction {
@@ -17,13 +17,17 @@
 	margin: 0 auto;
 }
 
+.confirm-by-typing__input::part(form-control-label) {
+	display: none;
+}
+
 .confirm-by-typing__input::part(input) {
 	font-family: var(--monospace-fonts);
 }
 
 .confirm-by-typing__confirm-text {
 	font-family: var(--monospace-fonts);
-	background-color: var(--sl-color-neutral-100);
+	background-color: var(--wa-color-neutral-90);
 	display: inline-block;
 	padding: 0 5px;
 	border-radius: 3px;

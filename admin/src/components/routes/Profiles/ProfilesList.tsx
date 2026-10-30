@@ -3,13 +3,11 @@ import ProfilesContext from '../../../context/ProfilesContext';
 import Toolbar from '../../base/Toolbar/Toolbar';
 import AlertDialog from '../../base/AlertDialog/AlertDialog';
 import Grid from '../../base/Grid/Grid';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import SlDropdown from '@shoelace-style/shoelace/dist/react/dropdown/index.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
-import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
-import SlMenu from '@shoelace-style/shoelace/dist/react/menu/index.js';
-import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
-import SlSwitch from '@shoelace-style/shoelace/dist/react/switch/index.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaDropdown from '@awesome.me/webawesome/dist/react/dropdown/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
+import WaSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
+import WaSwitch from '@awesome.me/webawesome/dist/react/switch/index.js';
 import { ProfileDrawer } from './ProfileDrawer';
 import { useProfilesGrid } from './useProfilesGrid';
 import { ProfileProperty } from './Profiles.types';
@@ -129,77 +127,78 @@ const ProfilesList = () => {
 	return (
 		<div className='profiles-list'>
 			<Toolbar>
-				<SlDropdown stayOpenOnSelect={true} className='profiles-list__toggle-columns'>
-					<SlButton slot='trigger' variant='default'>
-						<SlIcon slot='prefix' name='layout-three-columns' />
+				<WaDropdown className='profiles-list__toggle-columns'>
+					<WaButton slot='trigger' appearance='outlined'>
+						<WaIcon slot='start' name='layout-three-columns' />
 						Toggle columns
-					</SlButton>
-					<SlMenu>
+					</WaButton>
+					<div className='profiles-list__toggle-columns-list'>
 						{profilesProperties.map((p) => {
 							const isLastUsed = usedProperties.length === 1 && usedProperties[0].name === p.name;
 							return (
-								<SlOption key={p.name}>
-									<SlSwitch
-										size='small'
-										onSlChange={() => onToggleColumn(p.name)}
+								<div className='profiles-list__toggle-column' key={p.name}>
+									<WaSwitch
+										size='s'
+										onChange={() => onToggleColumn(p.name)}
 										checked={p.isUsed}
 										disabled={isLastUsed}
 									>
 										{p.name}
-									</SlSwitch>
-								</SlOption>
+									</WaSwitch>
+								</div>
 							);
 						})}
-					</SlMenu>
-				</SlDropdown>
+					</div>
+				</WaDropdown>
 				<div
 					className={`profiles-list__identity-resolution${!secondsSinceIRStart && !latestIRExecutionEnd && !isLoadingIdentityResolution ? ' profiles-list__identity-resolution--is-first-execution' : ''}`}
 				>
-					<SlButton
+					<WaButton
 						onClick={() => setAskResolveIdentitiesConfirmation(true)}
-						variant='primary'
+						variant='brand'
 						disabled={isLoadingIdentityResolution || secondsSinceIRStart != null}
 						className='profiles-list__identity-resolution-button'
 					>
 						{isLoadingIdentityResolution || secondsSinceIRStart ? (
-							<SlSpinner className='profiles-list__identity-resolution-spinner' slot='prefix' />
+							<WaSpinner className='profiles-list__identity-resolution-spinner' slot='start' />
 						) : (
-							<SlIcon slot='prefix' name='play' />
+							<WaIcon slot='start' name='play' />
 						)}
 						{secondsSinceIRStart ? 'Identity Resolution' : 'Run Profile Unification'}
-					</SlButton>
+					</WaButton>
 					<span className='profiles-list__identity-resolution-progress'>
 						{secondsSinceIRStart ? (
 							<div className='profiles-list__identity-resolution-since-start'>{`Progress: ${String(secondsSinceIRStart)}s`}</div>
 						) : latestIRExecutionEnd ? (
 							<div className='profiles-list__identity-resolution-end-time'>
-								<span>Latest Identity Resolution:</span>
-								<RelativeTime date={latestIRExecutionEnd} />
+								<span>Latest Identity Resolution:</span> <RelativeTime date={latestIRExecutionEnd} />
 							</div>
 						) : (
 							''
 						)}
 					</span>
 				</div>
-				<AlertDialog
-					isOpen={askRunIRConfirmation}
-					onClose={() => setAskResolveIdentitiesConfirmation(false)}
-					title='Processing time notice'
-					actions={
-						<>
-							<SlButton onClick={() => setAskResolveIdentitiesConfirmation(false)}>Cancel</SlButton>
-							<SlButton variant='primary' onClick={onStartIdentityResolution}>
-								Run Profile Unification
-							</SlButton>
-						</>
-					}
-				>
-					<p>
-						The time it takes to resolve the identities can vary significantly, from seconds to hours,
-						depending on the size of user data.
-					</p>
-				</AlertDialog>
 			</Toolbar>
+			<AlertDialog
+				isOpen={askRunIRConfirmation}
+				onClose={() => setAskResolveIdentitiesConfirmation(false)}
+				title='Processing time notice'
+				actions={
+					<>
+						<WaButton appearance='outlined' onClick={() => setAskResolveIdentitiesConfirmation(false)}>
+							Cancel
+						</WaButton>
+						<WaButton variant='brand' onClick={onStartIdentityResolution}>
+							Run Profile Unification
+						</WaButton>
+					</>
+				}
+			>
+				<p>
+					The time it takes to resolve the identities can vary significantly, from seconds to hours, depending
+					on the size of user data.
+				</p>
+			</AlertDialog>
 			<div className='profiles-list__content'>
 				<div className='profiles-list__grid-container'>
 					<Grid

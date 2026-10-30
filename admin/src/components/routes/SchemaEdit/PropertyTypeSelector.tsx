@@ -1,10 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import './PropertyTypeSelector.css';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import SlDropdown from '@shoelace-style/shoelace/dist/react/dropdown/index.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
-import SlMenu from '@shoelace-style/shoelace/dist/react/menu/index.js';
-import SlMenuItem from '@shoelace-style/shoelace/dist/react/menu-item/index.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaDropdown, { WaAfterHideEvent, WaShowEvent } from '@awesome.me/webawesome/dist/react/dropdown/index.js';
+import WaDropdownItem from '@awesome.me/webawesome/dist/react/dropdown-item/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import Type, { DurationUnit, TypeKind, UnitOfMeasure } from '../../../lib/api/types/types';
 import {
 	getPropertyValueType,
@@ -254,12 +253,20 @@ const PropertyTypeSelector = ({ type, canEditType, onChange }: PropertyTypeSelec
 		onChange(wrapPropertyValueType(valueType, nextStructure));
 	};
 
-	const onStructureMenuAfterHide = () => {
-		if (!focusTypeAfterStructureSelectionRef.current) {
+	const onStructureMenuAfterHide = (event: WaAfterHideEvent) => {
+		if (event.target !== event.currentTarget || !focusTypeAfterStructureSelectionRef.current) {
 			return;
 		}
 		focusTypeAfterStructureSelectionRef.current = false;
-		dropdownRef.current?.focusOnTrigger();
+		focusTrigger(dropdownRef.current);
+	};
+
+	// Web Awesome's dropdown has no disabled state: a type that cannot be
+	// edited keeps its menus closed.
+	const onShowMenu = (event: WaShowEvent) => {
+		if (event.target === event.currentTarget && !canEditType) {
+			event.preventDefault();
+		}
 	};
 
 	const onSelectOption = (event) => {
@@ -307,63 +314,63 @@ const PropertyTypeSelector = ({ type, canEditType, onChange }: PropertyTypeSelec
 					canEditType ? '' : ' property-type-selector__controls--read-only'
 				}${showValueTypeSelector ? '' : ' property-type-selector__controls--structure-only'}`}
 			>
-				<SlDropdown
+				<WaDropdown
 					className='property-type-selector__structure-dropdown'
-					hoist
 					placement='bottom-start'
 					distance={6}
-					disabled={!canEditType}
-					onSlAfterHide={onStructureMenuAfterHide}
+					onWaShow={onShowMenu}
+					onWaSelect={onSelectStructure}
+					onWaAfterHide={onStructureMenuAfterHide}
 				>
-					<SlButton
+					<WaButton
+						appearance='outlined'
 						className='property-type-selector__structure-trigger'
 						slot='trigger'
-						caret={canEditType}
+						withCaret={canEditType}
 						disabled={!canEditType}
 						aria-label={`Structure: ${selectedStructureOption.label}`}
+						onKeyDown={onTriggerKeyDown}
 					>
-						<SlIcon slot='prefix' name={selectedStructureOption.icon} />
+						<WaIcon slot='start' name={selectedStructureOption.icon} />
 						{selectedStructureOption.triggerLabel}
-					</SlButton>
-					<SlMenu className='property-type-selector__structure-menu' onSlSelect={onSelectStructure}>
-						{PROPERTY_STRUCTURE_OPTIONS.map((option) => (
-							<SlMenuItem
-								className={`property-type-selector__structure-option${
-									structure === option.id ? ' property-type-selector__structure-option--selected' : ''
-								}`}
-								key={option.id}
-								data-structure-option={option.id}
-								value={option.id}
-							>
-								<SlIcon slot='prefix' name={option.icon} />
-								<span className='property-type-selector__structure-option-content'>
-									<span className='property-type-selector__structure-option-label'>
-										{option.label}
-									</span>
-									<span className='property-type-selector__structure-option-description'>
-										{option.description}
-									</span>
+					</WaButton>
+					{PROPERTY_STRUCTURE_OPTIONS.map((option) => (
+						<WaDropdownItem
+							className={`property-type-selector__structure-option${
+								structure === option.id ? ' property-type-selector__structure-option--selected' : ''
+							}`}
+							key={option.id}
+							data-structure-option={option.id}
+							value={option.id}
+						>
+							<WaIcon slot='icon' name={option.icon} />
+							<span className='property-type-selector__structure-option-content'>
+								<span className='property-type-selector__structure-option-label'>{option.label}</span>
+								<span className='property-type-selector__structure-option-description'>
+									{option.description}
 								</span>
-								{structure === option.id && <SlIcon slot='suffix' name='check-lg' />}
-							</SlMenuItem>
-						))}
-					</SlMenu>
-				</SlDropdown>
+							</span>
+							{structure === option.id && <WaIcon slot='details' name='check-lg' />}
+						</WaDropdownItem>
+					))}
+				</WaDropdown>
 				{showValueTypeSelector && (
-					<SlDropdown
+					<WaDropdown
 						className='property-type-selector__dropdown'
 						ref={dropdownRef}
-						hoist
 						placement='bottom-end'
 						distance={6}
-						disabled={!canEditType}
+						onWaShow={onShowMenu}
+						onWaSelect={onSelectOption}
 					>
-						<SlButton
+						<WaButton
+							appearance='outlined'
 							className='property-type-selector__trigger'
 							slot='trigger'
-							caret={canEditType}
+							withCaret={canEditType}
 							disabled={!canEditType}
 							aria-label={valueType == null ? 'Select type' : undefined}
+							onKeyDown={onTriggerKeyDown}
 						>
 							{valueType == null ? (
 								<span className='property-type-selector__placeholder'>Select type...</span>
@@ -385,72 +392,85 @@ const PropertyTypeSelector = ({ type, canEditType, onChange }: PropertyTypeSelec
 									)}
 								</span>
 							)}
-						</SlButton>
-						<SlMenu className='property-type-selector__browser' onSlSelect={onSelectOption}>
-							{PROPERTY_TYPE_OPTIONS.map((option) => {
-								const optionType = option.create();
-								const optionSemantics = getTypeSemantics(optionType);
-								const label =
-									optionSemantics == null ? optionType.kind : toSemanticsLabel(optionSemantics);
-								let metadata = option.description;
-								if (optionSemantics != null) {
-									metadata =
-										optionSemantics === 'country' || optionSemantics === 'duration'
-											? toCompactPhysicalType(optionType)
-											: toProfileSchemaPhysicalType(optionType);
-								}
-								return (
-									<SlMenuItem
-										className={`property-type-selector__option${
-											option.separated ? ' property-type-selector__option--separated' : ''
-										}${
-											selectedOption?.id === option.id
-												? ' property-type-selector__option--selected'
-												: ''
-										}`}
-										key={option.id}
-										data-type-option={option.id}
-										value={option.id}
-									>
-										<span className='property-type-selector__type'>
-											<span className='property-type-selector__type-label'>{label}</span>
-											{metadata != null && (
+						</WaButton>
+						{PROPERTY_TYPE_OPTIONS.map((option) => {
+							const optionType = option.create();
+							const optionSemantics = getTypeSemantics(optionType);
+							const label = optionSemantics == null ? optionType.kind : toSemanticsLabel(optionSemantics);
+							let metadata = option.description;
+							if (optionSemantics != null) {
+								metadata =
+									optionSemantics === 'country' || optionSemantics === 'duration'
+										? toCompactPhysicalType(optionType)
+										: toProfileSchemaPhysicalType(optionType);
+							}
+							return (
+								<WaDropdownItem
+									className={`property-type-selector__option${
+										option.separated ? ' property-type-selector__option--separated' : ''
+									}${
+										selectedOption?.id === option.id
+											? ' property-type-selector__option--selected'
+											: ''
+									}`}
+									key={option.id}
+									data-type-option={option.id}
+									value={option.id}
+								>
+									<span className='property-type-selector__type'>
+										<span className='property-type-selector__type-label'>{label}</span>
+										{metadata != null && (
+											<span
+												className={`property-type-selector__type-metadata${
+													optionSemantics == null
+														? ''
+														: ' property-type-selector__type-metadata--physical'
+												}`}
+											>
 												<span
-													className={`property-type-selector__type-metadata${
+													className='property-type-selector__type-separator'
+													aria-hidden='true'
+												>
+													{' · '}
+												</span>
+												<span
+													className={
 														optionSemantics == null
 															? ''
-															: ' property-type-selector__type-metadata--physical'
-													}`}
+															: 'property-type-selector__type-physical'
+													}
 												>
-													<span
-														className='property-type-selector__type-separator'
-														aria-hidden='true'
-													>
-														{' · '}
-													</span>
-													<span
-														className={
-															optionSemantics == null
-																? ''
-																: 'property-type-selector__type-physical'
-														}
-													>
-														{metadata}
-													</span>
+													{metadata}
 												</span>
-											)}
-										</span>
-										{selectedOption?.id === option.id && <SlIcon slot='suffix' name='check-lg' />}
-									</SlMenuItem>
-								);
-							})}
-						</SlMenu>
+											</span>
+										)}
+									</span>
+									{selectedOption?.id === option.id && <WaIcon slot='details' name='check-lg' />}
+								</WaDropdownItem>
+							);
+						})}
 						<div className='property-type-selector__browser-fade' aria-hidden='true' />
-					</SlDropdown>
+					</WaDropdown>
 				)}
 			</div>
 		</div>
 	);
+};
+
+// focusTrigger focuses the trigger of a dropdown.
+const focusTrigger = (dropdown: HTMLElement | null) => {
+	dropdown?.querySelector<HTMLElement>('[slot="trigger"]')?.focus();
+};
+
+// onTriggerKeyDown opens the dropdown of a trigger from the arrow keys, Home
+// and End; Web Awesome's opens only on a click.
+const onTriggerKeyDown = (event: React.KeyboardEvent<HTMLElement>) => {
+	if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) {
+		return;
+	}
+	event.preventDefault();
+	const dropdown: any = event.currentTarget.closest('wa-dropdown');
+	dropdown.open = true;
 };
 
 const getPropertyStructure = (type: Type | null): PropertyStructure => {

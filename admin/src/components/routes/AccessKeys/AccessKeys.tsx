@@ -4,14 +4,14 @@ import { GridColumn, GridRow } from '../../base/Grid/Grid.types';
 import AppContext from '../../../context/AppContext';
 import { AccessKey, AccessKeyResponse, CreateAccessKeyResponse } from '../../../lib/api/types/responses';
 import Grid from '../../base/Grid/Grid';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import SlDialog from '@shoelace-style/shoelace/dist/react/dialog/index.js';
-import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
-import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
-import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
-import SlCopyButton from '@shoelace-style/shoelace/dist/react/copy-button/index.js';
-import SlDivider from '@shoelace-style/shoelace/dist/react/divider/index.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaDialog from '@awesome.me/webawesome/dist/react/dialog/index.js';
+import WaInput from '@awesome.me/webawesome/dist/react/input/index.js';
+import WaSelect from '@awesome.me/webawesome/dist/react/select/index.js';
+import WaOption from '@awesome.me/webawesome/dist/react/option/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
+import WaCopyButton from '@awesome.me/webawesome/dist/react/copy-button/index.js';
+import WaDivider from '@awesome.me/webawesome/dist/react/divider/index.js';
 import AlertDialog from '../../base/AlertDialog/AlertDialog';
 import { NotFoundError } from '../../../lib/api/errors';
 import { RelativeTime } from '../../base/RelativeTime/RelativeTime';
@@ -159,17 +159,17 @@ const AccessKeys = () => {
 
 			const pipelinesCell = (
 				<div className='access-keys__grid-buttons'>
-					<SlButton variant='default' size='small' onClick={() => onEditKey(k)}>
+					<WaButton appearance='outlined' size='s' onClick={() => onEditKey(k)}>
 						Edit...
-					</SlButton>
-					<SlButton
+					</WaButton>
+					<WaButton
 						className='connection-pipelines__delete-pipeline'
 						variant='danger'
-						size='small'
+						size='s'
 						onClick={() => onDeleteKey(k)}
 					>
 						Delete
-					</SlButton>
+					</WaButton>
 				</div>
 			);
 
@@ -196,9 +196,9 @@ const AccessKeys = () => {
 			<div className='access-keys__content'>
 				<div className='access-keys__title'>
 					<p className='access-keys__title-text'>API keys</p>
-					<SlButton size='small' variant='primary' onClick={() => setIsCreatingAPIKey(true)}>
+					<WaButton size='s' variant='brand' onClick={() => setIsCreatingAPIKey(true)}>
 						Add a new API key
-					</SlButton>
+					</WaButton>
 				</div>
 				<Grid
 					className='access-keys__grid'
@@ -213,13 +213,13 @@ const AccessKeys = () => {
 						API keys
 					</a>
 				</div>
-				<SlDivider style={{ '--spacing': '30px' } as React.CSSProperties} />
+				<WaDivider style={{ '--spacing': '30px' } as React.CSSProperties} />
 				<div className='access-keys__title access-keys__title--mcp'>
 					<p className='access-keys__title-text'>MCP keys</p>
 					{hasWorkspaceWithWarehouse && (
-						<SlButton size='small' variant='primary' onClick={() => setIsCreatingMCPKey(true)}>
+						<WaButton size='s' variant='brand' onClick={() => setIsCreatingMCPKey(true)}>
 							Add a new MCP key
-						</SlButton>
+						</WaButton>
 					)}
 				</div>
 				<Grid
@@ -244,10 +244,12 @@ const AccessKeys = () => {
 					title={`Delete the ${accessKeyToDeleteType} key?`}
 					actions={
 						<>
-							<SlButton onClick={onCloseDeleteAccessKeyDialog}>Cancel</SlButton>
-							<SlButton variant='danger' onClick={onConfirmDeleteKey} loading={isDeletingAccessKey}>
+							<WaButton appearance='outlined' onClick={onCloseDeleteAccessKeyDialog}>
+								Cancel
+							</WaButton>
+							<WaButton variant='danger' onClick={onConfirmDeleteKey} loading={isDeletingAccessKey}>
 								Delete
-							</SlButton>
+							</WaButton>
 						</>
 					}
 				>
@@ -305,7 +307,10 @@ const EditAccessKeyDialog = ({
 		setName(v);
 	};
 
-	const onHide = () => {
+	const onHide = (e) => {
+		if (e.target !== e.currentTarget) {
+			return;
+		}
 		setAccessKeyToEdit(null);
 		setError('');
 		setName('');
@@ -348,31 +353,32 @@ const EditAccessKeyDialog = ({
 	};
 
 	return (
-		<SlDialog
+		<WaDialog
 			className='access-keys__edit-dialog'
 			label={`Edit the ${accessKeyToEdit?.type} key`}
 			open={accessKeyToEdit != null}
-			onSlAfterHide={onHide}
+			lightDismiss
+			onWaAfterHide={onHide}
 		>
 			<div className='access-keys__dialog-form'>
-				<SlInput
+				<WaInput
 					className='access-keys__dialog-name'
 					ref={inputRef}
 					label='Name'
 					value={name}
-					onSlInput={onInputName}
+					onInput={onInputName}
 				/>
 				{error && (
 					<div className='access-keys__dialog-error'>
-						<SlIcon slot='icon' name='exclamation-octagon' />
+						<WaIcon slot='icon' name='exclamation-octagon' />
 						{error}
 					</div>
 				)}
-				<SlButton loading={isSaving} className='access-keys__dialog-save' variant='primary' onClick={onSave}>
+				<WaButton loading={isSaving} className='access-keys__dialog-save' variant='brand' onClick={onSave}>
 					Save
-				</SlButton>
+				</WaButton>
 			</div>
-		</SlDialog>
+		</WaDialog>
 	);
 };
 
@@ -434,7 +440,7 @@ const CreateAccessKeyDialog = ({
 	};
 
 	const onHide = (e) => {
-		if (e.target.tagName === 'SL-DIALOG') {
+		if (e.target === e.currentTarget) {
 			setIsOpen(false);
 			setNameError('');
 			setName('');
@@ -513,13 +519,14 @@ const CreateAccessKeyDialog = ({
 	};
 
 	return (
-		<SlDialog
+		<WaDialog
 			className={`access-keys__dialog${token != null ? ' access-keys__dialog--copy' : ''}`}
 			label={
 				token != null ? `Your new ${isMCP ? 'MCP' : 'API'} key` : `Create a new ${isMCP ? 'MCP' : 'API'} key`
 			}
 			open={isOpen}
-			onSlAfterHide={onHide}
+			lightDismiss
+			onWaAfterHide={onHide}
 		>
 			{token != null ? (
 				<div className='access-keys__dialog-created'>
@@ -529,67 +536,61 @@ const CreateAccessKeyDialog = ({
 						be the last time it will be visible to you
 					</div>
 					<div className='access-keys__key-copy'>
-						<SlInput readonly value={token} filled />
-						<SlCopyButton value={token} />
+						<WaInput readonly value={token} appearance='filled' />
+						<WaCopyButton value={token} />
 					</div>
-					<SlButton size='small' className='access-keys__dialog-done' variant='primary' onClick={onDone}>
+					<WaButton size='s' className='access-keys__dialog-done' variant='brand' onClick={onDone}>
 						Done
-					</SlButton>
+					</WaButton>
 				</div>
 			) : (
 				<div className='access-keys__dialog-form'>
-					<SlInput
+					<WaInput
 						className='access-keys__dialog-name'
 						ref={inputRef}
 						label='Name'
 						value={name}
-						onSlInput={onInputName}
+						onInput={onInputName}
 					/>
 					{nameError && (
 						<div className='access-keys__dialog-error'>
-							<SlIcon slot='icon' name='exclamation-octagon' />
+							<WaIcon slot='icon' name='exclamation-octagon' />
 							{nameError}
 						</div>
 					)}
-					<SlSelect
+					<WaSelect
 						label='Workspace'
 						className='access-keys__dialog-workspaces'
-						onSlChange={onChangeWorkspace}
+						onChange={onChangeWorkspace}
 						value={workspace != null ? workspace : isMCP ? '' : '0'}
-						hoist={true}
-						helpText='Note that you will no longer be able to edit the workspace after the creation of the key'
+						hint='Note that you will no longer be able to edit the workspace after the creation of the key'
 					>
-						{!isMCP && <SlOption value='0'>Any workspace</SlOption>}
+						{!isMCP && <WaOption value='0'>Any workspace</WaOption>}
 						{warehouseByWorkspace != null &&
 							workspaces.map((w) => {
 								const hasWarehouse = warehouseByWorkspace[w.id] !== '';
 								if (!isMCP || (isMCP && hasWarehouse)) {
 									return (
-										<SlOption key={w.id} value={w.id}>
+										<WaOption key={w.id} value={w.id}>
 											{w.name}
-										</SlOption>
+										</WaOption>
 									);
 								}
 								return null;
 							})}
-					</SlSelect>
+					</WaSelect>
 					{workspaceError && (
 						<div className='access-keys__dialog-error'>
-							<SlIcon slot='icon' name='exclamation-octagon' />
+							<WaIcon slot='icon' name='exclamation-octagon' />
 							{workspaceError}
 						</div>
 					)}
-					<SlButton
-						loading={isSaving}
-						className='access-keys__dialog-save'
-						variant='primary'
-						onClick={onSave}
-					>
+					<WaButton loading={isSaving} className='access-keys__dialog-save' variant='brand' onClick={onSave}>
 						Add
-					</SlButton>
+					</WaButton>
 				</div>
 			)}
-		</SlDialog>
+		</WaDialog>
 	);
 };
 
