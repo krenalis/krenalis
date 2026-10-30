@@ -550,7 +550,8 @@ func (core *Core) Close(ctx context.Context) {
 	if core.closed.Swap(true) {
 		panic("core already closed")
 	}
-	// Cancel pipeline runs initiated via the API.
+	// Cancel pipeline runs initiated via the API, Identity Resolutions, and
+	// profile schema alterations.
 	core.close.cancelCtx()
 	// Close the pipeline scheduler.
 	core.pipelineScheduler.Close()
