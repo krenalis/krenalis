@@ -19,7 +19,8 @@ import (
 )
 
 // initLockKey is the arbitrary key of the advisory lock that serializes the
-// initialization of the database.
+// initialization of the database. The lock is database-wide, so instances
+// using different schemas of the same database also wait for each other.
 const initLockKey = 1766325504
 
 // InitIfEmpty initializes the PostgreSQL database if it is empty.
