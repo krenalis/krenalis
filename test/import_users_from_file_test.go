@@ -81,7 +81,7 @@ func TestImportUsersFromFile(t *testing.T) {
 		expectedTotal       = 2
 		expectedProfilesLen = 2
 	)
-	profiles, _, total := k.Profiles([]string{"email"}, "", false, 0, 100)
+	profiles, total := k.Profiles([]string{"email"}, "", false, 0, 100)
 	profilesLen := len(profiles)
 	if profilesLen != expectedProfilesLen {
 		t.Fatalf("expected %d profiles, got %d", expectedProfilesLen, profilesLen)

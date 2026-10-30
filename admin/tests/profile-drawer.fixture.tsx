@@ -52,21 +52,45 @@ const appContext = {
 	},
 } as unknown as React.ContextType<typeof AppContext>;
 const profilesContext: React.ContextType<typeof ProfilesContext> = {
+	appliedFilter: null,
+	previewProfilesFilter: async () => ({ total: 1 }),
+	showProfilesFilter: async () => true,
 	profiles: [],
 	profilesTotal: 1,
 	profilesProperties: [],
+	profileSchema: { kind: 'object' },
+	profileSchemaProperties: {},
 	isLoading: false,
-	profileIDList: [PROFILE_ID],
-	fetchProfiles: async () => [PROFILE_ID],
+	isBoundaryLoading: false,
+	profilesFirst: 0,
+	profilesLimit: 50,
+	profilesProjection: [],
+	profilesExecutionID: 0,
+	profileSchemaSessionID: 0,
+	resetProfilesSchema: () => {},
+	profilesQueryKey: '',
+	hasNextPage: false,
+	activeProfileID: PROFILE_ID,
+	canNavigateNextProfile: false,
+	canNavigatePreviousProfile: false,
+	isProfileSchemaNotAligned: false,
+	goToProfilesPage: () => {},
+	markProfileSchemaNotAligned: () => {},
+	navigateProfile: () => {},
+	refreshProfiles: () => {},
+	reorderProfilesProperties: () => {},
+	setActiveProfileID: () => {},
+	setProfilesPageSize: () => {},
+	updateProfilesProperties: () => {},
 };
 
 const Fixture = () => {
-	const [selectedProfile, setSelectedProfile] = useState(PROFILE_ID);
+	const [activeProfileID, setActiveProfileID] = useState(PROFILE_ID);
 	return (
 		<AppContext.Provider value={appContext}>
-			<ProfilesContext.Provider value={profilesContext}>
+			<ProfilesContext.Provider value={{ ...profilesContext, activeProfileID, setActiveProfileID }}>
 				<div className='profiles-list__grid-container profile-drawer-fixture'>
-					<ProfileDrawer selectedProfile={selectedProfile} setSelectedProfile={setSelectedProfile} />
+					<ProfileDrawer />
 				</div>
 			</ProfilesContext.Provider>
 		</AppContext.Provider>

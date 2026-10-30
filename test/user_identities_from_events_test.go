@@ -67,7 +67,7 @@ func TestIdentitiesFromEvents(t *testing.T) {
 	k.RunIdentityResolutionAndWait()
 
 	// Retrieve the profile imported from the event.
-	profiles, _, total := k.Profiles([]string{"email"}, "", false, 0, 100)
+	profiles, total := k.Profiles([]string{"email"}, "", false, 0, 100)
 	if total != 1 {
 		t.Fatalf("expected one profile, got %d", total)
 	}
@@ -111,7 +111,7 @@ func TestIdentitiesFromEvents(t *testing.T) {
 	k.RunIdentityResolutionAndWait()
 
 	// Check that the profile has been created.
-	_, _, total = k.Profiles([]string{"email"}, "", false, 0, 100)
+	_, total = k.Profiles([]string{"email"}, "", false, 0, 100)
 	if total != 2 {
 		t.Fatalf("expected 2 profiles, got %d", total)
 	}
@@ -152,7 +152,7 @@ def transform(event: dict) -> dict:
 	k.RunIdentityResolutionAndWait()
 
 	// Check that the profile has been created.
-	_, _, total = k.Profiles([]string{"email"}, "", false, 0, 100)
+	_, total = k.Profiles([]string{"email"}, "", false, 0, 100)
 	if total != 3 {
 		t.Fatalf("expected 3 profiles, got %d", total)
 	}

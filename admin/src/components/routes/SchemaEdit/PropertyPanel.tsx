@@ -91,7 +91,11 @@ const PropertyPanel = ({
 		);
 	} else if (property != null && !isNew) {
 		actions = (
-			<SlTooltip className='schema-edit__toolbar-tooltip' content='Delete this property from the schema' hoist>
+			<SlTooltip
+				className='app-tooltip schema-edit__toolbar-tooltip'
+				content='Delete this property from the schema'
+				hoist
+			>
 				<SlButton
 					className='property-panel__remove property-panel__delete-button schema-edit__toolbar-icon-button'
 					size='small'

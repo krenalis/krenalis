@@ -63,8 +63,8 @@ func (this *Pipeline) exportProfiles(ctx context.Context) error {
 
 	// Build the query to read the profiles.
 	query := datastore.Query{Where: pipeline.Filter}
-	if connector.Type == state.FileStorage {
-		query.OrderBy = pipeline.OrderBy
+	if connector.Type == state.FileStorage && pipeline.OrderBy != "" {
+		query.OrderBy = []string{pipeline.OrderBy}
 	}
 	var matching *datastore.Matching
 	if connector.Type == state.Application {

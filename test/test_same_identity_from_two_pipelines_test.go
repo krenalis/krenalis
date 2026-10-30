@@ -72,7 +72,7 @@ func TestSameIdentityFromTwoPipelines(t *testing.T) {
 	k.RunIdentityResolutionAndWait()
 
 	// Check that there are 10 profiles.
-	profiles, _, total := k.Profiles([]string{"first_name", "last_name"}, "first_name", false, 0, 100)
+	profiles, total := k.Profiles([]string{"first_name", "last_name"}, "first_name", false, 0, 100)
 	if total != 10 {
 		t.Fatalf("expected 10 profiles, got %d", total)
 	}
