@@ -158,13 +158,12 @@ const PipelineHeader = () => {
 				<div
 					className={`pipeline__header-buttons-close-transformation${!isFullscreenTransformationOpen ? ' pipeline__header-buttons-close-transformation--hidden' : ''}`}
 				>
-					<button
+					<SlIconButton
 						className='pipeline__header-close-transformation'
+						name='arrows-angle-contract'
+						label='Exit full mode'
 						onClick={onCloseFullscreenTransformation}
-						title='Exit full mode'
-					>
-						×
-					</button>
+					/>
 				</div>
 			</div>
 		</div>
