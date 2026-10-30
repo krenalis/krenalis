@@ -74,6 +74,7 @@ type Krenalis struct {
 	natsAckWait           string
 	overrideProfileSchema *types.Type
 	populateProfileSchema bool
+	propertyRoles         *PropertyRoles
 }
 
 var assetsAlreadyGenerated bool
@@ -89,8 +90,8 @@ func (k *Krenalis) Addr() string {
 // NewKrenalisInstance initializes a new instance of Krenalis for testing.
 //
 // After initializing an instance, its options can be set (via
-// [PopulateProfileSchema], [SetFileSystemRoot], [SetNATSAckWait], and
-// [SetProfileSchema]) before calling [Start].
+// [PopulateProfileSchema], [SetFileSystemRoot], [SetNATSAckWait],
+// [SetPropertyRoles], and [SetProfileSchema]) before calling [Start].
 func NewKrenalisInstance(t *testing.T) *Krenalis {
 
 	if !launchKrenalisExternally {
@@ -186,6 +187,12 @@ func (k *Krenalis) SetProfileSchema(schema types.Type) {
 		panic("test/krenalistester: profile schema must be a valid object type")
 	}
 	k.overrideProfileSchema = &schema
+}
+
+// SetPropertyRoles sets the property roles used to create the initial
+// workspace. Call it before [Start].
+func (k *Krenalis) SetPropertyRoles(assignments PropertyRoles) {
+	k.propertyRoles = &assignments
 }
 
 // Start starts the Krenalis instance.
@@ -483,18 +490,14 @@ func (k *Krenalis) Start() {
 
 	// Create the workspace and connect the warehouse.
 	var profileSchema types.Type
-	var uiPreferences UIPreferences
 	if k.overrideProfileSchema != nil {
 		profileSchema = *k.overrideProfileSchema
 	} else if k.populateProfileSchema {
 		profileSchema = testsProfileSchema
-		uiPreferences.Profile.FirstName = "first_name"
-		uiPreferences.Profile.LastName = "last_name"
-		uiPreferences.Profile.Extra = "email"
 	} else {
 		profileSchema = minimalProfileSchema
 	}
-	id, err := k.createWorkspace("Test workspace", profileSchema, uiPreferences)
+	id, err := k.createWorkspace("Test workspace", profileSchema)
 	if err != nil {
 		k.t.Fatalf("cannot create workspace: %s", err)
 	}
@@ -574,15 +577,18 @@ func init() {
 	}
 }
 
-func (k *Krenalis) createWorkspace(name string, profileSchema types.Type, uiPreferences UIPreferences) (string, error) {
+func (k *Krenalis) createWorkspace(name string, profileSchema types.Type) (string, error) {
+	profileSchemaBody := map[string]any{"schema": profileSchema}
+	if k.propertyRoles != nil {
+		profileSchemaBody["propertyRoles"] = *k.propertyRoles
+	}
 	req := map[string]any{
 		"name":          name,
-		"profileSchema": profileSchema,
+		"profileSchema": profileSchemaBody,
 		"warehouse": map[string]any{
 			"platform": testsSettings.WarehousePlatform,
 			"settings": testsSettings.Warehouse,
 		},
-		"uiPreferences": uiPreferences,
 	}
 	var response struct {
 		ID string `json:"id"`
