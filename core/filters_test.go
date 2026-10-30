@@ -15,10 +15,12 @@ import (
 	"time"
 
 	"github.com/krenalis/krenalis/core/internal/state"
+	"github.com/krenalis/krenalis/test/warehouseexpr"
 	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
+	"github.com/krenalis/krenalis/warehouses"
 
 	"github.com/google/go-cmp/cmp"
 )
@@ -1165,6 +1167,72 @@ func Test_resolveFilterProperty(t *testing.T) {
 
 }
 
+// Test_validateDecimalFilters checks numeric limits for filter operands.
+func Test_validateDecimalFilters(t *testing.T) {
+
+	schema := types.Object([]types.Property{
+		{Name: "number", Type: types.Decimal(3, 2)},
+		{Name: "numbers", Type: types.Array(types.Decimal(3, 2))},
+		{Name: "json", Type: types.JSON()},
+		{Name: "jsons", Type: types.Array(types.JSON())},
+	})
+	for _, test := range []struct {
+		text  string
+		valid bool
+	}{
+		{"0", true}, {"-0e999999", true}, {"1.2300", true},
+		{"1e75", true}, {"-1e75", true}, {"1e-37", true},
+		{"10e-38", true}, {"1e" + strings.Repeat("0", 64) + "1", true},
+		{strings.Repeat("9", 76), true},
+		{"-" + strings.Repeat("9", 39) + "." + strings.Repeat("9", 37), true},
+		{"1e76", false}, {"1e-38", false},
+		{strings.Repeat("9", 77), false},
+		{strings.Repeat("9", 40) + "." + strings.Repeat("9", 37), false},
+		{"1e999999", false}, {"-1e999999", false}, {"1e-999999", false},
+	} {
+		for _, property := range []string{"number", "numbers", "json", "json.a", "jsons"} {
+			t.Run(property+"/"+test.text, func(t *testing.T) {
+
+				op := OpIs
+				if property == "numbers" || property == "jsons" {
+					op = OpContains
+				}
+				filter := &Filter{Operator: OpAnd, Rules: []FilterRule{
+					&FilterCondition{Property: property, Operator: op, Values: []string{test.text}},
+				}}
+				isJSON := strings.HasPrefix(property, "json")
+				_, err := validateFilter(filter, schema)
+				if err != nil {
+					if isJSON || test.valid {
+						t.Fatalf("expected valid filter, got %v", err)
+					}
+					return
+				}
+				if !isJSON && !test.valid {
+					t.Fatal("expected decimal validation error, got nil")
+				}
+
+				where := convertFilterToWhere(filter, schema)
+				value := where.Rules[0].(*state.WhereCondition).Values[0]
+				if isJSON {
+					operand := value.(state.JSONConditionValue)
+					if operand.String != test.text || (operand.Number != nil) != test.valid {
+						t.Fatalf("expected text %q and numeric operand %t, got %q and %t", test.text, test.valid, operand.String, operand.Number != nil)
+					}
+					got := convertWhereToFilter(where, schema).Rules[0].(*FilterCondition).Values[0]
+					if got != test.text {
+						t.Fatalf("expected original text %q, got %q", test.text, got)
+					}
+				} else if !value.(decimal.Decimal).Equal(decimal.MustParse(test.text)) {
+					t.Fatalf("expected decimal %s, got %s", test.text, value)
+				}
+
+			})
+		}
+	}
+
+}
+
 // Test_validateFilter verifies validation of filter structure, operators, and
 // values.
 func Test_validateFilter(t *testing.T) {
@@ -1193,14 +1261,9 @@ func Test_validateFilter(t *testing.T) {
 		{Name: "t", Type: types.Array(types.JSON())},
 		{Name: "u", Type: types.String().WithValues(longAllowedValue)},
 	})
-	destinationRole := state.Destination
-	eventTarget := state.TargetEvent
-
 	type testCase struct {
 		name     string
 		filter   Filter
-		role     *state.Role
-		target   *state.Target
 		expected []string
 		err      error
 	}
@@ -1632,8 +1695,7 @@ func Test_validateFilter(t *testing.T) {
 					&FilterCondition{Property: "m", Operator: OpIsEmpty},
 				},
 			},
-			role: &destinationRole,
-			err:  errors.New(`operator "is empty" can only be used with json, string, array, and map properties`),
+			err: errors.New(`operator "is empty" can only be used with json, string, array, and map properties`),
 		},
 		{
 			name: "is not empty on event object",
@@ -1643,8 +1705,7 @@ func Test_validateFilter(t *testing.T) {
 					&FilterCondition{Property: "m", Operator: OpIsNotEmpty},
 				},
 			},
-			target: &eventTarget,
-			err:    errors.New(`operator "is not empty" can only be used with json, string, array, and map properties`),
+			err: errors.New(`operator "is not empty" can only be used with json, string, array, and map properties`),
 		},
 		{
 			name: "JSON in destination user filter",
@@ -1654,8 +1715,7 @@ func Test_validateFilter(t *testing.T) {
 					&FilterCondition{Property: "d.p", Operator: OpIsNotEmpty},
 				},
 			},
-			role: &destinationRole,
-			err:  errors.New(`property "d" has type json, which is not supported in data warehouse exports`),
+			expected: []string{"d"},
 		},
 		{
 			name: "all valid operators",
@@ -1783,15 +1843,7 @@ func Test_validateFilter(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			role := state.Source
-			if test.role != nil {
-				role = *test.role
-			}
-			target := state.TargetUser
-			if test.target != nil {
-				target = *test.target
-			}
-			got, err := validateFilter(&test.filter, schema, role, target)
+			got, err := validateFilter(&test.filter, schema)
 			if err != nil {
 				if test.err == nil {
 					t.Fatalf("expected no error, got error %q (type %T)", err, err)
@@ -1808,6 +1860,84 @@ func Test_validateFilter(t *testing.T) {
 				t.Fatalf("expected %q, got %q", test.expected, got)
 			}
 		})
+	}
+
+}
+
+// Test_validateJSONFilters verifies JSON filter validation and checks that a
+// conversion round trip preserves the input and original value text.
+func Test_validateJSONFilters(t *testing.T) {
+
+	_, cases := warehouseexpr.JSONCases()
+	if len(cases) == 0 {
+		t.Fatal("expected at least one JSON test case, got 0")
+	}
+	schema := types.Object([]types.Property{
+		{Name: "value", Type: types.JSON(), ReadOptional: true},
+		{Name: "array", Type: types.Array(types.JSON()), ReadOptional: true},
+		{Name: "map", Type: types.Map(types.JSON()), ReadOptional: true},
+	})
+	for _, path := range []string{"value", "value.a.b", "array", "map"} {
+		for _, c := range cases {
+			if c.Operator < 0 || int(c.Operator) >= len(operators) {
+				t.Fatalf("expected known JSON operator for %s, got %d", c.Name, c.Operator)
+			}
+			op := operators[c.Operator]
+			if path == "array" || path == "map" {
+				allowed := op == OpExists || op == OpDoesNotExist || op == OpIsEmpty || op == OpIsNotEmpty
+				if path == "array" {
+					allowed = allowed || op == OpContains || op == OpDoesNotContain
+				}
+				if !allowed {
+					continue
+				}
+			}
+			t.Run(fmt.Sprintf("%s/%s", path, c.Name), func(t *testing.T) {
+
+				var values []string
+				for i, raw := range c.Values {
+					value, ok := raw.(warehouses.JSONConditionValue)
+					if !ok {
+						t.Fatalf("expected warehouses.JSONConditionValue at index %d, got %T", i, raw)
+					}
+					values = append(values, value.String)
+				}
+				filter := &Filter{Operator: OpAnd, Rules: []FilterRule{
+					&FilterCondition{Property: path, Operator: op, Values: values},
+				}}
+				expected := &Filter{Operator: OpAnd, Rules: []FilterRule{
+					&FilterCondition{Property: path, Operator: op, Values: slices.Clone(values)},
+				}}
+				hasEmptyValue := slices.Contains(values, "")
+
+				_, err := validateFilter(filter, schema)
+				if diff := cmp.Diff(expected, filter); diff != "" {
+					t.Fatalf("expected unchanged input after validation, got difference (-want +got):\n%s", diff)
+				}
+				if err != nil {
+					if !hasEmptyValue {
+						t.Fatalf("expected valid JSON filter, got %v", err)
+					}
+					if err.Error() != "condition value is empty" {
+						t.Fatalf("expected empty condition value error, got %v", err)
+					}
+					return
+				}
+				if hasEmptyValue {
+					t.Fatal("expected empty condition value rejection, got nil")
+				}
+				where := convertFilterToWhere(filter, schema)
+				// convertWhereToFilter must preserve the user's numeric spelling.
+				got := convertWhereToFilter(where, schema)
+				if diff := cmp.Diff(expected, filter); diff != "" {
+					t.Errorf("expected unchanged input, got difference (-want +got):\n%s", diff)
+				}
+				if diff := cmp.Diff(expected, got); diff != "" {
+					t.Fatalf("expected original filter, got difference (-want +got):\n%s", diff)
+				}
+
+			})
+		}
 	}
 
 }
@@ -1844,7 +1974,7 @@ func Test_validateFilterLimits(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			_, err := validateFilter(test.filter, schema, state.Source, state.TargetUser)
+			_, err := validateFilter(test.filter, schema)
 			if !reflect.DeepEqual(test.expected, err) {
 				t.Fatalf("expected error %q (type %T), got error %q (type %T)", test.expected, test.expected, err, err)
 			}
@@ -1870,11 +2000,52 @@ func Test_validateFilterRejectsNilRules(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			filter := &Filter{Operator: OpAnd, Rules: []FilterRule{test.rule}}
-			_, err := validateFilter(filter, schema, state.Source, state.TargetUser)
+			_, err := validateFilter(filter, schema)
 			if !reflect.DeepEqual(test.err, err) {
 				t.Fatalf("expected error %q (type %T), got error %q (type %T)", test.err, test.err, err, err)
 			}
 		})
 	}
 
+}
+
+// Test_validateFilterValueLimits checks operand lengths in runes.
+func Test_validateFilterValueLimits(t *testing.T) {
+	for _, test := range []struct {
+		typ       types.Type
+		maxLength int
+	}{
+		{types.Decimal(3, 2), 80}, {types.Array(types.Decimal(3, 2)), 80},
+		{types.JSON(), 80}, {types.Array(types.JSON()), 80},
+		{types.String(), 80}, {types.Array(types.String()), 80},
+	} {
+		for _, length := range []int{test.maxLength, test.maxLength + 1} {
+			t.Run(fmt.Sprintf("%s/%d", test.typ, length), func(t *testing.T) {
+				schema := types.Object([]types.Property{{Name: "value", Type: test.typ}})
+				op := OpIs
+				typ := test.typ
+				if typ.IsArray() {
+					op = OpContains
+					typ = typ.Elem()
+				}
+				text := strings.Repeat("é", length)
+				if typ.IsDecimal() {
+					text = "1." + strings.Repeat("0", length-2)
+				}
+				filter := &Filter{Operator: OpAnd, Rules: []FilterRule{
+					&FilterCondition{Property: "value", Operator: op, Values: []string{text}},
+				}}
+				_, err := validateFilter(filter, schema)
+				if err != nil {
+					if length <= test.maxLength || err.Error() != fmt.Sprintf("condition value is longer than %d runes", test.maxLength) {
+						t.Fatalf("expected length error only above %d runes, got %v", test.maxLength, err)
+					}
+					return
+				}
+				if length > test.maxLength {
+					t.Fatal("expected operand length error, got nil")
+				}
+			})
+		}
+	}
 }

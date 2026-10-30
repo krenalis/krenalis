@@ -789,7 +789,7 @@ func (this *Workspace) CreateEventListener(connection string, size int, filter *
 	}
 	var where *state.Where
 	if filter != nil {
-		_, err := validateFilter(filter, schemas.Event, state.Destination, state.TargetEvent)
+		_, err := validateFilter(filter, schemas.Event)
 		if err != nil {
 			return "", errors.BadRequest("filter is not valid: %w", err)
 		}
@@ -940,7 +940,7 @@ func (this *Workspace) Events(ctx context.Context, properties []string, filter *
 	// Validate the filter.
 	var where *state.Where
 	if filter != nil {
-		_, err := validateFilter(filter, schemas.Event, state.Destination, state.TargetEvent)
+		_, err := validateFilter(filter, schemas.Event)
 		if err != nil {
 			if err, ok := err.(types.PathNotExistError); ok {
 				return nil, errors.BadRequest("filter's property %q does not exist", err.Path)
@@ -1279,7 +1279,7 @@ func (this *Workspace) Profiles(ctx context.Context, properties []string, filter
 	// Validate the filter.
 	var where *state.Where
 	if filter != nil {
-		_, err := validateFilter(filter, ws.ProfileSchema, state.Destination, state.TargetUser)
+		_, err := validateFilter(filter, ws.ProfileSchema)
 		if err != nil {
 			if err, ok := err.(types.PathNotExistError); ok {
 				return nil, types.Type{}, 0, errors.Unprocessable(PropertyNotExist, "filter's property %s does not exist", err.Path)

@@ -368,6 +368,51 @@ func Test_unmarshalWhere(t *testing.T) {
 
 }
 
+// Test_unmarshalWhereJSONDecimals checks numeric classification and JSON text.
+func Test_unmarshalWhereJSONDecimals(t *testing.T) {
+	for _, test := range []struct {
+		text  string
+		valid bool
+	}{
+		{"0", true}, {"-0.00e999999", true}, {"1.2300", true},
+		{"1e75", true}, {"1e-37", true},
+		{strings.Repeat("9", 76), true},
+		{"-" + strings.Repeat("9", 39) + "." + strings.Repeat("9", 37), true},
+		{"1e76", false}, {"1e-38", false}, {strings.Repeat("9", 77), false},
+		{"1e999999", false}, {"1e-999999", false},
+	} {
+		for _, typ := range []types.Type{types.JSON(), types.Array(types.JSON())} {
+			t.Run(typ.String()+"/"+test.text, func(t *testing.T) {
+
+				schema := types.Object([]types.Property{{Name: "value", Type: typ}})
+				op := "Is"
+				if typ.IsArray() {
+					op = "Contains"
+				}
+				raw := `"` + test.text + `"`
+				encoded := `{"operator":"And","rules":[{"property":["value"],"operator":"` + op + `","values":[` + raw + `]}]}`
+				where, err := unmarshalWhere([]byte(encoded), schema)
+				if err != nil {
+					t.Fatalf("expected persisted JSON operand, got %v", err)
+				}
+
+				operand := where.Rules[0].(*WhereCondition).Values[0].(JSONConditionValue)
+				if operand.String != test.text || (operand.Number != nil) != test.valid {
+					t.Fatalf("expected text %q and numeric operand %t, got %q and %t", test.text, test.valid, operand.String, operand.Number != nil)
+				}
+				got, err := unmarshalWhere(MarshalWhere(where, schema), schema)
+				if err != nil {
+					t.Fatalf("expected persisted filter round trip, got %v", err)
+				}
+				if !where.Equal(got) {
+					t.Fatalf("expected unchanged persisted filter, got %v", got)
+				}
+
+			})
+		}
+	}
+}
+
 // Test_Where_Equal verifies equality of Where values, including nested
 // groups.
 func Test_Where_Equal(t *testing.T) {
