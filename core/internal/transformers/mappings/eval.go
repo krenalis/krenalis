@@ -324,7 +324,7 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 			}
 			if wordStart {
 				wordStart = false
-				return unicode.ToUpper(r)
+				return unicode.ToTitle(r)
 			}
 			return unicode.ToLower(r)
 		}, v.(string))
