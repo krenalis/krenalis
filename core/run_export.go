@@ -20,6 +20,7 @@ import (
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/core/internal/transformers"
 	"github.com/krenalis/krenalis/tools/types"
+	"github.com/krenalis/krenalis/tools/validation"
 )
 
 // exportProfiles exports the profiles for the pipeline.
@@ -423,16 +424,18 @@ func errMatchingPropertyConversion(in, ex string) error {
 //   - string to int, uuid, and string
 //   - uuid to uuid and string
 //
-// It panics if v is nil, the types in and ex do not have the same semantics
-// and options, or they are not conforming to these supported conversions.
+// It panics if v is nil, the types in and ex both have semantics but not the
+// same semantics and options, or they are not conforming to these supported
+// conversions.
 //
 // It returns an error if the converted value does not satisfy the constraints
-// of the ex type.
+// of the ex type or, when only ex has country or phone semantics, is not valid
+// for them.
 func convertToExternal(v any, in, ex types.Type, inPath, outPath string) (any, error) {
 	if v == nil {
 		panic(fmt.Sprintf("core: unexpected value nil for internal kind %s", in.Kind()))
 	}
-	if !types.EqualSemantics(in, ex) {
+	if in.Semantics() != types.NoSemantics && ex.Semantics() != types.NoSemantics && !types.EqualSemantics(in, ex) {
 		panic(fmt.Sprintf("core: internal and external semantics differ: "+
 			"internal %s semantics (options %s), external %s semantics (options %s)",
 			in.Semantics(), types.SemanticsOptionString(in), ex.Semantics(), types.SemanticsOptionString(ex)))
@@ -450,8 +453,29 @@ func convertToExternal(v any, in, ex types.Type, inPath, outPath string) (any, e
 		default:
 			panic(fmt.Sprintf("core: unexpected value of type %T for internal kind %s ", v, in.Kind()))
 		}
-		if in.Semantics() == types.CountrySemantics || in.Semantics() == types.PhoneSemantics {
-			return s, nil
+		// Validate that v matches the external property's semantics, if only it has them.
+		if in.Semantics() == types.NoSemantics {
+			switch ex.Semantics() {
+			case types.CountrySemantics:
+				switch format := ex.CountryFormat(); format {
+				case types.ISO3166Alpha2:
+					if !validation.IsValidCountryCodeAlpha2(s) {
+						return nil, errMatchingPropertyConversion(inPath, outPath)
+					}
+				case types.ISO3166Alpha3:
+					if !validation.IsValidCountryCodeAlpha3(s) {
+						return nil, errMatchingPropertyConversion(inPath, outPath)
+					}
+				default:
+					panic(fmt.Sprintf("core: unexpected country format %s", format))
+				}
+			case types.PhoneSemantics:
+				if !types.IsPhone(s) {
+					return nil, errMatchingPropertyConversion(inPath, outPath)
+				}
+			default:
+				// No semantics, or semantics that do not restrict the value.
+			}
 		}
 		// Validate that v matches the external property's constraints.
 		if n, ok := ex.MaxBytes(); ok && len(s) > n {

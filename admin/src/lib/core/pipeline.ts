@@ -2244,7 +2244,10 @@ const validateMatching = (inMatching: Property, outMatching: Property) => {
 		}
 	}
 
-	if (!typeSemanticsAreEqual(inMatching.type, outMatching.type)) {
+	// The semantics are checked only if both properties have them.
+	const hasInSemantics = 'semantics' in inMatching.type && inMatching.type.semantics != null;
+	const hasOutSemantics = 'semantics' in outMatching.type && outMatching.type.semantics != null;
+	if (hasInSemantics && hasOutSemantics && !typeSemanticsAreEqual(inMatching.type, outMatching.type)) {
 		throw new Error('Input and output matching properties do not have the same semantics and options');
 	}
 };

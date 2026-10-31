@@ -156,6 +156,68 @@ func TestConvertToExternalStringConstraintsWithSemantics(t *testing.T) {
 
 }
 
+// TestConvertToExternalOneSidedSemantics checks the conversion of matching
+// values when only one of the internal and external types has semantics.
+func TestConvertToExternalOneSidedSemantics(t *testing.T) {
+
+	countryAlpha2 := types.String().AsCountry(types.ISO3166Alpha2)
+	countryAlpha3 := types.String().AsCountry(types.ISO3166Alpha3)
+	email := types.String().AsEmail()
+	phone := types.String().AsPhone()
+
+	tests := []struct {
+		name    string
+		in, ex  types.Type
+		value   string
+		wantErr bool
+	}{
+		// Only the external type has semantics.
+		{"string to alpha-2 country", types.String(), countryAlpha2, "IT", false},
+		{"string to alpha-2 country with alpha-3 code", types.String(), countryAlpha2, "ITA", true},
+		{"string to alpha-2 country with unassigned code", types.String(), countryAlpha2, "ZZ", true},
+		{"string to alpha-3 country", types.String(), countryAlpha3, "ITA", false},
+		{"string to alpha-3 country with alpha-2 code", types.String(), countryAlpha3, "IT", true},
+		{"string to phone in canonical form", types.String(), phone, "+390236618300", false},
+		{"string to phone not in canonical form", types.String(), phone, "+39 02 3661 8300", true},
+		{"string to phone with invalid number", types.String(), phone, "not a phone", true},
+		{"string to email does not validate the value", types.String(), email, "not an email", false},
+
+		// Only the internal type has semantics.
+		{"country to string keeps the value", countryAlpha2, types.String(), "IT", false},
+		{"country to string exceeding max length", countryAlpha2, types.String().WithMaxLength(1), "IT", true},
+		{"phone to string keeps the value", phone, types.String(), "+390236618300", false},
+		{"phone to string within max length", phone, types.String().WithMaxLength(13), "+390236618300", false},
+		{"phone to string exceeding max length", phone, types.String().WithMaxLength(12), "+390236618300", true},
+		{"phone to string matching pattern", phone, types.String().WithPattern(regexp.MustCompile(`^\+39`)), "+390236618300", false},
+		{"phone to string not matching pattern", phone, types.String().WithPattern(regexp.MustCompile(`^\+1`)), "+390236618300", true},
+		{"email to string not in values", email, types.String().WithValues("alice@example.com"), "bob@example.com", true},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, err := convertToExternal(test.value, test.in, test.ex, "in", "ex")
+			if err != nil {
+				if !test.wantErr {
+					t.Fatalf("expected no error, got %v", err)
+				}
+				wantErr := errMatchingPropertyConversion("in", "ex")
+				if !reflect.DeepEqual(wantErr, err) {
+					t.Fatalf("expected error %#v, got %#v", wantErr, err)
+				}
+				return
+			}
+			if test.wantErr {
+				wantErr := errMatchingPropertyConversion("in", "ex")
+				t.Fatalf("expected error %#v, got nil", wantErr)
+			}
+			if got != test.value {
+				t.Fatalf("expected %#v, got %#v", test.value, got)
+			}
+		})
+	}
+
+}
+
 func TestGetAttribute(t *testing.T) {
 	cases := []struct {
 		name       string

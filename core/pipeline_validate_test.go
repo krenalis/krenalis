@@ -3793,34 +3793,20 @@ func TestMatchingPropertySemantics(t *testing.T) {
 			"country with different formats", types.String().AsCountry(types.ISO3166Alpha2),
 			types.String().AsCountry(types.ISO3166Alpha3), CreateOrUpdate, "input matching property has country format alpha-2, but output matching property requires alpha-3",
 		},
-		{
-			"country semantics on input only", types.String().AsCountry(types.ISO3166Alpha2), types.String(),
-			CreateOrUpdate, "input matching property has country semantics, but output matching property requires no semantics",
-		},
-		{
-			"country semantics on output only", types.String(), types.String().AsCountry(types.ISO3166Alpha2),
-			CreateOrUpdate, "input matching property has no semantics, but output matching property requires country semantics",
-		},
+		{"input country only", types.String().AsCountry(types.ISO3166Alpha2), types.String(), CreateOrUpdate, ""},
+		{"output country only", types.String(), types.String().AsCountry(types.ISO3166Alpha2), CreateOrUpdate, ""},
 		{
 			"duration with different constraints", types.Int(64).AsDuration(types.Second),
 			types.Int(32).AsDuration(types.Second), CreateOrUpdate, "",
 		},
-		{
-			"input phone only", types.String().AsPhone(), types.String(), CreateOnly,
-			"input matching property has phone semantics, but output matching property requires no semantics",
-		},
-		{
-			"output phone only", types.String(), types.String().AsPhone(), UpdateOnly,
-			"input matching property has no semantics, but output matching property requires phone semantics",
-		},
-		{
-			"input email only", types.String().AsEmail(), types.String(), CreateOnly,
-			"input matching property has email semantics, but output matching property requires no semantics",
-		},
-		{
-			"output email only", types.String(), types.String().AsEmail(), UpdateOnly,
-			"input matching property has no semantics, but output matching property requires email semantics",
-		},
+		{"input phone only", types.String().AsPhone(), types.String(), CreateOnly, ""},
+		{"output phone only", types.String(), types.String().AsPhone(), UpdateOnly, ""},
+		{"input email only", types.String().AsEmail(), types.String(), CreateOnly, ""},
+		{"output email only", types.String(), types.String().AsEmail(), UpdateOnly, ""},
+		{"input duration only", types.Int(64).AsDuration(types.Second), types.Int(64), CreateOrUpdate, ""},
+		{"output duration only", types.Int(64), types.Int(64).AsDuration(types.Second), CreateOrUpdate, ""},
+		{"input measurement only", types.Int(64).AsMeasurement(types.Meter), types.String(), CreateOrUpdate, ""},
+		{"output measurement only", types.String(), types.Int(64).AsMeasurement(types.Meter), CreateOrUpdate, ""},
 		{
 			"different semantics", types.String().AsEmail(), types.String().AsPhone(), CreateOrUpdate,
 			"input matching property has email semantics, but output matching property requires phone semantics",

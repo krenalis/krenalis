@@ -70,9 +70,14 @@ test('Validate matching semantics compatibility', () => {
 	expect(() => validateMatching(phone, otherPhone)).not.toThrow();
 	expect(() => validateMatching(durationSeconds, durationSeconds32)).not.toThrow();
 	expect(() => validateMatching(plain, matchingProperty({ kind: 'uuid' }))).not.toThrow();
-	expect(() => validateMatching(plain, phone)).toThrow(
-		'Input and output matching properties do not have the same semantics and options',
-	);
+	expect(() => validateMatching(plain, phone)).not.toThrow();
+	expect(() => validateMatching(phone, plain)).not.toThrow();
+	expect(() => validateMatching(plain, email)).not.toThrow();
+	expect(() => validateMatching(email, plain)).not.toThrow();
+	expect(() => validateMatching(durationSeconds, plain)).not.toThrow();
+	expect(() =>
+		validateMatching(matchingProperty({ kind: 'int', bitSize: 64, unsigned: false }), durationSeconds),
+	).not.toThrow();
 	expect(() => validateMatching(email, phone)).toThrow(
 		'Input and output matching properties do not have the same semantics and options',
 	);
