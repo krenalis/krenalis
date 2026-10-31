@@ -26,6 +26,14 @@ func Test_renderExpr(t *testing.T) {
 			query: `"ID" = 'qwerty'`,
 		},
 		{
+			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "ip_addr", Type: types.IP()}, warehouses.OpIs, "127.0.0.1"),
+			query: `"IP_ADDR" = '127.0.0.1'`,
+		},
+		{
+			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "age", Type: types.Int(32)}, warehouses.OpIsNot, 18),
+			query: `"AGE" <> 18`,
+		},
+		{
 			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "age", Type: types.Float(32)}, warehouses.OpIsNot, 18.0),
 			query: `"AGE" <> 18`,
 		},
@@ -70,6 +78,10 @@ func Test_renderExpr(t *testing.T) {
 			query: `"TIMESTAMP" >= '1900-01-02'`,
 		},
 		{
+			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "id", Type: types.Int(32)}, warehouses.OpIsBetween, 5, 10),
+			query: `"ID" BETWEEN 5 AND 10`,
+		},
+		{
 			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "id", Type: types.Float(64)}, warehouses.OpIsBetween, 5.0, 10.0),
 			query: `"ID" BETWEEN 5 AND 10`,
 		},
@@ -80,6 +92,10 @@ func Test_renderExpr(t *testing.T) {
 		{
 			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "name", Type: types.String()}, warehouses.OpDoesNotContain, "boo"),
 			query: `NOT CONTAINS("NAME", 'boo')`,
+		},
+		{
+			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "id", Type: types.Int(32)}, warehouses.OpIsOneOf, 3, 9, 5),
+			query: `"ID" IN (3,9,5)`,
 		},
 		{
 			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "id", Type: types.Float(32)}, warehouses.OpIsOneOf, 3.5, 9.2, 5.0),
@@ -243,4 +259,24 @@ func Test_renderExpr(t *testing.T) {
 			}
 		})
 	}
+}
+
+// Test_renderExpr_errors ensures that invalid expressions trigger an error
+// during SQL rendering.
+func Test_renderExpr_errors(t *testing.T) {
+
+	invalidColumn := warehouses.NewBaseExpr(warehouses.Column{Name: "bad name", Type: types.String()}, warehouses.OpIs, "v")
+	var b strings.Builder
+	err := renderExpr(&b, invalidColumn)
+	if err == nil {
+		t.Fatal("expected error for invalid column name, got nil")
+	}
+
+	badOp := warehouses.NewMultiExpr(warehouses.LogicalOperator(99), []warehouses.Expr{invalidColumn})
+	b.Reset()
+	err = renderExpr(&b, badOp)
+	if err == nil {
+		t.Fatal("expected error for invalid operator, got nil")
+	}
+
 }
