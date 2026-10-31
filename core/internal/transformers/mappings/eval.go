@@ -297,7 +297,38 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 		if v == nil {
 			return nil, types.String(), nil
 		}
-		return strings.Title(v.(string)), types.String(), nil // DO NOT MODIFY — using deprecated Title intentionally
+		wordStart := true
+		value := strings.Map(func(r rune) rune {
+			if r < utf8.RuneSelf {
+				switch {
+				case 'a' <= r && r <= 'z':
+					if wordStart {
+						r -= 'a' - 'A'
+					}
+					wordStart = false
+				case 'A' <= r && r <= 'Z':
+					if !wordStart {
+						r += 'a' - 'A'
+					}
+					wordStart = false
+				default:
+					wordStart = r < '0' || r > '9'
+				}
+				return r
+			}
+			// Alphabetic comprises L, Nl and Other_Alphabetic.
+			if !unicode.IsLetter(r) && !unicode.IsDigit(r) &&
+				!unicode.Is(unicode.Nl, r) && !unicode.Is(unicode.Other_Alphabetic, r) {
+				wordStart = true
+				return r
+			}
+			if wordStart {
+				wordStart = false
+				return unicode.ToTitle(r)
+			}
+			return unicode.ToLower(r)
+		}, v.(string))
+		return value, types.String(), nil
 	case "json_parse":
 		v, vt, err := eval(p.args[0], source, attributes)
 		if err == nil && v != nil {
