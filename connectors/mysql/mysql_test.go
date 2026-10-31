@@ -88,6 +88,8 @@ func TestStringValuesWithSQLModes(t *testing.T) {
 	settings.Password = password
 
 	for _, mode := range []string{
+		"",
+		"NO_BACKSLASH_ESCAPES",
 		"STRICT_TRANS_TABLES,NO_ENGINE_SUBSTITUTION",
 		"STRICT_TRANS_TABLES,NO_BACKSLASH_ESCAPES,NO_ENGINE_SUBSTITUTION",
 		"STRICT_TRANS_TABLES,ANSI_QUOTES,NO_ENGINE_SUBSTITUTION",
@@ -104,9 +106,9 @@ func TestStringValuesWithSQLModes(t *testing.T) {
 			if err != nil {
 				t.Fatalf("expected server SQL mode, got %v", err)
 			}
-			globalModes := strings.Split(globalMode, ",")
+			globalModes := strings.FieldsFunc(globalMode, func(r rune) bool { return r == ',' })
 			for requested := range strings.SplitSeq(mode, ",") {
-				if !slices.Contains(globalModes, requested) {
+				if requested != "" && !slices.Contains(globalModes, requested) {
 					t.Fatalf("expected server SQL mode %q, got %q", requested, globalMode)
 				}
 			}
@@ -129,9 +131,11 @@ func TestStringValuesWithSQLModes(t *testing.T) {
 			})
 
 			t.Run("NewConnections", func(t *testing.T) {
+				ctx, cancel := context.WithTimeout(t.Context(), 30*time.Second)
+				defer cancel()
 				var firstID uint64
 				for range 2 {
-					rows, _, err := connector.Query(t.Context(),
+					rows, _, err := connector.Query(ctx,
 						"SELECT CONNECTION_ID() AS connection_id, @@SESSION.sql_mode AS session_mode")
 					if err != nil {
 						t.Fatalf("expected session query, got %v", err)
@@ -150,7 +154,7 @@ func TestStringValuesWithSQLModes(t *testing.T) {
 						t.Fatalf("expected distinct connections, got repeated ID %d", id)
 					}
 					firstID = id
-					actualModes := strings.Split(sessionMode, ",")
+					actualModes := strings.FieldsFunc(sessionMode, func(r rune) bool { return r == ',' })
 					slices.Sort(actualModes)
 					if !slices.Equal(actualModes, expectedModes) {
 						t.Fatalf("expected session SQL modes %v, got %v", expectedModes, actualModes)
@@ -206,7 +210,7 @@ func TestStringValuesWithSQLModes(t *testing.T) {
 					if count != 1 || id != 2 {
 						t.Fatalf("expected one matching row with ID 2, got %d rows with minimum ID %d", count, id)
 					}
-					actualModes := strings.Split(sessionMode, ",")
+					actualModes := strings.FieldsFunc(sessionMode, func(r rune) bool { return r == ',' })
 					slices.Sort(actualModes)
 					if !slices.Equal(actualModes, expectedModes) {
 						t.Fatalf("expected session SQL modes %v, got %v", expectedModes, actualModes)
