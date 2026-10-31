@@ -25,9 +25,9 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
-// TestStringValuesWithSQLModes verifies that string values are preserved
-// across different SQL modes when querying and merging data.
-func TestStringValuesWithSQLModes(t *testing.T) {
+// TestStringValuesAcrossSQLModes verifies that string values are preserved
+// in queries and merge operations across different SQL modes.
+func TestStringValuesAcrossSQLModes(t *testing.T) {
 
 	const database, username, password = "krenalis", "krenalis", "krenalis"
 	container, err := testcontainers.GenericContainer(t.Context(), testcontainers.GenericContainerRequest{
