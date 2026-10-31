@@ -315,6 +315,11 @@ func (t Type) DurationUnit() DurationUnit {
 	return t.semanticsOption.(DurationUnit)
 }
 
+// HasSemantics reports whether t has semantics.
+func (t Type) HasSemantics() bool {
+	return t.semantics != NoSemantics
+}
+
 // Semantics returns the semantics of t, or NoSemantics if t has no semantics.
 func (t Type) Semantics() Semantics {
 	return t.semantics
@@ -349,7 +354,7 @@ func (t Type) withSemantics(semantics Semantics, option any) (Type, error) {
 	if semantics == NoSemantics {
 		return Type{}, errors.New("cannot apply NoSemantics to a type")
 	}
-	if t.semantics != NoSemantics {
+	if t.HasSemantics() {
 		return Type{}, errors.New("type already has semantics")
 	}
 
