@@ -188,8 +188,8 @@ func TestStringValuesWithSQLModes(t *testing.T) {
 						t.Fatalf("expected inserted fixtures, got %v", err)
 					}
 					query := "SELECT @@SESSION.sql_mode AS session_mode, COUNT(*) AS matches_count, " +
-						"COALESCE(MIN(id), 0) AS matched_id FROM string_values WHERE CAST(value AS BINARY) <=> " +
-						connector.SQLLiteral(test.value, test.typ)
+						"COALESCE(MIN(id), 0) AS matched_id FROM string_values WHERE CAST(value AS BINARY) <=> CAST(" +
+						connector.SQLLiteral(test.value, test.typ) + " AS BINARY)"
 					rows, _, err := connector.Query(t.Context(), query)
 					if err != nil {
 						t.Fatalf("expected literal query, got %v", err)
