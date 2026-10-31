@@ -82,7 +82,7 @@ func marshalType(b *bytes.Buffer, t Type) {
 	b.WriteString(`{"kind":"`)
 	b.WriteString(t.KindName())
 	b.WriteString(`"`)
-	if t.semantics != NoSemantics {
+	if t.HasSemantics() {
 		b.WriteString(`,"semantics":"`)
 		b.WriteString(t.semantics.String())
 		b.WriteByte('"')

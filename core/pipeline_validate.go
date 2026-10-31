@@ -342,12 +342,11 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 			}
 		}
 		// Check the semantics, if both properties have them.
-		inSem, outSem := in.Type.Semantics(), out.Type.Semantics()
-		if inSem != types.NoSemantics && outSem != types.NoSemantics && !types.EqualSemantics(in.Type, out.Type) {
-			if inSem != outSem {
+		if in.Type.HasSemantics() && out.Type.HasSemantics() && !types.EqualSemantics(in.Type, out.Type) {
+			if in.Type.Semantics() != out.Type.Semantics() {
 				return errors.BadRequest(
 					"input matching property has %s semantics, but output matching property requires %s semantics",
-					inSem, outSem)
+					in.Type.Semantics(), out.Type.Semantics())
 			}
 			option := "semantics option"
 			switch in.Type.Semantics() {

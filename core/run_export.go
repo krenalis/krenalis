@@ -435,7 +435,7 @@ func convertToExternal(v any, in, ex types.Type, inPath, outPath string) (any, e
 	if v == nil {
 		panic(fmt.Sprintf("core: unexpected value nil for internal kind %s", in.Kind()))
 	}
-	if in.Semantics() != types.NoSemantics && ex.Semantics() != types.NoSemantics && !types.EqualSemantics(in, ex) {
+	if in.HasSemantics() && ex.HasSemantics() && !types.EqualSemantics(in, ex) {
 		panic(fmt.Sprintf("core: internal and external semantics differ: "+
 			"internal %s semantics (options %s), external %s semantics (options %s)",
 			in.Semantics(), types.SemanticsOptionString(in), ex.Semantics(), types.SemanticsOptionString(ex)))
@@ -454,7 +454,7 @@ func convertToExternal(v any, in, ex types.Type, inPath, outPath string) (any, e
 			panic(fmt.Sprintf("core: unexpected value of type %T for internal kind %s ", v, in.Kind()))
 		}
 		// Validate that v matches the external property's semantics, if only it has them.
-		if in.Semantics() == types.NoSemantics {
+		if !in.HasSemantics() {
 			switch ex.Semantics() {
 			case types.CountrySemantics:
 				switch format := ex.CountryFormat(); format {
