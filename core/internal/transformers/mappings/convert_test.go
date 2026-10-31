@@ -141,6 +141,14 @@ func TestConvert(t *testing.T) {
 		{types.Decimal(20, 10), types.Float(64), decimal.MustParse("767.5018382257"), 767.5018382257, true, nil},
 		{types.String(), types.Float(64), "767.5018382257", 767.5018382257, true, nil},
 		{types.JSON(), types.Float(64), json.Value("767.5018382257"), 767.5018382257, true, nil},
+		{types.String(), types.Float(32).Real(), "1.5", 1.5, true, nil},
+		{types.String(), types.Float(32).Real(), "NaN", "NaN", true, errRangeConversion},
+		{types.String(), types.Float(32), "NaN", math.NaN(), true, nil},
+		{types.String(), types.Float(64).Real(), "1.5", 1.5, true, nil},
+		{types.String(), types.Float(64).Real(), "NaN", "NaN", true, errRangeConversion},
+		{types.String(), types.Float(64), "NaN", math.NaN(), true, nil},
+		{types.Float(64), types.Float(64).Real(), math.Inf(1), nil, true, errMaxConversion},
+		{types.Float(64), types.Float(64).Real(), math.Inf(-1), nil, true, errMinConversion},
 
 		// decimal.
 		{types.Int(32), types.Decimal(13, 3), math.MaxInt32, decimal.MustInt(math.MaxInt32), true, nil},

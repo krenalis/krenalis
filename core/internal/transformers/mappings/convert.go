@@ -361,9 +361,6 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, purpose Purpose) 
 			}
 		case types.FloatKind:
 			n = v.(float64)
-			if dt.IsReal() && !st.IsReal() && (math.IsNaN(n) || math.IsInf(n, 0)) {
-				return v, errRangeConversion
-			}
 			if dt.BitSize() == 32 && st.BitSize() != 32 {
 				n = float64(float32(n))
 			}
@@ -389,6 +386,9 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, purpose Purpose) 
 		}
 		if err != nil {
 			return v, errInvalidConversion
+		}
+		if dt.IsReal() && math.IsNaN(n) {
+			return v, errRangeConversion
 		}
 		min, max := dt.FloatRange()
 		if n < min {
