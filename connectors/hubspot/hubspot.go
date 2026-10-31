@@ -187,7 +187,7 @@ func (hs *HubSpot) RecordSchema(ctx context.Context, target connectors.Targets, 
 			} `json:"modificationMetadata"`
 		} `json:"results"`
 	}
-	err := hs.call(ctx, "GET", "/crm/v3/properties/contact", nil, &response)
+	err := hs.call(ctx, "GET", "/crm/v3/properties/contact", true, nil, &response)
 	if err != nil {
 		return types.Type{}, err
 	}
@@ -353,7 +353,7 @@ func (hs *HubSpot) Records(ctx context.Context, target connectors.Targets, updat
 	}
 	bb.WriteString(`]}`)
 
-	err := hs.call(ctx, "POST", path, bb, &response)
+	err := hs.call(ctx, "POST", path, true, bb, &response)
 	if err != nil {
 		return nil, "", err
 	}
@@ -441,10 +441,10 @@ func (hs *HubSpot) Upsert(ctx context.Context, target connectors.Targets, record
 
 	bb.WriteString(`]}`)
 
-	return hs.call(ctx, "POST", "/crm/v3/objects/contacts/batch/"+method, bb, nil)
+	return hs.call(ctx, "POST", "/crm/v3/objects/contacts/batch/"+method, false, bb, nil)
 }
 
-func (hs *HubSpot) call(ctx context.Context, method, path string, bb *connectors.BodyBuffer, response any) error {
+func (hs *HubSpot) call(ctx context.Context, method, path string, isIdempotent bool, bb *connectors.BodyBuffer, response any) error {
 	var s innerSettings
 	err := hs.env.Settings.Load(ctx, &s)
 	if err != nil {
@@ -455,6 +455,9 @@ func (hs *HubSpot) call(ctx context.Context, method, path string, bb *connectors
 		return err
 	}
 	req.Header.Set("Authorization", "Bearer "+s.AccessToken)
+	if isIdempotent {
+		req.Header["Idempotency-Key"] = nil
+	}
 	res, err := hs.env.HTTPClient.Do(req)
 	if err != nil {
 		return err

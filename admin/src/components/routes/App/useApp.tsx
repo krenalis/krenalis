@@ -565,6 +565,7 @@ const useApp = (
 		setIsLoadingConnections,
 		warehouse,
 		workspaces,
+		setWorkspaces,
 		setIsLoadingWorkspaces,
 		selectedWorkspace,
 		setSelectedWorkspace,

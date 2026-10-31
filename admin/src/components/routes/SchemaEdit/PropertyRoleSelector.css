@@ -1,0 +1,96 @@
+.property-role-selector,
+.property-role-selector__trigger {
+	width: 100%;
+}
+
+.property-role-selector {
+	container-type: inline-size;
+}
+
+.property-role-selector .property-role-selector__trigger::part(base) {
+	background-color: var(--sl-input-background-color);
+	color: var(--sl-input-color);
+	justify-content: flex-start;
+}
+
+.property-role-selector__trigger::part(label) {
+	font-weight: var(--sl-font-weight-normal);
+	text-align: left;
+	width: 100%;
+}
+
+.property-role-selector__trigger::part(caret) {
+	margin-left: auto;
+}
+
+.property-role-selector__menu {
+	background-color: var(--sl-panel-background-color);
+	border: solid var(--sl-panel-border-width) var(--sl-panel-border-color);
+	border-radius: var(--sl-border-radius-medium);
+	box-sizing: border-box;
+	padding: 0;
+	width: min(100cqi, calc(100vw - 40px));
+}
+
+.property-role-selector__menu sl-divider {
+	--spacing: 0;
+}
+
+.property-role-selector__option::part(base) {
+	min-height: 32px;
+	padding: 3px 12px;
+}
+
+.property-role-selector__none-option::part(base) {
+	align-items: center;
+	min-height: var(--sl-input-height-medium);
+}
+
+.property-role-selector__option::part(checked-icon),
+.property-role-selector__option::part(submenu-icon) {
+	display: none;
+}
+
+.property-role-selector__option::part(label) {
+	overflow: visible;
+	white-space: normal;
+}
+
+.property-role-selector__option:not(.property-role-selector__option--selected):hover::part(base),
+.property-role-selector__option:not(.property-role-selector__option--selected):focus-visible::part(base) {
+	background-color: var(--property-form-option-hover-background-color);
+	color: var(--text-primary) !important;
+}
+
+.property-role-selector__option--selected::part(base),
+.property-role-selector__option--selected:hover::part(base),
+.property-role-selector__option--selected:focus::part(base),
+.property-role-selector__option--selected:focus-visible::part(base) {
+	background-color: var(--property-form-option-selected-background-color);
+	color: var(--text-primary) !important;
+}
+
+.property-role-selector__option > [slot='suffix'] {
+	color: var(--sl-color-primary-600);
+}
+
+.property-role-selector__option-content {
+	display: flex;
+	flex-direction: column;
+	line-height: 1.25;
+	padding-block: 4px;
+}
+
+.property-role-selector__option-description {
+	color: var(--text-light);
+	font-size: 12px;
+}
+
+.property-role-selector__option-assignment {
+	color: var(--sl-color-primary-600);
+	font-size: 11px;
+}
+
+.property-role-selector__option-assignment-path {
+	font-family: var(--monospace-fonts);
+}
