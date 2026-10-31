@@ -48,15 +48,15 @@ func TestStringValuesWithSQLModes(t *testing.T) {
 		},
 		Started: true,
 	})
-	if err != nil {
-		t.Fatalf("expected MySQL container, got %v", err)
-	}
 	t.Cleanup(func() {
 		err := testcontainers.TerminateContainer(container)
 		if err != nil {
 			t.Errorf("expected container cleanup, got %v", err)
 		}
 	})
+	if err != nil {
+		t.Fatalf("expected MySQL container, got %v", err)
+	}
 	host, err := container.Host(t.Context())
 	if err != nil {
 		t.Fatalf("expected MySQL host, got %v", err)
