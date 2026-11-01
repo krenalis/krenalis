@@ -18,6 +18,24 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
+// TestCompileRejectsIncompatibleTimeLiterals verifies that boolean and numeric
+// literals cannot be converted to the time type.
+func TestCompileRejectsIncompatibleTimeLiterals(t *testing.T) {
+	for _, source := range []string{"true", "false", "42", "-42", "1.5"} {
+		t.Run(source, func(t *testing.T) {
+			_, _, err := Compile(source, types.Type{}, types.Time())
+			if err != nil {
+				expected := source + " is not convertible to the time type"
+				if err.Error() != expected {
+					t.Fatalf("expected error %q, got %q", expected, err)
+				}
+				return
+			}
+			t.Fatal("expected conversion error, got nil")
+		})
+	}
+}
+
 func Test_Compile(t *testing.T) {
 
 	d := time.Date(2023, 7, 8, 0, 0, 0, 0, time.UTC)

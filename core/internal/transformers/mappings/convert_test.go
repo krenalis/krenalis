@@ -175,6 +175,18 @@ func TestConvert(t *testing.T) {
 		{types.JSON(), types.Time(), json.Value(`"09:01:57"`), time.Date(1970, 1, 1, 9, 1, 57, 0, time.UTC), true, nil},
 		{types.JSON(), types.Time(), json.Value(`"09:01:57.49361409Z"`), time.Date(1970, 1, 1, 9, 1, 57, 493614090, time.UTC), true, nil},
 		{types.Time(), types.Time(), time.Date(1970, 1, 1, 9, 1, 57, 493614090, time.UTC), time.Date(1970, 1, 1, 9, 1, 57, 493614090, time.UTC), true, nil},
+		{types.Boolean(), types.Time(), true, nil, true, errInvalidConversion},
+		{types.Int(32), types.Time(), 42, nil, true, errInvalidConversion},
+		{types.Int(32).Unsigned(), types.Time(), uint(42), nil, true, errInvalidConversion},
+		{types.Float(64), types.Time(), 1.5, nil, true, errInvalidConversion},
+		{types.Decimal(6, 2), types.Time(), decimal.MustParse("1.5"), nil, true, errInvalidConversion},
+		{types.Date(), types.Time(), time.Date(2023, 5, 24, 0, 0, 0, 0, time.UTC), nil, true, errInvalidConversion},
+		{types.Year(), types.Time(), 2023, nil, true, errInvalidConversion},
+		{types.UUID(), types.Time(), "123e4567-e89b-12d3-a456-426614174000", nil, true, errInvalidConversion},
+		{types.IP(), types.Time(), "192.0.2.1", nil, true, errInvalidConversion},
+		{types.Array(types.String()), types.Time(), []any{"09:01:57"}, nil, true, errInvalidConversion},
+		{types.Object([]types.Property{{Name: "value", Type: types.String()}}), types.Time(), map[string]any{"value": "09:01:57"}, nil, true, errInvalidConversion},
+		{types.Map(types.String()), types.Time(), map[string]any{"value": "09:01:57"}, nil, true, errInvalidConversion},
 
 		// year.
 		{types.Year(), types.Year(), 2023, 2023, true, nil},
@@ -403,31 +415,82 @@ func TestConvertArrayUniqueness(t *testing.T) {
 
 }
 
-// TestConvertStringToDate checks parsing of various date formats.
+// TestConvertStringToDate checks calendar formats, Excel serial dates, and
+// error handling for invalid dates and out-of-range years.
 func TestConvertStringToDate(t *testing.T) {
 	tests := []struct {
-		in  string
-		t   time.Time
-		err error
+		in      string
+		want    time.Time
+		wantErr error
 	}{
 		{"2023-05-24", time.Date(2023, 5, 24, 0, 0, 0, 0, time.UTC), nil},
 		{"05/24/2023", time.Date(2023, 5, 24, 0, 0, 0, 0, time.UTC), nil},
 		{"05.24.2023", time.Date(2023, 5, 24, 0, 0, 0, 0, time.UTC), nil},
+		{"23-05-24", time.Date(23, 5, 24, 0, 0, 0, 0, time.UTC), nil},
+		{"05/24/23", time.Date(23, 5, 24, 0, 0, 0, 0, time.UTC), nil},
+		{"05.24.23", time.Date(23, 5, 24, 0, 0, 0, 0, time.UTC), nil},
+		{"01-01-01", time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC), nil},
+		{"68-01-01", time.Date(68, 1, 1, 0, 0, 0, 0, time.UTC), nil},
+		{"69-01-01", time.Date(69, 1, 1, 0, 0, 0, 0, time.UTC), nil},
+		{"99-12-31", time.Date(99, 12, 31, 0, 0, 0, 0, time.UTC), nil},
+		{"04-02-29", time.Date(4, 2, 29, 0, 0, 0, 0, time.UTC), nil},
+		{"2000-02-29", time.Date(2000, 2, 29, 0, 0, 0, 0, time.UTC), nil},
+		{"0001-01-01", time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC), nil},
+		{"9999-12-31", time.Date(9999, 12, 31, 0, 0, 0, 0, time.UTC), nil},
+		{"000", time.Date(1899, 12, 31, 0, 0, 0, 0, time.UTC), nil},
+		{"1.0", time.Date(1900, 1, 1, 0, 0, 0, 0, time.UTC), nil},
+		{"59.99999999999999999999", time.Date(1900, 2, 28, 0, 0, 0, 0, time.UTC), nil},
+		{"61.0", time.Date(1900, 3, 1, 0, 0, 0, 0, time.UTC), nil},
 		{"44927", time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC), nil},
-		{"60.0", time.Time{}, errParseConversion},
+		{"44927.50", time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC), nil},
+		{"44927.5000", time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC), nil},
+		{"00044927", time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC), nil},
+		{"0000044927", time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC), nil},
+		{"44927.99999999999999999999", time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC), nil},
+		{"106752", time.Date(2192, 4, 9, 0, 0, 0, 0, time.UTC), nil},
+		{"106753", time.Date(2192, 4, 10, 0, 0, 0, 0, time.UTC), nil},
+		{"2958465", time.Date(9999, 12, 31, 0, 0, 0, 0, time.UTC), nil},
+		{"2958465.99999999999999999999", time.Date(9999, 12, 31, 0, 0, 0, 0, time.UTC), nil},
+		{"060", time.Time{}, errParseConversion},
+		{"60.5", time.Time{}, errParseConversion},
+		{"60.99999999999999999999", time.Time{}, errParseConversion},
+		{"2958466", time.Time{}, errYearRangeConversion},
+		{"10000000", time.Time{}, errYearRangeConversion},
+		{"1000000000", time.Time{}, errYearRangeConversion},
+		{"9223372036854775808", time.Time{}, errYearRangeConversion},
 		{"2023-13-01", time.Time{}, errParseConversion},
+		{"1900-02-29", time.Time{}, errParseConversion},
+		{"23-02-29", time.Time{}, errParseConversion},
+		{"05/24.23", time.Time{}, errParseConversion},
+		{"2023/05-24", time.Time{}, errParseConversion},
 		{"0000-01-01", time.Time{}, errYearRangeConversion},
+		{"00-01-01", time.Time{}, errYearRangeConversion},
 		{"2000-02-30", time.Time{}, errParseConversion},
+		{"-1.0", time.Time{}, errParseConversion},
+		{"1e3", time.Time{}, errParseConversion},
+		{"1.2.3", time.Time{}, errParseConversion},
+		{"0", time.Time{}, errParseConversion},
+		{"61", time.Time{}, errParseConversion},
+		{"", time.Time{}, errParseConversion},
 		{"abc", time.Time{}, errParseConversion},
 	}
 	for _, tt := range tests {
-		got, err := convertStringToDate(tt.in)
-		if tt.err != err {
-			t.Fatalf("%s: expected error %v, got %v", tt.in, tt.err, err)
+		name := tt.in
+		if name == "" {
+			name = "<empty>"
 		}
-		if !tt.t.Equal(got) {
-			t.Fatalf("%s: expected %v, got %v", tt.in, tt.t, got)
-		}
+		t.Run(name, func(t *testing.T) {
+			got, err := convertStringToDate(tt.in)
+			if tt.wantErr != err {
+				t.Fatalf("expected error %v, got %v", tt.wantErr, err)
+			}
+			if !got.Equal(tt.want) {
+				t.Errorf("expected %v, got %v", tt.want, got)
+			}
+			if got.Location() != time.UTC {
+				t.Errorf("expected UTC location, got %v", got.Location())
+			}
+		})
 	}
 }
 
