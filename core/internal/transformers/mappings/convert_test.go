@@ -7,6 +7,7 @@ package mappings
 import (
 	"math"
 	"regexp"
+	"strings"
 	"testing"
 	"time"
 
@@ -413,8 +414,25 @@ func TestConvertStringToDate(t *testing.T) {
 		{"2023-05-24", time.Date(2023, 5, 24, 0, 0, 0, 0, time.UTC), nil},
 		{"05/24/2023", time.Date(2023, 5, 24, 0, 0, 0, 0, time.UTC), nil},
 		{"05.24.2023", time.Date(2023, 5, 24, 0, 0, 0, 0, time.UTC), nil},
+		{"12/31/25", time.Date(2025, 12, 31, 0, 0, 0, 0, time.UTC), nil},
+		{"02/29/00", time.Date(2000, 2, 29, 0, 0, 0, 0, time.UTC), nil},
+		{"68-12-31", time.Date(2068, 12, 31, 0, 0, 0, 0, time.UTC), nil},
+		{"01.01.69", time.Date(1969, 1, 1, 0, 0, 0, 0, time.UTC), nil},
+		{"12/31/xx", time.Time{}, errYearRangeConversion},
+		{"0025-12-31", time.Date(25, 12, 31, 0, 0, 0, 0, time.UTC), nil},
 		{"44927", time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC), nil},
+		{"44927.00", time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC), nil},
+		{"44927.0000", time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC), nil},
+		{"200000.0", time.Date(2447, 7, 30, 0, 0, 0, 0, time.UTC), nil},
+		{"200000.000", time.Date(2447, 7, 30, 0, 0, 0, 0, time.UTC), nil},
+		{"0.0", time.Date(1899, 12, 31, 0, 0, 0, 0, time.UTC), nil},
+		{"2958465.999", time.Date(9999, 12, 31, 0, 0, 0, 0, time.UTC), nil},
+		{"2958466", time.Time{}, errYearRangeConversion},
+		{strings.Repeat("9", 308), time.Time{}, errYearRangeConversion},
+		{"59.0", time.Date(1900, 2, 28, 0, 0, 0, 0, time.UTC), nil},
 		{"60.0", time.Time{}, errParseConversion},
+		{"61.0", time.Date(1900, 3, 1, 0, 0, 0, 0, time.UTC), nil},
+		{strings.Repeat("9", 309), time.Time{}, errParseConversion},
 		{"2023-13-01", time.Time{}, errParseConversion},
 		{"0000-01-01", time.Time{}, errYearRangeConversion},
 		{"2000-02-30", time.Time{}, errParseConversion},

@@ -880,24 +880,16 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, purpose Purpose) 
 
 func convertStringToDate(s string) (time.Time, error) {
 	month, day, year := -1, -1, -1
-	if len(s) == 10 {
-		if s[4] == '-' && s[7] == '-' {
-			year, month, day = parseUint(s[0:4]), parseUint(s[5:7]), parseUint(s[8:10]) // yyyy-mm-dd
-		} else if s[2] == '/' && s[5] == '/' || s[2] == '.' && s[5] == '.' {
-			month, day, year = parseUint(s[0:2]), parseUint(s[3:5]), parseUint(s[6:10]) // mm/dd/yyyy, mm.dd.yyyy
-		}
-	} else if len(s) == 8 {
-		if s[2] == '-' && s[5] == '-' {
-			year, month, day = parseUint(s[0:2]), parseUint(s[3:5]), parseUint(s[5:8]) // yy-mm-dd
-		} else if s[2] == '/' && s[5] == '/' || s[2] == '.' && s[5] == '.' {
-			month, day, year = parseUint(s[0:2]), parseUint(s[3:5]), parseUint(s[6:10]) // mm/dd/yy, mm.dd.yy
-		}
-	} else if isSimpleFloat(s) {
+	if isSimpleFloat(s) {
 		// Parse as Excel serial date-time.
 		// https://support.microsoft.com/en-us/office/datevalue-function-df8b07d4-7761-4a93-bc33-b7471bbff252
 		days, err := strconv.ParseFloat(s, 64)
 		if err != nil {
 			return time.Time{}, errParseConversion
+		}
+		// Serial day 2958466 is 10000-01-01, outside the supported year range.
+		if days >= 2958466 {
+			return time.Time{}, errYearRangeConversion
 		}
 		if days == 60 {
 			// 1900-02-29 does not exist. Excel returns it for compatibility with Lotus 1-2-3.
@@ -906,8 +898,29 @@ func convertStringToDate(s string) (time.Time, error) {
 		if days > 60 {
 			days--
 		}
-		t := excelEpoch.Add(time.Duration(days) * 24 * time.Hour)
+		t := excelEpoch.AddDate(0, 0, int(days))
 		return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC), nil
+	} else if len(s) == 8 {
+		if s[2] == '-' && s[5] == '-' {
+			year, month, day = parseUint(s[0:2]), parseUint(s[3:5]), parseUint(s[6:8]) // yy-mm-dd
+		} else if s[2] == '/' && s[5] == '/' || s[2] == '.' && s[5] == '.' {
+			month, day, year = parseUint(s[0:2]), parseUint(s[3:5]), parseUint(s[6:8]) // mm/dd/yy, mm.dd.yy
+		}
+		// Follow time.Parse: interpret years 00-68 as 2000-2068 and 69-99 as 1969-1999.
+		// https://pkg.go.dev/time#Parse
+		if year >= 0 {
+			if year < 69 {
+				year += 2000
+			} else {
+				year += 1900
+			}
+		}
+	} else if len(s) == 10 {
+		if s[4] == '-' && s[7] == '-' {
+			year, month, day = parseUint(s[0:4]), parseUint(s[5:7]), parseUint(s[8:10]) // yyyy-mm-dd
+		} else if s[2] == '/' && s[5] == '/' || s[2] == '.' && s[5] == '.' {
+			month, day, year = parseUint(s[0:2]), parseUint(s[3:5]), parseUint(s[6:10]) // mm/dd/yyyy, mm.dd.yyyy
+		}
 	}
 	if month < 1 || month > 12 || day < 1 || day > 31 {
 		return time.Time{}, errParseConversion
