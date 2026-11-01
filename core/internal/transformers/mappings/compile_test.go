@@ -471,7 +471,7 @@ func Test_Compile(t *testing.T) {
 				t.Fatalf("unexpected eval error: %s", err)
 			}
 			if v != nil {
-				v, err = convert(v, vt, test.dt, true, false, test.purpose)
+				v, err = convert(v, vt, test.dt, true, test.purpose)
 			}
 			if test.convertErr != nil {
 				if err == nil {
