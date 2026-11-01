@@ -104,6 +104,76 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 		serializeValue(b, baseExpr.Values[1], c.Type)
 
 	case warehouses.OpContains, warehouses.OpDoesNotContain:
+		if c.Type.IsArray() {
+			elem := c.Type.Elem()
+			fmt.Fprintf(b, "CASE WHEN %s IS NOT NULL THEN ", qname)
+			if op == warehouses.OpDoesNotContain {
+				b.WriteString("NOT ")
+			}
+			switch elem.Kind() {
+			case types.DecimalKind, types.FloatKind, types.DateTimeKind, types.DateKind, types.TimeKind:
+				fmt.Fprintf(b, "(ARRAY_SIZE(FILTER(%s, krenalis_element -> ", qname)
+				switch elem.Kind() {
+				case types.DecimalKind:
+					number, ok := baseExpr.Values[0].(decimal.Decimal)
+					if !ok {
+						return fmt.Errorf("warehouses/snowflake: unexpected operand type %T", baseExpr.Values[0])
+					}
+					precision, scale := number.PrecisionScale()
+					if precision > types.MaxDecimalPrecision || scale > types.MaxDecimalScale {
+						return fmt.Errorf("decimal operand exceeds precision 76 or scale 37")
+					}
+					digits := strings.ReplaceAll(fmt.Sprintf("%.*f", scale, number), ".", "")
+					digits = strings.Trim(strings.TrimPrefix(digits, "-"), "0")
+					// Stored JSON numbers have at most 38 significant digits.
+					if len(digits) > 38 {
+						b.WriteString("FALSE")
+					} else {
+						b.WriteString("TRY_TO_DECFLOAT(TO_JSON(krenalis_element)) = TO_DECFLOAT(")
+						quoteString(b, number.String())
+						b.WriteByte(')')
+					}
+				case types.FloatKind:
+					b.WriteString("TO_DOUBLE(krenalis_element) = ")
+					if value, ok := baseExpr.Values[0].(float64); ok && elem.IsFloat(32) {
+						// Match the element precision used by types.Marshal in Merge.
+						b.WriteString(strconv.FormatFloat(value, 'G', -1, 32))
+					} else {
+						serializeValue(b, baseExpr.Values[0], elem)
+					}
+				case types.DateTimeKind:
+					instant, ok := baseExpr.Values[0].(time.Time)
+					if !ok {
+						return fmt.Errorf("warehouses/snowflake: unexpected operand type %T", baseExpr.Values[0])
+					}
+					b.WriteString("CONVERT_TIMEZONE('UTC', " +
+						"TO_TIMESTAMP_TZ(AS_VARCHAR(krenalis_element)))::TIMESTAMP_NTZ = ")
+					serializeValue(b, instant.UTC(), elem)
+				case types.DateKind:
+					b.WriteString("TO_DATE(AS_VARCHAR(krenalis_element)) = ")
+					serializeValue(b, baseExpr.Values[0], elem)
+				case types.TimeKind:
+					b.WriteString("TO_TIME(AS_VARCHAR(krenalis_element)) = ")
+					serializeValue(b, baseExpr.Values[0], elem)
+				default:
+					return fmt.Errorf("warehouses/snowflake: unexpected array element type %s", elem)
+				}
+				b.WriteString(")) > 0)")
+			default:
+				// Match the JSON encoding used when array elements are stored.
+				value, err := types.Marshal(baseExpr.Values[0], elem)
+				if err != nil {
+					return err
+				}
+				b.WriteString("ARRAY_CONTAINS(")
+				serializeValue(b, value, types.JSON())
+				b.WriteString(", ")
+				b.WriteString(qname)
+				b.WriteByte(')')
+			}
+			b.WriteString(" ELSE NULL END")
+			return nil
+		}
 		if op == warehouses.OpDoesNotContain {
 			b.WriteString("NOT ")
 		}
