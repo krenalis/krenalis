@@ -108,6 +108,8 @@ type FilterCondition struct {
 	// Values.
 	// If the property has a string type with allowed values, each value must be one of the allowed values.
 	// In all other cases, each value must be at most 80 runes and must not contain the NUL byte.
+	// Decimal operands must fit a decimal(p,s) with p <= 76 and 0 <= s <= min(p,37).
+	// In addition to JSON strings, only JSON operands within these decimal limits are compared with JSON numbers.
 	Values []string `json:"values,omitzero"`
 }
 
@@ -171,9 +173,7 @@ var operators = [...]FilterOperator{
 type filterValidation struct {
 	paths      []string
 	properties types.Properties
-	role       state.Role
 	ruleCount  int
-	target     state.Target
 }
 
 // convertOperatorFromWhere converts a where operator into a filter operator.
@@ -333,17 +333,15 @@ func convertWhereToFilter(where *state.Where, schema types.Type) *Filter {
 	return filter
 }
 
-// parseFilterDecimal parses s as a decimal filter operand. It returns the
-// parsed value and true if the number can be represented exactly by a decimal
-// type supported by the types package; otherwise, it returns the zero value and
-// false.
+// parseFilterDecimal parses s as a decimal filter operand. It returns the parsed
+// value and true if the number can be represented exactly by a decimal type
+// supported by the types package; otherwise, it returns the zero value and false.
 func parseFilterDecimal(s string) (decimal.Decimal, bool) {
 	d, err := decimal.Parse(s, 0, 0)
 	if err != nil {
 		return decimal.Decimal{}, false
 	}
-	precision, scale := d.PrecisionScale()
-	if precision > types.MaxDecimalPrecision || scale > types.MaxDecimalScale {
+	if !types.IsDecimal(d) {
 		return decimal.Decimal{}, false
 	}
 	return d, true
@@ -729,8 +727,8 @@ func unmarshalFilterRules(dec *json.Decoder, depth int) ([]FilterRule, int, erro
 // Returns an error if the filter is not valid. Specifically, it returns a
 // types.PathNotExistError if a path does not exist.
 // Panics if the filter is nil or the schema is not valid.
-func validateFilter(filter *Filter, schema types.Type, role state.Role, target state.Target) ([]string, error) {
-	validation := filterValidation{properties: schema.Properties(), role: role, target: target}
+func validateFilter(filter *Filter, schema types.Type) ([]string, error) {
+	validation := filterValidation{properties: schema.Properties()}
 	if err := validateFilterGroup(filter, &validation, 1); err != nil {
 		return nil, err
 	}
@@ -740,9 +738,6 @@ func validateFilter(filter *Filter, schema types.Type, role state.Role, target s
 // validateFilterCondition checks the validity of a filter condition and
 // returns its property path.
 func validateFilterCondition(cond *FilterCondition, validation *filterValidation) (string, error) {
-
-	// disallowJSON indicates whether JSON properties are disallowed.
-	disallowJSON := validation.role == state.Destination && validation.target == state.TargetUser
 
 	if !types.IsValidPropertyPath(cond.Property) {
 		return "", errors.New("property path is not valid")
@@ -755,10 +750,6 @@ func validateFilterCondition(cond *FilterCondition, validation *filterValidation
 
 	op := cond.Operator
 	kind := p.Type.Kind()
-
-	if disallowJSON && kind == types.JSONKind {
-		return "", fmt.Errorf("property %q has type json, which is not supported in data warehouse exports", path)
-	}
 
 	// Validate the operator for the property kind.
 	//
@@ -791,8 +782,8 @@ func validateFilterCondition(cond *FilterCondition, validation *filterValidation
 	//
 	// [1]: Strings with allowed values are not supported.
 	// [2]: array(T) is supported if T is supported by the "is" operator.
-	// [3]: Only if the property is nullable or has type JSON.
-	// [4]: Only if the property is read-optional or the path continues inside a JSON property.
+	// [3]: Only if the property is nullable or is of type json.
+	// [4]: Only if the property is read-optional, or if it is of type json and has a JSON path.
 	//
 	switch op {
 	case OpIs, OpIsNot:

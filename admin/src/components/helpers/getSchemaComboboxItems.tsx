@@ -3,8 +3,6 @@ import { FlatSchema, flattenSchema, getCompatibleFilterOperators } from '../../l
 import { DecimalType, ObjectType } from '../../lib/api/types/types';
 import { ComboboxItem } from '../base/Combobox/Combobox.types';
 import { TypeIcon } from '../base/TypeIcon/TypeIcon';
-import { PipelineTarget } from '../../lib/api/types/pipeline';
-import TransformedConnection from '../../lib/core/connection';
 
 const getSchemaComboboxItems = (schema: ObjectType | FlatSchema, toHide?: string[]): ComboboxItem[] => {
 	if (schema == null) {
@@ -40,8 +38,6 @@ const getMatchingComboboxItems = (schema: FlatSchema): ComboboxItem[] => {
 
 const getFilterPropertyComboboxItems = (
 	schema: ObjectType,
-	connection: TransformedConnection,
-	target: PipelineTarget,
 	toHide?: string[],
 ): ComboboxItem[] => {
 	if (schema == null) {
@@ -60,8 +56,6 @@ const getFilterPropertyComboboxItems = (
 			if (compatibleOperators.length === 0) {
 				continue;
 			}
-		} else if (property.type === 'json' && connection.isDestination && target === 'User') {
-			continue;
 		}
 		filteredSchema[k] = v;
 	}
