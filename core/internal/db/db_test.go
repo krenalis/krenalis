@@ -15,6 +15,75 @@ import (
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 )
 
+// Test_OpenWithNonConformingStrings verifies that quoted values are safe when
+// the database defaults to non-standard string escaping.
+func Test_OpenWithNonConformingStrings(t *testing.T) {
+
+	const (
+		testDatabase = "krenalis"
+		testUser     = "krenalis"
+		testPassword = "krenalis"
+	)
+	ctx := t.Context()
+	postgresContainer, err := postgres.Run(ctx,
+		testimages.PostgreSQL,
+		postgres.WithDatabase(testDatabase),
+		postgres.WithUsername(testUser),
+		postgres.WithPassword(testPassword),
+		postgres.BasicWaitStrategies(),
+	)
+	if err != nil {
+		t.Fatalf("expected PostgreSQL container to start, got %v", err)
+	}
+	t.Cleanup(func() {
+		err := testcontainers.TerminateContainer(postgresContainer)
+		if err != nil {
+			t.Errorf("expected PostgreSQL container to terminate, got %v", err)
+		}
+	})
+	host, err := postgresContainer.Host(ctx)
+	if err != nil {
+		t.Fatalf("expected PostgreSQL host, got %v", err)
+	}
+	port, err := postgresContainer.MappedPort(ctx, "5432/tcp")
+	if err != nil {
+		t.Fatalf("expected PostgreSQL port, got %v", err)
+	}
+	database, err := Open(&Options{
+		Host: host, Port: int(port.Num()), Username: testUser, Password: testPassword, Database: testDatabase,
+	})
+	if err != nil {
+		t.Fatalf("expected database pool to open, got %v", err)
+	}
+	t.Cleanup(database.Close)
+
+	_, err = database.Exec(ctx, "CREATE TABLE quoted_values (id integer, value text)")
+	if err != nil {
+		t.Fatalf("expected fixture table, got %v", err)
+	}
+	text := `\' OR TRUE --`
+	_, err = database.Exec(ctx, "INSERT INTO quoted_values VALUES (1, $1), (2, $2)", "safe", text)
+	if err != nil {
+		t.Fatalf("expected fixture values, got %v", err)
+	}
+	_, err = database.Exec(ctx, "ALTER DATABASE "+testDatabase+" SET standard_conforming_strings = off")
+	if err != nil {
+		t.Fatalf("expected database default to change, got %v", err)
+	}
+	database.db.Reset()
+
+	var count, id int
+	query := "SELECT count(*), min(id) FROM quoted_values WHERE value = " + Quote(text)
+	err = database.QueryRow(ctx, query).Scan(&count, &id)
+	if err != nil {
+		t.Fatalf("expected quoted value query, got %v", err)
+	}
+	if count != 1 || id != 2 {
+		t.Fatalf("expected one matching row with ID 2, got %d rows with minimum ID %d", count, id)
+	}
+
+}
+
 // Test_Quote checks that Quote correctly formats different Go values for use
 // in SQL queries.
 func Test_Quote(t *testing.T) {

@@ -1,7 +1,7 @@
 import { test, expect, type Locator } from '@playwright/test';
 import { login, logout, adminURL, logValidationErrors } from './utils';
 import Type, { ObjectType, Property } from '../src/lib/api/types/types';
-import { ConsentPurpose } from '../src/lib/api/types/workspace';
+import { ConsentPurpose, PrimarySources, ProfilePropertyRoles, ProfileSchema } from '../src/lib/api/types/workspace';
 
 const createConsentPurpose = (id: string, name: string, property: string, jsonKey?: string): ConsentPurpose => ({
 	id,
@@ -32,6 +32,59 @@ const selectPropertyType = async (page, option: string) => {
 	await expect(dropdown).toHaveJSProperty('open', true);
 	await typeOption.waitFor({ state: 'visible' });
 	await typeOption.click();
+};
+
+const selectProfilePropertyRole = async (page, role: string) => {
+	const panel = page.locator('.property-panel');
+	const dropdown = panel.locator('.property-role-selector');
+	const option = panel.locator(`[data-property-role-option="${role}"]`);
+	await expect(dropdown).toHaveJSProperty('open', false);
+	await option.waitFor({ state: 'hidden' });
+	await panel.locator('.property-role-selector__trigger').click();
+	await expect(dropdown).toHaveJSProperty('open', true);
+	await option.waitFor({ state: 'visible' });
+	await option.click();
+};
+
+const mockProfilePropertyRoles = async (page, propertyRoles: ProfilePropertyRoles) => {
+	await page.route('**/v1/workspaces', async (route) => {
+		const response = await route.fetch();
+		const body = await response.json();
+		for (const workspace of body.workspaces) {
+			workspace.profileSchema.propertyRoles = propertyRoles;
+		}
+		await route.fulfill({ response, json: body });
+	});
+	await page.route('**/v1/profiles/schema', async (route) => {
+		if (route.request().method() === 'PUT') {
+			await route.fulfill({ json: {} });
+			return;
+		}
+		const response = await route.fetch();
+		const profileSchema = (await response.json()) as ProfileSchema;
+		profileSchema.propertyRoles = propertyRoles;
+		const schema = profileSchema.schema;
+		const firstName = schema.properties.find((property) => property.name === 'first_name');
+		const preferredName = structuredClone(firstName);
+		preferredName.name = 'preferred_name';
+		const avatarURL = structuredClone(firstName);
+		avatarURL.name = 'avatar_url';
+		avatarURL.type = { ...avatarURL.type, kind: 'string', semantics: 'url' };
+		const semanticEmail = structuredClone(firstName);
+		semanticEmail.name = 'semantic_email';
+		semanticEmail.type = { ...semanticEmail.type, kind: 'string', semantics: 'email' };
+		const semanticCountry = structuredClone(firstName);
+		semanticCountry.name = 'semantic_country';
+		semanticCountry.type = { kind: 'string', semantics: 'country', format: 'alpha-2' };
+		const active = structuredClone(firstName);
+		active.name = 'active';
+		active.type = { kind: 'boolean' };
+		schema.properties.push(preferredName, avatarURL, semanticEmail, semanticCountry, active);
+		await route.fulfill({ response, json: profileSchema });
+	});
+	await page.route('**/v1/profiles/schema/preview', async (route) => {
+		await route.fulfill({ json: { queries: [] } });
+	});
 };
 
 const editSchema = async (page) => {
@@ -113,13 +166,14 @@ test(`Show, paginate, and refresh consent purposes on profile schema properties`
 	};
 	await page.route('**/v1/profiles/schema', async (route) => {
 		const response = await route.fetch();
-		const schema = (await response.json()) as ObjectType;
+		const profileSchema = (await response.json()) as ProfileSchema;
+		const schema = profileSchema.schema;
 		schema.properties.push(
 			createSchemaProperty('consent_boolean', { kind: 'boolean' }),
 			createSchemaProperty('consent_json', { kind: 'json' }),
 			createSchemaProperty('consent_string', { kind: 'string' }),
 		);
-		await route.fulfill({ response, json: schema });
+		await route.fulfill({ response, json: profileSchema });
 	});
 
 	await page.goto(`${adminURL}/profile-unification/schema`);
@@ -269,13 +323,14 @@ test(`Update consent associations while editing profile schema properties`, asyn
 	});
 	await page.route('**/v1/profiles/schema', async (route) => {
 		const response = await route.fetch();
-		const schema = (await response.json()) as ObjectType;
+		const profileSchema = (await response.json()) as ProfileSchema;
+		const schema = profileSchema.schema;
 		schema.properties.push(
 			createSchemaProperty('property_to_rename', { kind: 'boolean' }),
 			createSchemaProperty('unassociated_property', { kind: 'boolean' }),
 			createSchemaProperty('replacement_property', { kind: 'boolean' }),
 		);
-		await route.fulfill({ response, json: schema });
+		await route.fulfill({ response, json: profileSchema });
 	});
 
 	await page.goto(`${adminURL}/profile-unification/schema`);
@@ -335,7 +390,6 @@ test(`Update consent associations while editing profile schema properties`, asyn
 });
 
 test(`Disable profile schema editing until the schema has loaded`, async ({ page }) => {
-	let schemaRequestCount = 0;
 	let releaseSchemaReload = () => {};
 	const schemaReloadGate = new Promise<void>((resolve) => {
 		releaseSchemaReload = resolve;
@@ -345,7 +399,7 @@ test(`Disable profile schema editing until the schema has loaded`, async ({ page
 		schemaReloadStarted = resolve;
 	});
 	await page.route('**/v1/profiles/schema', async (route) => {
-		if (route.request().method() === 'GET' && schemaRequestCount++ > 0) {
+		if (route.request().method() === 'GET') {
 			schemaReloadStarted();
 			await schemaReloadGate;
 		}
@@ -374,6 +428,471 @@ test(`Disable profile schema editing until the schema has loaded`, async ({ page
 	}
 	await expect(editSchemaButton).not.toHaveAttribute('disabled', { timeout: 10000 });
 });
+
+for (const { scenario, shouldObserveAltering, shouldDelayPreview, initialStartTime } of [
+	{
+		scenario: 'while another session alters the schema',
+		shouldObserveAltering: true,
+		shouldDelayPreview: false,
+		initialStartTime: '2026-08-24T00:00:00Z',
+	},
+	{
+		scenario: 'when an alteration completes between polls',
+		shouldObserveAltering: false,
+		shouldDelayPreview: false,
+		initialStartTime: '2026-08-24T00:00:00Z',
+	},
+	{
+		scenario: 'when the first alteration completes during a preview',
+		shouldObserveAltering: false,
+		shouldDelayPreview: true,
+		initialStartTime: null,
+	},
+]) {
+	test(`Preserve pending edits and block stale schema saves ${scenario}`, async ({ page }) => {
+		let latestAlter = {
+			startTime: initialStartTime,
+			endTime: initialStartTime == null ? null : '2026-08-24T00:00:01Z',
+			error: null,
+		};
+		let hasExternalChanges = false;
+		let schemaRequestCount = 0;
+		let alterationRequestCount = 0;
+		let releasePreview = () => {};
+		const previewGate = new Promise<void>((resolve) => {
+			releasePreview = resolve;
+		});
+		await page.route('**/v1/profiles/schema/latest-alter', async (route) => {
+			await route.fulfill({ json: latestAlter });
+		});
+		await page.route('**/v1/profiles/schema', async (route) => {
+			if (route.request().method() === 'PUT') {
+				alterationRequestCount++;
+				await route.fulfill({ json: {} });
+				return;
+			}
+			schemaRequestCount++;
+			await route.fulfill({
+				json: {
+					schema: {
+						kind: 'object',
+						properties: [
+							createSchemaProperty('first_name', { kind: 'string' }),
+							createSchemaProperty('last_name', { kind: 'string' }),
+							...(hasExternalChanges
+								? [createSchemaProperty('changed_elsewhere', { kind: 'string' })]
+								: []),
+						],
+					},
+					propertyRoles: { firstName: '', lastName: '', email: '', country: '', photo: '' },
+					primarySources: {},
+				},
+			});
+		});
+		await page.route('**/v1/profiles/schema/preview', async (route) => {
+			if (shouldDelayPreview) {
+				await previewGate;
+			}
+			await route.fulfill({ json: { queries: [] } });
+		});
+
+		await page.goto(`${adminURL}/profile-unification/schema`);
+		await editSchema(page);
+		await openProperty(page, 'first_name');
+		const panel = page.locator('.property-panel');
+		const description = panel.locator('sl-textarea textarea[name="description"]');
+		await description.fill('Pending schema change');
+		await panel.locator('.property-panel__save').click();
+		await expect(page.locator('.schema-edit__change-count')).toHaveText('1 pending change');
+		if (shouldObserveAltering) {
+			await description.fill('Unsaved property draft');
+		} else {
+			await page.locator('.schema-edit__header-apply-button').click();
+			await expect(page.locator('.schema-edit__queries')).toHaveJSProperty('open', true);
+			if (!shouldDelayPreview) {
+				await expect(page.locator('.schema-edit__apply-alter-button')).toBeVisible();
+			}
+		}
+
+		latestAlter = {
+			startTime: '2026-08-25T00:00:00Z',
+			endTime: shouldObserveAltering ? null : '2026-08-25T00:00:01Z',
+			error: null,
+		};
+		hasExternalChanges = !shouldObserveAltering;
+		const warning = page.locator('.schema-edit__outdated-warning');
+		const previewResponse = shouldDelayPreview ? page.waitForResponse('**/v1/profiles/schema/preview') : null;
+		try {
+			await expect(warning).toContainText('The schema was changed in another session', { timeout: 10000 });
+			await expect(page.locator('.schema-edit__queries')).toHaveJSProperty('open', false);
+		} finally {
+			releasePreview();
+		}
+		if (previewResponse != null) {
+			await previewResponse;
+		}
+		await expect(page.locator('.schema-edit__header-apply-button')).toHaveAttribute('disabled');
+		await expect(page.locator('.schema-edit__change-count')).toHaveText('1 pending change');
+		await expect(description).toHaveValue(
+			shouldObserveAltering ? 'Unsaved property draft' : 'Pending schema change',
+		);
+		await description.fill('Unsaved property draft');
+		latestAlter.endTime = '2026-08-25T00:00:01Z';
+		hasExternalChanges = true;
+		await expect.poll(() => schemaRequestCount, { timeout: 10000 }).toBe(2);
+		await page.waitForResponse('**/v1/profiles/schema/latest-alter');
+		await expect(warning).toBeVisible();
+		await expect(description).toHaveValue('Unsaved property draft');
+		await expect(page.locator('.schema-edit__change-count')).toHaveText('1 pending change');
+		await expect(page.locator('.schema-edit__queries')).toHaveJSProperty('open', false);
+		await expect(page.locator('.schema-edit__header-apply-button')).toHaveAttribute('disabled');
+		expect(alterationRequestCount).toBe(0);
+
+		page.once('dialog', async (dialog) => {
+			expect(dialog.type()).toBe('beforeunload');
+			await dialog.dismiss();
+		});
+		await warning.getByText('Reload schema', { exact: true }).click();
+		await expect(description).toHaveValue('Unsaved property draft');
+		page.once('dialog', async (dialog) => {
+			expect(dialog.type()).toBe('beforeunload');
+			await dialog.accept();
+		});
+		await warning.getByText('Reload schema', { exact: true }).click();
+		await expect(page.locator('.schema-edit .grid__row[data-id="changed_elsewhere"]')).toBeVisible();
+		await expect(warning).toHaveCount(0);
+		await expect(description).toHaveValue('');
+		await description.fill('Change on the updated schema');
+		await panel.locator('.property-panel__save').click();
+		await expect(page.locator('.schema-edit__header-apply-button')).not.toHaveAttribute('disabled');
+		await page.locator('.schema-edit__header-cancel-button').click();
+		await page.getByText('Discard and leave', { exact: true }).click();
+		await expect(page).toHaveURL(`${adminURL}/profile-unification/schema`);
+	});
+}
+
+for (const shouldFailSave of [false, true]) {
+	test(`Suppress external schema warnings during a local save ${shouldFailSave ? 'that fails' : 'that succeeds'}`, async ({
+		page,
+	}) => {
+		await page.clock.install();
+		let submittedSchema: ObjectType;
+		let isAlterComplete = false;
+		let releaseSave = () => {};
+		const saveGate = new Promise<void>((resolve) => {
+			releaseSave = resolve;
+		});
+		await page.route('**/v1/profiles/schema', async (route) => {
+			if (route.request().method() === 'PUT') {
+				submittedSchema = route.request().postDataJSON().schema;
+				await saveGate;
+				await route.fulfill({ status: shouldFailSave ? 500 : 200, json: {} });
+				return;
+			}
+			if (isAlterComplete) {
+				await route.fulfill({
+					json: {
+						schema: submittedSchema,
+						propertyRoles: { firstName: '', lastName: '', email: '', country: '', photo: '' },
+						primarySources: {},
+					},
+				});
+				return;
+			}
+			await route.continue();
+		});
+		await page.route('**/v1/profiles/schema/preview', async (route) => {
+			await route.fulfill({ json: { queries: [] } });
+		});
+		await page.route('**/v1/profiles/schema/latest-alter', async (route) => {
+			await route.fulfill({
+				json: {
+					startTime: submittedSchema == null ? null : '2026-08-25T00:00:00Z',
+					endTime: isAlterComplete ? '2026-08-25T00:00:01Z' : null,
+					error: null,
+				},
+			});
+		});
+
+		await page.goto(`${adminURL}/profile-unification/schema`);
+		await editSchema(page);
+		await openProperty(page, 'first_name');
+		const description = page.locator('.property-panel sl-textarea textarea[name="description"]');
+		await description.fill('Local schema change');
+		await page.locator('.property-panel__save').click();
+		await page.locator('.schema-edit__header-apply-button').click();
+		const confirmButton = page.locator('.schema-edit__apply-alter-button');
+		await confirmButton.click();
+		const editSchemaButton = page.locator('.schema-grid__alter-button');
+		const warning = page.locator('.schema-edit__outdated-warning');
+		try {
+			await expect.poll(() => submittedSchema).toBeDefined();
+			const alteringResponse = page.waitForResponse('**/v1/profiles/schema/latest-alter');
+			await page.clock.fastForward(3000);
+			await alteringResponse;
+			await expect(editSchemaButton).toHaveJSProperty('loading', true);
+			await expect(confirmButton).toHaveJSProperty('loading', true);
+			await expect(warning).toHaveCount(0);
+
+			isAlterComplete = true;
+			const completedResponse = page.waitForResponse('**/v1/profiles/schema/latest-alter');
+			await page.clock.fastForward(3000);
+			await completedResponse;
+			await expect(editSchemaButton).not.toHaveAttribute('disabled');
+			await expect(confirmButton).toHaveJSProperty('loading', true);
+			await expect(warning).toHaveCount(0);
+			await expect(description).toHaveValue('Local schema change');
+			await expect(page.locator('.schema-edit__change-count')).toHaveText('1 pending change');
+		} finally {
+			releaseSave();
+		}
+		if (shouldFailSave) {
+			await expect(warning).toBeVisible();
+			await expect(page.locator('.schema-edit__header-apply-button')).toHaveAttribute('disabled');
+			await expect(description).toHaveValue('Local schema change');
+			await page.locator('.schema-edit__header-cancel-button').click();
+			await page.getByText('Discard and leave', { exact: true }).click();
+		}
+		await expect(page.locator('.schema-edit')).toHaveCount(0);
+		await expect(editSchemaButton).not.toHaveAttribute('disabled');
+	});
+}
+
+for (const {
+	scenario,
+	shouldFailWorkspaceReload,
+	shouldNavigateAway,
+	shouldCompleteOnReturn = false,
+	shouldFailInitialAlterStatus = false,
+	shouldNavigateBack = false,
+} of [
+	{ scenario: 'with a delayed workspace reload', shouldFailWorkspaceReload: false, shouldNavigateAway: false },
+	{ scenario: 'after a failed workspace reload', shouldFailWorkspaceReload: true, shouldNavigateAway: false },
+	{
+		scenario: 'after leaving and returning to the schema',
+		shouldFailWorkspaceReload: false,
+		shouldNavigateAway: true,
+	},
+	{
+		scenario: 'after returning to the schema and retrying a failed reload',
+		shouldFailWorkspaceReload: true,
+		shouldNavigateAway: true,
+	},
+	{
+		scenario: 'while an alteration completes during the return to the schema',
+		shouldFailWorkspaceReload: false,
+		shouldNavigateAway: true,
+		shouldCompleteOnReturn: true,
+	},
+	{
+		scenario: 'after retrying the initial alteration status on return',
+		shouldFailWorkspaceReload: false,
+		shouldNavigateAway: true,
+		shouldCompleteOnReturn: true,
+		shouldFailInitialAlterStatus: true,
+	},
+	{
+		scenario: 'after going Back during an alteration and workspace reload',
+		shouldFailWorkspaceReload: false,
+		shouldNavigateAway: false,
+		shouldNavigateBack: true,
+	},
+	{
+		scenario: 'after going Back and retrying a failed workspace reload',
+		shouldFailWorkspaceReload: true,
+		shouldNavigateAway: false,
+		shouldNavigateBack: true,
+	},
+]) {
+	test(`Preserve primary sources across schema saves ${scenario}`, async ({ page }) => {
+		await page.clock.install();
+		const sourceID = '9zQ4Tn7B3mS6';
+		const submittedSources: PrimarySources[] = [];
+		const submittedSchemas: ObjectType[] = [];
+		const previewedSchemas: ObjectType[] = [];
+		let isAlterComplete = false;
+		let schemaRequestCount = 0;
+		let shouldWaitForAlterStatus = false;
+		let initialAlterStatusRequestCount = 0;
+		let releaseAlterStatus = () => {};
+		const alterStatusGate = new Promise<void>((resolve) => {
+			releaseAlterStatus = resolve;
+		});
+		let workspaceReloadCount = 0;
+		let releaseWorkspaceReload = () => {};
+		const workspaceReloadGate = new Promise<void>((resolve) => {
+			releaseWorkspaceReload = resolve;
+		});
+		await page.route('**/v1/connections', async (route) => {
+			const response = await route.fetch();
+			const body = await response.json();
+			body.connections.push({
+				id: sourceID,
+				name: 'Schema test source',
+				connector: 'dummy',
+				connectorType: 'SDK',
+				role: 'Source',
+				storage: '',
+				compression: '',
+				strategy: null,
+				sendingMode: null,
+				hasSettings: false,
+				health: 'Healthy',
+				pipelines: [],
+				linkedConnections: null,
+			});
+			await route.fulfill({ response, json: body });
+		});
+		await page.route('**/v1/workspaces', async (route) => {
+			const primarySources = isAlterComplete ? submittedSources[0] : {};
+			if (isAlterComplete) {
+				workspaceReloadCount++;
+				if (shouldFailWorkspaceReload && workspaceReloadCount === 1) {
+					await route.fulfill({ status: 500, json: {} });
+					return;
+				}
+				await workspaceReloadGate;
+			}
+			const response = await route.fetch();
+			const body = await response.json();
+			for (const workspace of body.workspaces) {
+				workspace.profileSchema.primarySources = primarySources;
+			}
+			await route.fulfill({ response, json: body });
+		});
+		await page.route('**/v1/profiles/schema', async (route) => {
+			if (route.request().method() === 'PUT') {
+				submittedSources.push(route.request().postDataJSON().primarySources);
+				submittedSchemas.push(route.request().postDataJSON().schema);
+				await route.fulfill({ json: {} });
+				return;
+			}
+			schemaRequestCount++;
+			if (isAlterComplete) {
+				await route.fulfill({
+					json: {
+						schema: submittedSchemas[0],
+						propertyRoles: { firstName: '', lastName: '', email: '', country: '', photo: '' },
+						primarySources: submittedSources[0],
+					},
+				});
+				return;
+			}
+			await route.continue();
+		});
+		await page.route('**/v1/profiles/schema/preview', async (route) => {
+			previewedSchemas.push(route.request().postDataJSON().schema);
+			await route.fulfill({ json: { queries: [] } });
+		});
+		await page.route('**/v1/profiles/schema/latest-alter', async (route) => {
+			if (shouldWaitForAlterStatus) {
+				initialAlterStatusRequestCount++;
+				if (shouldFailInitialAlterStatus && initialAlterStatusRequestCount === 1) {
+					await route.fulfill({ status: 500, json: {} });
+					return;
+				}
+				await alterStatusGate;
+			}
+			await route.fulfill({
+				json: {
+					startTime: submittedSources.length > 0 ? '2026-08-25T00:00:00Z' : null,
+					endTime: isAlterComplete ? '2026-08-25T00:00:01Z' : null,
+					error: null,
+				},
+			});
+		});
+
+		await page.goto(`${adminURL}/profile-unification/schema`);
+		await editSchema(page);
+		await openProperty(page, 'first_name');
+		const panel = page.locator('.property-panel');
+		const primarySource = panel.locator('.property-form__primary-source');
+		await primarySource.click();
+		await primarySource.locator(`sl-option[value="${sourceID}"]`).click();
+		await panel.locator('.property-panel__save').click();
+		await page.locator('.schema-edit__add-property').click();
+		await panel.locator('.property-form__name-input input').fill('added_during_alteration');
+		await selectPropertyType(page, 'string');
+		await panel.locator('.property-panel__save').click();
+		await page.locator('.schema-edit__header-apply-button').click();
+		await page.locator('.schema-edit__apply-alter-button').click();
+		await expect(page.locator('.schema-edit')).toHaveCount(0);
+		await expect(page).toHaveURL(`${adminURL}/profile-unification/schema`);
+		expect(submittedSources).toEqual([{ first_name: sourceID }]);
+		expect(submittedSchemas[0].properties.map((property) => property.name)).toContain('added_during_alteration');
+
+		const editSchemaButton = page.locator('.schema-grid__alter-button');
+		await expect(editSchemaButton).toHaveAttribute('disabled');
+		if (shouldNavigateBack) {
+			await page.goBack();
+			await expect(page).toHaveURL(`${adminURL}/profile-unification/schema/edit`);
+			await expect(page.locator('.schema-edit-fullscreen.fullscreen--loading')).toBeVisible();
+			await expect(page.locator('.schema-edit')).toHaveCount(0);
+		}
+		if (shouldNavigateAway) {
+			const initialDocument = await page.evaluateHandle(() => document);
+			await page.locator('.sidebar__item-text').getByText('Connections', { exact: true }).click();
+			await expect(page).toHaveURL(`${adminURL}/connections`);
+			await expect(page.locator('.schema')).toHaveCount(0);
+			isAlterComplete = !shouldCompleteOnReturn;
+			shouldWaitForAlterStatus = shouldCompleteOnReturn;
+			const schemaRequestsBeforeReturn = schemaRequestCount;
+			await page.locator('.sidebar__sub-item-text').getByText('Schema', { exact: true }).click();
+			await expect(page).toHaveURL(`${adminURL}/profile-unification/schema`);
+			expect(await initialDocument.evaluate((previous) => previous === document)).toBe(true);
+			await initialDocument.dispose();
+			if (shouldCompleteOnReturn) {
+				try {
+					await expect
+						.poll(() => initialAlterStatusRequestCount, { timeout: 10000 })
+						.toBe(shouldFailInitialAlterStatus ? 2 : 1);
+					await page.clock.runFor(6000);
+					expect(schemaRequestCount).toBe(schemaRequestsBeforeReturn);
+					await expect(editSchemaButton).toHaveAttribute('disabled');
+				} finally {
+					isAlterComplete = true;
+					releaseAlterStatus();
+				}
+			}
+		} else {
+			await page.waitForResponse('**/v1/profiles/schema/latest-alter');
+			isAlterComplete = true;
+		}
+		try {
+			await expect
+				.poll(() => workspaceReloadCount, { timeout: 10000 })
+				.toBeGreaterThan(shouldFailWorkspaceReload ? 1 : 0);
+			await page.clock.runFor(6000);
+			expect(workspaceReloadCount).toBe(shouldFailWorkspaceReload ? 2 : 1);
+			await expect(editSchemaButton).toHaveAttribute('disabled');
+			if (shouldNavigateBack) {
+				await expect(page.locator('.schema-edit-fullscreen.fullscreen--loading')).toBeVisible();
+				await expect(page.locator('.schema-edit')).toHaveCount(0);
+			}
+		} finally {
+			releaseWorkspaceReload();
+		}
+
+		if (shouldNavigateBack) {
+			await expect(page.locator('.schema-edit')).toBeVisible();
+		} else {
+			await editSchema(page);
+		}
+		await openProperty(page, 'last_name');
+		await panel.locator('sl-textarea textarea[name="description"]').fill('Updated description');
+		await panel.locator('.property-panel__save').click();
+		await page.locator('.schema-edit__header-apply-button').click();
+		await page.locator('.schema-edit__apply-alter-button').click();
+		await expect.poll(() => submittedSources.length).toBe(2);
+		expect(submittedSources[1]).toEqual(submittedSources[0]);
+		const expectedSchema = structuredClone(submittedSchemas[0]);
+		expectedSchema.properties.find((property) => property.name === 'last_name').description = 'Updated description';
+		expect(previewedSchemas[previewedSchemas.length - 1]).toEqual(expectedSchema);
+		expect(submittedSchemas[1]).toEqual(expectedSchema);
+		await expect(page.locator('.schema-edit')).toHaveCount(0);
+		await expect(editSchemaButton).not.toHaveAttribute('disabled');
+	});
+}
 
 // Search profile schema properties by the technical type shown in the list.
 test(`Search profile schema properties by technical type`, async ({ page }) => {
@@ -481,7 +1000,8 @@ test(`Keep keyboard hints fixed and show disabled reorder handles while filterin
 test(`Expand nested object properties while viewing and editing`, async ({ page }) => {
 	await page.route('**/v1/profiles/schema', async (route) => {
 		const response = await route.fetch();
-		const schema = (await response.json()) as ObjectType;
+		const profileSchema = (await response.json()) as ProfileSchema;
+		const schema = profileSchema.schema;
 		const property = schema.properties[0];
 		schema.properties.push({ ...property, name: 'reference_property', type: { kind: 'string' } });
 		schema.properties.push({
@@ -502,7 +1022,7 @@ test(`Expand nested object properties while viewing and editing`, async ({ page 
 				],
 			},
 		});
-		await route.fulfill({ response, json: schema });
+		await route.fulfill({ response, json: profileSchema });
 	});
 
 	const getExpandControl = (row) => row.locator('xpath=..').locator(':scope > .grid__row-expand');
@@ -605,7 +1125,8 @@ test(`Expand nested object properties while viewing and editing`, async ({ page 
 test(`Keep profile schema search selection and expansion consistent`, async ({ page }) => {
 	await page.route('**/v1/profiles/schema', async (route) => {
 		const response = await route.fetch();
-		const schema = (await response.json()) as ObjectType;
+		const profileSchema = (await response.json()) as ProfileSchema;
+		const schema = profileSchema.schema;
 		schema.properties.push({
 			name: 'search_object',
 			prefilled: '',
@@ -632,7 +1153,7 @@ test(`Keep profile schema search selection and expansion consistent`, async ({ p
 			displayName: '',
 			description: '',
 		});
-		await route.fulfill({ response, json: schema });
+		await route.fulfill({ response, json: profileSchema });
 	});
 
 	await page.goto(`${adminURL}/profile-unification/schema`);
@@ -792,7 +1313,8 @@ test(`Keep an object expanded when reordering it`, async ({ page }) => {
 	});
 	await page.route('**/v1/profiles/schema', async (route) => {
 		const response = await route.fetch();
-		const schema = (await response.json()) as ObjectType;
+		const profileSchema = (await response.json()) as ProfileSchema;
+		const schema = profileSchema.schema;
 		schema.properties.push(
 			{
 				name: 'expanded_object',
@@ -832,7 +1354,7 @@ test(`Keep an object expanded when reordering it`, async ({ page }) => {
 				description: '',
 			},
 		);
-		await route.fulfill({ response, json: schema });
+		await route.fulfill({ response, json: profileSchema });
 	});
 
 	await page.goto(`${adminURL}/profile-unification/schema`);
@@ -961,7 +1483,7 @@ test(`Keep contextual and form actions in their expected tab order`, async ({ pa
 	const removeButton = propertyPanel.locator('.property-panel__remove');
 	const identifierInfo = propertyPanel.getByLabel('About identifiers');
 	const primarySourceInfo = propertyPanel.getByLabel('About primary source');
-	await expect(propertyPanel.locator('.schema-property-grid__info')).toHaveCount(2);
+	await expect(propertyPanel.locator('.schema-property-grid__info')).toHaveCount(3);
 	await expectPassiveInformationTooltip(identifierInfo);
 	await expectPassiveInformationTooltip(primarySourceInfo);
 
@@ -1018,7 +1540,8 @@ test(`Keep an unsaved property visible while filtering`, async ({ page }) => {
 test(`Keep property details aligned and selected while viewing and editing`, async ({ page }) => {
 	await page.route('**/v1/profiles/schema', async (route) => {
 		const response = await route.fetch();
-		const schema = (await response.json()) as ObjectType;
+		const profileSchema = (await response.json()) as ProfileSchema;
+		const schema = profileSchema.schema;
 		const email = schema.properties.find((property) => property.name === 'email');
 		if (email != null) {
 			email.displayName = 'Email address';
@@ -1049,7 +1572,7 @@ test(`Keep property details aligned and selected while viewing and editing`, asy
 			displayName: '',
 			description: '',
 		});
-		await route.fulfill({ response, json: schema });
+		await route.fulfill({ response, json: profileSchema });
 	});
 
 	await page.goto(`${adminURL}/profile-unification/schema`);
@@ -1060,6 +1583,7 @@ test(`Keep property details aligned and selected while viewing and editing`, asy
 	await expect(panel.locator('.property-details-panel__label')).toContainText([
 		'Name',
 		'Type',
+		'Role',
 		'Display name',
 		'Description',
 		'Identifier',
@@ -1067,7 +1591,8 @@ test(`Keep property details aligned and selected while viewing and editing`, asy
 	]);
 	const primarySourceInfo = panel.getByLabel('About primary source');
 	await expect(primarySourceInfo).toBeVisible();
-	await expect(panel.locator('.schema-property-grid__info')).toHaveCount(2);
+	await expect(panel.locator('.schema-property-grid__info')).toHaveCount(3);
+	await expectPassiveInformationTooltip(panel.getByLabel('About roles'));
 	await expectPassiveInformationTooltip(panel.getByLabel('About identifiers'));
 	await expectPassiveInformationTooltip(primarySourceInfo);
 	await primarySourceInfo.hover();
@@ -1085,11 +1610,13 @@ test(`Keep property details aligned and selected while viewing and editing`, asy
 	await expect(panel.locator('.property-details-panel__value')).toHaveText([
 		'email',
 		'string, max 300 chars',
+		'—',
 		'Email address',
 		'—',
 		'Not an identifier',
-		emailCells[3],
+		emailCells[4],
 	]);
+	await expect(panel.locator('.property-details-panel__type')).toHaveAttribute('title', 'string, max 300 chars');
 	const gridTypeFont = await emailRow
 		.locator('.schema-property-grid__type-label')
 		.evaluate((type) => getComputedStyle(type).fontFamily);
@@ -1243,7 +1770,8 @@ test(`Show identifier order and renumber identifiers after removing a property`,
 test(`Keep object types unchanged after canceling the schema review`, async ({ page }) => {
 	await page.route('**/v1/profiles/schema', async (route) => {
 		const response = await route.fetch();
-		const schema = (await response.json()) as ObjectType;
+		const profileSchema = (await response.json()) as ProfileSchema;
+		const schema = profileSchema.schema;
 		schema.properties.push({
 			name: 'review_object',
 			prefilled: '',
@@ -1270,7 +1798,7 @@ test(`Keep object types unchanged after canceling the schema review`, async ({ p
 			displayName: '',
 			description: '',
 		});
-		await route.fulfill({ response, json: schema });
+		await route.fulfill({ response, json: profileSchema });
 	});
 	await page.route('**/v1/profiles/schema/preview', async (route) => {
 		await route.fulfill({ json: { queries: [] } });
@@ -1390,7 +1918,8 @@ test(`Keep the schema review open while applying changes`, async ({ page }) => {
 test(`Preserve create-required on top-level properties in the schema preview`, async ({ page }) => {
 	await page.route('**/v1/profiles/schema', async (route) => {
 		const response = await route.fetch();
-		const schema = (await response.json()) as ObjectType;
+		const profileSchema = (await response.json()) as ProfileSchema;
+		const schema = profileSchema.schema;
 		schema.properties.push({
 			name: 'create_required_property',
 			prefilled: '',
@@ -1402,7 +1931,7 @@ test(`Preserve create-required on top-level properties in the schema preview`, a
 			displayName: '',
 			description: '',
 		});
-		await route.fulfill({ response, json: schema });
+		await route.fulfill({ response, json: profileSchema });
 	});
 	await page.route('**/v1/profiles/schema/preview', async (route) => {
 		await route.fulfill({ json: { queries: [] } });
@@ -1815,6 +2344,357 @@ for (const [semantics, kind, structure] of [
 	});
 }
 
+test(`Assign and reassign property roles only when the property form is confirmed`, async ({ page }) => {
+	await mockProfilePropertyRoles(page, {
+		firstName: 'first_name',
+		lastName: '',
+		email: 'semantic_email',
+		country: 'semantic_country',
+		photo: 'avatar_url',
+	});
+
+	await page.goto(`${adminURL}/profile-unification/schema`);
+	const roleCell = (container, property: string) =>
+		container.locator(`.grid__row[data-id="${property}"] .grid__cell-content`).nth(3);
+	const readOnlyGrid = page.locator('.schema-grid');
+	await expect(roleCell(readOnlyGrid, 'first_name')).toHaveText('First name');
+	await expect(roleCell(readOnlyGrid, 'preferred_name')).toBeEmpty();
+	await expect(roleCell(readOnlyGrid, 'semantic_email')).toHaveText('Email');
+	await expect(roleCell(readOnlyGrid, 'semantic_country')).toHaveText('Country');
+	await expect(roleCell(readOnlyGrid, 'avatar_url')).toHaveText('Photo');
+	await expect(roleCell(readOnlyGrid, 'email')).toBeEmpty();
+
+	await editSchema(page);
+	const editGrid = page.locator('.schema-edit');
+	const panel = page.locator('.property-panel');
+	const reassignDialog = page.locator('.alert-dialog', { hasText: 'Reassign role?' });
+
+	await openProperty(page, 'preferred_name');
+	await expect(panel.locator('.property-role-selector__trigger')).toHaveText('Assign a role...');
+	await selectProfilePropertyRole(page, 'lastName');
+	await expect(reassignDialog).toBeHidden();
+	await expect(panel.locator('.property-role-selector__trigger')).toHaveText('Last name');
+	await panel.locator('.property-panel__cancel').click();
+	await expect(roleCell(editGrid, 'preferred_name')).toBeEmpty();
+
+	await openProperty(page, 'preferred_name');
+	await selectProfilePropertyRole(page, 'lastName');
+	await expect(reassignDialog).toBeHidden();
+	await panel.locator('.property-panel__save').click();
+	await expect(roleCell(editGrid, 'preferred_name')).toHaveText('Last name');
+
+	await openProperty(page, 'first_name');
+	await expect(panel.locator('.property-role-selector__trigger')).toHaveText('First name');
+	await panel.locator('.property-role-selector__trigger').click();
+	expect(
+		await panel
+			.locator('[data-property-role-option]')
+			.evaluateAll((options) => options.map((option) => option.getAttribute('data-property-role-option'))),
+	).toEqual(['none', 'firstName', 'lastName']);
+	await expect(panel.locator('[data-property-role-option="lastName"]')).toContainText(
+		'Currently assigned to preferred_name',
+	);
+
+	await openProperty(page, 'semantic_email');
+	await expect(panel.locator('.property-role-selector__trigger')).toHaveText('Email');
+	await panel.locator('.property-role-selector__trigger').click();
+	expect(
+		await panel
+			.locator('[data-property-role-option]')
+			.evaluateAll((options) => options.map((option) => option.getAttribute('data-property-role-option'))),
+	).toEqual(['none', 'email']);
+	await openProperty(page, 'semantic_country');
+	await expect(panel.locator('.property-role-selector__trigger')).toHaveText('Country');
+	await panel.locator('.property-role-selector__trigger').click();
+	expect(
+		await panel
+			.locator('[data-property-role-option]')
+			.evaluateAll((options) => options.map((option) => option.getAttribute('data-property-role-option'))),
+	).toEqual(['none', 'country']);
+	await openProperty(page, 'active');
+	await expect(panel.locator('.property-form__role')).toHaveCount(0);
+	await openProperty(page, 'avatar_url');
+	await expect(panel.locator('.property-role-selector__trigger')).toHaveText('Photo');
+	await panel.locator('.property-role-selector__trigger').click();
+	expect(
+		await panel
+			.locator('[data-property-role-option]')
+			.evaluateAll((options) => options.map((option) => option.getAttribute('data-property-role-option'))),
+	).toEqual(['none', 'photo']);
+
+	await openProperty(page, 'preferred_name');
+	await selectProfilePropertyRole(page, 'firstName');
+	await expect(reassignDialog).toContainText(
+		'First name is currently assigned to first_name. Reassign the First name role to preferred_name? ' +
+			'This will remove the Last name role from preferred_name.',
+	);
+	await reassignDialog.getByRole('button', { name: 'Reassign' }).click();
+	await expect(reassignDialog).toBeHidden();
+	await expect(panel.locator('.property-role-selector__trigger')).toHaveText('First name');
+	await panel.locator('.property-panel__cancel').click();
+	await expect(roleCell(editGrid, 'first_name')).toHaveText('First name');
+	await expect(roleCell(editGrid, 'preferred_name')).toHaveText('Last name');
+
+	await openProperty(page, 'preferred_name');
+	await expect(panel.locator('.property-role-selector__trigger')).toHaveText('Last name');
+	await selectProfilePropertyRole(page, 'firstName');
+	await reassignDialog.getByRole('button', { name: 'Reassign' }).click();
+	await expect(reassignDialog).toBeHidden();
+	await panel.locator('.property-form__change-name').click();
+	await panel.locator('.property-form__name-input input').fill('preferred_name_updated');
+	await panel.locator('.property-panel__save').click();
+	await expect(roleCell(editGrid, 'first_name')).toBeEmpty();
+	await expect(roleCell(editGrid, 'preferred_name')).toHaveText('First name');
+
+	const alterRequestPromise = page.waitForRequest(
+		(request) => request.url().endsWith('/profiles/schema') && request.method() === 'PUT',
+	);
+	await page.locator('.schema-edit__header-apply-button').click();
+	await expect(page.locator('.schema-edit__queries')).toBeVisible();
+	await page.locator('.schema-edit__apply-alter-button').click();
+	const propertyRoles = (await alterRequestPromise).postDataJSON().propertyRoles;
+	expect(propertyRoles).toEqual({
+		firstName: 'preferred_name_updated',
+		lastName: '',
+		email: 'semantic_email',
+		country: 'semantic_country',
+		photo: 'avatar_url',
+	});
+});
+
+test(`Confirm property role removal when a type becomes incompatible`, async ({ page }) => {
+	await mockProfilePropertyRoles(page, { firstName: '', lastName: '', email: '', country: '', photo: '' });
+
+	await page.goto(`${adminURL}/profile-unification/schema`);
+	await editSchema(page);
+	const panel = page.locator('.property-panel');
+	await page.locator('.schema-edit__add-property').click();
+	await panel.locator('.property-form__name-input input').fill('new_avatar_url');
+	await selectPropertyType(page, 'url');
+	await selectProfilePropertyRole(page, 'photo');
+	await panel.locator('.property-panel__save').click();
+	const roleCell = page.locator('.schema-edit .grid__row[data-id="new_avatar_url"] .grid__cell-content').nth(3);
+	await expect(roleCell).toHaveText('Photo');
+	await openProperty(page, 'new_avatar_url');
+	await expect(panel.locator('.property-role-selector__trigger')).toHaveText('Photo');
+
+	const typeTrigger = panel.locator('.property-type-selector__trigger .property-type-selector__type');
+	const initialType = await typeTrigger.innerText();
+	await selectPropertyType(page, 'string');
+	const changeTypeDialog = page.locator('.alert-dialog', { hasText: 'Change type?' });
+	await expect(changeTypeDialog).toContainText(
+		'Changing the type to string will remove the Photo role from this property.',
+	);
+	await expect(typeTrigger).toHaveText(initialType);
+	await expect(panel.locator('.property-role-selector__trigger')).toHaveText('Photo');
+	await changeTypeDialog.getByRole('button', { name: 'Cancel' }).click();
+	await expect(changeTypeDialog).toBeHidden();
+	await expect(typeTrigger).toHaveText(initialType);
+	await expect(panel.locator('.property-role-selector__trigger')).toHaveText('Photo');
+
+	await selectPropertyType(page, 'string');
+	await changeTypeDialog.getByRole('button', { name: 'Change type' }).click();
+	await expect(changeTypeDialog).toBeHidden();
+	await expect(typeTrigger).toHaveText('string');
+	await expect(panel.locator('.property-role-selector__trigger')).toHaveText('Assign a role...');
+	await panel.locator('.property-panel__cancel').click();
+	await expect(roleCell).toHaveText('Photo');
+
+	await openProperty(page, 'new_avatar_url');
+	await expect(panel.locator('.property-role-selector__trigger')).toHaveText('Photo');
+	await selectPropertyType(page, 'string');
+	await changeTypeDialog.getByRole('button', { name: 'Change type' }).click();
+	await expect(changeTypeDialog).toBeHidden();
+	await panel.locator('.property-panel__save').click();
+	await expect(roleCell).toBeEmpty();
+
+	const alterRequestPromise = page.waitForRequest(
+		(request) => request.url().endsWith('/profiles/schema') && request.method() === 'PUT',
+	);
+	await page.locator('.schema-edit__header-apply-button').click();
+	await expect(page.locator('.schema-edit__queries')).toBeVisible();
+	await page.locator('.schema-edit__apply-alter-button').click();
+	const request = (await alterRequestPromise).postDataJSON();
+	expect(request.propertyRoles.photo).toBe('');
+	const avatarURL = request.schema.properties.find((property) => property.name === 'new_avatar_url');
+	expect(avatarURL.type).toEqual({ kind: 'string' });
+});
+
+for (const finalType of ['url', 'object']) {
+	test(`Track descendant role removals through successive type changes to ${finalType}`, async ({ page }) => {
+		await mockProfilePropertyRoles(page, { firstName: '', lastName: '', email: '', country: '', photo: '' });
+
+		await page.goto(`${adminURL}/profile-unification/schema`);
+		await editSchema(page);
+		const panel = page.locator('.property-panel');
+		await page.locator('.schema-edit__add-property').click();
+		await panel.locator('.property-form__name-input input').fill('details');
+		await panel.locator('.property-type-selector__structure-trigger').click();
+		await panel.locator('[data-structure-option="object"]').click();
+		await panel.locator('.property-panel__save').click();
+		await page.locator('.schema-edit__add-property').click();
+		await panel.locator('.property-form__parent').evaluate((select: any) => {
+			select.value = 'details';
+			select.dispatchEvent(new CustomEvent('sl-change', { bubbles: true, composed: true }));
+		});
+		await panel.locator('.property-form__name-input input').fill('email');
+		await selectPropertyType(page, 'email');
+		await selectProfilePropertyRole(page, 'email');
+		await panel.locator('.property-panel__save').click();
+		await openProperty(page, 'details');
+
+		const changeTypeDialog = page.locator('.alert-dialog', { hasText: 'Change type?' });
+		await panel.locator('.property-type-selector__structure-trigger').click();
+		await panel.locator('[data-structure-option="array"]').click();
+		await selectPropertyType(page, 'email');
+		await expect(changeTypeDialog).toContainText(
+			'Changing the type to array of email will remove this role: Email.',
+		);
+		await changeTypeDialog.getByRole('button', { name: 'Cancel' }).click();
+		await expect(changeTypeDialog).toBeHidden();
+		await panel.locator('.property-panel__cancel').click();
+		await openProperty(page, 'details');
+		await panel.locator('.property-type-selector__structure-trigger').click();
+		await panel.locator('[data-structure-option="one"]').click();
+		await selectPropertyType(page, 'string');
+		await expect(changeTypeDialog).toContainText('will remove this role: Email');
+		await changeTypeDialog.getByRole('button', { name: 'Change type' }).click();
+		await expect(changeTypeDialog).toBeHidden();
+		await selectProfilePropertyRole(page, 'firstName');
+		await selectPropertyType(page, 'url');
+		await expect(changeTypeDialog).toContainText('will remove the First name role from this property');
+		await changeTypeDialog.getByRole('button', { name: 'Change type' }).click();
+		await expect(changeTypeDialog).toBeHidden();
+		if (finalType === 'object') {
+			await selectProfilePropertyRole(page, 'photo');
+			await panel.locator('.property-type-selector__structure-trigger').click();
+			await panel.locator('[data-structure-option="object"]').click();
+			await expect(changeTypeDialog).toContainText('will remove the Photo role from this property');
+			await changeTypeDialog.getByRole('button', { name: 'Change type' }).click();
+			await expect(changeTypeDialog).toBeHidden();
+			await panel.locator('sl-textarea textarea[name="description"]').fill('Contact details');
+		}
+		await panel.locator('.property-panel__save').click();
+
+		await page.locator('.schema-edit__header-apply-button').click();
+		await expect(page.locator('.schema-edit__queries')).toBeVisible();
+		const alterRequestPromise = page.waitForRequest(
+			(request) => request.url().endsWith('/profiles/schema') && request.method() === 'PUT',
+		);
+		await page.locator('.schema-edit__apply-alter-button').click();
+		const request = (await alterRequestPromise).postDataJSON();
+		expect(request.propertyRoles).toEqual({
+			firstName: '',
+			lastName: '',
+			email: finalType === 'object' ? 'details.email' : '',
+			country: '',
+			photo: '',
+		});
+		const details = request.schema.properties.find((property) => property.name === 'details');
+		if (finalType === 'object') {
+			expect(details.type.kind).toBe('object');
+			expect(details.type.properties).toEqual([
+				expect.objectContaining({ name: 'email', type: { kind: 'string', semantics: 'email' } }),
+			]);
+		} else {
+			expect(details.type).toEqual({ kind: 'string', semantics: 'url' });
+		}
+	});
+}
+
+test(`Delete a property and its role together`, async ({ page }) => {
+	await mockProfilePropertyRoles(page, { firstName: '', lastName: '', email: '', country: '', photo: 'avatar_url' });
+
+	await page.goto(`${adminURL}/profile-unification/schema`);
+	await editSchema(page);
+	await openProperty(page, 'avatar_url');
+	await page.locator('.property-panel__remove').click();
+	const deleteDialog = page.locator('.alert-dialog', { hasText: 'Delete property?' });
+	await expect(deleteDialog).toContainText('Deleting it will also unassign the Photo role.');
+	await deleteDialog.locator('.schema-edit__confirm-remove-property').click();
+	await expect(deleteDialog).toBeHidden();
+	await expect(page.locator('.schema-edit .grid__row[data-id="avatar_url"]')).toHaveCount(0);
+
+	const alterRequestPromise = page.waitForRequest(
+		(request) => request.url().endsWith('/profiles/schema') && request.method() === 'PUT',
+	);
+	await page.locator('.schema-edit__header-apply-button').click();
+	await expect(page.locator('.schema-edit__queries')).toBeVisible();
+	await page.locator('.schema-edit__apply-alter-button').click();
+	const request = (await alterRequestPromise).postDataJSON();
+	expect(request.propertyRoles.photo).toBe('');
+	expect(request.schema.properties.some((property) => property.name === 'avatar_url')).toBe(false);
+});
+
+test(`Show only compatible property roles and remove one when cardinality changes`, async ({ page }) => {
+	await mockProfilePropertyRoles(page, { firstName: '', lastName: '', email: '', country: '', photo: '' });
+
+	await page.goto(`${adminURL}/profile-unification/schema`);
+	await editSchema(page);
+	await page.locator('.schema-edit__add-property').click();
+	const panel = page.locator('.property-panel');
+	const changeTypeDialog = page.locator('.alert-dialog', { hasText: 'Change type?' });
+	await panel.locator('.property-form__name-input input').fill('new_avatar_url');
+	await selectPropertyType(page, 'string');
+	await panel.locator('.property-role-selector__trigger').click();
+	expect(
+		await panel
+			.locator('[data-property-role-option]')
+			.evaluateAll((options) => options.map((option) => option.getAttribute('data-property-role-option'))),
+	).toEqual(['none', 'firstName', 'lastName']);
+	await panel.locator('[data-property-role-option="firstName"]').click();
+	await expect(panel.locator('.property-role-selector__trigger')).toHaveText('First name');
+	await selectProfilePropertyRole(page, 'none');
+	await expect(panel.locator('.property-role-selector__trigger')).toHaveText('Assign a role...');
+	await selectPropertyType(page, 'email');
+	await panel.locator('.property-role-selector__trigger').click();
+	expect(
+		await panel
+			.locator('[data-property-role-option]')
+			.evaluateAll((options) => options.map((option) => option.getAttribute('data-property-role-option'))),
+	).toEqual(['none', 'email']);
+	await panel.locator('[data-property-role-option="email"]').click();
+	await panel.locator('.property-type-selector__structure-trigger').click();
+	await panel.locator('[data-structure-option="map"]').click();
+	await expect(changeTypeDialog).toContainText(
+		'Changing the type to map of email will remove the Email role from this property.',
+	);
+	await changeTypeDialog.getByRole('button', { name: 'Cancel' }).click();
+	await expect(changeTypeDialog).toBeHidden();
+	await expect(panel.locator('.property-role-selector__trigger')).toHaveText('Email');
+	await selectProfilePropertyRole(page, 'none');
+	await selectPropertyType(page, 'country');
+	await panel.locator('.property-role-selector__trigger').click();
+	expect(
+		await panel
+			.locator('[data-property-role-option]')
+			.evaluateAll((options) => options.map((option) => option.getAttribute('data-property-role-option'))),
+	).toEqual(['none', 'country']);
+	await panel.locator('[data-property-role-option="none"]').click();
+	await selectPropertyType(page, 'url');
+	await panel.locator('.property-role-selector__trigger').click();
+	expect(
+		await panel
+			.locator('[data-property-role-option]')
+			.evaluateAll((options) => options.map((option) => option.getAttribute('data-property-role-option'))),
+	).toEqual(['none', 'photo']);
+	await panel.locator('[data-property-role-option="photo"]').click();
+	await expect(panel.locator('.property-role-selector__trigger')).toHaveText('Photo');
+
+	await panel.locator('.property-type-selector__structure-trigger').click();
+	await panel.locator('[data-structure-option="array"]').click();
+	await expect(changeTypeDialog).toContainText(
+		'Changing this property to an array will remove the Photo role from this property.',
+	);
+	await changeTypeDialog.getByRole('button', { name: 'Change type' }).click();
+	await expect(changeTypeDialog).toBeHidden();
+	await expect(panel.locator('.property-form__role')).toHaveCount(0);
+	await panel.locator('.property-panel__save').click();
+	const row = page.locator('.schema-edit .grid__row[data-id="new_avatar_url"]');
+	await expect(row.locator('.grid__cell-content').nth(3)).toBeEmpty();
+	await expect(row.locator('.schema-property-grid__type')).toHaveText('array of URL · string');
+});
+
 test(`Keep applied property types read-only and preserve their configuration`, async ({ page }) => {
 	const appliedTypes: Record<string, Type> = {
 		email: { kind: 'string', maxLength: 100 },
@@ -1839,7 +2719,8 @@ test(`Keep applied property types read-only and preserve their configuration`, a
 	};
 	await page.route('**/v1/profiles/schema', async (route) => {
 		const response = await route.fetch();
-		const schema = (await response.json()) as ObjectType;
+		const profileSchema = (await response.json()) as ProfileSchema;
+		const schema = profileSchema.schema;
 		const email = schema.properties.find((property) => property.name === 'email');
 		email.type = appliedTypes.email;
 		for (const [name, type] of Object.entries(appliedTypes)) {
@@ -1847,7 +2728,7 @@ test(`Keep applied property types read-only and preserve their configuration`, a
 				schema.properties.push({ ...structuredClone(email), name, type });
 			}
 		}
-		await route.fulfill({ response, json: schema });
+		await route.fulfill({ response, json: profileSchema });
 	});
 	await page.route('**/v1/profiles/schema/preview', async (route) => {
 		await route.fulfill({ json: { queries: [] } });
@@ -1890,6 +2771,10 @@ test(`Keep applied property types read-only and preserve their configuration`, a
 		await changeNameButton.focus();
 		await expect(changeNameButton).toBeFocused();
 		await page.keyboard.press('Tab');
+		if (name === 'email' || name === 'materialized_email' || name === 'materialized_country') {
+			await expect(propertyPanel.locator('.property-role-selector__trigger button')).toBeFocused();
+			await page.keyboard.press('Tab');
+		}
 		await expect(propertyPanel.locator('.property-form__display-name input')).toBeFocused();
 		await expect(typeChangeNote).toBeVisible();
 		await structureTrigger.click({ force: true });
@@ -1946,7 +2831,8 @@ test(`Render array and map property types and preserve their semantics`, async (
 		const request = route.request();
 		if (request.method() === 'GET') {
 			const response = await route.fetch();
-			const schema = (await response.json()) as ObjectType;
+			const profileSchema = (await response.json()) as ProfileSchema;
+			const schema = profileSchema.schema;
 			const arrayProperty = schema.properties.find((property) => property.name === 'phone_numbers');
 			const plainArrayProperty = structuredClone(arrayProperty);
 			plainArrayProperty.name = 'plain_phone_numbers';
@@ -1958,7 +2844,7 @@ test(`Render array and map property types and preserve their semantics`, async (
 			phoneSemanticsMapProperty.name = 'phone_numbers_by_kind';
 			phoneSemanticsMapProperty.type = { kind: 'map', elementType: { kind: 'string', semantics: 'phone' } };
 			schema.properties.push(plainArrayProperty, plainMapProperty, phoneSemanticsMapProperty);
-			await route.fulfill({ response, json: schema });
+			await route.fulfill({ response, json: profileSchema });
 			return;
 		}
 		if (request.method() === 'PUT') {
@@ -2433,7 +3319,8 @@ test(`Edit schema property`, async ({ page }) => {
 test(`Restore the original property name without leaving pending changes`, async ({ page }) => {
 	await page.route('**/v1/profiles/schema', async (route) => {
 		const response = await route.fetch();
-		const schema = (await response.json()) as ObjectType;
+		const profileSchema = (await response.json()) as ProfileSchema;
+		const schema = profileSchema.schema;
 		schema.properties.push({
 			name: 'original_property_name',
 			prefilled: '',
@@ -2445,7 +3332,7 @@ test(`Restore the original property name without leaving pending changes`, async
 			displayName: '',
 			description: '',
 		});
-		await route.fulfill({ response, json: schema });
+		await route.fulfill({ response, json: profileSchema });
 	});
 
 	await page.goto(`${adminURL}/profile-unification/schema`);
@@ -2491,7 +3378,8 @@ test(`Restore the original property name without leaving pending changes`, async
 test(`Remove a renamed property without sending its stale RePath`, async ({ page }) => {
 	await page.route('**/v1/profiles/schema', async (route) => {
 		const response = await route.fetch();
-		const schema = (await response.json()) as ObjectType;
+		const profileSchema = (await response.json()) as ProfileSchema;
+		const schema = profileSchema.schema;
 		schema.properties.push({
 			name: 'property_to_rename_and_remove',
 			prefilled: '',
@@ -2503,7 +3391,7 @@ test(`Remove a renamed property without sending its stale RePath`, async ({ page
 			displayName: '',
 			description: '',
 		});
-		await route.fulfill({ response, json: schema });
+		await route.fulfill({ response, json: profileSchema });
 	});
 
 	await page.goto(`${adminURL}/profile-unification/schema`);
@@ -2532,7 +3420,8 @@ test(`Remove a replacement property without sending its stale RePath`, async ({ 
 			return;
 		}
 		const response = await route.fetch();
-		const schema = (await response.json()) as ObjectType;
+		const profileSchema = (await response.json()) as ProfileSchema;
+		const schema = profileSchema.schema;
 		schema.properties.push({
 			name: 'property_to_replace_and_remove',
 			prefilled: '',
@@ -2544,7 +3433,7 @@ test(`Remove a replacement property without sending its stale RePath`, async ({ 
 			displayName: '',
 			description: '',
 		});
-		await route.fulfill({ response, json: schema });
+		await route.fulfill({ response, json: profileSchema });
 	});
 
 	await page.goto(`${adminURL}/profile-unification/schema`);
@@ -2578,7 +3467,8 @@ test(`Remove a replacement property without sending its stale RePath`, async ({ 
 test(`Do not show modified field indicators on a replacement property`, async ({ page }) => {
 	await page.route('**/v1/profiles/schema', async (route) => {
 		const response = await route.fetch();
-		const schema = (await response.json()) as ObjectType;
+		const profileSchema = (await response.json()) as ProfileSchema;
+		const schema = profileSchema.schema;
 		schema.properties.push({
 			name: 'property_to_replace',
 			prefilled: '',
@@ -2590,7 +3480,7 @@ test(`Do not show modified field indicators on a replacement property`, async ({
 			displayName: '',
 			description: 'Original description',
 		});
-		await route.fulfill({ response, json: schema });
+		await route.fulfill({ response, json: profileSchema });
 	});
 
 	await page.goto(`${adminURL}/profile-unification/schema`);
@@ -2611,7 +3501,8 @@ test(`Do not show modified field indicators on a replacement property`, async ({
 test(`Rename an existing property to a deleted property's name`, async ({ page }) => {
 	await page.route('**/v1/profiles/schema', async (route) => {
 		const response = await route.fetch();
-		const schema = (await response.json()) as ObjectType;
+		const profileSchema = (await response.json()) as ProfileSchema;
+		const schema = profileSchema.schema;
 		schema.properties.push(
 			{
 				name: 'property_to_rename',
@@ -2636,7 +3527,7 @@ test(`Rename an existing property to a deleted property's name`, async ({ page }
 				description: '',
 			},
 		);
-		await route.fulfill({ response, json: schema });
+		await route.fulfill({ response, json: profileSchema });
 	});
 
 	await page.goto(`${adminURL}/profile-unification/schema`);
@@ -2729,7 +3620,8 @@ test(`Check that RePaths are sent correctly`, async ({ page }) => {
 test(`Reuse a property name more than once before applying schema changes`, async ({ page }) => {
 	await page.route('**/v1/profiles/schema', async (route) => {
 		const response = await route.fetch();
-		const schema = (await response.json()) as ObjectType;
+		const profileSchema = (await response.json()) as ProfileSchema;
+		const schema = profileSchema.schema;
 		schema.properties.push({
 			name: 'reused_property_name',
 			prefilled: '',
@@ -2741,7 +3633,7 @@ test(`Reuse a property name more than once before applying schema changes`, asyn
 			displayName: '',
 			description: '',
 		});
-		await route.fulfill({ response, json: schema });
+		await route.fulfill({ response, json: profileSchema });
 	});
 
 	await page.goto(`${adminURL}/profile-unification/schema`);
@@ -2775,7 +3667,8 @@ test(`Reuse a property name more than once before applying schema changes`, asyn
 test(`Remove a replacement property's RePath when renaming it`, async ({ page }) => {
 	await page.route('**/v1/profiles/schema', async (route) => {
 		const response = await route.fetch();
-		const schema = (await response.json()) as ObjectType;
+		const profileSchema = (await response.json()) as ProfileSchema;
+		const schema = profileSchema.schema;
 		schema.properties.push({
 			name: 'replacement_name',
 			prefilled: '',
@@ -2787,7 +3680,7 @@ test(`Remove a replacement property's RePath when renaming it`, async ({ page })
 			displayName: '',
 			description: '',
 		});
-		await route.fulfill({ response, json: schema });
+		await route.fulfill({ response, json: profileSchema });
 	});
 
 	await page.goto(`${adminURL}/profile-unification/schema`);
@@ -2820,7 +3713,8 @@ test(`Remove a replacement property's RePath when renaming it`, async ({ page })
 test(`Allow matching property names under different object parents`, async ({ page }) => {
 	await page.route('**/v1/profiles/schema', async (route) => {
 		const response = await route.fetch();
-		const schema = (await response.json()) as ObjectType;
+		const profileSchema = (await response.json()) as ProfileSchema;
+		const schema = profileSchema.schema;
 		const createProperty = (name: string, type: Property['type']): Property => ({
 			name,
 			prefilled: '',
@@ -2850,7 +3744,7 @@ test(`Allow matching property names under different object parents`, async ({ pa
 				],
 			}),
 		);
-		await route.fulfill({ response, json: schema });
+		await route.fulfill({ response, json: profileSchema });
 	});
 
 	await page.goto(`${adminURL}/profile-unification/schema`);
@@ -2890,7 +3784,8 @@ test(`Allow matching property names under different object parents`, async ({ pa
 test(`Support hasOwnProperty as a profile schema property name`, async ({ page }) => {
 	await page.route('**/v1/profiles/schema', async (route) => {
 		const response = await route.fetch();
-		const schema = (await response.json()) as ObjectType;
+		const profileSchema = (await response.json()) as ProfileSchema;
+		const schema = profileSchema.schema;
 		const createProperty = (name: string, type: Property['type']): Property => ({
 			name,
 			prefilled: '',
@@ -2909,7 +3804,7 @@ test(`Support hasOwnProperty as a profile schema property name`, async ({ page }
 				properties: [createProperty('existing_child', { kind: 'string' })],
 			}),
 		);
-		await route.fulfill({ response, json: schema });
+		await route.fulfill({ response, json: profileSchema });
 	});
 	await page.route('**/v1/profiles/schema/preview', async (route) => {
 		await route.fulfill({ json: { queries: [] } });
@@ -2940,7 +3835,8 @@ test(`Support hasOwnProperty as a profile schema property name`, async ({ page }
 test(`Ignore inherited primary sources for prototype property names`, async ({ page }) => {
 	await page.route('**/v1/profiles/schema', async (route) => {
 		const response = await route.fetch();
-		const schema = (await response.json()) as ObjectType;
+		const profileSchema = (await response.json()) as ProfileSchema;
+		const schema = profileSchema.schema;
 		schema.properties.push({
 			name: 'toString',
 			prefilled: '',
@@ -2952,7 +3848,7 @@ test(`Ignore inherited primary sources for prototype property names`, async ({ p
 			displayName: '',
 			description: '',
 		});
-		await route.fulfill({ response, json: schema });
+		await route.fulfill({ response, json: profileSchema });
 	});
 
 	await page.goto(`${adminURL}/profile-unification/schema`);
@@ -3135,7 +4031,8 @@ test(`Remove nested properties when changing a new object to another type`, asyn
 test(`Reject descendant changes while renaming an object property`, async ({ page }) => {
 	await page.route('**/v1/profiles/schema', async (route) => {
 		const response = await route.fetch();
-		const schema = (await response.json()) as ObjectType;
+		const profileSchema = (await response.json()) as ProfileSchema;
+		const schema = profileSchema.schema;
 		schema.properties.push({
 			name: 'object_to_rename',
 			prefilled: '',
@@ -3162,7 +4059,7 @@ test(`Reject descendant changes while renaming an object property`, async ({ pag
 			displayName: '',
 			description: '',
 		});
-		await route.fulfill({ response, json: schema });
+		await route.fulfill({ response, json: profileSchema });
 	});
 	let previewRequests = 0;
 	await page.route('**/v1/profiles/schema/preview', async (route) => {
@@ -3222,7 +4119,8 @@ test(`Reject a new object property without sub-properties`, async ({ page }) => 
 test(`Reject an existing object property after removing all its sub-properties`, async ({ page }) => {
 	await page.route('**/v1/profiles/schema', async (route) => {
 		const response = await route.fetch();
-		const schema = (await response.json()) as ObjectType;
+		const profileSchema = (await response.json()) as ProfileSchema;
+		const schema = profileSchema.schema;
 		schema.properties.push(
 			{
 				name: 'object_to_empty',
@@ -3262,7 +4160,7 @@ test(`Reject an existing object property after removing all its sub-properties`,
 				description: '',
 			},
 		);
-		await route.fulfill({ response, json: schema });
+		await route.fulfill({ response, json: profileSchema });
 	});
 	let previewRequests = 0;
 	await page.route('**/v1/profiles/schema/preview', async (route) => {
@@ -3286,7 +4184,8 @@ test(`Reject an existing object property after removing all its sub-properties`,
 test(`Count an object removal once after changing its children`, async ({ page }) => {
 	await page.route('**/v1/profiles/schema', async (route) => {
 		const response = await route.fetch();
-		const schema = (await response.json()) as ObjectType;
+		const profileSchema = (await response.json()) as ProfileSchema;
+		const schema = profileSchema.schema;
 		schema.properties.push({
 			name: 'object_with_replaced_child',
 			prefilled: '',
@@ -3324,7 +4223,7 @@ test(`Count an object removal once after changing its children`, async ({ page }
 			displayName: '',
 			description: '',
 		});
-		await route.fulfill({ response, json: schema });
+		await route.fulfill({ response, json: profileSchema });
 	});
 
 	await page.goto(`${adminURL}/profile-unification/schema`);

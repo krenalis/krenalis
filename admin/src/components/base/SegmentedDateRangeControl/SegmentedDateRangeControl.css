@@ -3,14 +3,12 @@
 	align-items: center;
 }
 
-.segmented-date-range-control sl-button::part(base),
-.segmented-date-range-button::part(base) {
+.segmented-date-range-control sl-button::part(base) {
 	padding-right: 15px;
 	padding-left: 15px;
 }
 
-.segmented-date-range-control sl-button[variant='default']::part(base),
-.segmented-date-range-button[variant='default']::part(base) {
+.segmented-date-range-control sl-button[variant='default']::part(base) {
 	background: var(--bg-primary);
 }
 

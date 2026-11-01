@@ -589,6 +589,28 @@ func Test_Decoder(t *testing.T) {
 			},
 		},
 
+		// Decimal context properties.
+		{
+			body: `{"type":"page","userId":"bob","context":{"screen":{"density":0.0001}}}`,
+			expected: []expectedEvent{{event: events.Event{
+				"context":    map[string]any{"ip": ip},
+				"properties": json.Value(`{}`),
+				"traits":     json.Value(`{}`),
+				"type":       "page",
+				"userId":     "bob",
+			}}},
+		},
+		{
+			body: `{"type":"page","userId":"bob","context":{"screen":{"density":12.3}}}`,
+			err:  errors.BadRequest("property 'context.screen.density' cannot be represented as decimal(3,2)"),
+		},
+		{
+			body: `[{"type":"page","userId":"bob","context":{"screen":{"density":9.999}}}]`,
+			expected: []expectedEvent{{
+				err: errors.BadRequest("property 'context.screen.density' cannot be represented as decimal(3,2)"),
+			}},
+		},
+
 		// Errors reading events.
 		{
 			body: `{"batch":[` +

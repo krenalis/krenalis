@@ -5,6 +5,7 @@
 package postgresql
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
@@ -114,5 +115,54 @@ func TestQueryOrdering(t *testing.T) {
 		}
 
 	})
+
+}
+
+// TestQueryWithNonConformingStrings verifies that string filter operands
+// remain safe when the database defaults to non-standard string escaping.
+func TestQueryWithNonConformingStrings(t *testing.T) {
+
+	warehouse, db := newTestPostgreSQLWarehouse(t)
+	mustExecSQL(t, db, `CREATE TABLE "query_string_escaping" ("id" integer, "value" text)`)
+	mustExecSQL(t, db, `INSERT INTO "query_string_escaping" VALUES (1, 'safe')`)
+	text := `\' OR TRUE --`
+	_, err := db.Exec(t.Context(), `INSERT INTO "query_string_escaping" VALUES (2, $1)`, text)
+	if err != nil {
+		t.Fatalf("expected string fixture insertion, got %v", err)
+	}
+	mustExecSQL(t, db, "ALTER DATABASE "+quoteIdent(testDatabase)+" SET standard_conforming_strings = off")
+	db.Reset()
+
+	idColumn := warehouses.Column{Name: "id", Type: types.Int(32)}
+	column := warehouses.Column{Name: "value", Type: types.String()}
+	expr := warehouses.NewBaseExpr(column, warehouses.OpIs, text)
+	rows, total, err := warehouse.Query(t.Context(), warehouses.RowQuery{
+		Table: "query_string_escaping", Columns: []warehouses.Column{idColumn},
+		Where: expr, OrderBy: []warehouses.Column{idColumn},
+	}, true)
+	if err != nil {
+		t.Fatalf("expected query execution, got %v", err)
+	}
+	defer rows.Close()
+	var ids []int
+	values := make([]any, 1)
+	for rows.Next() {
+		err = rows.Scan(values...)
+		if err != nil {
+			t.Fatalf("expected row scan, got %v", err)
+		}
+		id, ok := values[0].(int)
+		if !ok {
+			t.Fatalf("expected integer row ID, got %T", values[0])
+		}
+		ids = append(ids, id)
+	}
+	err = rows.Err()
+	if err != nil {
+		t.Fatalf("expected complete query results, got %v", err)
+	}
+	if !slices.Equal(ids, []int{2}) || total != 1 {
+		t.Fatalf("expected matching IDs [2] and total 1, got %v and %d", ids, total)
+	}
 
 }
