@@ -6,8 +6,11 @@ package mappings
 
 import (
 	"bytes"
+	"fmt"
 	"maps"
+	"math"
 	"reflect"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -21,6 +24,454 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 )
+
+// TestMappingArray checks array conversions and validation.
+func TestMappingArray(t *testing.T) {
+
+	date := time.Date(2025, 12, 31, 0, 0, 0, 0, time.UTC)
+	createRequiredObject := types.Object([]types.Property{{
+		Name: "required", Type: types.String(), ReadOptional: true, CreateRequired: true,
+	}})
+	updateRequiredObject := types.Object([]types.Property{{
+		Name: "required", Type: types.String(), ReadOptional: true, UpdateRequired: true,
+	}})
+	tests := []struct {
+		name        string
+		expression  string
+		source      types.Type
+		destination types.Type
+		value       any
+		expected    any
+		err         string
+		purpose     Purpose
+	}{
+		{
+			name:        "literal date",
+			expression:  "array('2025-12-31')",
+			source:      types.String(),
+			destination: types.Array(types.Date()),
+			expected:    []any{date},
+		},
+		{
+			name:        "dynamic date",
+			expression:  "array(value)",
+			source:      types.String(),
+			destination: types.Array(types.Date()),
+			value:       "46022",
+			expected:    []any{date},
+		},
+		{
+			name:        "fractional Excel serial date",
+			expression:  "array(value)",
+			source:      types.String(),
+			destination: types.Array(types.Date()),
+			value:       "46022.5",
+			expected:    []any{date},
+		},
+		{
+			name:        "int8 to boolean",
+			expression:  "array(value, 'true', false)",
+			source:      types.Int(8),
+			destination: types.Array(types.Boolean()),
+			value:       1,
+			expected:    []any{true, true, false},
+		},
+		{
+			name:        "boolean to int8",
+			expression:  "array(value)",
+			source:      types.Boolean(),
+			destination: types.Array(types.Int(8)),
+			value:       true,
+			expected:    []any{1},
+		},
+		{
+			name:        "int64 to float32 before range validation",
+			expression:  "array(value)",
+			source:      types.Int(64),
+			destination: types.Array(types.Float(32).WithFloatRange(0, 16777216)),
+			value:       16777217,
+			expected:    []any{float64(16777216)},
+		},
+		{
+			name:        "uint64 to float32",
+			expression:  "array(value)",
+			source:      types.Int(64).Unsigned(),
+			destination: types.Array(types.Float(32)),
+			value:       uint(16777217),
+			expected:    []any{float64(16777216)},
+		},
+		{
+			name:        "int64 to float32 without double rounding",
+			expression:  "array(value)",
+			source:      types.Int(64),
+			destination: types.Array(types.Float(32)),
+			value:       (1 << 62) + (1 << 38) + 1,
+			expected:    []any{float64((1 << 62) + (1 << 39))},
+		},
+		{
+			name:        "uint64 to float32 without double rounding",
+			expression:  "array(value)",
+			source:      types.Int(64).Unsigned(),
+			destination: types.Array(types.Float(32)),
+			value:       uint((1 << 62) + (1 << 38) + 1),
+			expected:    []any{float64((1 << 62) + (1 << 39))},
+		},
+		{
+			name:        "duplicate after float32 rounding",
+			expression:  "array(value, 16777216)",
+			source:      types.Int(64),
+			destination: types.Array(types.Float(32)).WithUnique(),
+			value:       16777217,
+			err:         "«array(value, 16777216)» is not convertible to the «array(float(32))» type",
+		},
+		{
+			name:        "decimal to float32 without double rounding",
+			expression:  "array(value)",
+			source:      types.Decimal(17, 16),
+			destination: types.Array(types.Float(32)),
+			value:       decimal.MustParse("1.0000000596046448"),
+			expected:    []any{1.0000001192092896},
+		},
+		{
+			name:        "unique decimals after float32 rounding",
+			expression:  "array(value, 1)",
+			source:      types.Decimal(17, 16),
+			destination: types.Array(types.Float(32)).WithUnique(),
+			value:       decimal.MustParse("1.0000000596046448"),
+			expected:    []any{1.0000001192092896, float64(1)},
+		},
+		{
+			name:        "decimal scale",
+			expression:  "array(value)",
+			source:      types.Decimal(5, 3),
+			destination: types.Array(types.Decimal(3, 1)),
+			value:       decimal.MustParse("1.234"),
+			err:         "«value» is not convertible to the «decimal(3,1)» type",
+		},
+		{
+			name:        "decimal integer digits",
+			expression:  "array(value)",
+			source:      types.Decimal(5, 2),
+			destination: types.Array(types.Decimal(2, 1)),
+			value:       decimal.MustParse("12.3"),
+			err:         "«value» is not convertible to the «decimal(2,1)» type",
+		},
+		{
+			name:        "decimal trailing zeros",
+			expression:  "array(value)",
+			source:      types.Decimal(5, 3),
+			destination: types.Array(types.Decimal(3, 1)),
+			value:       decimal.New(1200, 3),
+			expected:    []any{decimal.MustParse("1.2")},
+		},
+		{
+			name:        "decimal zero without integer digits",
+			expression:  "array(value)",
+			source:      types.Decimal(5, 3),
+			destination: types.Array(types.Decimal(1, 1)),
+			value:       decimal.Decimal{},
+			expected:    []any{decimal.Decimal{}},
+		},
+		{
+			name:        "nested array",
+			expression:  "array(array(value))",
+			source:      types.String(),
+			destination: types.Array(types.Array(types.Date())),
+			value:       "46022",
+			expected:    []any{[]any{date}},
+		},
+		{
+			name:        "array property",
+			expression:  "array(value)",
+			source:      types.Array(types.Int(8)),
+			destination: types.Array(types.Array(types.Boolean())),
+			value:       []any{1, 0},
+			expected:    []any{[]any{true, false}},
+		},
+		{
+			name:        "map property",
+			expression:  "array(value)",
+			source:      types.Map(types.Int(8)),
+			destination: types.Array(types.Map(types.Boolean())),
+			value:       map[string]any{"key": 1},
+			expected:    []any{map[string]any{"key": true}},
+		},
+		{
+			name:        "object null to string map",
+			expression:  "array(value)",
+			source:      types.Object([]types.Property{{Name: "key", Type: types.String(), Nullable: true}}),
+			destination: types.Array(types.Map(types.String())),
+			value:       map[string]any{"key": nil},
+			err:         "«value» is not convertible to the «map(string)» type",
+		},
+		{
+			name:        "object null to JSON map",
+			expression:  "array(value)",
+			source:      types.Object([]types.Property{{Name: "key", Type: types.String(), Nullable: true}}),
+			destination: types.Array(types.Map(types.JSON())),
+			value:       map[string]any{"key": nil},
+			expected:    []any{map[string]any{"key": json.Value("null")}},
+		},
+		{
+			name:        "object property",
+			expression:  "array(value)",
+			source:      types.Object([]types.Property{{Name: "key", Type: types.Int(8)}}),
+			destination: types.Array(types.Object([]types.Property{{Name: "key", Type: types.Boolean()}})),
+			value:       map[string]any{"key": 1},
+			expected:    []any{map[string]any{"key": true}},
+		},
+		{
+			name:        "coalesce uses value",
+			expression:  "array(coalesce(value, '2025-12-30'))",
+			source:      types.String(),
+			destination: types.Array(types.Date()),
+			value:       "46022",
+			expected:    []any{date},
+		},
+		{
+			name:        "coalesce uses fallback",
+			expression:  "array(coalesce(value, '2025-12-31'))",
+			source:      types.String(),
+			destination: types.Array(types.Date()),
+			value:       nil,
+			expected:    []any{date},
+		},
+		{
+			name:        "JSON result",
+			expression:  "array(value, null)",
+			source:      types.String(),
+			destination: types.JSON(),
+			value:       "foo",
+			expected:    json.Value(`["foo",null]`),
+		},
+		{
+			name:        "dynamic JSON null",
+			expression:  "array(value)",
+			source:      types.String(),
+			destination: types.Array(types.JSON()),
+			value:       nil,
+			expected:    []any{json.Value(`null`)},
+		},
+		{
+			name:        "literal NaN",
+			expression:  "array('NaN')",
+			source:      types.String(),
+			destination: types.Array(types.Float(64)),
+			expected:    []any{math.NaN()},
+		},
+		{
+			name:        "NaN64",
+			expression:  "array(value)",
+			source:      types.Float(64),
+			destination: types.Array(types.Float(64)),
+			value:       math.NaN(),
+			expected:    []any{math.NaN()},
+		},
+		{
+			name:        "positive infinity",
+			expression:  "array(value)",
+			source:      types.Float(64),
+			destination: types.Array(types.Float(64)),
+			value:       math.Inf(1),
+			expected:    []any{math.Inf(1)},
+		},
+		{
+			name:        "nil element",
+			expression:  "array(value)",
+			source:      types.String(),
+			destination: types.Array(types.String()),
+			value:       nil,
+			err:         "«value» is not convertible to the «string» type",
+		},
+		{
+			name:        "array elements satisfy pattern",
+			expression:  "value",
+			source:      types.Array(types.String()),
+			destination: types.Array(types.String().WithPattern(regexp.MustCompile("^ok$"))),
+			value:       []any{"ok", "ok"},
+			expected:    []any{"ok", "ok"},
+		},
+		{
+			name:        "pattern",
+			expression:  "array(value)",
+			source:      types.String(),
+			destination: types.Array(types.String().WithPattern(regexp.MustCompile("^ok$"))),
+			value:       "invalid",
+			err:         "«value» is not convertible to the «string» type",
+		},
+		{
+			name:        "real NaN",
+			expression:  "array(value)",
+			source:      types.Float(64),
+			destination: types.Array(types.Float(64).Real()),
+			value:       math.NaN(),
+			err:         "«value» is not convertible to the «float(64)» type",
+		},
+		{
+			name:        "real string NaN",
+			expression:  "array(value)",
+			source:      types.String(),
+			destination: types.Array(types.Float(64).Real()),
+			value:       "NaN",
+			err:         "«value» is not convertible to the «float(64)» type",
+		},
+		{
+			name:        "real narrowing overflow",
+			expression:  "array(value)",
+			source:      types.Float(64).Real(),
+			destination: types.Array(types.Float(32).Real()),
+			value:       math.MaxFloat64,
+			err:         "«value» is not convertible to the «float(32)» type",
+		},
+		{
+			name:        "JSON NaN",
+			expression:  "array(value)",
+			source:      types.Float(64),
+			destination: types.Array(types.JSON()),
+			value:       math.NaN(),
+			err:         "«value» is not convertible to the «json» type",
+		},
+		{
+			name:        "nested invalid date",
+			expression:  "array(array(value))",
+			source:      types.String(),
+			destination: types.Array(types.Array(types.Date())),
+			value:       "invalid",
+			err:         "«value» is not convertible to the «date» type",
+		},
+		{
+			name:        "too few",
+			expression:  "array(value)",
+			source:      types.Int(32),
+			destination: types.Array(types.Int(32)).WithMinElements(2),
+			value:       1,
+			err:         "«array(value)» is not convertible to the «array(int(32))» type",
+		},
+		{
+			name:        "too many",
+			expression:  "array(value, 2)",
+			source:      types.Int(32),
+			destination: types.Array(types.Int(32)).WithMaxElements(1),
+			value:       1,
+			err:         "«array(value, 2)» is not convertible to the «array(int(32))» type",
+		},
+		{
+			name:        "duplicate after conversion",
+			expression:  "array(value, '1')",
+			source:      types.String(),
+			destination: types.Array(types.Int(32)).WithUnique(),
+			value:       "01",
+			err:         "«array(value, '1')» is not convertible to the «array(int(32))» type",
+		},
+		{
+			name:        "required/create/object",
+			expression:  "array(value)",
+			source:      createRequiredObject,
+			destination: types.Array(createRequiredObject),
+			value:       map[string]any{},
+			err:         "«array(value)» is not convertible to the «array(object)» type",
+			purpose:     Create,
+		},
+		{
+			name:        "required/create/map",
+			expression:  "array(value)",
+			source:      types.Map(createRequiredObject),
+			destination: types.Array(types.Map(createRequiredObject)),
+			value:       map[string]any{"key": map[string]any{}},
+			err:         "«array(value)» is not convertible to the «array(map(object))» type",
+			purpose:     Create,
+		},
+		{
+			name:        "required/update/map",
+			expression:  "array(value)",
+			source:      types.Map(updateRequiredObject),
+			destination: types.Array(types.Map(updateRequiredObject)),
+			value:       map[string]any{"key": map[string]any{}},
+			err:         "«array(value)» is not convertible to the «array(map(object))» type",
+			purpose:     Update,
+		},
+		{
+			name:        "valid array constraints",
+			expression:  "array(value, '2')",
+			source:      types.String(),
+			destination: types.Array(types.Int(32)).WithMinElements(2).WithMaxElements(2).WithUnique(),
+			value:       "01",
+			expected:    []any{1, 2},
+		},
+		{
+			name:        "required/create/present",
+			expression:  "array(value)",
+			source:      types.Map(createRequiredObject),
+			destination: types.Array(types.Map(createRequiredObject)),
+			value:       map[string]any{"key": map[string]any{"required": "ok"}},
+			expected:    []any{map[string]any{"key": map[string]any{"required": "ok"}}},
+			purpose:     Create,
+		},
+		{
+			name:        "required/update/present",
+			expression:  "array(value)",
+			source:      types.Map(updateRequiredObject),
+			destination: types.Array(types.Map(updateRequiredObject)),
+			value:       map[string]any{"key": map[string]any{"required": "ok"}},
+			expected:    []any{map[string]any{"key": map[string]any{"required": "ok"}}},
+			purpose:     Update,
+		},
+		{
+			name:        "create required during update",
+			expression:  "array(value)",
+			source:      types.Map(createRequiredObject),
+			destination: types.Array(types.Map(createRequiredObject)),
+			value:       map[string]any{"key": map[string]any{}},
+			expected:    []any{map[string]any{"key": map[string]any{}}},
+			purpose:     Update,
+		},
+		{
+			name:        "update required during create",
+			expression:  "array(value)",
+			source:      types.Map(updateRequiredObject),
+			destination: types.Array(types.Map(updateRequiredObject)),
+			value:       map[string]any{"key": map[string]any{}},
+			expected:    []any{map[string]any{"key": map[string]any{}}},
+			purpose:     Create,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			input := types.Object([]types.Property{{Name: "value", Type: test.source, Nullable: true}})
+			output := types.Object([]types.Property{{Name: "result", Type: test.destination}})
+			mapping, err := New(map[string]string{"result": test.expression}, input, output)
+			if err != nil {
+				t.Fatalf("expected mapping creation to succeed, got %v", err)
+			}
+			got, err := mapping.Transform(map[string]any{"value": test.value}, test.purpose)
+			if err != nil {
+				if test.err == "" {
+					t.Fatalf("expected transformation to succeed, got %v", err)
+				}
+				if _, ok := errors.AsType[ValidationError](err); !ok {
+					t.Fatalf("expected ValidationError, got %T: %v", err, err)
+				}
+				want := test.err + " while mapping to «result»"
+				if err.Error() != want {
+					t.Fatalf("expected error %q, got %q", want, err.Error())
+				}
+				return
+			}
+			if test.err != "" {
+				t.Fatalf("expected error %q, got nil", test.err)
+			}
+			expected := map[string]any{"result": test.expected}
+			diff := cmp.Diff(expected, got, cmp.Comparer(func(a, b float64) bool {
+				return a == b || math.IsNaN(a) && math.IsNaN(b)
+			}))
+			if diff != "" {
+				t.Fatalf("expected no difference (-expected +got), got:\n%s", diff)
+			}
+		})
+	}
+
+}
 
 // TestMappingFailedConversionPreservesInput verifies that a failed conversion
 // leaves the input unchanged, even if an earlier element was converted.
@@ -49,6 +500,91 @@ func TestMappingFailedConversionPreservesInput(t *testing.T) {
 
 	if !reflect.DeepEqual(input, expected) {
 		t.Errorf("expected unchanged input %#v, got %#v", expected, input)
+	}
+
+}
+
+// TestMappingNestedConversionErrors checks that constraint violations and
+// conversion errors in nested values produce a ValidationError with a generic
+// message for the containing type.
+func TestMappingNestedConversionErrors(t *testing.T) {
+
+	tests := []struct {
+		name        string
+		source      types.Type
+		destination types.Type
+		value       any
+	}{
+		{
+			name:        "array element violates pattern",
+			source:      types.Array(types.String()),
+			destination: types.Array(types.String().WithPattern(regexp.MustCompile("^ok$"))),
+			value:       []any{"ok", "invalid"},
+		},
+		{
+			name:        "map value exceeds max bytes",
+			source:      types.Map(types.String()),
+			destination: types.Map(types.String().WithMaxBytes(2)),
+			value:       map[string]any{"key": "invalid"},
+		},
+		{
+			name:   "object property exceeds max length",
+			source: types.Object([]types.Property{{Name: "key", Type: types.String()}}),
+			destination: types.Object([]types.Property{
+				{Name: "key", Type: types.String().WithMaxLength(2)},
+			}),
+			value: map[string]any{"key": "invalid"},
+		},
+		{
+			name:   "deeply nested integer below minimum",
+			source: types.JSON(),
+			destination: types.Array(types.Map(types.Object([]types.Property{
+				{Name: "key", Type: types.Int(32).WithIntRange(0, 5)},
+			}))),
+			value: json.Value(`[{"outer":{"key":-1}}]`),
+		},
+		{
+			name:        "JSON array element exceeds maximum",
+			source:      types.JSON(),
+			destination: types.Array(types.Int(32).WithIntRange(0, 5)),
+			value:       json.Value(`[6]`),
+		},
+		{
+			name:        "JSON map value exceeds int64 range",
+			source:      types.JSON(),
+			destination: types.Map(types.Int(32)),
+			value:       json.Value(`{"key":9223372036854775808}`),
+		},
+		{
+			name:        "JSON object property contains invalid date",
+			source:      types.JSON(),
+			destination: types.Object([]types.Property{{Name: "key", Type: types.Date()}}),
+			value:       json.Value(`{"key":"invalid"}`),
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			input := types.Object([]types.Property{{Name: "value", Type: test.source}})
+			output := types.Object([]types.Property{{Name: "result", Type: test.destination}})
+			mapping, err := New(map[string]string{"result": "value"}, input, output)
+			if err != nil {
+				t.Fatalf("expected mapping creation to succeed, got %v", err)
+			}
+			_, err = mapping.Transform(map[string]any{"value": test.value}, None)
+			if err != nil {
+				if _, ok := err.(ValidationError); !ok {
+					t.Fatalf("expected ValidationError, got %T: %v", err, err)
+				}
+				want := fmt.Sprintf("«value» is not convertible to the «%s» type while mapping to «result»",
+					test.destination)
+				if err.Error() != want {
+					t.Fatalf("expected error %q, got %q", want, err.Error())
+				}
+				return
+			}
+			t.Fatal("expected ValidationError, got nil")
+		})
 	}
 
 }
@@ -151,7 +687,10 @@ func TestMappingReusePreservesBehavior(t *testing.T) {
 		{"float", types.Float(64), types.Float(64), 1.5, "source", false, nil},
 		{"decimal", types.Decimal(5, 0), types.Decimal(5, 0), decimal.MustInt(123), "source", false, nil},
 		{"datetime", types.DateTime(), types.DateTime(), time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC), "source", false, nil},
-		{"equal optional object", optional, optional, map[string]any{}, "source", false, nil},
+		{"equal optional object", optional, optional, map[string]any{}, "source", true, writePurposes},
+		{"equal optional array", types.Array(optional), types.Array(optional), []any{map[string]any{}}, "source", true, writePurposes},
+		{"equal optional map", types.Map(optional), types.Map(optional), map[string]any{"key": map[string]any{}}, "source", true, writePurposes},
+		{"equal optional coalesce", optional, optional, map[string]any{}, "coalesce(source, source)", true, writePurposes},
 		{"property metadata", types.AsRole(object, types.Source), metadata, value, "source", false, nil},
 		{"added required property", nonNullable, object, map[string]any{"name": "value"}, "source", true, writePurposes},
 		{"different property name", object, differentName, value, "source", true, nil},
@@ -164,6 +703,7 @@ func TestMappingReusePreservesBehavior(t *testing.T) {
 		{"profile object map", types.Map(profile), types.Map(destination), map[string]any{"key": map[string]any{"name": "value"}}, "source", false, nil},
 		{"required profile property", profile, object, map[string]any{"value": 1}, "source", true, writePurposes},
 		{"empty array", types.Array(types.Int(32)), types.Array(types.Int(32)), []any{}, "source", false, nil},
+		{"nil array", types.Array(types.Int(32)), types.Array(types.Int(32)), []any(nil), "source", false, nil},
 		{"nil map", types.Map(types.String()), types.Map(types.String()), map[string]any(nil), "source", false, nil},
 		{"array write metadata", types.Array(types.AsRole(object, types.Source)), array, []any{value}, "source", false, nil},
 		{"map write metadata", types.Map(types.AsRole(object, types.Source)), types.Map(object), map[string]any{"key": value}, "source", false, nil},
