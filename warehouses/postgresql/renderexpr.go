@@ -115,10 +115,15 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 				b.WriteString(") = 0")
 			}
 		case types.ArrayKind:
+			elem := c.Type.Elem()
+			value := baseExpr.Values[0]
+			if instant, ok := value.(time.Time); ok && elem.IsDateTime() {
+				value = instant.UTC()
+			}
 			if op == warehouses.OpDoesNotContain {
 				b.WriteString("NOT (")
 			}
-			serializeValue(b, baseExpr.Values[0], c.Type.Elem())
+			serializeValue(b, value, elem)
 			b.WriteString(" = ANY(")
 			b.WriteString(qname)
 			b.WriteByte(')')
