@@ -387,15 +387,16 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, purpose Purpose) 
 		if err != nil {
 			return v, errInvalidConversion
 		}
-		if dt.IsReal() && math.IsNaN(n) {
-			return v, errRangeConversion
-		}
 		min, max := dt.FloatRange()
 		if n < min {
 			return v, errMinConversion
 		}
 		if n > max {
 			return v, errMaxConversion
+		}
+		// Bounds may overflow when converted to float(32).
+		if dt.IsReal() && (math.IsNaN(n) || math.IsInf(n, 0)) {
+			return v, errRangeConversion
 		}
 		return n, nil
 	case types.DecimalKind:
