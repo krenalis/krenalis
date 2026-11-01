@@ -689,7 +689,7 @@ func errStringConversion(fn string, code string, v any) error {
 
 // valueOf returns the value at the specified path in attributes. It returns nil
 // if the path does not exist, including keys in a map and properties of a JSON
-// object.
+// object, or if an intermediate value is nil.
 //
 // For non-object JSON values, accessing a key returns nil if the key is
 // optional; otherwise, it returns an error.
@@ -702,7 +702,7 @@ func valueOf(path path, attributes map[string]any) (any, error) {
 	for i = 0; i < len(path.elements); i++ {
 		name := path.elements[i]
 		v, ok := attributes[name]
-		if !ok {
+		if !ok || v == nil {
 			return nil, nil
 		}
 		if i == last {
