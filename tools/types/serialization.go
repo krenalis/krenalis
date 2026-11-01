@@ -765,6 +765,7 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		min, max := decimal.Range(precision, scale)
 		t.vl = decimalRange{min, max}
 	}
+	minFloat, maxFloat := math.Inf(-1), math.Inf(1)
 	if minimum == "" {
 		if t.kind == IntKind && !t.unsigned && t.size < 4 { // 8, 16, 24, and 32 bits
 			t.p = int32(minInt[t.size])
@@ -806,29 +807,9 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 				}
 			}
 		case FloatKind:
-			if t.size == 4 {
-				// 64 bits.
-				min, err := minimum.Float64()
-				if err != nil || math.IsNaN(min) {
-					return Type{}, errors.New("invalid value for minimum")
-				}
-				if !math.IsInf(min, -1) {
-					minS := strconv.FormatFloat(min, 'f', -1, 64)
-					t.vl = floatRange{min: min, max: math.Inf(1), minS: minS}
-				}
-			} else {
-				// 32 bits.
-				min, err := strconv.ParseFloat(string(minimum), 32)
-				if err != nil || math.IsNaN(min) {
-					return Type{}, errors.New("invalid value for minimum")
-				}
-				if min < -math.MaxFloat32 && !math.IsInf(min, -1) || min > math.MaxFloat32 && !math.IsInf(min, 1) {
-					return Type{}, errors.New("invalid value for minimum")
-				}
-				if !math.IsInf(min, -1) {
-					minS := strconv.FormatFloat(min, 'f', -1, 32)
-					t.vl = floatRange{min: min, max: math.Inf(1), minS: minS}
-				}
+			minFloat, err = strconv.ParseFloat(string(minimum), bitSize)
+			if err != nil {
+				return Type{}, errors.New("invalid value for minimum")
 			}
 		case DecimalKind:
 			min, err := decimal.Parse(minimum, precision, scale)
@@ -916,45 +897,24 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 				}
 			}
 		case FloatKind:
-			if t.size == 4 {
-				// 64 bits.
-				max, err := maximum.Float64()
-				if err != nil || math.IsNaN(max) {
+			maxFloat, err = strconv.ParseFloat(string(maximum), bitSize)
+			if err != nil {
+				return Type{}, errors.New("invalid value for maximum")
+			}
+			min, max := minFloat, maxFloat
+			if bitSize == 32 && minimum != "" {
+				// Compare bounds before rounding to float32.
+				min, err = minimum.Float64()
+				if err != nil {
+					return Type{}, errors.New("invalid value for minimum")
+				}
+				max, err = maximum.Float64()
+				if err != nil {
 					return Type{}, errors.New("invalid value for maximum")
 				}
-				if !math.IsInf(max, 1) {
-					maxS := strconv.FormatFloat(max, 'f', -1, 64)
-					if f, ok := t.vl.(floatRange); ok {
-						if max < f.min {
-							return Type{}, errors.New("maximum cannot be less than minimum")
-						}
-						f.max = max
-						f.maxS = maxS
-						t.vl = f
-					} else {
-						t.vl = floatRange{min: math.Inf(-1), max: max, maxS: maxS}
-					}
-				}
-			} else {
-				// 32 bits.
-				max, err := strconv.ParseFloat(string(maximum), 32)
-				if err != nil || math.IsNaN(max) {
-					return Type{}, errors.New("invalid value for maximum")
-				}
-				max = float64(float32(max))
-				if !math.IsInf(max, 1) {
-					maxS := strconv.FormatFloat(max, 'f', -1, 32)
-					if f, ok := t.vl.(floatRange); ok {
-						if max < f.min {
-							return Type{}, errors.New("maximum cannot be less than minimum")
-						}
-						f.max = max
-						f.maxS = maxS
-						t.vl = f
-					} else {
-						t.vl = floatRange{min: math.Inf(-1), max: max, maxS: maxS}
-					}
-				}
+			}
+			if max < min {
+				return Type{}, errors.New("maximum cannot be less than minimum")
 			}
 		case DecimalKind:
 			max, err := decimal.Parse(maximum, precision, scale)
@@ -980,6 +940,12 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 			return Type{}, errors.New("unexpected real for non-float type")
 		}
 		t.real = real
+	}
+	if t.kind == FloatKind {
+		t, err = t.withFloatRange(minFloat, maxFloat)
+		if err != nil {
+			return Type{}, err
+		}
 	}
 	if elementType.Valid() {
 		if t.kind != ArrayKind && t.kind != MapKind {
