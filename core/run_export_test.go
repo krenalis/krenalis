@@ -76,7 +76,6 @@ func TestConvertToExternalSemantics(t *testing.T) {
 		{"current country", countryAlpha2, countryAlpha2, "IT"},
 		{"former country", countryAlpha2, countryAlpha2, "AN"},
 		{"alpha-3 country", countryAlpha3, countryAlpha3, "ITA"},
-		{"matching country semantics skip validation", countryAlpha2, countryAlpha2, "ZZ"},
 		{"matching phone semantics preserve value", phone, phone, "+390236618300"},
 	}
 
@@ -156,9 +155,9 @@ func TestConvertToExternalStringConstraintsWithSemantics(t *testing.T) {
 
 }
 
-// TestConvertToExternalOneSidedSemantics checks the conversion of matching
-// values when only one of the internal and external types has semantics.
-func TestConvertToExternalOneSidedSemantics(t *testing.T) {
+// TestConvertToExternalSemanticsValidation checks that matching values are
+// validated against the semantics of the external type.
+func TestConvertToExternalSemanticsValidation(t *testing.T) {
 
 	countryAlpha2 := types.String().AsCountry(types.ISO3166Alpha2)
 	countryAlpha3 := types.String().AsCountry(types.ISO3166Alpha3)
@@ -191,6 +190,11 @@ func TestConvertToExternalOneSidedSemantics(t *testing.T) {
 		{"phone to string matching pattern", phone, types.String().WithPattern(regexp.MustCompile(`^\+39`)), "+390236618300", false},
 		{"phone to string not matching pattern", phone, types.String().WithPattern(regexp.MustCompile(`^\+1`)), "+390236618300", true},
 		{"email to string not in values", email, types.String().WithValues("alice@example.com"), "bob@example.com", true},
+
+		// Both types have the same semantics.
+		{"alpha-2 country with unassigned code", countryAlpha2, countryAlpha2, "ZZ", true},
+		{"alpha-3 country with alpha-2 code", countryAlpha3, countryAlpha3, "IT", true},
+		{"phone not in canonical form", phone, phone, "+39 02 3661 8300", true},
 	}
 
 	for _, test := range tests {

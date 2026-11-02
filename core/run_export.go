@@ -452,29 +452,27 @@ func convertToExternal(v any, in, ex types.Type, inPath, outPath string) (any, e
 		default:
 			panic(fmt.Sprintf("core: unexpected value of type %T for internal kind %s ", v, in.Kind()))
 		}
-		// Validate that v matches the external property's semantics, if only it has them.
-		if in.Semantics() == types.NoSemantics {
-			switch ex.Semantics() {
-			case types.CountrySemantics:
-				switch format := ex.CountryFormat(); format {
-				case types.ISO3166Alpha2:
-					if !validation.IsValidCountryCodeAlpha2(s) {
-						return nil, errMatchingPropertyConversion(inPath, outPath)
-					}
-				case types.ISO3166Alpha3:
-					if !validation.IsValidCountryCodeAlpha3(s) {
-						return nil, errMatchingPropertyConversion(inPath, outPath)
-					}
-				default:
-					panic(fmt.Sprintf("core: unexpected country format %s", format))
+		// Validate that v matches the external property's semantics.
+		switch ex.Semantics() {
+		case types.CountrySemantics:
+			switch format := ex.CountryFormat(); format {
+			case types.ISO3166Alpha2:
+				if !validation.IsValidCountryCodeAlpha2(s) {
+					return nil, errMatchingPropertyConversion(inPath, outPath)
 				}
-			case types.PhoneSemantics:
-				if !types.IsPhone(s) {
+			case types.ISO3166Alpha3:
+				if !validation.IsValidCountryCodeAlpha3(s) {
 					return nil, errMatchingPropertyConversion(inPath, outPath)
 				}
 			default:
-				// No semantics, or semantics that do not restrict the value.
+				panic(fmt.Sprintf("core: unexpected country format %s", format))
 			}
+		case types.PhoneSemantics:
+			if !types.IsPhone(s) {
+				return nil, errMatchingPropertyConversion(inPath, outPath)
+			}
+		default:
+			// No semantics, or semantics that do not restrict the value.
 		}
 		// Validate that v matches the external property's constraints.
 		if n, ok := ex.MaxBytes(); ok && len(s) > n {
