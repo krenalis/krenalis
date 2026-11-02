@@ -341,7 +341,7 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 				return errors.BadRequest("input matching property cannot be converted to the output matching property")
 			}
 		}
-		// Check the semantics, if both properties have them.
+		// Check the semantics.
 		inSem, outSem := in.Type.Semantics(), out.Type.Semantics()
 		if inSem != types.NoSemantics && outSem != types.NoSemantics && !types.EqualSemantics(in.Type, out.Type) {
 			if inSem != outSem {
