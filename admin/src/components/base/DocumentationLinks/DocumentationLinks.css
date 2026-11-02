@@ -25,13 +25,13 @@
 	display: inline-flex;
 	align-items: center;
 	gap: 0.35rem;
-	color: var(--sl-color-primary-600);
+	color: var(--wa-color-brand-40);
 	text-decoration: none;
 	font-size: 13px;
 	line-height: 1;
 }
 
-.documentation-links a sl-icon {
+.documentation-links a wa-icon {
 	font-size: 14px;
 	flex-shrink: 0;
 }

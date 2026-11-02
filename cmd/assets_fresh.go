@@ -26,8 +26,8 @@ const embeddedAssets = false
 // moduleRoot is the root directory of the Go module.
 var moduleRoot string
 
-// Path to the Shoelace icons within the "node_modules" directory.
-const shoelaceIconsPath = "@shoelace-style/shoelace/dist/assets/icons"
+// Path to the Bootstrap Icons within the "node_modules" directory.
+const iconsPath = "bootstrap-icons/icons"
 
 func init() {
 	// Set the moduleRoot global variable.
@@ -155,10 +155,10 @@ func (h *assetsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.ServeFile(w, r, filepath.Join(moduleRoot, "admin", "public", "favicon.png"))
 			return
 		}
-		// Serve Shoelace icons.
-		if icon, ok := strings.CutPrefix(r.URL.Path, "/admin/src/shoelace/dist/assets/icons/"); ok {
+		// Serve the icons.
+		if icon, ok := strings.CutPrefix(r.URL.Path, "/admin/src/icons/"); ok {
 			w.Header().Set("Content-Type", "image/svg+xml")
-			http.ServeFile(w, r, filepath.Join(moduleRoot, "admin/node_modules", shoelaceIconsPath, icon))
+			http.ServeFile(w, r, filepath.Join(moduleRoot, "admin/node_modules", iconsPath, icon))
 			return
 		}
 		// Serve Monaco editor.

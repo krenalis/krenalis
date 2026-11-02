@@ -33,6 +33,8 @@ type Expression struct {
 // The schema defines the structure of the paths used in the expression, while
 // dt specifies the destination type.
 //
+// Function calls may be nested up to 10 levels.
+//
 // If schema is invalid, the expression will be compiled without path resolution.
 func Compile(expr string, schema, dt types.Type) (*Expression, []string, error) {
 	if schema.Valid() && !schema.IsObject() {
@@ -41,7 +43,7 @@ func Compile(expr string, schema, dt types.Type) (*Expression, []string, error) 
 	if !dt.Valid() {
 		return nil, nil, errors.New("destination type is the invalid type")
 	}
-	parts, src, err := parse(expr, 0, len(expr))
+	parts, src, err := parse(expr, 0, len(expr), 0)
 	if err != nil {
 		return nil, nil, err
 	}

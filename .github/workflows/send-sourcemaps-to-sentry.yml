@@ -48,7 +48,7 @@ jobs:
         run: go generate
 
       - name: Decompress .br assets using Brotli
-        run: find -name "*.br" -not -path "./shoelace/*" | xargs brotli -dvf
+        run: find -name "*.br" -not -path "./icons/*" | xargs brotli -dvf
         working-directory: ./admin/assets
 
       - name: Upload the source maps to Sentry

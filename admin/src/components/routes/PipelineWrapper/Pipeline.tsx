@@ -14,7 +14,7 @@ import { usePipeline } from './usePipeline';
 import ConnectionContext from '../../../context/ConnectionContext';
 import { FullscreenContext } from '../../../context/FullscreenContext';
 import PipelineContext from '../../../context/PipelineContext';
-import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
+import WaSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
 import Section from '../../base/Section/Section';
 
 const Pipeline = ({ pipelineType: providedPipelineType, pipeline: providedPipeline }) => {
@@ -89,14 +89,14 @@ const Pipeline = ({ pipelineType: providedPipelineType, pipeline: providedPipeli
 	if (isLoading) {
 		return (
 			<div className='pipeline pipeline--loading'>
-				<SlSpinner
+				<WaSpinner
 					style={
 						{
 							fontSize: '4rem',
 							'--track-width': '6px',
 						} as React.CSSProperties
 					}
-				></SlSpinner>
+				></WaSpinner>
 			</div>
 		);
 	}

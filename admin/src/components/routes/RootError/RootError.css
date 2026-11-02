@@ -23,8 +23,8 @@
 	font-size: 18px;
 }
 
-.root-error .icon-wrapper sl-icon {
-	color: var(--sl-color-primary-500);
+.root-error .icon-wrapper wa-icon {
+	color: var(--wa-color-brand-50);
 }
 
 .root-error__action {

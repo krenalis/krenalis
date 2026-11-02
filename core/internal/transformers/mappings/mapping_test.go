@@ -559,6 +559,10 @@ func Test_Transform(t *testing.T) {
 		})},
 		{Name: "d", Type: types.JSON()},
 		{Name: "e", Type: types.JSON(), Nullable: true},
+		{Name: "f", Type: types.Object([]types.Property{
+			{Name: "a", Type: types.String()},
+			{Name: "d", Type: types.String()},
+		}), Nullable: true},
 		{Name: "emptyObject", Type: types.Object([]types.Property{{Name: "foo", Type: types.String(), ReadOptional: true}})},
 	})
 
@@ -621,6 +625,18 @@ func Test_Transform(t *testing.T) {
 			expressions: map[string]string{"B": "c.z"},
 			attributes:  map[string]any{"c.z": nil},
 			expected:    map[string]any{"B": nil},
+		},
+		{
+			name:        `A property of a null object -> nil`,
+			expressions: map[string]string{"B": "f.a"},
+			attributes:  map[string]any{"f": nil},
+			expected:    map[string]any{"B": nil},
+		},
+		{
+			name:        `A property with a null ancestor -> nil`,
+			expressions: map[string]string{"A": "a", "B": "f.a"},
+			attributes:  map[string]any{"a": "outer", "f": nil},
+			expected:    map[string]any{"A": "outer", "B": nil},
 		},
 
 		{
@@ -771,6 +787,12 @@ func Test_Transform(t *testing.T) {
 			expressions: map[string]string{"E": "len(a)"},
 			attributes:  map[string]any{"a": "foo"},
 			expected:    map[string]any{"E": 3},
+		},
+		{
+			name:        `lower(f.d) with a null ancestor -> nil`,
+			expressions: map[string]string{"B": "lower(f.d)", "C": "d"},
+			attributes:  map[string]any{"d": json.Value(`123`), "f": nil},
+			expected:    map[string]any{"B": nil, "C": json.Value(`123`)},
 		},
 		{
 			name:        `Spurious properties`,

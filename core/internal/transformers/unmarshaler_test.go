@@ -856,6 +856,111 @@ func Test_UnmarshalEdgeCases(t *testing.T) {
 	})
 }
 
+// Test_UnmarshalFloatRanges checks how float ranges handle infinities and NaN.
+func Test_UnmarshalFloatRanges(t *testing.T) {
+	tests := []struct {
+		name     string
+		min, max float64
+		input    string
+		want     float64
+		wantErr  string
+	}{
+		{
+			name:    "positive infinity with finite bounds",
+			min:     0,
+			max:     1,
+			input:   `"Infinity"`,
+			wantErr: "is greater than 1",
+		},
+		{
+			name:    "negative infinity with finite bounds",
+			min:     0,
+			max:     1,
+			input:   `"-Infinity"`,
+			wantErr: "is less than 0",
+		},
+		{
+			name:  "positive infinity with infinite upper bound",
+			min:   0,
+			max:   math.Inf(1),
+			input: `"Infinity"`,
+			want:  math.Inf(1),
+		},
+		{
+			name:    "negative infinity below finite lower bound",
+			min:     0,
+			max:     math.Inf(1),
+			input:   `"-Infinity"`,
+			wantErr: "is less than 0",
+		},
+		{
+			name:    "positive infinity above finite upper bound",
+			min:     math.Inf(-1),
+			max:     0,
+			input:   `"Infinity"`,
+			wantErr: "is greater than 0",
+		},
+		{
+			name:  "negative infinity with infinite lower bound",
+			min:   math.Inf(-1),
+			max:   0,
+			input: `"-Infinity"`,
+			want:  math.Inf(-1),
+		},
+		{
+			name:  "NaN with finite bounds",
+			min:   0,
+			max:   1,
+			input: `"NaN"`,
+			want:  math.NaN(),
+		},
+	}
+	for _, size := range []int{32, 64} {
+		for _, test := range tests {
+			t.Run(fmt.Sprintf("float%d/%s", size, test.name), func(t *testing.T) {
+				typ := types.Float(size).WithFloatRange(test.min, test.max)
+				schema := types.Object([]types.Property{{Name: "value", Type: typ}})
+				for _, language := range []state.Language{state.JavaScript, state.Python} {
+					t.Run(language.String(), func(t *testing.T) {
+						records := make([]Record, 1)
+						input := strings.NewReader(`{"records":[{"value":{"value":` + test.input + `}}]}`)
+						err := Unmarshal(input, records, schema, language, false)
+						if err != nil {
+							t.Fatalf("expected no response error, got %v", err)
+						}
+						if err := records[0].Err; err != nil {
+							if test.wantErr == "" {
+								t.Fatalf("expected no record error, got %v", err)
+							}
+							if _, ok := errors.AsType[RecordValidationError](err); !ok {
+								t.Fatalf("expected a RecordValidationError, got %T: %v", err, err)
+							}
+							if !strings.Contains(err.Error(), test.wantErr) {
+								t.Fatalf("expected error containing %q, got %q", test.wantErr, err)
+							}
+							return
+						}
+						if test.wantErr != "" {
+							t.Fatalf("expected record error containing %q, got no error", test.wantErr)
+						}
+						got, ok := records[0].Attributes["value"].(float64)
+						if !ok {
+							t.Fatalf("expected a float64 value, got %#v", records[0].Attributes["value"])
+						}
+						if math.IsNaN(test.want) {
+							if !math.IsNaN(got) {
+								t.Fatalf("expected NaN, got %g", got)
+							}
+						} else if got != test.want {
+							t.Fatalf("expected value %g, got %g", test.want, got)
+						}
+					})
+				}
+			})
+		}
+	}
+}
+
 // equalValues reports whether v1 and v2 are equal according to the type t.
 // v1 is supposed to conform to type t, and v2 is checked for equality with v1.
 // If t is a datetime, date, or time type, v1 is truncated to a multiple of
