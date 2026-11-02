@@ -5,6 +5,7 @@
 package initdb
 
 import (
+	"context"
 	"encoding/base64"
 	"sync"
 	"testing"
@@ -12,8 +13,28 @@ import (
 	"github.com/krenalis/krenalis/tools/kms"
 )
 
+// barrierKms is a kms.Kms that, on its first call to
+// GenerateDataKeyWithoutPlaintext, waits until every other barrierKms sharing
+// the same arrived wait group has reached it.
+type barrierKms struct {
+	kms.Kms
+	once    sync.Once
+	arrived *sync.WaitGroup
+}
+
+// GenerateDataKeyWithoutPlaintext waits for the other instances on its first
+// call, then calls the method of the wrapped Kms.
+func (k *barrierKms) GenerateDataKeyWithoutPlaintext(ctx context.Context, keyLen int) ([]byte, error) {
+	k.once.Do(func() {
+		k.arrived.Done()
+		k.arrived.Wait()
+	})
+	return k.Kms.GenerateDataKeyWithoutPlaintext(ctx, keyLen)
+}
+
 // TestInitIfEmptyConcurrent verifies that concurrent calls to InitIfEmpty on
-// the same empty database succeed and initialize it only once.
+// the same empty database, all past its initial emptiness check, succeed and
+// initialize it only once.
 func TestInitIfEmptyConcurrent(t *testing.T) {
 	database := newTestDatabase(t)
 	key, err := kms.New(t.Context(), "key:"+base64.RawStdEncoding.EncodeToString(make([]byte, 32)))
@@ -22,10 +43,12 @@ func TestInitIfEmptyConcurrent(t *testing.T) {
 	}
 	const instances = 4
 	errs := make([]error, instances)
+	var arrived sync.WaitGroup
+	arrived.Add(instances)
 	var wg sync.WaitGroup
 	for i := range instances {
 		wg.Go(func() {
-			errs[i] = InitIfEmpty(t.Context(), database, key, false)
+			errs[i] = InitIfEmpty(t.Context(), database, &barrierKms{Kms: key, arrived: &arrived}, false)
 		})
 	}
 	wg.Wait()
