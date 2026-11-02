@@ -73,7 +73,7 @@ Keep every parameter list on one line, whatever its length; a list too long to r
 
 ## Contexts
 
-Functions whose execution time cannot be bounded in advance take a `context.Context` as first parameter; any exception must be compelling, explicit, and justified. Assume the caller has just checked that the context is still live: do not start the callee with a `ctx.Err()` or `ctx.Done()` check.
+Functions and methods whose execution time cannot be bounded in advance take a `context.Context` as first parameter; any exception must be compelling, explicit, and justified. Assume the caller has just checked that the context is still live: do not start the callee with a `ctx.Err()` or `ctx.Done()` check.
 
 ## Error handling
 
@@ -91,7 +91,7 @@ When handling an error would only return it, possibly with the call's other resu
 
 ## Errors versus panics
 
-Return an error when a function is expected to fail, because it performs fallible operations or returns errors callers can usefully handle; otherwise the error may be omitted.
+Return an error when a function or method is expected to fail, because it performs fallible operations or returns errors callers can usefully handle; otherwise the error may be omitted.
 
 An unexpected situation is one that callers or invariants rule out, such as an invalid argument or an impossible value, and reveals a bug. Return an error for it if the signature has one, so one failing operation does not bring down the process; panic if the signature has none, or if internal state is corrupted beyond safe recovery.
 
@@ -105,11 +105,11 @@ Use `testing/synctest` for concurrent or asynchronous code that depends on timer
 
 To see individual Admin test results without waiting for the full suite, you may run `go run ./test/commit -just-test-admin`.
 
-When a test reads a mapped port of a testcontainers container, its wait strategy must include `wait.ForListeningPort` for that port, or `MappedPort` can fail, notably on Docker Desktop. For PostgreSQL, `postgres.BasicWaitStrategies()` includes it.
+When a test reads a mapped port of a testcontainers container, its wait strategy must include `wait.ForListeningPort` for that port, or `MappedPort` can fail, notably on Docker Desktop. For PostgreSQL, use `postgres.BasicWaitStrategies()`, which includes it.
 
 ## Behavioral contracts
 
-Return a non-nil error whenever a function does not perform what its name, and secondarily its declaration comment, promises; never report success after skipping, failing, or partially completing the operation. An exception must be narrow, compelling, and stated in the name or declaration comment.
+Return a non-nil error whenever a function or method does not perform what its name, and secondarily its declaration comment, promises; never report success after skipping, failing, or partially completing the operation. An exception must be narrow, compelling, and stated in the name or declaration comment.
 
 ## Function extraction
 
@@ -117,9 +117,9 @@ Do not extract code solely to unit-test it. Keep small or operation-specific ste
 
 Extract a parser, validator, or converter only when it captures non-trivial, reusable rules inherent to a value or its representation; duplicated code alone is not enough. Prefer focused helpers for individual value concepts that callers compose, rather than one function handling an operation's whole set of parameters or results. First check how comparable cases were handled in the same context before the change: stay inline if they are inline, otherwise match their granularity; if precedent is unclear, ask before introducing the function.
 
-When a parsing or validation sequence is dense and covers several distinct values or groups, precede each group with a short comment naming the operation and subject, such as `// Validate start and end.`, one per group rather than per condition. Add a blank line before it only when it clarifies the boundary. Skip this for single checks, short sequences, or comments that would restate the conditions.
+When a parsing or validation sequence is dense, covers several distinct values or groups, and is hard to scan, precede each group with a short comment naming the operation and subject, such as `// Validate start and end.`, one per group rather than per condition. Add a blank line before it only when it clarifies the boundary. Skip this for single checks, short sequences, or comments that would restate the conditions.
 
-Exported functions validate their own arguments. Exception: exported methods in `core/internal/metrics` assume valid arguments and do not revalidate them; values read from a data warehouse must still be validated per the trust boundary.
+Exported functions and methods validate their own arguments. Exception: exported methods in `core/internal/metrics` assume valid arguments and do not revalidate them; values read from a data warehouse must still be validated per the trust boundary.
 
 ## Block spacing
 
@@ -159,7 +159,7 @@ func sortedKeys(entries map[string]int) []string {
 }
 ```
 
-The separated examples below show only padding placement; real separated blocks are longer:
+The separated examples below show only padding placement; real separated blocks are usually longer:
 
 ```go
 func topKeys(entries map[string]int, n int) []string {
@@ -212,7 +212,7 @@ Validate and bound anything arriving from outside (request bodies, settings, API
 
 For the TypeScript and React code under `admin/`:
 
-- Use boolean expressions in boolean contexts, not truthiness: `name !== ''`, `items.length > 0`, `value != null`. In JSX, idiomatic patterns such as `{condition && <Component />}` are fine when clearer.
+- Use boolean expressions in boolean contexts, not truthiness: `name !== ''`, `items.length > 0`, `value != null`. In JSX, idiomatic patterns such as `{condition && <Component />}` are preferred when clearer.
 - Prefix boolean names with `is`, `has`, `can`, or `should` when it clarifies them.
 - Compare with `===` and `!==`, except `value == null` or `value != null` to cover both `null` and `undefined`.
 - Use `interface` for object shapes and `type` for unions, tuples, and other aliases.
