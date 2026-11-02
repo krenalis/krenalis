@@ -435,7 +435,7 @@ func convertToExternal(v any, in, ex types.Type, inPath, outPath string) (any, e
 		panic(fmt.Sprintf("core: unexpected value nil for internal kind %s", in.Kind()))
 	}
 	if in.Semantics() != types.NoSemantics && ex.Semantics() != types.NoSemantics && !types.EqualSemantics(in, ex) {
-		panic(fmt.Sprintf("core: internal and external semantics differ: "+
+		panic(fmt.Sprintf("core: unexpected mismatch in semantics or options: "+
 			"internal %s semantics (options %s), external %s semantics (options %s)",
 			in.Semantics(), types.SemanticsOptionString(in), ex.Semantics(), types.SemanticsOptionString(ex)))
 	}
