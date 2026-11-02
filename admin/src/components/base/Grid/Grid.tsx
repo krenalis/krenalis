@@ -255,10 +255,10 @@ const Grid = forwardRef<GridRef, GridProps>(
 						? `${gridID}-row-${encodeURIComponent(activeRowID)}`
 						: undefined
 				}
-				tabIndex={keyboardNavigation || hasControlledActiveItem ? 0 : undefined}
-				onClick={keyboardNavigation || hasControlledActiveItem ? focusGridForKeyboardNavigation : undefined}
+				tabIndex={keyboardNavigation != null || hasControlledActiveItem ? 0 : undefined}
+				onClick={keyboardNavigation != null || hasControlledActiveItem ? focusGridForKeyboardNavigation : undefined}
 				onScroll={(event) => setIsScrolledVertically(event.currentTarget.scrollTop > 0)}
-				onKeyDown={keyboardNavigation || hasControlledActiveItem ? onGridKeyDown : undefined}
+				onKeyDown={keyboardNavigation != null || hasControlledActiveItem ? onGridKeyDown : undefined}
 			>
 				{isLoading ? (
 					<div className='grid__loading'>

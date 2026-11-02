@@ -56,7 +56,8 @@ const getProfilePropertyLabel = (path: string, properties: ProfileSchemaProperti
 		return fragments[fragments.length - 1];
 	}
 
-	return property.displayName?.trim() || property.name;
+	const displayName = property.displayName?.trim() ?? '';
+	return displayName !== '' ? displayName : property.name;
 };
 
 const getProfilePropertyPathLabel = (path: string, properties: ProfileSchemaProperties): string => {

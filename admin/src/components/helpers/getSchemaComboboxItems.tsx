@@ -151,8 +151,9 @@ const getPropertyPathDisplayValue = (name: string, schema: FlatSchema): string =
 	for (const fragment of name.split('.')) {
 		path = path === '' ? fragment : `${path}.${fragment}`;
 		const property = schema[path]?.full;
-		const displayName = property?.displayName?.trim();
-		labels.push(displayName || property?.name || fragment);
+		const displayName = property?.displayName?.trim() ?? '';
+		const propertyName = property?.name ?? '';
+		labels.push(displayName !== '' ? displayName : propertyName !== '' ? propertyName : fragment);
 	}
 	return labels.join(' › ');
 };
