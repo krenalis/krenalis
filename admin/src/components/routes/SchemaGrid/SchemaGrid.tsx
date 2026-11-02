@@ -5,8 +5,8 @@ import {
 	schemaPropertyGridNestedRowsIndentation,
 } from '../Schema/SchemaPropertyGrid';
 import './SchemaGrid.css';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import { Outlet, useLocation } from 'react-router-dom';
 import Grid from '../../base/Grid/Grid';
 import { GridRef } from '../../base/Grid/Grid.types';
@@ -17,7 +17,7 @@ import { useSchemaGrid } from './useSchemaGrid';
 import { GridKeyboardHints } from '../../base/Grid/GridKeyboardHints';
 import { useDocumentGridKeyboardNavigation } from '../../base/Grid/useDocumentGridKeyboardNavigation';
 
-const schemaGridColumns = 'minmax(180px, 0.75fr) minmax(300px, 1.6fr) 86px minmax(170px, 0.65fr)';
+const schemaGridColumns = 'minmax(180px, 0.75fr) minmax(290px, 1.45fr) 86px minmax(130px, 0.5fr) minmax(170px, 0.65fr)';
 
 interface SchemaGridOutletContext {
 	selectedPropertyPath: string | null;
@@ -119,19 +119,19 @@ const SchemaGrid = () => {
 						propertyCount={propertyCount}
 					/>
 				</div>
-				<SlButton
+				<WaButton
 					className='schema-grid__alter-button'
-					variant='primary'
+					variant='brand'
 					onClick={gridInteractionsDisabled ? null : onEditClick}
 					disabled={gridInteractionsDisabled}
 					loading={isAltering}
 				>
 					Edit schema
-				</SlButton>
+				</WaButton>
 			</div>
 			{!isAltering && latestAlterError && (
 				<div className='schema-grid__alter-error'>
-					<SlIcon name='exclamation-circle' />
+					<WaIcon name='exclamation-circle' />
 					{latestAlterError}
 				</div>
 			)}
@@ -166,6 +166,7 @@ const SchemaGrid = () => {
 					{detailsPanelProperty != null && (
 						<div className='schema-grid__details-panel' onTransitionEnd={onDetailsPanelTransitionEnd}>
 							<PropertyDetailsPanel
+								propertyRole={detailsPanelProperty.propertyRole}
 								identifierPosition={detailsPanelProperty.identifierPosition}
 								property={detailsPanelProperty.property}
 								primarySource={detailsPanelProperty.primarySource}

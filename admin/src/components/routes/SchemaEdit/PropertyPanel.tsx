@@ -1,10 +1,10 @@
 import React from 'react';
 import './PropertyPanel.css';
-import SlAnimation from '@shoelace-style/shoelace/dist/react/animation/index.js';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
-import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
-import { PrimarySources } from '../../../lib/api/types/workspace';
+import WaAnimation from '@awesome.me/webawesome/dist/react/animation/index.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
+import WaTooltip from '@awesome.me/webawesome/dist/react/tooltip/index.js';
+import { PrimarySources, ProfilePropertyRoles, ProfilePropertyRoleID } from '../../../lib/api/types/workspace';
 import { PropertyPanelLayout } from '../Schema/PropertyPanelLayout';
 import { PropertyForm } from './PropertyForm';
 import {
@@ -16,6 +16,8 @@ import {
 } from './useSchemaEdit';
 
 interface PropertyPanelProps {
+	propertyRole: ProfilePropertyRoleID | null;
+	propertyRoles: ProfilePropertyRoles;
 	animateActions: boolean;
 	dirty: boolean;
 	fieldChanges?: PropertyFieldChanges;
@@ -23,15 +25,23 @@ interface PropertyPanelProps {
 	property: PropertyToEdit | null;
 	parents: PropertyParent[];
 	primarySources: PrimarySources;
+	propertyPaths: Readonly<Record<string, string>>;
 	status?: PropertyChangeStatus;
 	onClose: () => void;
 	onActionsAnimationFinish: () => void;
 	onDirtyChange: (dirty: boolean) => void;
 	onRemove: (property: PropertyToEdit) => void;
-	onSave: (property: PropertyToEdit, primarySource: string | null) => void;
+	onSave: (
+		property: PropertyToEdit,
+		primarySource: string | null,
+		propertyRole: ProfilePropertyRoleID | null,
+		rolesToUnassign: readonly ProfilePropertyRoleID[],
+	) => void;
 }
 
 const PropertyPanel = ({
+	propertyRole,
+	propertyRoles,
 	animateActions,
 	dirty,
 	fieldChanges,
@@ -39,6 +49,7 @@ const PropertyPanel = ({
 	property,
 	parents,
 	primarySources,
+	propertyPaths,
 	status,
 	onClose,
 	onActionsAnimationFinish,
@@ -47,49 +58,58 @@ const PropertyPanel = ({
 	onSave,
 }: PropertyPanelProps) => {
 	const [valid, setValid] = React.useState(true);
+
+	const removeButtonID = React.useId();
 	const isNew = property != null && property.key == null;
 	const showActions = isNew || dirty;
 	const formID = 'schema-edit-property-form';
 	let actions: React.ReactNode = null;
 	if (showActions) {
 		actions = (
-			<SlAnimation
+			<WaAnimation
 				name='shake'
 				duration={1000}
 				playbackRate={1.2}
 				iterations={1}
 				play={animateActions}
-				onSlFinish={onActionsAnimationFinish}
+				onWaFinish={onActionsAnimationFinish}
 			>
 				<div className='property-panel__form-actions'>
-					<SlButton className='property-panel__cancel' size='small' onClick={onClose}>
+					<WaButton appearance='outlined' className='property-panel__cancel' size='s' onClick={onClose}>
 						Cancel
-					</SlButton>
-					<SlButton
+					</WaButton>
+					<WaButton
 						className='property-panel__save'
 						disabled={!valid}
-						form={formID}
-						size='small'
+						// Web Awesome types form as the owner element, but its
+						// setter takes the form id.
+						form={formID as unknown as HTMLFormElement}
+						size='s'
 						type='submit'
-						variant='primary'
+						variant='brand'
 					>
 						Confirm
-					</SlButton>
+					</WaButton>
 				</div>
-			</SlAnimation>
+			</WaAnimation>
 		);
 	} else if (property != null && !isNew) {
 		actions = (
-			<SlTooltip className='schema-edit__toolbar-tooltip' content='Delete this property from the schema' hoist>
-				<SlButton
+			<>
+				<WaTooltip className='schema-edit__toolbar-tooltip' for={removeButtonID}>
+					Delete this property from the schema
+				</WaTooltip>
+				<WaButton
+					id={removeButtonID}
+					appearance='outlined'
 					className='property-panel__remove property-panel__delete-button schema-edit__toolbar-icon-button'
-					size='small'
+					size='s'
 					aria-label='Delete this property from the schema'
 					onClick={() => onRemove(property)}
 				>
-					<SlIcon name='trash' />
-				</SlButton>
-			</SlTooltip>
+					<WaIcon name='trash' />
+				</WaButton>
+			</>
 		);
 	}
 
@@ -105,12 +125,15 @@ const PropertyPanel = ({
 					titleAdornment={status != null && <PropertyStatusBadge status={status} />}
 				>
 					<PropertyForm
+						propertyRole={propertyRole}
+						propertyRoles={propertyRoles}
 						key={property.key ?? '__new__'}
 						fieldChanges={fieldChanges}
 						formID={formID}
 						identifierPosition={identifierPosition}
 						propertyToEdit={property}
 						primarySources={primarySources}
+						propertyPaths={propertyPaths}
 						parents={parents}
 						showParent={isNew}
 						onDirtyChange={onDirtyChange}

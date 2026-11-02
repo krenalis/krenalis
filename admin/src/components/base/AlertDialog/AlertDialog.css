@@ -1,4 +1,4 @@
-.alert-dialog::part(panel) {
+.alert-dialog::part(dialog) {
 	position: relative;
 	padding: 35px 40px;
 }
@@ -24,7 +24,7 @@
 	text-align: center;
 }
 
-.alert-dialog__icon sl-icon {
+.alert-dialog__icon wa-icon {
 	color: var(--alert-color);
 }
 
