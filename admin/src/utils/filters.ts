@@ -6,6 +6,8 @@ const MAX_UNSIGNED = BigInt('18446744073709551615');
 const MAX_FLOAT32 = 3.4028234663852885981170418348451692544e38;
 const MIN_YEAR = 1;
 const MAX_YEAR = 9999;
+const MAX_DECIMAL_PRECISION = 76;
+const MAX_DECIMAL_SCALE = 37;
 
 // isFilterNumber reports whether value uses the numeric syntax accepted by the
 // filter parser.
@@ -70,6 +72,27 @@ const isDateTime = (s: string): boolean => {
 // isDecimal checks whether the string s represents a valid decimal value that
 // can be used as a filter value.
 const isDecimal = (s: string): boolean => {
+	const m = s.match(/^[+-]?(0|[1-9]\d*)?(?:\.(\d*))?(?:[eE]([+-]?\d+))?$/);
+	if (m == null) {
+		return false;
+	}
+	const [, integer = '', fraction = '', exponent = '0'] = m;
+	if (integer === '' && fraction === '') {
+		return false;
+	}
+	const digits = (integer + fraction).replace(/^0+/, '');
+	if (digits === '') {
+		return true;
+	}
+	const significant = digits.replace(/0+$/, '');
+	const scale = fraction.length - (digits.length - significant.length) - Number(exponent);
+	const precision = Math.max(significant.length - scale, 0) + Math.max(scale, 0);
+	return precision <= MAX_DECIMAL_PRECISION && scale <= MAX_DECIMAL_SCALE;
+};
+
+// isFloatingPoint checks whether the string s represents a valid floating-point
+// value.
+const isFloatingPoint = (s: string): boolean => {
 	if (s === '') {
 		return false;
 	}
@@ -150,7 +173,7 @@ const isYear = (s: string): boolean => {
 // specified bit size, which can be either 32 or 64, and can be used as a filter
 // value.
 const isFloat = (s: string, bitSize: number): boolean => {
-	if (!isDecimal(s)) {
+	if (!isFloatingPoint(s)) {
 		return false;
 	}
 	const n = parseFloat(s);
@@ -163,8 +186,8 @@ const isFloat = (s: string, bitSize: number): boolean => {
 // isTime checks whether the string s represents a valid time value that can be
 // used as a filter value.
 const isTime = (s: string): boolean => {
-	const m = s.match(/^(\d{2}):(\d{2}):(\d{2})(?:\.\d{1,9})?$/);
-	if (m == null) {
+	const m = s.match(/^(\d{2}):(\d{2}):(\d{2})/);
+	if (m == null || (s[8] === '.' && !/^\.\d{1,9}/.test(s.slice(8)))) {
 		return false;
 	}
 	const [hour, minute, second] = [Number(m[1]), Number(m[2]), Number(m[3])];
