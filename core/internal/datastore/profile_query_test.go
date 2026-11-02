@@ -53,7 +53,8 @@ func (w profileQueryWarehouse) Query(context.Context, warehouses.RowQuery, bool)
 	return w.rows, w.total, nil
 }
 
-// TestProfileQueryArguments verifies argument rejection before starting a warehouse operation.
+// TestProfileQueryArguments verifies argument rejection before starting a
+// warehouse operation.
 func TestProfileQueryArguments(t *testing.T) {
 	schema := types.Object([]types.Property{{Name: "email", Type: types.String()}})
 	for _, tc := range []struct {
@@ -78,7 +79,8 @@ func TestProfileQueryArguments(t *testing.T) {
 	}
 }
 
-// TestProfileQueryBounds verifies safety limits without enforcing count/row agreement.
+// TestProfileQueryBounds verifies safety limits without enforcing count/row
+// agreement.
 func TestProfileQueryBounds(t *testing.T) {
 	for _, tc := range []struct {
 		name      string

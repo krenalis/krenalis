@@ -24,7 +24,8 @@ func (negativeProfileCountWarehouse) Count(context.Context, string, []warehouses
 	return -1, nil
 }
 
-// TestProfileCountRejectsNegativeWarehouseValue verifies that profile counts are validated at the warehouse boundary.
+// TestProfileCountRejectsNegativeWarehouseValue verifies that profile counts
+// are validated at the warehouse boundary.
 func TestProfileCountRejectsNegativeWarehouseValue(t *testing.T) {
 
 	store := &Store{mc: newModeCoordinator(state.Normal)}

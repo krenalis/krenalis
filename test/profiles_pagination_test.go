@@ -19,7 +19,8 @@ import (
 	"github.com/krenalis/krenalis/tools/types"
 )
 
-// TestProfilesPagination verifies deterministic pagination and schema-aware live reads.
+// TestProfilesPagination verifies deterministic pagination and schema-aware
+// live reads.
 func TestProfilesPagination(t *testing.T) {
 
 	if testing.Short() {

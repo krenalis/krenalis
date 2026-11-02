@@ -1391,7 +1391,8 @@ type Profile struct {
 // It returns errors.NotFoundError if the workspace no longer exists, or
 // errors.UnprocessableError with code MaintenanceMode, PropertyNotExist,
 // OrderNotExist, OrderTypeNotSortable, or SchemaNotAligned. Invalid arguments
-// return errors.BadRequestError; warehouse failures return errors.UnavailableError.
+// return errors.BadRequestError; warehouse failures return
+// errors.UnavailableError.
 func (this *Workspace) Profiles(ctx context.Context, schema types.Type, properties []string, filter *Filter, order string, orderDesc bool, first, limit int) ([]Profile, int, bool, error) {
 
 	this.core.mustBeOpen()

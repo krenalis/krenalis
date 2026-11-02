@@ -142,7 +142,8 @@ func appendJoins(b *strings.Builder, joins []warehouses.Join) error {
 	return nil
 }
 
-// renderCountQuery renders a query that counts rows in table after applying joins and where.
+// renderCountQuery renders a query that counts rows in table after applying
+// joins and where.
 func renderCountQuery(table string, joins []warehouses.Join, where warehouses.Expr) (string, error) {
 
 	var b strings.Builder
