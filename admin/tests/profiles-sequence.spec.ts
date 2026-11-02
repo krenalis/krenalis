@@ -291,7 +291,7 @@ test(`Ignore logical operators in groups that contain fewer than two rules when 
 	expect(profileFilterResultsFingerprint(twoRulesAnd)).not.toBe(profileFilterResultsFingerprint(twoRulesOr));
 });
 
-test(`Add only successful previews to filter history and truncate a redo branch`, () => {
+test(`Add previews to filter history and truncate a redo branch`, () => {
 	const filterB: Filter = {
 		operator: 'and',
 		rules: [{ property: 'email', operator: 'contains', values: ['example.com'] }],
