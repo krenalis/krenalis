@@ -221,7 +221,7 @@ For the TypeScript and React code under `admin/`:
 - Write components and custom hooks as arrow functions assigned to `const`.
 - Type props with an interface `<ComponentName>Props` immediately before the component, unless shared from another module; destructure and type them in the parameter list, without `React.FC`.
 - Put component styles in a `.css` file next to the component and import it there, with BEM-style names such as `schema-grid`, `schema-grid__search`, and `schema-grid--loading`.
-- For a Shoelace icon, list its file name in `admin/src/shoelace-icons.txt` alphabetically and run `npm run makevendor` from `admin/`; unlisted icons are not embedded and fail to load.
+- For an icon, list its file name in `admin/src/icons.txt` alphabetically and run `npm run makevendor` from `admin/`; unlisted icons are not embedded and fail to load.
 
 # Reuse
 

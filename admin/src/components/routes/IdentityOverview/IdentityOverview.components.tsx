@@ -1,4 +1,4 @@
-import React, { ReactNode, useState } from 'react';
+import React, { ReactNode, useId, useState } from 'react';
 import {
 	Area,
 	AreaChart,
@@ -17,14 +17,15 @@ import {
 	XAxis,
 	YAxis,
 } from 'recharts';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import SlBadge from '@shoelace-style/shoelace/dist/react/badge/index.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
-import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
-import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
-import type SlSelectElement from '@shoelace-style/shoelace/dist/components/select/select.component.js';
-import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
-import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaBadge from '@awesome.me/webawesome/dist/react/badge/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
+import WaOption from '@awesome.me/webawesome/dist/react/option/index.js';
+import WaSelect from '@awesome.me/webawesome/dist/react/select/index.js';
+import type WaSelectElement from '@awesome.me/webawesome/dist/components/select/select.js';
+import WaSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
+import WaTooltip from '@awesome.me/webawesome/dist/react/tooltip/index.js';
+import { buttonVariant } from '../../../utils/buttonVariant';
 import Grid from '../../base/Grid/Grid';
 import { GridColumn, GridRow } from '../../base/Grid/Grid.types';
 import { Link } from '../../base/Link/Link';
@@ -75,12 +76,17 @@ interface InfoTooltipProps {
 }
 
 const InfoTooltip = ({ content, label }: InfoTooltipProps) => {
+	const buttonID = useId();
+
 	return (
-		<SlTooltip className='identity-dashboard__tooltip' content={content} placement='top' hoist={true}>
-			<button className='identity-dashboard__info' type='button' aria-label={label}>
-				<SlIcon name='info-circle' />
+		<>
+			<WaTooltip className='identity-dashboard__tooltip' for={buttonID} placement='top'>
+				{content}
+			</WaTooltip>
+			<button id={buttonID} className='identity-dashboard__info' type='button' aria-label={label}>
+				<WaIcon name='info-circle' />
 			</button>
-		</SlTooltip>
+		</>
 	);
 };
 
@@ -263,7 +269,7 @@ const StateMessage = ({ variant, title, description, action, compact }: StateMes
 			className={`identity-dashboard__state${variant === 'error' ? ' identity-dashboard__state--error' : ''}${compact ? ' identity-dashboard__state--compact' : ''}`}
 			role={variant === 'error' ? 'alert' : 'status'}
 		>
-			<SlIcon name={variant === 'error' ? 'exclamation-triangle' : 'info-circle'} />
+			<WaIcon name={variant === 'error' ? 'exclamation-triangle' : 'info-circle'} />
 			<div>
 				<div className='identity-dashboard__state-title'>{title}</div>
 				{description && <div className='identity-dashboard__state-description'>{description}</div>}
@@ -284,7 +290,7 @@ const CardLoading = ({ chart = false }: CardLoadingProps) => {
 			aria-label='Loading'
 		>
 			{chart ? (
-				<SlSpinner style={{ fontSize: '2rem', '--track-width': '4px' } as React.CSSProperties} />
+				<WaSpinner style={{ fontSize: '2rem', '--track-width': '4px' } as React.CSSProperties} />
 			) : (
 				<>
 					<div className='identity-dashboard__skeleton identity-dashboard__skeleton--value' />
@@ -611,19 +617,25 @@ const IdentitiesChart = ({
 			title='Identities over time (daily)'
 			info='Counts of recognized and anonymous identities at the end of each UTC day over the selected date range. Days with no data are shown as gaps.'
 			headerAction={
-				<SlSelect
+				<WaSelect
 					className='identity-dashboard__connection-select'
-					size='small'
+					size='s'
 					value={selectedConnection}
-					hoist={true}
 					aria-label='Connection'
-					onSlChange={(event) => onConnectionChange(String((event.currentTarget as SlSelectElement).value))}
+					onChange={(event) => {
+						const connection = String((event.currentTarget as WaSelectElement).value);
+						// The select also reports the option that is already selected.
+						if (connection === selectedConnection) {
+							return;
+						}
+						onConnectionChange(connection);
+					}}
 				>
-					<SlOption className='identity-dashboard__connection-option' value=''>
+					<WaOption className='identity-dashboard__connection-option' value=''>
 						All connections
-					</SlOption>
+					</WaOption>
 					{connectionOptions.map((connection) => (
-						<SlOption
+						<WaOption
 							className={`identity-dashboard__connection-option${
 								connection.id === DELETED_CONNECTION_SCOPE
 									? ' identity-dashboard__connection-option--deleted'
@@ -633,9 +645,9 @@ const IdentitiesChart = ({
 							value={connection.id}
 						>
 							<span className='identity-dashboard__connection-option-name'>{connection.name}</span>
-						</SlOption>
+						</WaOption>
 					))}
-				</SlSelect>
+				</WaSelect>
 			}
 			days={days}
 			recognizedColor={CHART_COLOR}
@@ -1104,7 +1116,7 @@ const TypeDistributionBlock = ({
 				<CardLoading chart={true} />
 			) : !hasData ? (
 				<div className='identity-dashboard__distribution-empty' role='status'>
-					<SlIcon name='info-circle' />
+					<WaIcon name='info-circle' />
 					<span>No data available</span>
 				</div>
 			) : (
@@ -1185,7 +1197,7 @@ const TypeDistributionCard = ({ processed, unified, loading, error }: TypeDistri
 				/>
 				<div className='identity-dashboard__distribution-divider' aria-hidden='true'>
 					<span>
-						<SlIcon name='arrows' />
+						<WaIcon name='arrows' />
 					</span>
 				</div>
 				<TypeDistributionBlock
@@ -1304,9 +1316,9 @@ const ProfileComposition = ({ profiles, composition, loading, error }: ProfileCo
 const GoToRun = () => {
 	return (
 		<Link path='profile-unification/profiles'>
-			<SlButton size='small' variant='default'>
+			<WaButton size='s' {...buttonVariant('default')}>
 				Go to Run
-			</SlButton>
+			</WaButton>
 		</Link>
 	);
 };
@@ -1350,7 +1362,7 @@ const HISTORY_COLUMNS: GridColumn[] = [
 ];
 
 const HISTORY_STATUSES = {
-	running: { label: 'Running', variant: 'primary' },
+	running: { label: 'Running', variant: 'brand' },
 	successful: { label: 'Successful', variant: 'success' },
 	failed: { label: 'Failed', variant: 'danger' },
 } as const;
@@ -1358,9 +1370,9 @@ const HISTORY_STATUSES = {
 const historyStatusBadge = (status: IdentityResolutionRun['status']): ReactNode => {
 	const { label, variant } = HISTORY_STATUSES[status];
 	return (
-		<SlBadge className='identity-dashboard__history-status' variant={variant} pill>
+		<WaBadge className='identity-dashboard__history-status' variant={variant} pill>
 			{label}
-		</SlBadge>
+		</WaBadge>
 	);
 };
 
