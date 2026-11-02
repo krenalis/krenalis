@@ -38,6 +38,20 @@ interface LatestIdentityResolution {
 	endTime: string | null;
 }
 
+type IdentityResolutionRunStatus = 'running' | 'successful' | 'failed';
+
+interface IdentityResolutionRun {
+	id: string;
+	status: IdentityResolutionRunStatus;
+	startTime: string;
+	endTime: string | null;
+	error: string | null;
+}
+
+interface IdentityResolutionRunsResponse {
+	runs: IdentityResolutionRun[];
+}
+
 interface LatestAlterProfileSchema {
 	startTime: string | null;
 	endTime: string | null;
@@ -65,6 +79,9 @@ export type {
 	CreateWorkspaceResponse,
 	PrimarySources,
 	LatestIdentityResolution,
+	IdentityResolutionRun,
+	IdentityResolutionRunsResponse,
+	IdentityResolutionRunStatus,
 	LatestAlterProfileSchema,
 	ConsentPurpose,
 	ProfilePropertyRoles,

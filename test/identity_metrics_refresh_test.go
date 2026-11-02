@@ -16,8 +16,9 @@ import (
 	"github.com/krenalis/krenalis/tools/types"
 )
 
-// TestIdentityMetricsRefreshAfterImport verifies automatic and explicit refresh
-// and reads the resulting current and daily metrics through the API.
+// TestIdentityMetricsRefreshAfterImport verifies automatic refresh after
+// imports and Identity Resolution, explicit refresh, and current and daily
+// API metrics.
 func TestIdentityMetricsRefreshAfterImport(t *testing.T) {
 
 	if testing.Short() {
@@ -26,6 +27,7 @@ func TestIdentityMetricsRefreshAfterImport(t *testing.T) {
 	k := krenalistester.NewKrenalisInstance(t)
 	k.Start()
 	defer k.Stop()
+	k.UpdateIdentityResolutionSettings(false, nil)
 	connection := k.CreateDummy("Identity metrics source", krenalistester.Source)
 	pipeline := k.CreatePipeline(connection, "User", krenalistester.PipelineToSet{
 		Name:    "Identity metrics pipeline",
@@ -82,6 +84,37 @@ func TestIdentityMetricsRefreshAfterImport(t *testing.T) {
 		if len(days) != 1 || days[0].Day != start.Format(time.DateOnly) || days[0].Total != 10 {
 			t.Fatalf("expected one observed day with 10 identities, got %#v", days)
 		}
+	}
+
+	if latest.WithoutProfile != 10 {
+		t.Fatalf("expected 10 identities without profiles before resolution, got %#v", latest)
+	}
+	if len(latest.Connections) != 1 || latest.Connections[0].WithoutProfile != 10 {
+		t.Fatalf("expected one connection with 10 identities without profiles before resolution, got %#v",
+			latest.Connections)
+	}
+	k.RunIdentityResolutionAndWait()
+	timer.Reset(10 * time.Second)
+	for {
+		k.Call("GET", "/v1/metrics/identities/latest", nil, nil, &latest)
+		if latest.WithoutProfile == 0 {
+			break
+		}
+		select {
+		case <-t.Context().Done():
+			t.Fatalf("expected automatic refresh after resolution, got %v", t.Context().Err())
+		case <-timer.C:
+			t.Fatalf("expected identities with profiles after resolution, got %#v", latest)
+		case <-ticker.C:
+		}
+	}
+	if latest.Total != 10 || latest.WithoutProfile != 0 {
+		t.Fatalf("expected 10 identities with profiles after resolution, got %#v", latest)
+	}
+	if len(latest.Connections) != 1 || latest.Connections[0].Connection != connection ||
+		latest.Connections[0].Anonymous+latest.Connections[0].Recognized != 10 ||
+		latest.Connections[0].WithoutProfile != 0 {
+		t.Fatalf("expected one refreshed connection with 10 identities with profiles, got %#v", latest.Connections)
 	}
 
 }
