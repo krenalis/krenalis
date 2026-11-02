@@ -270,6 +270,7 @@ test(`Initialize filter history from the displayed filter and last observed tota
 	expect(session.history).toHaveLength(1);
 	expect(currentProfilesFilterHistoryEntry(session)).toEqual({
 		filter,
+		draft: filter,
 		fingerprint: profileFilterFingerprint(filter),
 		total: 12,
 	});
@@ -400,4 +401,52 @@ test('A successful preview preserves placeholders in the editable draft', () => 
 	);
 	expect(next.draft).toEqual(draft);
 	expect(currentProfilesFilterHistoryEntry(next).filter).toEqual(filter);
+});
+
+test('Initialize a quoted profile filter draft without changing its values', () => {
+	const filter: Filter = {
+		operator: 'or',
+		rules: [
+			{
+				operator: 'and',
+				rules: [
+					{
+						property: 'email',
+						operator: 'is one of',
+						values: ['  Ada  ', '"Ada"', "'Ada'", '"Ada\\Lovelace"'],
+					},
+				],
+			},
+		],
+	};
+	const session = createProfilesFilterSession(filter, 1);
+	expect(validateAndNormalizeFilter(session.draft!, filterSchema)).toEqual(filter);
+	expect(currentProfilesFilterHistoryEntry(session).filter).toEqual(filter);
+});
+
+test('Restore a quoted profile filter draft from history without normalizing it twice', () => {
+	const draft: Filter = {
+		operator: 'and',
+		rules: [{ property: 'email', operator: 'is one of', values: ['"  Ada  "', '\'"Ada"\''] }],
+	};
+	const filter = validateAndNormalizeFilter(draft, filterSchema)!;
+	let session = createProfilesFilterSession(null, 2);
+	session = commitProfilesFilterPreview(
+		session,
+		{ filter, draft, fingerprint: profileFilterFingerprint(filter) },
+		{ total: 1 },
+	);
+	session = commitProfilesFilterPreview(
+		session,
+		{ filter: null, fingerprint: profileFilterFingerprint(null) },
+		{ total: 2 },
+	);
+	session = commitProfilesFilterPreview(
+		session,
+		{ filter, fingerprint: profileFilterFingerprint(filter), historyIndex: 1 },
+		{ total: 1 },
+	);
+	expect(session.draft).toEqual(draft);
+	expect(session.draft).not.toBe(draft);
+	expect(validateAndNormalizeFilter(session.draft!, filterSchema)).toEqual(filter);
 });

@@ -377,7 +377,7 @@ const ProfilesFilters = ({
 
 	const historyEntry = currentProfilesFilterHistoryEntry(session);
 	const rawDraftFingerprint = profileFilterFingerprint(session.draft);
-	const isDraftDirty = rawDraftFingerprint !== profileFilterFingerprint(historyEntry.filter);
+	const isDraftDirty = rawDraftFingerprint !== profileFilterFingerprint(historyEntry.draft);
 	const normalizedDraftFingerprint =
 		validatedDraft.error == null ? profileFilterFingerprint(validatedDraft.filter ?? null) : undefined;
 	const hasCurrentPreview = normalizedDraftFingerprint === historyEntry.fingerprint && historyEntry.total != null;
@@ -483,7 +483,11 @@ const ProfilesFilters = ({
 			} catch {
 				return;
 			}
-			void previewCandidate({ filter, fingerprint: profileFilterFingerprint(filter) });
+			void previewCandidate({
+				filter,
+				draft: cloneProfileFilter(draft),
+				fingerprint: profileFilterFingerprint(filter),
+			});
 		},
 		[normalizeFilter, previewCandidate],
 	);
@@ -491,12 +495,12 @@ const ProfilesFilters = ({
 	const undo = () => {
 		const current = sessionRef.current;
 		const entry = currentProfilesFilterHistoryEntry(current);
-		if (profileFilterFingerprint(current.draft) !== profileFilterFingerprint(entry.filter)) {
+		if (profileFilterFingerprint(current.draft) !== profileFilterFingerprint(entry.draft)) {
 			draftRevisionRef.current++;
 			invalidatePreview();
 			updateSessionWithHistoryTransition((state) => ({
 				...state,
-				draft: cloneProfileFilter(currentProfilesFilterHistoryEntry(state).filter),
+				draft: cloneProfileFilter(currentProfilesFilterHistoryEntry(state).draft),
 				pending: undefined,
 				failure: undefined,
 			}));
@@ -516,7 +520,7 @@ const ProfilesFilters = ({
 		if (
 			current.pending != null ||
 			profileFilterFingerprint(current.draft) !==
-				profileFilterFingerprint(currentProfilesFilterHistoryEntry(current).filter) ||
+				profileFilterFingerprint(currentProfilesFilterHistoryEntry(current).draft) ||
 			current.historyIndex >= current.history.length - 1
 		) {
 			return;
@@ -551,7 +555,7 @@ const ProfilesFilters = ({
 
 	const materializeProfiles = useCallback(
 		async (entry: FilterHistoryEntry, intent: GridMaterializationIntent) => {
-			const snapshot = createProfileFilterHistoryEntry(entry.filter, entry.total);
+			const snapshot = createProfileFilterHistoryEntry(entry.filter, entry.total, entry.draft);
 			const snapshotContext = snapshot.fingerprint;
 			const generation = ++gridRequestGenerationRef.current;
 			const draftRevision = draftRevisionRef.current;
@@ -623,7 +627,7 @@ const ProfilesFilters = ({
 		invalidatePreview();
 		updateSession((state) => ({
 			...state,
-			draft: cloneProfileFilter(currentProfilesFilterHistoryEntry(state).filter),
+			draft: cloneProfileFilter(currentProfilesFilterHistoryEntry(state).draft),
 			pending: undefined,
 			failure: undefined,
 		}));
@@ -668,13 +672,14 @@ const ProfilesFilters = ({
 				expectedDisplayedContext.intent === 'remove' &&
 				sessionRef.current === expectedDisplayedContext.session
 			) {
-				updateSession((state) =>
-					commitProfilesFilterPreview(
-						{ ...state, draft: cloneProfileFilter(appliedFilter) },
+				updateSession((state) => {
+					const next = commitProfilesFilterPreview(
+						state,
 						{ filter: appliedFilter, fingerprint: appliedFilterFingerprint },
 						{ total: profilesTotal },
-					),
-				);
+					);
+					return { ...next, draft: cloneProfileFilter(currentProfilesFilterHistoryEntry(next).draft) };
+				});
 			}
 			return;
 		}
