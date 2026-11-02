@@ -4,7 +4,9 @@
 
 import React, { useCallback, useState } from 'react';
 import ReactDOM from 'react-dom/client';
-import '@shoelace-style/shoelace/dist/themes/light.css';
+import '@awesome.me/webawesome/dist/styles/layers.css';
+import '@awesome.me/webawesome/dist/styles/themes/default.css';
+import '../src/components/routes/App/App.css';
 import API from '../src/lib/api/api';
 import Workspace from '../src/lib/api/types/workspace';
 import AppContext from '../src/context/AppContext';

@@ -201,11 +201,14 @@ func isPathByte(c byte) bool {
 	return 'a' <= c && c <= 'z' || c == '_' || 'A' <= c && c <= 'Z' || '0' <= c && c <= '9'
 }
 
+const maxFunctionDepth = 10
+
 // parse parses an expression from the provided source string and returns the
 // parsed expression along with the remaining unparsed source. If no expression
 // is found, it returns nil. Leading and trailing spaces are trimmed, except
-// when they occur within a string.
-func parse(src string, start, end int) ([]part, string, error) {
+// when they occur within a string. depth is the number of enclosing function
+// calls.
+func parse(src string, start, end, depth int) ([]part, string, error) {
 	var expr []part
 	var err error
 	var dot bool
@@ -293,6 +296,9 @@ Expression:
 				if !ok || len(p.path.elements) > 1 {
 					return nil, "", fmt.Errorf("function %q does not exist", p.path)
 				}
+				if depth >= maxFunctionDepth {
+					return nil, "", fmt.Errorf("there are more than %d nested functions", maxFunctionDepth)
+				}
 				p.args = make([][]part, 0, n)
 				for {
 					src = skipSpaces(src)
@@ -303,7 +309,7 @@ Expression:
 						break
 					}
 					var arg []part
-					arg, src, err = parse(src, end-len(src), end)
+					arg, src, err = parse(src, end-len(src), end, depth+1)
 					if err != nil {
 						return nil, "", err
 					}

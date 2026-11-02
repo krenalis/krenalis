@@ -1,14 +1,24 @@
-import React, { ReactNode, RefObject, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, {
+	ReactNode,
+	RefObject,
+	useCallback,
+	useEffect,
+	useId,
+	useLayoutEffect,
+	useMemo,
+	useRef,
+	useState,
+} from 'react';
 import './FilterEditor.css';
 import { getFilterPropertyComboboxItems } from '../../helpers/getSchemaComboboxItems';
-import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
-import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import type SlButtonElement from '@shoelace-style/shoelace/dist/components/button/button.component.js';
-import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
-import type SlInputElement from '@shoelace-style/shoelace/dist/components/input/input.component.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
-import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
+import WaOption from '@awesome.me/webawesome/dist/react/option/index.js';
+import WaSelect from '@awesome.me/webawesome/dist/react/select/index.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import type WaButtonElement from '@awesome.me/webawesome/dist/components/button/button.js';
+import WaInput from '@awesome.me/webawesome/dist/react/input/index.js';
+import type WaInputElement from '@awesome.me/webawesome/dist/components/input/input.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
+import WaTooltip from '@awesome.me/webawesome/dist/react/tooltip/index.js';
 import { Combobox } from '../Combobox/Combobox';
 import {
 	FILTER_OPERATORS,
@@ -123,6 +133,7 @@ const FilterEditor = ({
 	target,
 	textValueCommitDelayMs,
 }: FilterEditorProps) => {
+	const editorID = useId();
 	const [conditionRemovalAnnouncement, setConditionRemovalAnnouncement] = useState('');
 	const announcementFrameRef = useRef<number>();
 	const rootRef = useRef<HTMLDivElement>(null);
@@ -151,13 +162,13 @@ const FilterEditor = ({
 		}
 		pendingConditionFocusRef.current = undefined;
 
-		const propertyInputs = rootRef.current?.querySelectorAll<SlInputElement>(
-			'.pipeline__filters-property sl-input',
+		const propertyInputs = rootRef.current?.querySelectorAll<WaInputElement>(
+			'.pipeline__filters-property wa-input',
 		);
 		const target =
 			typeof pendingFocus === 'number'
 				? propertyInputs?.[pendingFocus]
-				: rootRef.current?.querySelector<SlButtonElement>('.pipeline__filters-add-condition');
+				: rootRef.current?.querySelector<WaButtonElement>('.pipeline__filters-add-condition');
 		if (target != null) {
 			// Removing a rule can remount the next input before its internal control is ready.
 			let canceled = false;
@@ -244,10 +255,10 @@ const FilterEditor = ({
 
 	const onRemoveCondition = (path: number[]) => {
 		const propertyInputs = Array.from(
-			rootRef.current?.querySelectorAll<HTMLElement>('.pipeline__filters-property sl-input') ?? [],
+			rootRef.current?.querySelectorAll<HTMLElement>('.pipeline__filters-property wa-input') ?? [],
 		);
 		const currentProperty = rootRef.current?.querySelector<HTMLElement>(
-			`[data-id="property-${pathID(path)}"] sl-input`,
+			`[data-id="property-${pathID(path)}"] wa-input`,
 		);
 		const currentIndex = currentProperty == null ? -1 : propertyInputs.indexOf(currentProperty);
 
@@ -379,7 +390,7 @@ const FilterEditor = ({
 		if (valueInput == null) {
 			return;
 		}
-		if (valueInput.tagName === 'SL-SELECT' && !valueInput.open) {
+		if (valueInput.tagName === 'WA-SELECT' && !valueInput.open) {
 			valueInput.show();
 		} else {
 			valueInput.focus();
@@ -408,7 +419,7 @@ const FilterEditor = ({
 			if (input == null) {
 				return;
 			}
-			if (input.tagName === 'SL-SELECT') {
+			if (input.tagName === 'WA-SELECT') {
 				input.show();
 			} else {
 				input.focus();
@@ -472,41 +483,40 @@ const FilterEditor = ({
 			/>
 		);
 		const pathInput = isJSON ? (
-			<SlInput
-				size='small'
+			<WaInput
+				size='s'
 				className='pipeline__filters-path'
 				value={propertyPath}
-				onSlInput={(event: any) => changeFilter(updatePath(path, event.target.value))}
-				onSlChange={(event: any) => changeFilter(updatePath(path, event.target.value), true)}
+				onInput={(event: any) => changeFilter(updatePath(path, event.target.value))}
+				onChange={(event: any) => changeFilter(updatePath(path, event.target.value), true)}
 				name={`path-${id}`}
 				disabled={disabled}
 				placeholder='Path (optional)'
 			/>
 		) : null;
 		const operatorSelect = (
-			<SlSelect
-				size='small'
+			<WaSelect
+				size='s'
 				name={`operator-${id}`}
 				className='pipeline__filters-operator'
 				value={String(FILTER_OPERATORS.findIndex((operator) => operator === condition.operator))}
-				onSlChange={(event: any) => changeOperator(path, FILTER_OPERATORS[event.target.value])}
-				onSlAfterHide={onOperatorSelectClose}
+				onChange={(event: any) => changeOperator(path, FILTER_OPERATORS[event.target.value])}
+				onWaAfterHide={onOperatorSelectClose}
 				placeholder='Operator'
 				disabled={isInvalidProperty || disabled}
-				hoist={hoistMenus}
 			>
 				{property != null
 					? getCompatibleFilterOperators(property, propertyPath !== '').map((index) => (
-							<SlOption key={index} value={String(index)}>
+							<WaOption key={index} value={String(index)}>
 								{FILTER_OPERATORS[index]}
-							</SlOption>
+							</WaOption>
 						))
 					: FILTER_OPERATORS.map((operator, index) => (
-							<SlOption key={operator} value={String(index)}>
+							<WaOption key={operator} value={String(index)}>
 								{operator}
-							</SlOption>
+							</WaOption>
 						))}
-			</SlSelect>
+			</WaSelect>
 		);
 
 		const valueElements: ReactNode[] = [];
@@ -518,7 +528,6 @@ const FilterEditor = ({
 					value={values[0] ?? ''}
 					options={propertyValues}
 					disabled={isInvalidProperty || disabled}
-					hoist={hoistMenus}
 					onValueChange={(value) => changeFilter(updateValue(path, 0, value))}
 					onValueCommit={(value) => changeFilter(updateValue(path, 0, value), true)}
 					textValueCommitDelayMs={textValueCommitDelayMs}
@@ -535,7 +544,6 @@ const FilterEditor = ({
 						value={values[1] ?? ''}
 						options={propertyValues}
 						disabled={isInvalidProperty || disabled}
-						hoist={hoistMenus}
 						onValueChange={(value) => changeFilter(updateValue(path, 1, value))}
 						onValueCommit={(value) => changeFilter(updateValue(path, 1, value), true)}
 						textValueCommitDelayMs={textValueCommitDelayMs}
@@ -551,7 +559,6 @@ const FilterEditor = ({
 								value={value}
 								options={propertyValues}
 								disabled={isInvalidProperty || disabled}
-								hoist={hoistMenus}
 								onValueChange={(value) => changeFilter(updateValue(path, valuePosition, value))}
 								onValueCommit={(value) => changeFilter(updateValue(path, valuePosition, value), true)}
 								textValueCommitDelayMs={textValueCommitDelayMs}
@@ -562,20 +569,21 @@ const FilterEditor = ({
 					);
 				}
 				valueElements.push(
-					<SlButton
+					<WaButton
 						className='pipeline__filters-add-value'
 						key='add-button'
-						variant='default'
-						size='small'
+						appearance='outlined'
+						size='s'
 						disabled={disabled}
 						onClick={() => onAddValue(path)}
 					>
 						Add value
-					</SlButton>,
+					</WaButton>,
 				);
 			}
 		}
 
+		const removeButtonID = `${editorID}-${id}-remove-condition`;
 		const removeButton = (
 			<button
 				type='button'
@@ -584,7 +592,7 @@ const FilterEditor = ({
 				onClick={() => onRemoveCondition(path)}
 				disabled={isRemoveDisabled}
 			>
-				<SlIcon name='x' aria-hidden='true' />
+				<WaIcon name='x' aria-hidden='true' />
 			</button>
 		);
 
@@ -604,17 +612,16 @@ const FilterEditor = ({
 						valueElements
 					)}
 					{!hideRemoveButton && (
-						<div className='pipeline__filters-remove-condition-wrapper'>
+						<div id={removeButtonID} className='pipeline__filters-remove-condition-wrapper'>
 							{isRemoveDisabled ? (
 								removeButton
 							) : (
-								<SlTooltip
-									className='app-tooltip'
-									content={`Remove condition ${conditionNumber}`}
-									hoist={true}
-								>
+								<>
+									<WaTooltip className='app-tooltip' for={removeButtonID}>
+										{`Remove condition ${conditionNumber}`}
+									</WaTooltip>
 									{removeButton}
-								</SlTooltip>
+								</>
 							)}
 						</div>
 					)}
@@ -637,34 +644,36 @@ const FilterEditor = ({
 					<span className='pipeline__filters-group-subject'>
 						{isRoot ? `${subject} matching` : 'matching'}
 					</span>
-					<SlSelect
+					<WaSelect
 						className='pipeline__filters-logical'
-						size='small'
+						size='s'
 						value={group.operator}
-						onSlChange={(event: any) => onLogicalChange(groupPath, event.target.value as FilterLogical)}
+						onChange={(event: any) => onLogicalChange(groupPath, event.target.value as FilterLogical)}
 						disabled={disabled}
-						hoist={hoistMenus}
 						aria-label='Match rules'
 					>
-						<SlOption value='and'>all</SlOption>
-						<SlOption value='or'>any</SlOption>
-					</SlSelect>
+						<WaOption value='and'>all</WaOption>
+						<WaOption value='or'>any</WaOption>
+					</WaSelect>
 					<span>of the following:</span>
 					{isRoot && rootActions != null && <div className='filter-editor__root-actions'>{rootActions}</div>}
 					{!isRoot && (
 						<div className='pipeline__filters-remove-group-wrapper'>
-							<SlTooltip className='app-tooltip' content={removeGroupTooltip} hoist={true}>
-								<SlButton
-									className='pipeline__filters-remove-group pipeline__filters-remove-rule'
-									size='small'
-									variant='text'
-									onClick={() => onRemoveRule(groupPath)}
-									disabled={disabled}
-								>
-									<SlIcon name='x' aria-hidden='true' />
-									<span className='pipeline__filters-remove-rule-label'>Remove group</span>
-								</SlButton>
-							</SlTooltip>
+							<WaTooltip className='app-tooltip' for={`${editorID}-${pathID(groupPath)}-remove-group`}>
+								{removeGroupTooltip}
+							</WaTooltip>
+							<WaButton
+								id={`${editorID}-${pathID(groupPath)}-remove-group`}
+								className='pipeline__filters-remove-group pipeline__filters-remove-rule'
+								size='s'
+								variant='brand'
+								appearance='plain'
+								onClick={() => onRemoveRule(groupPath)}
+								disabled={disabled}
+							>
+								<WaIcon name='x' aria-hidden='true' />
+								<span className='pipeline__filters-remove-rule-label'>Remove group</span>
+							</WaButton>
 						</div>
 					)}
 				</div>
@@ -693,26 +702,28 @@ const FilterEditor = ({
 					})}
 				</div>
 				<div className='pipeline__filters-group-actions'>
-					<SlButton
+					<WaButton
 						className='pipeline__filters-add-condition'
-						size='medium'
-						variant='text'
+						size='m'
+						variant='brand'
+						appearance='plain'
 						onClick={() => onAddCondition(groupPath)}
 						disabled={disabled || filterRuleCount >= MAX_FILTER_RULE_COUNT}
 					>
-						<SlIcon slot='prefix' name='plus-circle' />
+						<WaIcon slot='start' name='plus-circle' />
 						Add a condition
-					</SlButton>
-					<SlButton
+					</WaButton>
+					<WaButton
 						className='pipeline__filters-add-group'
-						size='medium'
-						variant='text'
+						size='m'
+						variant='brand'
+						appearance='plain'
 						onClick={() => onAddGroup(groupPath)}
 						disabled={disabled || depth >= MAX_FILTER_DEPTH || filterRuleCount > MAX_FILTER_RULE_COUNT - 2}
 					>
-						<SlIcon slot='prefix' name='plus-circle' />
+						<WaIcon slot='start' name='plus-circle' />
 						Add a group
-					</SlButton>
+					</WaButton>
 				</div>
 			</div>
 		);
@@ -735,7 +746,6 @@ interface FilterValueControlProps {
 	value: string;
 	options: string[];
 	disabled: boolean;
-	hoist: boolean;
 	onValueChange: (value: string) => void;
 	onValueCommit: (value: string) => void;
 	textValueCommitDelayMs?: number;
@@ -748,7 +758,6 @@ const FilterValueControl = ({
 	value,
 	options,
 	disabled,
-	hoist,
 	onValueChange,
 	onValueCommit,
 	textValueCommitDelayMs,
@@ -838,49 +847,48 @@ const FilterValueControl = ({
 	};
 
 	const removeButton = removable ? (
-		<SlButton
-			slot='suffix'
-			variant='default'
-			size='small'
-			circle
+		<WaButton
+			slot='end'
+			appearance='outlined'
+			size='s'
+			pill
 			className='pipeline__filters-value-remove'
 			onClick={onRemove}
 			disabled={disabled}
 		>
-			<SlIcon name='x' />
-		</SlButton>
+			<WaIcon name='x' />
+		</WaButton>
 	) : null;
 
 	if (options.length > 0) {
 		return (
 			<div className={removable ? 'pipeline__filters-value-control--removable' : undefined}>
-				<SlSelect
-					size='small'
+				<WaSelect
+					size='s'
 					className='pipeline__filters-value-input'
 					name={name}
 					value={value ?? ''}
-					onSlChange={handleSelect}
+					onChange={handleSelect}
 					disabled={disabled}
-					hoist={hoist}
 				>
 					{options.map((option, index) => (
-						<SlOption key={`${index}-${option}`} value={option}>
+						<WaOption key={`${index}-${option}`} value={option}>
 							{option === '' ? '\u00A0' : option}
-						</SlOption>
+						</WaOption>
 					))}
 					{removeButton}
-				</SlSelect>
+				</WaSelect>
 			</div>
 		);
 	}
 
 	return (
-		<SlInput
-			size='small'
+		<WaInput
+			size='s'
 			className='pipeline__filters-value-input'
 			value={value ?? ''}
-			onSlInput={handleInput}
-			onSlChange={handleCommit}
+			onInput={handleInput}
+			onChange={handleCommit}
 			onKeyDown={handleKeyDown}
 			onCompositionStart={handleCompositionStart}
 			onCompositionEnd={handleCompositionEnd}
@@ -888,7 +896,7 @@ const FilterValueControl = ({
 			disabled={disabled}
 		>
 			{removeButton}
-		</SlInput>
+		</WaInput>
 	);
 };
 

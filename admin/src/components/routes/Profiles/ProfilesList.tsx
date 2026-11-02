@@ -4,12 +4,12 @@ import AlertDialog from '../../base/AlertDialog/AlertDialog';
 import Grid from '../../base/Grid/Grid';
 import { GridRef } from '../../base/Grid/Grid.types';
 import { GridKeyboardHints } from '../../base/Grid/GridKeyboardHints';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import SlCheckbox from '@shoelace-style/shoelace/dist/react/checkbox/index.js';
-import SlDropdown from '@shoelace-style/shoelace/dist/react/dropdown/index.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
-import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
-import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaCheckbox from '@awesome.me/webawesome/dist/react/checkbox/index.js';
+import WaDropdown from '@awesome.me/webawesome/dist/react/dropdown/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
+import WaInput from '@awesome.me/webawesome/dist/react/input/index.js';
+import WaSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
 import { arrayMove } from '@dnd-kit/sortable';
 import { ProfileDrawer } from './ProfileDrawer';
 import { useProfilesGrid } from './useProfilesGrid';
@@ -201,9 +201,9 @@ const ProfilesList = () => {
 			{isProfileSchemaNotAligned && (
 				<div className='profiles-list__stale-notice' role='status'>
 					<span>The profile schema is no longer compatible with this view.</span>
-					<SlButton size='small' onClick={() => setAskSchemaResetConfirmation(true)}>
+					<WaButton appearance='outlined' size='s' onClick={() => setAskSchemaResetConfirmation(true)}>
 						Reset view
-					</SlButton>
+					</WaButton>
 				</div>
 			)}
 			<div className='profiles-list__page-header'>
@@ -211,19 +211,20 @@ const ProfilesList = () => {
 					<h1>Profiles</h1>
 				</div>
 				<div className='profiles-list__identity-resolution'>
-					<SlButton
+					<WaButton
+						appearance='outlined'
 						onClick={() => setAskResolveIdentitiesConfirmation(true)}
-						variant='primary'
+						variant='brand'
 						disabled={isLoadingIdentityResolution || isIdentityResolutionRunning}
 						className='profiles-list__identity-resolution-button'
 					>
 						{isLoadingIdentityResolution || isIdentityResolutionRunning ? (
-							<SlSpinner className='profiles-list__identity-resolution-spinner' slot='prefix' />
+							<WaSpinner className='profiles-list__identity-resolution-spinner' slot='start' />
 						) : (
-							<SlIcon slot='prefix' name='play' />
+							<WaIcon slot='start' name='play' />
 						)}
 						{isIdentityResolutionRunning ? 'Identity resolution' : 'Run identity resolution'}
-					</SlButton>
+					</WaButton>
 					{(isIdentityResolutionRunning || latestIRExecutionEnd) && (
 						<div className='profiles-list__identity-resolution-progress'>
 							{isIdentityResolutionRunning ? (
@@ -258,45 +259,49 @@ const ProfilesList = () => {
 							<div className='profiles-list__grid-summary-group'>
 								<div className='profiles-list__grid-summary'>
 									<span className='profiles-list__grid-summary-content'>
-										<SlIcon name='people' aria-hidden='true' />
+										<WaIcon name='people' aria-hidden='true' />
 										<span>{gridResultsLabel}</span>
 									</span>
 									<span className='profiles-list__grid-summary-sweep' aria-hidden='true'>
-										<SlIcon name='people' />
+										<WaIcon name='people' />
 										<span>{gridResultsLabel}</span>
 									</span>
 								</div>
 								<div ref={setFilterGridActionContainer} className='profiles-list__filter-grid-action' />
 							</div>
 							<div className='profiles-list__toolbar-actions'>
-								<SlButton size='small' onClick={refreshProfiles} disabled={isLoading}>
-									<SlIcon slot='prefix' name='arrow-clockwise' />
+								<WaButton appearance='outlined' size='s' onClick={refreshProfiles} disabled={isLoading}>
+									<WaIcon slot='start' name='arrow-clockwise' />
 									Refresh
-								</SlButton>
-								<SlDropdown
-									stayOpenOnSelect={true}
+								</WaButton>
+								<WaDropdown
 									className='profiles-list__toggle-columns'
 									placement='bottom-end'
 									distance={8}
 								>
-									<SlButton className='profiles-list__toolbar-button' slot='trigger' size='small'>
-										<SlIcon slot='prefix' name='layout-three-columns' />
+									<WaButton
+										appearance='outlined'
+										className='profiles-list__toolbar-button'
+										slot='trigger'
+										size='s'
+									>
+										<WaIcon slot='start' name='layout-three-columns' />
 										Columns
-									</SlButton>
+									</WaButton>
 									<div className='profiles-list__column-chooser'>
 										<div className='profiles-list__column-chooser-header'>
-											<SlInput
+											<WaInput
 												className='profiles-list__column-chooser-search'
-												size='small'
+												size='s'
 												label='Search columns'
 												placeholder='Search columns...'
-												clearable
+												withClear
 												value={columnSearch}
-												onSlInput={(event: any) => setColumnSearch(event.target.value)}
+												onInput={(event: any) => setColumnSearch(event.target.value)}
 											>
-												<SlIcon slot='prefix' name='search' />
-												<SlIcon slot='clear-icon' name='backspace' />
-											</SlInput>
+												<WaIcon slot='start' name='search' />
+												<WaIcon slot='clear-icon' name='backspace' />
+											</WaInput>
 										</div>
 										<div
 											className='profiles-list__column-chooser-list'
@@ -308,15 +313,15 @@ const ProfilesList = () => {
 													usedProperties.length === 1 &&
 													usedProperties[0].name === property.name;
 												return (
-													<SlCheckbox
+													<WaCheckbox
 														className='profiles-list__column-chooser-option'
 														key={property.name}
-														onSlChange={() => onToggleColumn(property.name)}
+														onChange={() => onToggleColumn(property.name)}
 														checked={property.isUsed}
 														disabled={isLastUsed}
 													>
 														{property.label}
-													</SlCheckbox>
+													</WaCheckbox>
 												);
 											})}
 											{matchingProfileProperties.length === 0 && (
@@ -326,7 +331,7 @@ const ProfilesList = () => {
 											)}
 										</div>
 									</div>
-								</SlDropdown>
+								</WaDropdown>
 							</div>
 						</div>
 						<Grid
@@ -376,16 +381,18 @@ const ProfilesList = () => {
 					title='Reset profile view?'
 					actions={
 						<>
-							<SlButton onClick={() => setAskSchemaResetConfirmation(false)}>Cancel</SlButton>
-							<SlButton
-								variant='primary'
+							<WaButton appearance='outlined' onClick={() => setAskSchemaResetConfirmation(false)}>
+								Cancel
+							</WaButton>
+							<WaButton
+								variant='brand'
 								onClick={() => {
 									setAskSchemaResetConfirmation(false);
 									resetProfilesSchema();
 								}}
 							>
 								Reset view
-							</SlButton>
+							</WaButton>
 						</>
 					}
 				>
@@ -401,10 +408,12 @@ const ProfilesList = () => {
 				title='Processing time notice'
 				actions={
 					<>
-						<SlButton onClick={() => setAskResolveIdentitiesConfirmation(false)}>Cancel</SlButton>
-						<SlButton variant='primary' onClick={onStartIdentityResolution}>
+						<WaButton appearance='outlined' onClick={() => setAskResolveIdentitiesConfirmation(false)}>
+							Cancel
+						</WaButton>
+						<WaButton variant='brand' onClick={onStartIdentityResolution}>
 							Run identity resolution
-						</SlButton>
+						</WaButton>
 					</>
 				}
 			>

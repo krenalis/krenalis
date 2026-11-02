@@ -1,5 +1,5 @@
 import React, { ReactNode } from 'react';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import { CSS } from '@dnd-kit/utilities';
 import { useSortable } from '@dnd-kit/sortable';
 
@@ -21,7 +21,7 @@ const DraggableWrapper = ({ id, className, children, disabled }: DraggableRowPro
 	return (
 		<div className={`draggable-wrapper${className ? ` ${className}` : ''}`} ref={setNodeRef} style={style}>
 			<button className='draggable-wrapper__handle' {...listeners} {...attributes} disabled={disabled}>
-				<SlIcon name='grip-vertical' />
+				<WaIcon name='grip-vertical' />
 			</button>
 			{children}
 		</div>

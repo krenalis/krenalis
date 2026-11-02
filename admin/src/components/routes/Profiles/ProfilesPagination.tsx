@@ -1,9 +1,9 @@
 import React from 'react';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import SlButtonGroup from '@shoelace-style/shoelace/dist/react/button-group/index.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
-import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
-import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaButtonGroup from '@awesome.me/webawesome/dist/react/button-group/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
+import WaOption from '@awesome.me/webawesome/dist/react/option/index.js';
+import WaSelect from '@awesome.me/webawesome/dist/react/select/index.js';
 import { formatNumber } from '../../../utils/formatNumber';
 
 const PROFILE_PAGE_SIZES = [25, 50, 100];
@@ -48,24 +48,25 @@ const ProfilesPagination = ({
 				{children}
 			</div>
 			<div className='profiles-list__pagination-controls'>
-				<SlSelect
+				<WaSelect
 					className='profiles-list__pagination-page-size'
 					label='Profiles per page'
-					size='small'
+					size='s'
 					value={String(limit)}
 					disabled={isLoading}
-					onSlChange={(event: any) => onLimitChange(Number(event.target.value))}
+					onChange={(event: any) => onLimitChange(Number(event.target.value))}
 				>
 					{PROFILE_PAGE_SIZES.map((pageSize) => (
-						<SlOption key={pageSize} value={String(pageSize)}>
+						<WaOption key={pageSize} value={String(pageSize)}>
 							{pageSize}
-						</SlOption>
+						</WaOption>
 					))}
-				</SlSelect>
-				<SlButtonGroup className='profiles-list__pagination-navigation' label='Profile pages'>
-					<SlButton
+				</WaSelect>
+				<WaButtonGroup className='profiles-list__pagination-navigation' label='Profile pages'>
+					<WaButton
+						appearance='outlined'
 						className='profiles-list__pagination-previous'
-						size='small'
+						size='s'
 						aria-label='Previous page'
 						disabled={previousPageDisabled}
 						onClick={() => {
@@ -74,12 +75,13 @@ const ProfilesPagination = ({
 							}
 						}}
 					>
-						<SlIcon name='chevron-left' aria-hidden='true' />
+						<WaIcon name='chevron-left' aria-hidden='true' />
 						<span className='profiles-list__pagination-action-label'>Previous page</span>
-					</SlButton>
-					<SlButton
+					</WaButton>
+					<WaButton
+						appearance='outlined'
 						className='profiles-list__pagination-next'
-						size='small'
+						size='s'
 						aria-label='Next page'
 						disabled={nextPageDisabled}
 						onClick={() => {
@@ -88,10 +90,10 @@ const ProfilesPagination = ({
 							}
 						}}
 					>
-						<SlIcon name='chevron-right' aria-hidden='true' />
+						<WaIcon name='chevron-right' aria-hidden='true' />
 						<span className='profiles-list__pagination-action-label'>Next page</span>
-					</SlButton>
-				</SlButtonGroup>
+					</WaButton>
+				</WaButtonGroup>
 			</div>
 		</nav>
 	);

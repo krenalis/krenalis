@@ -1,7 +1,7 @@
-import React, { CSSProperties, ReactNode, forwardRef } from 'react';
+import React, { CSSProperties, ReactNode, forwardRef, useId } from 'react';
 import './GridHeaderCell.css';
-import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import WaTooltip from '@awesome.me/webawesome/dist/react/tooltip/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 
 interface GridHeaderCellProps {
 	value: string;
@@ -15,6 +15,7 @@ interface GridHeaderCellProps {
 
 const GridHeaderCell = forwardRef<HTMLDivElement, GridHeaderCellProps>(
 	({ value, alignment, explanation, className, reorderHandle, semanticCell, style }, ref) => {
+		const explanationID = useId();
 		return (
 			<div
 				ref={ref}
@@ -26,9 +27,16 @@ const GridHeaderCell = forwardRef<HTMLDivElement, GridHeaderCellProps>(
 				<div className='grid__cell-content'>
 					{value}
 					{explanation && (
-						<SlTooltip className='grid__header-explanation-tooltip' content={explanation} placement='top'>
-							<SlIcon className='grid__header-explanation-icon' name='info-circle-fill' />
-						</SlTooltip>
+						<>
+							<WaTooltip className='grid__header-explanation-tooltip' for={explanationID} placement='top'>
+								{explanation}
+							</WaTooltip>
+							<WaIcon
+								id={explanationID}
+								className='grid__header-explanation-icon'
+								name='info-circle-fill'
+							/>
+						</>
 					)}
 					{reorderHandle}
 				</div>

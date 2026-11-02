@@ -1,10 +1,10 @@
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { createPortal, flushSync } from 'react-dom';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import SlButtonElement from '@shoelace-style/shoelace/dist/components/button/button.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
-import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
-import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaButtonElement from '@awesome.me/webawesome/dist/components/button/button.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
+import WaSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
+import WaTooltip from '@awesome.me/webawesome/dist/react/tooltip/index.js';
 import { FilterEditor } from '../../base/FilterEditor/FilterEditor';
 import { Filter, FilterRule } from '../../../lib/api/types/pipeline';
 import { CountProfilesResponse } from '../../../lib/api/types/responses';
@@ -122,6 +122,7 @@ const createCollapsedFilterItem = (
 };
 
 const CollapsedFilterChipLabel = ({ fullLabel, label }: CollapsedFilterChipLabelProps) => {
+	const labelID = useId();
 	const labelRef = useRef<HTMLSpanElement>(null);
 	const [isTruncated, setIsTruncated] = useState(false);
 
@@ -144,16 +145,14 @@ const CollapsedFilterChipLabel = ({ fullLabel, label }: CollapsedFilterChipLabel
 	}, [label]);
 
 	return (
-		<SlTooltip
-			className='app-tooltip profiles-list__filter-summary-chip-label-container'
-			content={fullLabel}
-			disabled={!isTruncated}
-			hoist={true}
-		>
-			<span ref={labelRef} className='profiles-list__filter-summary-chip-label'>
+		<span className='profiles-list__filter-summary-chip-label-container'>
+			<WaTooltip className='app-tooltip' for={labelID} disabled={!isTruncated}>
+				{fullLabel}
+			</WaTooltip>
+			<span id={labelID} ref={labelRef} className='profiles-list__filter-summary-chip-label'>
 				{label}
 			</span>
-		</SlTooltip>
+		</span>
 	);
 };
 
@@ -256,11 +255,11 @@ const CollapsedFilterChips = ({ disabled, filter, onRemove, propertyLabel, summa
 						disabled={disabled}
 						onClick={() => onRemove(index)}
 					>
-						<SlIcon name='x-lg' aria-hidden='true' />
+						<WaIcon name='x-lg' aria-hidden='true' />
 					</button>
 				) : (
 					<span className='profiles-list__filter-summary-chip-remove-measurement' aria-hidden='true'>
-						<SlIcon name='x-lg' />
+						<WaIcon name='x-lg' />
 					</span>
 				)}
 			</span>
@@ -333,7 +332,7 @@ const ProfilesFilters = ({
 	const expectedDisplayedContextRef = useRef<ExpectedDisplayedContext>();
 	const displayedContextRef = useRef<string>();
 	const panelRef = useRef<HTMLDivElement>(null);
-	const triggerRef = useRef<SlButtonElement>(null);
+	const triggerRef = useRef<WaButtonElement>(null);
 
 	const updateSession = useCallback((update: (current: FilterSession) => FilterSession) => {
 		const next = update(sessionRef.current);
@@ -723,7 +722,7 @@ const ProfilesFilters = ({
 				}
 				return (
 					element.classList.contains('combobox--open') ||
-					(element.tagName === 'SL-SELECT' && (element as any).open)
+					(element.tagName === 'WA-SELECT' && (element as any).open)
 				);
 			});
 			if (popupIsOpen) {
@@ -746,26 +745,28 @@ const ProfilesFilters = ({
 
 	const historyActions = (
 		<>
-			<SlButton
+			<WaButton
 				className='profiles-list__filter-history-action'
-				size='small'
-				variant='text'
+				size='s'
+				variant='brand'
+				appearance='plain'
 				disabled={!canUndo}
 				onClick={undo}
 			>
-				<SlIcon slot='prefix' name='arrow-counterclockwise' aria-hidden='true' />
+				<WaIcon slot='start' name='arrow-counterclockwise' aria-hidden='true' />
 				Undo
-			</SlButton>
-			<SlButton
+			</WaButton>
+			<WaButton
 				className='profiles-list__filter-history-action'
-				size='small'
-				variant='text'
+				size='s'
+				variant='brand'
+				appearance='plain'
 				disabled={!canRedo}
 				onClick={redo}
 			>
-				<SlIcon slot='prefix' name='arrow-clockwise' aria-hidden='true' />
+				<WaIcon slot='start' name='arrow-clockwise' aria-hidden='true' />
 				Redo
-			</SlButton>
+			</WaButton>
 		</>
 	);
 
@@ -777,18 +778,18 @@ const ProfilesFilters = ({
 			<div className='profiles-list__filter-summary'>
 				<div className='profiles-list__filter-heading'>
 					<span className='profiles-list__filter-title'>Filters</span>
-					<SlButton
+					<WaButton
 						ref={triggerRef}
 						className='profiles-list__filter-toggle'
-						size='small'
-						variant='default'
+						size='s'
+						appearance='outlined'
 						aria-controls='profiles-filter-editor'
 						aria-expanded={isOpen}
 						disabled={isOpen && isShowingCurrentPreview}
 						onClick={isOpen ? collapseFilters : () => setEditorOpen(true)}
 					>
 						{isOpen ? 'Done' : 'Edit'}
-					</SlButton>
+					</WaButton>
 				</div>
 				<div
 					ref={(element) => {
@@ -846,15 +847,16 @@ const ProfilesFilters = ({
 								{gridFailure != null && (
 									<div className='profiles-list__filter-grid-error' role='alert'>
 										<span>{gridFailure.message}</span>
-										<SlButton
-											size='small'
-											variant='text'
+										<WaButton
+											size='s'
+											variant='brand'
+											appearance='plain'
 											onClick={() =>
 												void materializeProfiles(gridFailure.entry, gridFailure.intent)
 											}
 										>
 											Retry
-										</SlButton>
+										</WaButton>
 									</div>
 								)}
 							</div>
@@ -889,9 +891,9 @@ const ProfilesFilters = ({
 						{session.failure != null ? (
 							<div className='profiles-list__filter-preview-error' role='status'>
 								<span>{session.failure.message}</span>
-								<SlButton size='small' variant='text' onClick={retryPreview}>
+								<WaButton size='s' variant='brand' appearance='plain' onClick={retryPreview}>
 									Retry
-								</SlButton>
+								</WaButton>
 							</div>
 						) : validatedDraft.error != null ? (
 							<span className='profiles-list__filter-preview-incomplete' role='status'>
@@ -900,23 +902,23 @@ const ProfilesFilters = ({
 						) : null}
 						{session.pending != null && (
 							<div className='profiles-list__filter-preview-count' role='status' aria-live='polite'>
-								<SlSpinner />
+								<WaSpinner />
 								<span>Calculating profiles…</span>
 							</div>
 						)}
 						{!isCurrentResultsUpdateConfirmed && session.pending == null && canShowCurrentPreview ? (
-							<SlButton
+							<WaButton
 								className='profiles-list__filter-update-results'
-								size='small'
-								variant='primary'
-								outline
+								size='s'
+								variant='brand'
+								appearance='outlined'
 								disabled={isShowingCurrentPreview}
 								onClick={() => void materializeProfiles(historyEntry, 'show')}
 							>
-								{isShowingCurrentPreview && <SlSpinner />}
+								{isShowingCurrentPreview && <WaSpinner />}
 								Show {formatNumber(historyEntry.total ?? 0)}{' '}
 								{historyEntry.total === 1 ? 'match' : 'matches'}
-							</SlButton>
+							</WaButton>
 						) : null}
 					</>,
 					gridActionContainer,

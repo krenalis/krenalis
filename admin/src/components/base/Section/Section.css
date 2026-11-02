@@ -11,7 +11,7 @@
 
 .section__description a,
 .section__description a:visited {
-	color: var(--sl-color-primary-600);
+	color: var(--wa-color-brand-40);
 	text-decoration: none;
 }
 
@@ -41,7 +41,7 @@
 	background-color: #fefefe;
 	padding: 36px;
 	border-radius: 10px;
-	border: 1px solid var(--sl-color-neutral-200);
+	border: 1px solid var(--wa-color-neutral-80);
 }
 
 .section--annotated {

@@ -155,6 +155,7 @@ for (const failure of [
 		await expect(rows.first()).toHaveClass(/grid__row--active/);
 		await expect(page.locator('.profile-drawer')).toContainText('profile-51');
 
+		await page.getByRole('button', { name: 'Close profile details', exact: true }).click();
 		await pagination.getByRole('button', { name: 'Next page' }).click();
 		await expect(page.locator('.profiles-list__pagination-range')).toHaveText('101–120 of 120');
 		await page.getByRole('button', { name: 'Refresh', exact: true }).click();
@@ -206,16 +207,16 @@ for (const shouldShowColumn of [false, true]) {
 		await expect(rows.first()).toContainText('profile-1@example.test');
 		const columns = page.locator('.profiles-list__toggle-columns');
 		await columns.getByRole('button', { name: 'Columns', exact: true }).click();
-		const nameColumn = columns.locator('sl-checkbox', { hasText: 'Name' });
+		const nameColumn = columns.locator('wa-checkbox', { hasText: 'Name' });
 		const nameHeader = page.locator('.profiles-list .grid__header-cell', { hasText: 'Name' });
 		if (shouldShowColumn) {
 			await nameColumn.click();
 			await expect(nameHeader).toHaveCount(0);
 		}
-		await columns.evaluate((dropdown: any) => dropdown.hide());
+		await columns.evaluate((dropdown: any) => (dropdown.open = false));
 		await page.getByRole('button', { name: 'Refresh', exact: true }).click();
 		await refreshStarted;
-		await columns.evaluate((dropdown: any) => dropdown.show());
+		await columns.evaluate((dropdown: any) => (dropdown.open = true));
 		await nameColumn.click();
 		await expect(nameColumn).toHaveJSProperty('checked', shouldShowColumn);
 		await expect(nameHeader).toHaveCount(shouldShowColumn ? 1 : 0);
@@ -290,8 +291,8 @@ for (const hasSurvivingVisibleColumn of [false, true]) {
 		]);
 		const columns = page.locator('.profiles-list__toggle-columns');
 		await columns.getByRole('button', { name: 'Columns', exact: true }).click();
-		await expect(columns.locator('sl-checkbox')).toHaveCount(2);
-		const visibleColumn = columns.locator('sl-checkbox', { hasText: visibleLabel });
+		await expect(columns.locator('wa-checkbox')).toHaveCount(2);
+		const visibleColumn = columns.locator('wa-checkbox', { hasText: visibleLabel });
 		await expect(visibleColumn).toHaveJSProperty('checked', true);
 		await expect(visibleColumn).toHaveJSProperty('disabled', true);
 		await expect(page.getByRole('alert')).toBeEmpty();

@@ -43,15 +43,15 @@ func TestAlterProfileSchemaFinalization(t *testing.T) {
 	container, err := postgres.Run(t.Context(), testimages.PostgreSQL,
 		postgres.WithDatabase("krenalis"), postgres.WithUsername("krenalis"), postgres.WithPassword("krenalis"),
 		postgres.BasicWaitStrategies())
-	if err != nil {
-		t.Fatalf("expected PostgreSQL container, got %v", err)
-	}
 	t.Cleanup(func() {
 		err := testcontainers.TerminateContainer(container)
 		if err != nil {
 			t.Errorf("expected container termination, got %v", err)
 		}
 	})
+	if err != nil {
+		t.Fatalf("expected PostgreSQL container, got %v", err)
+	}
 	host, err := container.Host(t.Context())
 	if err != nil {
 		t.Fatalf("expected container host, got %v", err)

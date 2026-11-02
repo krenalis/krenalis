@@ -185,9 +185,9 @@ const openFirstNameFilter = async (page: Page) => {
 	const editor = filters.getByRole('region', { name: 'Profile filters' });
 	const condition = editor.locator('.pipeline__filters-filter');
 	const property = condition.locator('.pipeline__filters-property');
-	await property.locator('sl-input').click();
+	await property.locator('wa-input').click();
 	await property.locator('input').fill('First');
-	await property.locator('sl-menu-item .schema-combobox-item__name', { hasText: /^First name$/ }).click();
+	await property.locator('.combobox-list__item .schema-combobox-item__name', { hasText: /^First name$/ }).click();
 
 	return {
 		filters,
@@ -200,8 +200,8 @@ const openFirstNameFilter = async (page: Page) => {
 
 const fillStringFilterCondition = async (condition: Locator, propertyName: RegExp, value: string) => {
 	const property = condition.locator('.pipeline__filters-property');
-	await property.locator('sl-input').click();
-	await property.locator('sl-menu-item .schema-combobox-item__name', { hasText: propertyName }).click();
+	await property.locator('wa-input').click();
+	await property.locator('.combobox-list__item .schema-combobox-item__name', { hasText: propertyName }).click();
 	const operator = condition.locator('.pipeline__filters-operator').getByRole('combobox');
 	await operator.press('Home');
 	await operator.press('Enter');
@@ -225,7 +225,7 @@ test(`Render the profile grid and manage visible columns`, async ({ page }) => {
 	await expect(page.locator('.profiles-list__page-header h1')).toHaveText('Profiles');
 	await expect(page.locator('.profiles-list__page-header .profiles-list__grid-summary')).toHaveCount(0);
 	await expect(page.locator('.profiles-list__grid-summary')).toContainText('4 profiles');
-	await expect(page.locator('.profiles-list__grid-summary-content sl-icon')).toHaveAttribute('name', 'people');
+	await expect(page.locator('.profiles-list__grid-summary-content wa-icon')).toHaveAttribute('name', 'people');
 	await expect(page.getByRole('button', { name: 'Refine filters' })).toHaveCount(0);
 	await expect(page.locator('.profiles-list__identity-resolution-button')).toHaveText('Run identity resolution');
 	await expect(page.locator('.profiles-list__card')).toBeVisible();
@@ -259,9 +259,9 @@ test(`Render the profile grid and manage visible columns`, async ({ page }) => {
 	const columns = page.locator('.profiles-list__toggle-columns');
 	const columnsButton = columns.getByRole('button', { name: 'Columns', exact: true });
 	await expect(columnsButton).toHaveAccessibleName('Columns');
-	await expect(columns.locator('sl-button[slot="trigger"]')).toHaveText('Columns');
+	await expect(columns.locator('wa-button[slot="trigger"]')).toHaveText('Columns');
 	await columnsButton.hover();
-	await expect(page.locator('sl-tooltip[open]')).toHaveCount(0);
+	await expect(page.locator('wa-tooltip[open]')).toHaveCount(0);
 	await columnsButton.click();
 	await expect(columns).toHaveJSProperty('open', true);
 	await expect(columns.locator('.profiles-list__column-chooser-header')).toBeVisible();
@@ -272,7 +272,7 @@ test(`Render the profile grid and manage visible columns`, async ({ page }) => {
 	await expect(columns.getByRole('button', { name: 'Reset', exact: true })).toHaveCount(0);
 	await expect(columns.locator('.profiles-list__column-chooser-list')).toHaveCSS('overflow-x', 'hidden');
 	await expect(columns.locator('.profiles-list__column-chooser-list')).toHaveCSS('overflow-y', 'auto');
-	await expect(columns.locator('sl-checkbox')).toHaveText([
+	await expect(columns.locator('wa-checkbox')).toHaveText([
 		'Customer ID',
 		'email',
 		'First name',
@@ -285,21 +285,21 @@ test(`Render the profile grid and manage visible columns`, async ({ page }) => {
 	const columnSearch = columns.getByRole('textbox', { name: 'Search columns' });
 	await expect(columns.getByRole('button', { name: 'Clear entry' })).toHaveCount(0);
 	await columnSearch.fill('FIRST NAME');
-	await expect(columns.locator('sl-checkbox')).toHaveText(['First name']);
+	await expect(columns.locator('wa-checkbox')).toHaveText(['First name']);
 	const clearColumnSearch = columns.getByRole('button', { name: 'Clear entry' });
 	await expect(clearColumnSearch).toBeVisible();
 	await clearColumnSearch.click();
 	await expect(columnSearch).toHaveValue('');
-	await expect(columns.locator('sl-checkbox')).toHaveCount(8);
+	await expect(columns.locator('wa-checkbox')).toHaveCount(8);
 	await expect(clearColumnSearch).toHaveCount(0);
 	await columnSearch.fill('billing_address.city');
-	await expect(columns.locator('sl-checkbox')).toHaveText(['Billing address › City']);
+	await expect(columns.locator('wa-checkbox')).toHaveText(['Billing address › City']);
 	await columnSearch.fill('does not exist');
-	await expect(columns.locator('sl-checkbox')).toHaveCount(0);
+	await expect(columns.locator('wa-checkbox')).toHaveCount(0);
 	await expect(columns.locator('.profiles-list__column-chooser-empty')).toHaveText('No columns found');
 	await columnSearch.fill('');
 
-	const emailColumn = columns.locator('sl-checkbox', { hasText: 'email' });
+	const emailColumn = columns.locator('wa-checkbox', { hasText: 'email' });
 	await expect(emailColumn.getByRole('checkbox')).toHaveAccessibleName('email');
 	await emailColumn.click();
 	await expect(columns).toHaveJSProperty('open', true);
@@ -331,7 +331,7 @@ test(`Toggle a column locally when its profile property is already loaded`, asyn
 
 	const columns = page.locator('.profiles-list__toggle-columns');
 	await columns.getByRole('button', { name: 'Columns', exact: true }).click();
-	const shippingAddressColumn = columns.locator('sl-checkbox', { hasText: 'shipping_address › City' });
+	const shippingAddressColumn = columns.locator('wa-checkbox', { hasText: 'shipping_address › City' });
 	const requestsBeforeToggle = profileRequests;
 	expect(loadedProjection).toContain('shipping_address');
 
@@ -391,7 +391,7 @@ test(`Keep the profile grid stable while loading a newly selected property`, asy
 	expect(initialProjection).not.toContain('shipping_address');
 	const columns = page.locator('.profiles-list__toggle-columns');
 	await columns.getByRole('button', { name: 'Columns', exact: true }).click();
-	const shippingAddressColumn = columns.locator('sl-checkbox', { hasText: 'shipping_address › City' });
+	const shippingAddressColumn = columns.locator('wa-checkbox', { hasText: 'shipping_address › City' });
 	await shippingAddressColumn.click();
 	await projectionStarted;
 
@@ -508,7 +508,7 @@ test(`Keep a reopened operator menu open and respect focus moved to another cont
 	await page.goto(`${adminURL}/profile-unification/profiles`);
 	const { condition, property, valueInput } = await openFirstNameFilter(page);
 	const operatorSelect = condition.locator('.pipeline__filters-operator');
-	await expect(operatorSelect.locator('sl-option[value="0"]')).toBeVisible();
+	await expect(operatorSelect.locator('wa-option[value="0"]')).toBeVisible();
 	await page.clock.install();
 	await operatorSelect.evaluate(async (select: any) => {
 		await select.hide();
@@ -517,7 +517,7 @@ test(`Keep a reopened operator menu open and respect focus moved to another cont
 	// Exercise the delayed focus handoff that used to close a newly reopened menu.
 	await page.clock.runFor(100);
 	await expect(operatorSelect).toHaveJSProperty('open', true);
-	await operatorSelect.locator('sl-option[value="0"]').click();
+	await operatorSelect.locator('wa-option[value="0"]').click();
 	await expect(valueInput).toBeFocused();
 
 	await operatorSelect.getByRole('combobox').click();
@@ -620,17 +620,19 @@ test(`Preview a completed filter and show its profiles explicitly`, async ({ pag
 	});
 	await expect(emptyConditionRemoveButton).toHaveCount(0);
 	const property = condition.locator('.pipeline__filters-property');
-	await property.locator('sl-input').click();
-	await expect(property.locator('sl-menu-item .schema-combobox-item__name', { hasText: /^email$/ })).toBeVisible();
+	await property.locator('wa-input').click();
 	await expect(
-		property.locator('sl-menu-item .schema-combobox-item__name', { hasText: /^Billing address › City$/ }),
+		property.locator('.combobox-list__item .schema-combobox-item__name', { hasText: /^email$/ }),
+	).toBeVisible();
+	await expect(
+		property.locator('.combobox-list__item .schema-combobox-item__name', { hasText: /^Billing address › City$/ }),
 	).toBeVisible();
 	const propertyMenu = property.locator('[data-is-combobox-list]');
 	await propertyMenu.hover();
 	await page.mouse.wheel(0, 200);
 	await expect.poll(() => propertyMenu.evaluate((menu) => menu.scrollTop)).toBeGreaterThan(0);
 	const propertyMenuLayout = await property.locator('[data-is-combobox-list]').evaluate((menu) => {
-		const lastItem = menu.querySelector('sl-menu-item:last-of-type');
+		const lastItem = menu.querySelector('.combobox-list__item:last-of-type');
 		if (!(lastItem instanceof HTMLElement)) {
 			throw new Error('The filter property menu is incomplete');
 		}
@@ -654,16 +656,14 @@ test(`Preview a completed filter and show its profiles explicitly`, async ({ pag
 	expect(propertyMenuLayout.lastItemBottom).toBeLessThanOrEqual(propertyMenuLayout.viewportBottom);
 	expect(propertyMenuLayout.lastItemIsVisible).toBe(true);
 	await property.locator('input').fill('First');
-	await property.locator('sl-menu-item .schema-combobox-item__name', { hasText: /^First name$/ }).click();
+	await property.locator('.combobox-list__item .schema-combobox-item__name', { hasText: /^First name$/ }).click();
 	await expect(property.locator('input')).toHaveValue('First name');
 	await expect(emptyConditionRemoveButton).toBeVisible();
-	await expect(filters.locator('.pipeline__filters-logical')).toHaveJSProperty('hoist', true);
 	const operatorSelect = condition.locator('.pipeline__filters-operator');
-	await expect(operatorSelect).toHaveJSProperty('hoist', true);
 	await expect(operatorSelect).toHaveJSProperty('open', true);
-	await expect(operatorSelect.locator('sl-option[value="4"]')).toBeVisible();
+	await expect(operatorSelect.locator('wa-option[value="4"]')).toBeVisible();
 	const operatorMenuLayout = await operatorSelect.evaluate((select) => {
-		const visibleOption = select.querySelector('sl-option[value="4"]');
+		const visibleOption = select.querySelector('wa-option[value="4"]');
 		if (!(visibleOption instanceof HTMLElement)) {
 			throw new Error('The filter operator menu is incomplete');
 		}
@@ -686,7 +686,7 @@ test(`Preview a completed filter and show its profiles explicitly`, async ({ pag
 	expect(operatorMenuLayout.optionTop).toBeGreaterThanOrEqual(0);
 	expect(operatorMenuLayout.optionBottom).toBeLessThanOrEqual(operatorMenuLayout.viewportBottom);
 	expect(operatorMenuLayout.optionIsVisible).toBe(true);
-	await operatorSelect.locator('sl-option[value="0"]').click();
+	await operatorSelect.locator('wa-option[value="0"]').click();
 	const valueInput = condition.locator('.pipeline__filters-value-input input');
 	await valueInput.fill('Grace');
 	await expect.poll(() => countRequests.length).toBe(0);
@@ -704,10 +704,10 @@ test(`Preview a completed filter and show its profiles explicitly`, async ({ pag
 	});
 	expect(countRequests.at(-1)?.searchParams.has('properties')).toBe(false);
 
-	const updateResults = page.locator('sl-button.profiles-list__filter-update-results');
+	const updateResults = page.locator('wa-button.profiles-list__filter-update-results');
 	await expect(updateResults.getByRole('button')).toHaveAccessibleName('Show 1 match');
-	await expect(updateResults).toHaveAttribute('size', 'small');
-	await expect(updateResults.locator('sl-icon')).toHaveCount(0);
+	await expect(updateResults).toHaveAttribute('size', 's');
+	await expect(updateResults.locator('wa-icon')).toHaveCount(0);
 	await expect(updateResults).toContainText('Show 1 match');
 	await expect(
 		page.locator('.profiles-list__grid-summary-group').getByRole('button', { name: 'Show 1 match' }),
@@ -754,11 +754,16 @@ test(`Preview a completed filter and show its profiles explicitly`, async ({ pag
 	await valueInput.focus();
 	await page.keyboard.press('Tab');
 	await expect(removeCondition).toBeFocused();
-	const removeConditionFocusStyle = await removeCondition.evaluate((button) => ({
-		outlineStyle: getComputedStyle(button).outlineStyle,
-		outlineWidth: getComputedStyle(button).outlineWidth,
-		focusRingWidth: getComputedStyle(document.documentElement).getPropertyValue('--sl-focus-ring-width').trim(),
-	}));
+	const removeConditionFocusStyle = await removeCondition.evaluate((button) => {
+		const rootStyle = getComputedStyle(document.documentElement);
+		const focusRingWidth = rootStyle.getPropertyValue('--wa-focus-ring-width').trim();
+		return {
+			outlineStyle: getComputedStyle(button).outlineStyle,
+			outlineWidth: parseFloat(getComputedStyle(button).outlineWidth),
+			focusRingWidth:
+				parseFloat(focusRingWidth) * (focusRingWidth.endsWith('rem') ? parseFloat(rootStyle.fontSize) : 1),
+		};
+	});
 	expect(removeConditionFocusStyle.outlineStyle).toBe('solid');
 	expect(removeConditionFocusStyle.outlineWidth).toBe(removeConditionFocusStyle.focusRingWidth);
 	await removeCondition.click();
@@ -831,7 +836,7 @@ test(`Recalculate previews when changing logical operators even in single-rule g
 	const rootGroup = editor.locator('.pipeline__filters-group--root');
 	const rootLogical = rootGroup.locator(':scope > .pipeline__filters-group-header > .pipeline__filters-logical');
 	await rootLogical.click();
-	await rootLogical.locator('sl-option[value="or"]').click();
+	await rootLogical.locator('wa-option[value="or"]').click();
 	await expect(rootLogical).toHaveJSProperty('value', 'or');
 	await expect(showMatches).toBeVisible();
 	expect(countRequests).toHaveLength(2);
@@ -840,9 +845,11 @@ test(`Recalculate previews when changing logical operators even in single-rule g
 	const nestedGroup = editor.locator('.pipeline__filters-group').nth(1);
 	const nestedCondition = nestedGroup.locator('.pipeline__filters-filter');
 	const nestedProperty = nestedCondition.locator('.pipeline__filters-property');
-	await nestedProperty.locator('sl-input').click();
-	await nestedProperty.locator('sl-menu-item .schema-combobox-item__name', { hasText: /^First name$/ }).click();
-	await nestedCondition.locator('.pipeline__filters-operator sl-option[value="0"]').click();
+	await nestedProperty.locator('wa-input').click();
+	await nestedProperty
+		.locator('.combobox-list__item .schema-combobox-item__name', { hasText: /^First name$/ })
+		.click();
+	await nestedCondition.locator('.pipeline__filters-operator wa-option[value="0"]').click();
 	const nestedValue = nestedCondition.locator('.pipeline__filters-value-input input');
 	await nestedValue.fill('Ada');
 	await nestedValue.press('Enter');
@@ -852,7 +859,7 @@ test(`Recalculate previews when changing logical operators even in single-rule g
 	const nestedLogical = nestedGroup.locator(':scope > .pipeline__filters-group-header > .pipeline__filters-logical');
 	await expect(nestedLogical).toHaveJSProperty('value', 'and');
 	await nestedLogical.click();
-	await nestedLogical.locator('sl-option[value="or"]').click();
+	await nestedLogical.locator('wa-option[value="or"]').click();
 	await expect(nestedLogical).toHaveJSProperty('value', 'or');
 	await expect(showMatches).toBeVisible();
 	expect(countRequests).toHaveLength(4);
@@ -909,7 +916,7 @@ test(`Summarize collapsed filters within their available width`, async ({ page }
 	);
 
 	const firstLabel = visibleUnits.first().locator('.profiles-list__filter-summary-chip-label');
-	const firstTooltip = visibleUnits.first().locator('sl-tooltip');
+	const firstTooltip = visibleUnits.first().locator('wa-tooltip');
 	await expect(visibleUnits.first().locator('.profiles-list__filter-summary-chip')).toHaveAccessibleName(
 		`First name is "${longValue}"`,
 	);
@@ -917,11 +924,11 @@ test(`Summarize collapsed filters within their available width`, async ({ page }
 	await expect(firstTooltip).toHaveJSProperty('disabled', false);
 	await firstLabel.hover();
 	await expect(firstTooltip).toHaveJSProperty('open', true);
-	await expect(firstTooltip).toHaveJSProperty('content', `First name is "${longValue}"`);
+	await expect(firstTooltip).toHaveText(`First name is "${longValue}"`);
 	await expect(visibleUnits.first().locator('.profiles-list__filter-summary-chip-remove')).toHaveAccessibleName(
 		`Remove condition: First name is "${longValue}"`,
 	);
-	await expect(visibleUnits.nth(2).locator('sl-tooltip')).toHaveJSProperty('disabled', true);
+	await expect(visibleUnits.nth(2).locator('wa-tooltip')).toHaveJSProperty('disabled', true);
 
 	const setVisibleUnitCapacity = (capacity: number) =>
 		chips.evaluate((element, visibleCapacity) => {
@@ -1005,9 +1012,9 @@ test(`Treat zero matches as a preview that can be shown`, async ({ page }) => {
 	const { valueInput } = await openFirstNameFilter(page);
 	await valueInput.fill('Missing');
 	await valueInput.press('Enter');
-	const updateResults = page.locator('sl-button.profiles-list__filter-update-results');
+	const updateResults = page.locator('wa-button.profiles-list__filter-update-results');
 	await expect(updateResults.getByRole('button')).toHaveAccessibleName('Show 0 matches');
-	await expect(updateResults.locator('sl-icon')).toHaveCount(0);
+	await expect(updateResults.locator('wa-icon')).toHaveCount(0);
 	await expect(updateResults).toContainText('Show 0 matches');
 	await updateResults.click();
 
@@ -1090,7 +1097,7 @@ test(`Materialize the current Undo entry on Done and preserve its history`, asyn
 	);
 	await expect(filters.getByRole('region', { name: 'Profile filters' })).toHaveCount(0);
 	await expect(filters.locator('.profiles-list__filter-title')).toHaveText('Filters');
-	await expect(filters.locator('sl-button.profiles-list__filter-toggle')).toHaveText('Edit');
+	await expect(filters.locator('wa-button.profiles-list__filter-toggle')).toHaveText('Edit');
 	await expect(
 		filters.locator('.profiles-list__filter-summary-visible-chips .profiles-list__filter-summary-chip-label'),
 	).toHaveText('First name is "Grace"');
@@ -1119,9 +1126,11 @@ test(`Reopen the property menu after collapsing a nested property filter`, async
 	await filters.getByRole('button', { name: 'Edit', exact: true }).click();
 	const condition = filters.locator('.pipeline__filters-filter');
 	const property = condition.locator('.pipeline__filters-property');
-	await property.locator('sl-input').click();
-	await property.locator('sl-menu-item .schema-combobox-item__name', { hasText: /^Billing address › City$/ }).click();
-	await condition.locator('.pipeline__filters-operator sl-option[value="0"]').click();
+	await property.locator('wa-input').click();
+	await property
+		.locator('.combobox-list__item .schema-combobox-item__name', { hasText: /^Billing address › City$/ })
+		.click();
+	await condition.locator('.pipeline__filters-operator wa-option[value="0"]').click();
 	await condition.locator('.pipeline__filters-value-input input').fill('Milan');
 	await condition.locator('.pipeline__filters-value-input input').press('Enter');
 	await filters.getByRole('button', { name: 'Done', exact: true }).click();
@@ -1129,9 +1138,9 @@ test(`Reopen the property menu after collapsing a nested property filter`, async
 	await filters.getByRole('button', { name: 'Edit', exact: true }).click();
 	const reopenedProperty = filters.locator('.pipeline__filters-property');
 	await expect(reopenedProperty.locator('input')).toHaveValue('Billing address › City');
-	await reopenedProperty.locator('sl-input').click();
+	await reopenedProperty.locator('wa-input').click();
 	await expect(
-		reopenedProperty.locator('sl-menu-item .schema-combobox-item__name', { hasText: /^First name$/ }),
+		reopenedProperty.locator('.combobox-list__item .schema-combobox-item__name', { hasText: /^First name$/ }),
 	).toBeVisible();
 });
 
@@ -1430,9 +1439,9 @@ test(`Restore the current successful preview when collapsing an incomplete draft
 	await trigger.click();
 	const editor = filters.getByRole('region', { name: 'Profile filters' });
 	const property = editor.locator('.pipeline__filters-property');
-	await property.locator('sl-input').click();
+	await property.locator('wa-input').click();
 	await property.locator('input').fill('First');
-	await property.locator('sl-menu-item .schema-combobox-item__name', { hasText: /^First name$/ }).click();
+	await property.locator('.combobox-list__item .schema-combobox-item__name', { hasText: /^First name$/ }).click();
 	await expect(page.locator('.profiles-list__layout')).not.toHaveAttribute('inert');
 	await expect(editor.locator('.pipeline__filters-operator')).toHaveJSProperty('open', true);
 	await page.keyboard.press('Escape');
@@ -1524,11 +1533,11 @@ test(`Keep an explicit grid request independent from a newer filter preview`, as
 	const { filters, valueInput } = await openFirstNameFilter(page);
 	await valueInput.fill('Grace');
 	await valueInput.press('Enter');
-	const updateResults = page.locator('sl-button.profiles-list__filter-update-results');
+	const updateResults = page.locator('wa-button.profiles-list__filter-update-results');
 	await expect(updateResults.getByRole('button')).toHaveAccessibleName('Show 1 match');
 	await updateResults.click();
 	await graceGridStarted;
-	await expect(updateResults.locator('sl-spinner')).toBeVisible();
+	await expect(updateResults.locator('wa-spinner')).toBeVisible();
 	await expect(filters).toHaveClass(/profiles-list__filters--updating-results/);
 	await expect(page.locator('.profiles-list__grid-summary-content')).toContainText('4 profiles');
 	await expect(page.locator('.profiles-list__grid-summary-sweep')).toBeVisible();
@@ -1664,8 +1673,8 @@ test(`Paginate profiles on the server`, async ({ page }) => {
 	const pagination = page.locator('.profiles-list__pagination');
 	const previousPage = pagination.locator('.profiles-list__pagination-previous').getByRole('button');
 	const nextPage = pagination.locator('.profiles-list__pagination-next').getByRole('button');
-	const pageSize = pagination.locator('sl-select');
-	const pageSizeLabel = pageSize.locator('[part="form-control-label"]');
+	const pageSize = pagination.locator('wa-select');
+	const pageSizeLabel = pageSize.locator('[part~="form-control-label"]');
 	const pageSizeCombobox = pageSize.getByRole('combobox');
 	const pageNavigation = pagination.locator('.profiles-list__pagination-navigation');
 	await expect(rows).toHaveCount(50);
@@ -1674,12 +1683,12 @@ test(`Paginate profiles on the server`, async ({ page }) => {
 	await expect(pagination.locator('.profiles-list__pagination-range')).toHaveText('1–50 of 55');
 	await expect(pageSizeLabel).toHaveText('Profiles per page');
 	await expect(pageSizeCombobox).toHaveAccessibleName('Profiles per page');
-	await expect(pageSize.locator('sl-option')).toHaveText(['25', '50', '100']);
-	await expect(pageNavigation.locator('sl-button')).toHaveCount(2);
+	await expect(pageSize.locator('wa-option')).toHaveText(['25', '50', '100']);
+	await expect(pageNavigation.locator('wa-button')).toHaveCount(2);
 	await expect(previousPage).toHaveAccessibleName('Previous page');
 	await expect(nextPage).toHaveAccessibleName('Next page');
-	await expect(previousPage).toHaveAttribute('aria-disabled', 'true');
-	await expect(nextPage).toHaveAttribute('aria-disabled', 'false');
+	await expect(previousPage).toBeDisabled();
+	await expect(nextPage).toBeEnabled();
 	await expect(pageSize).toHaveJSProperty('value', '50');
 	const desktopLayout = await pagination.evaluate((element) => {
 		const results = element.querySelector('.profiles-list__pagination-results');
@@ -1725,21 +1734,21 @@ test(`Paginate profiles on the server`, async ({ page }) => {
 	await expect(page.locator('.profile-drawer')).toHaveCount(0);
 	await expect(nextPage).toBeDisabled();
 	await expect(pagination.locator('.profiles-list__pagination-range')).toHaveText('51–55 of 55');
-	await expect(previousPage).toHaveAttribute('aria-disabled', 'false');
-	await expect(nextPage).toHaveAttribute('aria-disabled', 'true');
+	await expect(previousPage).toBeEnabled();
+	await expect(nextPage).toBeDisabled();
 	expect(requests).toHaveLength(requestCountBeforeCachedPage);
 
 	await pageSizeCombobox.click();
-	const selectedPageSize = pageSize.locator('sl-option[aria-selected="true"]');
+	const selectedPageSize = pageSize.locator('wa-option[aria-selected="true"]');
 	await expect(selectedPageSize).toHaveText('50');
 	await expect(selectedPageSize.locator('[part="checked-icon"]')).toBeVisible();
-	await pageSize.locator('sl-option[value="100"]').click();
+	await pageSize.locator('wa-option[value="100"]').click();
 	await expect(rows).toHaveCount(55);
 	await expect(pagination.locator('.profiles-list__pagination-range')).toHaveText('1–55 of 55');
 	await expect(pageSize).toHaveJSProperty('value', '100');
 	const pageSizeMetrics = await pageSize.evaluate((element) => {
-		const label = element.shadowRoot?.querySelector('[part="form-control-label"]');
-		const input = element.shadowRoot?.querySelector('.select__display-input');
+		const label = element.shadowRoot?.querySelector('[part~="form-control-label"]');
+		const input = element.shadowRoot?.querySelector('[part="display-input"]');
 		if (!(label instanceof HTMLElement) || !(input instanceof HTMLInputElement)) {
 			throw new Error('The page size label or input is missing');
 		}
@@ -1756,7 +1765,7 @@ test(`Paginate profiles on the server`, async ({ page }) => {
 	expect(requests.at(-1)?.searchParams.get('limit')).toBe('200');
 
 	await pageSizeCombobox.click();
-	await pageSize.locator('sl-option[value="25"]').click();
+	await pageSize.locator('wa-option[value="25"]').click();
 	await expect(rows).toHaveCount(25);
 	await expect(pagination.locator('.profiles-list__pagination-range')).toHaveText('1–25 of 55');
 	await expect(pageSize).toHaveJSProperty('value', '25');
@@ -1767,7 +1776,7 @@ test(`Paginate profiles on the server`, async ({ page }) => {
 		const results = element.querySelector('.profiles-list__pagination-results');
 		const controls = element.querySelector('.profiles-list__pagination-controls');
 		const pageSize = element.querySelector('.profiles-list__pagination-page-size');
-		const pageSizeLabel = pageSize?.shadowRoot?.querySelector('[part="form-control-label"]');
+		const pageSizeLabel = pageSize?.shadowRoot?.querySelector('[part~="form-control-label"]');
 		if (
 			!(results instanceof HTMLElement) ||
 			!(controls instanceof HTMLElement) ||
@@ -2048,7 +2057,7 @@ test(`Build the fixed profile column from the assigned profile roles`, async ({ 
 
 	const columns = page.locator('.profiles-list__toggle-columns');
 	await columns.getByRole('button', { name: 'Columns', exact: true }).click();
-	await columns.locator('sl-checkbox', { hasText: 'First name' }).click();
+	await columns.locator('wa-checkbox', { hasText: 'First name' }).click();
 	await expect(page.locator('.profiles-list .grid__header-cell', { hasText: 'First name' })).toHaveCount(0);
 	await expect(page.locator('.profiles-list__profile-name').first()).toHaveText('Ada Lovelace');
 });
@@ -2061,8 +2070,7 @@ test(`Keep fallback avatar colors distinct and stable for each profile`, async (
 	const graceAvatar = profileCells.nth(1).locator('.profiles-list__profile-thumbnail');
 	const curieAvatar = profileCells.nth(2).locator('.profiles-list__profile-thumbnail');
 	const getBackgroundColor = (element: Element): string => {
-		const base = element.shadowRoot?.querySelector('[part="base"]');
-		return base == null ? '' : getComputedStyle(base).backgroundColor;
+		return getComputedStyle(element).backgroundColor;
 	};
 	const graceBackgroundColor = await graceAvatar.evaluate(getBackgroundColor);
 	const curieBackgroundColor = await curieAvatar.evaluate(getBackgroundColor);
@@ -2208,7 +2216,7 @@ test(`Ignore late profile attributes and keep the non-modal panel from taking fo
 	await rows.nth(1).click();
 	await expect(page.locator('.profile-drawer')).toContainText('current-profile-two');
 	await expect(page.getByRole('complementary', { name: 'Profile details' })).toBeVisible();
-	await expect(page.locator('sl-drawer')).toHaveCount(0);
+	await expect(page.locator('wa-drawer')).toHaveCount(0);
 	await expect(grid).toBeFocused();
 
 	releaseFirstAttributes();
@@ -2331,7 +2339,7 @@ test(`Do not navigate profiles while a grid control or dialog is open`, async ({
 
 	await page.locator('.profiles-list__identity-resolution-button').click();
 	const dialog = page.locator('.alert-dialog');
-	await expect(dialog).toBeVisible();
+	await expect(dialog.getByRole('dialog')).toBeVisible();
 	await page.keyboard.press('ArrowDown');
 	await expect(page.locator('.profiles-list .grid__row--active')).toHaveCount(0);
 	await dialog.getByText('Cancel', { exact: true }).click();
@@ -2423,7 +2431,7 @@ test('Allow an empty continuation and keep Previous and Refresh usable', async (
 	await pagination.locator('.profiles-list__pagination-next').click();
 	await expect(page.locator('.profiles-list__pagination-range')).toHaveText('No profiles on this page');
 	await expect(page.locator('.profiles-list .grid__row--clickable')).toHaveCount(0);
-	await expect(pagination.getByRole('button', { name: 'Next page' })).toHaveAttribute('aria-disabled', 'true');
+	await expect(pagination.getByRole('button', { name: 'Next page' })).toBeDisabled();
 	await pagination.locator('.profiles-list__pagination-previous').click();
 	await expect(page.locator('.profiles-list .grid__row--clickable')).toHaveCount(50);
 	await page.getByRole('button', { name: 'Refresh', exact: true }).click();
@@ -2524,8 +2532,8 @@ test('Refresh keeps filter arguments and reloads the schema only after reset con
 	expect(schemaReads).toBe(1);
 	await expect(valueInput).toHaveValue('Uncommitted draft');
 	await page.locator('.profiles-list__stale-notice').getByRole('button', { name: 'Reset view' }).click();
-	const dialog = page.locator('sl-dialog', { hasText: 'Reset profile view?' });
-	await expect(dialog).toBeVisible();
+	const dialog = page.locator('wa-dialog', { hasText: 'Reset profile view?' });
+	await expect(dialog.getByRole('dialog')).toBeVisible();
 	await dialog.getByRole('button', { name: 'Cancel' }).click();
 	await expect(valueInput).toHaveValue('Uncommitted draft');
 	expect(schemaReads).toBe(1);

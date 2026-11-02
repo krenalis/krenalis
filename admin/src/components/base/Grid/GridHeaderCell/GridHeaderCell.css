@@ -10,15 +10,15 @@
 }
 
 .grid__header-cell--reorderable:hover {
-	background-color: color-mix(in srgb, var(--sl-color-primary-50) 75%, var(--bg-primary));
+	background-color: color-mix(in srgb, var(--wa-color-brand-95) 75%, var(--bg-primary));
 }
 
 .grid__column-reorder-handle {
 	align-items: center;
 	background-color: transparent;
 	border: 0;
-	border-radius: var(--sl-border-radius-small);
-	color: var(--sl-color-primary-600);
+	border-radius: var(--wa-border-radius-s);
+	color: var(--wa-color-brand-40);
 	cursor: grab;
 	display: flex;
 	font-size: 16px;
@@ -32,8 +32,8 @@
 	touch-action: none;
 	transform: translateY(-50%);
 	transition:
-		background-color var(--sl-transition-fast),
-		opacity var(--sl-transition-fast);
+		background-color var(--wa-transition-fast),
+		opacity var(--wa-transition-fast);
 	width: 26px;
 }
 
@@ -44,12 +44,12 @@
 }
 
 .grid__column-reorder-handle:hover {
-	background-color: var(--sl-color-primary-50);
+	background-color: var(--wa-color-brand-95);
 }
 
 .grid__column-reorder-handle:focus-visible {
-	outline: var(--sl-focus-ring);
-	outline-offset: var(--sl-focus-ring-offset);
+	outline: var(--wa-focus-ring);
+	outline-offset: var(--wa-focus-ring-offset);
 }
 
 .grid__header-cell--dragging {
@@ -64,8 +64,8 @@
 }
 
 .grid__header-cell--reorder-overlay {
-	background-color: var(--sl-color-primary-50);
-	box-shadow: var(--sl-shadow-medium);
+	background-color: var(--wa-color-brand-95);
+	box-shadow: var(--wa-shadow-m);
 	cursor: grabbing;
 	z-index: 1;
 }
