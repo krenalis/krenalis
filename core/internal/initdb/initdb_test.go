@@ -42,6 +42,9 @@ func TestInitIfEmptyConcurrent(t *testing.T) {
 		t.Fatalf("expected no error, got %v", err)
 	}
 	const instances = 4
+	if n := database.PoolStats().MaxConns(); n < instances {
+		t.Fatalf("expected at least %d pool connections, got %d", instances, n)
+	}
 	errs := make([]error, instances)
 	var arrived sync.WaitGroup
 	arrived.Add(instances)
