@@ -5,6 +5,8 @@
 import { expect, test } from '@playwright/test';
 import { build } from 'esbuild';
 import { resolve } from 'path';
+import { ProfileProperty } from '../src/components/routes/Profiles/Profiles.types';
+import { PROFILES_PROPERTIES_KEY } from '../src/constants/storage';
 import { ResponseProfile } from '../src/lib/api/types/responses';
 import { ObjectType } from '../src/lib/api/types/types';
 
@@ -225,5 +227,73 @@ for (const shouldShowColumn of [false, true]) {
 		await expect(nameHeader).toHaveCount(shouldShowColumn ? 1 : 0);
 		await expect(page.getByRole('alert')).toBeEmpty();
 		expect(refreshReads).toBe(2);
+	});
+}
+
+for (const hasSurvivingVisibleColumn of [false, true]) {
+	test(`${hasSurvivingVisibleColumn ? 'Preserve' : 'Restore'} column visibility after removing a property from the schema`, async ({
+		page,
+	}) => {
+		const preferences: ProfileProperty[] = [
+			{ name: 'removed', label: 'Removed', type: 'string', isUsed: true },
+			{ name: 'name', label: 'Name', type: 'string', isUsed: false },
+			{ name: 'email', label: 'Email', type: 'string', isUsed: hasSurvivingVisibleColumn },
+		];
+		await page.evaluate(({ key, preferences }) => localStorage.setItem(key, JSON.stringify(preferences)), {
+			key: PROFILES_PROPERTIES_KEY,
+			preferences,
+		});
+		const projections: string[] = [];
+		await page.route('**/v1/profiles?*', async (route) => {
+			const projection = new URL(route.request().url()).searchParams.get('properties') ?? '';
+			projections.push(projection);
+			if (projection === '') {
+				await route.fulfill({
+					status: 400,
+					json: { error: { code: 'BadRequest', message: 'Empty projection' } },
+				});
+				return;
+			}
+			await route.fulfill({
+				json: {
+					profiles: [
+						{
+							...profiles[0],
+							attributes: Object.fromEntries(
+								Object.entries(profiles[0].attributes).filter(([name]) =>
+									projection.split(',').includes(name),
+								),
+							),
+						},
+					],
+					total: 1,
+					hasNext: false,
+				},
+			});
+		});
+		await page.addScriptTag({ content: componentScript });
+		const visibleName = hasSurvivingVisibleColumn ? 'email' : 'name';
+		const visibleLabel = hasSurvivingVisibleColumn ? 'Email' : 'Name';
+		const rows = page.locator('.profiles-list .grid__row--clickable');
+		await expect(rows).toHaveCount(1);
+		await expect(rows.first()).toContainText(hasSurvivingVisibleColumn ? 'profile-1@example.test' : 'Person 1');
+		expect(projections).toEqual([visibleName]);
+		await expect(page.locator('.profiles-list .grid__header-cell', { hasText: visibleLabel })).toHaveCount(1);
+		await expect(
+			page.locator('.profiles-list .grid__header-cell', {
+				hasText: hasSurvivingVisibleColumn ? 'Name' : 'Email',
+			}),
+		).toHaveCount(0);
+		expect(await page.evaluate((key) => JSON.parse(localStorage.getItem(key)!), PROFILES_PROPERTIES_KEY)).toEqual([
+			{ name: 'name', label: 'Name', type: 'string', isUsed: !hasSurvivingVisibleColumn },
+			{ name: 'email', label: 'Email', type: 'string', isUsed: hasSurvivingVisibleColumn },
+		]);
+		const columns = page.locator('.profiles-list__toggle-columns');
+		await columns.getByRole('button', { name: 'Columns', exact: true }).click();
+		await expect(columns.locator('sl-checkbox')).toHaveCount(2);
+		const visibleColumn = columns.locator('sl-checkbox', { hasText: visibleLabel });
+		await expect(visibleColumn).toHaveJSProperty('checked', true);
+		await expect(visibleColumn).toHaveJSProperty('disabled', true);
+		await expect(page.getByRole('alert')).toBeEmpty();
 	});
 }

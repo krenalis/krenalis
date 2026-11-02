@@ -761,6 +761,9 @@ const profileMetadata = (schema: ObjectType) => {
 			(preferencePositions.get(first.name) ?? preferences.length) -
 			(preferencePositions.get(second.name) ?? preferences.length),
 	);
+	if (properties.length > 0 && !properties.some((property) => property.isUsed)) {
+		properties[0].isUsed = true;
+	}
 
 	return { properties, schemaProperties };
 };
