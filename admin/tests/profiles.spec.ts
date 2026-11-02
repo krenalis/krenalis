@@ -315,6 +315,26 @@ test(`Render the profile grid and manage visible columns`, async ({ page }) => {
 	await expect(headers.nth(7)).toHaveText('shipping_address › City');
 });
 
+test(`Keep the column chooser within a narrow viewport with long labels`, async ({ page }) => {
+	const longLabel = 'Customer preferred shipping street address and apartment number';
+	await mockProfiles(page, {
+		schema: {
+			...profileSchema,
+			properties: [...(profileSchema.properties ?? []), profileProperty('shipping_street', longLabel)],
+		},
+	});
+	await page.goto(`${adminURL}/profile-unification/profiles`);
+
+	const columns = page.locator('.profiles-list__toggle-columns');
+	await columns.getByRole('button', { name: 'Columns', exact: true }).click();
+	await page.setViewportSize({ width: 360, height: 720 });
+	const menu = columns.locator('[part="menu"]');
+	await expect(menu).toBeVisible();
+	await expect(columns.getByRole('checkbox', { name: longLabel, exact: true })).toBeVisible();
+	await expect.poll(() => menu.evaluate((element) => element.getBoundingClientRect().right)).toBeLessThanOrEqual(360);
+	await expect.poll(() => menu.evaluate((element) => element.getBoundingClientRect().left)).toBeGreaterThanOrEqual(0);
+});
+
 test(`Toggle a column locally when its profile property is already loaded`, async ({ page }) => {
 	let profileRequests = 0;
 	let loadedProjection: string[] = [];

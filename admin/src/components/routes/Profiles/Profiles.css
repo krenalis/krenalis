@@ -164,7 +164,7 @@ html.profiles-columns-transition .profiles-list__grid .grid__cell:not(.grid-el--
 	view-transition-name: match-element;
 }
 
-html.profiles-columns-transition .profiles-list__toggle-columns::part(panel) {
+html.profiles-columns-transition .profiles-list__toggle-columns::part(menu) {
 	view-transition-name: profiles-column-chooser;
 }
 
@@ -914,7 +914,7 @@ wa-button.profiles-list__filter-update-results::part(label) {
 	min-height: 180px;
 }
 
-.profiles-list__toggle-columns::part(panel) {
+.profiles-list__toggle-columns::part(menu) {
 	background-color: #fafafe;
 	border: 1px solid #dddaf3;
 	box-shadow: var(--wa-shadow-l);
