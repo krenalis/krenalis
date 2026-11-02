@@ -55,7 +55,6 @@ func (w profileQueryWarehouse) Query(context.Context, warehouses.RowQuery, bool)
 
 // TestProfileQueryArguments verifies argument rejection before starting a warehouse operation.
 func TestProfileQueryArguments(t *testing.T) {
-
 	schema := types.Object([]types.Property{{Name: "email", Type: types.String()}})
 	for _, tc := range []struct {
 		name   string
@@ -77,12 +76,10 @@ func TestProfileQueryArguments(t *testing.T) {
 			t.Fatal("expected an invalid argument error, got nil")
 		})
 	}
-
 }
 
 // TestProfileQueryBounds verifies safety limits without enforcing count/row agreement.
 func TestProfileQueryBounds(t *testing.T) {
-
 	for _, tc := range []struct {
 		name      string
 		total     int
@@ -94,9 +91,7 @@ func TestProfileQueryBounds(t *testing.T) {
 		{name: "excess rows", total: 3, rows: 3, scanned: 2, wantError: true},
 		{name: "independent observations", total: 0, rows: 2, scanned: 2},
 	} {
-
 		t.Run(tc.name, func(t *testing.T) {
-
 			rows := &profileQueryRows{remaining: tc.rows}
 			store := &Store{}
 			store.wh.Store(warehouses.Warehouse(profileQueryWarehouse{rows: rows, total: tc.total}))
@@ -120,9 +115,6 @@ func TestProfileQueryBounds(t *testing.T) {
 				t.Fatalf("expected total %d and rows %d, got total %d and rows %d",
 					tc.total, tc.rows, total, len(records))
 			}
-
 		})
-
 	}
-
 }
