@@ -39,7 +39,7 @@ require (
 	github.com/nats-io/nkeys v0.4.16
 	github.com/nyaruka/phonenumbers/v2 v2.0.14
 	github.com/oschwald/maxminddb-golang/v2 v2.8.0
-	github.com/pkg/sftp v1.13.11
+	github.com/pkg/sftp v1.13.12
 	github.com/prometheus/client_golang v1.25.0
 	github.com/prometheus/client_model v0.6.3
 	github.com/rabbitmq/amqp091-go v1.15.0
