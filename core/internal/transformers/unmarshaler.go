@@ -673,9 +673,15 @@ func (d decoder) value(v json.Value, t types.Type) (any, error) {
 				return math.NaN(), nil
 			}
 			if bytes.Equal(v, posInfinity) {
+				if _, max := t.FloatRange(); !math.IsInf(max, 1) {
+					return nil, newRecordValidationError("", fmt.Sprintf("is greater than %g", max))
+				}
 				return math.Inf(1), nil
 			}
 			if bytes.Equal(v, negInfinity) {
+				if min, _ := t.FloatRange(); !math.IsInf(min, -1) {
+					return nil, newRecordValidationError("", fmt.Sprintf("is less than %g", min))
+				}
 				return math.Inf(-1), nil
 			}
 		}
