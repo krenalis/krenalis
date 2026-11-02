@@ -428,9 +428,8 @@ func errMatchingPropertyConversion(in, ex string) error {
 // same semantics and options, or they are not conforming to these supported
 // conversions.
 //
-// It returns an error if the converted value does not satisfy the constraints
-// of the ex type or, when only ex has country or phone semantics, is not valid
-// for them.
+// It returns an error if the converted value does not satisfy the semantics or
+// the constraints of the ex type.
 func convertToExternal(v any, in, ex types.Type, inPath, outPath string) (any, error) {
 	if v == nil {
 		panic(fmt.Sprintf("core: unexpected value nil for internal kind %s", in.Kind()))
