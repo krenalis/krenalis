@@ -5,6 +5,7 @@
 package mappings
 
 import (
+	"maps"
 	"reflect"
 	"testing"
 	"time"
@@ -162,9 +163,7 @@ func TestSubstringArguments(t *testing.T) {
 			}
 
 			attributes := map[string]any{"value": test.value}
-			for name, value := range test.attributes {
-				attributes[name] = value
-			}
+			maps.Copy(attributes, test.attributes)
 			got, err := mapping.Transform(attributes, None)
 			if err != nil {
 				if test.message == "" {
