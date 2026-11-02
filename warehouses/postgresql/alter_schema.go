@@ -43,7 +43,7 @@ func (warehouse *PostgreSQL) AlterProfileSchema(ctx context.Context, opID string
 	bo := backoff.New(200)
 	bo.SetCap(time.Second)
 	for bo.Next(ctx) {
-		err2 := warehouse.setOperationAsCompleted(ctx, pool, opID, operationErr)
+		err2 := warehouse.setOperationAsCompleted(ctx, pool, opID, nil, operationErr)
 		if err2 != nil {
 			slog.Error("cannot set alter profile columns operation as completed, retrying",
 				"err", err2, "operationError", operationErr)

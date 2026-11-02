@@ -33,6 +33,8 @@ After the type groups, place package-level functions in alphabetical order.
 
 Place package-level constants and variables at the beginning of the file when they have broad relevance. When one is specific to a single function or method, or is otherwise of secondary importance, declare it immediately before the function or method that uses it.
 
+When you write an `init` function, place it immediately after the imports, before any other declaration. Do not flag or move an `init` function that you find already written, including in a change under review: its author may have placed it elsewhere deliberately.
+
 ## Layout and naming
 
 An exported function or method may call another exported function or method of the same package when it is solely a wrapper offering a simpler API for a common case. Otherwise, extract a shared unexported function or method and call that from both.

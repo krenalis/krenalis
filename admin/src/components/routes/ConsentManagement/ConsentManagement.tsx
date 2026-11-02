@@ -170,7 +170,7 @@ const ConsentManagement = () => {
 		const fetchProfileSchema = async () => {
 			let schema: ObjectType;
 			try {
-				schema = await api.workspaces.profileSchema();
+				schema = (await api.workspaces.profileSchema()).schema;
 			} catch (err) {
 				handleError(err);
 				return;

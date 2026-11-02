@@ -40,7 +40,7 @@ const useSchema = () => {
 		let timeoutID: number;
 		const fetchSchema = async () => {
 			try {
-				const schema = await api.workspaces.profileSchema();
+				const schema = (await api.workspaces.profileSchema()).schema;
 				if (!active) {
 					return;
 				}
