@@ -74,7 +74,7 @@ func TestProfileQueryArguments(t *testing.T) {
 			if err != nil {
 				return
 			}
-			t.Fatal("expected an invalid argument error")
+			t.Fatal("expected an invalid argument error, got nil")
 		})
 	}
 
@@ -104,19 +104,21 @@ func TestProfileQueryBounds(t *testing.T) {
 				table: "profiles", Properties: []string{"email"}, Limit: 2,
 			}, map[string]warehouses.Column{"email": {Name: "email", Type: types.String()}}, true)
 			if !rows.closed || rows.scanned != tc.scanned {
-				t.Fatalf("unexpected resource usage: closed=%t scanned=%d", rows.closed, rows.scanned)
+				t.Fatalf("expected closed true and scanned %d, got closed %t and scanned %d",
+					tc.scanned, rows.closed, rows.scanned)
 			}
 			if err != nil {
 				if !tc.wantError {
-					t.Fatal(err)
+					t.Fatalf("expected no error, got %v", err)
 				}
 				return
 			}
 			if tc.wantError {
-				t.Fatal("expected an error")
+				t.Fatal("expected an error, got nil")
 			}
 			if total != tc.total || len(records) != tc.rows {
-				t.Fatalf("observations were changed: total=%d rows=%d", total, len(records))
+				t.Fatalf("expected total %d and rows %d, got total %d and rows %d",
+					tc.total, tc.rows, total, len(records))
 			}
 
 		})

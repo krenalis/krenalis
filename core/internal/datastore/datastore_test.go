@@ -40,13 +40,13 @@ func TestProfileCountRejectsNegativeWarehouseValue(t *testing.T) {
 			t.Fatalf("expected an *UnavailableError error, got %T", err)
 		}
 		if unavailableErr.Err.Error() != "profile count is negative" {
-			t.Fatalf("unexpected underlying error: %s", unavailableErr.Err)
+			t.Fatalf("expected underlying error %q, got %q", "profile count is negative", unavailableErr.Err)
 		}
 
 		return
 	}
 
-	t.Fatal("expected an error")
+	t.Fatal("expected an error, got nil")
 
 }
 
