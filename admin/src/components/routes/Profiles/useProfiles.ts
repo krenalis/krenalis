@@ -41,6 +41,7 @@ interface InFlightProfilesRequest {
 interface ProfilesReplacement {
 	activeProfileID: string;
 	animateColumnVisibility?: boolean;
+	isRefresh?: boolean;
 	filter: Filter | null;
 	first: number;
 	profileProperties: ProfileProperty[];
@@ -97,6 +98,7 @@ const useProfiles = () => {
 	const pendingNavigationRef = useRef(false);
 	const gridReplacementGenerationRef = useRef(0);
 	const gridReplacementControllerRef = useRef<AbortController>();
+	const isRefreshPendingRef = useRef(false);
 
 	const applySequenceAction = useCallback((action: ProfilesSequenceAction) => {
 		sequenceRef.current = profilesSequenceReducer(sequenceRef.current, action);
@@ -116,6 +118,7 @@ const useProfiles = () => {
 		gridReplacementGenerationRef.current++;
 		gridReplacementControllerRef.current?.abort();
 		gridReplacementControllerRef.current = undefined;
+		isRefreshPendingRef.current = false;
 	}, []);
 
 	const loadProfilesRange = useCallback(
@@ -409,12 +412,6 @@ const useProfiles = () => {
 		[applySequenceAction, transitionToPage],
 	);
 
-	const refreshProfiles = useCallback(() => {
-		if (profileSchema != null) {
-			startExecution(profilesProperties, profileSchema, sequenceRef.current.pageSize);
-		}
-	}, [profileSchema, profilesProperties, startExecution]);
-
 	const resetProfilesSchema = useCallback(() => {
 		appliedFilterRef.current = null;
 		setAppliedFilter(null);
@@ -449,6 +446,7 @@ const useProfiles = () => {
 		async ({
 			activeProfileID,
 			animateColumnVisibility,
+			isRefresh = false,
 			filter: requestedFilter,
 			first,
 			profileProperties,
@@ -462,6 +460,7 @@ const useProfiles = () => {
 			const generation = gridReplacementGenerationRef.current;
 			const controller = new AbortController();
 			gridReplacementControllerRef.current = controller;
+			isRefreshPendingRef.current = isRefresh;
 			const pageSize = sequenceRef.current.pageSize;
 			const { filter, queryKey, request } = createProfilesExecution(
 				selectedWorkspace,
@@ -533,6 +532,7 @@ const useProfiles = () => {
 			} finally {
 				if (gridReplacementControllerRef.current === controller) {
 					gridReplacementControllerRef.current = undefined;
+					isRefreshPendingRef.current = false;
 				}
 			}
 		},
@@ -546,6 +546,22 @@ const useProfiles = () => {
 			workspaces,
 		],
 	);
+
+	const refreshProfiles = useCallback(() => {
+		void replaceProfilesExecution({
+			activeProfileID: '',
+			isRefresh: true,
+			filter: appliedFilterRef.current,
+			first: 0,
+			profileProperties: profilesProperties,
+			projection: sequenceRef.current.projection,
+		}).catch((error) => {
+			if (error instanceof UnprocessableError && error.code === 'SchemaNotAligned') {
+				return;
+			}
+			reportProfilesError(error);
+		});
+	}, [profilesProperties, replaceProfilesExecution, reportProfilesError]);
 
 	const showProfilesFilter = useCallback(
 		async (filter: Filter | null): Promise<boolean> => {
@@ -615,7 +631,9 @@ const useProfiles = () => {
 			const propertyRoles = workspaces.find((candidate) => candidate.id === selectedWorkspace)?.profileSchema.propertyRoles;
 			const requestedProjection = profileProjection(properties, propertyRoles);
 			if (requestedProjection.every((root) => loadedRoots.has(root))) {
-				cancelGridReplacement();
+				if (!isRefreshPendingRef.current) {
+					cancelGridReplacement();
+				}
 				return;
 			}
 
@@ -777,7 +795,9 @@ const createProfilesExecution = (
 	requestedProjection?: string[],
 ) => {
 	const filter = requestedFilter == null ? null : structuredClone(requestedFilter);
-	const projection = requestedProjection ?? profileProjection(properties, propertyRoles);
+	const projection = Array.from(
+		new Set([...profileProjection(properties, propertyRoles), ...(requestedProjection ?? [])]),
+	).sort();
 	const identity: ProfilesQueryIdentity = {
 		workspace,
 		search: '',

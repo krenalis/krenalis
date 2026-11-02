@@ -2510,10 +2510,15 @@ test('Refresh keeps filter arguments and reloads the schema only after reset con
 	await page.getByRole('button', { name: 'Show 1 match', exact: true }).click();
 	await expect(page.locator('.profiles-list .grid__row--clickable')).toHaveCount(1);
 	const applied = requests.at(-1)!.searchParams.get('filter');
+	await page.locator('.profiles-list .grid__row--clickable').click();
 	await valueInput.fill('Uncommitted draft');
 	incompatible = true;
 	await page.getByRole('button', { name: 'Refresh', exact: true }).click();
 	await expect(page.locator('.profiles-list__stale-notice')).toBeVisible();
+	await expect(page.locator('.profiles-list .grid__row--clickable')).toHaveCount(1);
+	await expect(page.locator('.profiles-list__grid-summary')).toContainText('1 profile');
+	await expect(page.locator('.profiles-list .grid__row--active')).toHaveAttribute('data-id', 'profile-2');
+	await expect(page.locator('.profile-drawer')).toBeVisible();
 	expect(requests.at(-1)!.searchParams.get('filter')).toBe(applied);
 	expect(JSON.parse(requests.at(-1)!.searchParams.get('schema')!)).toEqual(profileSchema);
 	expect(schemaReads).toBe(1);

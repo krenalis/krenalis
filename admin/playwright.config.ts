@@ -44,7 +44,7 @@ export default defineConfig({
 		{
 			name: 'profiles.spec.ts',
 			use: { ...devices['Desktop Chrome'] },
-			testMatch: ['tests/profiles.spec.ts', 'tests/profiles-sequence.spec.ts'],
+			testMatch: ['tests/profiles.spec.ts', 'tests/profiles-sequence.spec.ts', 'tests/profiles-refresh.spec.ts'],
 		},
 		{
 			name: 'connections.spec.ts',
