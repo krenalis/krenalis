@@ -6,7 +6,7 @@ import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
 import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import { formatNumber } from '../../../utils/formatNumber';
 
-const profilePageSizes = [25, 50, 100];
+const PROFILE_PAGE_SIZES = [25, 50, 100];
 
 interface ProfilesPaginationProps {
 	children?: React.ReactNode;
@@ -56,7 +56,7 @@ const ProfilesPagination = ({
 					disabled={isLoading}
 					onSlChange={(event: any) => onLimitChange(Number(event.target.value))}
 				>
-					{profilePageSizes.map((pageSize) => (
+					{PROFILE_PAGE_SIZES.map((pageSize) => (
 						<SlOption key={pageSize} value={String(pageSize)}>
 							{pageSize}
 						</SlOption>
