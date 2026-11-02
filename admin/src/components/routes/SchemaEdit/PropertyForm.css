@@ -79,6 +79,11 @@
 	margin-inline-start: 4px;
 }
 
+.property-form__placeholder {
+	color: var(--wa-form-control-placeholder-color);
+	font-weight: var(--wa-font-weight-normal);
+}
+
 .property-form__currency-option-code {
 	font-family: var(--monospace-fonts);
 }

@@ -27,9 +27,13 @@ Keep declarations in a predictable order. Place exported type groups before unex
 3. Its exported methods, sorted alphabetically.
 4. Its unexported methods, sorted alphabetically.
 
+As an exception, a type with no methods declared on it that appears in the declaration of exactly one other defined type may be declared immediately after that type, before its constructors and methods. Several such types follow in the order of their first use.
+
 After the type groups, place package-level functions in alphabetical order.
 
 Place package-level constants and variables at the beginning of the file when they have broad relevance. When one is specific to a single function or method, or is otherwise of secondary importance, declare it immediately before the function or method that uses it.
+
+When you write an `init` function, place it immediately after the imports, before any other declaration. Do not flag or move an `init` function that you find already written, including in a change under review: its author may have placed it elsewhere deliberately.
 
 ## Layout and naming
 
@@ -291,6 +295,8 @@ When a variable or constant belongs to a parenthesized `var` or `const` declarat
 An unexported package-level constant or constant group in a `_test.go` file may omit its declaration comment when its identifiers and surrounding context already make both its fixture role and meaning clear. Do not add a comment that merely labels such constants as test fixtures or states that tests use them. Keep the comment when it conveys non-obvious semantics, constraints, relationships, or reasons for particular values.
 
 When a function or method can return an error, document all and only the errors that callers can identify and handle without inspecting the error message. Do not document errors whose only distinguishing information is their message.
+
+As an exception, a method of `core` does not document the `errors.BadRequestError` it returns for invalid arguments: callers are expected to propagate it, not handle it, and the declaration comment states the argument requirements instead when they are not obvious. Document it only when callers need to distinguish it from the method's other errors.
 
 A short comment for a package-level variable or constant may appear on the same line as its declaration. In that case, start the comment with a lowercase letter or a number, do not use a period, and use a semicolon to separate phrases that would otherwise be separate sentences.
 

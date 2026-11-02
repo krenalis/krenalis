@@ -1069,7 +1069,7 @@ const TransformationBox = ({
 							{isIdentifier && (
 								<div className='pipeline__transformation-property-icon' slot='start'>
 									<WaTooltip for={`${transformationBoxID}-${path}-identifier`}>
-										Used as identifier in Identity Resolution
+										Used as identifier in identity resolution
 									</WaTooltip>
 									<WaIcon
 										id={`${transformationBoxID}-${path}-identifier`}
@@ -3523,7 +3523,7 @@ const TransformationProperty = ({
 									{isIdentifier && (
 										<>
 											<WaTooltip for={`${propertyID}-identifier`}>
-												Used as identifier in Identity Resolution
+												Used as identifier in identity resolution
 											</WaTooltip>
 											<WaIcon
 												id={`${propertyID}-identifier`}

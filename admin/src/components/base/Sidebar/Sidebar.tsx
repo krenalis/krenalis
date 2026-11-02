@@ -46,7 +46,7 @@ const sidebarItems: sidebarItem[] = [
 		subItems: [
 			{
 				name: 'profile-unification/overview',
-				label: 'Overview',
+				label: 'Identity dashboard',
 				link: 'profile-unification/overview',
 				icon: 'activity',
 			},

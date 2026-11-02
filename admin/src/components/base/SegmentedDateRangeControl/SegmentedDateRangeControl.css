@@ -3,14 +3,12 @@
 	align-items: center;
 }
 
-.segmented-date-range-control wa-button::part(button),
-.segmented-date-range-button::part(button) {
+.segmented-date-range-control wa-button::part(button) {
 	padding-right: 15px;
 	padding-left: 15px;
 }
 
-.segmented-date-range-control wa-button[appearance='outlined']::part(button),
-.segmented-date-range-button[appearance='outlined']::part(button) {
+.segmented-date-range-control wa-button[appearance='outlined']::part(button) {
 	background: var(--bg-primary);
 }
 

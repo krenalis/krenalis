@@ -164,14 +164,16 @@ const ProfilesList = () => {
 						) : (
 							<WaIcon slot='start' name='play' />
 						)}
-						{secondsSinceIRStart ? 'Identity Resolution' : 'Run Profile Unification'}
+						{secondsSinceIRStart != null && secondsSinceIRStart !== 0
+							? 'Identity resolution'
+							: 'Run identity resolution'}
 					</WaButton>
 					<span className='profiles-list__identity-resolution-progress'>
 						{secondsSinceIRStart ? (
 							<div className='profiles-list__identity-resolution-since-start'>{`Progress: ${String(secondsSinceIRStart)}s`}</div>
 						) : latestIRExecutionEnd ? (
 							<div className='profiles-list__identity-resolution-end-time'>
-								<span>Latest Identity Resolution:</span> <RelativeTime date={latestIRExecutionEnd} />
+								<span>Last run:</span> <RelativeTime date={latestIRExecutionEnd} />
 							</div>
 						) : (
 							''
@@ -189,7 +191,7 @@ const ProfilesList = () => {
 							Cancel
 						</WaButton>
 						<WaButton variant='brand' onClick={onStartIdentityResolution}>
-							Run Profile Unification
+							Run identity resolution
 						</WaButton>
 					</>
 				}
