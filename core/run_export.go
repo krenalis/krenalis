@@ -452,7 +452,7 @@ func convertToExternal(v any, in, ex types.Type, inPath, outPath string) (any, e
 		default:
 			panic(fmt.Sprintf("core: unexpected value of type %T for internal kind %s ", v, in.Kind()))
 		}
-		// Validate that v matches the external property's semantics.
+		// Validate that v matches the external property's semantics or constraints.
 		switch ex.Semantics() {
 		case types.CountrySemantics:
 			switch format := ex.CountryFormat(); format {
@@ -472,20 +472,19 @@ func convertToExternal(v any, in, ex types.Type, inPath, outPath string) (any, e
 				return nil, errMatchingPropertyConversion(inPath, outPath)
 			}
 		default:
-			// No semantics, or semantics that do not restrict the value.
-		}
-		// Validate that v matches the external property's constraints.
-		if n, ok := ex.MaxBytes(); ok && len(s) > n {
-			return nil, errMatchingPropertyConversion(inPath, outPath)
-		}
-		if n, ok := ex.MaxLength(); ok && utf8.RuneCountInString(s) > n {
-			return nil, errMatchingPropertyConversion(inPath, outPath)
-		}
-		if values := ex.Values(); values != nil && !slices.Contains(values, s) {
-			return nil, errMatchingPropertyConversion(inPath, outPath)
-		}
-		if re := ex.Pattern(); re != nil && !re.MatchString(s) {
-			return nil, errMatchingPropertyConversion(inPath, outPath)
+			// Only types without country or phone semantics can have constraints.
+			if n, ok := ex.MaxBytes(); ok && len(s) > n {
+				return nil, errMatchingPropertyConversion(inPath, outPath)
+			}
+			if n, ok := ex.MaxLength(); ok && utf8.RuneCountInString(s) > n {
+				return nil, errMatchingPropertyConversion(inPath, outPath)
+			}
+			if values := ex.Values(); values != nil && !slices.Contains(values, s) {
+				return nil, errMatchingPropertyConversion(inPath, outPath)
+			}
+			if re := ex.Pattern(); re != nil && !re.MatchString(s) {
+				return nil, errMatchingPropertyConversion(inPath, outPath)
+			}
 		}
 		return s, nil
 	case types.IntKind:
