@@ -174,6 +174,7 @@ const PipelineHeader = () => {
 						className='pipeline__header-close-transformation icon-button'
 						appearance='plain'
 						onClick={onCloseFullscreenTransformation}
+						title='Exit full mode'
 					>
 						<WaIcon name='arrows-angle-contract' label='Exit full mode' />
 					</WaButton>
