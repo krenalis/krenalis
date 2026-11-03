@@ -42,6 +42,7 @@ func Test_Compile(t *testing.T) {
 		{Name: "properties", Type: types.JSON(), Nullable: true},
 		{Name: "jsonNull", Type: types.JSON()},
 		{Name: "jsonNil", Type: types.JSON(), Nullable: true},
+		{Name: "flag", Type: types.Boolean()},
 	})
 
 	cx := decimal.MustParse("0.142")
@@ -101,6 +102,11 @@ func Test_Compile(t *testing.T) {
 		{expr: "1.5", dt: types.String().WithMaxBytes(2), compileErr: errors.New("1.5 exceeds the 2-byte limit")},
 		{expr: "123", dt: types.String().WithMaxLength(2), compileErr: errors.New("123 exceeds the 2-char limit")},
 		{expr: "' '   '  '", dt: types.String(), expected: "   "},
+		{expr: "null 'x'", dt: types.String(), expected: "x"},
+		{expr: "'a' null 'b'", dt: types.String(), expected: "ab"},
+		{expr: "null null", dt: types.String(), expected: ""},
+		{expr: "'[' flag ']'", dt: types.String(), expected: "[true]"},
+		{expr: "eq(passengers, 250) ':' eq(passengers, 1)", dt: types.String(), expected: "true:false"},
 		{expr: "''", dt: types.JSON(), expected: json.Value(`""`)},
 		{expr: "'100'", dt: types.JSON(), expected: json.Value(`"100"`)},
 		{expr: "'42'", dt: types.Int(32), expected: 42},
@@ -456,6 +462,7 @@ func Test_Compile(t *testing.T) {
 				"properties": json.Value(`{"a":1.0,"b":{"c":[1.0,2.0]},"[x":1.0,"x]":2.0,"[x]":3.0,"?":4.0,"x?":5.0,"[x]?":6.0,":":7.0,":x":8.0}`),
 				"jsonNull":   json.Value("null"),
 				"jsonNil":    nil,
+				"flag":       true,
 				"ip":         " 127.0.0.1  ",
 				"uuid":       "\n2e3e96c4-2bc8-41d5-b492-bd6745190691 ",
 			}

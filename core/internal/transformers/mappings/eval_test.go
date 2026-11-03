@@ -240,7 +240,8 @@ func Test_appendAsString(t *testing.T) {
 	}{
 		{nil, types.String(), "start", nil},
 		{"foo", types.String(), "startfoo", nil},
-		{true, types.Boolean(), "start", errInvalidConversion},
+		{true, types.Boolean(), "starttrue", nil},
+		{false, types.Boolean(), "startfalse", nil},
 		{int(3), types.Int(32), "start3", nil},
 		{uint(4), types.Int(16).Unsigned(), "start4", nil},
 		{1.5, types.Float(64), "start1.5", nil},
