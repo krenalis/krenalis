@@ -761,9 +761,10 @@ func (t Type) FloatRange() (min, max float64) {
 }
 
 // WithFloatRange returns t but with values in [min,max]. t must be a float
-// type. min cannot be greater than max. min and max cannot be NaN or overflow
-// t's precision. min cannot be +Inf and max cannot be -Inf.
-// It panics if previous restrictions are not met.
+// type. min cannot be greater than max. min and max cannot be NaN. min cannot
+// be +Inf and max cannot be -Inf. Finite bounds are rounded to t's precision
+// and clamped to its finite limits. It panics if previous restrictions are not
+// met.
 func (t Type) WithFloatRange(min, max float64) Type {
 	if t.kind != FloatKind {
 		panic("type is not a float type")
@@ -1107,8 +1108,9 @@ func (t Type) Elem() Type {
 }
 
 // withFloatRange returns t with its explicit bounds replaced by [min,max].
-// It rounds bounds to t's precision, omits bounds implied by real, and
-// returns an error if the bounds are invalid. t must be a float type.
+// It rounds bounds to t's precision, clamps finite bounds to t's finite
+// limits, omits bounds implied by real, and returns an error if the bounds
+// are invalid. t must be a float type.
 func (t Type) withFloatRange(min, max float64) (Type, error) {
 
 	if math.IsNaN(min) || math.IsNaN(max) {
@@ -1127,10 +1129,10 @@ func (t Type) withFloatRange(min, max float64) (Type, error) {
 		// 32 bits.
 		min32, max32 := float64(float32(min)), float64(float32(max))
 		if math.IsInf(min32, 0) && !math.IsInf(min, 0) {
-			return Type{}, errors.New("minimum overflows float32")
+			min32 = math.Copysign(math.MaxFloat32, min)
 		}
 		if math.IsInf(max32, 0) && !math.IsInf(max, 0) {
-			return Type{}, errors.New("maximum overflows float32")
+			max32 = math.Copysign(math.MaxFloat32, max)
 		}
 		min, max = min32, max32
 	}

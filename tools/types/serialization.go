@@ -809,7 +809,14 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		case FloatKind:
 			minFloat, err = strconv.ParseFloat(string(minimum), bitSize)
 			if err != nil {
-				return Type{}, errors.New("invalid value for minimum")
+				if bitSize == 64 || !errors.Is(err, strconv.ErrRange) {
+					return Type{}, errors.New("invalid value for minimum")
+				}
+				// Let withFloatRange clamp finite bounds that overflow float32.
+				minFloat, err = minimum.Float64()
+				if err != nil {
+					return Type{}, errors.New("invalid value for minimum")
+				}
 			}
 		case DecimalKind:
 			min, err := decimal.Parse(minimum, precision, scale)
@@ -899,7 +906,14 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		case FloatKind:
 			maxFloat, err = strconv.ParseFloat(string(maximum), bitSize)
 			if err != nil {
-				return Type{}, errors.New("invalid value for maximum")
+				if bitSize == 64 || !errors.Is(err, strconv.ErrRange) {
+					return Type{}, errors.New("invalid value for maximum")
+				}
+				// Let withFloatRange clamp finite bounds that overflow float32.
+				maxFloat, err = maximum.Float64()
+				if err != nil {
+					return Type{}, errors.New("invalid value for maximum")
+				}
 			}
 			min, max := minFloat, maxFloat
 			if bitSize == 32 && minimum != "" {

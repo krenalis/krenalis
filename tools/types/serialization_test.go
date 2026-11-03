@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"math"
 	"regexp"
+	"strconv"
 	"testing"
 
 	"github.com/krenalis/krenalis/tools/decimal"
@@ -36,12 +37,14 @@ func TestParseErrors(t *testing.T) {
 		{"{\"kind\":\"string\",\"maxBytes\":1,\"values\":[\"a\"]}", "values cannot be provided if max bytes is provided"},
 		{"{\"kind\":\"string\",\"values\":[\"a\"],\"maxLength\":1}", "max length cannot be provided if values are provided"},
 		{"{\"kind\":\"string\",\"maxLength\":1,\"values\":[\"a\"]}", "values cannot be provided if max length is provided"},
-		{"{\"kind\":\"float\",\"bitSize\":32,\"minimum\":1e100}", "invalid value for minimum"},
-		{"{\"kind\":\"float\",\"bitSize\":32,\"maximum\":1e100}", "invalid value for maximum"},
+		{"{\"kind\":\"float\",\"bitSize\":32,\"minimum\":1e400}", "invalid value for minimum"},
+		{"{\"kind\":\"float\",\"bitSize\":32,\"maximum\":1e400}", "invalid value for maximum"},
 		{"{\"kind\":\"float\",\"bitSize\":64,\"minimum\":1e400}", "invalid value for minimum"},
 		{"{\"kind\":\"float\",\"bitSize\":64,\"maximum\":1e400}", "invalid value for maximum"},
 		{"{\"kind\":\"float\",\"bitSize\":32,\"minimum\":1,\"maximum\":0}", "maximum cannot be less than minimum"},
 		{"{\"kind\":\"float\",\"bitSize\":32,\"minimum\":1.00000001,\"maximum\":1}", "maximum cannot be less than minimum"},
+		{"{\"kind\":\"float\",\"bitSize\":32,\"minimum\":1e100,\"maximum\":1e99}", "maximum cannot be less than minimum"},
+		{"{\"kind\":\"float\",\"bitSize\":32,\"minimum\":-1e99,\"maximum\":-1e100}", "maximum cannot be less than minimum"},
 		{"{\"kind\":\"float\",\"bitSize\":64,\"minimum\":1,\"maximum\":0}", "maximum cannot be less than minimum"},
 	}
 	for _, tc := range tests {
@@ -398,6 +401,11 @@ func TestTypeSerialization(t *testing.T) {
 			{0, limit, `,"minimum":0`},
 			{-limit, 0, `,"maximum":0`},
 			{-limit, limit, ""},
+			{0, math.MaxFloat64, `,"minimum":0`},
+			{-math.MaxFloat64, 0, `,"maximum":0`},
+			{-math.MaxFloat64, math.MaxFloat64, ""},
+			{math.MaxFloat64, math.MaxFloat64, `,"minimum":` + strconv.FormatFloat(limit, 'f', -1, size)},
+			{-math.MaxFloat64, -math.MaxFloat64, `,"maximum":` + strconv.FormatFloat(-limit, 'f', -1, size)},
 		} {
 			var parseBounds string
 			if !math.IsInf(test.min, -1) {
@@ -412,8 +420,13 @@ func TestTypeSerialization(t *testing.T) {
 				t.Fatalf("expected valid JSON, got %v", err)
 			}
 			tests = append(tests,
-				// Check the round trip for non-real floats.
+				// Check normalization and the round trip for non-real floats.
 				testCase{Data: string(data), Type: bounded},
+				testCase{
+					Data:      string(data),
+					ParseData: fmt.Sprintf(`{"kind":"float","bitSize":%d%s}`, size, parseBounds),
+					Type:      bounded,
+				},
 				testCase{
 					Data:      fmt.Sprintf(`{"kind":"float","bitSize":%d,"real":true%s}`, size, test.bounds),
 					ParseData: fmt.Sprintf(`{"kind":"float","bitSize":%d,"real":true%s}`, size, parseBounds),
