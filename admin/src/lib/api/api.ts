@@ -172,6 +172,7 @@ class API {
 		outSchema: ObjectType,
 		transformation: Transformation,
 		purpose: TransformationPurpose,
+		matchingOut?: string,
 	): Promise<TransformDataResponse> => {
 		return await call(`${this.apiURL}/transformations`, http.POST, this.workspaceID, {
 			data,
@@ -179,6 +180,7 @@ class API {
 			outSchema,
 			transformation,
 			purpose,
+			matchingOut,
 		});
 	};
 

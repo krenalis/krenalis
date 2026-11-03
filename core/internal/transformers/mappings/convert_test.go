@@ -6,11 +6,14 @@ package mappings
 
 import (
 	"math"
+	"reflect"
 	"regexp"
+	"strconv"
 	"testing"
 	"time"
 
 	"github.com/krenalis/krenalis/tools/decimal"
+	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 
@@ -154,11 +157,11 @@ func TestConvert(t *testing.T) {
 
 		// datetime.
 		{types.DateTime(), types.DateTime(), time.Date(2023, 5, 24, 9, 1, 57, 493614090, time.UTC), time.Date(2023, 5, 24, 9, 1, 57, 493614090, time.UTC), true, nil},
+		{types.DateTime(), types.DateTime(), time.Date(2023, 5, 24, 9, 1, 57, 493614090, time.UTC), time.Date(2023, 5, 24, 9, 1, 57, 493614090, time.UTC), true, nil},
 		{types.Date(), types.DateTime(), time.Date(2023, 5, 24, 0, 0, 0, 0, time.UTC), time.Date(2023, 5, 24, 0, 0, 0, 0, time.UTC), true, nil},
 		{types.String(), types.DateTime(), "2023-05-24T09:01:57.49361409Z", time.Date(2023, 5, 24, 9, 1, 57, 493614090, time.UTC), true, nil},
 		{types.String(), types.DateTime(), "2023-05-24T09:01:57-07:00", time.Date(2023, 5, 24, 16, 1, 57, 0, time.UTC), true, nil},
 		{types.JSON(), types.DateTime(), json.Value(`"2023-05-24T09:01:57-07:00"`), time.Date(2023, 5, 24, 16, 1, 57, 0, time.UTC), true, nil},
-		{types.DateTime(), types.DateTime(), time.Date(2023, 5, 24, 9, 1, 57, 493614090, time.UTC), time.Date(2023, 5, 24, 9, 1, 57, 493614090, time.UTC), true, nil},
 
 		// date.
 		{types.Date(), types.Date(), time.Date(2023, 24, 5, 0, 0, 0, 0, time.UTC), time.Date(2023, 24, 5, 0, 0, 0, 0, time.UTC), true, nil},
@@ -239,6 +242,12 @@ func TestConvert(t *testing.T) {
 		{types.JSON(), types.Array(types.String()), json.Value(`"foo"`), []any{"foo"}, true, nil},
 		{types.JSON(), types.Array(types.Float(64)), json.Value(`15.07`), []any{15.07}, true, nil},
 		{types.String(), types.Array(types.Float(64)), "foo", nil, false, errInvalidConversion},
+		{types.Array(types.JSON()), types.Array(types.JSON()), []any{nil}, []any{json.Value("null")}, false, nil},
+		{types.Array(types.String()), types.Array(types.JSON()), []any{nil}, []any{json.Value("null")}, false, nil},
+		{types.Array(types.JSON()), types.Array(types.JSON()), []any{json.Value("null")}, []any{json.Value("null")}, false, nil},
+		{types.Array(types.String()), types.Array(types.String()), []any{nil}, nil, false, errInvalidConversion},
+		{types.Array(types.JSON()), types.Array(types.String()), []any{json.Value("null")}, nil, false, errInvalidConversion},
+		{types.Array(types.String()), types.Array(types.Int(32)), []any{""}, nil, false, errInvalidConversion},
 
 		// object.
 		{
@@ -276,6 +285,24 @@ func TestConvert(t *testing.T) {
 		{types.JSON(), types.Object([]types.Property{{Name: "foo", Type: types.Int(32)}}), json.Value(`{"@":7,"foo":8}`), map[string]any{"foo": 8}, true, nil},
 		{types.Map(types.Boolean()), types.Object([]types.Property{{Name: "x", Type: types.String()}, {Name: "y", Type: types.Boolean()}}), map[string]any{"x": true, "y": false}, map[string]any{"x": "true", "y": false}, true, nil},
 		{types.Int(32), types.Object([]types.Property{{Name: "x", Type: types.String()}}), 56, nil, false, errInvalidConversion},
+		{types.Object([]types.Property{{Name: "value", Type: types.JSON(), Nullable: true}}), types.Object([]types.Property{{Name: "value", Type: types.JSON()}}), map[string]any{"value": nil}, map[string]any{"value": json.Value("null")}, false, nil},
+		{types.Object([]types.Property{{Name: "value", Type: types.String(), Nullable: true}}), types.Object([]types.Property{{Name: "value", Type: types.JSON()}}), map[string]any{"value": nil}, map[string]any{"value": json.Value("null")}, false, nil},
+		{types.Object([]types.Property{{Name: "value", Type: types.JSON(), Nullable: true}}), types.Object([]types.Property{{Name: "value", Type: types.JSON()}}), map[string]any{"value": json.Value("null")}, map[string]any{"value": json.Value("null")}, false, nil},
+		{types.Object([]types.Property{{Name: "value", Type: types.String(), Nullable: true}}), types.Object([]types.Property{{Name: "value", Type: types.String()}}), map[string]any{"value": nil}, nil, false, errInvalidConversion},
+		{types.Object([]types.Property{{Name: "value", Type: types.JSON(), Nullable: true}}), types.Object([]types.Property{{Name: "value", Type: types.String()}}), map[string]any{"value": json.Value("null")}, nil, false, errInvalidConversion},
+		{types.Object([]types.Property{{Name: "value", Type: types.String(), Nullable: true}}), types.Object([]types.Property{{Name: "value", Type: types.Int(32)}}), map[string]any{"value": ""}, nil, false, errInvalidConversion},
+		{types.Object([]types.Property{{Name: "value", Type: types.JSON()}}), types.Object([]types.Property{{Name: "value", Type: types.JSON()}}), map[string]any{"value": nil}, map[string]any{"value": json.Value("null")}, false, nil},
+		{types.Object([]types.Property{{Name: "value", Type: types.JSON()}}), types.Object([]types.Property{{Name: "value", Type: types.JSON()}}), map[string]any{"value": json.Value("null")}, map[string]any{"value": json.Value("null")}, false, nil},
+		{types.Object([]types.Property{{Name: "value", Type: types.String()}}), types.Object([]types.Property{{Name: "value", Type: types.String()}}), map[string]any{"value": nil}, nil, false, errInvalidConversion},
+		{types.Map(types.JSON()), types.Object([]types.Property{{Name: "value", Type: types.JSON()}}), map[string]any{"value": nil}, map[string]any{"value": json.Value("null")}, false, nil},
+		{types.Map(types.String()), types.Object([]types.Property{{Name: "value", Type: types.JSON()}}), map[string]any{"value": nil}, map[string]any{"value": json.Value("null")}, false, nil},
+		{types.Map(types.JSON()), types.Object([]types.Property{{Name: "value", Type: types.JSON()}}), map[string]any{"value": json.Value("null")}, map[string]any{"value": json.Value("null")}, false, nil},
+		{types.Map(types.String()), types.Object([]types.Property{{Name: "value", Type: types.String()}}), map[string]any{"value": nil}, nil, false, errInvalidConversion},
+		{types.Map(types.JSON()), types.Object([]types.Property{{Name: "value", Type: types.String()}}), map[string]any{"value": json.Value("null")}, nil, false, errInvalidConversion},
+		{types.Map(types.String()), types.Object([]types.Property{{Name: "value", Type: types.Int(32)}}), map[string]any{"value": ""}, nil, false, errInvalidConversion},
+		{types.JSON(), types.Object([]types.Property{{Name: "value", Type: types.JSON()}}), json.Value(`{"value":null}`), map[string]any{"value": json.Value("null")}, false, nil},
+		{types.JSON(), types.Object([]types.Property{{Name: "value", Type: types.String()}}), json.Value(`{"value":null}`), nil, false, errInvalidConversion},
+		{types.JSON(), types.Object([]types.Property{{Name: "value", Type: types.Int(32)}}), json.Value(`{"value":""}`), nil, false, errInvalidConversion},
 
 		// map.
 		{types.Map(types.Boolean()), types.Map(types.Boolean()), map[string]any{"a": true, "b": false}, map[string]any{"a": true, "b": false}, true, nil},
@@ -284,6 +311,18 @@ func TestConvert(t *testing.T) {
 		{types.JSON(), types.Map(types.Float(32)), json.Value(`{"a":4032,"b":-721}`), map[string]any{"a": float64(float32(4032)), "b": float64(float32(-721))}, true, nil},
 		{types.Object([]types.Property{{Name: "foo", Type: types.Int(32)}}), types.Map(types.String()), map[string]any{"foo": 572}, map[string]any{"foo": "572"}, true, nil},
 		{types.String(), types.Map(types.String()), "boo", nil, false, errInvalidConversion},
+		{types.Object([]types.Property{{Name: "value", Type: types.JSON(), Nullable: true}}), types.Map(types.JSON()), map[string]any{"value": nil}, map[string]any{"value": json.Value("null")}, false, nil},
+		{types.Object([]types.Property{{Name: "value", Type: types.String(), Nullable: true}}), types.Map(types.JSON()), map[string]any{"value": nil}, map[string]any{"value": json.Value("null")}, false, nil},
+		{types.Object([]types.Property{{Name: "value", Type: types.JSON(), Nullable: true}}), types.Map(types.JSON()), map[string]any{"value": json.Value("null")}, map[string]any{"value": json.Value("null")}, false, nil},
+		{types.Object([]types.Property{{Name: "value", Type: types.String(), Nullable: true}}), types.Map(types.String()), map[string]any{"value": nil}, nil, false, errInvalidConversion},
+		{types.Object([]types.Property{{Name: "value", Type: types.JSON(), Nullable: true}}), types.Map(types.String()), map[string]any{"value": json.Value("null")}, nil, false, errInvalidConversion},
+		{types.Object([]types.Property{{Name: "value", Type: types.String(), Nullable: true}}), types.Map(types.Int(32)), map[string]any{"value": ""}, nil, false, errInvalidConversion},
+		{types.Map(types.JSON()), types.Map(types.JSON()), map[string]any{"value": nil}, map[string]any{"value": json.Value("null")}, false, nil},
+		{types.Map(types.String()), types.Map(types.JSON()), map[string]any{"value": nil}, map[string]any{"value": json.Value("null")}, false, nil},
+		{types.Map(types.JSON()), types.Map(types.JSON()), map[string]any{"value": json.Value("null")}, map[string]any{"value": json.Value("null")}, false, nil},
+		{types.Map(types.String()), types.Map(types.String()), map[string]any{"value": nil}, nil, false, errInvalidConversion},
+		{types.Map(types.JSON()), types.Map(types.String()), map[string]any{"value": json.Value("null")}, nil, false, errInvalidConversion},
+		{types.Map(types.String()), types.Map(types.Int(32)), map[string]any{"value": ""}, nil, false, errInvalidConversion},
 	}
 
 	for _, test := range tests {
@@ -411,6 +450,109 @@ func TestConvertArrayUniqueness(t *testing.T) {
 				t.Fatalf("got value %#v, want %#v", got, test.expected)
 			}
 		})
+	}
+
+}
+
+// TestConvertEqualPreservesInput checks that converting nil to JSON null does
+// not modify the input, even if a required property is missing.
+func TestConvertEqualPreservesInput(t *testing.T) {
+
+	objectType := types.Object([]types.Property{
+		{Name: "payload", Type: types.JSON()},
+		{Name: "required", Type: types.String(), Nullable: true, ReadOptional: true, CreateRequired: true},
+	})
+
+	for _, shape := range []string{"object", "array", "map", "nested"} {
+		for _, missing := range []bool{false, true} {
+			for _, operation := range []string{"convert", "mapping"} {
+				t.Run(shape+"/missing="+strconv.FormatBool(missing)+"/"+operation, func(t *testing.T) {
+
+					typ := objectType
+					makeObject := func(payload any) map[string]any {
+						object := map[string]any{"payload": payload}
+						if !missing {
+							object["required"] = nil
+						}
+						return object
+					}
+					var value any = makeObject(nil)
+					var expected any = makeObject(json.Value("null"))
+					var original any = makeObject(nil)
+					requiredPath := "target"
+					switch shape {
+					case "object":
+						// Keep the object at the root.
+					case "array":
+						typ = types.Array(typ)
+						value, expected = []any{value}, []any{expected}
+						original = []any{original}
+						requiredPath += "[0]"
+					case "map":
+						typ = types.Map(typ)
+						value, expected = map[string]any{"key": value}, map[string]any{"key": expected}
+						original = map[string]any{"key": original}
+						requiredPath += `["key"]`
+					case "nested":
+						typ = types.Array(types.Map(types.Array(typ)))
+						value = []any{map[string]any{"key": []any{value}}}
+						expected = []any{map[string]any{"key": []any{expected}}}
+						original = []any{map[string]any{"key": []any{original}}}
+						requiredPath += `[0]["key"][0]`
+					default:
+						t.Fatalf("expected known shape, got %q", shape)
+					}
+
+					var got any
+					var err error
+					input := map[string]any{"source": value}
+					originalInput := map[string]any{"source": original}
+					if operation == "convert" {
+						got, err = convert(value, typ, typ, false, Create)
+					} else {
+						inSchema := types.Object([]types.Property{{Name: "source", Type: typ}})
+						outSchema := types.Object([]types.Property{{Name: "target", Type: typ}})
+						var mapping *Mapping
+						mapping, err = New(map[string]string{"target": "source"}, inSchema, outSchema, "")
+						if err != nil {
+							t.Fatalf("expected mapping creation to succeed, got %v", err)
+						}
+						var result map[string]any
+						result, err = mapping.Transform(input, Create)
+						got = result["target"]
+					}
+					if !reflect.DeepEqual(input, originalInput) {
+						t.Fatalf("expected unchanged input %#v, got %#v", originalInput, input)
+					}
+					if err != nil {
+						if !missing {
+							t.Fatalf("expected conversion to succeed, got %v", err)
+						}
+						if operation == "convert" && !errors.Is(err, errInvalidConversion) {
+							t.Fatalf("expected %v, got %v", errInvalidConversion, err)
+						}
+						if operation != "convert" {
+							if _, ok := errors.AsType[ValidationError](err); !ok {
+								t.Fatalf("expected ValidationError, got %T: %v", err, err)
+							}
+							expected := "property «" + requiredPath + ".required» is missing"
+							expected += " but it is required for creation"
+							if err.Error() != expected {
+								t.Fatalf("expected error %q, got %q", expected, err)
+							}
+						}
+						return
+					}
+					if missing {
+						t.Fatalf("expected required-property error, got %#v", got)
+					}
+					if !reflect.DeepEqual(got, expected) {
+						t.Fatalf("expected %#v, got %#v", expected, got)
+					}
+
+				})
+			}
+		}
 	}
 
 }

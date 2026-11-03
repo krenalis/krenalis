@@ -1087,14 +1087,17 @@ const (
 // must be non-nil. purpose indicates the intent of the transformation and can
 // be "Import", "Create", or "Update".
 //
+// matchingOut is the output matching property supplied separately during
+// export, or empty if there is none. It affects required-property validation
+// for mappings only and is ignored for function transformations.
+//
 // It returns an errors.NotFound error if the organization does not exist.
 //
 // It returns an errors.UnprocessableError error with code:
 //   - TransformationFailed if the transformation fails due to an error in the
 //     executed function.
 //   - UnsupportedLanguage, if the transformation language is not supported.
-func (core *Core) TransformData(ctx context.Context, organization string, data []byte,
-	inSchema, outSchema types.Type, transformation DataTransformation, purpose Purpose) (json.Value, error) {
+func (core *Core) TransformData(ctx context.Context, organization string, data []byte, inSchema, outSchema types.Type, transformation DataTransformation, purpose Purpose, matchingOut string) (json.Value, error) {
 
 	core.mustBeOpen()
 
@@ -1123,6 +1126,7 @@ func (core *Core) TransformData(ctx context.Context, organization string, data [
 	pipeline := &state.Pipeline{
 		InSchema:  inSchema,
 		OutSchema: outSchema,
+		Matching:  state.Matching{Out: matchingOut},
 		Transformation: state.Transformation{
 			Mapping: transformation.Mapping,
 		},
@@ -1134,7 +1138,7 @@ func (core *Core) TransformData(ctx context.Context, organization string, data [
 	// Validate the mapping and the transformation.
 	switch {
 	case transformation.Mapping != nil:
-		mapping, err := mappings.New(transformation.Mapping, inSchema, outSchema)
+		mapping, err := mappings.New(transformation.Mapping, inSchema, outSchema, matchingOut)
 		if err != nil {
 			return nil, errors.BadRequest("mapping is not valid: %s", err)
 		}

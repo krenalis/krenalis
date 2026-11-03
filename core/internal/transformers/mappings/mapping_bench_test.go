@@ -80,7 +80,7 @@ func BenchmarkMappingTransform(b *testing.B) {
 			inSchema := types.Object([]types.Property{{Name: "source", Type: test.source}})
 			outSchema := types.Object([]types.Property{{Name: "target", Type: test.target, CreateRequired: true}})
 			expressions := map[string]string{"target": test.expr}
-			mapping, err := New(expressions, inSchema, outSchema)
+			mapping, err := New(expressions, inSchema, outSchema, "")
 			if err != nil {
 				b.Fatalf("expected mapping creation to succeed, got %v", err)
 			}
