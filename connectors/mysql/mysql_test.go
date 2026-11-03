@@ -76,7 +76,7 @@ func TestStringValuesAcrossSQLModes(t *testing.T) {
 			t.Errorf("expected administrative connector cleanup, got %v", err)
 		}
 	})
-	err = admin.openDB(t.Context())
+	err = admin.openDB(t.Context(), false)
 	if err != nil {
 		t.Fatalf("expected administrative database, got %v", err)
 	}
@@ -112,12 +112,7 @@ func TestStringValuesAcrossSQLModes(t *testing.T) {
 					t.Fatalf("expected server SQL mode %q, got %q", requested, globalMode)
 				}
 			}
-			var expectedModes []string
-			for _, mode := range globalModes {
-				if mode != "NO_BACKSLASH_ESCAPES" {
-					expectedModes = append(expectedModes, mode)
-				}
-			}
+			expectedModes := slices.Clone(globalModes)
 			slices.Sort(expectedModes)
 			connector, err := testconnector.NewDatabase[*MySQL]("mysql", settings)
 			if err != nil {
@@ -226,6 +221,46 @@ func TestStringValuesAcrossSQLModes(t *testing.T) {
 				},
 				Keys: []string{"id"},
 			}
+			destination, err := testconnector.NewDatabase[*MySQL]("mysql", settings)
+			if err != nil {
+				t.Fatalf("expected destination connector, got %v", err)
+			}
+			t.Cleanup(func() {
+				err := destination.Close()
+				if err != nil {
+					t.Errorf("expected destination cleanup, got %v", err)
+				}
+			})
+			_, err = destination.Columns(t.Context(), table.Name)
+			if err != nil {
+				t.Fatalf("expected destination columns, got %v", err)
+			}
+
+			t.Run("ColumnsAfterQuery", func(t *testing.T) {
+				_, err := connector.Columns(t.Context(), table.Name)
+				if err != nil {
+					return
+				}
+				t.Fatal("expected Columns after Query to fail, got no error")
+			})
+
+			t.Run("MergeAfterQuery", func(t *testing.T) {
+				err := connector.Merge(t.Context(), table, [][]any{{1, "value"}})
+				if err != nil {
+					return
+				}
+				t.Fatal("expected Merge after Query to fail, got no error")
+			})
+
+			t.Run("QueryAfterColumns", func(t *testing.T) {
+				rows, _, err := destination.Query(t.Context(), "SELECT 1 AS value")
+				if err != nil {
+					return
+				}
+				_ = rows.Close()
+				t.Fatal("expected Query after Columns to fail, got no error")
+			})
+
 			for _, test := range []struct {
 				name    string
 				payload string
@@ -246,7 +281,7 @@ func TestStringValuesAcrossSQLModes(t *testing.T) {
 
 					// Insert the row, then update the same primary key with a different value.
 					for _, payload := range []string{test.payload, "updated " + test.payload} {
-						err = connector.Merge(t.Context(), table, [][]any{{1, payload}})
+						err = destination.Merge(t.Context(), table, [][]any{{1, payload}})
 						if err != nil {
 							t.Fatalf("expected merged string value, got %v", err)
 						}
@@ -391,20 +426,22 @@ func Test_Merge_Query(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Open the MySQL connector.
-	connector, err := testconnector.NewDatabase[*MySQL]("mysql", innerSettings{
+	// Open the destination connector.
+	settings := innerSettings{
 		Host:     host,
 		Port:     int(port.Num()),
 		Username: username,
 		Password: password,
 		Database: database,
-	})
+	}
+	connector, err := testconnector.NewDatabase[*MySQL]("mysql", settings)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer connector.Close()
-	if err = connector.openDB(ctx); err != nil {
-		t.Fatalf("cannot open the database: %s", err)
+	err = connector.openDB(t.Context(), true)
+	if err != nil {
+		t.Fatalf("expected open destination database, got %v", err)
 	}
 
 	// Create the table and add a row.
@@ -452,7 +489,12 @@ func Test_Merge_Query(t *testing.T) {
 		query.WriteString(c.Name)
 	}
 	query.WriteString(" FROM " + table.Name)
-	rows, columns, err := connector.Query(context.Background(), query.String())
+	source, err := testconnector.NewDatabase[*MySQL]("mysql", settings)
+	if err != nil {
+		t.Fatalf("expected source connector, got %v", err)
+	}
+	defer source.Close()
+	rows, columns, err := source.Query(t.Context(), query.String())
 	if err != nil {
 		t.Fatalf("query execution is failed: %s", err)
 	}

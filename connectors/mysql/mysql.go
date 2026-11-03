@@ -13,10 +13,11 @@ import (
 	"context"
 	"database/sql"
 	_ "embed"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"strconv"
-	"strings"
+	"time"
 	"unicode/utf8"
 
 	"github.com/krenalis/krenalis/connectors"
@@ -54,9 +55,13 @@ func New(env *connectors.DatabaseEnv) (*MySQL, error) {
 	return &MySQL{env: env}, nil
 }
 
+// MySQL is a MySQL database connector.
+// Its methods must be called sequentially. Calls to Query must not be mixed
+// with Columns or Merge on the same instance.
 type MySQL struct {
-	env *connectors.DatabaseEnv
-	db  *sql.DB
+	env                    *connectors.DatabaseEnv
+	db                     *sql.DB
+	enableBackslashEscapes bool
 }
 
 // Close closes the database.
@@ -88,7 +93,8 @@ func (my *MySQL) Columns(ctx context.Context, table string) ([]connectors.Column
 // Merge performs batch insert and update operations on the specified table,
 // basing on the table keys.
 func (my *MySQL) Merge(ctx context.Context, table connectors.Table, rows [][]any) error {
-	if err := my.openDB(ctx); err != nil {
+	err := my.openDB(ctx, true)
+	if err != nil {
 		return err
 	}
 	// Acquire a connection.
@@ -108,14 +114,32 @@ func (my *MySQL) Query(ctx context.Context, query string) (connectors.Rows, []co
 
 // SQLLiteral returns the SQL literal representation of v according to the
 // provided Krenalis type t. It supports nil values and the following Krenalis
-// types: string, datetime, date, and json.
+// types: string, datetime, date, time, and json.
+// The representation is independent of the session's SQL modes.
 func (my *MySQL) SQLLiteral(value any, typ types.Type) string {
-	if value == nil {
+	var text []byte
+	switch v := value.(type) {
+	case nil:
 		return "NULL"
+	case string:
+		text = []byte(v)
+	case json.Value:
+		text = v
+	case time.Time:
+		switch typ.Kind() {
+		case types.DateTimeKind:
+			return "'" + v.Format("2006-01-02 15:04:05.999999") + "'"
+		case types.DateKind:
+			return "'" + v.Format("2006-01-02") + "'"
+		case types.TimeKind:
+			return "'" + v.Format("15:04:05.999999") + "'"
+		default:
+			panic(fmt.Errorf("connectors/mysql: unsupported temporal type %s", typ))
+		}
+	default:
+		panic(fmt.Errorf("connectors/mysql: unsupported SQL literal value type %T", v))
 	}
-	var b strings.Builder
-	_ = quoteValue(&b, value, typ)
-	return b.String()
+	return "_utf8mb4 X'" + hex.EncodeToString(text) + "'"
 }
 
 // ServeUI serves the connector's user interface.
@@ -158,9 +182,13 @@ func (my *MySQL) ServeUI(ctx context.Context, event string, settings json.Value,
 	return ui, nil
 }
 
-// openDB opens the database. If the database is already open it does nothing.
-func (my *MySQL) openDB(ctx context.Context) error {
+// openDB opens the database if necessary, enabling backslash escaping when
+// enableBackslashEscapes is true. Later calls must use the same value.
+func (my *MySQL) openDB(ctx context.Context, enableBackslashEscapes bool) error {
 	if my.db != nil {
+		if my.enableBackslashEscapes != enableBackslashEscapes {
+			return errors.New("connectors/mysql: cannot mix Query with Columns or Merge on the same instance")
+		}
 		return nil
 	}
 	var s innerSettings
@@ -168,13 +196,21 @@ func (my *MySQL) openDB(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	mysqlConnector, err := mysql.NewConnector(config(&s, my.env.Dial))
+	c := config(&s, my.env.Dial)
+	if enableBackslashEscapes {
+		// Enable backslash escaping in SQL string literals.
+		c.Params = map[string]string{
+			"sql_mode": "REPLACE(@@SESSION.sql_mode, 'NO_BACKSLASH_ESCAPES', '')",
+		}
+	}
+	mysqlConnector, err := mysql.NewConnector(c)
 	if err != nil {
 		return err
 	}
 	db := sql.OpenDB(mysqlConnector)
 	db.SetMaxIdleConns(0)
 	my.db = db
+	my.enableBackslashEscapes = enableBackslashEscapes
 	return nil
 }
 
@@ -182,7 +218,8 @@ func (my *MySQL) openDB(ctx context.Context) error {
 // writable indicates whether the resulting columns should be marked as
 // writable.
 func (my *MySQL) query(ctx context.Context, query string, writable bool) (connectors.Rows, []connectors.Column, error) {
-	if err := my.openDB(ctx); err != nil {
+	err := my.openDB(ctx, writable)
+	if err != nil {
 		return nil, nil, err
 	}
 	rows, err := my.db.QueryContext(ctx, query)
@@ -272,10 +309,6 @@ func config(s *innerSettings, dial connectors.DialFunc) *mysql.Config {
 	c.AllowOldPasswords = true
 	c.ParseTime = true
 	c.DialFunc = dial
-	// Enable backslash escaping in SQL string literals.
-	c.Params = map[string]string{
-		"sql_mode": "REPLACE(@@SESSION.sql_mode, 'NO_BACKSLASH_ESCAPES', '')",
-	}
 	return c
 }
 
