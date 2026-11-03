@@ -11,7 +11,7 @@ replace github.com/snowflakedb/gosnowflake/v2 => github.com/krenalis/gosnowflake
 require (
 	github.com/ClickHouse/clickhouse-go/v2 v2.49.0
 	github.com/LumenResearch/uasurfer v0.3.1
-	github.com/andybalholm/brotli v1.2.6
+	github.com/andybalholm/brotli v1.2.7
 	github.com/aws/aws-sdk-go-v2 v1.47.3
 	github.com/aws/aws-sdk-go-v2/config v1.33.9
 	github.com/aws/aws-sdk-go-v2/credentials v1.20.9
