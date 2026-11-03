@@ -1,17 +1,18 @@
-import React, { useState, useEffect, useContext, useMemo, useRef, ReactNode } from 'react';
+import React, { useState, useEffect, useContext, useId, useMemo, useRef, ReactNode } from 'react';
 import './ConnectionMetrics.css';
 import Grid from '../../base/Grid/Grid';
 import AppContext from '../../../context/AppContext';
 import ConnectionContext from '../../../context/ConnectionContext';
 import { ComposedChart, Line, Bar, Legend, XAxis, Tooltip, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts';
 import Arrow from '../../base/Arrow/Arrow';
-import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
-import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
-import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
-import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
-import SlButtonGroup from '@shoelace-style/shoelace/dist/react/button-group/index.js';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
+import WaSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
+import WaTooltip from '@awesome.me/webawesome/dist/react/tooltip/index.js';
+import WaSelect from '@awesome.me/webawesome/dist/react/select/index.js';
+import WaOption from '@awesome.me/webawesome/dist/react/option/index.js';
+import WaButtonGroup from '@awesome.me/webawesome/dist/react/button-group/index.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import { buttonVariant } from '../../../utils/buttonVariant';
 import { PipelineError, PipelineErrorsResponse } from '../../../lib/api/types/responses';
 import { PipelineMetrics, PipelineTarget } from '../../../lib/api/types/pipeline';
 import { GridColumn, GridRow } from '../../base/Grid/Grid.types';
@@ -132,6 +133,8 @@ const ConnectionMetrics = () => {
 	const supportedTargets = useRef([]);
 	const currentMetricsIntervalID = useRef<any>();
 	const previouslySelectedPipeline = useRef<string | null>(null);
+
+	const errorCountNoticeID = useId();
 
 	const isUsersSelected = selectedTarget === 'User';
 
@@ -481,14 +484,14 @@ const ConnectionMetrics = () => {
 	if (isLoading) {
 		return (
 			<div className='connection-metrics--loading'>
-				<SlSpinner
+				<WaSpinner
 					style={
 						{
 							fontSize: '3rem',
 							'--track-width': '6px',
 						} as React.CSSProperties
 					}
-				></SlSpinner>
+				></WaSpinner>
 			</div>
 		);
 	}
@@ -528,49 +531,50 @@ const ConnectionMetrics = () => {
 							onPresetChange={setSelectedMetricsRange}
 							onCustomRangeChange={onChangeCustomMetricsRange}
 						/>
-						<SlButtonGroup>
-							<SlButton
-								variant={isUsersSelected ? 'default' : 'primary'}
+						<WaButtonGroup>
+							<WaButton
+								{...buttonVariant(isUsersSelected ? 'default' : 'primary')}
 								onClick={
 									supportedTargets.current.includes('Event')
 										? () => onChangeSelectedTarget('Event')
 										: null
 								}
-								size='small'
+								size='s'
 								disabled={!supportedTargets.current.includes('Event')}
 							>
 								Events
-							</SlButton>
-							<SlButton
-								variant={isUsersSelected ? 'primary' : 'default'}
+							</WaButton>
+							<WaButton
+								{...buttonVariant(isUsersSelected ? 'primary' : 'default')}
 								onClick={
 									supportedTargets.current.includes('User')
 										? () => onChangeSelectedTarget('User')
 										: null
 								}
-								size='small'
+								size='s'
 								disabled={!supportedTargets.current.includes('User')}
 							>
 								Profiles
-							</SlButton>
-						</SlButtonGroup>
+							</WaButton>
+						</WaButtonGroup>
 						{c.pipelines?.some((p) => p.target === selectedTarget) &&
 							!((c.isSDK || c.isWebhook) && c.isSource && selectedTarget === 'Event') && (
-								<SlSelect
-									size='small'
+								<WaSelect
+									size='s'
 									placeholder='All pipelines'
-									onSlChange={onChangesetSelectedPipeline}
+									onChange={onChangesetSelectedPipeline}
 									value={selectedPipeline == null ? '' : selectedPipeline}
 									className='connection-metrics__pipelines'
-									clearable
+									withClear
 								>
+									<WaIcon name='x-circle-fill' slot='clear-icon' />
 									{c.pipelines?.map((p) => {
 										if (p.target == selectedTarget) {
-											return <SlOption value={p.id}>{p.name}</SlOption>;
+											return <WaOption value={p.id}>{p.name}</WaOption>;
 										}
 										return null;
 									})}
-								</SlSelect>
+								</WaSelect>
 							)}
 					</div>
 					<div className='connection-metrics__chart'>
@@ -667,9 +671,11 @@ const ConnectionMetrics = () => {
 						<div className='connection-metrics__errors-heading'>
 							Error log
 							<div className='connection-metrics__error-count-notice'>
-								<SlTooltip content="These are the last 50 pipeline errors for this connection. They don't include errors from any deleted pipelines.">
-									<SlIcon name='info-circle' />
-								</SlTooltip>
+								<WaTooltip for={errorCountNoticeID}>
+									These are the last 50 pipeline errors for this connection. They don't include errors
+									from any deleted pipelines.
+								</WaTooltip>
+								<WaIcon id={errorCountNoticeID} name='info-circle' />
 							</div>
 							<span>{titleRange}</span>
 						</div>

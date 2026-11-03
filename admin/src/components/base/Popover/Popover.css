@@ -1,12 +1,12 @@
 .popover {
-	background-color: var(--sl-color-primary-100);
+	background-color: var(--wa-color-brand-90);
 	font-size: 13px;
 	display: flex;
 	justify-content: start;
 	align-items: center;
 	padding: 0 15px;
-	box-shadow: var(--sl-shadow-small);
-	border: 1px solid var(--sl-color-primary-200);
+	box-shadow: var(--wa-shadow-s);
+	border: 1px solid var(--wa-color-brand-80);
 	border-radius: 5px;
 	font-weight: 500;
 	position: relative;
@@ -15,7 +15,7 @@
 	transition:
 		opacity 0.3s,
 		left 0.7s;
-	color: var(--sl-color-primary-600);
+	color: var(--wa-color-brand-40);
 	min-height: 30px;
 }
 
@@ -30,8 +30,8 @@
 	height: 10px;
 	position: absolute;
 	left: -5px;
-	background-color: var(--sl-color-primary-100);
+	background-color: var(--wa-color-brand-90);
 	transform: rotate(45deg);
-	border-left: 1px solid var(--sl-color-primary-200);
-	border-bottom: 1px solid var(--sl-color-primary-200);
+	border-left: 1px solid var(--wa-color-brand-80);
+	border-bottom: 1px solid var(--wa-color-brand-80);
 }

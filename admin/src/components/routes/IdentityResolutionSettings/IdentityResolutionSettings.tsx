@@ -4,18 +4,18 @@ import Section from '../../base/Section/Section';
 import * as icons from '../../../constants/icons';
 import { useContext } from 'react';
 import AppContext from '../../../context/AppContext';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
-import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
-import SlDropdown from '@shoelace-style/shoelace/dist/react/dropdown/index.js';
-import SlMenu from '@shoelace-style/shoelace/dist/react/menu/index.js';
-import SlMenuItem from '@shoelace-style/shoelace/dist/react/menu-item/index.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
+import WaSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
+import WaDropdown from '@awesome.me/webawesome/dist/react/dropdown/index.js';
+import WaDropdownItem from '@awesome.me/webawesome/dist/react/dropdown-item/index.js';
+import type WaDropdownItemElement from '@awesome.me/webawesome/dist/components/dropdown-item/dropdown-item.js';
 import { ObjectType } from '../../../lib/api/types/types';
 import { Identifiers } from '../../../lib/api/types/identifiers';
 import { getSchemaComboboxItems } from '../../helpers/getSchemaComboboxItems';
 import IconWrapper from '../../base/IconWrapper/IconWrapper';
 import { Link } from '../../base/Link/Link';
-import SlCheckbox from '@shoelace-style/shoelace/dist/react/checkbox/index.js';
+import WaCheckbox from '@awesome.me/webawesome/dist/react/checkbox/index.js';
 import { Combobox } from '../../base/Combobox/Combobox';
 
 const IdentityResolutionSettings = () => {
@@ -128,14 +128,14 @@ const IdentityResolutionSettings = () => {
 	return (
 		<div className='identifiers'>
 			{isLoading ? (
-				<SlSpinner
+				<WaSpinner
 					style={
 						{
 							fontSize: '3rem',
 							'--track-width': '6px',
 						} as React.CSSProperties
 					}
-				></SlSpinner>
+				></WaSpinner>
 			) : suitableAsIdentifiers == null ? (
 				<div className='identifiers__no-schema'>
 					<IconWrapper name='person-exclamation' size={40} />
@@ -143,9 +143,9 @@ const IdentityResolutionSettings = () => {
 						The current profile schema doesn't include any property that can be used as an identifier
 					</div>
 					<Link path='profile-unification/schema'>
-						<SlButton variant='primary' className='identifiers__no-schema-button'>
+						<WaButton variant='brand' className='identifiers__no-schema-button'>
 							See schema
-						</SlButton>
+						</WaButton>
 					</Link>
 				</div>
 			) : (
@@ -174,48 +174,62 @@ const IdentityResolutionSettings = () => {
 										items={rowItems}
 										size='small'
 									/>
-									<SlDropdown>
-										<SlButton size='small' className='identifiers__identifier-menu' slot='trigger'>
-											<SlIcon slot='prefix' name='three-dots'></SlIcon>
-										</SlButton>
-										<SlMenu>
-											<SlMenuItem
-												className='identifiers__mapping-up'
-												onClick={() => moveIdentifierUp(position)}
-												disabled={position === 1}
-											>
-												<SlIcon slot='prefix' name='arrow-up-circle' />
-												Move up
-											</SlMenuItem>
-											<SlMenuItem
-												className='identifiers__mapping-down'
-												onClick={() => moveIdentifierDown(position)}
-												disabled={position === identifiers.length}
-											>
-												<SlIcon slot='prefix' name='arrow-down-circle' />
-												Move down
-											</SlMenuItem>
-											<SlMenuItem
-												className='identifiers__mapping-remove'
-												onClick={() => removeIdentifier(position)}
-											>
-												<SlIcon slot='prefix' name='trash3' />
-												Remove
-											</SlMenuItem>
-										</SlMenu>
-									</SlDropdown>
+									<WaDropdown
+										onWaSelect={(e) => {
+											switch ((e.detail.item as WaDropdownItemElement).value) {
+												case 'up':
+													moveIdentifierUp(position);
+													break;
+												case 'down':
+													moveIdentifierDown(position);
+													break;
+												case 'remove':
+													removeIdentifier(position);
+													break;
+											}
+										}}
+									>
+										<WaButton
+											appearance='outlined'
+											size='s'
+											className='identifiers__identifier-menu'
+											slot='trigger'
+										>
+											<WaIcon name='three-dots'></WaIcon>
+										</WaButton>
+										<WaDropdownItem
+											className='identifiers__mapping-up'
+											value='up'
+											disabled={position === 1}
+										>
+											<WaIcon slot='icon' name='arrow-up-circle' />
+											Move up
+										</WaDropdownItem>
+										<WaDropdownItem
+											className='identifiers__mapping-down'
+											value='down'
+											disabled={position === identifiers.length}
+										>
+											<WaIcon slot='icon' name='arrow-down-circle' />
+											Move down
+										</WaDropdownItem>
+										<WaDropdownItem className='identifiers__mapping-remove' value='remove'>
+											<WaIcon slot='icon' name='trash3' />
+											Remove
+										</WaDropdownItem>
+									</WaDropdown>
 								</div>
 							);
 						})}
-						<SlButton
+						<WaButton
 							className='identifiers__add'
-							size='small'
+							size='s'
 							variant='neutral'
 							onClick={onAddIdentifier}
-							circle
+							pill
 						>
-							<SlIcon name='plus' />
-						</SlButton>
+							<WaIcon name='plus' />
+						</WaButton>
 					</Section>
 					<Section
 						title='Automatic unification'
@@ -223,23 +237,18 @@ const IdentityResolutionSettings = () => {
 						padded={true}
 						annotated={true}
 					>
-						<SlCheckbox
+						<WaCheckbox
 							className='identifiers__automatic-execution'
 							checked={runOnBatchImport}
-							onSlChange={onRunOnBatchImportChange}
+							onChange={onRunOnBatchImportChange}
 						>
 							Automatically run Profile Unification when ingesting identities from apps, files and
 							databases
-						</SlCheckbox>
+						</WaCheckbox>
 					</Section>
-					<SlButton
-						className='identifiers__save-button'
-						onClick={onSave}
-						variant='primary'
-						loading={isSaving}
-					>
+					<WaButton className='identifiers__save-button' onClick={onSave} variant='brand' loading={isSaving}>
 						Save
-					</SlButton>
+					</WaButton>
 				</div>
 			)}
 		</div>
