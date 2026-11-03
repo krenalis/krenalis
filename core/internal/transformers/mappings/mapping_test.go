@@ -300,13 +300,14 @@ func TestMappingSharedSlicesAndMaps(t *testing.T) {
 			expected: []any{map[string]any{"keep": "x"}, map[string]any{"keep": "x"}},
 		},
 	}
+
+	// Expressions are evaluated in path order, with "a" before "b".
 	scenarios := []struct {
 		name, convertedPath, originalPath string
-		convertedFirst                    bool
 	}{
-		{"converted first", "a", "b", true},
-		{"original first", "b", "a", false},
-		{"single output", "out", "", true},
+		{"converted first", "a", "b"},
+		{"original first", "b", "a"},
+		{"single output", "out", ""},
 	}
 
 	for _, test := range tests {
@@ -319,9 +320,6 @@ func TestMappingSharedSlicesAndMaps(t *testing.T) {
 				if scenario.originalPath != "" {
 					expressions[scenario.originalPath] = "value"
 					properties = append(properties, types.Property{Name: scenario.originalPath, Type: test.source})
-					if !scenario.convertedFirst {
-						properties[0], properties[1] = properties[1], properties[0]
-					}
 					expected[scenario.originalPath] = test.value()
 				}
 				inSchema := types.Object([]types.Property{{Name: "value", Type: test.source}})
