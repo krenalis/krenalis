@@ -182,7 +182,7 @@ const PipelineHeader = () => {
 					</WaTooltip>
 					<WaButton
 						id={closeTransformationID}
-						className='pipeline__header-close-transformation icon-button'
+						className='pipeline__header-close-transformation'
 						appearance='outlined'
 						onClick={onCloseFullscreenTransformation}
 					>

@@ -135,6 +135,7 @@
 
 .pipeline__header-close-transformation::part(button) {
 	align-items: center;
+	background-color: transparent;
 	border: 0;
 	border-radius: var(--radius);
 	box-shadow: none;
