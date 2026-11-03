@@ -42,7 +42,7 @@ require (
 	github.com/pkg/sftp v1.13.12
 	github.com/prometheus/client_golang v1.25.0
 	github.com/prometheus/client_model v0.6.3
-	github.com/rabbitmq/amqp091-go v1.15.0
+	github.com/rabbitmq/amqp091-go v1.16.0
 	github.com/relvacode/iso8601 v1.8.3
 	github.com/snowflakedb/gosnowflake/v2 v2.3.0
 	github.com/testcontainers/testcontainers-go v0.44.0
