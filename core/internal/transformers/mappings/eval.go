@@ -54,7 +54,7 @@ func appendAsString(b []byte, v any, t types.Type) ([]byte, error) {
 	}
 	switch t.Kind() {
 	case types.BooleanKind:
-		strconv.AppendBool(b, v.(bool))
+		return strconv.AppendBool(b, v.(bool)), nil
 	case types.IntKind:
 		if t.IsUnsigned() {
 			return strconv.AppendUint(b, uint64(v.(uint)), 10), nil
