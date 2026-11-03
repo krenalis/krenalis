@@ -1,10 +1,9 @@
-import React, { useState, useContext, useEffect, useId } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import PipelineContext from '../../../context/PipelineContext';
 import AppContext from '../../../context/AppContext';
 import WaInput from '@awesome.me/webawesome/dist/react/input/index.js';
 import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
-import WaTooltip from '@awesome.me/webawesome/dist/react/tooltip/index.js';
 import { PipelineIssues } from './PipelineIssues';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
 import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
@@ -14,8 +13,6 @@ const PipelineHeader = () => {
 	const [isNameEditable, setIsNameEditable] = useState(false);
 	const [isFullscreenClosing, setIsFullscreenClosing] = useState(false);
 	const [isSaving, setIsSaving] = useState<boolean>(false);
-
-	const closeTransformationID = useId();
 
 	const { handleError } = useContext(AppContext);
 
@@ -173,20 +170,14 @@ const PipelineHeader = () => {
 				<div
 					className={`pipeline__header-buttons-close-transformation${!isFullscreenTransformationOpen ? ' pipeline__header-buttons-close-transformation--hidden' : ''}`}
 				>
-					<WaTooltip
-						className='pipeline__header-close-transformation-tooltip'
-						for={closeTransformationID}
-						placement='bottom'
-					>
-						Exit full mode
-					</WaTooltip>
 					<WaButton
-						id={closeTransformationID}
 						className='pipeline__header-close-transformation'
-						appearance='outlined'
+						variant='brand'
+						appearance='plain'
 						onClick={onCloseFullscreenTransformation}
 					>
-						<WaIcon name='arrows-angle-contract' label='Exit full mode' />
+						Exit full mode
+						<WaIcon name='arrows-angle-contract' />
 					</WaButton>
 				</div>
 			</div>
