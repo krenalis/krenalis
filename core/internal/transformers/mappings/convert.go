@@ -65,7 +65,8 @@ var (
 //
 // purpose specifies the reason for the transformation. If Create or Update,
 // then all the properties required for creation or the update must be present
-// in the returned value.
+// in the returned value. For Create and Update, this requirement also applies
+// when the source and destination are equal array, object, or map types.
 //
 // If the value cannot be converted, it returns v and one of the following:
 //   - errMaxBytesConversion
@@ -361,22 +362,27 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, purpose Purpose) 
 			}
 		case types.FloatKind:
 			n = v.(float64)
-			if dt.IsReal() && !st.IsReal() && (math.IsNaN(n) || math.IsInf(n, 0)) {
-				return v, errRangeConversion
-			}
 			if dt.BitSize() == 32 && st.BitSize() != 32 {
 				n = float64(float32(n))
 			}
 		case types.IntKind:
 			if st.IsUnsigned() {
 				n = float64(v.(uint))
+				if dt.BitSize() == 32 {
+					n = float64(float32(v.(uint)))
+				}
 			} else {
 				n = float64(v.(int))
+				if dt.BitSize() == 32 {
+					n = float64(float32(v.(int)))
+				}
 			}
 		case types.DecimalKind:
-			n, _ = v.(decimal.Decimal).Float64()
 			if dt.BitSize() == 32 {
-				n = float64(float32(n))
+				f, _ := v.(decimal.Decimal).Float32()
+				n = float64(f)
+			} else {
+				n, _ = v.(decimal.Decimal).Float64()
 			}
 		case types.JSONKind:
 			v := v.(json.Value)
@@ -397,6 +403,10 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, purpose Purpose) 
 		if n > max {
 			return v, errMaxConversion
 		}
+		// Bounds may overflow when converted to float(32).
+		if dt.IsReal() && (math.IsNaN(n) || math.IsInf(n, 0)) {
+			return v, errRangeConversion
+		}
 		return n, nil
 	case types.DecimalKind:
 		var err error
@@ -405,7 +415,11 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, purpose Purpose) 
 		case types.StringKind:
 			n, err = decimal.Parse(v.(string), dt.Precision(), dt.Scale())
 		case types.DecimalKind:
-			n, _ = v.(decimal.Decimal)
+			n = v.(decimal.Decimal)
+			_, scale := n.PrecisionScale()
+			if scale > dt.Scale() {
+				return v, errRangeConversion
+			}
 		case types.IntKind:
 			if st.IsUnsigned() {
 				n, err = decimal.Uint(v.(uint), dt.Precision(), dt.Scale())
@@ -691,7 +705,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, purpose Purpose) 
 			it1 := st.Elem()
 			it2 := dt.Elem()
 			sameType := types.Equal(it1, it2)
-			if !sameType {
+			if !sameType || purpose != None {
 				if !inPlace {
 					d = make([]any, len(s))
 				}
@@ -719,7 +733,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, purpose Purpose) 
 		dProperties := dt.Properties()
 		switch sk {
 		case types.ObjectKind:
-			if types.Equal(st, dt) {
+			if types.Equal(st, dt) && purpose == None {
 				return v, nil
 			}
 			s := v.(map[string]any)
@@ -825,7 +839,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, purpose Purpose) 
 		case types.MapKind:
 			vt1 := st.Elem()
 			vt2 := dt.Elem()
-			if types.Equal(vt1, vt2) {
+			if types.Equal(vt1, vt2) && purpose == None {
 				return v, nil
 			}
 			s := v.(map[string]any)
@@ -851,7 +865,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, purpose Purpose) 
 			var err error
 			for _, p := range st.Properties().All() {
 				if value, ok := s[p.Name]; ok {
-					d[p.Name], err = convert(value, p.Type, vt, true, inPlace, purpose)
+					d[p.Name], err = convert(value, p.Type, vt, false, inPlace, purpose)
 					if err != nil {
 						return nil, err
 					}
@@ -880,24 +894,16 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, purpose Purpose) 
 
 func convertStringToDate(s string) (time.Time, error) {
 	month, day, year := -1, -1, -1
-	if len(s) == 10 {
-		if s[4] == '-' && s[7] == '-' {
-			year, month, day = parseUint(s[0:4]), parseUint(s[5:7]), parseUint(s[8:10]) // yyyy-mm-dd
-		} else if s[2] == '/' && s[5] == '/' || s[2] == '.' && s[5] == '.' {
-			month, day, year = parseUint(s[0:2]), parseUint(s[3:5]), parseUint(s[6:10]) // mm/dd/yyyy, mm.dd.yyyy
-		}
-	} else if len(s) == 8 {
-		if s[2] == '-' && s[5] == '-' {
-			year, month, day = parseUint(s[0:2]), parseUint(s[3:5]), parseUint(s[5:8]) // yy-mm-dd
-		} else if s[2] == '/' && s[5] == '/' || s[2] == '.' && s[5] == '.' {
-			month, day, year = parseUint(s[0:2]), parseUint(s[3:5]), parseUint(s[6:10]) // mm/dd/yy, mm.dd.yy
-		}
-	} else if isSimpleFloat(s) {
+	if isSimpleFloat(s) {
 		// Parse as Excel serial date-time.
 		// https://support.microsoft.com/en-us/office/datevalue-function-df8b07d4-7761-4a93-bc33-b7471bbff252
 		days, err := strconv.ParseFloat(s, 64)
 		if err != nil {
 			return time.Time{}, errParseConversion
+		}
+		// Serial day 2958466 is 10000-01-01, outside the supported year range.
+		if days >= 2958466 {
+			return time.Time{}, errYearRangeConversion
 		}
 		if days == 60 {
 			// 1900-02-29 does not exist. Excel returns it for compatibility with Lotus 1-2-3.
@@ -906,8 +912,29 @@ func convertStringToDate(s string) (time.Time, error) {
 		if days > 60 {
 			days--
 		}
-		t := excelEpoch.Add(time.Duration(days) * 24 * time.Hour)
+		t := excelEpoch.AddDate(0, 0, int(days))
 		return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC), nil
+	} else if len(s) == 8 {
+		if s[2] == '-' && s[5] == '-' {
+			year, month, day = parseUint(s[0:2]), parseUint(s[3:5]), parseUint(s[6:8]) // yy-mm-dd
+		} else if s[2] == '/' && s[5] == '/' || s[2] == '.' && s[5] == '.' {
+			month, day, year = parseUint(s[0:2]), parseUint(s[3:5]), parseUint(s[6:8]) // mm/dd/yy, mm.dd.yy
+		}
+		// Follow time.Parse: interpret years 00-68 as 2000-2068 and 69-99 as 1969-1999.
+		// https://pkg.go.dev/time#Parse
+		if year >= 0 {
+			if year < 69 {
+				year += 2000
+			} else {
+				year += 1900
+			}
+		}
+	} else if len(s) == 10 {
+		if s[4] == '-' && s[7] == '-' {
+			year, month, day = parseUint(s[0:4]), parseUint(s[5:7]), parseUint(s[8:10]) // yyyy-mm-dd
+		} else if s[2] == '/' && s[5] == '/' || s[2] == '.' && s[5] == '.' {
+			month, day, year = parseUint(s[0:2]), parseUint(s[3:5]), parseUint(s[6:10]) // mm/dd/yyyy, mm.dd.yyyy
+		}
 	}
 	if month < 1 || month > 12 || day < 1 || day > 31 {
 		return time.Time{}, errParseConversion

@@ -7,6 +7,7 @@ package mappings
 import (
 	"math"
 	"regexp"
+	"strings"
 	"testing"
 	"time"
 
@@ -139,8 +140,22 @@ func TestConvert(t *testing.T) {
 		{types.Int(32), types.Float(64), 5617072831, 5.617072831e+09, true, nil},
 		{types.Int(8).Unsigned(), types.Float(32), uint(256), float64(float32(256)), true, nil},
 		{types.Decimal(20, 10), types.Float(64), decimal.MustParse("767.5018382257"), 767.5018382257, true, nil},
+		{types.Decimal(41, 0), types.Float(32), decimal.MustParse("1e40"), math.Inf(1), true, nil},
+		{types.Decimal(41, 0), types.Float(32).Real(), decimal.MustParse("1e40"), nil, true, errMaxConversion},
 		{types.String(), types.Float(64), "767.5018382257", 767.5018382257, true, nil},
 		{types.JSON(), types.Float(64), json.Value("767.5018382257"), 767.5018382257, true, nil},
+		{types.String(), types.Float(32).Real(), "1.5", 1.5, true, nil},
+		{types.String(), types.Float(32).Real(), "NaN", "NaN", true, errRangeConversion},
+		{types.String(), types.Float(32), "NaN", math.NaN(), true, nil},
+		{types.String(), types.Float(64).Real(), "1.5", 1.5, true, nil},
+		{types.String(), types.Float(64).Real(), "NaN", "NaN", true, errRangeConversion},
+		{types.String(), types.Float(64), "NaN", math.NaN(), true, nil},
+		{types.Float(64), types.Float(64).Real(), math.Inf(1), nil, true, errMaxConversion},
+		{types.Float(64), types.Float(64).Real(), math.Inf(-1), nil, true, errMinConversion},
+		{types.Float(64), types.Float(32).Real().WithFloatRange(0, math.MaxFloat64), math.Inf(1), nil, true, errRangeConversion},
+		{types.Float(64), types.Float(32).Real().WithFloatRange(-math.MaxFloat64, 0), math.Inf(-1), nil, true, errRangeConversion},
+		{types.Float(64).Real(), types.Float(32).Real().WithFloatRange(0, math.MaxFloat64), math.MaxFloat64, nil, true, errRangeConversion},
+		{types.Float(64).Real(), types.Float(32).Real().WithFloatRange(0, math.MaxFloat64), float64(math.MaxFloat32), float64(math.MaxFloat32), true, nil},
 
 		// decimal.
 		{types.Int(32), types.Decimal(13, 3), math.MaxInt32, decimal.MustInt(math.MaxInt32), true, nil},
@@ -413,8 +428,25 @@ func TestConvertStringToDate(t *testing.T) {
 		{"2023-05-24", time.Date(2023, 5, 24, 0, 0, 0, 0, time.UTC), nil},
 		{"05/24/2023", time.Date(2023, 5, 24, 0, 0, 0, 0, time.UTC), nil},
 		{"05.24.2023", time.Date(2023, 5, 24, 0, 0, 0, 0, time.UTC), nil},
+		{"12/31/25", time.Date(2025, 12, 31, 0, 0, 0, 0, time.UTC), nil},
+		{"02/29/00", time.Date(2000, 2, 29, 0, 0, 0, 0, time.UTC), nil},
+		{"68-12-31", time.Date(2068, 12, 31, 0, 0, 0, 0, time.UTC), nil},
+		{"01.01.69", time.Date(1969, 1, 1, 0, 0, 0, 0, time.UTC), nil},
+		{"12/31/xx", time.Time{}, errYearRangeConversion},
+		{"0025-12-31", time.Date(25, 12, 31, 0, 0, 0, 0, time.UTC), nil},
 		{"44927", time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC), nil},
+		{"44927.00", time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC), nil},
+		{"44927.0000", time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC), nil},
+		{"200000.0", time.Date(2447, 7, 30, 0, 0, 0, 0, time.UTC), nil},
+		{"200000.000", time.Date(2447, 7, 30, 0, 0, 0, 0, time.UTC), nil},
+		{"0.0", time.Date(1899, 12, 31, 0, 0, 0, 0, time.UTC), nil},
+		{"2958465.999", time.Date(9999, 12, 31, 0, 0, 0, 0, time.UTC), nil},
+		{"2958466", time.Time{}, errYearRangeConversion},
+		{strings.Repeat("9", 308), time.Time{}, errYearRangeConversion},
+		{"59.0", time.Date(1900, 2, 28, 0, 0, 0, 0, time.UTC), nil},
 		{"60.0", time.Time{}, errParseConversion},
+		{"61.0", time.Date(1900, 3, 1, 0, 0, 0, 0, time.UTC), nil},
+		{strings.Repeat("9", 309), time.Time{}, errParseConversion},
 		{"2023-13-01", time.Time{}, errParseConversion},
 		{"0000-01-01", time.Time{}, errYearRangeConversion},
 		{"2000-02-30", time.Time{}, errParseConversion},
