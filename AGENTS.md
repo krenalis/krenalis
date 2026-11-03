@@ -97,6 +97,8 @@ An unexpected situation is one that callers or invariants rule out, such as an i
 
 ## Tests
 
+Before adding a test function, look for an existing test with a suitable purpose, setup, and assertions. Prefer adding cases there when they fit without complicating its structure. Use a separate test when integration would obscure its purpose or require unrelated setup or branches.
+
 Failure messages take the form `expected ..., got ...`.
 
 Use `t.Context()` for operations whose lifetime follows the test, passing it directly unless it spans a broad part of the test or derives another context. A helper that takes `*testing.T` obtains the context itself; it accepts a separate context only when callers need one with different values, deadline, cancellation, or lifetime.
