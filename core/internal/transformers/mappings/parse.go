@@ -182,7 +182,7 @@ func (p part) appendValue(v any, multipart bool) (any, types.Type) {
 	// Append the value.
 	t := types.String()
 	switch p.typ.Kind() {
-	case types.InvalidKind:
+	case types.InvalidKind, types.JSONKind:
 		return s, t
 	case types.StringKind:
 		return p.value.(string) + s, t
