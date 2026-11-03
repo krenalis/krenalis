@@ -75,7 +75,7 @@ func (warehouse *Snowflake) alterProfileSchema(ctx context.Context, columns []wa
 	// Execute the alter schema queries within a transaction.
 	err = warehouse.execTransaction(ctx, func(tx *sql.Tx) error {
 		for _, query := range queries {
-			_, err := tx.Exec(query)
+			_, err := tx.ExecContext(ctx, query)
 			if err != nil {
 				return snowflake(err)
 			}
