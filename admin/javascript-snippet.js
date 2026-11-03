@@ -29,6 +29,7 @@ if (e.load) {
     "reset",
     "screen",
     "setAnonymousId",
+    "setConsents",
     "startSession",
     "track",
     "user",
