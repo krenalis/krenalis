@@ -44,7 +44,7 @@ const isDate = (s: string): boolean => {
 		return false;
 	}
 	const [year, month, day] = [Number(m[1]), Number(m[2]), Number(m[3])];
-	if (year !== date.getFullYear() || month !== date.getMonth() + 1 || day !== date.getDate()) {
+	if (year !== date.getUTCFullYear() || month !== date.getUTCMonth() + 1 || day !== date.getUTCDate()) {
 		return false;
 	}
 	return MIN_YEAR <= year && year <= MAX_YEAR;
@@ -53,19 +53,17 @@ const isDate = (s: string): boolean => {
 // isDateTime checks whether the string s represents a valid datetime value that
 // can be used as a filter value.
 const isDateTime = (s: string): boolean => {
-	const m = s.match(/^(\d{4})-(\d{2})-(\d{2})T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?(?:[+-]\d{2}:\d{2}|Z)?$/);
-	if (m == null) {
+	const m = s.match(/^\d{4}-\d{2}-\d{2}T(\d{2}):\d{2}:\d{2}(?:\.\d{1,9})?(?:[+-]\d{2}:\d{2}|Z)?$/);
+	if (m == null || Number(m[1]) > 23 || !isDate(s.slice(0, 10))) {
 		return false;
 	}
 	const date = new Date(s);
 	if (Number.isNaN(date.valueOf())) {
 		return false;
 	}
-	let [year, month, day] = [Number(m[1]), Number(m[2]), Number(m[3])];
-	if (year !== date.getFullYear() || month !== date.getMonth() + 1 || day !== date.getDate()) {
-		return false;
-	}
-	year = date.getUTCFullYear();
+	// Check the year again taking the time and offset into account, as
+	// they can move the date into a year outside the supported range.
+	const year = date.getUTCFullYear();
 	return MIN_YEAR <= year && year <= MAX_YEAR;
 };
 
