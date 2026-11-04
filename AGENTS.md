@@ -186,6 +186,10 @@ func (c *cache) reset() {
 }
 ```
 
+## Code comments
+
+A comment that introduces a block of code states the purpose of the block as a whole rather than describing what it does. In particular, do not restate its conditions in prose: a comment that names only some cases, even accurately, suggests that the others are handled elsewhere. This also applies to the Admin.
+
 ## Declaration comments
 
 Every exported package-level declaration and exported method has a declaration comment in the style of the Go standard library, except as noted below. An unexported declaration needs one when it is long, takes or returns several values, or is not obvious.
