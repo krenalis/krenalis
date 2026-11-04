@@ -186,10 +186,6 @@ func (c *cache) reset() {
 }
 ```
 
-## Code comments
-
-A comment that introduces a block of code states the purpose of the block as a whole. In particular, do not restate its conditions in prose: a comment that names only some cases, even accurately, suggests that the others are handled elsewhere. This also applies to the Admin.
-
 ## Declaration comments
 
 Every exported package-level declaration and exported method has a declaration comment in the style of the Go standard library, except as noted below. An unexported declaration needs one when it is long, takes or returns several values, or is not obvious.
@@ -228,6 +224,10 @@ For the TypeScript and React code under `admin/`:
 - Type props with an interface `<ComponentName>Props` immediately before the component, unless shared from another module; destructure and type them in the parameter list, without `React.FC`.
 - Put component styles in a `.css` file next to the component and import it there, with BEM-style names such as `schema-grid`, `schema-grid__search`, and `schema-grid--loading`.
 - For an icon, list its file name in `admin/src/icons.txt` alphabetically and run `npm run makevendor` from `admin/`; unlisted icons are not embedded and fail to load.
+
+# Code comments
+
+A comment on a block of code describes at a high level what the block does, without explaining what the code already makes clear.
 
 # Reuse
 
