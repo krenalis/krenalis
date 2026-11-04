@@ -9,7 +9,7 @@
 	transform: translateY(-50%) translate(-31px);
 	cursor: pointer;
 	transition: transform 0.3s;
-	color: var(--sl-color-neutral-400);
+	color: var(--wa-color-neutral-60);
 }
 
 .grid__nested-rows--expanded > .grid__row-expand {
@@ -37,8 +37,8 @@
 	width: 15px;
 	height: 15px;
 	position: absolute;
-	border-left: 2px solid var(--sl-color-neutral-400);
-	border-bottom: 2px solid var(--sl-color-neutral-400);
+	border-left: 2px solid var(--wa-color-neutral-60);
+	border-bottom: 2px solid var(--wa-color-neutral-60);
 	left: var(--children-indentation); /* set in the component */
 	top: 0;
 	transform: translateY(100%) translate(-30px);

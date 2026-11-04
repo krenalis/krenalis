@@ -5,11 +5,13 @@
 package mappings
 
 import (
+	"maps"
 	"reflect"
 	"testing"
 	"time"
 
 	"github.com/krenalis/krenalis/tools/decimal"
+	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 )
@@ -26,8 +28,8 @@ func TestErrorHelpers(t *testing.T) {
 		t.Fatalf("unexpected boolean json error: %v", bErr)
 	}
 	iErr := errInt32Conversion("fn", "x", 5.5, types.Float(64))
-	if iErr.Error() != "«x», with a value of %!s(float64=5.5), cannot be passed as a 32-bit int to the «fn» function" {
-		t.Fatalf("unexpected int error: %v", iErr)
+	if iErr.Error() != "«x», with a value of 5.5, cannot be passed as a 32-bit int to the «fn» function" {
+		t.Fatalf("expected a conversion error containing the value 5.5, got %v", iErr)
 	}
 	ji := json.Value("\"foo\"")
 	iErr = errInt32Conversion("fn", "x", ji, types.JSON())
@@ -38,6 +40,193 @@ func TestErrorHelpers(t *testing.T) {
 	if tErr.Error() != "«x» (a JSON array) cannot be converted to a string value to be passed to the «up» function" {
 		t.Fatalf("unexpected string error: %v", tErr)
 	}
+}
+
+// TestSubstringArguments checks argument conversions and verifies that errors
+// identify the argument that caused them.
+func TestSubstringArguments(t *testing.T) {
+
+	tests := []struct {
+		name       string
+		expression string
+		typ        types.Type
+		value      any
+		attributes map[string]any
+		expected   any
+		message    string
+	}{
+		{name: "string start", expression: "substring('abc', value)", typ: types.String(), value: "2", expected: "bc"},
+		{name: "string length", expression: "substring('abc', 1, value)", typ: types.String(), value: "2", expected: "ab"},
+		{name: "fractional start", expression: "substring('abc', value)", typ: types.Float(64), value: 1.5, expected: "bc"},
+		{name: "fractional length", expression: "substring('abc', 1, value)", typ: types.Float(64), value: 1.5, expected: "ab"},
+		{name: "JSON numeric start", expression: "substring('abc', value)", typ: types.JSON(), value: json.Value(`2`), expected: "bc"},
+		{name: "JSON numeric length", expression: "substring('abc', 1, value)", typ: types.JSON(), value: json.Value(`2`), expected: "ab"},
+		{name: "unsigned start", expression: "substring('abc', value)", typ: types.Int(8).Unsigned(), value: uint(2), expected: "bc"},
+		{name: "unsigned length", expression: "substring('abc', 1, value)", typ: types.Int(32).Unsigned(), value: uint(2), expected: "ab"},
+		{name: "unsigned start and length", expression: "substring('aé🙂z', value, value)", typ: types.Int(16).Unsigned(), value: uint(2), expected: "é🙂"},
+		{name: "zero unsigned start", expression: "substring('abc', value)", typ: types.Int(24).Unsigned(), value: uint(0), expected: "abc"},
+		{name: "zero unsigned length", expression: "substring('abc', 1, value)", typ: types.Int(64).Unsigned(), value: uint(0), expected: ""},
+		{name: "maximum start", expression: "substring('abc', value)", typ: types.Int(32).Unsigned(), value: uint(2147483647), expected: ""},
+		{name: "maximum length", expression: "substring('abc', 1, value)", typ: types.Int(32).Unsigned(), value: uint(2147483647), expected: "abc"},
+		{name: "minimum start", expression: "substring('abc', value)", typ: types.Int(32), value: -2147483648, expected: "abc"},
+		{name: "null start", expression: "substring('abc', value)", typ: types.String(), value: nil, expected: nil},
+		{name: "null length", expression: "substring('abc', 1, value)", typ: types.String(), value: nil, expected: nil},
+		{
+			name: "invalid start with two arguments", expression: "substring('abc', value)",
+			typ: types.String(), value: "bad",
+			message: "«value», of type string, cannot be passed as int to the «substring» function",
+		},
+		{
+			name: "invalid start with three arguments", expression: "substring('abc', value, 1)",
+			typ: types.String(), value: "bad",
+			message: "«value», of type string, cannot be passed as int to the «substring» function",
+		},
+		{
+			name: "invalid length", expression: "substring('abc', 1, value)",
+			typ: types.String(), value: "bad",
+			message: "«value», of type string, cannot be passed as int to the «substring» function",
+		},
+		{
+			name: "invalid start with dynamic length", expression: "substring('abc', start, length)",
+			typ: types.String(), attributes: map[string]any{"start": "bad", "length": "1"},
+			message: "«start», of type string, cannot be passed as int to the «substring» function",
+		},
+		{
+			name: "invalid length with dynamic start", expression: "substring('abc', start, length)",
+			typ: types.String(), attributes: map[string]any{"start": "1", "length": "bad"},
+			message: "«length», of type string, cannot be passed as int to the «substring» function",
+		},
+		{
+			name: "unsigned start overflow", expression: "substring('abc', value)",
+			typ: types.Int(32).Unsigned(), value: uint(2147483648),
+			message: "«value», with a value of 2147483648, cannot be passed as a 32-bit int to the «substring» function",
+		},
+		{
+			name: "unsigned length overflow", expression: "substring('abc', 1, value)",
+			typ: types.Int(32).Unsigned(), value: uint(2147483648),
+			message: "«value», with a value of 2147483648, cannot be passed as a 32-bit int to the «substring» function",
+		},
+		{
+			name: "signed start underflow", expression: "substring('abc', value)",
+			typ: types.Int(64), value: -2147483649,
+			message: "«value», with a value of -2147483649, cannot be passed as a 32-bit int to the «substring» function",
+		},
+		{
+			name: "signed length underflow", expression: "substring('abc', 1, value)",
+			typ: types.Int(64), value: -2147483649,
+			message: "«value», with a value of -2147483649, cannot be passed as a 32-bit int to the «substring» function",
+		},
+		{
+			name: "float start overflow", expression: "substring('abc', value)",
+			typ: types.Float(64), value: 2147483648.0,
+			message: "«value», with a value of 2.147483648e+09, cannot be passed as a 32-bit int to the «substring» function",
+		},
+		{
+			name: "decimal length overflow", expression: "substring('abc', 1, value)",
+			typ: types.Decimal(10, 0), value: decimal.MustParse("2147483648"),
+			message: "«value», with a value of 2147483648, cannot be passed as a 32-bit int to the «substring» function",
+		},
+		{
+			name: "JSON start object", expression: "substring('abc', value)",
+			typ: types.JSON(), value: json.Value(`{}`),
+			message: "«value», of type JSON object, cannot be passed as an int to the «substring» function",
+		},
+		{
+			name: "JSON length array", expression: "substring('abc', 1, value)",
+			typ: types.JSON(), value: json.Value(`[]`),
+			message: "«value», of type JSON array, cannot be passed as an int to the «substring» function",
+		},
+		{
+			name: "JSON numeric start overflow", expression: "substring('abc', value)",
+			typ: types.JSON(), value: json.Value(`2147483648`),
+			message: "«value», with a value of 2147483648, cannot be passed as a 32-bit int to the «substring» function",
+		},
+		{
+			name: "JSON source array", expression: "substring(value, 1)",
+			typ: types.JSON(), value: json.Value(`[]`),
+			message: "«value» (a JSON array) cannot be converted to a string value to be passed to the «substring» function",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+
+			inSchema := types.Object([]types.Property{
+				{Name: "value", Type: test.typ, Nullable: true},
+				{Name: "start", Type: types.String(), Nullable: true},
+				{Name: "length", Type: types.String(), Nullable: true},
+			})
+			outSchema := types.Object([]types.Property{{Name: "out", Type: types.String(), Nullable: true}})
+			mapping, err := New(map[string]string{"out": test.expression}, inSchema, outSchema, false)
+			if err != nil {
+				t.Fatalf("expected mapping construction to succeed, got %v", err)
+			}
+
+			attributes := map[string]any{"value": test.value}
+			maps.Copy(attributes, test.attributes)
+			got, err := mapping.Transform(attributes, None)
+			if err != nil {
+				if test.message == "" {
+					t.Fatalf("expected transformation to succeed, got %v", err)
+				}
+				if _, ok := errors.AsType[TransformationError](err); !ok {
+					t.Errorf("expected TransformationError, got %T: %v", err, err)
+				}
+				expected := test.message + " while mapping to «out»"
+				if err.Error() != expected {
+					t.Errorf("expected error %q, got %q", expected, err.Error())
+				}
+				return
+			}
+			if test.message != "" {
+				t.Fatalf("expected conversion error %q, got nil", test.message)
+			}
+			expected := map[string]any{"out": test.expected}
+			if !reflect.DeepEqual(got, expected) {
+				t.Errorf("expected output %#v, got %#v", expected, got)
+			}
+
+		})
+	}
+
+}
+
+// TestSubstringEmptyString verifies that substring returns an empty string for
+// empty input, with or without a length argument.
+func TestSubstringEmptyString(t *testing.T) {
+
+	expressions := []string{
+		"substring('', 0)",
+		"substring('', 1)",
+		"substring('', -1)",
+		"substring('', 2)",
+		"substring('', 1, 1)",
+		"substring('', 0, 1)",
+		"substring('', -1, 1)",
+		"substring('', 1, 0)",
+		"substring('', 2, 1)",
+	}
+	expectedType := types.String()
+
+	for _, expression := range expressions {
+		t.Run(expression, func(t *testing.T) {
+			expr, _, err := Compile(expression, types.Type{}, expectedType)
+			if err != nil {
+				t.Fatalf("expected compilation to succeed, got %v", err)
+			}
+			got, typ, err := expr.Eval(nil)
+			if err != nil {
+				t.Fatalf("expected evaluation to succeed, got %v", err)
+			}
+			if got != "" {
+				t.Errorf("expected an empty string, got %#v", got)
+			}
+			if !types.Equal(typ, expectedType) {
+				t.Errorf("expected type %s, got %s", expectedType, typ)
+			}
+		})
+	}
+
 }
 
 // Test_appendAsString ensures values are appended correctly as strings.
@@ -51,7 +240,8 @@ func Test_appendAsString(t *testing.T) {
 	}{
 		{nil, types.String(), "start", nil},
 		{"foo", types.String(), "startfoo", nil},
-		{true, types.Boolean(), "start", errInvalidConversion},
+		{true, types.Boolean(), "starttrue", nil},
+		{false, types.Boolean(), "startfalse", nil},
 		{int(3), types.Int(32), "start3", nil},
 		{uint(4), types.Int(16).Unsigned(), "start4", nil},
 		{1.5, types.Float(64), "start1.5", nil},
@@ -196,6 +386,8 @@ func Test_substring(t *testing.T) {
 		expected string
 	}{
 		{"", 1, 0, ""},
+		{"", 1, 1, ""},
+		{"", 1, -1, ""},
 		{"", 5, 3, ""},
 		{"a", 1, 1, "a"},
 		{"a", 1, -1, "a"},
@@ -220,6 +412,22 @@ func Test_substring(t *testing.T) {
 		{"日本の文化はとても興味深いです。", 1, 5, "日本の文化"},
 		{"日本の文化はとても興味深いです。", 6, 7, "はとても興味深"},
 		{"日本の文化はとても興味深いです。", 10, -1, "興味深いです。"},
+		{"é🙂x", 2, 1, "🙂"},
+		{"\uFFFDx", 1, 1, "\uFFFD"},
+		{"é\uFFFD", 2, 10, "\uFFFD"},
+		{"\xff", 1, 1, "\xff"},
+		{"\xffab", 1, 1, "\xff"},
+		{"\xffé", 1, 1, "\xff"},
+		{"é\xff", 2, 1, "\xff"},
+		{"\xff\uFFFD", 1, 1, "\xff"},
+		{"\uFFFD\xff", 1, 1, "\uFFFD"},
+		{"\x80", 1, 1, "\x80"},
+		{"\xe2\x82", 1, 1, "\xe2"},
+		{"\xe2\x82", 2, 1, "\x82"},
+		{"\xe2\x82", 1, 10, "\xe2\x82"},
+		{"\xc0\xaf", 1, 1, "\xc0"},
+		{"\xed\xa0\x80", 1, 1, "\xed"},
+		{"\xf4\x90\x80\x80", 1, 1, "\xf4"},
 	}
 
 	for _, test := range tests {
