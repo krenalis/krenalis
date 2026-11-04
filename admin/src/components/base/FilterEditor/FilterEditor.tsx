@@ -590,7 +590,7 @@ const FilterEditor = ({
 							) : (
 								<>
 									<WaTooltip className='app-tooltip' for={removeButtonID}>
-										{`Remove condition ${conditionNumber}`}
+										Remove condition
 									</WaTooltip>
 									{removeButton}
 								</>
@@ -604,6 +604,7 @@ const FilterEditor = ({
 
 	const renderGroup = (group: Filter, groupPath: number[], depth: number): ReactNode => {
 		const isRoot = depth === 1;
+		const currentGroupNumber = isRoot ? undefined : ++groupNumber;
 		const removeGroupTooltip = group.rules.some(isFilterGroup) ? 'Remove groups' : 'Remove group';
 
 		return (
@@ -642,7 +643,7 @@ const FilterEditor = ({
 								disabled={disabled}
 							>
 								<WaIcon name='x' aria-hidden='true' />
-								<span className='filter-editor__remove-rule-label'>Remove group</span>
+								<span className='filter-editor__remove-rule-label'>{`Remove group ${currentGroupNumber}`}</span>
 							</WaButton>
 						</div>
 					)}
@@ -700,6 +701,7 @@ const FilterEditor = ({
 	};
 
 	let conditionNumber = 0;
+	let groupNumber = 0;
 
 	return (
 		<>

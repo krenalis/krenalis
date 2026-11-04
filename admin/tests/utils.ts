@@ -246,7 +246,7 @@ const fillUserPipelineFilters = async (page: Page): Promise<void> => {
 	);
 	await expect(rootRemoveConditionButton).toHaveJSProperty('disabled', false);
 	await expect(rootRemoveConditionTooltip).toHaveCount(1);
-	await expect(rootRemoveConditionTooltip).toHaveText('Remove condition 1');
+	await expect(rootRemoveConditionTooltip).toHaveText('Remove condition');
 
 	await page.locator('.filter-editor__add-condition').click();
 	await page.locator('.filter-editor__add-condition').click();
@@ -273,6 +273,7 @@ const fillUserPipelineFilters = async (page: Page): Promise<void> => {
 	await expect(nestedGroup.locator('.filter-editor__logical')).toHaveJSProperty('value', 'or');
 	await expect(nestedRemoveGroupTooltip).toHaveCount(1);
 	await expect(nestedRemoveGroupTooltip).toHaveText('Remove group');
+	await expect(nestedGroup.getByRole('button', { name: 'Remove group 1', exact: true })).toBeVisible();
 
 	const nestedRemoveConditionButtons = nestedGroup.locator(
 		':scope > .filter-editor__group-rules > .filter-editor__rule:not(.filter-editor__rule--group) .filter-editor__remove-condition',
@@ -288,8 +289,8 @@ const fillUserPipelineFilters = async (page: Page): Promise<void> => {
 	await expect(nestedRemoveConditionTooltips).toHaveCount(2);
 	await expect(nestedRemoveConditionButtons.first()).toHaveAccessibleName('Remove condition 4');
 	await expect(nestedRemoveConditionButtons.nth(1)).toHaveAccessibleName('Remove condition 5');
-	await expect(nestedRemoveConditionTooltips.first()).toHaveText('Remove condition 4');
-	await expect(nestedRemoveConditionTooltips.nth(1)).toHaveText('Remove condition 5');
+	await expect(nestedRemoveConditionTooltips.first()).toHaveText('Remove condition');
+	await expect(nestedRemoveConditionTooltips.nth(1)).toHaveText('Remove condition');
 
 	await nestedRemoveConditionButtons.nth(1).click();
 	await expect(nestedRemoveConditionButtons).toHaveCount(1);
@@ -305,7 +306,7 @@ const fillUserPipelineFilters = async (page: Page): Promise<void> => {
 	);
 	await childGroup
 		.locator(':scope > .filter-editor__group-header')
-		.getByRole('button', { name: 'Remove group' })
+		.getByRole('button', { name: 'Remove group 2', exact: true })
 		.click();
 	await expect(childGroup).toHaveCount(0);
 	await expect(nestedRemoveConditionButtons).toHaveCount(1);
@@ -318,7 +319,7 @@ const fillUserPipelineFilters = async (page: Page): Promise<void> => {
 	await nestedGroup
 		.first()
 		.locator(':scope > .filter-editor__group-header')
-		.getByRole('button', { name: 'Remove group' })
+		.getByRole('button', { name: 'Remove group 1', exact: true })
 		.click();
 
 	const filters = page.locator('.filter-editor__filter');
@@ -374,7 +375,7 @@ const fillUserPipelineFilters = async (page: Page): Promise<void> => {
 
 	await expect(nestedGroup.locator('.filter-editor__group-subject')).toHaveText('matching');
 	await expect(nestedGroup.locator('.filter-editor__logical')).toHaveJSProperty('value', 'and');
-	const removeGroupButton = nestedGroup.getByRole('button', { name: 'Remove group' });
+	const removeGroupButton = nestedGroup.getByRole('button', { name: 'Remove group 1', exact: true });
 	await expect(removeGroupButton).toBeAttached();
 	await removeGroupButton.click();
 };

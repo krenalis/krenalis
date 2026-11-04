@@ -164,6 +164,40 @@ for (const [index, value] of values.entries()) {
 	});
 }
 
+test(`Number removable groups across nested and sibling groups`, async ({ page }) => {
+	await page.route(/\/v1\/profiles\/query$/, (route) =>
+		route.fulfill({ json: { profiles, total: profiles.length, hasNext: false } }),
+	);
+	await page.goto('https://example.test/');
+	await page.addStyleTag({ content: componentStyles });
+	await page.addScriptTag({ content: componentScript });
+	const filters = page.locator('.profiles-list__filters');
+	await filters.getByRole('button', { name: 'Change', exact: true }).click();
+	const rootActions = filters.locator('.filter-editor__group--root > .filter-editor__group-actions');
+	await rootActions.getByRole('button', { name: 'Add a group', exact: true }).click();
+	const groups = filters.locator('.filter-editor__group:not(.filter-editor__group--root)');
+	await groups.first().getByRole('button', { name: 'Add a group', exact: true }).click();
+	await rootActions.getByRole('button', { name: 'Add a group', exact: true }).click();
+	const removeGroups = filters.locator('.filter-editor__remove-group');
+	await expect(removeGroups).toHaveCount(3);
+	for (let index = 0; index < 3; index++) {
+		await expect(removeGroups.nth(index).getByRole('button')).toHaveAccessibleName(`Remove group ${index + 1}`);
+	}
+	await expect(filters.locator('.filter-editor__remove-group-wrapper wa-tooltip')).toHaveText([
+		'Remove groups',
+		'Remove group',
+		'Remove group',
+	]);
+	await expect(filters.locator('.filter-editor__remove-condition-wrapper wa-tooltip')).toHaveText([
+		'Remove condition',
+		'Remove condition',
+	]);
+	await filters.getByRole('button', { name: 'Remove group 1', exact: true }).click();
+	await expect(removeGroups).toHaveCount(1);
+	await expect(removeGroups.getByRole('button')).toHaveAccessibleName('Remove group 1');
+	await expect(groups.getByRole('button', { name: 'Remove condition 2', exact: true })).toBeDisabled();
+});
+
 test(`Automatically show completed previews, preserve focus and remember the preference`, async ({ page }) => {
 	const countFilters: (Filter | null)[] = [];
 	const gridFilters: (Filter | null)[] = [];
