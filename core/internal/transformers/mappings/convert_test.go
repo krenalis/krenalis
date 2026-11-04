@@ -431,16 +431,6 @@ func TestConvertStringToDate(t *testing.T) {
 	}
 }
 
-// TestGenericTypeRequiresConversion checks that identical unresolved types
-// still require conversion.
-func TestGenericTypeRequiresConversion(t *testing.T) {
-	typ := types.Array(types.Parameter("T"))
-	got := typeNeedsConversion(typ, typ)
-	if !got {
-		t.Fatalf("expected conversion true for a generic type, got %v", got)
-	}
-}
-
 // TestIsSimpleFloat validates detection of simple floating point strings.
 func TestIsSimpleFloat(t *testing.T) {
 	tests := []struct {

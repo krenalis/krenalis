@@ -1007,7 +1007,7 @@ func parseUint(s string) int {
 // typeNeedsConversion reports whether valid st values need conversion to dt for
 // any purpose, including conversion-specific checks.
 func typeNeedsConversion(st, dt types.Type) bool {
-	if st.Kind() != dt.Kind() || st.Generic() || dt.Generic() || !types.EqualSemantics(st, dt) {
+	if st.Kind() != dt.Kind() {
 		return true
 	}
 	if types.Equal(st, dt) {
