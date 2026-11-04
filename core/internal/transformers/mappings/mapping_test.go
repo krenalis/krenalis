@@ -153,7 +153,7 @@ func TestMappingReusePreservesBehavior(t *testing.T) {
 		{"optional update field", types.AsRole(updateRequired, types.Source), updateRequired, map[string]any{}, "source", true, []Purpose{Update}},
 		{"array element constraints", types.Array(wide), types.Array(narrow), []any{map[string]any{"number": 1000}}, "source", true, allPurposes},
 		{"optional map write field", types.Map(types.AsRole(optional, types.Source)), types.Map(optional), map[string]any{"key": map[string]any{}}, "source", true, writePurposes},
-		{"nil JSON write metadata", types.AsRole(payload, types.Source), payload, map[string]any{"payload": nil}, "source", true, allPurposes},
+		{"JSON null write metadata", types.AsRole(payload, types.Source), payload, map[string]any{"payload": json.Value("null")}, "source", false, nil},
 		{"nullable JSON write metadata", types.AsRole(nullablePayload, types.Source), nullablePayload, map[string]any{"payload": nil}, "source", false, nil},
 		{"nullability", nullable, nonNullable, map[string]any{"name": nil}, "source", true, allPurposes},
 		{"array minimum", types.Array(types.Int(32)), types.Array(types.Int(32)).WithMinElements(2), []any{1}, "source", true, allPurposes},

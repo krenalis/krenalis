@@ -1027,10 +1027,6 @@ func typeNeedsConversion(st, dt types.Type) bool {
 			if p.ReadOptional && (d.CreateRequired || d.UpdateRequired) {
 				return true
 			}
-			// Object conversion rejects nil in non-nullable JSON properties.
-			if !p.Nullable && p.Type.IsJSON() {
-				return true
-			}
 			if typeNeedsConversion(p.Type, d.Type) {
 				return true
 			}
