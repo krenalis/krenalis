@@ -275,7 +275,7 @@ func TestConvert(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		got, err := convert(test.value, test.t1, test.t2, test.nullable, false, Create)
+		got, err := convert(test.value, test.t1, test.t2, test.nullable, Create)
 		if err != nil {
 			if test.err != nil {
 				if test.err != err {
@@ -379,7 +379,7 @@ func TestConvertArrayUniqueness(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got, err := convert(test.value, test.source, test.destination, false, false, None)
+			got, err := convert(test.value, test.source, test.destination, false, None)
 			if err != nil {
 				if !test.wantError {
 					t.Fatal(err)
