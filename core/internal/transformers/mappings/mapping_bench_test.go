@@ -14,7 +14,7 @@ import (
 
 // BenchmarkMappingTransform measures time and allocations per transformed
 // record. The Mapping, schemas, and input records are constructed outside the
-// timer. The same source supports main and the source-preservation PR's API.
+// timer.
 func BenchmarkMappingTransform(b *testing.B) {
 
 	integers := make([]any, 1024)
@@ -65,16 +65,7 @@ func BenchmarkMappingTransform(b *testing.B) {
 			inSchema := types.Object([]types.Property{{Name: "source", Type: test.source}})
 			outSchema := types.Object([]types.Property{{Name: "target", Type: test.target, CreateRequired: true}})
 			expressions := map[string]string{"target": test.expr}
-			var mapping *Mapping
-			var err error
-			switch constructor := any(New).(type) {
-			case func(map[string]string, types.Type, types.Type) (*Mapping, error):
-				mapping, err = constructor(expressions, inSchema, outSchema)
-			case func(map[string]string, types.Type, types.Type, bool) (*Mapping, error):
-				mapping, err = constructor(expressions, inSchema, outSchema, false)
-			default:
-				b.Fatalf("expected a supported Mapping constructor, got %T", constructor)
-			}
+			mapping, err := New(expressions, inSchema, outSchema)
 			if err != nil {
 				b.Fatalf("expected mapping creation to succeed, got %v", err)
 			}
