@@ -212,7 +212,6 @@ const ProfilesList = () => {
 				</div>
 				<div className='profiles-list__identity-resolution'>
 					<WaButton
-						appearance='outlined'
 						onClick={() => setAskResolveIdentitiesConfirmation(true)}
 						variant='brand'
 						disabled={isLoadingIdentityResolution || isIdentityResolutionRunning}

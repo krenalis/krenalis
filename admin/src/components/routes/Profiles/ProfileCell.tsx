@@ -29,12 +29,14 @@ const ProfileCell = ({ propertyRoles, attributes, countryFormat, profileID }: Pr
 				photo={photo}
 				profileID={profileID}
 			/>
-			{(name !== '' || country != null) && (
-				<div className='profiles-list__profile-details'>
-					{name !== '' && <div className='profiles-list__profile-name'>{name}</div>}
-					{country != null && <div className='profiles-list__profile-country'>{country}</div>}
+			<div className='profiles-list__profile-details'>
+				<div
+					className={`profiles-list__profile-name${name === '' ? ' profiles-list__profile-name--unavailable' : ''}`}
+				>
+					{name === '' ? 'Name not available' : name}
 				</div>
-			)}
+				{country != null && <div className='profiles-list__profile-country'>{country}</div>}
+			</div>
 		</div>
 	);
 };

@@ -12,10 +12,6 @@ interface ProfileThumbnailProps {
 
 const ProfileThumbnail = ({ className, firstName, lastName, photo, profileID }: ProfileThumbnailProps) => {
 	const initials = getProfileInitials(firstName, lastName);
-	if (photo == null && initials === '') {
-		return null;
-	}
-
 	const name = [firstName, lastName].filter((value) => value != null).join(' ');
 	const colors = getProfileAvatarColors(profileID);
 	const style = {

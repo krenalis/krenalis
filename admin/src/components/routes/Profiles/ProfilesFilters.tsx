@@ -4,6 +4,7 @@ import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import WaButtonElement from '@awesome.me/webawesome/dist/components/button/button.js';
 import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import WaSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
+import WaSwitch from '@awesome.me/webawesome/dist/react/switch/index.js';
 import WaTooltip from '@awesome.me/webawesome/dist/react/tooltip/index.js';
 import { FilterEditor } from '../../base/FilterEditor/FilterEditor';
 import { Filter, FilterRule } from '../../../lib/api/types/pipeline';
@@ -12,6 +13,7 @@ import { ObjectType } from '../../../lib/api/types/types';
 import { isFilterGroup, validateAndNormalizeFilter } from '../../../lib/core/pipeline';
 import { formatNumber } from '../../../utils/formatNumber';
 import { serializeFilter } from '../../../utils/filters';
+import { PROFILES_SHOW_MATCHES_AUTOMATICALLY_KEY } from '../../../constants/storage';
 import { getPropertyPathDisplayValue } from '../../helpers/getPropertyPathDisplayValue';
 import { ProfileSchemaProperties } from './Profiles.types';
 import {
@@ -39,7 +41,7 @@ interface FailedGridRequest {
 	message: string;
 }
 
-type GridMaterializationIntent = 'collapse' | 'remove' | 'show';
+type GridMaterializationIntent = 'auto' | 'collapse' | 'remove' | 'show';
 
 interface ExpectedDisplayedContext {
 	context: string;
@@ -319,6 +321,13 @@ const ProfilesFilters = ({
 		createProfilesFilterSession(appliedFilter, profilesTotal),
 	);
 	const [isOpen, setIsOpen] = useState(false);
+	const [shouldAutoUpdateProfiles, setShouldAutoUpdateProfiles] = useState(() => {
+		try {
+			return localStorage.getItem(PROFILES_SHOW_MATCHES_AUTOMATICALLY_KEY) === 'true';
+		} catch {
+			return false;
+		}
+	});
 	const [pendingGridContext, setPendingGridContext] = useState<string>();
 	const [gridFailure, setGridFailure] = useState<FailedGridRequest>();
 	const [resultsUpdatedContext, setResultsUpdatedContext] = useState<string>();
@@ -333,6 +342,14 @@ const ProfilesFilters = ({
 	const displayedContextRef = useRef<string>();
 	const panelRef = useRef<HTMLDivElement>(null);
 	const triggerRef = useRef<WaButtonElement>(null);
+
+	useEffect(() => {
+		try {
+			localStorage.setItem(PROFILES_SHOW_MATCHES_AUTOMATICALLY_KEY, String(shouldAutoUpdateProfiles));
+		} catch (error) {
+			console.error(`cannot write the automatic profile matches preference on local storage: ${error}`);
+		}
+	}, [shouldAutoUpdateProfiles]);
 
 	const updateSession = useCallback((update: (current: FilterSession) => FilterSession) => {
 		const next = update(sessionRef.current);
@@ -592,7 +609,7 @@ const ProfilesFilters = ({
 				if (gridRequestGenerationRef.current === generation) {
 					expectedDisplayedContextRef.current = undefined;
 					setPendingGridContext(undefined);
-					setGridFailure({ entry: snapshot, intent, message: 'Unable to show profiles.' });
+					setGridFailure({ entry, intent, message: 'Unable to show profiles.' });
 				}
 			}
 		},
@@ -740,8 +757,30 @@ const ProfilesFilters = ({
 	const canShowCurrentPreview = draftMatchesCurrentPreview && previewFilterDiffersFromGrid;
 	const isCurrentResultsUpdateConfirmed =
 		resultsUpdatedContext === currentPreviewContext && session.pending == null && draftMatchesCurrentPreview;
+	const canUpdateResults = !isCurrentResultsUpdateConfirmed && session.pending == null && canShowCurrentPreview;
 	const isUpdatingGridResults = pendingGridContext != null;
 	const textValueCommitDelayMs = previewTiming.suspended ? undefined : previewTiming.delayMs;
+
+	useEffect(() => {
+		if (
+			!shouldAutoUpdateProfiles ||
+			!isOpen ||
+			!canUpdateResults ||
+			isShowingCurrentPreview ||
+			gridFailure?.entry === historyEntry
+		) {
+			return;
+		}
+		void materializeProfiles(historyEntry, 'auto');
+	}, [
+		canUpdateResults,
+		gridFailure,
+		historyEntry,
+		isOpen,
+		isShowingCurrentPreview,
+		materializeProfiles,
+		shouldAutoUpdateProfiles,
+	]);
 
 	const historyActions = (
 		<>
@@ -788,7 +827,12 @@ const ProfilesFilters = ({
 						disabled={isOpen && isShowingCurrentPreview}
 						onClick={isOpen ? collapseFilters : () => setEditorOpen(true)}
 					>
-						{isOpen ? 'Done' : 'Edit'}
+						<WaIcon
+							slot='start'
+							name={isOpen ? 'arrows-angle-contract' : 'arrows-angle-expand'}
+							aria-hidden='true'
+						/>
+						{isOpen ? 'Reduce' : 'Change'}
 					</WaButton>
 				</div>
 				<div
@@ -860,6 +904,15 @@ const ProfilesFilters = ({
 									</div>
 								)}
 							</div>
+							<div className='profiles-list__filter-options'>
+								<WaSwitch
+									size='s'
+									checked={shouldAutoUpdateProfiles}
+									onChange={(event: any) => setShouldAutoUpdateProfiles(event.target.checked)}
+								>
+									Show matches automatically
+								</WaSwitch>
+							</div>
 						</section>
 						<div className='profiles-list__filter-preview-context'>
 							<div className='profiles-list__filter-overview'>
@@ -906,7 +959,7 @@ const ProfilesFilters = ({
 								<span>Calculating profiles…</span>
 							</div>
 						)}
-						{!isCurrentResultsUpdateConfirmed && session.pending == null && canShowCurrentPreview ? (
+						{!shouldAutoUpdateProfiles && canUpdateResults ? (
 							<WaButton
 								className='profiles-list__filter-update-results'
 								size='s'

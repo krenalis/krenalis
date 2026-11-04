@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext, useMemo, useRef, useId } from 'react';
+import React, { useState, useEffect, useContext, useLayoutEffect, useMemo, useRef, useId } from 'react';
 import { useProfileDrawer } from './useProfileDrawer';
 import { ProfileTab } from './Profiles.types';
 import AppContext from '../../../context/AppContext';
@@ -19,14 +19,24 @@ import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
 import { ProfileSchemaProperties } from './Profiles.types';
 import { getProfileAttributeString, getProfilePropertyLabel } from './Profiles.helpers';
 import { ProfileThumbnail } from './ProfileThumbnail';
+import { ResponseProfile } from '../../../lib/api/types/responses';
+
+interface ClosingProfile {
+	context: string;
+	id: string;
+	resources: ReturnType<typeof useProfileDrawer>;
+	summary?: ResponseProfile;
+}
 
 const ProfileDrawer = () => {
 	const drawerID = useId();
 	const [selectedTab, setSelectedTab] = useState<ProfileTab>();
+	const [closingProfile, setClosingProfile] = useState<ClosingProfile>();
+	const drawerRef = useRef<HTMLElement | null>(null);
 
 	const { connections, workspaces, selectedWorkspace } = useContext(AppContext);
 	const {
-		activeProfileID,
+		activeProfileID: selectedProfileID,
 		canNavigateNextProfile,
 		canNavigatePreviousProfile,
 		profileSchema,
@@ -38,6 +48,23 @@ const ProfileDrawer = () => {
 		profiles,
 		setActiveProfileID,
 	} = useContext(ProfilesContext);
+	const profileContext = `${selectedWorkspace}:${profilesExecutionID}:${profilesQueryKey}`;
+	const isClosing = selectedProfileID === '' && closingProfile?.context === profileContext;
+	const activeProfileID = isClosing ? closingProfile.id : selectedProfileID;
+
+	useEffect(() => {
+		setClosingProfile((current) =>
+			selectedProfileID !== '' || current?.context !== profileContext ? undefined : current,
+		);
+	}, [profileContext, selectedProfileID]);
+
+	const currentResources = useProfileDrawer(
+		selectedProfileID,
+		selectedTab,
+		profileSchema,
+		`${profilesExecutionID}:${profilesQueryKey}`,
+		markProfileSchemaNotAligned,
+	);
 	const {
 		attributes,
 		events,
@@ -46,13 +73,22 @@ const ProfileDrawer = () => {
 		isEventsLoading,
 		isIdentitiesLoading,
 		isProfileMissing,
-	} = useProfileDrawer(
-		activeProfileID,
-		selectedTab,
-		profileSchema,
-		`${profilesExecutionID}:${profilesQueryKey}`,
-		markProfileSchemaNotAligned,
-	);
+	} = isClosing ? closingProfile.resources : currentResources;
+
+	useLayoutEffect(() => {
+		if (drawerRef.current == null || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+			return;
+		}
+		const animations = Array.from(
+			drawerRef.current.querySelectorAll('.profile-drawer__top-section, wa-tab-group'),
+			(element) => element.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 180, easing: 'ease-out' }),
+		);
+		return () => {
+			for (const animation of animations) {
+				animation.cancel();
+			}
+		};
+	}, [activeProfileID, attributes, events, identities, isProfileMissing]);
 
 	const workspace = useMemo(
 		() => workspaces.find((w) => w.id === selectedWorkspace),
@@ -87,7 +123,7 @@ const ProfileDrawer = () => {
 		setSelectedTab(e.detail.name);
 	};
 
-	const summary = profiles.find((profile) => profile.kpid === activeProfileID);
+	const summary = isClosing ? closingProfile.summary : profiles.find((profile) => profile.kpid === activeProfileID);
 	const displayedAttributes = isProfileMissing ? undefined : (attributes ?? summary?.attributes);
 	const profilePhoto = getProfileAttributeString(
 		displayedAttributes,
@@ -122,7 +158,26 @@ const ProfileDrawer = () => {
 	}
 
 	return (
-		<aside className='profile-drawer' aria-label='Profile details'>
+		<aside
+			ref={(element) => {
+				drawerRef.current = element;
+				if (element != null) {
+					element.inert = isClosing;
+				}
+			}}
+			className={`profile-drawer${isClosing ? ' profile-drawer--closing' : ''}`}
+			aria-label='Profile details'
+			aria-hidden={isClosing}
+			onAnimationEnd={(event) => {
+				if (
+					event.target === event.currentTarget &&
+					event.animationName === 'profile-drawer-exit' &&
+					isClosing
+				) {
+					setClosingProfile(undefined);
+				}
+			}}
+		>
 			<div className='profile-drawer__navigation'>
 				<WaButton
 					className='icon-button'
@@ -146,7 +201,15 @@ const ProfileDrawer = () => {
 					appearance='plain'
 					className='icon-button profile-drawer__close'
 					aria-label='Close profile details'
-					onClick={() => setActiveProfileID('')}
+					onClick={() => {
+						setClosingProfile({
+							context: profileContext,
+							id: activeProfileID,
+							resources: currentResources,
+							summary,
+						});
+						setActiveProfileID('');
+					}}
 				>
 					<WaIcon name='x-lg' label='Close profile details' />
 				</WaButton>
@@ -160,11 +223,19 @@ const ProfileDrawer = () => {
 					profileID={activeProfileID}
 				/>
 				<div className='profile-drawer__profile-properties'>
-					<span className='profile-drawer__first-name'>{profileFirstName ?? ''}</span>{' '}
-					<span className='profile-drawer__last-name'>{profileLastName ?? ''}</span>
+					{profileFirstName == null && profileLastName == null ? (
+						<span className='profile-drawer__name--unavailable'>Name not available</span>
+					) : (
+						<>
+							<span className='profile-drawer__first-name'>{profileFirstName ?? ''}</span>{' '}
+							<span className='profile-drawer__last-name'>{profileLastName ?? ''}</span>
+						</>
+					)}
 					<div className='profile-drawer__email'>{profileEmail ?? ''}</div>
 					<span className='profile-drawer__kpid'>
-						<WaTooltip for={`${drawerID}-kpid`}>Krenalis Profile ID</WaTooltip>
+						<WaTooltip className='app-tooltip' for={`${drawerID}-kpid`}>
+							Krenalis Profile ID
+						</WaTooltip>
 						<WaIcon id={`${drawerID}-kpid`} name='info-circle-fill' />
 						KPID: <span className='profile-drawer__kpid-value'>{activeProfileID}</span>
 					</span>

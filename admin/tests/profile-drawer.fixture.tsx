@@ -22,6 +22,7 @@ declare global {
 }
 
 const PROFILE_ID = '00000000-0000-4000-8000-000000000001';
+const NEXT_PROFILE_ID = '00000000-0000-4000-8000-000000000002';
 const workspace: Workspace = {
 	id: 'workspace111',
 	name: 'Test workspace',
@@ -89,8 +90,19 @@ const Fixture = () => {
 	const [activeProfileID, setActiveProfileID] = useState(PROFILE_ID);
 	return (
 		<AppContext.Provider value={appContext}>
-			<ProfilesContext.Provider value={{ ...profilesContext, activeProfileID, setActiveProfileID }}>
+			<ProfilesContext.Provider
+				value={{
+					...profilesContext,
+					activeProfileID,
+					setActiveProfileID,
+					canNavigateNextProfile: activeProfileID === PROFILE_ID,
+					canNavigatePreviousProfile: activeProfileID === NEXT_PROFILE_ID,
+					navigateProfile: (direction) =>
+						setActiveProfileID(direction === 'next' ? NEXT_PROFILE_ID : PROFILE_ID),
+				}}
+			>
 				<div className='profiles-list__grid-container profile-drawer-fixture'>
+					<button onClick={() => setActiveProfileID(PROFILE_ID)}>Open profile details</button>
 					<ProfileDrawer />
 				</div>
 			</ProfilesContext.Provider>
