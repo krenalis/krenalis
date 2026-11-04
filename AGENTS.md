@@ -188,7 +188,7 @@ func (c *cache) reset() {
 
 ## Code comments
 
-A comment that introduces a block of code states the purpose of the block as a whole rather than describing what it does. In particular, do not restate its conditions in prose: a comment that names only some cases, even accurately, suggests that the others are handled elsewhere. This also applies to the Admin.
+A comment that introduces a block of code states the purpose of the block as a whole. In particular, do not restate its conditions in prose: a comment that names only some cases, even accurately, suggests that the others are handled elsewhere. This also applies to the Admin.
 
 ## Declaration comments
 
