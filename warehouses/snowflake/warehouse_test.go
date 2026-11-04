@@ -293,6 +293,56 @@ func Test_Merge(t *testing.T) {
 	}
 }
 
+// Test_QueryReadOnly verifies that QueryReadOnly returns rows for valid
+// read-only statements.
+func Test_QueryReadOnly(t *testing.T) {
+
+	wh, db := newTestSnowflakeWarehouse(t)
+
+	mustExecSQL(t, db, `CREATE TABLE "TEST_QUERYREADONLY" ("ID" INTEGER PRIMARY KEY, "NAME" VARCHAR)`)
+	mustExecSQL(t, db, `INSERT INTO "TEST_QUERYREADONLY" ("ID", "NAME") VALUES (1, 'a'), (2, 'b')`)
+
+	rows, columnCount, err := wh.QueryReadOnly(t.Context(), `SELECT "ID", "NAME" FROM "TEST_QUERYREADONLY" ORDER BY "ID"`)
+	if err != nil {
+		t.Fatalf("QueryReadOnly returned error: %s", err)
+	}
+	defer rows.Close()
+	if columnCount != 2 {
+		t.Fatalf("expected 2 columns, got %d", columnCount)
+	}
+
+	var id int64
+	var name string
+	if !rows.Next() {
+		t.Fatal("expected first row, got none")
+	}
+	if err := rows.Scan(&id, &name); err != nil {
+		t.Fatalf("unexpected scan error on first row: %s", err)
+	}
+	if id != 1 || name != "a" {
+		t.Fatalf("expected first row id=1 name=\"a\", got id=%d name=%q", id, name)
+	}
+
+	if !rows.Next() {
+		t.Fatal("expected second row, got none")
+	}
+	if err := rows.Scan(&id, &name); err != nil {
+		t.Fatalf("unexpected scan error on second row: %s", err)
+	}
+	if id != 2 || name != "b" {
+		t.Fatalf("expected second row id=2 name=\"b\", got id=%d name=%q", id, name)
+	}
+
+	if rows.Next() {
+		t.Fatal("expected 2 rows, got more")
+	}
+	err = rows.Err()
+	if err != nil {
+		t.Fatalf("unexpected rows error: %s", err)
+	}
+
+}
+
 type testSettingsLoader struct {
 	settings json.Value
 }

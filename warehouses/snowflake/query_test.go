@@ -5,11 +5,48 @@
 package snowflake
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
 )
+
+// Test_appendJoins renders join clauses and checks for errors on invalid join
+// conditions.
+func Test_appendJoins(t *testing.T) {
+
+	join := warehouses.Join{
+		Type:  warehouses.InnerJoin,
+		Table: "t2",
+		Condition: warehouses.NewBaseExpr(
+			warehouses.Column{Name: "id", Type: types.Int(32)},
+			warehouses.OpIs,
+			warehouses.Column{Name: "fk", Type: types.Int(32)},
+		),
+	}
+	var b strings.Builder
+	err := appendJoins(&b, []warehouses.Join{join})
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := " JOIN \"T2\" ON \"ID\" = \"FK\""
+	if b.String() != expected {
+		t.Fatalf("expected %q, got %q", expected, b.String())
+	}
+
+	bad := warehouses.Join{
+		Type:      warehouses.InnerJoin,
+		Table:     "t3",
+		Condition: warehouses.NewBaseExpr(warehouses.Column{Name: "bad name", Type: types.Int(32)}, warehouses.OpIs, 1),
+	}
+	b.Reset()
+	err = appendJoins(&b, []warehouses.Join{bad})
+	if err == nil {
+		t.Fatal("expected error for bad join condition, got nil")
+	}
+
+}
 
 // TestQueryOrdering verifies that an empty OrderBy is omitted and descending order is applied to every ordered column.
 func TestQueryOrdering(t *testing.T) {
