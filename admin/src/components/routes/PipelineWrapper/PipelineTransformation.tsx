@@ -1291,10 +1291,12 @@ const TransformationBox = ({
 							<WaButton
 								className='transformation-box__fullscreen-button'
 								variant='brand'
+								appearance='plain'
 								onClick={onOpenTransformation}
 								disabled={isTransformationDisabled}
 							>
 								Edit in full mode
+								<WaIcon name='arrows-angle-expand' />
 							</WaButton>
 						</WaAnimation>
 					)}
