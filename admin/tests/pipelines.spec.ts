@@ -401,23 +401,37 @@ test.describe('Matching semantics', () => {
 		await expect(matching.locator('.schema-combobox-item__name')).toHaveText(['phone', 'country']);
 	});
 
+	const countryType = { kind: 'string', semantics: 'country', format: 'alpha-3' };
+	const phoneType = { kind: 'string', semantics: 'phone' };
+
 	for (const scenario of [
 		{
-			property: 'country',
 			mode: 'CreateOrUpdate',
-			type: { kind: 'string', semantics: 'country', format: 'alpha-3' },
+			in: { property: 'country', type: countryType },
+			out: { property: 'country', type: countryType },
 		},
-		{ property: 'phone', mode: 'UpdateOnly', type: { kind: 'string', semantics: 'phone' } },
+		{
+			mode: 'UpdateOnly',
+			in: { property: 'phone', type: phoneType },
+			out: { property: 'phone', type: phoneType },
+		},
+		{
+			mode: 'UpdateOnly',
+			in: { property: 'firstName', type: { kind: 'string' } },
+			out: { property: 'phone', type: phoneType },
+		},
 	]) {
-		test(`Preserve ${scenario.property} semantics when saving in ${scenario.mode} mode`, async ({ page }) => {
+		test(`Save compatible ${scenario.in.property}/${scenario.out.property} semantics in ${scenario.mode} mode`, async ({
+			page,
+		}) => {
 			await openPipeline(page);
 			const exportMode = page.locator('.pipeline__export-mode wa-select');
 			await exportMode.locator('[part="display-input"]').click();
 			await exportMode.locator(`wa-option[value="${scenario.mode}"]`).click();
 			await expect(exportMode.locator(`wa-option[value="${scenario.mode}"]`)).toBeHidden();
 			const matching = page.locator('.pipeline__matching-properties');
-			for (const side of ['in', 'out']) {
-				await matching.locator(`[data-id="${side}"] input`).fill(scenario.property);
+			for (const side of ['in', 'out'] as const) {
+				await matching.locator(`[data-id="${side}"] input`).fill(scenario[side].property);
 				await page.keyboard.press('Escape');
 			}
 			await page.locator('.pipeline__transformation .combobox[data-id="firstName"] input').fill('firstName');
@@ -431,11 +445,15 @@ test.describe('Matching semantics', () => {
 			await page.locator('.pipeline__header-save button').click();
 			const body = (await requestPromise).postDataJSON();
 			expect(body.exportMode).toBe(scenario.mode);
-			expect(body.matching).toEqual({ in: scenario.property, out: scenario.property });
-			for (const schema of [body.inSchema, body.outSchema]) {
-				const property = schema.properties.find((property: Property) => property.name === scenario.property);
-				expect(property?.type).toEqual(scenario.type);
-			}
+			expect(body.matching).toEqual({ in: scenario.in.property, out: scenario.out.property });
+			const inProperty = body.inSchema.properties.find(
+				(property: Property) => property.name === scenario.in.property,
+			);
+			expect(inProperty?.type).toEqual(scenario.in.type);
+			const outProperty = body.outSchema.properties.find(
+				(property: Property) => property.name === scenario.out.property,
+			);
+			expect(outProperty?.type).toEqual(scenario.out.type);
 			expect(body.transformation.mapping).toEqual({ firstName: 'firstName' });
 			await expect(page.locator('.pipeline__header')).toHaveCount(0);
 		});
@@ -443,7 +461,7 @@ test.describe('Matching semantics', () => {
 
 	for (const scenario of [
 		{
-			in: 'firstName',
+			in: 'country',
 			out: 'phone',
 			hasRequiredPhone: false,
 			error: 'Input and output matching properties do not have the same semantics and options',

@@ -1,3 +1,12 @@
+## v2.0.16 (2026-10-26)
+ * Always sync both metadata and code together
+ * Add missing Kazakh carrier data
+ * Reconciled code baseline to v9.0.42
+ * Updated metadata to v9.0.42
+
+## v2.0.15 (2026-10-19)
+ * Update metadata to v9.0.41
+
 ## v2.0.14 (2026-10-02)
  * Drop + and * from the grouping symbols kept in raw input
 

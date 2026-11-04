@@ -23,7 +23,7 @@ import (
 )
 
 // TestMappingFailedConversionPreservesInput verifies that a failed conversion
-// leaves the input unchanged.
+// leaves the input unchanged, even if an earlier element was converted.
 func TestMappingFailedConversionPreservesInput(t *testing.T) {
 
 	source := types.Array(types.String())
@@ -401,8 +401,9 @@ func TestMappingSemanticsValidation(t *testing.T) {
 
 }
 
-// TestMappingSharedSlicesAndMaps checks conversions of shared slices and maps.
-func TestMappingSharedSlicesAndMaps(t *testing.T) {
+// TestMappingSharedValues checks conversions of values shared across
+// expressions and nested structures.
+func TestMappingSharedValues(t *testing.T) {
 
 	stringObject := types.Object([]types.Property{{Name: "x", Type: types.String()}})
 	intObject := types.Object([]types.Property{{Name: "x", Type: types.Int(32)}})
@@ -505,14 +506,34 @@ func TestMappingSharedSlicesAndMaps(t *testing.T) {
 			},
 			expected: []any{map[string]any{"keep": "x"}, map[string]any{"keep": "x"}},
 		},
+		{
+			name: "shared object with distinct projections",
+			source: types.Object([]types.Property{
+				{Name: "left", Type: fullObject},
+				{Name: "right", Type: fullObject},
+			}),
+			target: types.Object([]types.Property{
+				{Name: "left", Type: projection},
+				{Name: "right", Type: types.Object([]types.Property{{Name: "extra", Type: types.String()}})},
+			}),
+			value: func() any {
+				shared := map[string]any{"keep": "x", "extra": "y"}
+				return map[string]any{"left": shared, "right": shared}
+			},
+			expected: map[string]any{
+				"left":  map[string]any{"keep": "x"},
+				"right": map[string]any{"extra": "y"},
+			},
+		},
 	}
+
+	// Expressions are evaluated in path order, with "a" before "b".
 	scenarios := []struct {
 		name, convertedPath, originalPath string
-		convertedFirst                    bool
 	}{
-		{"converted first", "a", "b", true},
-		{"original first", "b", "a", false},
-		{"single output", "out", "", true},
+		{"converted first", "a", "b"},
+		{"original first", "b", "a"},
+		{"single output", "out", ""},
 	}
 
 	for _, test := range tests {
@@ -525,9 +546,6 @@ func TestMappingSharedSlicesAndMaps(t *testing.T) {
 				if scenario.originalPath != "" {
 					expressions[scenario.originalPath] = "value"
 					properties = append(properties, types.Property{Name: scenario.originalPath, Type: test.source})
-					if !scenario.convertedFirst {
-						properties[0], properties[1] = properties[1], properties[0]
-					}
 					expected[scenario.originalPath] = test.value()
 				}
 				inSchema := types.Object([]types.Property{{Name: "value", Type: test.source}})
@@ -556,11 +574,11 @@ func TestMappingSharedSlicesAndMaps(t *testing.T) {
 
 }
 
-// TestTransformDoesNotMutateInput verifies that transformations do not modify
-// their input.
+// TestTransformDoesNotMutateInput verifies that Transform does not modify its
+// input.
 func TestTransformDoesNotMutateInput(t *testing.T) {
 
-	clone := func(t *testing.T, v map[string]any, schema types.Type) map[string]any {
+	roundTrip := func(t *testing.T, v map[string]any, schema types.Type) map[string]any {
 		t.Helper()
 		data, err := types.Marshal(v, schema)
 		if err != nil {
@@ -589,6 +607,13 @@ func TestTransformDoesNotMutateInput(t *testing.T) {
 			expected: []any{"1", "2", "3"},
 		},
 		{
+			name:     "empty array",
+			inType:   types.Array(types.Int(32)),
+			outType:  types.Array(types.String()),
+			value:    []any{},
+			expected: []any{},
+		},
+		{
 			name:     "map of booleans to strings",
 			inType:   types.Map(types.Boolean()),
 			outType:  types.Map(types.String()),
@@ -596,11 +621,25 @@ func TestTransformDoesNotMutateInput(t *testing.T) {
 			expected: map[string]any{"a": "true", "b": "false"},
 		},
 		{
+			name:     "empty map",
+			inType:   types.Map(types.Boolean()),
+			outType:  types.Map(types.String()),
+			value:    map[string]any{},
+			expected: map[string]any{},
+		},
+		{
 			name:     "object with removed property",
 			inType:   objectType,
 			outType:  types.Object([]types.Property{{Name: "a", Type: types.String()}}),
 			value:    map[string]any{"a": 22, "b": "90620928-691e-4aab-9b5c-ce202cad156f"},
 			expected: map[string]any{"a": "22"},
+		},
+		{
+			name:     "nullable object property",
+			inType:   types.Object([]types.Property{{Name: "a", Type: types.String(), Nullable: true}}),
+			outType:  types.Object([]types.Property{{Name: "a", Type: types.Int(32), Nullable: true}}),
+			value:    map[string]any{"a": nil},
+			expected: map[string]any{"a": nil},
 		},
 		{
 			name:     "array of maps from integers to floats",
@@ -645,8 +684,8 @@ func TestTransformDoesNotMutateInput(t *testing.T) {
 
 			inSchema := types.Object([]types.Property{{Name: "in", Type: test.inType}})
 			outSchema := types.Object([]types.Property{{Name: "out", Type: test.outType}})
-			input := clone(t, map[string]any{"in": test.value}, inSchema)
-			original := clone(t, input, inSchema)
+			input := roundTrip(t, map[string]any{"in": test.value}, inSchema)
+			original := roundTrip(t, input, inSchema)
 			mapping, err := New(expressions, inSchema, outSchema)
 			if err != nil {
 				t.Fatalf("expected mapping construction to succeed, got %v", err)
@@ -658,11 +697,11 @@ func TestTransformDoesNotMutateInput(t *testing.T) {
 			}
 
 			expected := map[string]any{"out": test.expected}
-			if !reflect.DeepEqual(got, expected) {
-				t.Errorf("expected output %#v, got %#v", expected, got)
+			if diff := cmp.Diff(expected, got); diff != "" {
+				t.Errorf("expected matching output, got diff (-expected +got):\n%s", diff)
 			}
-			if !reflect.DeepEqual(input, original) {
-				t.Errorf("expected unchanged input %#v, got %#v", original, input)
+			if diff := cmp.Diff(original, input); diff != "" {
+				t.Errorf("expected unchanged input, got diff (-expected +got):\n%s", diff)
 			}
 
 		})
