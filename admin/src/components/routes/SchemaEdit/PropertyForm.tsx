@@ -1,17 +1,16 @@
 import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import './PropertyForm.css';
-import SlBadge from '@shoelace-style/shoelace/dist/react/badge/index.js';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import SlCheckbox from '@shoelace-style/shoelace/dist/react/checkbox/index.js';
-import SlDivider from '@shoelace-style/shoelace/dist/react/divider/index.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
-import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
-import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
-import SlRadioButton from '@shoelace-style/shoelace/dist/react/radio-button/index.js';
-import SlRadioGroup from '@shoelace-style/shoelace/dist/react/radio-group/index.js';
-import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
-import SlTextarea from '@shoelace-style/shoelace/dist/react/textarea/index.js';
-import type SlTextareaElement from '@shoelace-style/shoelace/dist/components/textarea/textarea.component.js';
+import WaBadge from '@awesome.me/webawesome/dist/react/badge/index.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaCheckbox from '@awesome.me/webawesome/dist/react/checkbox/index.js';
+import WaDivider from '@awesome.me/webawesome/dist/react/divider/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
+import WaInput from '@awesome.me/webawesome/dist/react/input/index.js';
+import WaOption from '@awesome.me/webawesome/dist/react/option/index.js';
+import WaRadio from '@awesome.me/webawesome/dist/react/radio/index.js';
+import WaRadioGroup from '@awesome.me/webawesome/dist/react/radio-group/index.js';
+import WaSelect from '@awesome.me/webawesome/dist/react/select/index.js';
+import WaTextarea from '@awesome.me/webawesome/dist/react/textarea/index.js';
 import AppContext from '../../../context/AppContext';
 import Type, {
 	DecimalType,
@@ -87,16 +86,6 @@ interface PropertyTypeError {
 		| 'duration-unit';
 	message: string;
 }
-
-const disableShoelaceTextareaHeightReset = (textarea: SlTextareaElement | null) => {
-	if (textarea == null) {
-		return;
-	}
-	// Shoelace 2.20 resets the inline height whenever its ResizeObserver runs,
-	// which prevents the browser's vertical resize handle from working.
-	// See https://github.com/shoelace-style/shoelace/pull/2465.
-	Reflect.set(textarea, 'setTextareaHeight', () => undefined);
-};
 
 interface PendingTypeChange {
 	description: React.ReactNode;
@@ -694,35 +683,35 @@ const PropertyForm = ({
 	const numericRangeControls =
 		canEditType && isNumericType(valueType) ? (
 			<div className='property-form__numeric-range'>
-				<SlInput
+				<WaInput
 					className='property-form__minimum'
-					size='small'
+					size='s'
 					value={numericRangeInputs.minimum.value}
 					type='number'
 					step={numericRangeStep}
 					placeholder={minimumPlaceholder}
-					onSlInput={(event) => onInputNumericRange('minimum', event)}
+					onInput={(event) => onInputNumericRange('minimum', event)}
 				>
 					<PropertyFormLabel slot='label' tooltip={minimumTooltip}>
 						Min
 					</PropertyFormLabel>
-				</SlInput>
+				</WaInput>
 				<span className='property-form__numeric-range-separator' aria-hidden='true'>
 					–
 				</span>
-				<SlInput
+				<WaInput
 					className='property-form__maximum'
-					size='small'
+					size='s'
 					value={numericRangeInputs.maximum.value}
 					type='number'
 					step={numericRangeStep}
 					placeholder={maximumPlaceholder}
-					onSlInput={(event) => onInputNumericRange('maximum', event)}
+					onInput={(event) => onInputNumericRange('maximum', event)}
 				>
 					<PropertyFormLabel slot='label' tooltip={maximumTooltip}>
 						Max
 					</PropertyFormLabel>
-				</SlInput>
+				</WaInput>
 				{typeError?.location === 'numeric-range' && (
 					<PropertyFormError name='numeric-range'>{typeError.message}</PropertyFormError>
 				)}
@@ -732,7 +721,7 @@ const PropertyForm = ({
 	return (
 		<form className='property-form' id={formID} onSubmit={onSubmit}>
 			<div className='property-form__control property-form__control--name'>
-				<SlInput
+				<WaInput
 					className='property-form__name-input'
 					ref={nameInputRef}
 					value={property.name}
@@ -740,42 +729,43 @@ const PropertyForm = ({
 					name='name'
 					placeholder='first_name'
 					readonly={!isNameEditable}
-					onSlBlur={onBlurName}
-					onSlFocus={onFocusName}
-					onSlInput={onInputName}
+					onBlur={onBlurName}
+					onFocus={onFocusName}
+					onInput={onInputName}
 				>
 					<PropertyFormLabel slot='label' modified={fieldChanges?.name}>
 						Name
 					</PropertyFormLabel>
 					{isEditing && !isNameEditable && (
-						<SlButton
+						<WaButton
 							className='property-form__change-name'
-							size='small'
-							slot='suffix'
-							variant='text'
+							size='s'
+							slot='end'
+							variant='brand'
+							appearance='plain'
 							onPointerDown={(event) => event.preventDefault()}
 							onClick={onChangeName}
 						>
 							Change
-						</SlButton>
+						</WaButton>
 					)}
-				</SlInput>
+				</WaInput>
 				{nameError !== '' && <PropertyFormError name='name'>{nameError}</PropertyFormError>}
 			</div>
 			{showParent && parents != null && (
 				<div className='property-form__control'>
-					<SlSelect
+					<WaSelect
 						className='property-form__parent'
 						label='Add property to'
 						value={property.parentKey || '__root__'}
-						onSlChange={onChangeParent}
+						onChange={onChangeParent}
 					>
 						{parents.map((parent) => (
-							<SlOption key={parent.key || '__root__'} value={parent.key || '__root__'}>
+							<WaOption key={parent.key || '__root__'} value={parent.key || '__root__'}>
 								{parent.label}
-							</SlOption>
+							</WaOption>
 						))}
-					</SlSelect>
+					</WaSelect>
 				</div>
 			)}
 			<div
@@ -794,9 +784,9 @@ const PropertyForm = ({
 				/>
 				{shouldShowPercentageControls && (
 					<div className='property-form__percentage-description'>
-						<SlBadge className='property-form__percentage-badge' pill variant='neutral'>
+						<WaBadge className='property-form__percentage-badge' pill variant='neutral'>
 							<span className='property-form__percentage-badge-text'>0.9 represents 90%</span>
-						</SlBadge>
+						</WaBadge>
 					</div>
 				)}
 				{typeError?.location === 'type' && (
@@ -815,25 +805,25 @@ const PropertyForm = ({
 			)}
 			{shouldShowStringConstraints && (
 				<div className='property-form__constraints property-form__constraints--length'>
-					<SlInput
+					<WaInput
 						label='Max characters'
-						size='small'
+						size='s'
 						value={valueType.maxLength == null ? '' : String(valueType.maxLength)}
 						type='number'
 						min={1}
 						max={MAX_STRING_LENGTH}
 						step={1}
-						onSlInput={onInputMaxLength}
+						onInput={onInputMaxLength}
 					/>
-					<SlInput
+					<WaInput
 						label='Max bytes'
-						size='small'
+						size='s'
 						value={valueType.maxBytes == null ? '' : String(valueType.maxBytes)}
 						type='number'
 						min={1}
 						max={MAX_STRING_LENGTH}
 						step={1}
-						onSlInput={onInputMaxBytes}
+						onInput={onInputMaxBytes}
 					/>
 					{typeError?.location === 'string-constraints' && (
 						<PropertyFormError name='string-constraints'>{typeError.message}</PropertyFormError>
@@ -849,37 +839,42 @@ const PropertyForm = ({
 						}`}
 					>
 						{valueType.kind === 'int' && (
-							<SlRadioGroup
+							<WaRadioGroup
 								className='property-form__integer-sign'
 								label='Sign'
-								size='small'
+								orientation='horizontal'
+								size='s'
 								value={valueType.unsigned ? 'unsigned' : 'signed'}
-								onSlChange={onUnsignedChange}
+								onChange={onUnsignedChange}
 							>
-								<SlRadioButton value='signed'>signed</SlRadioButton>
-								<SlRadioButton value='unsigned'>unsigned</SlRadioButton>
-							</SlRadioGroup>
+								<WaRadio appearance='button' value='signed'>
+									signed
+								</WaRadio>
+								<WaRadio appearance='button' value='unsigned'>
+									unsigned
+								</WaRadio>
+							</WaRadioGroup>
 						)}
-						<SlSelect
+						<WaSelect
 							className='property-form__bit-size'
 							label={valueType.kind === 'int' ? 'Integer size' : 'Bit size'}
-							size='small'
+							size='s'
 							value={String(valueType.bitSize)}
-							onSlChange={onChangeBitSize}
+							onChange={onChangeBitSize}
 						>
 							{(valueType.kind === 'int' ? INT_BITSIZES : FLOAT_BITSIZES).map((bitSize) => (
-								<SlOption key={bitSize} value={bitSize}>
+								<WaOption key={bitSize} value={bitSize}>
 									{bitSize}-bit
-								</SlOption>
+								</WaOption>
 							))}
-						</SlSelect>
+						</WaSelect>
 						{valueType.kind === 'float' && (
 							<div className='property-form__float-special-values'>
-								<SlCheckbox size='small' checked={!valueType.real} onSlChange={onRealChange}>
+								<WaCheckbox size='s' checked={!valueType.real} onChange={onRealChange}>
 									<span className='property-form__float-special-values-label'>
 										Allow ±Inf and NaN
 									</span>
-								</SlCheckbox>
+								</WaCheckbox>
 							</div>
 						)}
 						{numericRangeControls}
@@ -887,25 +882,25 @@ const PropertyForm = ({
 				)}
 			{canEditType && valueType?.kind === 'decimal' && valueType.semantics == null && (
 				<div className='property-form__constraints property-form__constraints--decimal'>
-					<SlInput
+					<WaInput
 						className='property-form__precision'
 						label='Precision'
-						size='small'
+						size='s'
 						value={decimalTypeInputs.precision}
 						type='number'
 						max={MAX_DECIMAL_PRECISION}
 						maxlength={2}
-						onSlInput={onInputPrecision}
+						onInput={onInputPrecision}
 					/>
-					<SlInput
+					<WaInput
 						className='property-form__scale'
 						label='Scale'
-						size='small'
+						size='s'
 						value={decimalTypeInputs.scale}
 						type='number'
 						max={MAX_DECIMAL_SCALE}
 						maxlength={2}
-						onSlInput={onInputScale}
+						onInput={onInputScale}
 					/>
 					{typeError?.location === 'decimal-constraints' ? (
 						<PropertyFormError name='decimal-constraints'>{typeError.message}</PropertyFormError>
@@ -918,31 +913,31 @@ const PropertyForm = ({
 			{valueType?.kind === 'decimal' && valueType.semantics === 'money' && (
 				<div className='property-form__constraints property-form__constraints--money'>
 					{canEditType ? (
-						<SlSelect
+						<WaSelect
 							className='property-form__currency'
-							size='small'
+							size='s'
 							value={valueType.currency || 'none'}
-							onSlChange={onChangeCurrency}
+							onChange={onChangeCurrency}
 						>
 							<PropertyFormLabel slot='label'>Currency</PropertyFormLabel>
-							<SlOption value='none'>No currency specified</SlOption>
-							<SlDivider />
+							<WaOption value='none'>No currency specified</WaOption>
+							<WaDivider />
 							{CURRENCY_OPTIONS.map((option, index) => (
 								<React.Fragment key={option.code}>
-									{index === COMMON_CURRENCY_OPTION_COUNT && <SlDivider />}
-									<SlOption value={option.code}>
+									{index === COMMON_CURRENCY_OPTION_COUNT && <WaDivider />}
+									<WaOption value={option.code}>
 										<span className='property-form__currency-option-code'>{option.code}</span>
 										<span className='property-form__currency-option-separator'> · </span>
 										<span>{option.name}</span>
 										{option.symbol != null && (
-											<span className='property-form__currency-option-symbol' slot='suffix'>
+											<span className='property-form__currency-option-symbol' slot='end'>
 												{option.symbol}
 											</span>
 										)}
-									</SlOption>
+									</WaOption>
 								</React.Fragment>
 							))}
-						</SlSelect>
+						</WaSelect>
 					) : (
 						<div className='property-form__currency'>
 							<div className='property-form__label'>Currency</div>
@@ -964,33 +959,33 @@ const PropertyForm = ({
 			{valueType?.kind === 'decimal' && valueType.semantics === 'measurement' && (
 				<div className='property-form__constraints property-form__constraints--measurement'>
 					{canEditType ? (
-						<SlSelect
+						<WaSelect
 							className='property-form__measurement-unit'
-							size='small'
+							size='s'
 							value={valueType.unit}
 							placeholder='Select a unit...'
-							onSlChange={onChangeMeasurementUnit}
+							onChange={onChangeMeasurementUnit}
 						>
 							<PropertyFormLabel slot='label'>Unit</PropertyFormLabel>
 							{(valueType.unit == null || valueType.unit.length === 0) && (
-								<SlOption className='property-form__unit-placeholder' value='' disabled />
+								<WaOption className='property-form__unit-placeholder' value='' disabled />
 							)}
 							{UNIT_OF_MEASURE_OPTIONS.map((option, index) => (
 								<React.Fragment key={option.value}>
-									{option.groupLabel != null && index > 0 && <SlDivider />}
+									{option.groupLabel != null && index > 0 && <WaDivider />}
 									{option.groupLabel != null && (
 										<div className='property-form__unit-option-group' role='presentation'>
 											{option.groupLabel}
 										</div>
 									)}
-									<SlOption value={option.value}>
+									<WaOption value={option.value}>
 										<span>{option.label}</span>
 										<span className='property-form__unit-option-separator'> · </span>
 										<span className='property-form__unit-option-symbol'>{option.value}</span>
-									</SlOption>
+									</WaOption>
 								</React.Fragment>
 							))}
-						</SlSelect>
+						</WaSelect>
 					) : (
 						<div className='property-form__measurement-unit'>
 							<div className='property-form__label'>Unit</div>
@@ -1010,25 +1005,25 @@ const PropertyForm = ({
 			{valueType?.kind === 'int' && valueType.semantics === 'duration' && (
 				<div className='property-form__constraints property-form__constraints--duration'>
 					{canEditType ? (
-						<SlSelect
+						<WaSelect
 							className='property-form__duration-unit'
-							size='small'
+							size='s'
 							value={valueType.unit}
 							placeholder='Select a unit...'
-							onSlChange={onChangeDurationUnit}
+							onChange={onChangeDurationUnit}
 						>
 							<PropertyFormLabel slot='label'>Unit</PropertyFormLabel>
 							{(valueType.unit == null || valueType.unit.length === 0) && (
-								<SlOption className='property-form__unit-placeholder' value='' disabled />
+								<WaOption className='property-form__unit-placeholder' value='' disabled />
 							)}
 							{DURATION_UNIT_OPTIONS.map((option) => (
-								<SlOption key={option.value} value={option.value}>
+								<WaOption key={option.value} value={option.value}>
 									<span>{option.label}</span>
 									<span className='property-form__unit-option-separator'> · </span>
 									<span className='property-form__unit-option-symbol'>{option.symbol}</span>
-								</SlOption>
+								</WaOption>
 							))}
-						</SlSelect>
+						</WaSelect>
 					) : (
 						<div className='property-form__duration-unit'>
 							<div className='property-form__label'>Unit</div>
@@ -1066,29 +1061,28 @@ const PropertyForm = ({
 					/>
 				</div>
 			)}
-			<SlInput
+			<WaInput
 				className='property-form__control property-form__display-name'
 				value={property.displayName || ''}
 				name='displayName'
 				placeholder='First name'
-				onSlInput={onInputDisplayName}
+				onInput={onInputDisplayName}
 			>
 				<PropertyFormLabel slot='label' modified={fieldChanges?.displayName}>
 					Display name <span className='property-form__optional-label'>(optional)</span>
 				</PropertyFormLabel>
-			</SlInput>
-			<SlTextarea
+			</WaInput>
+			<WaTextarea
 				className='property-form__control property-form__description'
-				ref={disableShoelaceTextareaHeightReset}
 				value={property.description || ''}
 				name='description'
 				placeholder='Describe what this property represents…'
-				onSlInput={onInputDescription}
+				onInput={onInputDescription}
 			>
 				<PropertyFormLabel slot='label' modified={fieldChanges?.description}>
 					Description <span className='property-form__optional-label'>(optional)</span>
 				</PropertyFormLabel>
-			</SlTextarea>
+			</WaTextarea>
 			{showIdentityResolution && (
 				<div className='property-form__control'>
 					<div className='property-form__label'>
@@ -1111,16 +1105,16 @@ const PropertyForm = ({
 							<div className='property-form__empty-value'>No source connections are available.</div>
 						</>
 					) : (
-						<SlSelect
+						<WaSelect
 							className='property-form__primary-source'
 							value={primarySource == null ? 'none' : primarySource}
 							name='primary-source'
-							onSlChange={onChangePrimarySource}
+							onChange={onChangePrimarySource}
 						>
 							<PropertyFormLabel slot='label' modified={fieldChanges?.primarySource}>
 								<SchemaPropertyPrimarySourceLabel />
 							</PropertyFormLabel>
-							<div slot='prefix'>
+							<div slot='start'>
 								{selectedConnection != null && (
 									<LittleLogo
 										code={selectedConnection.connector.code}
@@ -1128,16 +1122,16 @@ const PropertyForm = ({
 									/>
 								)}
 							</div>
-							<SlOption value='none'>No primary source</SlOption>
+							<WaOption value='none'>No primary source</WaOption>
 							{sourceConnections.map((connection) => (
-								<SlOption key={connection.id} value={connection.id}>
-									<div slot='prefix'>
+								<WaOption key={connection.id} value={connection.id}>
+									<div slot='start'>
 										<LittleLogo code={connection.connector.code} path={CONNECTORS_ASSETS_PATH} />
 									</div>
 									{connection.name}
-								</SlOption>
+								</WaOption>
 							))}
-						</SlSelect>
+						</WaSelect>
 					)}
 				</div>
 			)}
@@ -1147,10 +1141,12 @@ const PropertyForm = ({
 				title='Reassign role?'
 				actions={
 					<>
-						<SlButton onClick={() => setRoleToReassign(null)}>Cancel</SlButton>
-						<SlButton variant='primary' onClick={onConfirmReassign}>
+						<WaButton appearance='outlined' onClick={() => setRoleToReassign(null)}>
+							Cancel
+						</WaButton>
+						<WaButton variant='brand' onClick={onConfirmReassign}>
 							Reassign
-						</SlButton>
+						</WaButton>
 					</>
 				}
 			>
@@ -1175,10 +1171,12 @@ const PropertyForm = ({
 				title='Change type?'
 				actions={
 					<>
-						<SlButton onClick={() => setPendingTypeChange(null)}>Cancel</SlButton>
-						<SlButton variant='primary' onClick={onConfirmTypeChange}>
+						<WaButton appearance='outlined' onClick={() => setPendingTypeChange(null)}>
+							Cancel
+						</WaButton>
+						<WaButton variant='brand' onClick={onConfirmTypeChange}>
 							Change type
-						</SlButton>
+						</WaButton>
 					</>
 				}
 			>
@@ -1214,7 +1212,7 @@ const PropertyFormLabel = ({
 const PropertyFormError = ({ name, children }: { name: string; children: React.ReactNode }) => {
 	return (
 		<div className='property-form__control-error' data-error-on={name}>
-			<SlIcon name='exclamation-circle' />
+			<WaIcon name='exclamation-circle' />
 			{children}
 		</div>
 	);

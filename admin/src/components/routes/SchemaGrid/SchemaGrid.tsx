@@ -5,8 +5,8 @@ import {
 	schemaPropertyGridNestedRowsIndentation,
 } from '../Schema/SchemaPropertyGrid';
 import './SchemaGrid.css';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import { Outlet, useLocation } from 'react-router-dom';
 import Grid from '../../base/Grid/Grid';
 import { GridRef } from '../../base/Grid/Grid.types';
@@ -119,19 +119,19 @@ const SchemaGrid = () => {
 						propertyCount={propertyCount}
 					/>
 				</div>
-				<SlButton
+				<WaButton
 					className='schema-grid__alter-button'
-					variant='primary'
+					variant='brand'
 					onClick={gridInteractionsDisabled ? null : onEditClick}
 					disabled={gridInteractionsDisabled}
 					loading={isAltering}
 				>
 					Edit schema
-				</SlButton>
+				</WaButton>
 			</div>
 			{!isAltering && latestAlterError && (
 				<div className='schema-grid__alter-error'>
-					<SlIcon name='exclamation-circle' />
+					<WaIcon name='exclamation-circle' />
 					{latestAlterError}
 				</div>
 			)}

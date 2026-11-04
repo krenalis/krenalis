@@ -9,8 +9,8 @@ import Grid from '../../base/Grid/Grid';
 import { GridColumn, GridRow } from '../../base/Grid/Grid.types';
 import Section from '../../base/Section/Section';
 import DataWarehouseSettings from './DataWarehouseSettings';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
 import { WAREHOUSES_ASSETS_PATH } from '../../../constants/paths';
 
 const DataWarehouse = () => {
@@ -46,7 +46,7 @@ const DataWarehouse = () => {
 
 	if (isLoading) {
 		return (
-			<SlSpinner
+			<WaSpinner
 				className='data-warehouse__spinner'
 				style={
 					{
@@ -54,7 +54,7 @@ const DataWarehouse = () => {
 						'--track-width': '6px',
 					} as React.CSSProperties
 				}
-			></SlSpinner>
+			></WaSpinner>
 		);
 	}
 
@@ -184,13 +184,9 @@ const WarehouseInfo = ({
 					</div>
 					<div className='warehouse-info__name'>{warehouse.name}</div>
 				</div>
-				<SlButton
-					className='warehouse-info__change-settings-button'
-					variant='primary'
-					onClick={onChangeSettings}
-				>
+				<WaButton className='warehouse-info__change-settings-button' variant='brand' onClick={onChangeSettings}>
 					Modify...
-				</SlButton>
+				</WaButton>
 			</div>
 			<Section
 				title={warehouseSectionTexts.mode.title}

@@ -5,12 +5,12 @@ import FeedbackButton, { FeedbackButtonRef } from '../../base/FeedbackButton/Fee
 import NotFound from '../NotFound/NotFound';
 import ConnectorUI from '../../base/ConnectorUI/ConnectorUI';
 import AppContext from '../../../context/AppContext';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
-import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
-import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
-import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
+import WaInput from '@awesome.me/webawesome/dist/react/input/index.js';
+import WaSelect from '@awesome.me/webawesome/dist/react/select/index.js';
+import WaOption from '@awesome.me/webawesome/dist/react/option/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import TransformedConnector from '../../../lib/core/connector';
 import { ConnectionRole, ConnectionToAdd, SendingMode as SendingModeType } from '../../../lib/api/types/connection';
@@ -261,13 +261,13 @@ const ConnectorSettings = () => {
 	} else {
 		buttonsToRender.push(
 			<div className='connector-settings__save-wrapper'>
-				<SlButton
+				<WaButton
 					className='connector-settings__save-button'
-					variant='primary'
+					variant='brand'
 					onClick={() => onButtonClick('save')}
 				>
 					Add
-				</SlButton>
+				</WaButton>
 			</div>,
 		);
 	}
@@ -281,7 +281,7 @@ const ConnectorSettings = () => {
 
 	if (isLoading) {
 		return (
-			<SlSpinner
+			<WaSpinner
 				style={
 					{
 						display: 'block',
@@ -292,7 +292,7 @@ const ConnectorSettings = () => {
 						'--track-width': '6px',
 					} as React.CSSProperties
 				}
-			></SlSpinner>
+			></WaSpinner>
 		);
 	}
 
@@ -312,13 +312,13 @@ const ConnectorSettings = () => {
 				<div className='connector-settings__settings'>
 					<div className='connector-settings__basic'>
 						<div className='connector-settings__input'>
-							<SlInput
+							<WaInput
 								className='connector-settings__label-field'
 								name='name'
 								value={name}
 								label='Name'
 								type='text'
-								onSlInput={(e) => {
+								onInput={(e) => {
 									const target = e.currentTarget as any;
 									setName(target!.value);
 								}}
@@ -326,19 +326,19 @@ const ConnectorSettings = () => {
 						</div>
 						{connectionRole !== 'Source' && connector.supportedSendingModes.length > 0 && (
 							<div className='connector-settings__input'>
-								<SlSelect
+								<WaSelect
 									className='connector-settings__mode-field'
 									name='mode'
 									value={sendingMode}
 									label='Sending mode'
-									onSlChange={(e) => {
+									onChange={(e) => {
 										const target = e.currentTarget as any;
 										const value = target.value as SendingModeType;
 										setSendingMode(value);
 									}}
 								>
-									<div className='connector-settings__mode-value-icon' slot='prefix'>
-										<SlIcon
+									<div className='connector-settings__mode-value-icon' slot='start'>
+										<WaIcon
 											name={
 												sendingMode === 'Server'
 													? 'cloud'
@@ -349,17 +349,17 @@ const ConnectorSettings = () => {
 										/>
 									</div>
 									{connector.supportedSendingModes.map((m) => (
-										<SlOption key={m} value={m}>
-											<div slot='prefix'>
-												<SlIcon
+										<WaOption key={m} value={m}>
+											<div slot='start'>
+												<WaIcon
 													className='connector-settings__mode-icon'
 													name={m === 'Server' ? 'cloud' : m === 'Client' ? 'phone' : 'send'}
 												/>
 											</div>
 											{m === 'ClientAndServer' ? 'Client and server' : m}
-										</SlOption>
+										</WaOption>
 									))}
-								</SlSelect>
+								</WaSelect>
 							</div>
 						)}
 					</div>

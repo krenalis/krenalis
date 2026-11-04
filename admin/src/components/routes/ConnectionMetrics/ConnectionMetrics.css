@@ -5,7 +5,7 @@
 
 .connection-metrics__title {
 	font-size: 18px;
-	color: var(--sl-color-gray-700);
+	color: var(--wa-color-gray-30);
 	margin-bottom: 24px;
 }
 
@@ -15,14 +15,16 @@
 	align-items: center;
 	row-gap: 15px;
 	flex-flow: row wrap;
+	position: relative;
+	z-index: 1;
 }
 
-.connection-metrics__tabs sl-button::part(base) {
+.connection-metrics__tabs wa-button::part(button) {
 	padding-left: 15px;
 	padding-right: 15px;
 }
 
-.connection-metrics__tabs sl-button[variant='default']::part(base) {
+.connection-metrics__tabs wa-button[appearance='outlined']::part(button) {
 	background: var(--bg-primary);
 }
 
@@ -35,7 +37,7 @@
 	font-size: 0.75rem;
 	transition: border 0.5s;
 	box-shadow: none !important;
-	border: solid var(--sl-input-border-width) var(--sl-input-border-color) !important;
+	border: solid var(--wa-border-width-s) var(--wa-form-control-border-color) !important;
 }
 
 .connection-metrics__pipelines::part(display-input) {
@@ -44,14 +46,14 @@
 }
 
 .connection-metrics__pipelines:hover::part(combobox) {
-	border: 1px solid var(--sl-color-primary-300) !important;
+	border: 1px solid var(--wa-color-brand-70) !important;
 }
 
 .connection-metrics__pipelines:hover::part(display-input) {
-	color: var(--sl-color-primary-600);
+	color: var(--wa-color-brand-40);
 }
 
-.connection-metrics__pipelines sl-option::part(base) {
+.connection-metrics__pipelines wa-option {
 	font-size: 0.75rem;
 }
 
@@ -61,8 +63,8 @@
 	position: relative;
 	background-color: var(--bg-primary);
 	border-radius: var(--radius);
-	border: 1px solid var(--sl-color-neutral-200);
-	box-shadow: var(--sl-shadow-small);
+	border: 1px solid var(--wa-color-neutral-80);
+	box-shadow: var(--wa-shadow-s);
 	padding: 30px;
 }
 
@@ -73,7 +75,7 @@
 .connection-metrics__chart-heading,
 .connection-metrics__errors-heading,
 .connection-metrics__funnel-heading {
-	color: var(--sl-color-gray-700);
+	color: var(--wa-color-gray-30);
 	margin-top: -8px;
 	margin-bottom: 30px;
 	font-size: 15px;
@@ -129,7 +131,7 @@
 }
 
 .connection-metrics__errors .grid a {
-	color: var(--sl-color-primary-600);
+	color: var(--wa-color-brand-40);
 	text-decoration: underline;
 }
 
@@ -137,8 +139,8 @@
 	margin: 20px auto 0 auto;
 	background-color: var(--bg-primary);
 	border-radius: var(--radius);
-	border: 1px solid var(--sl-color-neutral-200);
-	box-shadow: var(--sl-shadow-small);
+	border: 1px solid var(--wa-color-neutral-80);
+	box-shadow: var(--wa-shadow-s);
 	padding: 22px;
 }
 
@@ -203,7 +205,7 @@
 }
 
 .connection-metrics__funnel-title {
-	color: var(--sl-color-neutral-600);
+	color: var(--wa-color-neutral-40);
 	font-size: 14px;
 	margin-bottom: 8px;
 	font-weight: 500;
@@ -217,7 +219,7 @@
 	width: 23px;
 	height: 23px;
 	border: 5px solid var(--bg-gray);
-	background-color: var(--sl-color-neutral-400);
+	background-color: var(--wa-color-neutral-60);
 }
 
 .connection-metrics__funnel-label {
@@ -228,15 +230,15 @@
 }
 
 .connection-metrics__funnel-label--passed {
-	color: var(--sl-color-primary-600);
+	color: var(--wa-color-brand-40);
 }
 
 .connection-metrics__funnel-label--failed {
-	color: var(--sl-color-danger-600);
+	color: var(--wa-color-danger-40);
 }
 
 .connection-metrics__funnel-label--discarded {
-	color: var(--sl-color-neutral-600) !important;
+	color: var(--wa-color-neutral-40) !important;
 }
 
 .connection-metrics__funnel-initial {
@@ -246,7 +248,7 @@
 	padding-right: 5px;
 	top: 28px;
 	height: max-content;
-	color: var(--sl-color-neutral-600);
+	color: var(--wa-color-neutral-40);
 	width: max-content;
 }
 
@@ -256,7 +258,7 @@
 
 .connection-metrics__funnel-final {
 	font-weight: 600;
-	color: var(--sl-color-primary-600);
+	color: var(--wa-color-brand-40);
 	padding-left: 5px;
 	font-size: 17px;
 	position: relative;

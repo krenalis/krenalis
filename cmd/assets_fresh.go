@@ -26,8 +26,8 @@ const embeddedAssets = false
 // moduleRoot is the root directory of the Go module.
 var moduleRoot string
 
-// Path to the Shoelace icons within the "node_modules" directory.
-const shoelaceIconsPath = "@shoelace-style/shoelace/dist/assets/icons"
+// Path to the Bootstrap Icons within the "node_modules" directory.
+const iconsPath = "bootstrap-icons/icons"
 
 func init() {
 	// Set the moduleRoot global variable.
@@ -155,10 +155,10 @@ func (h *assetsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.ServeFile(w, r, filepath.Join(moduleRoot, "admin", "public", "favicon.png"))
 			return
 		}
-		// Serve Shoelace icons.
-		if icon, ok := strings.CutPrefix(r.URL.Path, "/admin/src/shoelace/dist/assets/icons/"); ok {
+		// Serve the icons.
+		if icon, ok := strings.CutPrefix(r.URL.Path, "/admin/src/icons/"); ok {
 			w.Header().Set("Content-Type", "image/svg+xml")
-			http.ServeFile(w, r, filepath.Join(moduleRoot, "admin/node_modules", shoelaceIconsPath, icon))
+			http.ServeFile(w, r, filepath.Join(moduleRoot, "admin/node_modules", iconsPath, icon))
 			return
 		}
 		// Serve Monaco editor.
@@ -204,6 +204,7 @@ func (h *assetsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		result := watcher.Rebuild()
 		if result.Errors != nil {
 			msg := "cannot generate assets when making vendor:"
+			unresolvedPackages := false
 			for _, err := range result.Errors {
 				if len(result.Errors) == 1 {
 					msg += " "
@@ -214,6 +215,16 @@ func (h *assetsHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				if loc := err.Location; loc != nil {
 					msg += fmt.Sprintf(" at %s %d:%d", loc.File, loc.Line, loc.Column)
 				}
+				// Relative imports start with ".", so they do not refer to packages.
+				if p, ok := strings.CutPrefix(err.Text, `Could not resolve "`); ok && !strings.HasPrefix(p, ".") {
+					unresolvedPackages = true
+				}
+			}
+			if unresolvedPackages {
+				msg = "===========================================================================\n" +
+					"Run \"npm install\" in the \"admin\" directory, then reload this page.\n" +
+					"Some packages could not be resolved: they are not installed or out of date.\n" +
+					"===========================================================================\n\n" + msg
 			}
 			http.Error(w, msg, http.StatusInternalServerError)
 			return
