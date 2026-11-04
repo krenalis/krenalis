@@ -435,9 +435,9 @@ func TestConvertStringToDate(t *testing.T) {
 // still require conversion.
 func TestGenericTypeRequiresConversion(t *testing.T) {
 	typ := types.Array(types.Parameter("T"))
-	convert := typeNeedsConversion(typ, typ)
-	if !convert {
-		t.Fatalf("expected conversion true for a generic type, got %v", convert)
+	got := typeNeedsConversion(typ, typ)
+	if !got {
+		t.Fatalf("expected conversion true for a generic type, got %v", got)
 	}
 }
 

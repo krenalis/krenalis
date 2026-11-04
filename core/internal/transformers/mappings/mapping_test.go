@@ -214,9 +214,9 @@ func TestMappingReusePreservesBehavior(t *testing.T) {
 			if err != nil {
 				t.Fatalf("expected mapping creation to succeed, got %v", err)
 			}
-			convert := mapping.expressions[0].convert
-			if convert != test.wantConvert {
-				t.Fatalf("expected conversion %v, got %v", test.wantConvert, convert)
+			gotConvert := mapping.expressions[0].convert
+			if gotConvert != test.wantConvert {
+				t.Fatalf("expected conversion %v, got %v", test.wantConvert, gotConvert)
 			}
 			reference, err := New(expressions, inSchema, outSchema)
 			if err != nil {
