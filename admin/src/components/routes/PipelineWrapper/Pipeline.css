@@ -129,15 +129,20 @@
 	min-width: 150px;
 }
 
+.pipeline__header-close-transformation {
+	position: relative;
+	right: -10px;
+}
+
 .pipeline__header-close-transformation::part(label) {
 	display: flex;
 	align-items: center;
 	gap: 10px;
-	font-size: 13px;
+	font-size: 14px;
 }
 
 .pipeline__header-close-transformation wa-icon {
-	font-size: 14px;
+	font-size: 15px;
 }
 
 .pipeline__header-save::part(button) {
@@ -1054,7 +1059,7 @@ inherit the disabled style */
 	display: flex;
 	align-items: center;
 	gap: 10px;
-	font-size: 13px;
+	font-size: 14px;
 }
 
 .transformation-box__header-buttons wa-button[appearance='outlined']::part(button) {
