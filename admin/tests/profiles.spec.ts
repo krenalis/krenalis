@@ -181,7 +181,7 @@ const mockProfiles = async (
 
 const openFirstNameFilter = async (page: Page) => {
 	const filters = page.locator('.profiles-list__filters');
-	await filters.getByRole('button', { name: 'Change', exact: true }).click();
+	await filters.getByRole('button', { name: 'Expand', exact: true }).click();
 	const editor = filters.getByRole('region', { name: 'Profile filters' });
 	const condition = editor.locator('.filter-editor__filter');
 	const property = condition.locator('.filter-editor__property');
@@ -575,14 +575,14 @@ test(`Preview a completed filter and show its profiles explicitly`, async ({ pag
 	await expect(filters.locator('.profiles-list__filter-description')).not.toBeVisible();
 	await expect(filters.getByRole('link', { name: 'Learn more about filters' })).not.toBeVisible();
 	await expect(rows).toHaveCount(4);
-	const editFilters = filters.getByRole('button', { name: 'Change', exact: true });
+	const editFilters = filters.getByRole('button', { name: 'Expand', exact: true });
 	const filterTitle = filters.locator('.profiles-list__filter-title');
 	const editFiltersLayout = await editFilters.boundingBox();
 	const collapsedFilterTitleLayout = await filterTitle.boundingBox();
 	await editFilters.click();
 	const editor = filters.getByRole('region', { name: 'Profile filters' });
 	await expect(editor).toBeVisible();
-	const closeFilters = filters.getByRole('button', { name: 'Reduce', exact: true });
+	const closeFilters = filters.getByRole('button', { name: 'Collapse', exact: true });
 	await expect(closeFilters).not.toBeFocused();
 	await expect(filterTitle).toBeVisible();
 	await expect(filters.locator('.profiles-list__filter-summary-value')).not.toBeVisible();
@@ -799,7 +799,7 @@ test(`Preview a completed filter and show its profiles explicitly`, async ({ pag
 	await closeFilters.click();
 	await expect(editor).toHaveCount(0);
 	await expect(filters.locator('.profiles-list__filter-summary-value')).toHaveText('No filters');
-	await expect(filters.getByRole('button', { name: 'Change', exact: true })).toBeFocused();
+	await expect(filters.getByRole('button', { name: 'Expand', exact: true })).toBeFocused();
 	expect(gridRequests).toHaveLength(requestsBeforeCollapse);
 });
 
@@ -915,7 +915,7 @@ test(`Summarize collapsed filters within their available width`, async ({ page }
 	await fillStringFilterCondition(complexConditions.nth(2), /^Billing address › City$/, 'Milan');
 
 	await expect(page.getByRole('button', { name: 'Show 4 matches', exact: true })).toBeVisible();
-	await filters.getByRole('button', { name: 'Reduce', exact: true }).click();
+	await filters.getByRole('button', { name: 'Collapse', exact: true }).click();
 	await expect(editor).toHaveCount(0);
 
 	const chips = filters.locator('.profiles-list__filter-summary-chips');
@@ -1083,7 +1083,7 @@ test(`Keep the displayed grid intact when showing the preview fails`, async ({ p
 	await expect(filters).not.toHaveClass(/profiles-list__filters--results-updated/);
 });
 
-test(`Materialize the current Undo entry on Reduce and preserve its history`, async ({ page }) => {
+test(`Materialize the current Undo entry on Collapse and preserve its history`, async ({ page }) => {
 	const gridRequests: Request[] = [];
 	page.on('request', (request) => {
 		const url = new URL(request.url());
@@ -1108,7 +1108,7 @@ test(`Materialize the current Undo entry on Reduce and preserve its history`, as
 	await filters.getByRole('button', { name: 'Undo', exact: true }).click();
 	await expect(valueInput).toHaveValue('Grace');
 
-	await filters.getByRole('button', { name: 'Reduce', exact: true }).click();
+	await filters.getByRole('button', { name: 'Collapse', exact: true }).click();
 	await expect(filters).toHaveClass(/profiles-list__filters--results-updated/);
 	await expect(page.locator('.profiles-list__grid-summary-content')).toHaveCSS(
 		'animation-name',
@@ -1116,7 +1116,7 @@ test(`Materialize the current Undo entry on Reduce and preserve its history`, as
 	);
 	await expect(filters.getByRole('region', { name: 'Profile filters' })).toHaveCount(0);
 	await expect(filters.locator('.profiles-list__filter-title')).toHaveText('Filters');
-	await expect(filters.locator('wa-button.profiles-list__filter-toggle')).toHaveText('Change');
+	await expect(filters.locator('wa-button.profiles-list__filter-toggle')).toHaveText('Expand');
 	await expect(
 		filters.locator('.profiles-list__filter-summary-visible-chips .profiles-list__filter-summary-chip-label'),
 	).toHaveText('First name is "Grace"');
@@ -1128,11 +1128,11 @@ test(`Materialize the current Undo entry on Reduce and preserve its history`, as
 	await expect(filters.locator('.profiles-list__filter-summary-chip-remove')).toHaveCSS('cursor', 'pointer');
 	await expect(page.locator('.profiles-list__grid-summary')).toContainText('1 profile');
 	await expect(page.locator('.profiles-list .grid__row--clickable')).toContainText(['Grace Hopper']);
-	await expect(filters.getByRole('button', { name: 'Change', exact: true })).toBeFocused();
+	await expect(filters.getByRole('button', { name: 'Expand', exact: true })).toBeFocused();
 	const materializedFilter = gridRequests.at(-1)?.postDataJSON().filter ?? null;
 	expect(materializedFilter.rules[0].values).toEqual(['Grace']);
 
-	await filters.getByRole('button', { name: 'Change', exact: true }).click();
+	await filters.getByRole('button', { name: 'Expand', exact: true }).click();
 	await expect(filters.getByRole('region', { name: 'Profile filters' }).locator(':focus')).toHaveCount(0);
 	await expect(filters.getByRole('button', { name: 'Redo', exact: true })).toBeEnabled();
 });
@@ -1142,7 +1142,7 @@ test(`Reopen the property menu after collapsing a nested property filter`, async
 	await page.goto(`${adminURL}/profile-unification/profiles`);
 
 	const filters = page.locator('.profiles-list__filters');
-	await filters.getByRole('button', { name: 'Change', exact: true }).click();
+	await filters.getByRole('button', { name: 'Expand', exact: true }).click();
 	const condition = filters.locator('.filter-editor__filter');
 	const property = condition.locator('.filter-editor__property');
 	await property.locator('wa-input').click();
@@ -1152,9 +1152,9 @@ test(`Reopen the property menu after collapsing a nested property filter`, async
 	await condition.locator('.filter-editor__operator wa-option[value="0"]').click();
 	await condition.locator('.filter-editor__value-input input').fill('Milan');
 	await condition.locator('.filter-editor__value-input input').press('Enter');
-	await filters.getByRole('button', { name: 'Reduce', exact: true }).click();
+	await filters.getByRole('button', { name: 'Collapse', exact: true }).click();
 
-	await filters.getByRole('button', { name: 'Change', exact: true }).click();
+	await filters.getByRole('button', { name: 'Expand', exact: true }).click();
 	const reopenedProperty = filters.locator('.filter-editor__property');
 	await expect(reopenedProperty.locator('input')).toHaveValue('Billing address › City');
 	await reopenedProperty.locator('wa-input').click();
@@ -1186,7 +1186,7 @@ test(`Remove an applied filter from its collapsed chip, update the grid, and pre
 	const { filters, valueInput } = await openFirstNameFilter(page);
 	await valueInput.fill('Grace');
 	await valueInput.press('Enter');
-	await filters.getByRole('button', { name: 'Reduce', exact: true }).click();
+	await filters.getByRole('button', { name: 'Collapse', exact: true }).click();
 	await expect(
 		filters.locator('.profiles-list__filter-summary-visible-chips .profiles-list__filter-summary-chip-label'),
 	).toHaveText('First name is "Grace"');
@@ -1208,7 +1208,7 @@ test(`Remove an applied filter from its collapsed chip, update the grid, and pre
 	expect(gridRequests).toHaveLength(gridRequestsBeforeRemoval + 1);
 	expect(gridRequests.at(-1)?.postDataJSON().filter ?? null).toBeNull();
 
-	await filters.getByRole('button', { name: 'Change', exact: true }).click();
+	await filters.getByRole('button', { name: 'Expand', exact: true }).click();
 	const editor = filters.getByRole('region', { name: 'Profile filters' });
 	const undo = filters.getByRole('button', { name: 'Undo', exact: true });
 	const redo = filters.getByRole('button', { name: 'Redo', exact: true });
@@ -1225,7 +1225,9 @@ test(`Remove an applied filter from its collapsed chip, update the grid, and pre
 	expect(countRequests).toHaveLength(countRequestsBeforeRemoval + 2);
 });
 
-test(`Keep filters expanded when Reduce cannot update the grid and discard the error after Undo`, async ({ page }) => {
+test(`Keep filters expanded when Collapse cannot update the grid and discard the error after Undo`, async ({
+	page,
+}) => {
 	await mockProfiles(page, {
 		profilesForRequest: (request) =>
 			request.postDataJSON().filter != null
@@ -1248,7 +1250,7 @@ test(`Keep filters expanded when Reduce cannot update the grid and discard the e
 	const { filters, valueInput } = await openFirstNameFilter(page);
 	await valueInput.fill('Grace');
 	await valueInput.press('Enter');
-	await filters.getByRole('button', { name: 'Reduce', exact: true }).click();
+	await filters.getByRole('button', { name: 'Collapse', exact: true }).click();
 
 	await expect(filters.getByRole('region', { name: 'Profile filters' })).toBeVisible();
 	await expect(filters.locator('.profiles-list__filter-grid-error')).toContainText('Unable to show profiles.');
@@ -1269,7 +1271,7 @@ test(`Grow nested filters in the document flow without an internal scrollbar`, a
 	await page.goto(`${adminURL}/profile-unification/profiles`);
 
 	const filters = page.locator('.profiles-list__filters');
-	await filters.getByRole('button', { name: 'Change', exact: true }).click();
+	await filters.getByRole('button', { name: 'Expand', exact: true }).click();
 	const editor = filters.getByRole('region', { name: 'Profile filters' });
 	await editor.getByRole('button', { name: 'Add a group', exact: true }).click();
 	const nestedGroup = editor.locator('.filter-editor__group:not(.filter-editor__group--root)');
@@ -1387,14 +1389,14 @@ test(`Discard an in-flight preview when collapsing the editor`, async ({ page })
 	await expect(rows).toHaveCount(4);
 	await rows.first().click();
 	await expect(rows.first()).toHaveClass(/grid__row--active/);
-	await filters.getByRole('button', { name: 'Reduce', exact: true }).click();
+	await filters.getByRole('button', { name: 'Collapse', exact: true }).click();
 	await expect(opened.editor).toHaveCount(0);
-	await expect(filters.getByRole('button', { name: 'Change', exact: true })).toBeFocused();
+	await expect(filters.getByRole('button', { name: 'Expand', exact: true })).toBeFocused();
 	releaseCandidate();
 
 	await expect(filters.locator('.profiles-list__filter-summary-value')).toHaveText('No filters');
 	await expect(rows).toHaveCount(4);
-	await expect(filters.getByRole('button', { name: 'Change', exact: true })).toBeVisible();
+	await expect(filters.getByRole('button', { name: 'Expand', exact: true })).toBeVisible();
 });
 
 test(`Ignore an obsolete preview after the draft changes`, async ({ page }) => {
@@ -1454,7 +1456,7 @@ test(`Restore the current successful preview when collapsing an incomplete draft
 	await page.goto(`${adminURL}/profile-unification/profiles`);
 
 	const filters = page.locator('.profiles-list__filters');
-	const trigger = filters.getByRole('button', { name: 'Change', exact: true });
+	const trigger = filters.getByRole('button', { name: 'Expand', exact: true });
 	await trigger.click();
 	const editor = filters.getByRole('region', { name: 'Profile filters' });
 	const property = editor.locator('.filter-editor__property');
@@ -1468,11 +1470,11 @@ test(`Restore the current successful preview when collapsing an incomplete draft
 	await page.keyboard.press('Escape');
 
 	await expect(editor).toHaveCount(0);
-	await expect(filters.getByRole('button', { name: 'Change', exact: true })).toBeFocused();
+	await expect(filters.getByRole('button', { name: 'Expand', exact: true })).toBeFocused();
 	await expect(filters.locator('.profiles-list__filter-summary-value')).toHaveText('No filters');
 	expect(countRequests).toHaveLength(0);
 
-	await filters.getByRole('button', { name: 'Change', exact: true }).click();
+	await filters.getByRole('button', { name: 'Expand', exact: true }).click();
 	await expect(editor.locator('.filter-editor__filter')).toHaveCount(1);
 	await expect(editor.locator('.filter-editor__property input')).toHaveValue('');
 	await expect(filters.getByRole('button', { name: 'Undo', exact: true })).toBeDisabled();
@@ -2568,6 +2570,6 @@ test('Refresh keeps filter arguments and reloads the schema only after reset con
 	await expect(filters).toContainText('No filters');
 	await expect(page.locator('.profiles-list .grid__row--clickable')).toHaveCount(4);
 	expect(requests.at(-1)!.postDataJSON().filter).toBeUndefined();
-	await filters.getByRole('button', { name: 'Change', exact: true }).click();
+	await filters.getByRole('button', { name: 'Expand', exact: true }).click();
 	await expect(filters.getByRole('button', { name: 'Undo', exact: true })).toBeDisabled();
 });

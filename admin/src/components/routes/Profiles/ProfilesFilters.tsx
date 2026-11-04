@@ -827,12 +827,8 @@ const ProfilesFilters = ({
 						disabled={isOpen && isShowingCurrentPreview}
 						onClick={isOpen ? collapseFilters : () => setEditorOpen(true)}
 					>
-						<WaIcon
-							slot='start'
-							name={isOpen ? 'arrows-angle-contract' : 'arrows-angle-expand'}
-							aria-hidden='true'
-						/>
-						{isOpen ? 'Reduce' : 'Change'}
+						<WaIcon slot='start' name={isOpen ? 'chevron-up' : 'chevron-down'} aria-hidden='true' />
+						{isOpen ? 'Collapse' : 'Expand'}
 					</WaButton>
 				</div>
 				<div

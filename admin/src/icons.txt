@@ -10,8 +10,6 @@ arrow-right-short.svg
 arrow-right.svg
 arrow-up-circle.svg
 arrow-up-right-square.svg
-arrows-angle-contract.svg
-arrows-angle-expand.svg
 arrows-collapse.svg
 arrows-expand.svg
 arrows.svg
@@ -35,6 +33,7 @@ chevron-down.svg
 chevron-expand.svg
 chevron-left.svg
 chevron-right.svg
+chevron-up.svg
 circle-fill.svg
 clock.svg
 cloud.svg

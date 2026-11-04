@@ -103,7 +103,7 @@ for (const [index, value] of values.entries()) {
 		await expect(rows).toHaveCount(3);
 
 		const filters = page.locator('.profiles-list__filters');
-		await filters.getByRole('button', { name: 'Change', exact: true }).click();
+		await filters.getByRole('button', { name: 'Expand', exact: true }).click();
 		const editor = filters.getByRole('region', { name: 'Profile filters' });
 		const property = editor.locator('.filter-editor__property');
 		const propertyInput = property.locator('input');
@@ -146,17 +146,17 @@ for (const [index, value] of values.entries()) {
 		expect(countFilters).toEqual([filter, null, filter]);
 		await expect(rows).toHaveCount(3);
 
-		await filters.getByRole('button', { name: 'Reduce', exact: true }).click();
-		await expect(filters.getByRole('button', { name: 'Change', exact: true })).toBeVisible();
+		await filters.getByRole('button', { name: 'Collapse', exact: true }).click();
+		await expect(filters.getByRole('button', { name: 'Expand', exact: true })).toBeVisible();
 		await expect(rows).toHaveCount(1);
 		await expect(rows).toHaveAttribute('data-id', `profile-${index + 1}`);
 		expect(gridFilters).toEqual([null, filter]);
 
-		await filters.getByRole('button', { name: 'Change', exact: true }).click();
+		await filters.getByRole('button', { name: 'Expand', exact: true }).click();
 		await expect(valueInput).toHaveValue(draftValue);
 		await valueInput.fill('"');
-		await filters.getByRole('button', { name: 'Reduce', exact: true }).click();
-		await filters.getByRole('button', { name: 'Change', exact: true }).click();
+		await filters.getByRole('button', { name: 'Collapse', exact: true }).click();
+		await filters.getByRole('button', { name: 'Expand', exact: true }).click();
 		await expect(valueInput).toHaveValue(draftValue);
 		expect(countFilters).toEqual([filter, null, filter]);
 		expect(gridFilters).toEqual([null, filter]);
@@ -172,7 +172,7 @@ test(`Number removable groups across nested and sibling groups`, async ({ page }
 	await page.addStyleTag({ content: componentStyles });
 	await page.addScriptTag({ content: componentScript });
 	const filters = page.locator('.profiles-list__filters');
-	await filters.getByRole('button', { name: 'Change', exact: true }).click();
+	await filters.getByRole('button', { name: 'Expand', exact: true }).click();
 	const rootActions = filters.locator('.filter-editor__group--root > .filter-editor__group-actions');
 	await rootActions.getByRole('button', { name: 'Add a group', exact: true }).click();
 	const groups = filters.locator('.filter-editor__group:not(.filter-editor__group--root)');
@@ -234,7 +234,7 @@ test(`Automatically show completed previews, preserve focus and remember the pre
 	const automaticUpdates = filters.getByRole('switch', { name: 'Show matches automatically' });
 	await expect(rows).toHaveCount(3);
 	await expect(automaticUpdates).not.toBeVisible();
-	await filters.getByRole('button', { name: 'Change', exact: true }).click();
+	await filters.getByRole('button', { name: 'Expand', exact: true }).click();
 	await expect(automaticUpdates).not.toBeChecked();
 	const editor = filters.getByRole('region', { name: 'Profile filters' });
 	const property = editor.locator('.filter-editor__property');
@@ -293,14 +293,14 @@ test(`Automatically show completed previews, preserve focus and remember the pre
 	await expect(rows).toHaveAttribute('data-id', 'profile-2');
 	expect(gridFilters.slice(1)).toEqual(countFilters);
 	await expect(page.locator('.profiles-list__filter-update-results')).toHaveCount(0);
-	await filters.getByRole('button', { name: 'Reduce', exact: true }).click();
+	await filters.getByRole('button', { name: 'Collapse', exact: true }).click();
 	await expect(automaticUpdates).not.toBeVisible();
 	await expect(page.getByRole('alert')).toBeEmpty();
 
 	await page.reload();
 	await page.addStyleTag({ content: componentStyles });
 	await page.addScriptTag({ content: componentScript });
-	await filters.getByRole('button', { name: 'Change', exact: true }).click();
+	await filters.getByRole('button', { name: 'Expand', exact: true }).click();
 	await expect(automaticUpdates).toBeChecked();
 	expect(await page.evaluate((key) => localStorage.getItem(key), PROFILES_SHOW_MATCHES_AUTOMATICALLY_KEY)).toBe(
 		'true',
@@ -314,7 +314,7 @@ test(`Automatically show completed previews, preserve focus and remember the pre
 	await page.reload();
 	await page.addStyleTag({ content: componentStyles });
 	await page.addScriptTag({ content: componentScript });
-	await filters.getByRole('button', { name: 'Change', exact: true }).click();
+	await filters.getByRole('button', { name: 'Expand', exact: true }).click();
 	await expect(automaticUpdates).not.toBeChecked();
 });
 
@@ -346,7 +346,7 @@ test(`Keep results after failed automatic updates and recover with Retry and Und
 	const rows = page.locator('.profiles-list .grid__row--clickable');
 	const filters = page.locator('.profiles-list__filters');
 	await expect(rows).toHaveCount(3);
-	await filters.getByRole('button', { name: 'Change', exact: true }).click();
+	await filters.getByRole('button', { name: 'Expand', exact: true }).click();
 	await filters.getByText('Show matches automatically', { exact: true }).click();
 	const editor = filters.getByRole('region', { name: 'Profile filters' });
 	const property = editor.locator('.filter-editor__property');
@@ -418,7 +418,7 @@ test(`Resume automatic matches after Refresh cancels their loading`, async ({ pa
 	const rows = page.locator('.profiles-list .grid__row--clickable');
 	const filters = page.locator('.profiles-list__filters');
 	await expect(rows).toHaveCount(3);
-	await filters.getByRole('button', { name: 'Change', exact: true }).click();
+	await filters.getByRole('button', { name: 'Expand', exact: true }).click();
 	await filters.getByText('Show matches automatically', { exact: true }).click();
 	const property = filters.locator('.filter-editor__property');
 	await property.locator('wa-input').click();

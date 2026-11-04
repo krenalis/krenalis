@@ -496,12 +496,25 @@ html.profiles-columns-transition::view-transition-new(*):only-child {
 	flex: none;
 }
 
-.profiles-list__filter-toggle::part(button) {
+.profiles-list__filter-toggle[appearance='outlined']::part(button) {
+	background-color: var(--bg-primary);
 	padding-inline: calc(var(--wa-space-xs) + 5px) 2px;
 }
 
+.profiles-list__filter-toggle::part(label) {
+	color: var(--wa-color-neutral-50);
+}
+
+.profiles-list__filter-toggle:not([disabled]):hover::part(label) {
+	color: inherit;
+}
+
 .profiles-list__filter-toggle wa-icon {
-	font-size: 12px;
+	font-size: 14px;
+}
+
+.profiles-list__filter-toggle[aria-expanded='false'] wa-icon {
+	transform: translateY(1px);
 }
 
 .profiles-list__filter-editor {
