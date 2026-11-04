@@ -1,6 +1,6 @@
-import React, { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useContext, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import './IdentityOverview.css';
-import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
+import WaTooltip from '@awesome.me/webawesome/dist/react/tooltip/index.js';
 import AppContext from '../../../context/AppContext';
 import SegmentedDateRangeControl, {
 	SegmentedDateRangePreset,
@@ -419,6 +419,7 @@ const IdentityOverview = () => {
 		latestResolution == null ? resolutionKpiComparison.previousEnd : instantToDateKey(latestResolution.observedAt),
 	);
 	const browserTimeZone = new Intl.DateTimeFormat().resolvedOptions().timeZone;
+	const localTimeTriggerID = useId();
 	const shouldShowResolutionKpiComparison = temporalSemantics.shouldShowLatestResolutionComparison;
 	const unifiedProfilesComparison =
 		shouldShowResolutionKpiComparison && resolutionKpiComparison.profilesChangePercent != null
@@ -529,23 +530,33 @@ const IdentityOverview = () => {
 								latestResolution == null ? (
 									'—'
 								) : (
-									<SlTooltip className='identity-dashboard__tooltip' placement='top' hoist={true}>
-										<div slot='content' className='identity-dashboard__local-time-tooltip'>
-											<strong>Your local time</strong>
-											<span>
-												{formatResolutionLocalTimeZoneDetails(
-													latestResolution.observedAt,
-													browserTimeZone,
-												)}
-											</span>
-										</div>
-										<span className='identity-dashboard__local-time-trigger' tabIndex={0}>
+									<>
+										<WaTooltip
+											className='identity-dashboard__tooltip'
+											for={localTimeTriggerID}
+											placement='top'
+										>
+											<div className='identity-dashboard__local-time-tooltip'>
+												<strong>Your local time</strong>
+												<span>
+													{formatResolutionLocalTimeZoneDetails(
+														latestResolution.observedAt,
+														browserTimeZone,
+													)}
+												</span>
+											</div>
+										</WaTooltip>
+										<span
+											id={localTimeTriggerID}
+											className='identity-dashboard__local-time-trigger'
+											tabIndex={0}
+										>
 											{formatResolutionLocalTimestamp(
 												latestResolution.observedAt,
 												browserTimeZone,
 											)}
 										</span>
-									</SlTooltip>
+									</>
 								)
 							}
 							subtleBackground={true}

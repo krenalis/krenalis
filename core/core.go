@@ -1136,7 +1136,7 @@ func (core *Core) TransformData(ctx context.Context, organization string, data [
 	// Validate the mapping and the transformation.
 	switch {
 	case transformation.Mapping != nil:
-		mapping, err := mappings.New(transformation.Mapping, inSchema, outSchema, false)
+		mapping, err := mappings.New(transformation.Mapping, inSchema, outSchema)
 		if err != nil {
 			return nil, errors.BadRequest("mapping is not valid: %s", err)
 		}

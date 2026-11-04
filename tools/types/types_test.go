@@ -340,6 +340,115 @@ func Test_Ranges(t *testing.T) {
 		t.Errorf("Float(64).FloatRange(): expected (%f, %f), got (%f, %f)", -math.MaxFloat64, math.MaxFloat64, min, max)
 	}
 
+	for _, size := range []int{32, 64} {
+		limit := math.MaxFloat64
+		tiny := -math.SmallestNonzeroFloat64
+		largeMin := math.MaxFloat64 / 2
+		if size == 32 {
+			limit = math.MaxFloat32
+			tiny = 0
+			largeMin = limit
+		}
+		tests := []struct {
+			name             string
+			min, max         float64
+			wantMin, wantMax float64
+		}{
+			{"finite", -1, 1, -1, 1},
+			{"single value", 0, 0, 0, 0},
+			{"negative zero minimum", math.Copysign(0, -1), 1, 0, 1},
+			{"negative zero maximum", -1, math.Copysign(0, -1), -1, 0},
+			{"tiny negative minimum", -math.SmallestNonzeroFloat64, 1, tiny, 1},
+			{"tiny negative maximum", -1, -math.SmallestNonzeroFloat64, -1, tiny},
+			{"minimum", 0, math.Inf(1), 0, limit},
+			{"maximum", math.Inf(-1), 0, -limit, 0},
+			{"unbounded", math.Inf(-1), math.Inf(1), -limit, limit},
+			{"finite upper default", 0, limit, 0, limit},
+			{"finite lower default", -limit, 0, -limit, 0},
+			{"finite defaults", -limit, limit, -limit, limit},
+			{"large finite minimum", -math.MaxFloat64, 0, -limit, 0},
+			{"large finite maximum", 0, math.MaxFloat64, 0, limit},
+			{"large finite bounds", -math.MaxFloat64, math.MaxFloat64, -limit, limit},
+			{"large positive range", math.MaxFloat64 / 2, math.MaxFloat64, largeMin, limit},
+			{"large negative range", -math.MaxFloat64, -math.MaxFloat64 / 2, -limit, -largeMin},
+		}
+		for _, test := range tests {
+			t.Run(fmt.Sprintf("%d/%s", size, test.name), func(t *testing.T) {
+				bounded := Float(size).WithFloatRange(test.min, test.max)
+				realFirst := Float(size).Real().WithFloatRange(test.min, test.max)
+				rangeFirst := bounded.Real()
+				if !Equal(realFirst, rangeFirst) {
+					t.Fatalf("expected equal construction results, got %#v and %#v", realFirst, rangeFirst)
+				}
+				if min, max := realFirst.FloatRange(); min != test.wantMin || max != test.wantMax {
+					t.Fatalf("expected range [%g, %g], got [%g, %g]", test.wantMin, test.wantMax, min, max)
+				}
+				wantMin, wantMax := test.wantMin, test.wantMax
+				if math.IsInf(test.min, -1) {
+					wantMin = test.min
+				}
+				if math.IsInf(test.max, 1) {
+					wantMax = test.max
+				}
+				if min, max := bounded.FloatRange(); min != wantMin || max != wantMax {
+					t.Fatalf("expected range [%g, %g], got [%g, %g]", wantMin, wantMax, min, max)
+				}
+				canonical := Float(size).Real().WithFloatRange(test.wantMin, test.wantMax)
+				if !Equal(realFirst, canonical) {
+					t.Fatalf("expected canonical type %#v, got %#v", canonical, realFirst)
+				}
+				for _, typ := range []Type{bounded, realFirst} {
+					min, max := typ.FloatRange()
+					if min == 0 && math.Signbit(min) || max == 0 && math.Signbit(max) {
+						t.Fatalf("expected positive zero bounds, got [%g, %g]", min, max)
+					}
+				}
+				if test.wantMin == -limit && test.wantMax == limit && !Equal(Float(size).Real(), realFirst) {
+					t.Fatal("expected the default real type, got redundant bounds")
+				}
+				replaced := Float(size).Real().WithFloatRange(-0.5, 0.5).WithFloatRange(test.min, test.max)
+				if !Equal(realFirst, replaced) {
+					t.Fatal("expected replacement of previous real bounds, got a different type")
+				}
+				replaced = Float(size).WithFloatRange(-0.5, 0.5).WithFloatRange(test.min, test.max)
+				if !Equal(bounded, replaced) {
+					t.Fatal("expected replacement of previous float bounds, got a different type")
+				}
+			})
+		}
+	}
+
+	tests := []struct {
+		name     string
+		typ      Type
+		min, max float64
+		want     string
+	}{
+		{"wrong kind", Int(32), 0, 1, "type is not a float type"},
+		{"NaN minimum", Float(64), math.NaN(), 1, "min and max cannot be NaN"},
+		{"NaN maximum", Float(64), 0, math.NaN(), "min and max cannot be NaN"},
+		{"reversed", Float(64), 1, 0, "max cannot be less than min"},
+		{"reversed before rounding", Float(32), 1.00000001, 1, "max cannot be less than min"},
+		{"reversed positive saturation", Float(32), math.MaxFloat64, math.MaxFloat64 / 2, "max cannot be less than min"},
+		{"reversed negative saturation", Float(32), -math.MaxFloat64 / 2, -math.MaxFloat64, "max cannot be less than min"},
+		{"positive infinity minimum", Float(64), math.Inf(1), math.Inf(1), "min cannot be +Inf"},
+		{"negative infinity maximum", Float(64).Real(), math.Inf(-1), math.Inf(-1), "max cannot be -Inf"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			defer func() {
+				got := recover()
+				if got == nil {
+					t.Fatal("expected a panic, got none")
+				}
+				if message := fmt.Sprint(got); message != test.want {
+					t.Fatalf("expected panic %q, got %q", test.want, message)
+				}
+			}()
+			test.typ.WithFloatRange(test.min, test.max)
+		})
+	}
+
 }
 
 func Test_Len(t *testing.T) {
