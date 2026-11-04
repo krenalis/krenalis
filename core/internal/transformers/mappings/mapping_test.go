@@ -232,7 +232,7 @@ func TestMappingReusePreservesBehavior(t *testing.T) {
 					wantError := slices.Contains(test.errorPurposes, purpose.purpose)
 					referenceInput := map[string]any{"source": clone(test.value)}
 					input := map[string]any{"source": clone(test.value)}
-					want, wantErr := reference.Transform(referenceInput, purpose.purpose)
+					refOut, refErr := reference.Transform(referenceInput, purpose.purpose)
 					got, err := mapping.Transform(input, purpose.purpose)
 
 					expectedInput := map[string]any{"source": test.value}
@@ -249,22 +249,22 @@ func TestMappingReusePreservesBehavior(t *testing.T) {
 						if _, ok := errors.AsType[ValidationError](err); !ok {
 							t.Fatalf("expected ValidationError, got %T: %v", err, err)
 						}
-						if wantErr == nil {
-							t.Fatalf("expected reference validation error, got %#v", want)
+						if refErr == nil {
+							t.Fatalf("expected reference validation error, got %#v", refOut)
 						}
-						if reflect.TypeOf(err) != reflect.TypeOf(wantErr) || err.Error() != wantErr.Error() {
-							t.Fatalf("expected error %T: %v, got %T: %v", wantErr, wantErr, err, err)
+						if reflect.TypeOf(err) != reflect.TypeOf(refErr) || err.Error() != refErr.Error() {
+							t.Fatalf("expected error %T: %v, got %T: %v", refErr, refErr, err, err)
 						}
 						return
 					}
-					if wantErr != nil {
-						t.Fatalf("expected error %T: %v, got %#v", wantErr, wantErr, got)
+					if refErr != nil {
+						t.Fatalf("expected error %T: %v, got %#v", refErr, refErr, got)
 					}
 					if wantError {
 						t.Fatalf("expected validation error, got %#v", got)
 					}
-					if !reflect.DeepEqual(got, want) {
-						t.Fatalf("expected output %#v, got %#v", want, got)
+					if !reflect.DeepEqual(got, refOut) {
+						t.Fatalf("expected output %#v, got %#v", refOut, got)
 					}
 
 				})
