@@ -227,7 +227,7 @@ For the TypeScript and React code under `admin/`:
 
 # Code comments
 
-A comment on a block of code describes at a high level what the block does, without explaining what the code already makes clear.
+A comment on a block of code describes at a high level what the block does, without explaining what the code already makes clear; it may also state a non-obvious reason or constraint the code relies on.
 
 # Reuse
 
