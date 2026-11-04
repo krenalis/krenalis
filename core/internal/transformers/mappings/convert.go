@@ -1021,7 +1021,7 @@ func typeNeedsConversion(st, dt types.Type) bool {
 		}
 		for _, p := range sp.All() {
 			d, ok := dp.ByName(p.Name)
-			if !ok || p.Nullable != d.Nullable || p.ReadOptional != d.ReadOptional {
+			if !ok || p.Nullable && !d.Nullable {
 				return true
 			}
 			if p.ReadOptional && (d.CreateRequired || d.UpdateRequired) {

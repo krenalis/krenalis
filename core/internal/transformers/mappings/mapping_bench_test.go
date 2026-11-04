@@ -37,6 +37,20 @@ func BenchmarkMappingTransform(b *testing.B) {
 	for i := range objects {
 		objects[i] = map[string]any{"name": "value", "value": i}
 	}
+	// Profile properties are read-optional and not nullable; destination properties are not read-optional.
+	profileAddress := types.Object([]types.Property{
+		{Name: "street", Type: types.String(), ReadOptional: true},
+		{Name: "city", Type: types.String(), ReadOptional: true},
+		{Name: "postal_code", Type: types.String(), ReadOptional: true},
+		{Name: "country", Type: types.String(), ReadOptional: true},
+	})
+	destinationAddress := types.Object([]types.Property{
+		{Name: "street", Type: types.String(), Nullable: true},
+		{Name: "city", Type: types.String(), Nullable: true},
+		{Name: "postal_code", Type: types.String(), Nullable: true},
+		{Name: "country", Type: types.String(), Nullable: true},
+	})
+	address := map[string]any{"street": "Via Roma 1", "city": "Milano", "postal_code": "20121", "country": "IT"}
 	jsonValues := make([]any, 64)
 	for i := range jsonValues {
 		jsonValues[i] = json.Value("null")
@@ -56,6 +70,7 @@ func BenchmarkMappingTransform(b *testing.B) {
 		{"objects_coalesce", types.Array(object), types.Array(object), objects, "coalesce(source, source)"},
 		{"objects_if", types.Array(object), types.Array(object), objects, "if(true, source, source)"},
 		{"objects_optional", types.Array(optionalObject), types.Array(optionalObject), objects, "source"},
+		{"profile_object", profileAddress, destinationAddress, address, "source"},
 		{"json_values", types.Array(types.JSON()), types.Array(types.JSON()), jsonValues, "source"},
 	}
 

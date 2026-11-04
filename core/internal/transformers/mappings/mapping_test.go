@@ -115,6 +115,17 @@ func TestMappingReusePreservesBehavior(t *testing.T) {
 	nullable := types.Object([]types.Property{{Name: "name", Type: types.String(), Nullable: true}})
 	nonNullable := types.Object([]types.Property{{Name: "name", Type: types.String()}})
 	readOptional := types.Object([]types.Property{{Name: "name", Type: types.String(), ReadOptional: true}})
+	// Profile properties are read-optional and not nullable; destination properties are not read-optional.
+	profile := types.Object([]types.Property{
+		{Name: "name", Type: types.String(), ReadOptional: true},
+		{Name: "value", Type: types.Int(32), ReadOptional: true},
+	})
+	destination := types.Object([]types.Property{
+		{Name: "name", Type: types.String(), Nullable: true},
+		{Name: "value", Type: types.Int(32)},
+	})
+	nestedProfile := types.Object([]types.Property{{Name: "child", Type: profile, ReadOptional: true}})
+	nestedDestination := types.Object([]types.Property{{Name: "child", Type: destination}})
 	wide := types.Object([]types.Property{{Name: "number", Type: types.Int(32)}})
 	narrow := types.Object([]types.Property{{Name: "number", Type: types.Int(8)}})
 	array := types.Array(object)
@@ -144,7 +155,14 @@ func TestMappingReusePreservesBehavior(t *testing.T) {
 		{"property metadata", types.AsRole(object, types.Source), metadata, value, "source", false, nil},
 		{"added required property", nonNullable, object, map[string]any{"name": "value"}, "source", true, writePurposes},
 		{"different property name", object, differentName, value, "source", true, nil},
-		{"read optional", readOptional, nonNullable, map[string]any{}, "source", true, nil},
+		{"read optional", readOptional, nonNullable, map[string]any{}, "source", false, nil},
+		{"empty profile object", profile, destination, map[string]any{}, "source", false, nil},
+		{"partial profile object", profile, destination, map[string]any{"value": 1}, "source", false, nil},
+		{"complete profile object", profile, destination, value, "source", false, nil},
+		{"nested profile object", nestedProfile, nestedDestination, map[string]any{"child": map[string]any{"value": 1}}, "source", false, nil},
+		{"profile object array", types.Array(profile), types.Array(destination), []any{map[string]any{}, value}, "source", false, nil},
+		{"profile object map", types.Map(profile), types.Map(destination), map[string]any{"key": map[string]any{"name": "value"}}, "source", false, nil},
+		{"required profile property", profile, object, map[string]any{"value": 1}, "source", true, writePurposes},
 		{"empty array", types.Array(types.Int(32)), types.Array(types.Int(32)), []any{}, "source", false, nil},
 		{"nil map", types.Map(types.String()), types.Map(types.String()), map[string]any(nil), "source", false, nil},
 		{"array write metadata", types.Array(types.AsRole(object, types.Source)), array, []any{value}, "source", false, nil},
@@ -155,6 +173,7 @@ func TestMappingReusePreservesBehavior(t *testing.T) {
 		{"optional map write field", types.Map(types.AsRole(optional, types.Source)), types.Map(optional), map[string]any{"key": map[string]any{}}, "source", true, writePurposes},
 		{"JSON null write metadata", types.AsRole(payload, types.Source), payload, map[string]any{"payload": json.Value("null")}, "source", false, nil},
 		{"nullable JSON write metadata", types.AsRole(nullablePayload, types.Source), nullablePayload, map[string]any{"payload": nil}, "source", false, nil},
+		{"nullable widening", nonNullable, nullable, map[string]any{"name": "value"}, "source", false, nil},
 		{"nullability", nullable, nonNullable, map[string]any{"name": nil}, "source", true, allPurposes},
 		{"array minimum", types.Array(types.Int(32)), types.Array(types.Int(32)).WithMinElements(2), []any{1}, "source", true, allPurposes},
 		{"array maximum", types.Array(types.Int(32)), types.Array(types.Int(32)).WithMaxElements(1), []any{1, 2}, "source", true, allPurposes},
