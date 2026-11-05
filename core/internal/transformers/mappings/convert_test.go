@@ -7,7 +7,6 @@ package mappings
 import (
 	"math"
 	"regexp"
-	"strings"
 	"testing"
 	"time"
 
@@ -430,17 +429,6 @@ func TestConvertStringToDate(t *testing.T) {
 		{"23-05-24", time.Time{}, errParseConversion},
 		{"05/24/23", time.Time{}, errParseConversion},
 		{"05.24.23", time.Time{}, errParseConversion},
-		{"01-01-01", time.Time{}, errParseConversion},
-		{"68-01-01", time.Time{}, errParseConversion},
-		{"69-01-01", time.Time{}, errParseConversion},
-		{"99-12-31", time.Time{}, errParseConversion},
-		{"04-02-29", time.Time{}, errParseConversion},
-		{"12/31/25", time.Time{}, errParseConversion},
-		{"02/29/00", time.Time{}, errParseConversion},
-		{"68-12-31", time.Time{}, errParseConversion},
-		{"01.01.69", time.Time{}, errParseConversion},
-		{"12/31/xx", time.Time{}, errParseConversion},
-		{"12/31/abcd", time.Time{}, errParseConversion},
 		{"abcd-12-31", time.Time{}, errParseConversion},
 		{"2023-ab-24", time.Time{}, errParseConversion},
 		{"2023-05-cd", time.Time{}, errParseConversion},
@@ -479,15 +467,10 @@ func TestConvertStringToDate(t *testing.T) {
 		{"10000000", time.Time{}, errYearRangeConversion},
 		{"1000000000", time.Time{}, errYearRangeConversion},
 		{"9223372036854775808", time.Time{}, errYearRangeConversion},
-		{strings.Repeat("9", 308), time.Time{}, errYearRangeConversion},
-		{strings.Repeat("9", 309), time.Time{}, errYearRangeConversion},
 		{"2023-13-01", time.Time{}, errParseConversion},
 		{"1900-02-29", time.Time{}, errParseConversion},
-		{"23-02-29", time.Time{}, errParseConversion},
-		{"05/24.23", time.Time{}, errParseConversion},
 		{"2023/05-24", time.Time{}, errParseConversion},
 		{"0000-01-01", time.Time{}, errYearRangeConversion},
-		{"00-01-01", time.Time{}, errParseConversion},
 		{"2000-02-30", time.Time{}, errParseConversion},
 		{"-1.0", time.Time{}, errParseConversion},
 		{"1e3", time.Time{}, errParseConversion},

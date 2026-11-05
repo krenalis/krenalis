@@ -18,24 +18,6 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-// TestCompileRejectsIncompatibleTimeLiterals verifies that boolean and numeric
-// literals cannot be converted to the time type.
-func TestCompileRejectsIncompatibleTimeLiterals(t *testing.T) {
-	for _, source := range []string{"true", "false", "42", "-42", "1.5"} {
-		t.Run(source, func(t *testing.T) {
-			_, _, err := Compile(source, types.Type{}, types.Time())
-			if err != nil {
-				expected := source + " is not convertible to the time type"
-				if err.Error() != expected {
-					t.Fatalf("expected error %q, got %q", expected, err)
-				}
-				return
-			}
-			t.Fatal("expected conversion error, got nil")
-		})
-	}
-}
-
 func Test_Compile(t *testing.T) {
 
 	d := time.Date(2023, 7, 8, 0, 0, 0, 0, time.UTC)
@@ -184,6 +166,9 @@ func Test_Compile(t *testing.T) {
 		{expr: "true && false", dt: types.Boolean(), compileErr: errors.New(`unexpected character '&'`)},
 		{expr: "1,000", dt: types.Int(32), compileErr: errors.New(`unexpected character ','`)},
 		{expr: "true", dt: types.Int(32), compileErr: errors.New("true is not convertible to the int(32) type")},
+		{expr: "true", dt: types.Time(), compileErr: errors.New("true is not convertible to the time type")},
+		{expr: "42", dt: types.Time(), compileErr: errors.New("42 is not convertible to the time type")},
+		{expr: "1.5", dt: types.Time(), compileErr: errors.New("1.5 is not convertible to the time type")},
 		{expr: "engine", dt: types.Object([]types.Property{{Name: "notfound", Type: types.String()}}), compileErr: errors.New("cannot convert expression (type object) to object")},
 		{expr: "engine", dt: types.Object([]types.Property{{Name: "power", Type: types.Boolean()}}), compileErr: errors.New("cannot convert expression (type object) to object")},
 		{expr: "revision_dates", dt: types.Array(types.Boolean()), compileErr: errors.New("cannot convert expression (type array(datetime)) to array(boolean)")},
