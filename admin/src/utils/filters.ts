@@ -53,11 +53,16 @@ const isDate = (s: string): boolean => {
 // isDateTime checks whether the string s represents a valid datetime value that
 // can be used as a filter value.
 const isDateTime = (s: string): boolean => {
-	const m = s.match(/^\d{4}-\d{2}-\d{2}T(\d{2}):\d{2}:\d{2}(?:\.\d{1,9})?(?:[+-]\d{2}:\d{2}|Z)?$/);
+	const m = s.match(/^\d{4}-\d{2}-\d{2}T(\d{2}):\d{2}:\d{2}(?:\.\d{1,9})?([+-]\d{2}:\d{2}|Z)?$/);
 	if (m == null || Number(m[1]) > 23 || !isDate(s.slice(0, 10))) {
 		return false;
 	}
-	const date = new Date(s);
+	// Read a datetime without an offset as UTC, as the server does, by
+	// appending "Z". Otherwise Date would read it in the browser's time
+	// zone, and the year check below, done in UTC, could reject it: for
+	// example, 9999-12-31T23:30:00 in New York is
+	// 10000-01-01T04:30:00Z.
+	const date = new Date(m[2] == null ? s + 'Z' : s);
 	if (Number.isNaN(date.valueOf())) {
 		return false;
 	}
