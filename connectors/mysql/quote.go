@@ -7,6 +7,7 @@ package mysql
 import (
 	"errors"
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -46,6 +47,9 @@ func quoteValue(b *strings.Builder, v any, t types.Type) error {
 	case uint:
 		b.WriteString(strconv.FormatUint(uint64(v), 10))
 	case float64:
+		if math.IsNaN(v) || math.IsInf(v, 0) {
+			return fmt.Errorf("connectors/mysql: non-finite floating-point value %v", v)
+		}
 		b.WriteString(strconv.FormatFloat(v, 'G', -1, t.BitSize()))
 	case decimal.Decimal:
 		b.WriteString(v.String())

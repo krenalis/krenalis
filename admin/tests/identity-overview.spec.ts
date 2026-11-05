@@ -160,7 +160,7 @@ for (const [title, maximum, anonymousMaximum] of [
 		).toHaveCount(6);
 		if (title === 'Identities over time (daily)') {
 			await anonymous.click();
-			await page.locator('sl-select[aria-label="Connection"]').click();
+			await page.locator('wa-select[aria-label="Connection"]').click();
 			await page.getByRole('option', { name: 'Removed connections' }).click();
 			await expect(ticks.last()).toHaveText('8');
 			await expect(anonymous).toHaveAttribute('aria-pressed', 'false');
@@ -334,10 +334,7 @@ for (const scenario of ['resolutionAtIdentity', 'resolutionSingleDayZero'] as co
 					.locator('.identity-dashboard__kpi-value'),
 			).toHaveText(value);
 		}
-		await expect(page.locator('sl-button').filter({ hasText: 'Last 30 days' })).toHaveAttribute(
-			'variant',
-			'primary',
-		);
+		await expect(page.locator('wa-button').filter({ hasText: 'Last 30 days' })).toHaveAttribute('variant', 'brand');
 		const charts = page.locator('.identity-dashboard__effectiveness-chart');
 		await expect(charts).toHaveCount(2);
 		await page.mouse.move(0, 0);
@@ -425,7 +422,7 @@ test('loads removed connection history when the current state is zero', async ({
 	await expect(
 		page.locator('.identity-dashboard__section--current-state .identity-dashboard__kpi-value').first(),
 	).toHaveText('0');
-	await page.locator('sl-select[aria-label="Connection"]').click();
+	await page.locator('wa-select[aria-label="Connection"]').click();
 	await page.getByRole('option', { name: 'Removed connections' }).click();
 	await expect
 		.poll(async () =>
@@ -615,7 +612,7 @@ test('keeps the requested connection selected and allows leaving it after a fail
 		window.identityOverviewFailure = '?connection=deleted';
 		window.identityOverviewHold = '?connection=deleted';
 	});
-	const select = page.locator('sl-select[aria-label="Connection"]');
+	const select = page.locator('wa-select[aria-label="Connection"]');
 	await select.click();
 	await page.getByRole('option', { name: 'Removed connections' }).click();
 	await expect.poll(() => page.evaluate(() => window.identityOverviewPending.length)).toBe(1);
@@ -680,7 +677,7 @@ test('clears the previous workspace and ignores its unfinished load after a work
 	});
 	await page.addScriptTag({ content: componentScript });
 	await expect(page.locator('.identity-dashboard__history-status')).toHaveText('Successful');
-	const select = page.locator('sl-select[aria-label="Connection"]');
+	const select = page.locator('wa-select[aria-label="Connection"]');
 	await select.click();
 	await page.getByRole('option', { name: 'Removed connections' }).click();
 	await expect(select).toHaveJSProperty('value', 'deleted');
