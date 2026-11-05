@@ -1589,7 +1589,7 @@ func (this *Connection) PreviewSendEvent(ctx context.Context, typ string, event 
 		// Validate the mapping and the transformation.
 		switch {
 		case transformation.Mapping != nil:
-			mapping, err := mappings.New(transformation.Mapping, schemas.Event, outSchema, false)
+			mapping, err := mappings.New(transformation.Mapping, schemas.Event, outSchema)
 			if err != nil {
 				return nil, errors.BadRequest("mapping is not valid: %s", err)
 			}

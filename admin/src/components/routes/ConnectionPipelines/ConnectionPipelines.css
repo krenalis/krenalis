@@ -215,6 +215,10 @@
 	color: var(--text-onaccent);
 }
 
+.connection-pipelines__buttons-dropdown .connection-pipelines__run-button::part(label) {
+	padding-inline: calc(var(--wa-space-2xs) + 1.5em) !important;
+}
+
 .connection-pipelines__buttons-dropdown .connection-pipelines__run-button-tooltip,
 .connection-pipelines__buttons-dropdown .connection-pipelines__run-button,
 .connection-pipelines__buttons-dropdown .connection-pipelines__manage-button {

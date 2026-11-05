@@ -573,7 +573,7 @@ const PropertyForm = ({
 	};
 
 	const onChangeDurationUnit = (event) => {
-		updateValueType((type: IntType) => {
+		updateValueType((type: FloatType) => {
 			if (type.semantics === 'duration') {
 				type.unit = event.target.value;
 			}
@@ -646,7 +646,7 @@ const PropertyForm = ({
 			? UNIT_OF_MEASURE_OPTIONS.find((option) => option.value === valueType.unit)
 			: undefined;
 	const selectedDurationUnitOption =
-		valueType?.kind === 'int' && valueType.semantics === 'duration'
+		valueType?.kind === 'float' && valueType.semantics === 'duration'
 			? DURATION_UNIT_OPTIONS.find((option) => option.value === valueType.unit)
 			: undefined;
 	const propertyParentPath = propertyPaths[parentKey] ?? '';
@@ -1002,7 +1002,7 @@ const PropertyForm = ({
 					{numericRangeControls}
 				</div>
 			)}
-			{valueType?.kind === 'int' && valueType.semantics === 'duration' && (
+			{valueType?.kind === 'float' && valueType.semantics === 'duration' && (
 				<div className='property-form__constraints property-form__constraints--duration'>
 					{canEditType ? (
 						<WaSelect
@@ -1274,7 +1274,7 @@ const validatePropertyType = (
 			return error;
 		}
 	}
-	if (type.kind === 'int' && type.semantics === 'duration' && (type.unit == null || type.unit.length === 0)) {
+	if (type.kind === 'float' && type.semantics === 'duration' && (type.unit == null || type.unit.length === 0)) {
 		return { location: 'duration-unit', message: 'Unit is required' };
 	}
 	return null;
