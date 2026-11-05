@@ -470,6 +470,7 @@ func TestConvertStringToDate(t *testing.T) {
 		{"2023-13-01", time.Time{}, errParseConversion},
 		{"1900-02-29", time.Time{}, errParseConversion},
 		{"2023/05-24", time.Time{}, errParseConversion},
+		{"2023-05/24", time.Time{}, errParseConversion},
 		{"0000-01-01", time.Time{}, errYearRangeConversion},
 		{"2000-02-30", time.Time{}, errParseConversion},
 		{"-1.0", time.Time{}, errParseConversion},
