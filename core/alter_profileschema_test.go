@@ -801,7 +801,7 @@ func Test_checkAllowedTypesProfileSchema(t *testing.T) {
 			err: "profile schema properties with duration semantics must have real float(64) values",
 		},
 		{
-			name: "Duration semantics on float(32)",
+			name: "Duration semantics on real float(32)",
 			schema: types.Object([]types.Property{
 				{
 					Name: "duration", Type: types.Float(32).Real().AsDuration(types.Second), ReadOptional: true,
