@@ -2255,7 +2255,7 @@ for (const [semantics, kind, structure] of [
 	['phone', 'string', 'array'],
 	['url', 'string', 'map'],
 	['country', 'string', 'one'],
-	['duration', 'int', 'array'],
+	['duration', 'float', 'array'],
 	['money', 'decimal', 'one'],
 	['percentage', 'decimal', 'array'],
 	['measurement', 'decimal', 'map'],
@@ -2311,9 +2311,12 @@ for (const [semantics, kind, structure] of [
 			await expect(propertyPanel.locator('.property-form__scale input')).toHaveValue('4');
 			await expect(propertyPanel.locator('.property-form__minimum input')).toHaveValue('-10.5');
 			await expect(propertyPanel.locator('.property-form__maximum input')).toHaveValue('10.5');
-		} else if (kind === 'int') {
+		} else if (kind === 'float') {
 			await expect(propertyPanel.locator('.property-form__bit-size')).toHaveJSProperty('value', '64');
-			await expect(propertyPanel.locator('.property-form__integer-sign')).toHaveJSProperty('value', 'signed');
+			await expect(propertyPanel.locator('.property-form__float-special-values wa-checkbox')).toHaveJSProperty(
+				'checked',
+				false,
+			);
 		} else {
 			await expect(propertyPanel.locator('.property-form__constraints--length')).toBeVisible();
 		}
@@ -2333,8 +2336,8 @@ for (const [semantics, kind, structure] of [
 		const valueType: Type =
 			kind === 'decimal'
 				? { kind, precision: 18, scale: 4, minimum: -10.5, maximum: 10.5 }
-				: kind === 'int'
-					? { kind, bitSize: 64, unsigned: false }
+				: kind === 'float'
+					? { kind, bitSize: 64, real: true }
 					: { kind };
 		for (const request of [previewRequest, alterRequest]) {
 			const schema = request.postDataJSON().schema as ObjectType;
@@ -2713,7 +2716,7 @@ test(`Keep applied property types read-only and preserve their configuration`, a
 		},
 		materialized_money_without_currency: { kind: 'decimal', semantics: 'money', precision: 18, scale: 4 },
 		materialized_measurement: { kind: 'decimal', semantics: 'measurement', unit: 'kg', precision: 18, scale: 4 },
-		materialized_duration: { kind: 'int', semantics: 'duration', unit: 'second', bitSize: 64, unsigned: false },
+		materialized_duration: { kind: 'float', semantics: 'duration', unit: 'second', bitSize: 64, real: true },
 		materialized_country: { kind: 'string', semantics: 'country', format: 'alpha-3' },
 		materialized_percentage: { kind: 'decimal', semantics: 'percentage', precision: 18, scale: 4 },
 		materialized_integer: { kind: 'int', bitSize: 32, unsigned: true, minimum: 0, maximum: 100 },
