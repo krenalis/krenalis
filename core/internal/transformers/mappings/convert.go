@@ -882,7 +882,8 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, purpose Purpose) 
 }
 
 // convertStringToDate parses dates in YYYY-MM-DD format and Excel serial dates.
-// Serial fractions are discarded, and Excel's fictitious day 60 is rejected.
+// Fractional parts of serial dates are discarded, and Excel's fictitious day 60
+// is rejected.
 //
 // It returns errParseConversion for invalid dates and errYearRangeConversion
 // for years outside [1, 9999].
