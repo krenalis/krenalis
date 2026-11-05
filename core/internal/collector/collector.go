@@ -821,10 +821,16 @@ func (c *Collector) serveEvents(w http.ResponseWriter, r *http.Request) error {
 	receivedAt := dec.receivedAt
 
 	// Decode the events.
-	for event, err := range dec.Events(connection.ID, connector.FallbackToRequestIP) {
+	for event, err := range dec.Events(connection.ID, ws.LookupEventDefinition, connector.FallbackToRequestIP) {
 
 		if err != nil {
-			continue
+			if _, ok := errors.AsType[*errors.BadRequestError](err); ok {
+				continue
+			}
+			if _, ok := errors.AsType[ValidationError](err); ok {
+				continue
+			}
+			return err
 		}
 		consumedEventCount++
 

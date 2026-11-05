@@ -6,6 +6,7 @@ package collector
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"iter"
 	"maps"
@@ -22,6 +23,7 @@ import (
 	"uuid"
 
 	"github.com/krenalis/krenalis/core/internal/events"
+	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/tools/base58"
 	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/errors"
@@ -43,6 +45,9 @@ var (
 	ip24 = netip.AddrFrom4([4]byte{255, 255, 255})      // 255.255.255.0
 	ip32 = netip.AddrFrom4([4]byte{255, 255, 255, 255}) // 255.255.255.255
 )
+
+// eventDefinitionLookup resolves an event's catalog definition.
+type eventDefinitionLookup func(typ, eventOrName string) state.EventDefinition
 
 type decoder struct {
 	payload *bytes.Buffer
@@ -101,21 +106,27 @@ func (d *decoder) EventCount() int {
 	return d.eventCount
 }
 
-// Events returns an iterator to iterate over events. connectionId represents
-// the identifier of the source connection from which the events are received.
+// Events returns an iterator over events, validated using lookup.
+// connectionId identifies the source connection from which events are received.
 //
 // If fallbackToRequestIP is true and the event IP is missing from the context,
 // the event IP is taken from the request's IP address.
 //
-// For malformed errors, it returns nil and the corresponding error.
-func (d *decoder) Events(connectionId string, fallbackToRequestIP bool) iter.Seq2[events.Event, error] {
+// Malformed events yield nil and *errors.BadRequestError. Invalid catalog data
+// yields nil and a ValidationError. Events without a matching schema retain
+// their JSON payloads. lookup must not be nil.
+func (d *decoder) Events(connectionId string, lookup eventDefinitionLookup, fallbackToRequestIP bool) iter.Seq2[events.Event, error] {
 	return func(yield func(events.Event, error) bool) {
+		if lookup == nil {
+			yield(nil, errors.New("core/internal/collector: event decoder schema lookup is nil"))
+			return
+		}
 		if d.typ != "batch" {
 			// Decode a single event.
 			var event events.Event
 			var err error
 			if k := d.dec.PeekKind(); k == json.Object {
-				event, err = d.decodeEvent(connectionId, fallbackToRequestIP)
+				event, err = d.decodeEvent(connectionId, lookup, fallbackToRequestIP)
 			} else {
 				err = errors.BadRequest("expected an object for the event, but found %s instead", k)
 			}
@@ -137,7 +148,7 @@ func (d *decoder) Events(connectionId string, fallbackToRequestIP bool) iter.Seq
 				}
 				continue
 			}
-			event, err := d.decodeEvent(connectionId, fallbackToRequestIP)
+			event, err := d.decodeEvent(connectionId, lookup, fallbackToRequestIP)
 			if !yield(event, err) {
 				return
 			}
@@ -364,7 +375,7 @@ func (d *decoder) WriteKey() string {
 }
 
 // decodeEvent decodes and returns an event.
-func (d *decoder) decodeEvent(connectionId string, fallbackToRequestIP bool) (events.Event, error) {
+func (d *decoder) decodeEvent(connectionId string, lookup eventDefinitionLookup, fallbackToRequestIP bool) (events.Event, error) {
 
 	_ = d.dec.SkipToken() // Skip '{'.
 
@@ -778,6 +789,36 @@ func (d *decoder) decodeEvent(connectionId string, fallbackToRequestIP bool) (ev
 			delete(context, "traits")
 		} else {
 			event["traits"] = json.Value("{}")
+		}
+	}
+
+	// Validate and normalize the catalog's traits and properties schemas.
+	eventOrName, _ := event["event"].(string)
+	if !isTrack {
+		eventOrName, _ = event["name"].(string)
+	}
+	definition := lookup(typ, eventOrName)
+	traitsSchema, propertiesSchema := definition.Schemas.Traits, definition.Schemas.Properties
+	if traitsSchema.Valid() {
+		traits, ok := event["traits"].(json.Value)
+		if !ok {
+			return nil, fmt.Errorf(
+				"core/internal/collector: expected traits to be json.Value, got %T", event["traits"])
+		}
+		event["traits"], err = normalizeJSON("traits", traits, traitsSchema)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if propertiesSchema.Valid() {
+		properties, ok := event["properties"].(json.Value)
+		if !ok {
+			return nil, fmt.Errorf(
+				"core/internal/collector: expected properties to be json.Value, got %T", event["properties"])
+		}
+		event["properties"], err = normalizeJSON("properties", properties, propertiesSchema)
+		if err != nil {
+			return nil, err
 		}
 	}
 

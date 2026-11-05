@@ -217,7 +217,7 @@ func decodeMaxMindTestEvent(t *testing.T, db *maxminddb.Reader, body string, rem
 		count int
 	)
 	const testConnectionID = "6NpT4zB8QaR2"
-	for gotEvent, err := range dec.Events(testConnectionID, fallbackToRequestIP) {
+	for gotEvent, err := range dec.Events(testConnectionID, lookupTestEventDefinition, fallbackToRequestIP) {
 		if err != nil {
 			t.Fatalf("decoding event: %v", err)
 		}

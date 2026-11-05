@@ -64,7 +64,7 @@ func TestDecoderEventCount(t *testing.T) {
 				t.Fatalf("expected event count %d, got %d", test.count, count)
 			}
 			decoded := 0
-			for event, err := range dec.Events(decoderTestConnectionID, false) {
+			for event, err := range dec.Events(decoderTestConnectionID, lookupTestEventDefinition, false) {
 				if test.validEvents {
 					if err != nil {
 						t.Fatalf("expected no event error, got %v", err)
@@ -663,7 +663,7 @@ func Test_Decoder(t *testing.T) {
 				}
 			}
 			i := 0
-			for got, err := range dec.Events(test.connectionId, true) {
+			for got, err := range dec.Events(test.connectionId, lookupTestEventDefinition, true) {
 				if i == len(test.expected) {
 					if err != nil {
 						t.Fatalf("when parsing an unexpected event, got error %q", err)
@@ -747,7 +747,7 @@ func TestDecoderResetClearsType(t *testing.T) {
 		}
 	}
 
-	for _, err := range dec.Events(decoderTestConnectionID, false) {
+	for _, err := range dec.Events(decoderTestConnectionID, lookupTestEventDefinition, false) {
 		if want := errors.BadRequest("property 'type' is required for a single-event request"); !reflect.DeepEqual(err, want) {
 			t.Fatalf("expected event error %#v, got %#v", want, err)
 		}
@@ -863,7 +863,7 @@ func TestDecoderDefaultContextNotMutatedAcrossEvents(t *testing.T) {
 	}
 
 	i := 0
-	for event, err := range dec.Events(decoderTestConnectionID, true) {
+	for event, err := range dec.Events(decoderTestConnectionID, lookupTestEventDefinition, true) {
 		if err != nil {
 			t.Fatalf("unexpected event error: %v", err)
 		}
@@ -950,7 +950,7 @@ func TestDecoderContextIPHandling(t *testing.T) {
 			count    int
 		)
 
-		for event, err := range dec.Events(decoderTestConnectionID, fallback) {
+		for event, err := range dec.Events(decoderTestConnectionID, lookupTestEventDefinition, fallback) {
 			gotEvent = event
 			gotErr = err
 			count++
