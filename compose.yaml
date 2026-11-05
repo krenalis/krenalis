@@ -6,9 +6,7 @@ services:
     image: krenalis/krenalis:v0.46.0
     command: -init-db-if-empty -init-docker-member
     restart: on-failure
-    # Time allowed for a graceful shutdown before Docker kills Krenalis.
-    # Docker's default of 10 seconds may not be enough to complete it.
-    stop_grace_period: 30s
+    stop_grace_period: 30s # the 10s default may cut the shutdown short
     ports:
       - ${KRENALIS_DOCKER_COMPOSE_PORT-2022}:2022
     environment:
