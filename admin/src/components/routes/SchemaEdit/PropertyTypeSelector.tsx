@@ -119,22 +119,22 @@ const PROPERTY_TYPE_OPTIONS: PropertyTypeOption[] = [
 		create: () => ({ kind: 'boolean' }),
 	},
 	{
-		id: 'duration',
-		kind: 'int',
-		separated: true,
-		create: () => ({ kind: 'int', bitSize: 64, unsigned: false, semantics: 'duration', unit: EMPTY_DURATION_UNIT }),
-	},
-	{
 		id: 'int',
 		kind: 'int',
 		description: 'Number with no decimal places',
+		separated: true,
 		create: () => ({ kind: 'int', bitSize: 32, unsigned: false }),
+	},
+	{
+		id: 'duration',
+		kind: 'float',
+		separated: true,
+		create: () => ({ kind: 'float', bitSize: 64, real: true, semantics: 'duration', unit: EMPTY_DURATION_UNIT }),
 	},
 	{
 		id: 'float',
 		kind: 'float',
 		description: 'Number with approximate precision',
-		separated: true,
 		create: () => ({ kind: 'float', bitSize: 64, real: false }),
 	},
 	{
