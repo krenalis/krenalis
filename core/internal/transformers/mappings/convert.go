@@ -961,7 +961,6 @@ func isSimpleFloat(s string) bool {
 
 // needsConversion reports whether non-null results of expr must pass through
 // convert to apply conversions or validation checks.
-// Evaluation assumes that input values conform to the source schema.
 func needsConversion(expr []part, dt types.Type) bool {
 	if len(expr) == 1 && expr[0].value == nil {
 		p := expr[0]
