@@ -881,27 +881,12 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, purpose Purpose) 
 	return v, errInvalidConversion
 }
 
-// convertStringToDate parses calendar dates and Excel serial dates. Two-digit
-// years are interpreted literally. Serial fractions are discarded, and Excel's
-// fictitious serial day 60 is rejected.
+// convertStringToDate parses dates in YYYY-MM-DD format and Excel serial dates.
+// Serial fractions are discarded, and Excel's fictitious day 60 is rejected.
 //
 // It returns errParseConversion for invalid dates and errYearRangeConversion
 // for years outside [1, 9999].
 func convertStringToDate(s string) (time.Time, error) {
-	month, day, year := -1, -1, -1
-	if len(s) == 10 {
-		if s[4] == '-' && s[7] == '-' {
-			year, month, day = parseUint(s[0:4]), parseUint(s[5:7]), parseUint(s[8:10]) // yyyy-mm-dd
-		} else if s[2] == '/' && s[5] == '/' || s[2] == '.' && s[5] == '.' {
-			month, day, year = parseUint(s[0:2]), parseUint(s[3:5]), parseUint(s[6:10]) // mm/dd/yyyy, mm.dd.yyyy
-		}
-	} else if len(s) == 8 {
-		if s[2] == '-' && s[5] == '-' {
-			year, month, day = parseUint(s[0:2]), parseUint(s[3:5]), parseUint(s[6:8]) // yy-mm-dd
-		} else if s[2] == '/' && s[5] == '/' || s[2] == '.' && s[5] == '.' {
-			month, day, year = parseUint(s[0:2]), parseUint(s[3:5]), parseUint(s[6:8]) // mm/dd/yy, mm.dd.yy
-		}
-	}
 	if isSimpleFloat(s) {
 		// Parse as Excel serial date-time.
 		// https://support.microsoft.com/en-us/office/datevalue-function-df8b07d4-7761-4a93-bc33-b7471bbff252
@@ -923,7 +908,11 @@ func convertStringToDate(s string) (time.Time, error) {
 		}
 		return excelEpoch.AddDate(0, 0, days), nil
 	}
-	if month < 1 || month > 12 || day < 1 || day > 31 {
+	if len(s) != 10 || s[4] != '-' || s[7] != '-' {
+		return time.Time{}, errParseConversion
+	}
+	year, month, day := parseUint(s[0:4]), parseUint(s[5:7]), parseUint(s[8:10])
+	if year < 0 || month < 1 || month > 12 || day < 1 || day > 31 {
 		return time.Time{}, errParseConversion
 	}
 	if year < 1 || year > 9999 {

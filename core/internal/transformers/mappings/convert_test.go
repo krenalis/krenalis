@@ -7,6 +7,7 @@ package mappings
 import (
 	"math"
 	"regexp"
+	"strings"
 	"testing"
 	"time"
 
@@ -415,7 +416,7 @@ func TestConvertArrayUniqueness(t *testing.T) {
 
 }
 
-// TestConvertStringToDate checks calendar formats, Excel serial dates, and
+// TestConvertStringToDate checks YYYY-MM-DD dates, Excel serial dates, and
 // error handling for invalid dates and out-of-range years.
 func TestConvertStringToDate(t *testing.T) {
 	tests := []struct {
@@ -424,16 +425,34 @@ func TestConvertStringToDate(t *testing.T) {
 		wantErr error
 	}{
 		{"2023-05-24", time.Date(2023, 5, 24, 0, 0, 0, 0, time.UTC), nil},
-		{"05/24/2023", time.Date(2023, 5, 24, 0, 0, 0, 0, time.UTC), nil},
-		{"05.24.2023", time.Date(2023, 5, 24, 0, 0, 0, 0, time.UTC), nil},
-		{"23-05-24", time.Date(23, 5, 24, 0, 0, 0, 0, time.UTC), nil},
-		{"05/24/23", time.Date(23, 5, 24, 0, 0, 0, 0, time.UTC), nil},
-		{"05.24.23", time.Date(23, 5, 24, 0, 0, 0, 0, time.UTC), nil},
-		{"01-01-01", time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC), nil},
-		{"68-01-01", time.Date(68, 1, 1, 0, 0, 0, 0, time.UTC), nil},
-		{"69-01-01", time.Date(69, 1, 1, 0, 0, 0, 0, time.UTC), nil},
-		{"99-12-31", time.Date(99, 12, 31, 0, 0, 0, 0, time.UTC), nil},
-		{"04-02-29", time.Date(4, 2, 29, 0, 0, 0, 0, time.UTC), nil},
+		{"05/24/2023", time.Time{}, errParseConversion},
+		{"05.24.2023", time.Time{}, errParseConversion},
+		{"23-05-24", time.Time{}, errParseConversion},
+		{"05/24/23", time.Time{}, errParseConversion},
+		{"05.24.23", time.Time{}, errParseConversion},
+		{"01-01-01", time.Time{}, errParseConversion},
+		{"68-01-01", time.Time{}, errParseConversion},
+		{"69-01-01", time.Time{}, errParseConversion},
+		{"99-12-31", time.Time{}, errParseConversion},
+		{"04-02-29", time.Time{}, errParseConversion},
+		{"12/31/25", time.Time{}, errParseConversion},
+		{"02/29/00", time.Time{}, errParseConversion},
+		{"68-12-31", time.Time{}, errParseConversion},
+		{"01.01.69", time.Time{}, errParseConversion},
+		{"12/31/xx", time.Time{}, errParseConversion},
+		{"12/31/abcd", time.Time{}, errParseConversion},
+		{"abcd-12-31", time.Time{}, errParseConversion},
+		{"2023-ab-24", time.Time{}, errParseConversion},
+		{"2023-05-cd", time.Time{}, errParseConversion},
+		{"2023-5-24", time.Time{}, errParseConversion},
+		{"2023-05-4", time.Time{}, errParseConversion},
+		{"2023/05/24", time.Time{}, errParseConversion},
+		{"2023.05.24", time.Time{}, errParseConversion},
+		{" 2023-05-24", time.Time{}, errParseConversion},
+		{"2023-05-24 ", time.Time{}, errParseConversion},
+		{"2023-05-24T00:00:00Z", time.Time{}, errParseConversion},
+		{"2023-05-24Z", time.Time{}, errParseConversion},
+		{"0025-12-31", time.Date(25, 12, 31, 0, 0, 0, 0, time.UTC), nil},
 		{"2000-02-29", time.Date(2000, 2, 29, 0, 0, 0, 0, time.UTC), nil},
 		{"0001-01-01", time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC), nil},
 		{"9999-12-31", time.Date(9999, 12, 31, 0, 0, 0, 0, time.UTC), nil},
@@ -449,22 +468,27 @@ func TestConvertStringToDate(t *testing.T) {
 		{"44927.99999999999999999999", time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC), nil},
 		{"106752", time.Date(2192, 4, 9, 0, 0, 0, 0, time.UTC), nil},
 		{"106753", time.Date(2192, 4, 10, 0, 0, 0, 0, time.UTC), nil},
+		{"200000.0", time.Date(2447, 7, 30, 0, 0, 0, 0, time.UTC), nil},
+		{"200000.000", time.Date(2447, 7, 30, 0, 0, 0, 0, time.UTC), nil},
 		{"2958465", time.Date(9999, 12, 31, 0, 0, 0, 0, time.UTC), nil},
 		{"2958465.99999999999999999999", time.Date(9999, 12, 31, 0, 0, 0, 0, time.UTC), nil},
 		{"060", time.Time{}, errParseConversion},
+		{"60.0", time.Time{}, errParseConversion},
 		{"60.5", time.Time{}, errParseConversion},
 		{"60.99999999999999999999", time.Time{}, errParseConversion},
 		{"2958466", time.Time{}, errYearRangeConversion},
 		{"10000000", time.Time{}, errYearRangeConversion},
 		{"1000000000", time.Time{}, errYearRangeConversion},
 		{"9223372036854775808", time.Time{}, errYearRangeConversion},
+		{strings.Repeat("9", 308), time.Time{}, errYearRangeConversion},
+		{strings.Repeat("9", 309), time.Time{}, errYearRangeConversion},
 		{"2023-13-01", time.Time{}, errParseConversion},
 		{"1900-02-29", time.Time{}, errParseConversion},
 		{"23-02-29", time.Time{}, errParseConversion},
 		{"05/24.23", time.Time{}, errParseConversion},
 		{"2023/05-24", time.Time{}, errParseConversion},
 		{"0000-01-01", time.Time{}, errYearRangeConversion},
-		{"00-01-01", time.Time{}, errYearRangeConversion},
+		{"00-01-01", time.Time{}, errParseConversion},
 		{"2000-02-30", time.Time{}, errParseConversion},
 		{"-1.0", time.Time{}, errParseConversion},
 		{"1e3", time.Time{}, errParseConversion},
@@ -481,8 +505,13 @@ func TestConvertStringToDate(t *testing.T) {
 		}
 		t.Run(name, func(t *testing.T) {
 			got, err := convertStringToDate(tt.in)
-			if tt.wantErr != err {
-				t.Fatalf("expected error %v, got %v", tt.wantErr, err)
+			if err != nil {
+				if err != tt.wantErr {
+					t.Fatalf("expected error %v, got %v", tt.wantErr, err)
+				}
+			}
+			if err == nil && tt.wantErr != nil {
+				t.Fatalf("expected error %v, got nil", tt.wantErr)
 			}
 			if !got.Equal(tt.want) {
 				t.Errorf("expected %v, got %v", tt.want, got)
