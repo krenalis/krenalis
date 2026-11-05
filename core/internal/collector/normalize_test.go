@@ -17,6 +17,16 @@ import (
 // TestNormalizeJSON checks validation and normalization of open event data.
 func TestNormalizeJSON(t *testing.T) {
 
+	product := types.Object([]types.Property{
+		{Name: "quantity", Type: types.Int(32), ReadOptional: true},
+		{Name: "price", Type: types.Decimal(30, 4), ReadOptional: true},
+		{Name: "addedAt", Type: types.DateTime(), ReadOptional: true},
+		{
+			Name: "details", ReadOptional: true,
+			Type: types.Object([]types.Property{{Name: "source", Type: types.String()}}),
+		},
+		{Name: "nullable", Type: types.String(), Nullable: true, ReadOptional: true},
+	})
 	schema := types.Object([]types.Property{
 		{Name: "count", Type: types.Int(8), ReadOptional: true},
 		{
@@ -27,6 +37,7 @@ func TestNormalizeJSON(t *testing.T) {
 		},
 		{Name: "raw", Type: types.JSON(), ReadOptional: true},
 		{Name: "nullable", Type: types.String(), Nullable: true, ReadOptional: true},
+		{Name: "products", Type: types.Array(product), ReadOptional: true},
 	})
 	large := strings.Repeat("9", 90)
 
@@ -53,6 +64,14 @@ func TestNormalizeJSON(t *testing.T) {
 		{name: "opaque JSON", value: `{"b":2, "a":` + large + `}`, schema: types.JSON(), want: `{"b":2,"a":` + large + `}`},
 		{name: "array", value: `["2026-11-04T12:00:00+01:00"]`, schema: types.Array(types.DateTime()), want: `["2026-11-04T11:00:00Z"]`},
 		{name: "JSON array with null", value: `[null,"1",1]`, schema: types.Array(types.JSON()), want: `[null,"1",1]`},
+		{name: "empty object array", value: `[]`, schema: types.Array(product), want: `[]`},
+		{name: "object array with optional fields absent", value: `[{}]`, schema: types.Array(product), want: `[{}]`},
+		{name: "object array preserves order and duplicates", value: `[{"quantity":2,"extra":true},{"quantity":1},{"quantity":2,"extra":true}]`, schema: types.Array(product), want: `[{"quantity":2,"extra":true},{"quantity":1},{"quantity":2,"extra":true}]`},
+		{name: "object array normalization", value: `[{"extra":{"arbitrary.key":null},"details":{"extra":true,"source":"sdk"},"addedAt":"2026-11-04T12:00:00+01:00"}]`, schema: types.Array(product), want: `[{"addedAt":"2026-11-04T11:00:00Z","details":{"source":"sdk","extra":true},"extra":{"arbitrary.key":null}}]`},
+		{name: "object array precision", value: `[{"price":12345678901234567890.1234,"extra":` + large + `}]`, schema: types.Array(product), want: `[{"price":12345678901234567890.1234,"extra":` + large + `}]`},
+		{name: "object array nullable field", value: `[{"nullable":null}]`, schema: types.Array(product), want: `[{"nullable":null}]`},
+		{name: "object array bounds", value: `[{"quantity":1},{"quantity":2}]`, schema: types.Array(product).WithMinElements(2).WithMaxElements(2), want: `[{"quantity":1},{"quantity":2}]`},
+		{name: "nested object arrays", value: `[{"products":[{"extra":true,"quantity":1}]}]`, schema: types.Array(schema), want: `[{"products":[{"quantity":1,"extra":true}]}]`},
 		{name: "map", value: `{"z":"2026-11-04T12:00:00+01:00","a":"2026-11-04T10:00:00Z"}`, schema: types.Map(types.DateTime()), want: `{"a":"2026-11-04T10:00:00Z","z":"2026-11-04T11:00:00Z"}`},
 		{name: "empty object", value: `{}`, schema: schema, want: `{}`},
 		{name: "schema then extra order", value: `{"z":true,"nullable":"x","count":1,"a":"extra"}`, schema: schema, want: `{"count":1,"nullable":"x","a":"extra","z":true}`},
@@ -76,6 +95,16 @@ func TestNormalizeJSON(t *testing.T) {
 		{name: "non-finite real", value: `"NaN"`, schema: types.Float(64).Real(), invalid: true},
 		{name: "invalid array element", value: `[1]`, schema: types.Array(types.String()), invalid: true},
 		{name: "null array element", value: `["x",null]`, schema: types.Array(types.String()), invalid: true},
+		{name: "object array wrong kind", value: `{}`, schema: types.Array(product), invalid: true},
+		{name: "object array scalar element", value: `[1]`, schema: types.Array(product), invalid: true, path: "[0]"},
+		{name: "object array null element", value: `[null]`, schema: types.Array(product), invalid: true, path: "[0]"},
+		{name: "object array too short", value: `[]`, schema: types.Array(product).WithMinElements(1), invalid: true},
+		{name: "object array too long", value: `[{},{}]`, schema: types.Array(product).WithMaxElements(1), invalid: true},
+		{name: "object array invalid field", value: `[{"quantity":1},{"quantity":"1"}]`, schema: types.Array(product), invalid: true, path: "[1].quantity"},
+		{name: "object array missing required field", value: `[{"details":{}}]`, schema: types.Array(product), invalid: true, path: "[0].details.source"},
+		{name: "object array decimal overflow", value: `[{"price":1},{"price":100000000000000000000000000}]`, schema: types.Array(product), invalid: true, path: "[1].price"},
+		{name: "nested object array error", value: `{"products":[{"quantity":"1"}]}`, schema: schema, invalid: true, path: "products[0].quantity"},
+		{name: "nested object arrays error", value: `[{"products":[{"quantity":"1"}]}]`, schema: types.Array(schema), invalid: true, path: "[0].products[0].quantity"},
 		{name: "invalid map value", value: `{"x":1}`, schema: types.Map(types.String()), invalid: true},
 		{name: "null map value", value: `{"x":null}`, schema: types.Map(types.String()), invalid: true},
 		{name: "object null", value: `null`, schema: schema, invalid: true},
@@ -109,7 +138,10 @@ func TestNormalizeJSON(t *testing.T) {
 				}
 				path := "properties"
 				if test.path != "" {
-					path += "." + test.path
+					if test.path[0] != '[' {
+						path += "."
+					}
+					path += test.path
 				}
 				if validation.PropertyPath() != path {
 					t.Fatalf("expected path %q, got %q", path, validation.PropertyPath())

@@ -41,14 +41,16 @@ func (err *jsonValidationError) Unwrap() error {
 func (err *jsonValidationError) withProperty(name string) *jsonValidationError {
 	path := name
 	if err.path != "" {
-		path += "." + err.path
+		if err.path[0] != '[' {
+			path += "."
+		}
+		path += err.path
 	}
 	return &jsonValidationError{path: path, err: err.err}
 }
 
 // normalizeJSON validates and normalizes event JSON against a catalog schema,
-// preserving undeclared properties. The schema follows the profile-schema
-// restrictions, so arrays and maps contain scalars or opaque JSON values.
+// preserving undeclared properties in objects and arrays of objects.
 // Input representations and scalar normalization follow types.Decode/Marshal;
 // additional conversions are deferred. Invalid input returns a ValidationError
 // whose property path starts with name.
@@ -74,6 +76,41 @@ func normalizeJSONValue(v json.Value, t types.Type) (json.Value, error) {
 
 	if !t.IsJSON() && v.IsNull() {
 		return nil, &jsonValidationError{err: errors.New("value cannot be null")}
+	}
+	if t.IsArray() && t.Elem().IsObject() {
+
+		var elements []json.Value
+		err := json.Unmarshal(v, &elements)
+		if err != nil {
+			return nil, &jsonValidationError{err: err}
+		}
+		if len(elements) < t.MinElements() {
+			err := fmt.Errorf("contains less than %d elements", t.MinElements())
+			return nil, &jsonValidationError{err: err}
+		}
+		if len(elements) > t.MaxElements() {
+			err := fmt.Errorf("contains more than %d elements", t.MaxElements())
+			return nil, &jsonValidationError{err: err}
+		}
+
+		var out json.Buffer
+		out.WriteByte('[')
+		for i, element := range elements {
+			value, err := normalizeJSONValue(element, t.Elem())
+			if err != nil {
+				if err, ok := errors.AsType[*jsonValidationError](err); ok {
+					return nil, err.withProperty(fmt.Sprintf("[%d]", i))
+				}
+				return nil, err
+			}
+			if i > 0 {
+				out.WriteByte(',')
+			}
+			out.Write(value)
+		}
+		out.WriteByte(']')
+
+		return out.Value()
 	}
 	if !t.IsObject() {
 		value, err := types.Decode[any](bytes.NewReader(v), t)

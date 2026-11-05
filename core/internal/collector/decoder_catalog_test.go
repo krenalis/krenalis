@@ -155,6 +155,60 @@ func TestDecoderEventCatalogBatch(t *testing.T) {
 
 }
 
+// TestDecoderEventCatalogObjectArrays preserves open objects and reports the
+// failing element without preventing later events from being decoded.
+func TestDecoderEventCatalogObjectArrays(t *testing.T) {
+
+	body := `{"batch":[` +
+		`{"type":"track","event":"Order Completed","userId":"bad",` +
+		`"properties":{"products":[{"quantity":1},{"quantity":"2"}]}},` +
+		`{"type":"track","event":"Order Completed","userId":"valid",` +
+		`"properties":{"products":[{"extra":null,"quantity":2},{"quantity":1},{"extra":null,"quantity":2}]}}]}`
+	r := httptest.NewRequest(http.MethodPost, "/events", strings.NewReader(body))
+	r.Header.Set("Content-Type", "application/json")
+	dec, err := newDecoder(r)
+	if err != nil {
+		t.Fatalf("expected an event decoder, got %v", err)
+	}
+
+	lookup := func(typ, eventOrName string) state.EventDefinition {
+		if typ != "track" || eventOrName != "Order Completed" {
+			t.Fatalf("expected lookup (track, Order Completed), got (%q, %q)", typ, eventOrName)
+		}
+		product := types.Object([]types.Property{{Name: "quantity", Type: types.Int(32), ReadOptional: true}})
+		properties := types.Object([]types.Property{
+			{Name: "products", Type: types.Array(product), ReadOptional: true},
+		})
+		return state.EventDefinition{Schemas: state.EventSchemas{Properties: properties}}
+	}
+	count := 0
+	for event, err := range dec.Events(decoderTestConnectionID, lookup, false) {
+		count++
+		if err != nil {
+			validation, ok := errors.AsType[ValidationError](err)
+			if !ok || count != 1 || validation.PropertyPath() != "properties.products[1].quantity" {
+				t.Fatalf("expected first-event properties.products[1].quantity error, got event %d: %v", count, err)
+			}
+			if event != nil {
+				t.Fatalf("expected no invalid event, got %#v", event)
+			}
+			continue
+		}
+		if count != 2 {
+			t.Fatalf("expected validation error for first event, got successful event %d", count)
+		}
+		want := `{"products":[{"quantity":2,"extra":null},{"quantity":1},{"quantity":2,"extra":null}]}`
+		value, ok := event["properties"].(json.Value)
+		if !ok || string(value) != want {
+			t.Fatalf("expected properties=%s as json.Value, got %#v", want, event["properties"])
+		}
+	}
+	if count != 2 {
+		t.Fatalf("expected two event results, got %d", count)
+	}
+
+}
+
 // TestDecoderEventCatalogRequiresLookup rejects a missing schema lookup.
 func TestDecoderEventCatalogRequiresLookup(t *testing.T) {
 
@@ -302,7 +356,29 @@ func TestDecoderEventSchemaInvariant(t *testing.T) {
 	}
 }
 
+// lookupTestEventDefinition keeps parser fixtures independent of the catalog.
 func lookupTestEventDefinition(typ, eventOrName string) state.EventDefinition {
-	var workspace state.Workspace
-	return workspace.LookupEventDefinition(typ, eventOrName)
+	if typ == "page" && eventOrName == "Example Page" {
+		return state.EventDefinition{ID: "example-page", Type: "page", Name: "Example Page"}
+	}
+	if typ != "track" || eventOrName != "Example Action" {
+		return state.EventDefinition{}
+	}
+	return state.EventDefinition{
+		ID: "example-action", Type: "track", Event: "Example Action",
+		Schemas: state.EventSchemas{
+			Traits: types.Object([]types.Property{
+				{Name: "email", Type: types.String().AsEmail(), ReadOptional: true},
+				{Name: "country", Type: types.String().AsCountry(types.ISO3166Alpha2), ReadOptional: true},
+			}),
+			Properties: types.Object([]types.Property{
+				{Name: "quantity", Type: types.Int(32), ReadOptional: true},
+				{Name: "occurredAt", Type: types.DateTime(), ReadOptional: true},
+				{
+					Name: "details", ReadOptional: true,
+					Type: types.Object([]types.Property{{Name: "source", Type: types.String(), ReadOptional: true}}),
+				},
+			}),
+		},
+	}
 }
