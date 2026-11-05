@@ -9,6 +9,7 @@ Uses only the standard library and the documented-profile helpers delivered
 with the property catalog. Does not modify either archive or its JSON Schemas.
 """
 
+import argparse
 import hashlib
 import json
 from pathlib import Path
@@ -18,21 +19,19 @@ import subprocess
 import tempfile
 import zipfile
 
+from native_type_choices import TYPE_CHOICES
+
 
 HERE = Path(__file__).resolve().parent
 OUTPUT = HERE.parents[1] / "core/internal/state/event_catalog_data.go"
 PROPERTY_NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
-MONEY_FIELDS = {
-    "amount", "discount", "price", "revenue", "shipping", "subtotal", "tax", "total",
-}
-INTEGER_FIELDS = {
-    "bitrate", "employees", "logins", "pod_length", "pod_position", "position", "quartile", "step",
-}
-DURATION_FIELDS = {"conversation_duration", "total_length"}
 
 
 def archive_files(name):
-    """Check the source manifest before reading any executable helpers."""
+    """Check archive consistency, not authenticity, against its own manifest.
+
+    The archives and executable helpers must already be trusted repository inputs.
+    """
     with zipfile.ZipFile(HERE / name) as archive:
         files = {name: archive.read(name) for name in archive.namelist()}
     for line in files["MANIFEST.sha256"].decode().splitlines():
@@ -88,12 +87,15 @@ def properties_type(nodes, event_id, selected_types, indent):
 def native_type(node, event_id, selected_types, indent):
     """Choose the native value type, independently of future input conversions."""
     kinds = set(selected_types(node, "documented")) - {"null"}
-    name = node["name"]
+    choice = TYPE_CHOICES.get((event_id, node["path"]))
+    if choice:
+        expected, native = choice
+        if kinds != set(expected):
+            raise ValueError(f"Source kinds changed for {event_id} {node['path']}: {sorted(kinds)}")
+        return native
+    if len(kinds) > 1:
+        raise ValueError(f"Unreviewed mixed kinds for {event_id} {node['path']}: {sorted(kinds)}")
     if not kinds:
-        # Both providers document the logical Date despite leaving its wire
-        # representation unspecified; Krenalis uses its normal Date encoding.
-        if name == "birthday" and "logical type Date" in node["description"]:
-            return "types.Date()"
         return "types.JSON()"
     if kinds == {"object"}:
         return properties_type(node["properties"], event_id, selected_types, indent)
@@ -104,39 +106,16 @@ def native_type(node, event_id, selected_types, indent):
         if item and "null" in selected_types(item, "documented"):
             element = "types.JSON()"
         return "types.Array(" + element + ")"
-    if kinds == {"boolean"}:
-        return "types.Boolean()"
-    if kinds <= {"number", "integer", "string"}:
-        if name in MONEY_FIELDS or name == "value" and (
-            "Monetary value" in node["description"] or "Checkout value" in node["description"]
-        ):
-            return "types.Decimal(18, 4).AsMoney()"
-        if name == "quantity":
-            return "types.Decimal(18, 4)"
-        if name == "employees":
-            return "types.Int(32)"
-        if kinds == {"string"} or name in {"rating", "value"}:
-            if name == "email" or name.endswith("_email"):
-                return "types.String().AsEmail()"
-            if name in {"avatar", "website", "url"} or name.endswith("_url"):
-                return "types.String().AsURL()"
-            if name in {"createdAt", "created_at"} and event_id.startswith("identity."):
-                return "types.DateTime()"
-            return "types.String()"
-        if name in DURATION_FIELDS:
-            return "types.Float(64).Real().AsDuration(types.Second)"
-        if event_id.startswith("video.") and name in {"position", "seek_position"}:
-            # Measurement/Second will be added only after its separate change
-            # has been integrated; these values already use the chosen kind.
-            return "types.Float(64).Real()"
-        if kinds == {"integer"} or name in INTEGER_FIELDS:
-            return "types.Int(32)"
-        return "types.Float(64).Real()"
-    # String/Object and String/Array describe genuinely different structures.
-    return "types.JSON()"
+    return {
+        "boolean": "types.Boolean()", "string": "types.String()",
+        "integer": "types.Int(32)", "number": "types.Float(64).Real()",
+    }[next(iter(kinds))]
 
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--check", action="store_true", help="check generated Go without modifying it")
+    args = parser.parse_args()
     taxonomy_files = archive_files("cdp-event-taxonomy.zip")
     property_files = archive_files("cdp-event-properties.zip")
     for name in ("cdp-event-catalog.json", "cdp-event-bindings.json"):
@@ -220,8 +199,16 @@ import "github.com/krenalis/krenalis/tools/types"
     data = header + "\n".join(declarations)
     data += "\n// eventDefinitions is shared by all workspaces and is never modified.\n"
     data += "var eventDefinitions = []EventDefinition{\n" + "\n".join(definitions) + "\n}\n"
-    OUTPUT.write_text(data)
-    subprocess.run(["gofmt", "-w", str(OUTPUT)], check=True)
+    with tempfile.TemporaryDirectory(prefix="krenalis-event-catalog-format-") as directory:
+        formatted = Path(directory) / "catalog.go"
+        formatted.write_text(data)
+        subprocess.run(["gofmt", "-w", str(formatted)], check=True)
+        data = formatted.read_bytes()
+    if args.check:
+        if OUTPUT.read_bytes() != data:
+            raise SystemExit("Compiled catalog differs from the generator; regenerate it")
+    else:
+        OUTPUT.write_bytes(data)
     print(f"Generated {len(events)} event definitions and {len(schemas)} distinct schemas: {OUTPUT}")
 
 

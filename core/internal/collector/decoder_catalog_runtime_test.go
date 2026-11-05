@@ -127,9 +127,44 @@ func TestDecoderWorkspaceEventCatalog(t *testing.T) {
 			traits: `{"birthday":"2000-01-02","createdAt":"2026-11-04T11:00:00Z","extra":null}`,
 		},
 		{
+			name:   "company text identifier",
+			body:   `{"type":"identify","userId":"u","traits":{"company":{"id":"acme-42"}}}`,
+			traits: `{"company":{"id":"acme-42"}}`,
+		},
+		{
+			name:      "numeric identifier is rejected without rounding",
+			body:      `{"type":"identify","userId":"u","traits":{"company":{"id":12345678901234567}}}`,
+			errorPath: "traits.company.id",
+		},
+		{
+			name:   "date-only account creation becomes an instant",
+			body:   `{"type":"identify","userId":"u","traits":{"createdAt":"2026-11-04"}}`,
+			traits: `{"createdAt":"2026-11-04T00:00:00Z"}`,
+		},
+		{
+			name:   "text employee range",
+			body:   `{"type":"group","userId":"u","groupId":"g","traits":{"employees":"10-50"}}`,
+			traits: `{"employees":"10-50"}`,
+		},
+		{
+			name:   "numeric employee label",
+			body:   `{"type":"group","userId":"u","groupId":"g","traits":{"employees":"42"}}`,
+			traits: `{"employees":"42"}`,
+		},
+		{
+			name:       "destination-specific checkout value",
+			body:       `{"type":"track","event":"Checkout Step Completed","userId":"u","properties":{"value":"10.5"}}`,
+			properties: `{"value":"10.5"}`, traits: `{}`,
+		},
+		{
+			name:       "destination-specific payment value",
+			body:       `{"type":"track","event":"Payment Info Entered","userId":"u","properties":{"value":"10.5"}}`,
+			properties: `{"value":"10.5"}`, traits: `{}`,
+		},
+		{
 			name:   "group traits retain arbitrary extra keys",
-			body:   `{"type":"group","userId":"u","groupId":"g","traits":{"employees":42,"total billed":100.25,"name":"Example"}}`,
-			traits: `{"name":"Example","employees":42,"total billed":100.25}`,
+			body:   `{"type":"group","userId":"u","groupId":"g","traits":{"employees":"42","total billed":100.25,"name":"Example"}}`,
+			traits: `{"name":"Example","employees":"42","total billed":100.25}`,
 		},
 		{
 			name:       "named page uses generic definition",

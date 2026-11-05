@@ -320,7 +320,7 @@ var identityIdentifiedTraits = types.Object([]types.Property{
 			},
 			{
 				Name:         "id",
-				Type:         types.Float(64).Real(),
+				Type:         types.String(),
 				ReadOptional: true,
 				Description: "The organization identifier carried in the person company attribute; both " +
 					"text and numeric identifiers are documented.",
@@ -2499,7 +2499,7 @@ var commerceCheckoutStepCompletedProperties = types.Object([]types.Property{
 	},
 	{
 		Name:         "value",
-		Type:         types.Decimal(18, 4).AsMoney(),
+		Type:         types.JSON(),
 		ReadOptional: true,
 		Description: "Monetary value supplied for the GA4 destination mapping of this action; " +
 			"its calculation is not defined by the core event table.",
@@ -3769,7 +3769,7 @@ var commercePaymentInfoEnteredProperties = types.Object([]types.Property{
 	},
 	{
 		Name:         "value",
-		Type:         types.Decimal(18, 4).AsMoney(),
+		Type:         types.JSON(),
 		ReadOptional: true,
 		Description: "Monetary value supplied for the GA4 destination mapping of this action; " +
 			"its calculation is not defined by the core event table.",
@@ -5523,7 +5523,7 @@ var identityGroupAssociatedTraits = types.Object([]types.Property{
 	},
 	{
 		Name:         "employees",
-		Type:         types.Int(32),
+		Type:         types.String(),
 		ReadOptional: true,
 		Description: "The employee-count value associated with the organization; the official " +
 			"tables and payload examples disagree on its representation.",

@@ -7,6 +7,7 @@ package state_test
 import (
 	"archive/zip"
 	"io"
+	"os/exec"
 	"reflect"
 	"slices"
 	"testing"
@@ -94,7 +95,10 @@ func TestWorkspaceEventDefinitionSchemas(t *testing.T) {
 		{"chat duration", "track", "Live Chat Conversation Ended", false, "conversation_duration", types.Float(64).Real().AsDuration(types.Second), false},
 		{"logical date", "identify", "", true, "birthday", types.Date(), false},
 		{"account creation time", "identify", "", true, "createdAt", types.DateTime(), false},
-		{"group employee count", "group", "", true, "employees", types.Int(32), false},
+		{"company identifier", "identify", "", true, "company.id", types.String(), false},
+		{"group employees label", "group", "", true, "employees", types.String(), false},
+		{"destination-only checkout value", "track", "Checkout Step Completed", false, "value", types.JSON(), false},
+		{"destination-only payment value", "track", "Payment Info Entered", false, "value", types.JSON(), false},
 		{"proposed type stays unconstrained", "track", "Order Created", false, "total", types.JSON(), false},
 		{"unknown type stays unconstrained", "track", "Video Quality Updated", false, "startupTime", types.JSON(), false},
 	} {
@@ -208,6 +212,19 @@ func TestWorkspaceEventDefinitionSources(t *testing.T) {
 		}
 	}
 
+}
+
+// TestWorkspaceEventCatalogGeneration detects drift from the source generator.
+func TestWorkspaceEventCatalogGeneration(t *testing.T) {
+	python, err := exec.LookPath("python3")
+	if err != nil {
+		t.Skip("requires Python 3 for catalog regeneration")
+	}
+	command := exec.CommandContext(t.Context(), python, "../../../filtering/event-catalog/generate_catalog.py", "--check")
+	output, err := command.CombinedOutput()
+	if err != nil {
+		t.Fatalf("expected a reproducible compiled catalog, got %v: %s", err, output)
+	}
 }
 
 // TestWorkspaceLookupEventDefinition checks exact track names and generic

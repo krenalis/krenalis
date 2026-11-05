@@ -21,12 +21,23 @@ Per rigenerare il file Go dal repository:
 
 ```sh
 python3 filtering/event-catalog/generate_catalog.py
+python3 filtering/event-catalog/generate_catalog.py --check
+python3 -m unittest discover -s filtering/event-catalog -p 'test_*.py'
 ```
 
 Il generatore verifica i manifest SHA-256 dei due archivi, la loro baseline
 comune e la corrispondenza dei 102 ID. Riutilizza dal pacchetto delle proprietà
 i criteri del profilo `documented` e l'espansione dei campi condivisi. Non modifica
 gli archivi, i JSON Schema consegnati o altri file derivati dei pacchetti.
+Il manifest verifica la coerenza interna, non l'autenticità: archivi e helper
+eseguibili sono input del repository che devono già essere considerati fidati.
+
+`native_type_choices.py` contiene le scelte non predefinite per coppia
+`(event_id, path)`, insieme ai kind sorgente attesi. Non si ricavano semantiche
+da nomi o sottostringhe delle descrizioni. Un'unione di tipi non censita o un
+cambio dei kind di una scelta già censita interrompe la generazione.
+`--check` verifica la corrispondenza byte per byte senza modificare il file Go;
+il controllo viene eseguito anche dai test Go quando Python 3 è disponibile.
 
 Il risultato è `core/internal/state/event_catalog_data.go`. Le dichiarazioni Go
 contengono direttamente `types.Type`; nessun generatore viene eseguito all'avvio.
@@ -67,6 +78,7 @@ una traduzione senza perdita di tutti i JSON Schema dei provider.
 | Posizioni ordinali e conteggi documentati | Int(32) |
 | Altri Number documentati | Float(64) reale |
 | Rating | String, senza scala numerica implicita |
+| Identificatore company.id e employees dei gruppi | String; nessuna conversione numerica implicita |
 | Valore generico Number/String delle azioni | String; i valori specificamente monetari mantengono Money |
 | Query prodotti String/Object e ad_type String/Array | JSON |
 | Birthday documentato come data logica | Date |
@@ -115,6 +127,13 @@ la validazione restituisce un errore di dato. Non si interpreta un tipo non
 convertibile come dato assente e non si allarga silenziosamente il tipo a JSON.
 Le regole future saranno valutate sui casi del catalogo e confrontate con i
 mapping senza obbligo di condividere implementazione o tutte le conversioni.
+
+Il collector attualmente scarta l'intero evento che non supera la validazione,
+senza una segnalazione dedicata dello scarto. La decisione fra rifiuto e
+conservazione del campo non conforme, e la relativa osservabilità, è stata
+esplicitamente rinviata da Marco dopo la revisione. Questo incremento non
+modifica tale politica. Prima di esporre i dettagli degli errori sarà necessario
+anche limitarne i valori e rendere i messaggi adatti all'utente.
 
 Le eventuali tabelle per evento e per gli elementi degli array restano future.
 Una rappresentazione a sole colonne potrebbe accorpare assenza e null esplicito:
