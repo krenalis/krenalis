@@ -237,6 +237,10 @@ type Warehouse interface {
 	// information, maximum character count, enum values, etc...).
 	ColumnTypeDescription(t types.Type) (string, error)
 
+	// Count returns the number of rows in table after applying joins and where.
+	// A nil where expression does not filter the rows.
+	Count(ctx context.Context, table string, joins []Join, where Expr) (int, error)
+
 	// Counts returns one row count for each condition on the table.
 	// A nil slice of conditions, or a nil condition, counts all rows.
 	// A non-nil empty slice of conditions is invalid. Each result is between
@@ -424,12 +428,10 @@ type RowQuery struct {
 	// Where, when not nil, filters the records to return.
 	Where Expr
 
-	// OrderBy, when provided, specifies the columns used to order the returned
-	// rows.
+	// OrderBy specifies the columns by which the returned rows are ordered.
 	OrderBy []Column
 
-	// OrderDesc, when true and OrderBy is provided, orders the returned rows in
-	// descending order instead of ascending order.
+	// OrderDesc applies descending order to every OrderBy column.
 	OrderDesc bool
 
 	// First is the index of the first returned row and must be >= 0.

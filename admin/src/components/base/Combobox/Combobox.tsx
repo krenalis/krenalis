@@ -20,6 +20,7 @@ const CONSTANT_REGEX = /"([^"]*)"/;
 
 interface ComboboxProps {
 	value: string;
+	displayValue?: string;
 	items: ComboboxItem[];
 	onInput: (path: string, value: string) => void;
 	onSelect: (path: string, value: string) => void;
@@ -36,6 +37,7 @@ interface ComboboxProps {
 	controlled?: boolean;
 	autoResize?: boolean;
 	disabled?: boolean;
+	hoist?: boolean;
 	indentation?: number;
 	children?: ReactNode;
 	label?: string;
@@ -49,6 +51,7 @@ interface ComboboxProps {
 // schema properties and expressions.
 const Combobox = ({
 	value,
+	displayValue,
 	items,
 	onInput: onInputFunc,
 	onSelect: onSelectFunc,
@@ -65,6 +68,7 @@ const Combobox = ({
 	controlled = false,
 	autoResize,
 	disabled = false,
+	hoist = false,
 	indentation,
 	children,
 	label,
@@ -73,7 +77,7 @@ const Combobox = ({
 	propertiesToHide,
 	...rest
 }: ComboboxProps) => {
-	const [val, setVal] = useState<string>(value == null ? '' : value);
+	const [val, setVal] = useState<string>(displayValue ?? value ?? '');
 	const [cursorPosition, setCursorPosition] = useState<number>();
 	const [isOpen, setIsOpen] = useState<boolean>(false);
 	const [listWidth, setListWidth] = useState<number>();
@@ -191,11 +195,11 @@ const Combobox = ({
 				// Defer update to next event loop tick to ensure the input is
 				// mounted before updating its value.
 				setTimeout(() => {
-					updateComboboxValue(value);
+					updateComboboxValue(displayValue ?? value);
 					isFirstControl.current = false;
 				});
 			} else {
-				updateComboboxValue(value);
+				updateComboboxValue(displayValue ?? value);
 			}
 		}
 		if (autoResize && !isFirstControl.current) {
@@ -204,7 +208,7 @@ const Combobox = ({
 			// error icon shown in the suffix slot of the input).
 			resizeCombobox();
 		}
-	}, [value, error]);
+	}, [displayValue, value, error]);
 
 	useEffect(() => {
 		if (!isOpen || listRef.current == null) {
@@ -268,16 +272,45 @@ const Combobox = ({
 		if (listRef.current == null || !isOpen) {
 			return;
 		}
-		// Check if the combobox list vertically overflows the viewport
-		// and eventually position it on the border top of the combobox
-		// input.
-		listRef.current.classList.add('combobox-list--computing-position');
-		setTimeout(() => {
-			const rect = listRef.current.getBoundingClientRect();
-			listRef.current.classList.toggle('combobox-list--top', rect.bottom > window.innerHeight);
-			listRef.current.classList.remove('combobox-list--computing-position');
+		const list = listRef.current;
+		const positionList = () => {
+			if (hoist) {
+				const inputRect = inputRef.current.getBoundingClientRect();
+				const viewportSpacing = parseFloat(getComputedStyle(list).getPropertyValue('--wa-space-s'));
+				const spacing = Number.isFinite(viewportSpacing) ? viewportSpacing : 8;
+				const width = Math.min(Math.max(inputRect.width, listWidth ?? 0), window.innerWidth - spacing * 2);
+				list.style.width = `${width}px`;
+				const listRect = list.getBoundingClientRect();
+				const placeAbove =
+					listRect.height > window.innerHeight - inputRect.bottom &&
+					inputRect.top > window.innerHeight - inputRect.bottom;
+				const preferredTop = placeAbove ? inputRect.top - listRect.height : inputRect.bottom;
+				const top = Math.max(spacing, Math.min(preferredTop, window.innerHeight - listRect.height - spacing));
+				list.style.left = `${Math.max(spacing, Math.min(inputRect.left, window.innerWidth - width - spacing))}px`;
+				list.style.top = `${top}px`;
+				list.style.bottom = 'auto';
+				list.classList.remove('combobox-list--top');
+			} else {
+				const rect = list.getBoundingClientRect();
+				list.classList.toggle('combobox-list--top', rect.bottom > window.innerHeight);
+			}
+		};
+
+		list.classList.add('combobox-list--computing-position');
+		const timeoutID = window.setTimeout(() => {
+			positionList();
+			list.classList.remove('combobox-list--computing-position');
 		}, 20);
-	}, [isOpen]);
+		if (hoist) {
+			window.addEventListener('resize', positionList);
+			window.addEventListener('scroll', positionList, true);
+		}
+		return () => {
+			window.clearTimeout(timeoutID);
+			window.removeEventListener('resize', positionList);
+			window.removeEventListener('scroll', positionList, true);
+		};
+	}, [hoist, isOpen, listWidth]);
 
 	useLayoutEffect(() => {
 		if (enumValues == null) {
@@ -480,7 +513,7 @@ const Combobox = ({
 		}
 	}, []);
 
-	const onSelect = (e, term: string, type: 'property' | 'function' | 'enum') => {
+	const onSelect = (e, term: string, type: 'property' | 'function' | 'enum', selectedDisplayValue?: string) => {
 		e.preventDefault();
 		e.stopPropagation();
 
@@ -491,6 +524,15 @@ const Combobox = ({
 			inputRef.current.focus();
 			onSelectFunc(name, v);
 			validate(name, v);
+			setIsOpen(false);
+			return;
+		}
+		if (type === 'property' && !isExpression && selectedDisplayValue != null) {
+			updateComboboxValue(selectedDisplayValue);
+			programmaticFocus.current = true;
+			inputRef.current.focus();
+			onSelectFunc(name, term);
+			validate(name, term);
 			setIsOpen(false);
 			return;
 		}
@@ -562,7 +604,7 @@ const Combobox = ({
 
 	return (
 		<div
-			className={`combobox${isOpen ? ' combobox--open' : ''}${isExpression ? ' combobox--expression' : ''}${caret ? ' combobox--caret' : ''}${className ? ` ${className}` : ''}`}
+			className={`combobox${isOpen ? ' combobox--open' : ''}${isExpression ? ' combobox--expression' : ''}${caret ? ' combobox--caret' : ''}${hoist ? ' combobox--hoist' : ''}${className ? ` ${className}` : ''}`}
 			data-id={name}
 			style={
 				{
@@ -691,7 +733,7 @@ const Combobox = ({
 												key={item.term}
 												className='combobox-list__item'
 												role='menuitem'
-												onClick={(e) => onSelect(e, item.term, 'property')}
+												onClick={(e) => onSelect(e, item.term, 'property', item.displayValue)}
 											>
 												{item.content}
 											</div>
@@ -721,7 +763,7 @@ const Combobox = ({
 											key={item.term}
 											className='combobox-list__item'
 											role='menuitem'
-											onClick={(e) => onSelect(e, item.term, 'property')}
+											onClick={(e) => onSelect(e, item.term, 'property', item.displayValue)}
 										>
 											{item.content}
 										</div>
@@ -747,8 +789,12 @@ const filterComboboxItems = (
 	propertyItems: ComboboxItem[],
 	functionItems: ComboboxItem[],
 ): ComboboxState => {
-	if (value === '' || (fragment != null && fragment.func == null && fragment.pos == null && fragment.type == null)) {
-		// the user is at the start of a new fragment.
+	if (
+		cursorPosition === 0 ||
+		value === '' ||
+		(fragment != null && fragment.func == null && fragment.pos == null && fragment.type == null)
+	) {
+		// Every completion is relevant at the start of the value or of a new fragment.
 		return { filteredProperties: propertyItems, filteredFunctions: functionItems };
 	}
 
@@ -774,13 +820,7 @@ const filterComboboxItems = (
 const filterItems = (searchTerm: string, items: ComboboxItem[]): ComboboxItem[] => {
 	const filtered: ComboboxItem[] = [];
 	for (const item of items) {
-		const term = item.term;
-		if (
-			term.includes(searchTerm) ||
-			term.includes(searchTerm.charAt(0).toUpperCase() + searchTerm.slice(1)) ||
-			term.includes(searchTerm.toUpperCase()) ||
-			term.includes(searchTerm.toLowerCase())
-		) {
+		if ([item.term, item.displayValue].some((term) => term != null && termMatches(term, searchTerm))) {
 			filtered.push(item);
 		}
 	}
@@ -797,6 +837,12 @@ const filterItems = (searchTerm: string, items: ComboboxItem[]): ComboboxItem[] 
 
 	return filtered;
 };
+
+const termMatches = (term: string, searchTerm: string): boolean =>
+	term.includes(searchTerm) ||
+	term.includes(searchTerm.charAt(0).toUpperCase() + searchTerm.slice(1)) ||
+	term.includes(searchTerm.toUpperCase()) ||
+	term.includes(searchTerm.toLowerCase());
 
 const getFunctionsComboboxItems = (functions: KrenalisFunction[]): ComboboxItem[] => {
 	const functionItems: ComboboxItem[] = [];

@@ -42,6 +42,16 @@ export default defineConfig({
 			testMatch: ['tests/schema.spec.ts', 'tests/schema-consents.spec.ts', 'tests/schema-reordering.spec.ts'],
 		},
 		{
+			name: 'profiles.spec.ts',
+			use: { ...devices['Desktop Chrome'] },
+			testMatch: [
+				'tests/profiles.spec.ts',
+				'tests/profiles-sequence.spec.ts',
+				'tests/profiles-refresh.spec.ts',
+				'tests/profiles-filters.spec.ts',
+			],
+		},
+		{
 			name: 'connections.spec.ts',
 			use: { ...devices['Desktop Chrome'] },
 			testMatch: ['tests/connections.spec.ts'],

@@ -1585,7 +1585,15 @@ const FullscreenTransformation = ({
 				}
 				let res: FindProfilesResponse;
 				try {
-					res = await api.workspaces.profiles.find(properties, normalizedFilter, '', true, 0, 20);
+					res = await api.workspaces.profiles.find(
+						properties,
+						normalizedFilter,
+						'',
+						true,
+						0,
+						20,
+						inputSchema,
+					);
 				} catch (err) {
 					setIsLoading(false);
 					handleError(err);

@@ -117,7 +117,7 @@ func TestUsageMetricsHTTPContract(t *testing.T) {
 
 	createPipelineMetricsFixture(t, k)
 	k.RunIdentityResolutionAndWait()
-	_, _, total := k.Profiles(nil, "", false, 0, 100)
+	_, total := k.Profiles(nil, "", false, 0, 100)
 	var resolutionObservedAt time.Time
 	var resolutionProfiles int
 	k.QueryRowTestDatabase(t.Context(), &resolutionObservedAt, `

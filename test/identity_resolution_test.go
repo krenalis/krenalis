@@ -100,7 +100,7 @@ func TestIdentityResolution(t *testing.T) {
 	expectProfiles := func(expectedProfiles []map[string]any) {
 
 		// Retrieve the profiles from the APIs.
-		profiles, _, _ := k.Profiles([]string{"dummy_id", "email", "phone_numbers"}, "dummy_id", false, 0, 1000)
+		profiles, _ := k.Profiles([]string{"dummy_id", "email", "phone_numbers"}, "dummy_id", false, 0, 1000)
 
 		// Check if the users are equal to the expected or not.
 		if len(expectedProfiles) != len(profiles) {

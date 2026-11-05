@@ -61,6 +61,12 @@
 	opacity: 0 !important;
 }
 
+.combobox--hoist.combobox--open .combobox-list {
+	min-width: 0;
+	position: fixed;
+	z-index: 1000;
+}
+
 .combobox--open .combobox-list {
 	visibility: visible;
 	opacity: 1;

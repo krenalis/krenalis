@@ -59,8 +59,11 @@ test('displays profile information from roles assigned to nested properties', as
 	await expect(page.locator('.profile-drawer__last-name')).toHaveText('Lovelace');
 	await expect(page.locator('.profile-drawer__email')).toBeVisible();
 	await expect(page.locator('.profile-drawer__email')).toHaveText('ada@example.test');
-	await expect(page.locator('.profile-drawer__photo')).toBeVisible();
-	await expect(page.locator('.profile-drawer__photo')).toHaveJSProperty('image', 'https://example.test/photo.svg');
+	await expect(page.locator('.profile-drawer__profile-thumbnail')).toBeVisible();
+	await expect(page.locator('.profile-drawer__profile-thumbnail')).toHaveJSProperty(
+		'image',
+		'https://example.test/photo.svg',
+	);
 });
 
 test('leaves profile information empty when an intermediate property is missing', async ({ page }) => {
@@ -72,5 +75,5 @@ test('leaves profile information empty when an intermediate property is missing'
 	await expect(page.locator('.profile-drawer__first-name')).toHaveText('');
 	await expect(page.locator('.profile-drawer__last-name')).toHaveText('');
 	await expect(page.locator('.profile-drawer__email')).toHaveText('');
-	await expect(page.locator('.profile-drawer__photo')).toHaveJSProperty('image', '');
+	await expect(page.locator('.profile-drawer__profile-thumbnail')).toHaveCount(0);
 });
