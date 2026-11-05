@@ -824,7 +824,7 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 			return m, nil
 		}
 		rv := reflect.ValueOf(src)
-		if rv.Kind() != reflect.Map {
+		if rv.Kind() != reflect.Map || rv.Type().Key().Kind() != reflect.String {
 			return nil, invalidType(name, src, typ)
 		}
 		if rv.IsNil() && nullable {

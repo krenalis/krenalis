@@ -462,6 +462,7 @@ func Test_normalize_errors(t *testing.T) {
 		{name: "mapValueTypeError", typ: types.Map(types.Int(32)), value: map[string]any{"ok": 1, "bad": "nope"}, wantContains: "property 'k[\"bad\"]' has a string value that does not represent an int value"},
 		{name: "mapEmptyUnsupportedValue", typ: types.Map(types.String().WithValues("foo", "bar")), value: map[string]any{"foo": ""}, want: "property 'k[\"foo\"]' contains an unsupported value", wantInputError: true},
 		{name: "mapInvalidType", typ: types.Map(types.String()), value: 5, wantContains: "has type int that is not allowed for type map"},
+		{name: "mapInvalidKeyType", typ: types.Map(types.String()), value: map[int]any{3: "boo"}, want: "property 'k' has type map[int]interface {} that is not allowed for type map(string)", wantInputError: true},
 	}
 
 	// Invalid Unix timestamps must be rejected for every time unit, even when nullable.
