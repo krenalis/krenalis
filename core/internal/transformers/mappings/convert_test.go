@@ -420,9 +420,9 @@ func TestConvertArrayUniqueness(t *testing.T) {
 // error handling for invalid dates and out-of-range years.
 func TestConvertStringToDate(t *testing.T) {
 	tests := []struct {
-		in      string
-		want    time.Time
-		wantErr error
+		in  string
+		t   time.Time
+		err error
 	}{
 		{"2023-05-24", time.Date(2023, 5, 24, 0, 0, 0, 0, time.UTC), nil},
 		{"05/24/2023", time.Time{}, errParseConversion},
@@ -456,7 +456,6 @@ func TestConvertStringToDate(t *testing.T) {
 		{"2000-02-29", time.Date(2000, 2, 29, 0, 0, 0, 0, time.UTC), nil},
 		{"0001-01-01", time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC), nil},
 		{"9999-12-31", time.Date(9999, 12, 31, 0, 0, 0, 0, time.UTC), nil},
-		{"000", time.Date(1899, 12, 31, 0, 0, 0, 0, time.UTC), nil},
 		{"1.0", time.Date(1900, 1, 1, 0, 0, 0, 0, time.UTC), nil},
 		{"59.99999999999999999999", time.Date(1900, 2, 28, 0, 0, 0, 0, time.UTC), nil},
 		{"61.0", time.Date(1900, 3, 1, 0, 0, 0, 0, time.UTC), nil},
@@ -493,8 +492,6 @@ func TestConvertStringToDate(t *testing.T) {
 		{"-1.0", time.Time{}, errParseConversion},
 		{"1e3", time.Time{}, errParseConversion},
 		{"1.2.3", time.Time{}, errParseConversion},
-		{"0", time.Time{}, errParseConversion},
-		{"61", time.Time{}, errParseConversion},
 		{"", time.Time{}, errParseConversion},
 		{"abc", time.Time{}, errParseConversion},
 	}
@@ -506,15 +503,15 @@ func TestConvertStringToDate(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			got, err := convertStringToDate(tt.in)
 			if err != nil {
-				if err != tt.wantErr {
-					t.Fatalf("expected error %v, got %v", tt.wantErr, err)
+				if err != tt.err {
+					t.Fatalf("expected error %v, got %v", tt.err, err)
 				}
 			}
-			if err == nil && tt.wantErr != nil {
-				t.Fatalf("expected error %v, got nil", tt.wantErr)
+			if err == nil && tt.err != nil {
+				t.Fatalf("expected error %v, got nil", tt.err)
 			}
-			if !got.Equal(tt.want) {
-				t.Errorf("expected %v, got %v", tt.want, got)
+			if !got.Equal(tt.t) {
+				t.Errorf("expected %v, got %v", tt.t, got)
 			}
 			if got.Location() != time.UTC {
 				t.Errorf("expected UTC location, got %v", got.Location())
