@@ -54,7 +54,7 @@ const isDate = (s: string): boolean => {
 // can be used as a filter value.
 const isDateTime = (s: string): boolean => {
 	const m = s.match(/^\d{4}-\d{2}-\d{2}T(\d{2}):\d{2}:\d{2}(?:\.\d{1,9})?([+-]\d{2}:\d{2}|Z)?$/);
-	if (m == null || Number(m[1]) > 23 || !isDate(s.slice(0, 10))) {
+	if (m == null || Number(m[1]) > 23 || m[2] === '-00:00' || !isDate(s.slice(0, 10))) {
 		return false;
 	}
 	// Read a datetime without an offset as UTC, as the server does, by
