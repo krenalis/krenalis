@@ -120,9 +120,9 @@ const PROPERTY_TYPE_OPTIONS: PropertyTypeOption[] = [
 	},
 	{
 		id: 'duration',
-		kind: 'int',
+		kind: 'float',
 		separated: true,
-		create: () => ({ kind: 'int', bitSize: 64, unsigned: false, semantics: 'duration', unit: EMPTY_DURATION_UNIT }),
+		create: () => ({ kind: 'float', bitSize: 64, real: true, semantics: 'duration', unit: EMPTY_DURATION_UNIT }),
 	},
 	{
 		id: 'int',

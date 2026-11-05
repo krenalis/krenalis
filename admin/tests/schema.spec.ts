@@ -2083,7 +2083,7 @@ test(`Create profile schema properties with default semantics and options`, asyn
 		),
 	).toHaveText([
 		'country · string',
-		'duration · int',
+		'duration · float',
 		'money · decimal(18,4)',
 		'percentage · decimal(18,4)',
 		'measurement · decimal(18,4)',
@@ -2196,7 +2196,7 @@ test(`Create profile schema properties with default semantics and options`, asyn
 	await propertyPanel.locator('.property-panel__save').click();
 	await expect(
 		page.locator('.schema-edit .grid__row[data-id="semantics_duration"] .schema-property-grid__type'),
-	).toHaveText('duration — s · int(64)');
+	).toHaveText('duration — s · float(64) · real');
 
 	const previewRequestPromise = page.waitForRequest(
 		(request) => request.url().endsWith('/profiles/schema/preview') && request.method() === 'PUT',
@@ -2239,11 +2239,11 @@ test(`Create profile schema properties with default semantics and options`, asyn
 	});
 	const duration = schema.properties.find((property) => property.name === 'semantics_duration');
 	expect(duration?.type).toEqual({
-		kind: 'int',
+		kind: 'float',
 		semantics: 'duration',
 		unit: 'second',
 		bitSize: 64,
-		unsigned: false,
+		real: true,
 	});
 	const previewResponse = await previewResponsePromise;
 	expect(previewResponse.status()).toBe(200);

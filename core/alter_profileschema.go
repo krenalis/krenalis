@@ -245,8 +245,8 @@ func checkAllowedSemanticsProfileSchema(t types.Type) error {
 				t.Semantics())
 		}
 	case types.DurationSemantics:
-		if !t.IsInt(64) || t.IsUnsigned() {
-			return errors.New("profile schema properties with duration semantics must have signed int(64) values")
+		if !t.IsFloat(64) || !t.IsReal() {
+			return errors.New("profile schema properties with duration semantics must have real float(64) values")
 		}
 	}
 	return nil
