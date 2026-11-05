@@ -1003,8 +1003,9 @@ func parseUint(s string) int {
 	return n
 }
 
-// typeNeedsConversion reports whether valid st values need conversion to dt for
-// any purpose, including conversion-specific checks.
+// typeNeedsConversion reports whether a value of type st needs conversion to dt
+// for any purpose, including conversion-specific checks.
+// st and dt cannot be the invalid type.
 func typeNeedsConversion(st, dt types.Type) bool {
 	if st.Kind() != dt.Kind() {
 		return true
