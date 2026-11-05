@@ -55,7 +55,7 @@ type mappingExpr struct {
 	nullable       bool
 	createRequired bool
 	updateRequired bool
-	convert        bool // non-null results must pass through convert
+	convert        bool // if true, non-null results must pass through convert
 }
 
 // New returns a new mapping that transforms values according to the provided
