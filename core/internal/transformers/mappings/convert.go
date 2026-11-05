@@ -56,12 +56,12 @@ var (
 	maxUintDecimal = decimal.MustUint(18446744073709551615)
 )
 
-// convert converts v from type st to type dt and returns the converted value.
+// convert converts v from type st to type dt without modifying v.
+// The result may share slices and maps with v. To modify either value
+// independently, callers must first make a deep copy of that value.
+//
 // nullable reports whether nil is allowed as return value. If v is nil and
 // nullable is true, it returns nil.
-//
-// If inPlace is true, the conversion is permitted to modify array, object, and
-// map values directly within the value being converted.
 //
 // purpose specifies the reason for the transformation. If Create or Update,
 // then all the properties required for creation or the update must be present
@@ -78,7 +78,7 @@ var (
 //   - errRangeConversion
 //   - errPatternConversion
 //   - errYearRangeConversion
-func convert(v any, st, dt types.Type, nullable, inPlace bool, purpose Purpose) (any, error) {
+func convert(v any, st, dt types.Type, nullable bool, purpose Purpose) (any, error) {
 	sk := st.Kind()
 	dk := dt.Kind()
 	if nullable {
@@ -652,7 +652,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, purpose Purpose) 
 				if min > 1 || max == 0 {
 					return v, errInvalidConversion
 				}
-				elem, err := convert(s, types.JSON(), et, false, inPlace, purpose)
+				elem, err := convert(s, types.JSON(), et, false, purpose)
 				if err != nil {
 					return nil, err
 				}
@@ -663,7 +663,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, purpose Purpose) 
 				if i == max {
 					return v, errInvalidConversion
 				}
-				e, err := convert(elem, types.JSON(), et, false, inPlace, purpose)
+				e, err := convert(elem, types.JSON(), et, false, purpose)
 				if err != nil {
 					return nil, err
 				}
@@ -692,12 +692,10 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, purpose Purpose) 
 			it2 := dt.Elem()
 			sameType := types.Equal(it1, it2)
 			if !sameType {
-				if !inPlace {
-					d = make([]any, len(s))
-				}
+				d = make([]any, len(s))
 				var err error
 				for i, item := range s {
-					d[i], err = convert(item, it1, it2, false, inPlace, purpose)
+					d[i], err = convert(item, it1, it2, false, purpose)
 					if err != nil {
 						return nil, err
 					}
@@ -723,49 +721,38 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, purpose Purpose) 
 				return v, nil
 			}
 			s := v.(map[string]any)
-			d = s
-			if !inPlace {
-				d = make(map[string]any)
-			}
+			d = map[string]any{}
 			var err error
 			sProperties := st.Properties()
 			for name, value := range s {
 				dp, ok := dProperties.ByName(name)
 				if !ok {
-					if inPlace {
-						delete(d, name)
-					}
 					continue
 				}
 				if value == nil {
 					if !dp.Nullable {
 						return v, errInvalidConversion
 					}
-					if !inPlace {
-						d[name] = nil
-					}
+					d[name] = nil
 					continue
 				}
 				sp, ok := sProperties.ByName(name)
 				if !ok {
 					panic(fmt.Sprintf("unknown property %s", name))
 				}
-				d[name], err = convert(value, sp.Type, dp.Type, dp.Nullable, inPlace, purpose)
+				d[name], err = convert(value, sp.Type, dp.Type, dp.Nullable, purpose)
 				if err != nil {
 					return nil, err
 				}
 			}
 		case types.MapKind:
 			s := v.(map[string]any)
-			d := s
-			if !inPlace {
-				d = make(map[string]any)
-			}
+			d := map[string]any{}
 			vt := st.Elem()
 			var err error
 			for _, p := range dProperties.All() {
 				if value, ok := s[p.Name]; ok {
-					d[p.Name], err = convert(value, vt, p.Type, p.Nullable, inPlace, purpose)
+					d[p.Name], err = convert(value, vt, p.Type, p.Nullable, purpose)
 					if err != nil {
 						return nil, err
 					}
@@ -791,7 +778,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, purpose Purpose) 
 				if !ok {
 					continue
 				}
-				d[name], err = convert(value, types.JSON(), p.Type, p.Nullable, inPlace, purpose)
+				d[name], err = convert(value, types.JSON(), p.Type, p.Nullable, purpose)
 				if err != nil {
 					return nil, err
 				}
@@ -829,13 +816,10 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, purpose Purpose) 
 				return v, nil
 			}
 			s := v.(map[string]any)
-			d := s
-			if !inPlace {
-				d = make(map[string]any, len(s))
-			}
+			d := make(map[string]any, len(s))
 			var err error
 			for key, value := range s {
-				d[key], err = convert(value, vt1, vt2, false, inPlace, purpose)
+				d[key], err = convert(value, vt1, vt2, false, purpose)
 				if err != nil {
 					return nil, err
 				}
@@ -843,15 +827,12 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, purpose Purpose) 
 			return d, nil
 		case types.ObjectKind:
 			s := v.(map[string]any)
-			d := s
-			if !inPlace {
-				d = make(map[string]any, len(s))
-			}
+			d := make(map[string]any, len(s))
 			vt := dt.Elem()
 			var err error
 			for _, p := range st.Properties().All() {
 				if value, ok := s[p.Name]; ok {
-					d[p.Name], err = convert(value, p.Type, vt, true, inPlace, purpose)
+					d[p.Name], err = convert(value, p.Type, vt, true, purpose)
 					if err != nil {
 						return nil, err
 					}
@@ -867,7 +848,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, purpose Purpose) 
 			d := make(map[string]any)
 			var err error
 			for name, value := range s.Properties() {
-				d[name], err = convert(value, types.JSON(), vt, false, inPlace, purpose)
+				d[name], err = convert(value, types.JSON(), vt, false, purpose)
 				if err != nil {
 					return nil, err
 				}

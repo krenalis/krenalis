@@ -170,13 +170,15 @@ const PipelineHeader = () => {
 				<div
 					className={`pipeline__header-buttons-close-transformation${!isFullscreenTransformationOpen ? ' pipeline__header-buttons-close-transformation--hidden' : ''}`}
 				>
-					<button
+					<WaButton
 						className='pipeline__header-close-transformation'
+						variant='brand'
+						appearance='plain'
 						onClick={onCloseFullscreenTransformation}
-						title='Exit full mode'
 					>
-						×
-					</button>
+						Exit full mode
+						<WaIcon name='arrows-angle-contract' />
+					</WaButton>
 				</div>
 			</div>
 		</div>
