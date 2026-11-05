@@ -97,6 +97,8 @@ An unexpected situation is one that callers or invariants rule out, such as an i
 
 ## Tests
 
+Before adding a test function, look for an existing test with a suitable purpose, setup, and assertions. Prefer adding cases there when they fit without complicating its structure. Use a separate test when adding them there would obscure its purpose or require unrelated setup or branches.
+
 Failure messages take the form `expected ..., got ...`.
 
 Use `t.Context()` for operations whose lifetime follows the test, passing it directly unless it spans a broad part of the test or derives another context. A helper that takes `*testing.T` obtains the context itself; it accepts a separate context only when callers need one with different values, deadline, cancellation, or lifetime.
@@ -222,6 +224,10 @@ For the TypeScript and React code under `admin/`:
 - Type props with an interface `<ComponentName>Props` immediately before the component, unless shared from another module; destructure and type them in the parameter list, without `React.FC`.
 - Put component styles in a `.css` file next to the component and import it there, with BEM-style names such as `schema-grid`, `schema-grid__search`, and `schema-grid--loading`.
 - For an icon, list its file name in `admin/src/icons.txt` alphabetically and run `npm run makevendor` from `admin/`; unlisted icons are not embedded and fail to load.
+
+# Code comments
+
+A comment on a statement or a group of statements describes at a high level what it does, without explaining what the code already makes clear; it may also state a non-obvious reason or constraint the code relies on.
 
 # Reuse
 

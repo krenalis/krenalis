@@ -157,7 +157,7 @@ func TestSubstringArguments(t *testing.T) {
 				{Name: "length", Type: types.String(), Nullable: true},
 			})
 			outSchema := types.Object([]types.Property{{Name: "out", Type: types.String(), Nullable: true}})
-			mapping, err := New(map[string]string{"out": test.expression}, inSchema, outSchema, false)
+			mapping, err := New(map[string]string{"out": test.expression}, inSchema, outSchema)
 			if err != nil {
 				t.Fatalf("expected mapping construction to succeed, got %v", err)
 			}
@@ -240,7 +240,8 @@ func Test_appendAsString(t *testing.T) {
 	}{
 		{nil, types.String(), "start", nil},
 		{"foo", types.String(), "startfoo", nil},
-		{true, types.Boolean(), "start", errInvalidConversion},
+		{true, types.Boolean(), "starttrue", nil},
+		{false, types.Boolean(), "startfalse", nil},
 		{int(3), types.Int(32), "start3", nil},
 		{uint(4), types.Int(16).Unsigned(), "start4", nil},
 		{1.5, types.Float(64), "start1.5", nil},
