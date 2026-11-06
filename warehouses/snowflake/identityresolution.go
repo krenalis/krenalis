@@ -52,6 +52,11 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, opID string, 
 	deferFinalization := true
 	defer func() {
 		if deferFinalization {
+			if err != nil && ctx.Err() != nil {
+				err = fmt.Errorf("operation interrupted: %w", context.Cause(ctx))
+			}
+			ctx, cancel := finalizationContext(ctx)
+			defer cancel()
 			counts, err = warehouse.finalizeIdentityResolution(ctx, db, opID, counts, err)
 		}
 	}()
@@ -320,7 +325,12 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, opID string, 
 	// If the operation was persisted as successful, finalize the published
 	// profiles below.
 	deferFinalization = false
-	counts, err = warehouse.finalizeIdentityResolution(ctx, db, opID, counts, err)
+	if err != nil && ctx.Err() != nil {
+		err = fmt.Errorf("operation interrupted: %w", context.Cause(ctx))
+	}
+	finalizationCtx, cancel := finalizationContext(ctx)
+	defer cancel()
+	counts, err = warehouse.finalizeIdentityResolution(finalizationCtx, db, opID, counts, err)
 	if err != nil {
 		return nil, err
 	}
@@ -338,13 +348,8 @@ func (warehouse *Snowflake) finalizeIdentityResolution(ctx context.Context, conn
 	if operationErr == nil {
 		return counts, nil
 	}
-	if ctx.Err() != nil {
-		operationErr = fmt.Errorf("operation interrupted: %w", context.Cause(ctx))
-	}
 	operationError := warehouses.NewOperationError(operationErr)
 
-	ctx, cancel := finalizationContext(ctx)
-	defer cancel()
 	bo := backoff.New(200)
 	bo.SetCap(30 * time.Second)
 	for bo.Next(ctx) {
