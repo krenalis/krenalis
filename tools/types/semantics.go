@@ -205,7 +205,7 @@ func (t Type) AsCountry(format CountryFormat) Type {
 
 // AsDuration returns t with duration semantics using unit. It panics unless
 // t is an int, decimal, or real float type without semantics and unit is
-// usable as duration.
+// valid and is usable as duration.
 func (t Type) AsDuration(unit Unit) Type {
 	t, err := t.withSemantics(DurationSemantics, unit)
 	if err != nil {
@@ -226,7 +226,7 @@ func (t Type) AsEmail() Type {
 
 // AsMeasurement returns t with measurement semantics using unit. It panics
 // unless t is an int, decimal, or real float type without semantics and unit
-// is valid.
+// is valid and is usable as measurement.
 func (t Type) AsMeasurement(unit Unit) Type {
 	t, err := t.withSemantics(MeasurementSemantics, unit)
 	if err != nil {
