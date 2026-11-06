@@ -284,8 +284,6 @@ func (t Type) CountryFormat() CountryFormat {
 	return t.semanticsOption.(CountryFormat)
 }
 
-// TODO: aggiornare doc su krenalis.com
-
 // Currency returns the currency code of t and whether one is set. It panics
 // unless t has money semantics.
 func (t Type) Currency() (string, bool) {
@@ -295,8 +293,6 @@ func (t Type) Currency() (string, bool) {
 	currency, _ := t.semanticsOption.(string)
 	return currency, currency != ""
 }
-
-// TODO: mantenere un unico metodo Unit anziché DurationUnit e UnitOfMeasure?
 
 // Semantics returns the semantics of t, or NoSemantics if t has no semantics.
 func (t Type) Semantics() Semantics {
