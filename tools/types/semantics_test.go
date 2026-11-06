@@ -529,8 +529,16 @@ func Test_TypeSemanticsJSONRoundTrip(t *testing.T) {
 			`{"kind":"decimal","semantics":"measurement","unit":"kg","precision":10,"scale":2}`,
 		},
 		{
+			"measurement time unit", Float(64).Real().AsMeasurement(Second),
+			`{"kind":"float","semantics":"measurement","unit":"second","bitSize":64,"real":true}`,
+		},
+		{
 			"duration", Int(64).AsDuration(Millisecond),
 			`{"kind":"int","semantics":"duration","unit":"millisecond","bitSize":64}`,
+		},
+		{
+			"duration year", Float(64).Real().AsDuration(YearUnit),
+			`{"kind":"float","semantics":"duration","unit":"year","bitSize":64,"real":true}`,
 		},
 		{"array email", Array(String().AsEmail()), `{"kind":"array","elementType":{"kind":"string","semantics":"email"}}`},
 		{
