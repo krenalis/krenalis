@@ -134,27 +134,28 @@ type Rule struct {
 
 // Scope qualifies recorded track events by their raw name at message_id grain.
 // Start/End define a mature [Start,End) period; Elapsed and Calendar resolve
-// against the operation's single T. FullHistory is recognized but requires a
-// governed history binding not implemented by this first vertical.
+// against the operation's single T. History selects all queryable recorded
+// events before T without an asserted lower bound.
 // All event timestamps are known and every event has a determined message_id
 // and profile attribution in the coherent view supplied to this operation.
 type Scope struct {
-	Event       string
-	Grain       string
-	Start       time.Time
-	End         time.Time
-	Elapsed     *ElapsedPeriod
-	Calendar    *CalendarPeriod
-	FullHistory bool
+	Event    string
+	Grain    string
+	Start    time.Time
+	End      time.Time
+	Elapsed  *ElapsedPeriod
+	Calendar *CalendarPeriod
+	History  *History
 }
 
-// bounds validates the period and resolves elapsed offsets against validated T.
+// bounds validates the period and resolves it against validated T.
+// A zero start denotes an unbounded period only with a resolved History.
 func (s Scope) bounds(at time.Time) (time.Time, time.Time, error) {
 
 	start, end := s.Start, s.End
 	var unavailable error
 	if s.Calendar != nil {
-		if s.Elapsed != nil || s.FullHistory || !start.IsZero() || !end.IsZero() {
+		if s.Elapsed != nil || s.History != nil || !start.IsZero() || !end.IsZero() {
 			return time.Time{}, time.Time{}, fmt.Errorf("calendar period cannot have other temporal forms")
 		}
 		var err error
@@ -163,8 +164,8 @@ func (s Scope) bounds(at time.Time) (time.Time, time.Time, error) {
 			return time.Time{}, time.Time{}, err
 		}
 	} else if s.Elapsed != nil {
-		if s.FullHistory || !start.IsZero() || !end.IsZero() {
-			return time.Time{}, time.Time{}, fmt.Errorf("elapsed period cannot have explicit bounds or FullHistory")
+		if s.History != nil || !start.IsZero() || !end.IsZero() {
+			return time.Time{}, time.Time{}, fmt.Errorf("elapsed period cannot have explicit bounds or history")
 		}
 		p := s.Elapsed
 		if p.Older <= 0 || p.Newer < 0 || p.Newer >= p.Older {
@@ -175,11 +176,18 @@ func (s Scope) bounds(at time.Time) (time.Time, time.Time, error) {
 				Capability: "elapsed duration precision greater than one microsecond"}
 		}
 		start, end = at.Add(-p.Older), at.Add(-p.Newer)
-	} else if s.FullHistory {
+	} else if s.History != nil {
 		if !start.IsZero() || !end.IsZero() {
-			return time.Time{}, time.Time{}, fmt.Errorf("FullHistory cannot have explicit bounds")
+			return time.Time{}, time.Time{}, fmt.Errorf("full relevant history cannot have explicit bounds")
 		}
-		return time.Time{}, time.Time{}, &UnsupportedError{Capability: "governed FullRelevantHistory binding"}
+		if s.History.definition != "registered-queryable-events" || s.History.meaningRevision != "1" {
+			return time.Time{}, time.Time{}, fmt.Errorf("unresolved recorded history")
+		}
+		err := validateTime(at)
+		if err != nil {
+			return time.Time{}, time.Time{}, err
+		}
+		return time.Time{}, at.UTC(), nil
 	}
 
 	for _, bound := range []time.Time{start, end} {

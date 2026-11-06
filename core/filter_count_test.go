@@ -218,6 +218,10 @@ func TestFilterCountInvalidBeforeUnsupported(t *testing.T) {
 			c.Values = []json.Value{json.Value(`18446744073709551616`), json.Value(`-1`)}
 		}},
 		{"period", func(c *FilterCountCondition) { c.Count.Period.Kind = "calendarMonth" }},
+		{"history revision", func(c *FilterCountCondition) {
+			c.Count.Period = FilterPeriod{Kind: "fullRelevantHistory",
+				History: &FilterHistory{Definition: "registered-queryable-events", MeaningRevision: "2"}}
+		}},
 		{"source", func(c *FilterCountCondition) { c.Count.Source.Kind = "SQL" }},
 		{"event", func(c *FilterCountCondition) { c.Count.Source.Name = "" }},
 		{"grain", func(c *FilterCountCondition) { c.Count.Source.Grain = "" }},

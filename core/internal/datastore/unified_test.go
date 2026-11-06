@@ -231,13 +231,34 @@ SELECT e.* FROM event_fixture e CROSS JOIN (VALUES (1),(2),(3)) copies(n)`)
 		}
 	})
 
-	t.Run("history reference not yet bound", func(t *testing.T) {
-		history := unified.Rule{Count: &unified.Count{Scope: unified.Scope{Event: "Purchase",
-			Grain: "registered-message", FullHistory: true}, Test: unified.CountTest{Operator: unified.Equal}}}
-		result, err := store.UnifiedProfiles(t.Context(), &history, bindings, at, page)
-		assertUnifiedUnsupported(t, err)
-		if result != nil {
-			t.Fatalf("expected no semantic result, got %+v", result)
+	t.Run("recorded history raw and governed", func(t *testing.T) {
+		history, err := unified.ResolveHistory("registered-queryable-events", "1")
+		if err != nil {
+			t.Fatalf("expected history binding, got %v", err)
+		}
+		for _, test := range []struct {
+			name string
+			rule unified.Rule
+			want []unified.Truth
+		}{
+			{"raw", raw, []unified.Truth{unified.Match, unified.NoMatch, unified.Match, unified.Unknown, unified.Match, unified.NoMatch, unified.NoMatch, unified.NoMatch}},
+			{"governed", governed, []unified.Truth{unified.Match, unified.NoMatch, unified.Unknown, unified.Unknown, unified.Match, unified.NoMatch, unified.NoMatch, unified.NoMatch}},
+		} {
+			t.Run(test.name, func(t *testing.T) {
+				count := *test.rule.Count
+				count.Scope = unified.Scope{Event: "Purchase", Grain: "registered-message", History: history}
+				rule := unified.Rule{Count: &count}
+				assertUnifiedTruths(t, query(t, &rule, page), test.want)
+				for i, want := range test.want {
+					explained, err := store.ExplainUnifiedProfile(t.Context(), &rule, bindings, at, unifiedTestID(i+1))
+					if err != nil {
+						t.Fatalf("expected history explanation, got %v", err)
+					}
+					if explained == nil || len(explained.Nodes) != 1 || explained.Nodes[0].Truth != want {
+						t.Fatalf("expected history explanation %v for profile %d, got %+v", want, i+1, explained)
+					}
+				}
+			})
 		}
 	})
 

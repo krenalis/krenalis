@@ -145,6 +145,48 @@ func TestProfileFilterSQL(t *testing.T) {
 	}
 }
 
+// TestProfileHistorySQL binds only the exclusive upper edge for all history.
+func TestProfileHistorySQL(t *testing.T) {
+
+	end := time.Date(2026, 2, 1, 0, 0, 0, 123456000, time.FixedZone("offset", 3600))
+	count := &warehouses.IndependentOccurrenceCount{
+		Source: warehouses.OccurrenceSource{Table: "krenalis_events",
+			Profile:   warehouses.Column{Name: "kpid", Type: types.UUID(), Nullable: true},
+			Identity:  warehouses.Column{Name: "message_id", Type: types.String()},
+			Timestamp: warehouses.Column{Name: "timestamp", Type: types.DateTime()}},
+		UnboundedStart: true, End: end, Accept: []warehouses.CountRange{{Lower: 1}},
+	}
+	filter := warehouses.Filter{Root: count}
+	population := warehouses.ProfileSource{Table: "profiles", Key: warehouses.Column{Name: "_kpid", Type: types.UUID()}}
+	query, err := profilefilter.Build(filter, warehouses.ProfileOutcomeRequest{Population: population, Limit: 10},
+		profileFilterDialect())
+	if err != nil {
+		t.Fatalf("expected history SQL, got %v", err)
+	}
+	values, err := query.Values()
+	if err != nil {
+		t.Fatalf("expected history arguments, got %v", err)
+	}
+	if len(values) != 1 || values[0] != "2026-01-31 23:00:00.123456" ||
+		strings.Contains(query.SQL, "lower_bound") || !strings.Contains(query.SQL, "<(SELECT upper_bound FROM bounds0)") {
+		t.Fatalf("expected only exclusive T without a fabricated lower bound, got %s and %v", query.SQL, values)
+	}
+	explained, err := profilefilter.BuildExplanation(filter, population,
+		"00000000-0000-0000-0000-000000000001", profileFilterDialect())
+	if err != nil {
+		t.Fatalf("expected history explanation SQL, got %v", err)
+	}
+	values, err = explained.Values()
+	if err != nil {
+		t.Fatalf("expected history explanation arguments, got %v", err)
+	}
+	if len(values) != 2 || values[1] != "2026-01-31 23:00:00.123456" ||
+		strings.Contains(explained.SQL, "lower_bound") {
+		t.Fatalf("expected target and exclusive T without a lower bound, got %s and %v", explained.SQL, values)
+	}
+
+}
+
 // TestProfileRecordSQL projects leaves only within the population table.
 func TestProfileRecordSQL(t *testing.T) {
 

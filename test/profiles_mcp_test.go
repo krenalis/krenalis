@@ -244,6 +244,9 @@ GRANT SELECT (_kpid,country) ON profiles TO mcp_profile_reader;`)
 		`"duration":{"value":31,"unit":"day"}},"where":{"operator":"and","rules":[` +
 		`{"property":"properties.currency","operator":"is","values":["EUR"]}]}},"operator":"is","values":[0]}]}`
 	const at = "2026-02-01T00:00:00Z"
+	historyCount := strings.Replace(count,
+		`{"kind":"elapsedLookback","duration":{"value":31,"unit":"day"}}`,
+		`{"kind":"fullRelevantHistory","history":{"definition":"registered-queryable-events","meaningRevision":"1"}}`, 1)
 	for i, expected := range []string{"MATCH", "NO_MATCH", "MATCH", "UNKNOWN"} {
 		t.Run("explanation "+strconv.Itoa(i+1), func(t *testing.T) {
 			profile := "00000000-0000-0000-0000-00000000000" + strconv.Itoa(i+1)
@@ -306,6 +309,19 @@ GRANT SELECT (_kpid,country) ON profiles TO mcp_profile_reader;`)
 			assertToolError(t, tool(t, "explain-profile-filter", test.args), test.code)
 		})
 	}
+	t.Run("history explanation", func(t *testing.T) {
+		profile := "00000000-0000-0000-0000-000000000004"
+		var expected json.RawMessage
+		k.Call("GET", "/v1/profiles/"+profile+"/filter-explanation?filter="+url.QueryEscape(historyCount)+
+			"&at="+url.QueryEscape(at), nil, nil, &expected)
+		actual := assertResult(t, tool(t, "explain-profile-filter",
+			map[string]any{"kpid": profile, "filter": historyCount, "at": at}))
+		if actual != string(expected) || !strings.Contains(actual, `"unboundedStart":true`) ||
+			strings.Contains(actual, `"start":`) || !strings.Contains(actual, `"end":"`+at+`"`) ||
+			!strings.Contains(actual, `"result":"UNKNOWN"`) || !strings.Contains(actual, `"uncertain":1`) {
+			t.Fatalf("expected HTTP-identical UNKNOWN history explanation without a lower date, got %s", actual)
+		}
+	})
 	calendarCount := strings.Replace(count,
 		`{"kind":"elapsedLookback","duration":{"value":31,"unit":"day"}}`,
 		`{"kind":"lastCompleteCalendarPeriods","unit":"month","count":1}`, 1)
@@ -330,6 +346,8 @@ GRANT SELECT (_kpid,country) ON profiles TO mcp_profile_reader;`)
 		{"Count empty page", count, at, 99},
 		{"Count calendar month", calendarCount, at, 0},
 		{"Count calendar empty page", calendarCount, at, 99},
+		{"Count recorded history", historyCount, at, 0},
+		{"Count recorded history empty page", historyCount, at, 99},
 		{"exact JSON number", strings.Replace(count, `"property":"properties.currency","operator":"is","values":["EUR"]`, `"property":"properties.amount","operator":"is","values":[9007199254740993]`, 1), at, 0},
 	} {
 		t.Run(test.name, func(t *testing.T) {
@@ -378,6 +396,7 @@ GRANT SELECT (_kpid,country) ON profiles TO mcp_profile_reader;`)
 		args any
 		code string
 	}{
+		{"unresolved history", map[string]any{"filter": strings.Replace(historyCount, `"meaningRevision":"1"`, `"meaningRevision":"2"`, 1)}, "InvalidArguments"},
 		{"filter object", map[string]any{"filter": map[string]any{"operator": "and", "rules": []any{}}}, "InvalidArguments"},
 		{"filter null", map[string]any{"filter": nil}, "InvalidArguments"},
 		{"null text", map[string]any{"filter": "null"}, "InvalidArguments"},

@@ -55,6 +55,15 @@ func TestValidateProfileFilter(t *testing.T) {
 		{"unknown time", func(c *IndependentOccurrenceCount) { c.Source.Timestamp.Nullable = true }},
 		{"empty period", func(c *IndependentOccurrenceCount) { c.Start = c.End }},
 		{"precision", func(c *IndependentOccurrenceCount) { c.Start = c.Start.Add(time.Nanosecond) }},
+		{"unbounded with start", func(c *IndependentOccurrenceCount) { c.UnboundedStart = true }},
+		{"missing bounded start", func(c *IndependentOccurrenceCount) { c.Start = time.Time{} }},
+		{"unbounded missing end", func(c *IndependentOccurrenceCount) {
+			c.UnboundedStart = true
+			c.Start, c.End = time.Time{}, time.Time{}
+		}},
+		{"unbounded end precision", func(c *IndependentOccurrenceCount) {
+			c.UnboundedStart, c.Start, c.End = true, time.Time{}, c.End.Add(time.Nanosecond)
+		}},
 		{"negative range", func(c *IndependentOccurrenceCount) { c.Accept = []CountRange{{Lower: -1}} }},
 		{"reverse range", func(c *IndependentOccurrenceCount) { c.Accept = []CountRange{{Lower: 2, Upper: upper(1)}} }},
 		{"adjacent", func(c *IndependentOccurrenceCount) {

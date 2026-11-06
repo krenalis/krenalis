@@ -56,6 +56,7 @@ func (*RecordFilter) filterCondition() {}
 
 // IndependentOccurrenceCount counts determined identities with independent,
 // row-local qualification uncertainty in the mature period [Start,End).
+// UnboundedStart omits the lower bound and requires Start to be zero.
 // Core must establish these preconditions before constructing the node.
 // For valid source data every integer between the certain and possible counts
 // is reachable. Accept is the normalized set of counts satisfying the terminal
@@ -66,10 +67,11 @@ func (*RecordFilter) filterCondition() {}
 // fail the operation; this node does not model uncertain business identity.
 // Unattributed occurrences do not contribute to a profile's history.
 type IndependentOccurrenceCount struct {
-	Source        OccurrenceSource
-	Start, End    time.Time
-	Qualification RowQualification
-	Accept        []CountRange
+	Source         OccurrenceSource
+	Start, End     time.Time
+	UnboundedStart bool
+	Qualification  RowQualification
+	Accept         []CountRange
 }
 
 func (*IndependentOccurrenceCount) filterCondition() {}

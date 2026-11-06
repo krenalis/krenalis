@@ -24,7 +24,7 @@ supported canonical shape and calls `unified.Prepare` with resolved source
 metadata and the existing `convertWhere` Record binders for the two subjects.
 
 `Prepare` returns `warehouses.Filter`: profile Record leaves, Count sources,
-mature absolute periods, local qualifications and normalized accepted integer
+mature periods with an optional lower bound, local qualifications and normalized accepted integer
 ranges. It produces no SQL and receives no dialect callbacks. T remains in core because maturity and all
 periods have already been resolved before the warehouse call.
 
@@ -83,9 +83,19 @@ property-reference comparison or a governed current-profile dependency.
   precision and bounds outside the existing timestamp range are unsupported;
   no rounding or clipping is applied. This internal representation does not
   define public or persisted constructor payloads. The prepared warehouse
-  filter still receives only absolute UTC bounds, exact to microseconds. Event
+  filter receives resolved absolute UTC bounds, exact to microseconds. Event
   timestamps remain the values actually stored, including the current schema's
   millisecond precision; they are not reconstructed from the original input.
+- `FullRelevantHistory` resolves the explicit built-in history reference
+  `registered-queryable-events` at immutable meaning revision `1`. Its domain
+  is all retained, queryable recorded events in the coherent query view, before
+  T exclusively. It has no lower bound, relationship-start certificate or
+  assertion about deleted or never-recorded events. Retention can therefore
+  change counts and absence. This new definition adopts the 1.2 recorded-history
+  meaning explicitly; no old meaning revision is reinterpreted. Core resolves
+  the descriptor and passes `UnboundedStart` with a zero `Start` and resolved UTC
+  `End=T` to the warehouse. The shared compiler omits the lower predicate and
+  parameter; it does not replace it with year 1, the first event or retention.
 - Prepared Record qualification on Event properties, with the existing 26
   operators, literal payloads and schema-aware preparation. Local groups have
   the occurrence-body limit of two levels; this does not restrict existing root
@@ -124,9 +134,9 @@ produces count 1 in every completion (g / its typed complement). Both inputs are
 rejected with `*UnsupportedError` before SQL execution. They are not declared
 invalid under 1.2 and do not yield UNKNOWN.
 
-The following also remain outside this vertical: governed FullRelevantHistory
-and AvailableHistory bindings, future/unmatured windows (06 §17.4), other calendar
-constructors, personal anchors, unknown timestamps/attribution/grain,
+The following also remain outside this vertical: AvailableHistory bindings,
+future/unmatured windows (06 §17.4), other calendar constructors, personal
+anchors, unknown timestamps/attribution/grain,
 business deduplication, source unions, property-reference terminals, other
 governed predicates, owned-member traversal, E/K/P/T, sums and shares. Count
 literal bounds above signed 64-bit range are unsupported. Structurally invalid
@@ -144,8 +154,10 @@ every main-tree rule outcome for one KPID, in input order, including non-matches
 and UNKNOWNs. It is not a listing of UNKNOWN profiles or a new selection policy.
 
 Each Count includes its resolved UTC `[start,end)` period, `certain` qualifying
-occurrences and `uncertain` qualifications. Under this subset's independent
-occurrence contract, the reachable count is every integer from `certain` through
+occurrences and `uncertain` qualifications. For full history, `start` is omitted
+and `unboundedStart:true` makes the absent lower bound explicit; `end` is T.
+Existing bounded-period responses remain unchanged. Under this subset's
+independent occurrence contract, the reachable count is every integer from `certain` through
 `certain + uncertain`. For example, 1 certain and 1 uncertain makes Count >= 2
 UNKNOWN. A parent OR may still MATCH because another child matches. Record
 qualifications are closed before counting: this explanation does not identify

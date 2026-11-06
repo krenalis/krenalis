@@ -63,9 +63,13 @@ func (c *compiler) count(node *warehouses.IndependentOccurrenceCount) (string, e
 	n := strconv.Itoa(c.counts)
 	c.counts++
 	q := c.dialect.QuoteIdentifier
-	start, err := c.parameter(types.DateTime(), node.Start)
-	if err != nil {
-		return "", err
+	lower := ""
+	if !node.UnboundedStart {
+		start, err := c.parameter(types.DateTime(), node.Start)
+		if err != nil {
+			return "", err
+		}
+		lower = start + " AS lower_bound,"
 	}
 	end, err := c.parameter(types.DateTime(), node.End)
 	if err != nil {
@@ -78,9 +82,11 @@ func (c *compiler) count(node *warehouses.IndependentOccurrenceCount) (string, e
 			return "", err
 		}
 	}
-	c.ctes = append(c.ctes, "bounds"+n+" AS (SELECT "+start+" AS lower_bound,"+end+" AS upper_bound)")
-	within := q(node.Source.Timestamp.Name) + ">=(SELECT lower_bound FROM bounds" + n + ") AND " +
-		q(node.Source.Timestamp.Name) + "<(SELECT upper_bound FROM bounds" + n + ")"
+	c.ctes = append(c.ctes, "bounds"+n+" AS (SELECT "+lower+end+" AS upper_bound)")
+	within := q(node.Source.Timestamp.Name) + "<(SELECT upper_bound FROM bounds" + n + ")"
+	if !node.UnboundedStart {
+		within = q(node.Source.Timestamp.Name) + ">=(SELECT lower_bound FROM bounds" + n + ") AND " + within
+	}
 	table, id, profile := q(node.Source.Table), q(node.Source.Identity.Name), q(node.Source.Profile.Name)
 
 	// Seed identities by period, then inspect all copies, including those outside

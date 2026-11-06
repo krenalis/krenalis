@@ -121,6 +121,56 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,event text,timestamp tim
 		})
 	}
 
+	t.Run("unbounded history identity contract", func(t *testing.T) {
+
+		history, err := unified.ResolveHistory("registered-queryable-events", "1")
+		if err != nil {
+			t.Fatalf("expected history reference, got %v", err)
+		}
+		count := *rule.Count
+		count.Scope = unified.Scope{Event: "Purchase", Grain: "registered-message", History: history}
+		historyRule := unified.Rule{Count: &count}
+
+		for _, test := range []struct {
+			name     string
+			rows     []event
+			conflict bool
+			want     unified.Truth
+		}{
+			{"copies across centuries", []event{row("1", "same", "0001-01-01", `{"currency":"EUR"}`), row("1", "same", "2026-01-15", `{"currency":"EUR"}`)}, false, unified.Match},
+			{"distinct old identities", []event{row("1", "a", "0001-01-01", `{"currency":"EUR"}`), row("1", "b", "1900-01-01", `{"currency":"EUR"}`)}, false, unified.NoMatch},
+			{"old qualification conflict", []event{row("1", "same", "1800-01-01", `{"currency":"EUR"}`), row("1", "same", "2026-01-15", `{}`)}, true, 0},
+			{"old attribution conflict", []event{row("1", "same", "1800-01-01", `{"currency":"EUR"}`), row("2", "same", "1900-01-01", `{"currency":"EUR"}`)}, true, 0},
+			{"crosses exclusive T", []event{row("1", "same", "1800-01-01", `{"currency":"EUR"}`), row("1", "same", "2026-02-01", `{"currency":"EUR"}`)}, true, 0},
+			{"future conflicts irrelevant", []event{row("1", "same", "2026-02-01", `{"currency":"EUR"}`), row("2", "same", "2026-02-02", `{}`)}, false, unified.NoMatch},
+			{"old missing identity", []event{row("1", "", "0001-01-01", `{"currency":"EUR"}`)}, true, 0},
+		} {
+			t.Run(test.name, func(t *testing.T) {
+				execUnifiedFixture(t, dw, "TRUNCATE krenalis_events")
+				for _, r := range test.rows {
+					id := "NULL"
+					if r.id != "" {
+						id = "'" + r.id + "'"
+					}
+					execUnifiedFixture(t, dw, fmt.Sprintf("INSERT INTO krenalis_events VALUES ('%s',%s,'Purchase','%s','%s')",
+						unifiedTestID(int(r.profile[0]-'0')), id, r.date, r.properties))
+				}
+				result, err := store.UnifiedProfiles(t.Context(), &historyRule, bindings, at, unified.Page{Limit: 10})
+				if err != nil {
+					if !test.conflict || result != nil {
+						t.Fatalf("expected history conflict=%v without partial result, got %+v, %v", test.conflict, result, err)
+					}
+					return
+				}
+				if test.conflict {
+					t.Fatal("expected source contract error, got success")
+				}
+				assertUnifiedTruths(t, result, []unified.Truth{test.want, unified.NoMatch})
+			})
+		}
+
+	})
+
 	// A fault confined to another profile must not poison the target explanation.
 	for _, test := range []struct{ name, rows string }{
 		{"unrelated missing identity", `('00000000-0000-0000-0000-000000000002',NULL,'Purchase','2026-01-15','{"currency":"EUR"}')`},

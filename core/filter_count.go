@@ -228,8 +228,9 @@ func (duration FilterDuration) elapsed() (filterCountInteger, error) {
 	return value.scaled(uint64(unit)), nil
 }
 
-// FilterPeriod describes an absoluteHalfOpen, elapsedLookback, elapsedAgoBand or
-// lastCompleteCalendarPeriods period. The latter requires root defaultCalendar.
+// FilterPeriod describes an absoluteHalfOpen, elapsedLookback, elapsedAgoBand,
+// lastCompleteCalendarPeriods or fullRelevantHistory period. Calendar periods
+// require root defaultCalendar; fullRelevantHistory requires an explicit History.
 // Exactly the fields belonging to Kind must be supplied. Absolute instants use
 // RFC 3339 with an explicit offset. Relative periods remain relative when
 // serialized; their UTC bounds are resolved only for execution.
@@ -242,6 +243,7 @@ type FilterPeriod struct {
 	Newer    *FilterDuration `json:"newer,omitzero"`
 	Unit     string          `json:"unit,omitzero"`
 	Count    json.Value      `json:"count,omitzero"`
+	History  *FilterHistory  `json:"history,omitzero"`
 }
 
 // UnmarshalJSON decodes a period and rejects unknown or null fields.
@@ -268,7 +270,7 @@ func (period *FilterPeriod) UnmarshalJSON(data []byte) error {
 			if value.IsNull() {
 				return errors.New("filter period fields cannot be null")
 			}
-		case "kind", "duration", "older", "newer":
+		case "kind", "duration", "older", "newer", "history":
 			if value.IsNull() {
 				return errors.New("filter period fields cannot be null")
 			}
@@ -305,7 +307,20 @@ func (period FilterPeriod) scope(source FilterCountSource, calendar *unified.Cal
 	if period.Kind != "lastCompleteCalendarPeriods" && (period.Unit != "" || period.Count != nil) {
 		return unified.Scope{}, errors.New("calendar period fields require lastCompleteCalendarPeriods")
 	}
+	if period.Kind != "fullRelevantHistory" && period.History != nil {
+		return unified.Scope{}, errors.New("history reference requires fullRelevantHistory")
+	}
 	switch period.Kind {
+	case "fullRelevantHistory":
+		if period.History == nil || period.Start != nil || period.End != nil || period.Duration != nil ||
+			period.Older != nil || period.Newer != nil {
+			return unified.Scope{}, errors.New("full relevant history requires only a history reference")
+		}
+		history, err := unified.ResolveHistory(period.History.Definition, period.History.MeaningRevision)
+		if err != nil {
+			return unified.Scope{}, err
+		}
+		scope.History = history
 	case "lastCompleteCalendarPeriods":
 		if period.Start != nil || period.End != nil || period.Duration != nil ||
 			period.Older != nil || period.Newer != nil || calendar == nil {

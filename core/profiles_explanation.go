@@ -36,11 +36,13 @@ type ProfileRuleExplanation struct {
 // ProfileCountExplanation describes independently qualified occurrences in
 // [Start,End). Every integer from Certain to Certain+Uncertain is reachable.
 // These are recorded occurrences, not deduplicated business entities.
+// UnboundedStart means all queryable history before End; Start is then omitted.
 type ProfileCountExplanation struct {
-	Start     time.Time `json:"start"`
-	End       time.Time `json:"end"`
-	Certain   int64     `json:"certain"`
-	Uncertain int64     `json:"uncertain"`
+	Start          time.Time `json:"start,omitzero"`
+	End            time.Time `json:"end"`
+	Certain        int64     `json:"certain"`
+	Uncertain      int64     `json:"uncertain"`
+	UnboundedStart bool      `json:"unboundedStart,omitzero"`
 }
 
 // ExplainProfileFilter explains a supported filter for the KPID in the URL.
@@ -161,7 +163,7 @@ func explainProfileRule(rule warehouses.FilterCondition, nodes []warehouses.Filt
 		}
 		result.Kind = "count"
 		result.Count = &ProfileCountExplanation{Start: rule.Start, End: rule.End, Certain: node.Count.Certain,
-			Uncertain: node.Count.Possible - node.Count.Certain}
+			Uncertain: node.Count.Possible - node.Count.Certain, UnboundedStart: rule.UnboundedStart}
 	default:
 		return ProfileRuleExplanation{}, errors.New("core: invalid profile explanation condition")
 	}

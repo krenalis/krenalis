@@ -78,13 +78,21 @@ func validateFilterCondition(node FilterCondition, depth int, nodes, physical *i
 		if err != nil {
 			return err
 		}
-		for _, bound := range []time.Time{n.Start, n.End} {
+		bounds := []time.Time{n.End}
+		if n.UnboundedStart {
+			if !n.Start.IsZero() {
+				return fmt.Errorf("warehouses: unbounded prepared period cannot have a start")
+			}
+		} else {
+			bounds = append(bounds, n.Start)
+		}
+		for _, bound := range bounds {
 			utc := bound.UTC()
 			if utc.IsZero() || utc.Year() < 1 || utc.Year() > 9999 || utc.Nanosecond()%1000 != 0 {
 				return fmt.Errorf("warehouses: invalid prepared timestamp")
 			}
 		}
-		if !n.Start.Before(n.End) {
+		if !n.UnboundedStart && !n.Start.Before(n.End) {
 			return fmt.Errorf("warehouses: invalid prepared period")
 		}
 		if len(n.Accept) > 2 {

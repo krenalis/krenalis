@@ -404,6 +404,101 @@ INSERT INTO unified_v.krenalis_events VALUES
 		})
 	}
 
+	t.Run("full recorded history", func(t *testing.T) {
+
+		_, err := database.Exec(t.Context(), `INSERT INTO unified_v.krenalis_events VALUES
+('00000000-0000-0000-0000-000000000001','history-oldest','History','0001-01-01','{"currency":"EUR"}'),
+('00000000-0000-0000-0000-000000000001','history-old','History','1900-01-01','{"currency":"EUR"}'),
+('00000000-0000-0000-0000-000000000002','history-before','History','2026-01-31 23:59:59.999','{"currency":"EUR"}'),
+('00000000-0000-0000-0000-000000000002','history-at','History','2026-02-01','{"currency":"EUR"}'),
+('00000000-0000-0000-0000-000000000003','history-null','History','1800-01-01','{"currency":null}'),
+('00000000-0000-0000-0000-000000000004','history-after','History','2026-02-02','{}')`)
+		if err != nil {
+			t.Fatalf("expected recorded history fixtures, got %v", err)
+		}
+		filter := &Filter{Operator: OpAnd, Rules: []FilterRule{&FilterCountCondition{
+			Count: FilterCount{Source: FilterCountSource{Kind: "recordedEvents", Name: "History", Grain: "registered-message"},
+				Period: FilterPeriod{Kind: "fullRelevantHistory", History: &FilterHistory{
+					Definition: "registered-queryable-events", MeaningRevision: "1"}}},
+			Operator: OpIsGreaterThanOrEqualTo, Values: filterValues(1)}}}
+		before, err := json.Marshal(filter)
+		if err != nil {
+			t.Fatalf("expected history filter encoding, got %v", err)
+		}
+		var stored []byte
+		err = database.QueryRow(t.Context(), "SELECT $1::jsonb", string(before)).Scan(&stored)
+		if err != nil {
+			t.Fatalf("expected history document JSONB round-trip, got %v", err)
+		}
+		var restored Filter
+		err = json.Unmarshal(stored, &restored)
+		if err != nil {
+			t.Fatalf("expected restored history reference, got %v", err)
+		}
+		query := ProfileQuery{Filter: &restored, At: at.Format(time.RFC3339), Properties: []string{"profile_id"},
+			Order: "profile_id", Limit: 10}
+		result, err := workspace.QueryProfiles(t.Context(), query)
+		if err != nil {
+			t.Fatalf("expected full-history query, got %v", err)
+		}
+		if result.Total != 3 || len(result.Profiles) != 3 || result.Evaluation.Match != 3 ||
+			result.Evaluation.NoMatch != 1 || result.Evaluation.Unknown != 0 || !result.Evaluation.At.Equal(at) {
+			t.Fatalf("expected three matches and one nonmatch on recorded history, got %+v", result)
+		}
+		for i, expected := range []int64{2, 1, 1, 0} {
+			explained, err := workspace.ExplainProfileFilter(t.Context(),
+				fmt.Sprintf("00000000-0000-0000-0000-%012d", i+1), &restored, query.At)
+			if err != nil {
+				t.Fatalf("expected measured history explanation, got %v", err)
+			}
+			count := explained.Rule.Rules[0].Count
+			if count == nil || !count.UnboundedStart || !count.Start.IsZero() || !count.End.Equal(at) ||
+				count.Certain != expected || count.Uncertain != 0 {
+				t.Fatalf("expected unbounded history before T with %d occurrences, got %+v", expected, count)
+			}
+			data, err := json.Marshal(explained)
+			if err != nil {
+				t.Fatalf("expected history explanation encoding, got %v", err)
+			}
+			if strings.Contains(string(data), `"start":`) || !strings.Contains(string(data), `"unboundedStart":true`) {
+				t.Fatalf("expected explicit unbounded history without a fictional start, got %s", data)
+			}
+		}
+		query.First = 99
+		empty, err := workspace.QueryProfiles(t.Context(), query)
+		if err != nil {
+			t.Fatalf("expected empty history page, got %v", err)
+		}
+		if len(empty.Profiles) != 0 || empty.Total != result.Total || *empty.Evaluation != *result.Evaluation {
+			t.Fatalf("expected unchanged history totals on empty page, got %+v", empty)
+		}
+
+		// A prior occurrence and no recent occurrence is an AND of two Counts.
+		recent := *restored.Rules[0].(*FilterCountCondition)
+		recent.Count.Period = FilterPeriod{Kind: "elapsedLookback",
+			Duration: &FilterDuration{Value: json.Value(`30`), Unit: "day"}}
+		recent.Operator, recent.Values = OpIs, filterValues(0)
+		restored.Rules = append(restored.Rules, &recent)
+		query.First = 0
+		result, err = workspace.QueryProfiles(t.Context(), query)
+		if err != nil {
+			t.Fatalf("expected history and recent-window composition, got %v", err)
+		}
+		if result.Total != 2 || len(result.Profiles) != 2 ||
+			result.Profiles[0].Attributes["profile_id"] != "customer-1" ||
+			result.Profiles[1].Attributes["profile_id"] != "customer-3" {
+			t.Fatalf("expected two historical-only profiles, got %+v", result)
+		}
+		after, err := json.Marshal(filter)
+		if err != nil {
+			t.Fatalf("expected history encoding after execution, got %v", err)
+		}
+		if string(before) != string(after) {
+			t.Fatalf("expected unchanged original document %s, got %s", before, after)
+		}
+
+	})
+
 	t.Run("complete calendar periods", func(t *testing.T) {
 
 		_, err := database.Exec(t.Context(), `INSERT INTO unified_v.krenalis_events VALUES

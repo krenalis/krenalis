@@ -64,6 +64,21 @@ func TestUnifiedPrepare(t *testing.T) {
 		count.Accept[1].Lower != 3 || count.Accept[1].Upper != nil {
 		t.Fatalf("expected [1,1] and [3,infinity], got %+v", count.Accept)
 	}
+	history, err := unified.ResolveHistory("registered-queryable-events", "1")
+	if err != nil {
+		t.Fatalf("expected resolved history, got %v", err)
+	}
+	historyCount := *rule.Count
+	historyCount.Scope = unified.Scope{Event: "Purchase'", Grain: "registered-message", History: history}
+	historyFilter, err := unified.Prepare(&unified.Rule{Count: &historyCount}, bindings, at, source)
+	if err != nil {
+		t.Fatalf("expected prepared history filter, got %v", err)
+	}
+	preparedHistory := historyFilter.Root.(*warehouses.IndependentOccurrenceCount)
+	if !preparedHistory.UnboundedStart || !preparedHistory.Start.IsZero() || !preparedHistory.End.Equal(at) ||
+		!historyCount.Scope.End.IsZero() {
+		t.Fatalf("expected explicit unbounded start and resolved T without changing input, got %+v", preparedHistory)
+	}
 	for _, platform := range []string{"PostgreSQL", "Snowflake"} {
 		dw := warehouses.Registered(platform).New(newTestSettingsLoader(nil), nil)
 		backend, ok := dw.(warehouses.ProfileFilterWarehouse)
@@ -79,9 +94,9 @@ func TestUnifiedPrepare(t *testing.T) {
 		func(r *unified.Rule) { r.Count.Shared = &unified.SharedBoolean{Fact: "g"} },
 		func(r *unified.Rule) { r.Count.Scope.End = at.Add(time.Hour) },
 		func(r *unified.Rule) {
-			r.Count.Scope.FullHistory = true
 			r.Count.Scope.Start = time.Time{}
 			r.Count.Scope.End = time.Time{}
+			r.Count.Scope.Elapsed = &unified.ElapsedPeriod{Older: time.Nanosecond}
 		},
 	} {
 		c := *rule.Count

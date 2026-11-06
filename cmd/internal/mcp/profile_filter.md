@@ -157,11 +157,27 @@ return capability errors, never UNKNOWN or approximate elapsed windows.
 Havana's midnight on 2026-11-01 is ambiguous: any window starting or ending there
 is unavailable, including October and November 2026 as single complete months.
 
+For all retained, queryable recorded history before T, use:
+
+```json
+{"kind":"fullRelevantHistory","history":{"definition":"registered-queryable-events","meaningRevision":"1"}}
+```
+
+This is a `period`, with no start, end, duration, calendar unit or count fields.
+The history reference is explicit; no implicit default or alias is resolved.
+Only this definition and immutable meaning revision 1 are currently available.
+It has no lower date and excludes events exactly at T. It needs no calendar.
+"Never purchased" means Count is 0 in this recorded history, not a statement
+about all real-world purchases. Retention and deletion can change this result;
+the filter neither reconstructs deleted events nor certifies external coverage.
+For "purchased previously but not in the last 30 days", AND an existence Count
+over this history with an absence Count over an elapsedLookback of 30 days.
+
 No relevant recorded events means Count zero. The history is the events recorded
 and queryable in Krenalis, not a certification of events in external systems.
 Unknown decisive local values can yield UNKNOWN; independent qualification
 uncertainty is supported. Shared governed facts, ambiguous identity/timestamps,
-business deduplication, other calendar/history/personal-anchor constructors, sums,
+business deduplication, AvailableHistory and other calendar/personal-anchor constructors, sums,
 shares and E/K/P/T are not available through this tool.
 
 Raw JSON and governed business properties differ. With `properties.currency is
@@ -182,6 +198,8 @@ as `at`. It returns `{kpid,at,rule}`. Each rule has `kind` (`and`, `or`, `record
 `count`), `result` (`MATCH`, `NO_MATCH`, `UNKNOWN`), and ordered child `rules`
 for groups. Count adds `{start,end,certain,uncertain}`: the reachable count is
 every integer in `[certain,certain+uncertain]` for this supported subset.
+For fullRelevantHistory, `start` is omitted and `unboundedStart:true` is present;
+`end` is T. There is no inferred beginning of the customer's real relationship.
 
 For example, 1 certain and 1 uncertain occurrence means Count >= 2 is UNKNOWN,
 but Count >= 1 is MATCH. An OR can MATCH while a child is UNKNOWN; retain that
@@ -213,6 +231,12 @@ No recorded Purchase in the last 30 elapsed days:
 
 ```json
 {"operator":"and","rules":[{"count":{"source":{"kind":"recordedEvents","name":"Purchase","grain":"registered-message"},"period":{"kind":"elapsedLookback","duration":{"value":30,"unit":"day"}}},"operator":"is","values":[0]}]}
+```
+
+No Purchase in the entire retained, queryable recorded history:
+
+```json
+{"operator":"and","rules":[{"count":{"source":{"kind":"recordedEvents","name":"Purchase","grain":"registered-message"},"period":{"kind":"fullRelevantHistory","history":{"definition":"registered-queryable-events","meaningRevision":"1"}}},"operator":"is","values":[0]}]}
 ```
 
 Between two and five Purchases in an absolute period:

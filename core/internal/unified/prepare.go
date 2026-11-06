@@ -190,7 +190,7 @@ func prepareRule(rule Rule, bindings Bindings, at time.Time, source SourceBindin
 		return nil, err
 	}
 	return &warehouses.IndependentOccurrenceCount{
-		Source: source.Occurrences, Start: start, End: end,
+		Source: source.Occurrences, Start: start, End: end, UnboundedStart: c.Scope.History != nil,
 		Qualification: &warehouses.QualificationGroup{Operator: warehouses.OpAnd, Children: qualifiers},
 		Accept:        acceptedCountRanges(c.Test, c.Minimum),
 	}, nil
