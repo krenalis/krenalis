@@ -121,6 +121,7 @@ func (this *Workspace) ExplainProfileFilter(ctx context.Context, kpid string, fi
 // explainProfileRule attaches measured outcomes to the prepared filter shape.
 // It neither reevaluates conditions nor infers reasons from raw SQL NULLs.
 func explainProfileRule(rule warehouses.FilterCondition, nodes []warehouses.FilterNodeOutcome, index *int) (ProfileRuleExplanation, error) {
+
 	if *index >= len(nodes) {
 		return ProfileRuleExplanation{}, errors.New("core: incomplete profile explanation")
 	}

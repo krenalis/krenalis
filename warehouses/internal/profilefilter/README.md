@@ -19,6 +19,9 @@ path. Source, cancellation, scan, iteration or Close failures return no partial
 explanation. Unlike population listing, identity seeds are restricted to those
 having any copy attributed to the target profile, including outside the period;
 all copies of each seeded identity still participate in conflict checks.
+An explanation can therefore succeed when population listing fails because of
+source-contract faults confined to other profiles. It does not certify the
+entire source or make the target explanation partial.
 
 Each profile Record leaf is projected only in the population-table SELECT,
 without joins, a prefilter or NULL coalescing. The resulting nullable columns

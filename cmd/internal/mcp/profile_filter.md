@@ -189,6 +189,11 @@ distinction. These are recorded occurrences, not deduplicated business orders.
 Do not infer the missing field from these counters: the tool does not explain
 individual qualification operands or return event payloads. It does not make
 unsupported capabilities available and cannot reconstruct an earlier data view.
+The explanation is scoped to that KPID. It can succeed when query-profiles fails
+because of source-contract faults confined to other profiles. That success means
+a complete evaluation of the target, not recovery of the failed population query.
+Do not assemble successful explanations into a partial replacement for a failed
+segment listing.
 
 The tool uses the same MCP enablement and main connection as query-profiles.
 It returns `ProfileNotFound` for a missing KPID; technical errors return no

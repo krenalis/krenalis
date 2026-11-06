@@ -42,6 +42,10 @@ func (store *Store) ExplainUnifiedProfile(ctx context.Context, root *unified.Rul
 	if err != nil {
 		return nil, err
 	}
+	err = warehouses.ValidateProfileFilter(filter, warehouses.ProfileOutcomeRequest{Population: source.Profiles, Limit: 1})
+	if err != nil {
+		return nil, err
+	}
 	nodes, err := backend.ExplainProfileFilter(ctx, filter, source.Profiles, profile)
 	if err != nil {
 		return nil, unavailableError(err)

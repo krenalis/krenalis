@@ -159,6 +159,9 @@ population and returns at most one row per node, with a fixed six-column schema.
 Count identity seeds include copies attributed to the target profile outside
 the period too; all copies of seeded identities are checked for attribution,
 period and qualification conflicts. Other profiles' filters are not evaluated.
+Consequently, a target explanation can succeed while population listing fails
+because of source-contract faults confined to other profiles. Success means
+completion of that target's evaluation, not validation of the whole source.
 
 The decoder bounds node rows to 101, checks profile identity, preorder indices,
 nonnegative count bounds and source diagnostics, and always closes the cursor.

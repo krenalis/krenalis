@@ -17,6 +17,7 @@ import (
 // TestUnifiedSourcePostgreSQL checks the determined-identity source contract on
 // a fixture without a PK. This models conflicts that a physical PK can hide.
 func TestUnifiedSourcePostgreSQL(t *testing.T) {
+
 	dw := newJSONFilterTestWarehouse(t, "PostgreSQL")
 	store := &Store{mc: newModeCoordinator(state.Normal)}
 	store.wh.Store(dw)
@@ -119,6 +120,45 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,event text,timestamp tim
 			assertUnifiedTruths(t, result, []unified.Truth{test.want, unified.NoMatch})
 		})
 	}
+
+	// A fault confined to another profile must not poison the target explanation.
+	for _, test := range []struct{ name, rows string }{
+		{"unrelated missing identity", `('00000000-0000-0000-0000-000000000002',NULL,'Purchase','2026-01-15','{"currency":"EUR"}')`},
+		{"unrelated attribution conflict", `('00000000-0000-0000-0000-000000000002','other','Purchase','2026-01-15','{"currency":"EUR"}'),(NULL,'other','Purchase','2026-01-15','{"currency":"EUR"}')`},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			execUnifiedFixture(t, dw, "TRUNCATE krenalis_events")
+			execUnifiedFixture(t, dw, `INSERT INTO krenalis_events VALUES
+('00000000-0000-0000-0000-000000000001','target','Purchase','2026-01-15','{"currency":"EUR"}'),`+test.rows)
+			explained, err := store.ExplainUnifiedProfile(t.Context(), &rule, bindings, at, unifiedTestID(1))
+			if err != nil {
+				t.Fatalf("expected unrelated fault to leave target explanation complete, got %v", err)
+			}
+			if explained == nil || len(explained.Nodes) != 1 || explained.Nodes[0].Truth != unified.Match ||
+				explained.Nodes[0].Count == nil || explained.Nodes[0].Count.Certain != 1 ||
+				explained.Nodes[0].Count.Possible != 1 {
+				t.Fatalf("expected target MATCH with exact Count [1,1], got %+v", explained)
+			}
+			explained, err = store.ExplainUnifiedProfile(t.Context(), &rule, bindings, at, unifiedTestID(2))
+			if err != nil {
+				if explained != nil || !strings.Contains(err.Error(), "occurrence source violates") {
+					t.Fatalf("expected affected profile to fail without explanation, got %+v, %v", explained, err)
+				}
+			}
+			if err == nil {
+				t.Fatal("expected affected profile source-contract failure, got success")
+			}
+			result, err := store.UnifiedProfiles(t.Context(), &rule, bindings, at, unified.Page{Limit: 10})
+			if err != nil {
+				if result != nil || !strings.Contains(err.Error(), "occurrence source violates") {
+					t.Fatalf("expected population source-contract failure without partial result, got %+v, %v", result, err)
+				}
+				return
+			}
+			t.Fatal("expected population source-contract failure, got success")
+		})
+	}
+
 	// A failed operation must leave the connection usable for a valid request.
 	execUnifiedFixture(t, dw, "TRUNCATE krenalis_events")
 	result, err := store.UnifiedProfiles(t.Context(), &rule, bindings, at, unified.Page{Limit: 10})
@@ -126,4 +166,5 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,event text,timestamp tim
 		t.Fatalf("expected reusable connection after conflicts, got %v", err)
 	}
 	assertUnifiedTruths(t, result, []unified.Truth{unified.NoMatch, unified.NoMatch})
+
 }
