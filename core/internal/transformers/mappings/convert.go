@@ -388,16 +388,16 @@ func convert(v any, st, dt types.Type, nullable bool, purpose Purpose) (any, err
 		if err != nil {
 			return v, errInvalidConversion
 		}
+		// Reject NaN explicitly because range comparisons do not catch it.
+		if dt.IsReal() && math.IsNaN(n) {
+			return v, errRangeConversion
+		}
 		min, max := dt.FloatRange()
 		if n < min {
 			return v, errMinConversion
 		}
 		if n > max {
 			return v, errMaxConversion
-		}
-		// Check bounds first to report more specific errors for infinities.
-		if dt.IsReal() && (math.IsNaN(n) || math.IsInf(n, 0)) {
-			return v, errRangeConversion
 		}
 		return n, nil
 	case types.DecimalKind:

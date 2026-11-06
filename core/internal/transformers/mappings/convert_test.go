@@ -149,9 +149,7 @@ func TestConvert(t *testing.T) {
 		{types.String(), types.Float(64), "NaN", math.NaN(), true, nil},
 		{types.Float(64), types.Float(64).Real(), math.Inf(1), nil, true, errMaxConversion},
 		{types.Float(64), types.Float(64).Real(), math.Inf(-1), nil, true, errMinConversion},
-		{types.Float(64), types.Float(32).Real().WithFloatRange(0, math.MaxFloat64), math.Inf(1), nil, true, errRangeConversion},
-		{types.Float(64), types.Float(32).Real().WithFloatRange(-math.MaxFloat64, 0), math.Inf(-1), nil, true, errRangeConversion},
-		{types.Float(64).Real(), types.Float(32).Real().WithFloatRange(0, math.MaxFloat64), math.MaxFloat64, nil, true, errRangeConversion},
+		{types.Float(64).Real(), types.Float(32).Real().WithFloatRange(0, math.MaxFloat64), math.MaxFloat64, nil, true, errMaxConversion},
 		{types.Float(64).Real(), types.Float(32).Real().WithFloatRange(0, math.MaxFloat64), float64(math.MaxFloat32), float64(math.MaxFloat32), true, nil},
 
 		// decimal.
