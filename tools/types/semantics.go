@@ -174,12 +174,12 @@ func UnitByName(name string) (Unit, bool) {
 	return 0, false
 }
 
-// IsDurationUnit reports whether u is usable as duration.
+// IsDurationUnit reports whether u is usable as a duration unit.
 func (u Unit) IsDurationUnit() bool {
 	return u >= Millisecond && int(u) <= len(unitName)
 }
 
-// IsMeasurementUnit reports whether u is usable as measurement.
+// IsMeasurementUnit reports whether u is usable as a measurement unit.
 func (u Unit) IsMeasurementUnit() bool {
 	return u >= 1 && int(u) <= len(unitName)
 }
@@ -205,7 +205,7 @@ func (t Type) AsCountry(format CountryFormat) Type {
 
 // AsDuration returns t with duration semantics using unit. It panics unless
 // t is an int, decimal, or real float type without semantics and unit is
-// valid and is usable as duration.
+// valid and is usable as a duration unit.
 func (t Type) AsDuration(unit Unit) Type {
 	t, err := t.withSemantics(DurationSemantics, unit)
 	if err != nil {
@@ -226,7 +226,7 @@ func (t Type) AsEmail() Type {
 
 // AsMeasurement returns t with measurement semantics using unit. It panics
 // unless t is an int, decimal, or real float type without semantics and unit
-// is valid and is usable as measurement.
+// is valid and is usable as a measurement unit.
 func (t Type) AsMeasurement(unit Unit) Type {
 	t, err := t.withSemantics(MeasurementSemantics, unit)
 	if err != nil {
