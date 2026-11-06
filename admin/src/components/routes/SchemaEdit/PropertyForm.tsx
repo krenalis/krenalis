@@ -39,7 +39,7 @@ import {
 	getPropertyValueType,
 	isSuitableAsIdentifier,
 	replacePropertyValueType,
-	UNIT_OF_MEASURE_OPTIONS,
+	UNIT_OPTIONS,
 } from '../../helpers/types';
 import {
 	SchemaPropertyIdentifierLabel,
@@ -641,13 +641,10 @@ const PropertyForm = ({
 		valueType?.kind === 'decimal' && valueType.semantics === 'money'
 			? CURRENCY_OPTIONS.find((option) => option.code === valueType.currency)
 			: undefined;
-	const selectedMeasurementUnitOption =
-		valueType?.kind === 'decimal' && valueType.semantics === 'measurement'
-			? UNIT_OF_MEASURE_OPTIONS.find((option) => option.value === valueType.unit)
-			: undefined;
-	const selectedDurationUnitOption =
-		valueType?.kind === 'float' && valueType.semantics === 'duration'
-			? DURATION_UNIT_OPTIONS.find((option) => option.value === valueType.unit)
+	const selectedUnitOption =
+		(valueType?.kind === 'decimal' && valueType.semantics === 'measurement') ||
+		(valueType?.kind === 'float' && valueType.semantics === 'duration')
+			? UNIT_OPTIONS.find((option) => option.value === valueType.unit)
 			: undefined;
 	const propertyParentPath = propertyPaths[parentKey] ?? '';
 	const propertyPath = propertyParentPath === '' ? property.name : `${propertyParentPath}.${property.name}`;
@@ -970,7 +967,7 @@ const PropertyForm = ({
 							{(valueType.unit == null || valueType.unit.length === 0) && (
 								<WaOption className='property-form__unit-placeholder' value='' disabled />
 							)}
-							{UNIT_OF_MEASURE_OPTIONS.map((option, index) => (
+							{UNIT_OPTIONS.map((option, index) => (
 								<React.Fragment key={option.value}>
 									{option.groupLabel != null && index > 0 && <WaDivider />}
 									{option.groupLabel != null && (
@@ -981,7 +978,7 @@ const PropertyForm = ({
 									<WaOption value={option.value}>
 										<span>{option.label}</span>
 										<span className='property-form__unit-option-separator'> · </span>
-										<span className='property-form__unit-option-symbol'>{option.value}</span>
+										<span className='property-form__unit-option-symbol'>{option.symbol}</span>
 									</WaOption>
 								</React.Fragment>
 							))}
@@ -990,9 +987,9 @@ const PropertyForm = ({
 						<div className='property-form__measurement-unit'>
 							<div className='property-form__label'>Unit</div>
 							<div className='property-form__value'>
-								{selectedMeasurementUnitOption == null
+								{selectedUnitOption == null
 									? ''
-									: `${selectedMeasurementUnitOption.label} · ${selectedMeasurementUnitOption.value}`}
+									: `${selectedUnitOption.label} · ${selectedUnitOption.symbol}`}
 							</div>
 						</div>
 					)}
@@ -1028,9 +1025,9 @@ const PropertyForm = ({
 						<div className='property-form__duration-unit'>
 							<div className='property-form__label'>Unit</div>
 							<div className='property-form__value'>
-								{selectedDurationUnitOption == null
+								{selectedUnitOption == null
 									? ''
-									: `${selectedDurationUnitOption.label} · ${selectedDurationUnitOption.symbol}`}
+									: `${selectedUnitOption.label} · ${selectedUnitOption.symbol}`}
 							</div>
 						</div>
 					)}
