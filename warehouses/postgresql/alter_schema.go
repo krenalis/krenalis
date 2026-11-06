@@ -43,7 +43,7 @@ func (warehouse *PostgreSQL) AlterProfileSchema(ctx context.Context, opID string
 		}
 		operationErr = warehouses.NewOperationError(err)
 	}
-	ctx, cancel := finalizationContext(ctx)
+	ctx, cancel := withDelayedCancellation(ctx, finalizationGracePeriod)
 	defer cancel()
 	bo := backoff.New(200)
 	bo.SetCap(time.Second)

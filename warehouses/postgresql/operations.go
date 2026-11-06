@@ -18,6 +18,11 @@ import (
 	"github.com/krenalis/krenalis/warehouses"
 )
 
+// finalizationGracePeriod is how long an operation still has to record its
+// outcome after its context is done, so that an interrupted operation is
+// marked as failed rather than left uncompleted.
+const finalizationGracePeriod = 10 * time.Second
+
 type warehouseOp string
 
 const (
@@ -182,19 +187,15 @@ func (warehouse *PostgreSQL) setOperationAsCompleted(ctx context.Context, conn c
 	return err
 }
 
-const finalizationGracePeriod = 10 * time.Second
-
-// finalizationContext returns a context for recording the outcome of an
-// operation. It is canceled only finalizationGracePeriod after ctx is done, so
-// that an operation interrupted by a shutdown can still be marked as failed
-// instead of being waited on forever. The caller must call the returned cancel
-// function.
-func finalizationContext(ctx context.Context) (context.Context, context.CancelFunc) {
-	finalizationCtx, cancel := context.WithCancel(context.WithoutCancel(ctx))
+// withDelayedCancellation returns a context that preserves ctx's values and is
+// automatically canceled delay after ctx is done. The caller must call the
+// returned cancel function when the context is no longer needed.
+func withDelayedCancellation(ctx context.Context, delay time.Duration) (context.Context, context.CancelFunc) {
+	delayedCtx, cancel := context.WithCancel(context.WithoutCancel(ctx))
 	stop := context.AfterFunc(ctx, func() {
-		time.AfterFunc(finalizationGracePeriod, cancel)
+		time.AfterFunc(delay, cancel)
 	})
-	return finalizationCtx, func() {
+	return delayedCtx, func() {
 		stop()
 		cancel()
 	}

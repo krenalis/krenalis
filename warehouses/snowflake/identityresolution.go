@@ -55,7 +55,7 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, opID string, 
 			if err != nil && ctx.Err() != nil {
 				err = fmt.Errorf("operation interrupted: %w", context.Cause(ctx))
 			}
-			ctx, cancel := finalizationContext(ctx)
+			ctx, cancel := withDelayedCancellation(ctx, finalizationGracePeriod)
 			defer cancel()
 			counts, err = warehouse.finalizeIdentityResolution(ctx, db, opID, counts, err)
 		}
@@ -328,7 +328,7 @@ func (warehouse *Snowflake) ResolveIdentities(ctx context.Context, opID string, 
 	if err != nil && ctx.Err() != nil {
 		err = fmt.Errorf("operation interrupted: %w", context.Cause(ctx))
 	}
-	finalizationCtx, cancel := finalizationContext(ctx)
+	finalizationCtx, cancel := withDelayedCancellation(ctx, finalizationGracePeriod)
 	defer cancel()
 	counts, err = warehouse.finalizeIdentityResolution(finalizationCtx, db, opID, counts, err)
 	if err != nil {
