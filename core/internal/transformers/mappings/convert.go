@@ -390,7 +390,7 @@ func convert(v any, st, dt types.Type, nullable bool, purpose Purpose) (any, err
 		}
 		// Reject NaN explicitly because range comparisons do not catch it.
 		if dt.IsReal() && math.IsNaN(n) {
-			return v, errRangeConversion
+			return v, errInvalidConversion
 		}
 		min, max := dt.FloatRange()
 		if n < min {
