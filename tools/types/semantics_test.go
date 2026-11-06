@@ -256,6 +256,7 @@ func Test_EqualSemantics(t *testing.T) {
 		{"different duration unit", Int(64).AsDuration(Second), Int(64).AsDuration(Minute), false},
 		{"equal measurement", Decimal(10, 2).AsMeasurement(Kilogram), Int(64).AsMeasurement(Kilogram), true},
 		{"different measurement unit", Decimal(10, 2).AsMeasurement(Kilogram), Int(64).AsMeasurement(Gram), false},
+		{"measurement and duration with same unit", Int(64).AsMeasurement(Second), Int(64).AsDuration(Second), false},
 		{"money without currency", Decimal(10, 2).AsMoney(), Decimal(18, 4).AsMoney(), true},
 		{
 			"equal money currency", Decimal(10, 2).AsMoney().WithCurrency("EUR"),
