@@ -21,6 +21,9 @@ import (
 const serverInstructions = "Krenalis MCP tools must be used only through this MCP server." +
 	" For profiles and segments, use query-profiles." +
 	" Read profile-filter-doc before constructing a filter." +
+	" Discover business events with list-event-definitions." +
+	" Inspect get-event-definition before choosing a track event." +
+	" Catalog schemas do not prove historical conformity or enable unsupported filtering capabilities." +
 	" query-data-warehouse is retained for discovering event names, inspecting JSON properties and other analysis." +
 	" Never use SQL to emulate an unsupported Unified capability." +
 	" Report unsupported capabilities explicitly and do not reinterpret them as empty results or UNKNOWN." +

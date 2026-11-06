@@ -25,6 +25,7 @@ const (
 	DifferentWarehouse             errors.Code = "DifferentWarehouse"
 	EmailInvitationRequired        errors.Code = "EmailInvitationRequired" // Returned by apisServer.
 	EmailSendFailed                errors.Code = "EmailSendFailed"
+	EventDefinitionNotExist        errors.Code = "EventDefinitionNotExist"
 	EventNotExist                  errors.Code = "EventNotExist"
 	EventTypeNotExist              errors.Code = "EventTypeNotExist"
 	FilterCapabilityNotImplemented errors.Code = "FilterCapabilityNotImplemented"

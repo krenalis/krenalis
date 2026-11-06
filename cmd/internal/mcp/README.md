@@ -7,6 +7,28 @@ tool remains available for discovery and other analysis. Server instructions
 direct profile/segment questions to Unified and prohibit SQL fallback for
 unavailable filtering capabilities.
 
+## Event catalog
+
+`list-event-definitions` returns metadata summaries, with optional literal
+case-insensitive substring search (256 UTF-8 bytes). `get-event-definition`
+accepts an exact ID and returns the native traits/properties schemas with
+descriptions and units. Both call `core.Workspace`, not internal state or the
+warehouse, and use the usual workspace MCP authentication and rate limit.
+MCP warehouse settings are not required for catalog access.
+
+Arguments must be an object of at most 2 KiB, with only string `query` (list)
+or `id` (get); null and unknown arguments are rejected. Results are complete
+JSON, published as structured content and equivalent JSON text fallback, with a
+128 KiB JSON payload limit. Empty searches return `definitions: []`.
+Unknown IDs produce `EventDefinitionNotExist`; malformed arguments use the MCP
+`InvalidArguments` prefix. There is no new HTTP endpoint or filter syntax.
+
+The documentation distinguishes schema metadata from historical conformity,
+the catalog ID from the exact track event name, and native field meaning from
+raw JSON predicate semantics. It explicitly excludes inferred capabilities for
+arrays, sums, governed bindings and generic page/screen or identity definitions.
+The catalog does not change invalid-event handling or ingestion conversions.
+
 ## Access and connections
 
 A workspace-scoped MCP key, enabled organization, request rate capacity and
@@ -72,7 +94,7 @@ with their classification/code. Technical execution errors are opaque operation
 failures without profile data. The profile path does not reuse the old SQL tool's
 partial-result handling.
 
-No Admin filter editor, event catalog, calendar constructor, governed public
+No Admin filter editor, calendar constructor, governed public
 binding, E/K/P/T, persistence or destination execution is introduced. Coherent
 source views remain an infrastructure prerequisite, not a guarantee established
 by this MCP adapter.

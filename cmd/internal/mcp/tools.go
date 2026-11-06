@@ -111,6 +111,8 @@ var tools = []server.ServerTool{
 
 	queryProfilesTool,
 	profileFilterDocumentationTool,
+	listEventDefinitionsTool,
+	getEventDefinitionTool,
 
 	// Tool that exposes the profile schema.
 	{

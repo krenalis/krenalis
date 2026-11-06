@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"reflect"
 	"strconv"
 	"strings"
 	"testing"
@@ -24,7 +25,8 @@ type profileMCPResponse struct {
 			Type string `json:"type"`
 			Text string `json:"text"`
 		} `json:"content"`
-		IsError bool `json:"isError"`
+		StructuredContent json.RawMessage `json:"structuredContent"`
+		IsError           bool            `json:"isError"`
 	} `json:"result"`
 	Error *struct {
 		Code    int    `json:"code"`
@@ -114,6 +116,72 @@ GRANT SELECT (_kpid,country) ON profiles TO mcp_profile_reader;`)
 		return result.Result.Content[0].Text
 	}
 	assertToolError(t, tool(t, "query-profiles", map[string]any{}), "MCPNotConfigured")
+
+	// Metadata discovery needs only the scoped MCP key, not warehouse MCP settings.
+	catalog := assertResult(t, tool(t, "list-event-definitions", map[string]any{"query": "ORDER COMPLETED"}))
+	var discovery struct {
+		Definitions []struct {
+			ID    string `json:"id"`
+			Event string `json:"event"`
+		} `json:"definitions"`
+	}
+	err = json.Unmarshal([]byte(catalog), &discovery)
+	if err != nil {
+		t.Fatalf("expected catalog JSON, got %v", err)
+	}
+	orderEvent := ""
+	orderID := ""
+	for _, definition := range discovery.Definitions {
+		if definition.ID == "commerce.order_completed" {
+			orderEvent, orderID = definition.Event, definition.ID
+		}
+	}
+	if orderEvent != "Order Completed" {
+		t.Fatalf("expected Order Completed discovery, got %s", catalog)
+	}
+	definitionResult := tool(t, "get-event-definition", map[string]any{"id": orderID})
+	detail := assertResult(t, definitionResult)
+	if len(definitionResult.Result.StructuredContent) == 0 {
+		t.Fatal("expected structured catalog content, got absent")
+	}
+	var textObject, structuredObject map[string]any
+	err = json.Unmarshal([]byte(detail), &textObject)
+	if err != nil {
+		t.Fatalf("expected catalog text JSON, got %v", err)
+	}
+	err = json.Unmarshal(definitionResult.Result.StructuredContent, &structuredObject)
+	if err != nil {
+		t.Fatalf("expected structured catalog JSON, got %v", err)
+	}
+	if !reflect.DeepEqual(textObject, structuredObject) {
+		t.Fatal("expected equivalent text and structured content, got different JSON values")
+	}
+	if !strings.Contains(detail, `"semantics":"money"`) || !strings.Contains(detail, `"name":"products"`) {
+		t.Fatalf("expected native money and product schemas, got %s", detail)
+	}
+	for _, test := range []struct {
+		name string
+		tool string
+		args any
+		code string
+	}{
+		{"missing ID", "get-event-definition", map[string]any{}, "InvalidArguments"},
+		{"unknown ID", "get-event-definition", map[string]any{"id": "missing"}, "EventDefinitionNotExist"},
+		{"numeric ID", "get-event-definition", map[string]any{"id": 42}, "InvalidArguments"},
+		{"null ID", "get-event-definition", map[string]any{"id": nil}, "InvalidArguments"},
+		{"unknown argument", "list-event-definitions", map[string]any{"id": "x"}, "InvalidArguments"},
+		{"null query", "list-event-definitions", map[string]any{"query": nil}, "InvalidArguments"},
+		{"long query", "list-event-definitions", map[string]any{"query": strings.Repeat("x", 257)}, "InvalidArguments"},
+		{"oversize arguments", "list-event-definitions", map[string]any{"query": strings.Repeat("x", 2048)}, "InvalidArguments"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			assertToolError(t, tool(t, test.tool, test.args), test.code)
+		})
+	}
+	emptyCatalog := assertResult(t, tool(t, "list-event-definitions", map[string]any{"query": "no-such-definition"}))
+	if !strings.Contains(emptyCatalog, `"definitions":[]`) {
+		t.Fatalf("expected an empty definitions array, got %s", emptyCatalog)
+	}
 	guide := assertResult(t, tool(t, "profile-filter-doc", map[string]any{}))
 	if !strings.Contains(guide, "table, column") || !strings.Contains(guide, "main virtual warehouse") {
 		t.Fatalf("expected explicit access and Snowflake documentation, got absent")
@@ -122,6 +190,31 @@ GRANT SELECT (_kpid,country) ON profiles TO mcp_profile_reader;`)
 	mcpSettings.Username, mcpSettings.Password = "mcp_profile_reader", "mcp-profile-fixture"
 	k.Call("PUT", "/v1/warehouse", nil, map[string]any{"mode": "Normal", "settings": settings,
 		"mcpSettings": mcpSettings}, nil)
+
+	// Use the discovered technical name, not the catalog ID, in an actual Count.
+	_, err = pool.Exec(t.Context(), `INSERT INTO krenalis_events
+ (kpid,message_id,event,timestamp,received_at,sent_at,type,connection_id,anonymous_id,traits,properties)
+ SELECT _kpid,'catalog-'||n,'Order Completed','2026-01-15','2026-02-01','2026-02-01',
+ 'track','fixture','a','{}','{}' FROM profiles CROSS JOIN generate_series(1,2) n
+ WHERE email='profile-1@example.com'`)
+	if err != nil {
+		t.Fatalf("expected recorded order fixtures, got %v", err)
+	}
+	orderFilter, err := json.Marshal(map[string]any{"operator": "and", "rules": []any{map[string]any{
+		"count": map[string]any{"source": map[string]any{"kind": "recordedEvents",
+			"name": orderEvent, "grain": "registered-message"},
+			"period": map[string]any{"kind": "elapsedLookback", "duration": map[string]any{"value": 30, "unit": "day"}}},
+		"operator": "is greater than or equal to", "values": []int{2},
+	}}})
+	if err != nil {
+		t.Fatalf("expected a filter using the discovered event, got %v", err)
+	}
+	orders := assertResult(t, tool(t, "query-profiles", map[string]any{"filter": string(orderFilter),
+		"properties": []string{"email"}, "at": "2026-02-01T00:00:00Z"}))
+	if !strings.Contains(orders, `"total":1`) || !strings.Contains(orders, `"email":"profile-1@example.com"`) ||
+		!strings.Contains(orders, `"match":1,"noMatch":3,"unknown":0`) {
+		t.Fatalf("expected one matching profile from two recorded orders, got %s", orders)
+	}
 	defaults := assertResult(t, tool(t, "query-profiles", map[string]any{}))
 	if !strings.Contains(defaults, `"total":4`) || strings.Contains(defaults, `"evaluation":`) {
 		t.Fatalf("expected default Record listing without evaluation, got %s", defaults)
@@ -131,6 +224,13 @@ GRANT SELECT (_kpid,country) ON profiles TO mcp_profile_reader;`)
 		map[string]any{"name": "query-profiles", "arguments": map[string]any{}})
 	if rejected.Error == nil || len(rejected.Result.Content) != 0 {
 		t.Fatalf("expected invalid-key rejection without data, got %+v", rejected)
+	}
+	for _, name := range []string{"list-event-definitions", "get-event-definition"} {
+		rejected := profileMCPCall(t, k.Addr(), invalidToken, &session, "tools/call",
+			map[string]any{"name": name, "arguments": map[string]any{}})
+		if rejected.Error == nil || len(rejected.Result.Content) != 0 {
+			t.Fatalf("expected catalog authentication failure without data, got %+v", rejected)
+		}
 	}
 
 	const count = `{"operator":"and","rules":[{"count":{"source":{"kind":"recordedEvents",` +

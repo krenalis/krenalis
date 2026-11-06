@@ -6,6 +6,35 @@ Read `profile-schema` and, for Count qualification, `event-schema`. Use the sche
 property `path`, not its physical warehouse column name. Fetch only the profile
 properties needed to answer the user.
 
+Use `list-event-definitions` to discover events by ID, technical name, display
+name or description. The optional `query` is a literal substring, not semantic
+search; omit it to compare the full catalog. Then use `get-event-definition`
+with an exact catalog ID to inspect the native schemas and property meanings.
+Both tools require a workspace MCP key and rate capacity, but not MCP warehouse
+settings. Their JSON is returned as text and structured content.
+
+Catalog IDs select metadata, not filter sources. For example, retrieve
+`commerce.order_completed`, read its `event` value `Order Completed`, then use
+that exact value as Count `source.name`. To find profiles with at least two
+orders in the last thirty elapsed days, use:
+
+```json
+{"operator":"and","rules":[{"count":{"source":{"kind":"recordedEvents","name":"Order Completed","grain":"registered-message"},"period":{"kind":"elapsedLookback","duration":{"value":30,"unit":"day"}}},"operator":"is greater than or equal to","values":[2]}]}
+```
+
+This counts recorded messages, not deduplicated business orders. Catalog entries
+do not prove which events were received or that historical data follows the
+current schema. A page/screen definition with an empty event name does not make
+it a valid Count name; do not invent a track event for it. The legacy merge
+definition is historical, not an enabled ingestion or query capability.
+
+The native schemas provide descriptions, units and nested structure. Conditions
+on traits/properties still use the raw JSON operators described below, not
+native date, currency or other governed semantics inferred from the catalog.
+Declared array elements do not enable traversal or same-element predicates.
+Sums, business-order deduplication and other unsupported constructions must be
+reported as unsupported, without SQL fallback.
+
 ## Connection and access
 
 MCP warehouse settings must be configured to enable profile queries. This tool
