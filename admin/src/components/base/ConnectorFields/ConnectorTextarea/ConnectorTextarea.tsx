@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './ConnectorTextarea';
-import SlTextarea from '@shoelace-style/shoelace/dist/react/textarea/index.js';
+import WaTextarea from '@awesome.me/webawesome/dist/react/textarea/index.js';
 
 interface ConnectorTextAreaProps {
 	name: string;
@@ -41,16 +41,16 @@ const ConnectorTextarea = ({
 
 	return (
 		<div className='connector-textarea'>
-			<SlTextarea
+			<WaTextarea
 				name={name}
 				value={value}
 				label={label}
 				placeholder={placeholder}
-				help-text={helpText}
+				hint={helpText}
 				rows={rows}
 				minlength={minlength !== 0 ? minlength : undefined}
 				maxlength={maxlength !== 0 ? maxlength : undefined}
-				onSlChange={onTextAreaChange}
+				onChange={onTextAreaChange}
 			/>
 			{error !== '' && <div className='connector-ui__fields-error'>{error}</div>}
 		</div>

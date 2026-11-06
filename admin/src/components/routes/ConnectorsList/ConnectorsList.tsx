@@ -2,12 +2,12 @@ import React, { useState, useContext, useLayoutEffect, useMemo, useEffect } from
 import './ConnectorsList.css';
 import { ConnectionRole } from '../../../lib/api/types/connection';
 import AppContext from '../../../context/AppContext';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
-import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
-import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
-import SlDrawer from '@shoelace-style/shoelace/dist/react/drawer/index.js';
-import SlBadge from '@shoelace-style/shoelace/dist/react/badge/index.js';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
+import WaInput from '@awesome.me/webawesome/dist/react/input/index.js';
+import WaSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
+import WaDrawer from '@awesome.me/webawesome/dist/react/drawer/index.js';
+import WaBadge from '@awesome.me/webawesome/dist/react/badge/index.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import { authURLResponse } from '../../../lib/api/types/responses';
 import { useLocation } from 'react-router-dom';
 import TransformedConnector from '../../../lib/core/connector';
@@ -216,14 +216,14 @@ const ConnectorsList = () => {
 	return (
 		<div className='connectors-list'>
 			<div className='route-content'>
-				<SlInput
+				<WaInput
 					className='connectors-list__search-bar'
 					value={searchTerm}
-					onSlInput={onSearchTermUpdate}
+					onInput={onSearchTermUpdate}
 					placeholder='Search for a connector...'
 				>
-					<SlIcon name='search' slot='prefix' />
-				</SlInput>
+					<WaIcon name='search' slot='start' />
+				</WaInput>
 				<div className='connectors-list__categories'>
 					{categories.map((c) => {
 						return (
@@ -240,39 +240,42 @@ const ConnectorsList = () => {
 					<div className='connectors-list__connectors'>
 						{cards}
 						<div className='connectors-list__feedback'>
-							<SlIcon name='chat-dots' />
+							<WaIcon name='chat-dots' />
 							{feedbackMessage}
 						</div>
 					</div>
 				) : (
 					<div className='connectors-list__no-connector'>
-						<SlIcon name='exclamation-circle' />
+						<WaIcon name='exclamation-circle' />
 						<div className='connectors-list__no-connector-title'>Nothing found</div>
 						<div className='connectors-list__no-connector-feedback'>{feedbackMessage}</div>
 					</div>
 				)}
 			</div>
-			<SlDrawer
+			<WaDrawer
 				style={{ '--size': '600px' } as React.CSSProperties}
 				open={selectedConnector != null}
 				className='connectors-list__documentation-drawer'
-				onSlAfterHide={() => {
-					setSelectedConnector(null);
+				lightDismiss
+				onWaAfterHide={(e) => {
+					if (e.target === e.currentTarget) {
+						setSelectedConnector(null);
+					}
 				}}
 			>
 				<div className='connectors-list__documentation-drawer-label' slot='label'>
 					<span>{selectedConnector?.label}</span>
-					<SlButton
+					<WaButton
 						className='connectors-list__documentation-add'
-						variant='primary'
+						variant='brand'
 						onClick={onConnectorAdd}
 						disabled={selectedConnector?.oauth != null && !selectedConnector?.oauth.configured}
 					>
 						Add {connectionRole.toLowerCase()}...
-					</SlButton>
+					</WaButton>
 				</div>
 				{isLoadingDocumentation ? (
-					<SlSpinner
+					<WaSpinner
 						style={
 							{
 								fontSize: '3rem',
@@ -298,7 +301,7 @@ const ConnectorsList = () => {
 						)}
 					</>
 				)}
-			</SlDrawer>
+			</WaDrawer>
 		</div>
 	);
 };
@@ -330,9 +333,9 @@ const ConnectorCard = ({ connector, potentialConnector, onClick, role }: Connect
 					</div>
 					<div className='connectors-list__card-label'>{connector.label}</div>
 					{connector.categories.map((category, index) => (
-						<SlBadge key={index} className='connectors-list__card-type' variant='neutral'>
+						<WaBadge key={index} className='connectors-list__card-type' variant='neutral'>
 							{category}
-						</SlBadge>
+						</WaBadge>
 					))}
 					<div className='connectors-list__card-summary'>
 						{role === 'Source' ? connector.asSource.summary : connector.asDestination.summary}
@@ -370,9 +373,9 @@ const ConnectorCard = ({ connector, potentialConnector, onClick, role }: Connect
 					</div>
 					<div className='connectors-list__card-label'>{potentialConnector.label}</div>
 					{potentialConnector.categories.map((category, index) => (
-						<SlBadge key={index} className='connectors-list__card-type' variant='neutral'>
+						<WaBadge key={index} className='connectors-list__card-type' variant='neutral'>
 							{category}
-						</SlBadge>
+						</WaBadge>
 					))}
 					<div className='connectors-list__card-summary'>
 						{role === 'Source'

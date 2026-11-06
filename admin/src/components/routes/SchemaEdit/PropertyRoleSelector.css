@@ -7,14 +7,14 @@
 	container-type: inline-size;
 }
 
-.property-role-selector .property-role-selector__trigger::part(base) {
-	background-color: var(--sl-input-background-color);
-	color: var(--sl-input-color);
+.property-role-selector .property-role-selector__trigger::part(button) {
+	background-color: var(--wa-form-control-background-color);
+	color: var(--text-light);
 	justify-content: flex-start;
 }
 
 .property-role-selector__trigger::part(label) {
-	font-weight: var(--sl-font-weight-normal);
+	font-weight: var(--wa-font-weight-normal);
 	text-align: left;
 	width: 100%;
 }
@@ -23,31 +23,31 @@
 	margin-left: auto;
 }
 
-.property-role-selector__menu {
-	background-color: var(--sl-panel-background-color);
-	border: solid var(--sl-panel-border-width) var(--sl-panel-border-color);
-	border-radius: var(--sl-border-radius-medium);
+.property-role-selector::part(menu) {
+	background-color: var(--wa-color-surface-default);
+	border: solid var(--wa-border-width-s) var(--wa-color-neutral-80);
+	border-radius: var(--wa-border-radius-m);
 	box-sizing: border-box;
 	padding: 0;
 	width: min(100cqi, calc(100vw - 40px));
 }
 
-.property-role-selector__menu sl-divider {
+.property-role-selector wa-divider {
 	--spacing: 0;
 }
 
-.property-role-selector__option::part(base) {
+.property-role-selector__option {
 	min-height: 32px;
 	padding: 3px 12px;
 }
 
-.property-role-selector__none-option::part(base) {
+.property-role-selector__none-option {
 	align-items: center;
-	min-height: var(--sl-input-height-medium);
+	min-height: var(--input-height-medium);
 }
 
-.property-role-selector__option::part(checked-icon),
-.property-role-selector__option::part(submenu-icon) {
+.property-role-selector__option::before,
+.property-role-selector__option::after {
 	display: none;
 }
 
@@ -56,22 +56,37 @@
 	white-space: normal;
 }
 
-.property-role-selector__option:not(.property-role-selector__option--selected):hover::part(base),
-.property-role-selector__option:not(.property-role-selector__option--selected):focus-visible::part(base) {
+.property-role-selector__option:not(.property-role-selector__option--selected):hover,
+.property-role-selector__option:not(.property-role-selector__option--selected):focus-visible {
 	background-color: var(--property-form-option-hover-background-color);
 	color: var(--text-primary) !important;
 }
 
-.property-role-selector__option--selected::part(base),
-.property-role-selector__option--selected:hover::part(base),
-.property-role-selector__option--selected:focus::part(base),
-.property-role-selector__option--selected:focus-visible::part(base) {
+.property-role-selector__option--selected,
+.property-role-selector__option--selected:hover,
+.property-role-selector__option--selected:focus,
+.property-role-selector__option--selected:focus-visible {
 	background-color: var(--property-form-option-selected-background-color);
 	color: var(--text-primary) !important;
 }
 
-.property-role-selector__option > [slot='suffix'] {
-	color: var(--sl-color-primary-600);
+/* App.css recolours every descendant of a focused dropdown item; keep the
+   colours that the option has when it is not focused. */
+.property-role-selector__option:focus-visible * {
+	color: inherit !important;
+}
+
+.property-role-selector__option:focus-visible .property-role-selector__option-description {
+	color: var(--text-light) !important;
+}
+
+.property-role-selector__option:focus-visible .property-role-selector__option-assignment,
+.property-role-selector__option:focus-visible > [slot='details'] {
+	color: var(--wa-color-brand-40) !important;
+}
+
+.property-role-selector__option > [slot='details'] {
+	color: var(--wa-color-brand-40);
 }
 
 .property-role-selector__option-content {
@@ -87,7 +102,7 @@
 }
 
 .property-role-selector__option-assignment {
-	color: var(--sl-color-primary-600);
+	color: var(--wa-color-brand-40);
 	font-size: 11px;
 }
 
