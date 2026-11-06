@@ -62,10 +62,10 @@ type mappingExpr struct {
 // expressions. inSchema and outSchema represent the input and output schemas,
 // respectively.
 //
-// The source type can be the invalid type if expressions do not contain paths.
+// inSchema can be the invalid type if expressions do not contain properties.
 //
-// It returns a types.PathNotExistError error if a path in expressions does not
-// exist in the source schema.
+// It returns a types.PathNotExistError error if a property path in expressions
+// does not exist in the input schema.
 func New(expressions map[string]string, inSchema, outSchema types.Type) (*Mapping, error) {
 	if len(expressions) == 0 {
 		return nil, errors.New("there are no expressions")
@@ -145,9 +145,8 @@ func (mapping *Mapping) OutPaths() []string {
 	return paths
 }
 
-// Transform transforms attributes, that must conform to the expression's source
-// schema, and returns the result that conforms to the expression's output
-// schema.
+// Transform transforms attributes, that must conform to the mapping's input
+// schema, and returns the result that conforms to the mapping's output schema.
 //
 // Transform does not modify attributes. The result may share arrays, objects,
 // and maps with attributes. Changes to shared slices and maps affect both
