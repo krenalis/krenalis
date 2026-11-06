@@ -5,6 +5,7 @@
 package postgresql
 
 import (
+	"context"
 	"strings"
 	"testing"
 	"time"
@@ -88,6 +89,82 @@ func Test_finalizeIdentityResolutionPreservesPersistedSuccess(t *testing.T) {
 			}
 
 		})
+	}
+
+}
+
+// TestResolveIdentitiesMarksInterruptedOperationAsFailed verifies that an
+// Identity Resolution interrupted by the cancellation of its context, as
+// happens on shutdown, is still marked as failed, with an error that reports
+// the cancellation cause.
+func TestResolveIdentitiesMarksInterruptedOperationAsFailed(t *testing.T) {
+
+	warehouse, pool := newTestPostgreSQLWarehouse(t)
+	profileColumns := []warehouses.Column{{Name: "email", Type: types.String(), Nullable: true}}
+	err := warehouse.Initialize(t.Context(), profileColumns)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Lock the profiles table, so that the Identity Resolution waits for the
+	// lock until its context is canceled.
+	lockTx, err := pool.Begin(t.Context())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer lockTx.Rollback(t.Context())
+	_, err = lockTx.Exec(t.Context(), `LOCK TABLE "krenalis_profiles_0" IN ACCESS EXCLUSIVE MODE`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	const opID = "a44731d8-d89d-44b9-ac87-a8ce1a8770d1"
+	ctx, cancel := context.WithCancelCause(t.Context())
+	defer cancel(nil)
+	done := make(chan error, 1)
+	go func() {
+		_, err := warehouse.ResolveIdentities(ctx, opID, profileColumns, profileColumns, nil)
+		done <- err
+	}()
+
+	// Cancel the context once the Identity Resolution waits for the lock.
+	for isWaiting := false; !isWaiting; {
+		select {
+		case err := <-done:
+			t.Fatalf("expected Identity Resolution to wait for the lock, got return with error %v", err)
+		case <-time.After(10 * time.Millisecond):
+		}
+		err = pool.QueryRow(t.Context(), `SELECT EXISTS (SELECT FROM pg_locks WHERE NOT granted)`).Scan(&isWaiting)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	cancel(errors.New("Krenalis was shut down"))
+	err = <-done
+	if err != nil {
+		_, ok := errors.AsType[*warehouses.OperationError](err)
+		if !ok {
+			t.Fatalf("expected *warehouses.OperationError, got %T: %v", err, err)
+		}
+	}
+	if err == nil {
+		t.Fatal("expected *warehouses.OperationError, got nil")
+	}
+
+	var completedAt *time.Time
+	var operationError string
+	err = pool.QueryRow(t.Context(),
+		`SELECT "completed_at", "error" FROM "krenalis_system_operations" WHERE "id" = $1`, opID).
+		Scan(&completedAt, &operationError)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if completedAt == nil {
+		t.Fatal("expected operation to be completed, got uncompleted operation")
+	}
+	const expectedError = "operation interrupted: Krenalis was shut down"
+	if operationError != expectedError {
+		t.Fatalf("expected operation error %q, got %q", expectedError, operationError)
 	}
 
 }

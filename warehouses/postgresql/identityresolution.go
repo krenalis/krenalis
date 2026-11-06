@@ -50,6 +50,11 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, opID string,
 	deferFinalization := true
 	defer func() {
 		if deferFinalization {
+			if err != nil && ctx.Err() != nil {
+				err = fmt.Errorf("operation interrupted: %w", context.Cause(ctx))
+			}
+			ctx, cancel := withDelayedCancellation(ctx, finalizationGracePeriod)
+			defer cancel()
 			counts, err = warehouse.finalizeIdentityResolution(ctx, pool, opID, counts, err)
 		}
 	}()
@@ -322,7 +327,12 @@ func (warehouse *PostgreSQL) ResolveIdentities(ctx context.Context, opID string,
 	// Publication and cleanup were part of the same transaction, so no further
 	// finalization is needed after a persisted success.
 	deferFinalization = false
-	counts, err = warehouse.finalizeIdentityResolution(ctx, pool, opID, counts, err)
+	if err != nil && ctx.Err() != nil {
+		err = fmt.Errorf("operation interrupted: %w", context.Cause(ctx))
+	}
+	finalizationCtx, cancel := withDelayedCancellation(ctx, finalizationGracePeriod)
+	defer cancel()
+	counts, err = warehouse.finalizeIdentityResolution(finalizationCtx, pool, opID, counts, err)
 
 	return counts, err
 }
