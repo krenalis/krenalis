@@ -95,12 +95,9 @@ func marshalType(b *bytes.Buffer, t Type) {
 				b.WriteString(`,"currency":`)
 				_ = marshalString(b, currency)
 			}
-		case MeasurementSemantics:
+		case MeasurementSemantics, DurationSemantics:
 			b.WriteString(`,"unit":`)
-			_ = marshalString(b, t.UnitOfMeasure().String())
-		case DurationSemantics:
-			b.WriteString(`,"unit":`)
-			_ = marshalString(b, t.DurationUnit().String())
+			_ = marshalString(b, t.Unit().String())
 		}
 	}
 	switch t.kind {
@@ -1078,8 +1075,8 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		if !hasUnit {
 			return Type{}, errors.New("missing measurement unit")
 		}
-		measurementUnit, ok := UnitOfMeasureByName(unit)
-		if !ok {
+		measurementUnit, ok := UnitByName(unit)
+		if !ok || !measurementUnit.IsMeasurementUnit() {
 			return Type{}, fmt.Errorf("invalid unit of measure %q", unit)
 		}
 		semanticsOption = measurementUnit
@@ -1093,8 +1090,8 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		if !hasUnit {
 			return Type{}, errors.New("missing duration unit")
 		}
-		durationUnit, ok := DurationUnitByName(unit)
-		if !ok {
+		durationUnit, ok := UnitByName(unit)
+		if !ok || !durationUnit.IsDurationUnit() {
 			return Type{}, fmt.Errorf("invalid duration unit %q", unit)
 		}
 		semanticsOption = durationUnit

@@ -41,9 +41,10 @@ type UnitOfMeasure =
 	| 'in'
 	| 'ft'
 	| 'yd'
-	| 'mi';
+	| 'mi'
+	| DurationUnit;
 
-type DurationUnit = 'millisecond' | 'second' | 'minute' | 'hour' | 'day' | 'week';
+type DurationUnit = 'millisecond' | 'second' | 'minute' | 'hour' | 'day' | 'week' | 'month' | 'year';
 
 type Semantics = 'email' | 'phone' | 'url' | 'country' | 'money' | 'percentage' | 'measurement' | 'duration';
 

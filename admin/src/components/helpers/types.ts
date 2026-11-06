@@ -3,6 +3,7 @@ import Type, { DurationUnit, Semantics, UnitOfMeasure } from '../../lib/api/type
 interface UnitOfMeasureOption {
 	groupLabel?: string;
 	label: string;
+	symbol?: string;
 	value: UnitOfMeasure;
 }
 
@@ -38,6 +39,14 @@ const UNIT_OF_MEASURE_OPTIONS: UnitOfMeasureOption[] = [
 	{ value: '°F', label: 'Degree Fahrenheit' },
 	{ value: 'mL', label: 'Millilitre', groupLabel: 'Volume' },
 	{ value: 'L', label: 'Litre' },
+	{ value: 'millisecond', label: 'Millisecond', symbol: 'ms', groupLabel: 'Time' },
+	{ value: 'second', label: 'Second', symbol: 's' },
+	{ value: 'minute', label: 'Minute', symbol: 'min' },
+	{ value: 'hour', label: 'Hour', symbol: 'h' },
+	{ value: 'day', label: 'Day', symbol: 'd' },
+	{ value: 'week', label: 'Week', symbol: 'wk' },
+	{ value: 'month', label: 'Month', symbol: 'mo' },
+	{ value: 'year', label: 'Year', symbol: 'yr' },
 ];
 
 const DURATION_UNIT_OPTIONS: DurationUnitOption[] = [
@@ -47,6 +56,8 @@ const DURATION_UNIT_OPTIONS: DurationUnitOption[] = [
 	{ value: 'hour', label: 'Hours', symbol: 'h' },
 	{ value: 'day', label: 'Days', symbol: 'd' },
 	{ value: 'week', label: 'Weeks', symbol: 'wk' },
+	{ value: 'month', label: 'Months', symbol: 'mo' },
+	{ value: 'year', label: 'Years', symbol: 'yr' },
 ];
 
 function getPropertyValueType(type: Type | null): Type | null {
@@ -75,11 +86,15 @@ function getProfileSchemaTypePresentation(type: Type): ProfileSchemaTypePresenta
 				primary += ` — ${valueType.currency}`;
 			}
 			break;
-		case 'measurement':
-			if ('unit' in valueType) {
-				primary += ` — ${valueType.unit}`;
+		case 'measurement': {
+			const unit = UNIT_OF_MEASURE_OPTIONS.find(
+				(option) => 'unit' in valueType && option.value === valueType.unit,
+			);
+			if (unit != null) {
+				primary += ` — ${unit.symbol ?? unit.value}`;
 			}
 			break;
+		}
 		case 'duration': {
 			const unit = DURATION_UNIT_OPTIONS.find((option) => 'unit' in valueType && option.value === valueType.unit);
 			if (unit != null) {

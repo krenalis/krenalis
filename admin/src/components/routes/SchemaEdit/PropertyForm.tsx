@@ -981,7 +981,9 @@ const PropertyForm = ({
 									<WaOption value={option.value}>
 										<span>{option.label}</span>
 										<span className='property-form__unit-option-separator'> · </span>
-										<span className='property-form__unit-option-symbol'>{option.value}</span>
+										<span className='property-form__unit-option-symbol'>
+											{option.symbol ?? option.value}
+										</span>
 									</WaOption>
 								</React.Fragment>
 							))}
@@ -992,7 +994,7 @@ const PropertyForm = ({
 							<div className='property-form__value'>
 								{selectedMeasurementUnitOption == null
 									? ''
-									: `${selectedMeasurementUnitOption.label} · ${selectedMeasurementUnitOption.value}`}
+									: `${selectedMeasurementUnitOption.label} · ${selectedMeasurementUnitOption.symbol ?? selectedMeasurementUnitOption.value}`}
 							</div>
 						</div>
 					)}

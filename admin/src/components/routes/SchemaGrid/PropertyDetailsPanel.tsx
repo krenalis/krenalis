@@ -136,7 +136,10 @@ const getSemanticsDetail = (property: Property): { label: string; value?: string
 	}
 	if (type != null && 'semantics' in type && type.semantics === 'measurement') {
 		const option = UNIT_OF_MEASURE_OPTIONS.find((candidate) => candidate.value === type.unit);
-		return { label: 'Unit', value: option == null ? undefined : `${option.label} · ${option.value}` };
+		return {
+			label: 'Unit',
+			value: option == null ? undefined : `${option.label} · ${option.symbol ?? option.value}`,
+		};
 	}
 	if (type != null && 'semantics' in type && type.semantics === 'duration') {
 		const option = DURATION_UNIT_OPTIONS.find((candidate) => candidate.value === type.unit);

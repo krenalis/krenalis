@@ -94,75 +94,45 @@ func (f CountryFormat) String() string {
 	return countryFormatName[f-2]
 }
 
-// DurationUnit identifies the unit used to represent a duration.
-type DurationUnit int8
+// Unit identifies a unit used by measurement and duration semantics.
+type Unit int8
 
 const (
-	Millisecond DurationUnit = iota + 1 // millisecond
-	Second                              // second
-	Minute                              // minute
-	Hour                                // hour
-	Day                                 // day
-	Week                                // week
+	// Units usable as measurement.
+	Gram       Unit = iota + 1 // gram
+	Kilogram                   // kilogram
+	Millimeter                 // millimeter
+	Centimeter                 // centimeter
+	Meter                      // meter
+	Kilometer                  // kilometer
+	Milliliter                 // milliliter
+	Liter                      // liter
+	Byte                       // byte
+	Kilobyte                   // kilobyte
+	Megabyte                   // megabyte
+	Gigabyte                   // gigabyte
+	Celsius                    // degree Celsius
+	Fahrenheit                 // degree Fahrenheit
+	Ounce                      // ounce
+	Pound                      // pound
+	Inch                       // inch
+	Foot                       // foot
+	Yard                       // yard
+	Mile                       // mile
+
+	// Units usable as measurement and duration.
+	Millisecond // millisecond
+	Second      // second
+	Minute      // minute
+	Hour        // hour
+	Day         // day
+	Week        // week
+	Month       // month
+	YearUnit    // year; TODO: add a reference to the issue about this name
 )
 
-// durationUnitName contains the JSON names of all valid duration units.
-var durationUnitName = [...]string{
-	"millisecond",
-	"second",
-	"minute",
-	"hour",
-	"day",
-	"week",
-}
-
-// DurationUnitByName returns the duration unit identified by name.
-// The second return value reports whether the name was found.
-func DurationUnitByName(name string) (DurationUnit, bool) {
-	for i, n := range durationUnitName {
-		if n == name {
-			return DurationUnit(i + 1), true
-		}
-	}
-	return 0, false
-}
-
-// String returns the name of u.
-func (u DurationUnit) String() string {
-	if u < 1 || int(u) > len(durationUnitName) {
-		return fmt.Sprintf("%%!DurationUnit(%d)", int(u))
-	}
-	return durationUnitName[u-1]
-}
-
-// UnitOfMeasure identifies a unit of measure.
-type UnitOfMeasure int8
-
-const (
-	Gram       UnitOfMeasure = iota + 1 // gram
-	Kilogram                            // kilogram
-	Millimeter                          // millimeter
-	Centimeter                          // centimeter
-	Meter                               // meter
-	Kilometer                           // kilometer
-	Milliliter                          // milliliter
-	Liter                               // liter
-	Byte                                // byte
-	Kilobyte                            // kilobyte
-	Megabyte                            // megabyte
-	Gigabyte                            // gigabyte
-	Celsius                             // degree Celsius
-	Fahrenheit                          // degree Fahrenheit
-	Ounce                               // ounce
-	Pound                               // pound
-	Inch                                // inch
-	Foot                                // foot
-	Yard                                // yard
-	Mile                                // mile
-)
-
-// unitOfMeasureName contains the JSON names of all valid units of measure.
-var unitOfMeasureName = [...]string{
+// unitName contains the JSON names of all valid units.
+var unitName = [...]string{
 	"g",
 	"kg",
 	"mm",
@@ -183,25 +153,43 @@ var unitOfMeasureName = [...]string{
 	"ft",
 	"yd",
 	"mi",
+	"millisecond",
+	"second",
+	"minute",
+	"hour",
+	"day",
+	"week",
+	"month",
+	"year",
 }
 
-// UnitOfMeasureByName returns the unit of measure identified by name.
+// UnitByName returns the unit identified by name.
 // The second return value reports whether the name was found.
-func UnitOfMeasureByName(name string) (UnitOfMeasure, bool) {
-	for i, n := range unitOfMeasureName {
+func UnitByName(name string) (Unit, bool) {
+	for i, n := range unitName {
 		if n == name {
-			return UnitOfMeasure(i + 1), true
+			return Unit(i + 1), true
 		}
 	}
 	return 0, false
 }
 
+// IsDurationUnit reports whether u is usable as duration.
+func (u Unit) IsDurationUnit() bool {
+	return u >= Millisecond && int(u) <= len(unitName)
+}
+
+// IsMeasurementUnit reports whether u is usable as measurement.
+func (u Unit) IsMeasurementUnit() bool {
+	return u >= 1 && int(u) <= len(unitName)
+}
+
 // String returns the name of u.
-func (u UnitOfMeasure) String() string {
-	if u < 1 || int(u) > len(unitOfMeasureName) {
-		return fmt.Sprintf("%%!UnitOfMeasure(%d)", int(u))
+func (u Unit) String() string {
+	if u < 1 || int(u) > len(unitName) {
+		return fmt.Sprintf("%%!Unit(%d)", int(u))
 	}
-	return unitOfMeasureName[u-1]
+	return unitName[u-1]
 }
 
 // AsCountry returns t with country semantics using format. It panics if t is
@@ -217,8 +205,8 @@ func (t Type) AsCountry(format CountryFormat) Type {
 
 // AsDuration returns t with duration semantics using unit. It panics unless
 // t is an int, decimal, or real float type without semantics and unit is
-// valid.
-func (t Type) AsDuration(unit DurationUnit) Type {
+// usable as duration.
+func (t Type) AsDuration(unit Unit) Type {
 	t, err := t.withSemantics(DurationSemantics, unit)
 	if err != nil {
 		panic(err.Error())
@@ -239,7 +227,7 @@ func (t Type) AsEmail() Type {
 // AsMeasurement returns t with measurement semantics using unit. It panics
 // unless t is an int, decimal, or real float type without semantics and unit
 // is valid.
-func (t Type) AsMeasurement(unit UnitOfMeasure) Type {
+func (t Type) AsMeasurement(unit Unit) Type {
 	t, err := t.withSemantics(MeasurementSemantics, unit)
 	if err != nil {
 		panic(err.Error())
@@ -296,6 +284,8 @@ func (t Type) CountryFormat() CountryFormat {
 	return t.semanticsOption.(CountryFormat)
 }
 
+// TODO: aggiornare doc su krenalis.com
+
 // Currency returns the currency code of t and whether one is set. It panics
 // unless t has money semantics.
 func (t Type) Currency() (string, bool) {
@@ -306,27 +296,20 @@ func (t Type) Currency() (string, bool) {
 	return currency, currency != ""
 }
 
-// DurationUnit returns the duration unit of t. It panics unless t has
-// duration semantics.
-func (t Type) DurationUnit() DurationUnit {
-	if t.semantics != DurationSemantics {
-		panic("type does not have duration semantics")
-	}
-	return t.semanticsOption.(DurationUnit)
-}
+// TODO: mantenere un unico metodo Unit anziché DurationUnit e UnitOfMeasure?
 
 // Semantics returns the semantics of t, or NoSemantics if t has no semantics.
 func (t Type) Semantics() Semantics {
 	return t.semantics
 }
 
-// UnitOfMeasure returns the unit of measure of t. It panics unless t has
-// measurement semantics.
-func (t Type) UnitOfMeasure() UnitOfMeasure {
-	if t.semantics != MeasurementSemantics {
-		panic("type does not have measurement semantics")
+// Unit returns the unit of t. It panics unless t has measurement or duration
+// semantics.
+func (t Type) Unit() Unit {
+	if t.semantics != MeasurementSemantics && t.semantics != DurationSemantics {
+		panic("type does not have measurement or duration semantics")
 	}
-	return t.semanticsOption.(UnitOfMeasure)
+	return t.semanticsOption.(Unit)
 }
 
 // WithCurrency returns t with the given ISO 4217 currency code. It panics
@@ -401,16 +384,16 @@ func (t Type) withSemantics(semantics Semantics, option any) (Type, error) {
 		if !semanticsNumericType(t) {
 			return Type{}, errors.New("measurement semantics require an int, decimal, or real float type")
 		}
-		unit, ok := option.(UnitOfMeasure)
-		if !ok || unit < 1 || int(unit) > len(unitOfMeasureName) {
+		unit, ok := option.(Unit)
+		if !ok || !unit.IsMeasurementUnit() {
 			return Type{}, errors.New("invalid unit of measure")
 		}
 	case DurationSemantics:
 		if !semanticsNumericType(t) {
 			return Type{}, errors.New("duration semantics require an int, decimal, or real float type")
 		}
-		unit, ok := option.(DurationUnit)
-		if !ok || unit < 1 || int(unit) > len(durationUnitName) {
+		unit, ok := option.(Unit)
+		if !ok || !unit.IsDurationUnit() {
 			return Type{}, errors.New("invalid duration unit")
 		}
 	}
