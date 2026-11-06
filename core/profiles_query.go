@@ -65,7 +65,18 @@ func (this *Workspace) QueryProfiles(ctx context.Context, query ProfileQuery) (*
 		if query.At != "" {
 			return nil, errors.BadRequest("at requires a Count filter")
 		}
-		profiles, schema, total, err := this.profiles(ctx, query.Properties, query.Filter,
+		filter := query.Filter
+		if filter != nil && filter.DefaultCalendar != nil {
+			_, err := unified.ResolveCalendar(filter.DefaultCalendar.Definition, filter.DefaultCalendar.MeaningRevision)
+			if err != nil {
+				return nil, errors.BadRequest("filter is not valid: %s", err)
+			}
+			// Retain the public metadata; the Record executor has no use for it.
+			record := *filter
+			record.DefaultCalendar = nil
+			filter = &record
+		}
+		profiles, schema, total, err := this.profiles(ctx, query.Properties, filter,
 			query.Order, query.OrderDesc, query.First, query.Limit)
 		if err != nil {
 			return nil, err

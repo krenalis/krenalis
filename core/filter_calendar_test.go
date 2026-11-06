@@ -79,6 +79,7 @@ func TestFilterCalendarRoundTrip(t *testing.T) {
 		t.Fatalf("expected relative calendar round-trip %s, got %s", input, before)
 	}
 	clear(input)
+
 	nodes := 0
 	schema := types.Object([]types.Property{{Name: "country", Type: types.String()}})
 	root, err := prepareUnifiedRule(&filter, schema, 0, &nodes)
@@ -101,6 +102,7 @@ func TestFilterCalendarRoundTrip(t *testing.T) {
 	if !bytes.Equal(before, after) {
 		t.Fatalf("expected unchanged public filter %s, got %s", before, after)
 	}
+
 	record := &Filter{Operator: OpAnd, DefaultCalendar: filter.DefaultCalendar,
 		Rules: []FilterRule{&FilterCondition{Property: "country", Operator: OpExists}}}
 	_, _, err = prepareFilter(record, schema)
@@ -121,6 +123,8 @@ func TestFilterCalendarStructure(t *testing.T) {
 		{"duplicate period count", `{"operator":"and","rules":[` + strings.Replace(calendarConditionJSON, `"count":1`, `"count":1,"count":2`, 1) + `]}`},
 		{"nested calendar", `{"operator":"and","rules":[{"operator":"and","rules":[],"defaultCalendar":{}}]}`},
 		{"Record condition calendar", `{"operator":"and","rules":[{"property":"x","operator":"exists","defaultCalendar":{}}]}`},
+		{"root Record condition calendar", `{"property":"x","operator":"exists","defaultCalendar":{}}`},
+		{"root Count condition calendar", strings.TrimSuffix(calendarConditionJSON, `}`) + `,"defaultCalendar":{}}`},
 		{"Count condition calendar", `{"operator":"and","rules":[` + strings.TrimSuffix(calendarConditionJSON, `}`) + `,"defaultCalendar":{}}]}`},
 		{"occurrence calendar", `{"operator":"and","rules":[{"count":{"source":{},"period":{},"where":{"operator":"and","rules":[],"defaultCalendar":{}}},"operator":"is","values":[0]}]}`},
 		{"null unit", `{"operator":"and","rules":[` + strings.Replace(calendarConditionJSON, `"unit":"month"`, `"unit":null`, 1) + `]}`},
@@ -133,6 +137,10 @@ func TestFilterCalendarStructure(t *testing.T) {
 			}
 			err := json.Unmarshal([]byte(test.input), target)
 			if err != nil {
+				if strings.HasPrefix(test.name, "root ") &&
+					!strings.Contains(err.Error(), "defaultCalendar is only allowed on the root group") {
+					t.Fatalf("expected root calendar placement error, got %v", err)
+				}
 				return
 			}
 			t.Fatal("expected invalid calendar shape, got success")

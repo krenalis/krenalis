@@ -260,21 +260,28 @@ days can be 23 or 25 hours. Weeks run Monday through Sunday.
 Built-in calendar definitions use `gregorian-monday/TIMEZONE`, at immutable
 meaning revision `1`. TIMEZONE is an explicit IANA name, including `UTC`;
 `Local`, unknown definitions/revisions and implicit workspace calendars are not
-admitted. Timezone offsets follow the runtime IANA database, with Go's embedded
+admitted. Names and aliases must exactly match `calendar_zones.txt`, copied from
+Go 1.27.2's `lib/time/zoneinfo.zip`, excluding the `Factory` placeholder. This
+keeps name validation independent of the host's filesystem and local aliases.
+Timezone offsets follow the runtime IANA database, with Go's embedded
 database available as a fallback; the meaning revision does not pin a tzdb build.
 No configurable registry or workspace setting is introduced.
 
 `defaultCalendar` is optional for existing Count forms and mandatory for this
 calendar form. It is allowed only on the main root and applies to every calendar
 Count, including inside nested groups. Condition overrides and profile timezones
-are not implemented. Record-only paths reject calendar metadata rather than
-dropping it through `state.Where`. Relative periods and the explicit reference
+are not implemented. Profiles queries accept and validate the reference even
+without Count, retaining the existing Record execution and response. Contexts
+restricted to Record filtering reject it rather than dropping it through
+`state.Where`. Relative periods and the explicit reference
 survive encode/decode and preparation unchanged. There is no Unified persistence
 format or materialized UTC period added by this increment.
 
 Nonexistent or ambiguous midnight boundaries require an unavailable capability,
-not a hidden DST choice or semantic UNKNOWN. Counts whose bounds exceed the
-timestamp domain also remain unavailable. Missing decisive event values retain
+not a hidden DST choice or semantic UNKNOWN. For example, Havana's ambiguous
+midnight on 2026-11-01 also prevents evaluating October as a complete month.
+Counts whose bounds exceed the timestamp domain also remain unavailable.
+Missing decisive event values retain
 the ordinary ternary rules. These changes add no SQL dialect features; Snowflake
 retains its unverified-backend gate.
 

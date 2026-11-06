@@ -228,10 +228,11 @@ func (duration FilterDuration) elapsed() (filterCountInteger, error) {
 	return value.scaled(uint64(unit)), nil
 }
 
-// FilterPeriod describes an absolute, elapsed or complete calendar period.
-// Exactly the fields belonging to Kind must be supplied. Absolute
-// instants use RFC 3339 with an explicit offset. Relative periods remain
-// relative when serialized; their UTC bounds are resolved only for execution.
+// FilterPeriod describes an absoluteHalfOpen, elapsedLookback, elapsedAgoBand or
+// lastCompleteCalendarPeriods period. The latter requires root defaultCalendar.
+// Exactly the fields belonging to Kind must be supplied. Absolute instants use
+// RFC 3339 with an explicit offset. Relative periods remain relative when
+// serialized; their UTC bounds are resolved only for execution.
 type FilterPeriod struct {
 	Kind     string          `json:"kind"`
 	Start    *time.Time      `json:"start,omitzero"`
@@ -317,7 +318,7 @@ func (period FilterPeriod) scope(source FilterCountSource, calendar *unified.Cal
 		}
 		count, err := parseFilterCountInteger(period.Count)
 		if err != nil {
-			return unified.Scope{}, err
+			return unified.Scope{}, fmt.Errorf("invalid calendar period count: %w", err)
 		}
 		if count == "0" {
 			return unified.Scope{}, errors.New("calendar period count must be positive")

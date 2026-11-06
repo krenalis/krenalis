@@ -5,6 +5,10 @@
 package unified
 
 import (
+	"archive/zip"
+	"io"
+	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 
@@ -58,6 +62,65 @@ func TestCalendarPeriodBounds(t *testing.T) {
 	}
 }
 
+func TestCalendarPeriodEmbeddedBounds(t *testing.T) {
+
+	archive, err := zip.OpenReader(filepath.Join(runtime.GOROOT(), "lib", "time", "zoneinfo.zip"))
+	if err != nil {
+		t.Fatalf("expected Go timezone archive, got %v", err)
+	}
+	t.Cleanup(func() { _ = archive.Close() })
+
+	for _, test := range []struct {
+		zone, unit     string
+		count          uint64
+		at, start, end string
+	}{
+		{"Europe/Rome", "month", 1, "2025-01-15T12:00:00Z", "2024-11-30T23:00:00Z", "2024-12-31T23:00:00Z"},
+		{"Europe/Rome", "month", 1, "2041-01-15T12:00:00Z", "2040-11-30T23:00:00Z", "2040-12-31T23:00:00Z"},
+		{"Europe/Rome", "month", 22, "2026-11-06T00:00:00Z", "2024-12-31T23:00:00Z", "2026-10-31T23:00:00Z"},
+		{"Europe/Rome", "week", 1, "2025-01-08T12:00:00Z", "2024-12-29T23:00:00Z", "2025-01-05T23:00:00Z"},
+		{"Europe/Rome", "day", 1, "2024-12-31T12:00:00Z", "2024-12-29T23:00:00Z", "2024-12-30T23:00:00Z"},
+		{"Europe/Rome", "day", 1, "2025-01-01T12:00:00Z", "2024-12-30T23:00:00Z", "2024-12-31T23:00:00Z"},
+		{"Europe/Rome", "day", 1, "2025-01-02T12:00:00Z", "2024-12-31T23:00:00Z", "2025-01-01T23:00:00Z"},
+		{"America/New_York", "month", 1, "2025-01-15T12:00:00Z", "2024-12-01T05:00:00Z", "2025-01-01T05:00:00Z"},
+		{"Europe/London", "month", 1, "2025-01-15T12:00:00Z", "2024-12-01T00:00:00Z", "2025-01-01T00:00:00Z"},
+		{"Australia/Sydney", "month", 1, "2025-01-15T12:00:00Z", "2024-11-30T13:00:00Z", "2024-12-31T13:00:00Z"},
+	} {
+		t.Run(test.zone+"/"+test.unit+"/"+test.at, func(t *testing.T) {
+			file, err := archive.Open(test.zone)
+			if err != nil {
+				t.Fatalf("expected embedded timezone file, got %v", err)
+			}
+			data, err := io.ReadAll(file)
+			_ = file.Close()
+			if err != nil {
+				t.Fatalf("expected embedded timezone data, got %v", err)
+			}
+			location, err := time.LoadLocationFromTZData(test.zone, data)
+			if err != nil {
+				t.Fatalf("expected embedded timezone, got %v", err)
+			}
+			var instants [3]time.Time
+			for i, text := range []string{test.at, test.start, test.end} {
+				instants[i], err = time.Parse(time.RFC3339, text)
+				if err != nil {
+					t.Fatalf("expected fixture instant, got %v", err)
+				}
+			}
+			scope := Scope{Calendar: &CalendarPeriod{Calendar: &Calendar{location: location},
+				Unit: test.unit, Count: test.count}}
+			start, end, err := scope.bounds(instants[0])
+			if err != nil {
+				t.Fatalf("expected complete embedded calendar bounds, got %v", err)
+			}
+			if !start.Equal(instants[1]) || !end.Equal(instants[2]) {
+				t.Fatalf("expected [%s,%s), got [%s,%s)", instants[1], instants[2], start, end)
+			}
+		})
+	}
+
+}
+
 func TestCalendarPeriodUnavailable(t *testing.T) {
 	for _, test := range []struct {
 		name, zone, unit, at string
@@ -92,11 +155,25 @@ func TestCalendarPeriodUnavailable(t *testing.T) {
 }
 
 func TestResolveCalendar(t *testing.T) {
+	for _, zone := range []string{"UTC", "Europe/Rome", "America/New_York", "Etc/GMT+1", "US/Eastern"} {
+		calendar, err := ResolveCalendar("gregorian-monday/"+zone, "1")
+		if err != nil {
+			t.Fatalf("expected resolved IANA name %q, got %v", zone, err)
+		}
+		if calendar == nil || calendar.location.String() != zone {
+			t.Fatalf("expected exact timezone %q, got %+v", zone, calendar)
+		}
+	}
 	for _, test := range []struct{ definition, revision string }{
 		{"", "1"}, {"Europe/Rome", "1"}, {"gregorian-monday/", "1"},
 		{"gregorian-monday/Local", "1"}, {"gregorian-monday/../Europe/Rome", "1"},
 		{"gregorian-monday/posix/Europe/Rome", "1"}, {"gregorian-monday/unknown", "1"},
 		{"gregorian-monday/UTC", ""}, {"gregorian-monday/UTC", "2"},
+		{"gregorian-monday/europe/rome", "1"}, {"gregorian-monday/EUROPE/ROME", "1"},
+		{"gregorian-monday/utc", "1"}, {"gregorian-monday/Europe//Rome", "1"},
+		{"gregorian-monday/posixrules", "1"}, {"gregorian-monday/Factory", "1"},
+		{"gregorian-monday/ Europe/Rome", "1"}, {"gregorian-monday/Europe/Rome/", "1"},
+		{"gregorian-monday/UTC\nEurope/Rome", "1"},
 	} {
 		calendar, err := ResolveCalendar(test.definition, test.revision)
 		if err != nil {

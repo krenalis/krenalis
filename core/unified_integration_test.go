@@ -166,6 +166,37 @@ INSERT INTO unified_v.krenalis_events VALUES
 		t.Fatal("expected workspace state, got none")
 	}
 	workspace := &Workspace{core: &Core{}, store: store, workspace: ws}
+	t.Run("Record-only default calendar", func(t *testing.T) {
+
+		filter := &Filter{Operator: OpAnd, Rules: []FilterRule{
+			&FilterCondition{Property: "country", Operator: OpIs, Values: filterValues("IT")}}}
+		query := ProfileQuery{Filter: filter, Properties: []string{"profile_id"}, Order: "profile_id", Limit: 10}
+		expected, err := workspace.QueryProfiles(t.Context(), query)
+		if err != nil {
+			t.Fatalf("expected Record query, got %v", err)
+		}
+		filter.DefaultCalendar = &FilterCalendar{Definition: "gregorian-monday/Europe/Rome", MeaningRevision: "1"}
+		before, err := json.Marshal(filter)
+		if err != nil {
+			t.Fatalf("expected calendar metadata encoding, got %v", err)
+		}
+
+		result, err := workspace.QueryProfiles(t.Context(), query)
+		if err != nil {
+			t.Fatalf("expected Record query retaining defaultCalendar, got %v", err)
+		}
+		if expected.Total != 2 || expected.Evaluation != nil || !reflect.DeepEqual(result, expected) {
+			t.Fatalf("expected unchanged Record result %+v without evaluation, got %+v", expected, result)
+		}
+		after, err := json.Marshal(filter)
+		if err != nil {
+			t.Fatalf("expected retained calendar metadata encoding, got %v", err)
+		}
+		if string(before) != string(after) {
+			t.Fatalf("expected unchanged filter %s, got %s", before, after)
+		}
+
+	})
 	var document Filter
 	err = json.Unmarshal([]byte(`{"operator":"and","rules":[{"count":{`+
 		`"source":{"kind":"recordedEvents","name":"Purchase","grain":"registered-message"},`+
@@ -270,22 +301,25 @@ INSERT INTO unified_v.krenalis_events VALUES
 		if err != nil {
 			t.Fatalf("expected calendar boundary fixtures, got %v", err)
 		}
+
 		for _, test := range []struct {
 			zone, unit string
+			count      json.Value
 			ids        []string
 		}{
-			{"Europe/Rome", "month", []string{"1", "2"}},
-			{"UTC", "month", []string{"2", "3"}},
-			{"Europe/Rome", "week", []string{"2", "3", "4"}},
-			{"Europe/Rome", "day", []string{"3", "4"}},
+			{"Europe/Rome", "month", json.Value(`1`), []string{"1", "2"}},
+			{"UTC", "month", json.Value(`1`), []string{"2", "3"}},
+			{"Europe/Rome", "week", json.Value(`1`), []string{"2", "3", "4"}},
+			{"Europe/Rome", "day", json.Value(`1`), []string{"3", "4"}},
+			{"Europe/Rome", "month", json.Value(`22`), []string{"1", "2", "4"}},
 		} {
-			t.Run(test.zone+"/"+test.unit, func(t *testing.T) {
+			t.Run(test.zone+"/"+test.unit+"/"+string(test.count), func(t *testing.T) {
 
 				filter := Filter{Operator: OpAnd,
 					DefaultCalendar: &FilterCalendar{Definition: "gregorian-monday/" + test.zone, MeaningRevision: "1"},
 					Rules: []FilterRule{&FilterCountCondition{Count: FilterCount{
 						Source: FilterCountSource{Kind: "recordedEvents", Name: "Calendar", Grain: "registered-message"},
-						Period: FilterPeriod{Kind: "lastCompleteCalendarPeriods", Unit: test.unit, Count: json.Value(`1`)},
+						Period: FilterPeriod{Kind: "lastCompleteCalendarPeriods", Unit: test.unit, Count: test.count},
 					}, Operator: OpIsGreaterThanOrEqualTo, Values: filterValues(1)}}}
 				before, err := json.Marshal(&filter)
 				if err != nil {
@@ -307,6 +341,7 @@ INSERT INTO unified_v.krenalis_events VALUES
 						t.Fatalf("expected calendar member customer-%s, got %+v", id, result.Profiles[i])
 					}
 				}
+
 				query.First = 99
 				empty, err := workspace.QueryProfiles(t.Context(), query)
 				if err != nil {

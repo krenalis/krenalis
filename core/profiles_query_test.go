@@ -47,6 +47,34 @@ func TestFilterHasCount(t *testing.T) {
 	}
 }
 
+func TestQueryProfilesCalendarValidation(t *testing.T) {
+	workspace := &Workspace{core: &Core{}, workspace: &state.Workspace{ProfileSchema: types.Object([]types.Property{
+		{Name: "email", Type: types.String(), ReadOptional: true},
+	})}}
+	for _, test := range []struct{ name, definition, revision string }{
+		{"unknown definition", "unknown", "1"},
+		{"unknown revision", "gregorian-monday/Europe/Rome", "2"},
+		{"nested calendar", "gregorian-monday/Europe/Rome", "1"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			filter := &Filter{Operator: OpAnd,
+				DefaultCalendar: &FilterCalendar{Definition: test.definition, MeaningRevision: test.revision},
+				Rules:           []FilterRule{&FilterCondition{Property: "email", Operator: OpExists}}}
+			if test.name == "nested calendar" {
+				filter = &Filter{Operator: OpAnd, Rules: []FilterRule{filter}}
+			}
+			result, err := workspace.QueryProfiles(t.Context(), ProfileQuery{Filter: filter, Limit: 10})
+			if err != nil {
+				if _, ok := errors.AsType[*errors.BadRequestError](err); !ok || result != nil {
+					t.Fatalf("expected BadRequest without results, got %v, %v", result, err)
+				}
+				return
+			}
+			t.Fatal("expected invalid Record calendar, got success")
+		})
+	}
+}
+
 func TestQueryProfilesValidation(t *testing.T) {
 	workspace := &Workspace{core: &Core{}, workspace: &state.Workspace{ProfileSchema: types.Object([]types.Property{
 		{Name: "email", Type: types.String(), ReadOptional: true},

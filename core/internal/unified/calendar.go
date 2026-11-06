@@ -5,11 +5,18 @@
 package unified
 
 import (
+	_ "embed"
 	"fmt"
 	"strings"
 	"time"
 	_ "time/tzdata"
 )
+
+// calendarZones lists the IANA names and aliases in Go 1.27.2's zoneinfo.zip,
+// excluding the placeholder Factory. Offsets still come from time.LoadLocation.
+//
+//go:embed calendar_zones.txt
+var calendarZones string
 
 // Calendar is a resolved built-in Gregorian calendar with Monday-first weeks.
 // Its definition includes an explicit IANA timezone and meaning revision.
@@ -23,8 +30,9 @@ type Calendar struct {
 func ResolveCalendar(definition, meaningRevision string) (*Calendar, error) {
 	zone, ok := strings.CutPrefix(definition, "gregorian-monday/")
 	if !ok || len(definition) > 256 || zone == "" || zone == "Local" ||
-		strings.ContainsAny(zone, "\x00\\.") || strings.HasPrefix(zone, "/") ||
-		strings.HasPrefix(zone, "posix/") || strings.HasPrefix(zone, "right/") {
+		strings.ContainsAny(zone, "\x00\\.\r\n") || strings.HasPrefix(zone, "/") ||
+		strings.HasPrefix(zone, "posix/") || strings.HasPrefix(zone, "right/") ||
+		!strings.Contains(calendarZones, "\n"+zone+"\n") {
 		return nil, fmt.Errorf("invalid fixed calendar definition")
 	}
 	if meaningRevision != "1" {
@@ -39,7 +47,6 @@ func ResolveCalendar(definition, meaningRevision string) (*Calendar, error) {
 
 // midnight resolves a civil boundary that identifies exactly one instant.
 func (calendar *Calendar) midnight(civil time.Time) (time.Time, error) {
-
 	// IANA UTC offsets fit within a day. Inspect all zone intervals that could
 	// contain this midnight instead of letting time.Date choose a DST branch.
 	var result time.Time
@@ -62,11 +69,14 @@ func (calendar *Calendar) midnight(civil time.Time) (time.Time, error) {
 			found = true
 		}
 		_, end := local.ZoneBounds()
+		if !end.IsZero() && !end.After(cursor) {
+			// Go's TZif tail approximates the last zone interval with a
+			// 365-day year. On December 31 of a leap year its end can be in
+			// the past, although the offset lasts until the next UTC year.
+			end = time.Date(cursor.UTC().Year()+1, time.January, 1, 0, 0, 0, 0, time.UTC)
+		}
 		if end.IsZero() || end.After(limit) {
 			break
-		}
-		if !end.After(cursor) {
-			return time.Time{}, fmt.Errorf("core/internal/unified: non-increasing calendar zone boundary")
 		}
 		cursor = end
 	}
@@ -97,8 +107,10 @@ func (period CalendarPeriod) bounds(at time.Time) (time.Time, time.Time, error) 
 	// Any larger count exceeds the supported 1..9999 timestamp domain, even
 	// in days. Check before converting to int or multiplying a week count.
 	if period.Count > 366*10000 {
-		return time.Time{}, time.Time{}, &UnsupportedError{Capability: "calendar period outside supported timestamp range"}
+		return time.Time{}, time.Time{},
+			&UnsupportedError{Capability: "calendar period outside supported timestamp range"}
 	}
+
 	local := at.In(period.Calendar.location)
 	year, month, day := local.Date()
 	end := time.Date(year, month, day, 0, 0, 0, 0, time.UTC)
@@ -123,5 +135,6 @@ func (period CalendarPeriod) bounds(at time.Time) (time.Time, time.Time, error) 
 	if err != nil {
 		return time.Time{}, time.Time{}, err
 	}
+
 	return start, end, nil
 }

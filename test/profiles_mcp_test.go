@@ -248,13 +248,18 @@ GRANT SELECT (_kpid,country) ON profiles TO mcp_profile_reader;`)
 		`{"kind":"lastCompleteCalendarPeriods","unit":"month","count":1}`, 1)
 	calendarCount = strings.TrimSuffix(calendarCount, `}`) +
 		`,"defaultCalendar":{"definition":"gregorian-monday/Europe/Rome","meaningRevision":"1"}}`
+	const record = `{"operator":"and","rules":[{"property":"country","operator":"is","values":["IT"]}]}`
+	recordCalendar := strings.TrimSuffix(record, `}`) +
+		`,"defaultCalendar":{"definition":"gregorian-monday/Europe/Rome","meaningRevision":"1"}}`
+	var recordResult string
 	for _, test := range []struct {
 		name   string
 		filter string
 		at     string
 		first  int
 	}{
-		{"Record", `{"operator":"and","rules":[{"property":"country","operator":"is","values":["IT"]}]}`, "", 0},
+		{"Record", record, "", 0},
+		{"Record calendar", recordCalendar, "", 0},
 		{"exact Int64", `{"operator":"and","rules":[{"property":"account","operator":"is","values":[9007199254740993]}]}`, "", 0},
 		{"Count first page", count, at, 0},
 		{"Count next page", count, at, 1},
@@ -278,6 +283,12 @@ GRANT SELECT (_kpid,country) ON profiles TO mcp_profile_reader;`)
 			actual := assertResult(t, tool(t, "query-profiles", args))
 			if actual != string(expected) {
 				t.Fatalf("expected HTTP-identical profile result %s, got %s", expected, actual)
+			}
+			if test.name == "Record" {
+				recordResult = actual
+			}
+			if test.name == "Record calendar" && (actual != recordResult || strings.Contains(actual, `"evaluation":`)) {
+				t.Fatalf("expected byte-identical Record response %s without evaluation, got %s", recordResult, actual)
 			}
 			if test.name == "exact Int64" && !strings.Contains(actual, `"account":"9007199254740993"`) {
 				t.Fatalf("expected exact Int64 profile operand and result, got %s", actual)
@@ -321,6 +332,7 @@ GRANT SELECT (_kpid,country) ON profiles TO mcp_profile_reader;`)
 		{"nanosecond at", map[string]any{"filter": count, "at": "2026-02-01T00:00:00.000000001Z"}, "InvalidArguments"},
 		{"at without Count", map[string]any{"at": at}, "InvalidArguments"},
 		{"invalid filter", map[string]any{"filter": strings.Replace(count, `"values":[0]`, `"values":[-1]`, 1)}, "InvalidArguments"},
+		{"invalid Record calendar", map[string]any{"filter": strings.Replace(recordCalendar, `"meaningRevision":"1"`, `"meaningRevision":"2"`, 1)}, "InvalidArguments"},
 		{"inverted exact interval", map[string]any{"filter": strings.Replace(count, `"operator":"is","values":[0]`, `"operator":"is between","values":[9007199254740993,9007199254740992]`, 1)}, "InvalidArguments"},
 		{"unsupported range", map[string]any{"filter": strings.Replace(count, `"values":[0]`, `"values":[9223372036854775808]`, 1)}, "FilterCapabilityNotImplemented"},
 		{"long natural", map[string]any{"filter": strings.Replace(count, `"values":[0]`, `"values":[`+strings.Repeat("9", 10000)+`]`, 1)}, "FilterCapabilityNotImplemented"},
