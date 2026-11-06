@@ -2,9 +2,9 @@
 
 This MIT package is shared by the warehouse drivers. `core` supplies a prepared
 `warehouses.Filter`; it does not supply SQL or dialect functions. The initial
-subset is profile Record, independent occurrence Count and outer AND/OR. The
+subset is profile Record, independent occurrence Count/Sum and outer AND/OR. The
 source, typed Record operands, known-JSON-String reads, mature period and accepted cardinalities
-are already determined. Each Count closes its own evidence before composition.
+are already determined. Each Count or Sum closes its own evidence before composition.
 
 `Build` emits one statement for a projected, ordered profile page and exact
 MATCH, NO_MATCH and UNKNOWN totals. Empty pages still carry totals in a marked metadata row.
@@ -22,6 +22,29 @@ all copies of each seeded identity still participate in conflict checks.
 An explanation can therefore succeed when population listing fails because of
 source-contract faults confined to other profiles. It does not certify the
 entire source or make the target explanation partial.
+
+Sum adds signed known Decimal(18,4) values, with independently optional
+contributions and unbounded unknown amounts. Finite extrema are reachable;
+intermediate sums need not be. Core supplies an exact grid-normalized inclusive
+threshold representable in Decimal(38,4), so no driver sees the original 76-digit
+threshold as a Float or DECFLOAT. Relevant amount disagreements between copies
+are source faults. Certainly excluded amounts are not read. A per-profile
+occurrence count beyond MaxInt64 or arithmetic overflow fails the operation.
+
+Filters containing Sum use two additional bounded text columns in explanations,
+leaving Count's six-column protocol unchanged otherwise. Statement.ReadExplanation
+uses its compiled Count/Sum node metadata and validates finite bounds within the
+global 76/37 domain, lower<=upper, cursor completion and Close. Nil bounds mean
+no finite bound. Source, time, identity and logical structure are still prepared
+by core; business references never enter this package.
+
+The local Snowflake numeric reading uses the documented
+[IS_DECIMAL](https://docs.snowflake.com/en/sql-reference/functions/is) predicate
+for fixed-point VARIANT numbers. Its
+[TRY_TO_DECIMAL](https://docs.snowflake.com/en/sql-reference/functions/try_to_decimal)
+conversion is accepted only when the round-trip equals the original value.
+DOUBLE representations and remote execution remain unverified, behind the
+closed backend gate; documentation checks do not establish runtime conformance.
 
 Each profile Record leaf is projected only in the population-table SELECT,
 without joins, a prefilter or NULL coalescing. The resulting nullable columns

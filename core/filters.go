@@ -36,7 +36,8 @@ type Filter struct {
 }
 
 // FilterRule represents a condition or a nested filter group.
-// It is implemented by *FilterCondition, *FilterCountCondition and *Filter.
+// It is implemented by *FilterCondition, *FilterCountCondition,
+// *FilterSumCondition and *Filter.
 type FilterRule interface {
 	filterRule()
 }
@@ -44,6 +45,43 @@ type FilterRule interface {
 // HasCount reports whether a Count occurs within the admitted main-tree bounds.
 // It does not validate the filter; malformed trees still require preparation.
 func (filter *Filter) HasCount() bool {
+	return filter.hasBehavior(false)
+}
+
+// MarshalJSON returns the JSON representation of filter.
+func (filter *Filter) MarshalJSON() ([]byte, error) {
+	if filter == nil {
+		return nil, errors.New("filter cannot be nil")
+	}
+	var b json.Buffer
+	err := marshalFilterJSON(&b, filter)
+	if err != nil {
+		return nil, err
+	}
+	return b.Bytes(), nil
+}
+
+// RequiresUnified reports Count or Sum within the admitted main-tree bounds.
+// It does not validate the filter.
+func (filter *Filter) RequiresUnified() bool {
+	return filter.hasBehavior(true)
+}
+
+// UnmarshalJSON sets filter to the filter group represented by data.
+func (filter *Filter) UnmarshalJSON(data []byte) error {
+	dec := json.NewDecoder(bytes.NewBuffer(data))
+	group, _, err := unmarshalFilterRule(dec, 1, expectFilterGroup, false)
+	if err != nil {
+		return err
+	}
+	*filter = *(group.(*Filter))
+	return nil
+}
+
+// filterRule marks Filter as a filter rule.
+func (*Filter) filterRule() {}
+
+func (filter *Filter) hasBehavior(includeSum bool) bool {
 	type entry struct {
 		group *Filter
 		depth int
@@ -64,6 +102,10 @@ func (filter *Filter) HasCount() bool {
 			switch rule := rule.(type) {
 			case *FilterCountCondition:
 				return true
+			case *FilterSumCondition:
+				if includeSum {
+					return true
+				}
 			case *Filter:
 				stack = append(stack, entry{rule, current.depth + 1})
 			default:
@@ -73,33 +115,6 @@ func (filter *Filter) HasCount() bool {
 	}
 	return false
 }
-
-// MarshalJSON returns the JSON representation of filter.
-func (filter *Filter) MarshalJSON() ([]byte, error) {
-	if filter == nil {
-		return nil, errors.New("filter cannot be nil")
-	}
-	var b json.Buffer
-	err := marshalFilterJSON(&b, filter)
-	if err != nil {
-		return nil, err
-	}
-	return b.Bytes(), nil
-}
-
-// UnmarshalJSON sets filter to the filter group represented by data.
-func (filter *Filter) UnmarshalJSON(data []byte) error {
-	dec := json.NewDecoder(bytes.NewBuffer(data))
-	group, _, err := unmarshalFilterRule(dec, 1, expectFilterGroup, false)
-	if err != nil {
-		return err
-	}
-	*filter = *(group.(*Filter))
-	return nil
-}
-
-// filterRule marks Filter as a filter rule.
-func (*Filter) filterRule() {}
 
 // FilterLogical represents the logical operator of a filter.
 // It can be OpAnd or OpOr.
@@ -373,6 +388,14 @@ func marshalFilterJSON(b *json.Buffer, filter *Filter) error {
 			if err != nil {
 				return err
 			}
+		case *FilterSumCondition:
+			if rule == nil {
+				return errors.New("filter sum condition cannot be nil")
+			}
+			err = b.Encode(rule)
+			if err != nil {
+				return err
+			}
 		case nil:
 			return errors.New("filter rule cannot be nil")
 		default:
@@ -436,6 +459,8 @@ func unmarshalFilterRule(dec *json.Decoder, depth int, expectGroup, occurrence b
 	var values []json.Value
 	var count FilterCount
 	var hasCount bool
+	var sum FilterSum
+	var hasSum bool
 	var calendar *FilterCalendar
 	var hasCalendar bool
 	var descendantRuleCount int
@@ -501,6 +526,19 @@ func unmarshalFilterRule(dec *json.Decoder, depth int, expectGroup, occurrence b
 			} else {
 				err = dec.Decode(&count)
 			}
+		case "sum":
+			if occurrence {
+				return nil, 0, errors.New("Sum is not allowed in an occurrence Record filter")
+			}
+			if hasSum {
+				return nil, 0, errors.New("duplicate filter property sum")
+			}
+			hasSum = true
+			if expectGroup {
+				err = dec.SkipValue()
+			} else {
+				err = dec.Decode(&sum)
+			}
 		case "values":
 			if hasValues {
 				return nil, 0, fmt.Errorf("duplicate filter property %q", name)
@@ -521,8 +559,20 @@ func unmarshalFilterRule(dec *json.Decoder, depth int, expectGroup, occurrence b
 
 	_ = dec.SkipToken() // skip '}'
 
-	if hasCalendar && (!hasRules || hasCount || hasProperty) {
+	if hasCalendar && (!hasRules || hasCount || hasSum || hasProperty) {
 		return nil, 0, errors.New("defaultCalendar is only allowed on the root group")
+	}
+	if hasSum {
+		if expectGroup {
+			return nil, 0, errors.New("filter must be a group")
+		}
+		if hasRules || hasProperty || hasCount {
+			return nil, 0, errors.New("filter rule cannot combine sum with another subject")
+		}
+		if !hasOperator || !hasValues {
+			return nil, 0, errors.New("Sum condition must contain operator and values")
+		}
+		return &FilterSumCondition{Sum: sum, Operator: FilterOperator(operator), Values: values}, 0, nil
 	}
 	if hasCount {
 		if expectGroup {
@@ -869,6 +919,8 @@ func prepareFilterGroup(filter *Filter, validation *filterValidation, depth int)
 			}
 		case *FilterCountCondition:
 			return nil, errors.New("Count requires Unified profile filtering")
+		case *FilterSumCondition:
+			return nil, errors.New("Sum requires Unified profile filtering")
 		default:
 			return nil, errors.New("unsupported filter rule")
 		}

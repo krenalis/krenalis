@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
+	"math/big"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -387,6 +388,77 @@ GRANT SELECT (_kpid,country) ON profiles TO mcp_profile_reader;`)
 			}
 		})
 	}
+
+	t.Run("Sum", func(t *testing.T) {
+
+		_, err := pool.Exec(t.Context(), `UPDATE krenalis_events SET properties='{"total":20,"currency":"EUR"}'
+WHERE event='Order Completed';
+INSERT INTO krenalis_events
+(kpid,message_id,event,timestamp,received_at,sent_at,type,connection_id,anonymous_id,traits,properties) VALUES
+('00000000-0000-0000-0000-000000000002','sum-two','Order Completed','2026-01-15','2026-02-01','2026-02-01','track','fixture','a','{}','{"total":20,"currency":"EUR"}'),
+('00000000-0000-0000-0000-000000000002','sum-usd','Order Completed','2026-01-15','2026-02-01','2026-02-01','track','fixture','a','{}','{"currency":"USD"}'),
+('00000000-0000-0000-0000-000000000003','sum-three','Order Completed','2026-01-15','2026-02-01','2026-02-01','track','fixture','a','{}','{"total":20,"currency":"EUR"}'),
+('00000000-0000-0000-0000-000000000003','sum-unknown','Order Completed','2026-01-15','2026-02-01','2026-02-01','track','fixture','a','{}','{"total":20}')`)
+		if err != nil {
+			t.Fatalf("expected coherent monetary fixtures, got %v", err)
+		}
+		const sum = `{"operator":"and","rules":[{"sum":{"source":{"kind":"recordedEvents","name":"Order Completed","grain":"registered-message"},"period":{"kind":"elapsedLookback","duration":{"value":31,"unit":"day"}},"field":{"definition":"commerce.order_completed.total","meaningRevision":"1"},"nativeCurrency":"EUR"},"operator":"is greater than or equal to","values":[30]}]}`
+		for _, first := range []int{0, 99} {
+			var expected json.RawMessage
+			k.Call("GET", "/v1/profiles?filter="+url.QueryEscape(sum)+"&at="+url.QueryEscape(at)+"&first="+strconv.Itoa(first), nil, nil, &expected)
+			actual := assertResult(t, tool(t, "query-profiles", map[string]any{"filter": sum, "at": at, "first": first}))
+			if actual != string(expected) || !strings.Contains(actual, `"match":1,"noMatch":2,"unknown":1`) {
+				t.Fatalf("expected identical HTTP/MCP Sum listing and totals 1/2/1, got %s", actual)
+			}
+			if first == 99 && !strings.HasPrefix(actual, `{"profiles":[]`) {
+				t.Fatalf("expected empty Sum page, got %s", actual)
+			}
+		}
+		var expected json.RawMessage
+		profile := "00000000-0000-0000-0000-000000000003"
+		k.Call("GET", "/v1/profiles/"+profile+"/filter-explanation?filter="+url.QueryEscape(sum)+"&at="+url.QueryEscape(at), nil, nil, &expected)
+		actual := assertResult(t, tool(t, "explain-profile-filter", map[string]any{"kpid": profile, "filter": sum, "at": at}))
+		if actual != string(expected) || !strings.Contains(actual, `"result":"UNKNOWN"`) ||
+			!strings.Contains(actual, `"definition":"commerce.order_completed.total"`) || !strings.Contains(actual, `"nativeCurrency":"EUR"`) {
+			t.Fatalf("expected measured Sum explanation with reference and currency, got %s", actual)
+		}
+		var explanation struct {
+			Rule struct {
+				Rules []struct {
+					Sum struct {
+						Bounds struct{ Lower, Upper json.Number } `json:"bounds"`
+					} `json:"sum"`
+				} `json:"rules"`
+			} `json:"rule"`
+		}
+		err = json.Unmarshal([]byte(actual), &explanation)
+		if err != nil {
+			t.Fatalf("expected exact bounds JSON, got %v", err)
+		}
+		if len(explanation.Rule.Rules) != 1 {
+			t.Fatalf("expected one Sum leaf, got %s", actual)
+		}
+		lower, lok := new(big.Rat).SetString(string(explanation.Rule.Rules[0].Sum.Bounds.Lower))
+		upper, uok := new(big.Rat).SetString(string(explanation.Rule.Rules[0].Sum.Bounds.Upper))
+		if !lok || !uok || lower.Cmp(big.NewRat(20, 1)) != 0 || upper.Cmp(big.NewRat(40, 1)) != 0 {
+			t.Fatalf("expected exact bounds [20,40], got %s", actual)
+		}
+		for _, test := range []struct{ name, filter, code string }{
+			{"equality", strings.Replace(sum, `is greater than or equal to`, `is`, 1), "FilterCapabilityNotImplemented"},
+			{"missing currency", strings.Replace(sum, `,"nativeCurrency":"EUR"`, ``, 1), "InvalidArguments"},
+			{"incompatible source", strings.Replace(sum, `"name":"Order Completed"`, `"name":"Refund"`, 1), "InvalidArguments"},
+		} {
+			t.Run(test.name, func(t *testing.T) {
+				assertToolError(t, tool(t, "query-profiles", map[string]any{"filter": test.filter, "at": at}), test.code)
+			})
+		}
+		negative := strings.Replace(sum, `[30]`, `[-0.00001]`, 1)
+		actual = assertResult(t, tool(t, "query-profiles", map[string]any{"filter": negative, "at": at}))
+		if !strings.Contains(actual, `"match":4,"noMatch":0,"unknown":0`) {
+			t.Fatalf("expected negative threshold with empty sum zero, got %s", actual)
+		}
+
+	})
 
 	// The SQL tool still uses the restricted connection, unlike query-profiles.
 	assertResult(t, tool(t, "query-data-warehouse", map[string]any{"query": "SELECT country FROM profiles"}))

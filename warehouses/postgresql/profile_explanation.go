@@ -40,5 +40,5 @@ func (warehouse *PostgreSQL) ExplainProfileFilter(ctx context.Context, filter wa
 	}
 	scanner := newScanner(query.Columns, rows)
 	scanner.maxBytes = 64 * 1024
-	return profilefilter.ReadExplanation(ctx, scanner, query.CountNodes, profile)
+	return query.ReadExplanation(ctx, scanner, profile)
 }

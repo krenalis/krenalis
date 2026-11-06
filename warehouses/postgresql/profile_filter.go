@@ -15,15 +15,15 @@ import (
 	"github.com/krenalis/krenalis/warehouses/internal/profilefilter"
 )
 
-// profileFilterVerified gates Record/Count pending real-database tests.
+// profileFilterVerified gates Record/Count/Sum pending real-database tests.
 const profileFilterVerified = true
 
-// ProfileFilterVerified reports backend verification of Record/Count.
+// ProfileFilterVerified reports backend verification of Record/Count/Sum.
 func (warehouse *PostgreSQL) ProfileFilterVerified() bool {
 	return profileFilterVerified
 }
 
-// ProfileOutcomes returns a complete Record/Count page and exact ternary
+// ProfileOutcomes returns a complete Record/Count/Sum page and exact ternary
 // totals from one statement. Source, execution, cancellation, scan and Close
 // failures return no partial result. It returns
 // warehouses.ErrProfileProjectionTooWide or warehouses.ErrProfileResultTooLarge
@@ -61,9 +61,28 @@ func (warehouse *PostgreSQL) ProfileOutcomes(ctx context.Context, filter warehou
 	return profilefilter.Read(ctx, scanner, request)
 }
 
+// profileExactDecimal preserves exact readings and returns NULL for unknown
+// or incompatible values. It never coerces JSON strings or rounds a reading.
+func profileExactDecimal(reading warehouses.DecimalReading) (string, error) {
+	err := reading.Validate()
+	if err != nil {
+		return "", err
+	}
+	target := quoteIdent(reading.Column.Name)
+	for _, key := range reading.Keys {
+		var literal strings.Builder
+		quoteString(&literal, key)
+		target = "(" + target + " -> " + literal.String() + ")"
+	}
+	number := "(" + target + " #>> '{}')::numeric"
+	return "CASE WHEN jsonb_typeof(" + target + ")='number' THEN CASE WHEN " + number +
+		" BETWEEN -99999999999999.9999 AND 99999999999999.9999 AND trunc(" + number + ",4)=" + number +
+		" THEN CAST(" + number + " AS DECIMAL(18,4)) END END", nil
+}
+
 func profileFilterDialect() profilefilter.Dialect {
 	return profilefilter.Dialect{ValueSize: profileValueSize, QuoteIdentifier: quoteIdent, Record: profileRecord,
-		KnownText: profileKnownText, Parameter: profileParameter}
+		KnownText: profileKnownText, ExactDecimal: profileExactDecimal, Parameter: profileParameter}
 }
 
 // profileKnownText extracts only a JSON String, preserving unknown business

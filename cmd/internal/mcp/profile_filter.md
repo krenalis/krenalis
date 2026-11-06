@@ -1,4 +1,4 @@
-# Querying profiles with Record and Count filters
+# Querying profiles with Record, Count and Sum filters
 
 Use `query-profiles` for questions about profiles and segments. It runs the same
 `core.Filter` and `Workspace.QueryProfiles` path as `GET /v1/profiles`.
@@ -177,13 +177,67 @@ No relevant recorded events means Count zero. The history is the events recorded
 and queryable in Krenalis, not a certification of events in external systems.
 Unknown decisive local values can yield UNKNOWN; independent qualification
 uncertainty is supported. Shared governed facts, ambiguous identity/timestamps,
-business deduplication, AvailableHistory and other calendar/personal-anchor constructors, sums,
-shares and E/K/P/T are not available through this tool.
+business deduplication, AvailableHistory and other calendar/personal-anchor constructors,
+other reductions, shares and E/K/P/T are not available through this tool.
+
+## Monetary Sum
+
+Sum adds the totals reported by recorded `Order Completed` messages in one
+explicit native currency. It does not calculate total customer spend across
+currencies, convert money, certify payment/settlement, or deduplicate business
+orders. Other known currencies are excluded. Distinct message identities
+contribute separately even when they refer to the same order.
+
+```json
+{"operator":"and","rules":[{"sum":{"source":{"kind":"recordedEvents","name":"Order Completed","grain":"registered-message"},"period":{"kind":"elapsedLookback","duration":{"value":30,"unit":"day"}},"field":{"definition":"commerce.order_completed.total","meaningRevision":"1"},"nativeCurrency":"EUR"},"operator":"is greater than or equal to","values":[30]}]}
+```
+
+This is the only currently resolved monetary field reference. Do not invent
+other references by concatenating catalog IDs and property names. It fixes
+`properties.total`, exact Decimal(18,4) reading and the associated
+`properties.currency` field. The source must be `recordedEvents`, exact name
+`Order Completed`, grain `registered-message`; incompatible sources are invalid.
+All supported Count periods work, including complete calendar periods with the
+same root calendar requirement and fullRelevantHistory with its explicit reference.
+
+`nativeCurrency` is mandatory: three uppercase ASCII letters. Reading is the
+same as governed Count currency: missing, JSON null and non-String are unknown;
+any known String is compared verbatim. `"eur"` is different from `"EUR"`.
+There is no implicit USD default. The existing raw JSON Record currency tests
+retain their distinct semantics.
+
+Use the four ordered operators (`is less than`, `is less than or equal to`,
+`is greater than`, `is greater than or equal to`) with one signed JSON Number.
+Thresholds are exact, up to precision 76 and scale 37, independently of the
+field's four decimal places. They never pass through a float. Input literal
+spelling is bounded to 4096 bytes. Equality, inequality and intervals are valid
+language capabilities not yet implemented for Sum. Additional event `where`
+qualification and sample `minimum` are also unavailable; do not replace their
+meaning with separate profile conditions or SQL.
+
+Amounts are known only when JSON Numbers exactly representable as Decimal(18,4).
+Missing, null, other kinds and non-representable readings are unknown, never zero
+or rounded. Empty sums are zero. With 20 EUR and an unknown amount in USD, the
+EUR sum is exactly 20: certainly excluded amounts do not affect the result.
+Amounts have no certified non-negative sign: 35 EUR and an unknown EUR amount
+can yield UNKNOWN at >=30. With 35 EUR plus a known 20 of unknown currency, the
+reachable extrema are 35 and 55, so >=30 is MATCH. Conflicting copies, execution
+overflow and exhausted resources fail the complete operation, never yield UNKNOWN.
+
+Sum explanations add `sum` with the same `start`, `end`, `unboundedStart`, and
+`history` names and omission rules as Count, plus `field`, `nativeCurrency` and
+`bounds:{lower,upper}`. Finite numbers are exact reachable extrema; values between
+them need not be reachable. For example, 20 EUR plus 20 of unknown currency has
+bounds 20 and 40, with only those two totals possible. A null bound means no
+finite bound in that direction, never zero. References identify the reading
+actually resolved by core; bounds do not certify external history or explain
+every individual event. An explanation does not make unsupported forms available.
 
 Raw JSON and governed business properties differ. With `properties.currency is
 "EUR"`, a present JSON null is FALSE and a missing path is UNKNOWN; Number 100
 is different from String "100". Negative comparisons do not make missing values
-match. NativeCurrency bindings are internal only: do not infer or invent one.
+match. Count NativeCurrency bindings remain internal; do not infer one from raw JSON.
+Sum resolves its currency reading through the explicit monetary field reference.
 
 Event names and arbitrary JSON contents are workspace-specific. Ask the user or
 use `query-data-warehouse` to discover them before constructing a filter. SQL may
@@ -195,7 +249,7 @@ or complete a Unified feature that `query-profiles` cannot execute.
 To understand a known profile's result, call `explain-profile-filter` with its
 `kpid`, the same JSON-text `filter`, and optionally the listing's `evaluation.at`
 as `at`. It returns `{kpid,at,rule}`. Each rule has `kind` (`and`, `or`, `record`,
-`count`), `result` (`MATCH`, `NO_MATCH`, `UNKNOWN`), and ordered child `rules`
+`count`, `sum`), `result` (`MATCH`, `NO_MATCH`, `UNKNOWN`), and ordered child `rules`
 for groups. Count adds `{start,end,certain,uncertain}`: the reachable count is
 every integer in `[certain,certain+uncertain]` for this supported subset.
 For fullRelevantHistory, `start` is omitted and `unboundedStart:true` is present;

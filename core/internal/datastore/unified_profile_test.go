@@ -232,7 +232,7 @@ INSERT INTO krenalis_events
 			if _, ok := errors.AsType[*UnavailableError](err); !ok {
 				t.Fatalf("expected occurrence source UnavailableError, got %T (%v)", err, err)
 			}
-			if !strings.Contains(err.Error(), "occurrence source violates the prepared Count contract") {
+			if !strings.Contains(err.Error(), "occurrence source violates the prepared occurrence contract") {
 				t.Fatalf("expected occurrence source contract failure, got %v", err)
 			}
 			if result != nil {

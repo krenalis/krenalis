@@ -20,6 +20,7 @@ import (
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/core/internal/unified"
 	"github.com/krenalis/krenalis/test/testimages"
+	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/kms"
@@ -519,6 +520,97 @@ INSERT INTO unified_v.krenalis_events VALUES
 		}
 		if string(before) != string(after) {
 			t.Fatalf("expected unchanged original document %s, got %s", before, after)
+		}
+
+	})
+
+	t.Run("public Sum", func(t *testing.T) {
+
+		_, err := database.Exec(t.Context(), `INSERT INTO unified_v.krenalis_events VALUES
+('00000000-0000-0000-0000-000000000001','sum1','Order Completed','2026-01-15','{"total":20,"currency":"EUR"}'),
+('00000000-0000-0000-0000-000000000001','sum2','Order Completed','2026-01-16','{"total":15,"currency":"EUR"}'),
+('00000000-0000-0000-0000-000000000002','sum3','Order Completed','2026-01-15','{"total":20,"currency":"EUR"}'),
+('00000000-0000-0000-0000-000000000002','sum4','Order Completed','2026-01-15','{"currency":"USD"}'),
+('00000000-0000-0000-0000-000000000003','sum5','Order Completed','2026-01-15','{"total":20,"currency":"EUR"}'),
+('00000000-0000-0000-0000-000000000003','sum6','Order Completed','2026-01-15','{"total":20}')`)
+		if err != nil {
+			t.Fatalf("expected coherent monetary fixtures, got %v", err)
+		}
+		var filter Filter
+		err = json.Unmarshal([]byte(`{"operator":"and","rules":[`+sumConditionJSON+`]}`), &filter)
+		if err != nil {
+			t.Fatalf("expected public Sum decoding, got %v", err)
+		}
+		condition := filter.Rules[0].(*FilterSumCondition)
+		calendar := &FilterCalendar{Definition: "gregorian-monday/UTC", MeaningRevision: "1"}
+		for _, period := range []FilterPeriod{
+			{Kind: "elapsedLookback", Duration: &FilterDuration{Value: json.Value(`31`), Unit: "day"}},
+			{Kind: "lastCompleteCalendarPeriods", Unit: "month", Count: json.Value(`1`)},
+			{Kind: "fullRelevantHistory", History: &FilterHistory{Definition: "registered-queryable-events", MeaningRevision: "1"}},
+		} {
+			condition.Sum.Period = period
+			filter.DefaultCalendar = calendar
+			query := ProfileQuery{Filter: &filter, At: at.Format(time.RFC3339), Properties: []string{"profile_id"}, Limit: 10}
+			result, err := workspace.QueryProfiles(t.Context(), query)
+			if err != nil {
+				t.Fatalf("expected public Sum execution, got %v", err)
+			}
+			if result.Total != 1 || len(result.Profiles) != 1 || result.Evaluation.Match != 1 ||
+				result.Evaluation.NoMatch != 2 || result.Evaluation.Unknown != 1 ||
+				result.Profiles[0].Attributes["profile_id"] != "customer-1" {
+				t.Fatalf("expected one Sum member and totals 1/2/1, got %+v", result)
+			}
+			for i, expected := range []struct{ truth, lower, upper string }{
+				{"MATCH", "35", "35"}, {"NO_MATCH", "20", "20"}, {"UNKNOWN", "20", "40"}, {"NO_MATCH", "0", "0"},
+			} {
+				explained, err := workspace.ExplainProfileFilter(t.Context(), fmt.Sprintf("00000000-0000-0000-0000-%012d", i+1), &filter, query.At)
+				if err != nil {
+					t.Fatalf("expected public Sum explanation, got %v", err)
+				}
+				value := explained.Rule.Rules[0].Sum
+				if explained.Rule.Result != expected.truth || value == nil || value.NativeCurrency != "EUR" ||
+					value.Field.Definition != "commerce.order_completed.total" || value.Field.MeaningRevision != "1" ||
+					value.Bounds.Lower == nil || value.Bounds.Upper == nil ||
+					!value.Bounds.Lower.Equal(decimal.MustParse(expected.lower)) ||
+					!value.Bounds.Upper.Equal(decimal.MustParse(expected.upper)) || !value.End.Equal(at) {
+					t.Fatalf("expected %s Sum bounds [%s,%s] and resolved metadata, got %+v", expected.truth, expected.lower, expected.upper, value)
+				}
+				if period.Kind == "fullRelevantHistory" && (!value.UnboundedStart || !value.Start.IsZero() ||
+					value.History == nil || value.History.Definition != "registered-queryable-events" || value.History.MeaningRevision != "1") {
+					t.Fatalf("expected full history metadata, got %+v", value)
+				}
+			}
+		}
+		// The same explanation transports both numeric Sum and integer Count bounds.
+		filter.DefaultCalendar = nil
+		mixed := &Filter{Operator: OpOr, DefaultCalendar: calendar,
+			Rules: []FilterRule{&filter, &FilterCondition{Property: "country", Operator: OpIs, Values: filterValues("IT")}, count}}
+		explained, err := workspace.ExplainProfileFilter(t.Context(), "00000000-0000-0000-0000-000000000003", mixed, at.Format(time.RFC3339))
+		if err != nil {
+			t.Fatalf("expected mixed Record/Count/Sum explanation, got %v", err)
+		}
+		if explained.Rule.Result != "MATCH" || explained.Rule.Rules[0].Rules[0].Sum == nil ||
+			explained.Rule.Rules[1].Kind != "record" || explained.Rule.Rules[2].Count == nil {
+			t.Fatalf("expected measured mixed-tree outcomes, got %+v", explained)
+		}
+		unverifiedStore, ok := ds.Store("222222222222")
+		if !ok {
+			t.Fatal("expected unverified store, got none")
+		}
+		unverifiedState, ok := st.Workspace("222222222222")
+		if !ok {
+			t.Fatal("expected unverified workspace, got none")
+		}
+		unverified := &Workspace{core: &Core{}, store: unverifiedStore, workspace: unverifiedState}
+		unavailable, err := unverified.QueryProfiles(t.Context(), ProfileQuery{Filter: mixed, At: at.Format(time.RFC3339), Limit: 1})
+		if err != nil {
+			failure, ok := errors.AsType[*errors.UnprocessableError](err)
+			if !ok || failure.Code != UnifiedFilteringUnavailable || unavailable != nil {
+				t.Fatalf("expected gated Sum backend without result, got %+v, %v", unavailable, err)
+			}
+		}
+		if err == nil {
+			t.Fatal("expected unavailable Sum backend, got success")
 		}
 
 	})

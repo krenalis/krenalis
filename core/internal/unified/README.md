@@ -1,8 +1,8 @@
-# Internal Unified Record and Count vertical
+# Internal Unified Record, Count and Sum vertical
 
 This package implements the first backend subset of the B architecture consolidated
 in `filtering/14-confronto-architetture-interrogazione-unified-fase-4b.md`. The
-normative baseline remains 06/07/08 version 1.2. Count is exposed by the existing
+normative baseline remains 06/07/08 version 1.2. Count and Sum are exposed by the existing
 Profiles HTTP endpoint and MCP `query-profiles` tool on the verified backend;
 Admin and destination connections do not expose it yet. The prepared-filter
 boundary refines the SQL transport described in report 14 §5.4: generated SQL is
@@ -11,7 +11,7 @@ now an internal detail of the warehouse implementation.
 ## Executable path
 
 `Workspace.QueryProfiles` receives one `core.Filter`, decoded using the
-public Record/Count JSON contract below. The temporary private `unifiedRule` and
+public Record/Count/Sum JSON contract below. The temporary private `unifiedRule` and
 `unifiedCount` input trees have been removed. Profile predicates reuse
 `prepareFilter` with the workspace Profile schema; Count qualification uses the
 Event schema. Every prepared profile condition becomes one Record leaf in the
@@ -141,9 +141,73 @@ The following also remain outside this vertical: AvailableHistory bindings,
 future/unmatured windows (06 §17.4), other calendar constructors, personal
 anchors, unknown timestamps/attribution/grain,
 business deduplication, source unions, property-reference terminals, other
-governed predicates, owned-member traversal, E/K/P/T, sums and shares. Count
+governed predicates, owned-member traversal, E/K/P/T, other reductions and shares. Count
 literal bounds above signed 64-bit range are unsupported. Structurally invalid
 input remains an error, distinct from unsupported valid-language capability.
+
+## Monetary Sum subset
+
+The public `sum` subject reuses the source, periods and `operator`/`values` shape
+of Count. It requires `field:{definition:"commerce.order_completed.total",
+meaningRevision:"1"}` and `nativeCurrency`, three uppercase letters. The immutable
+reading binds track `Order Completed`, `properties.total` and `properties.currency`
+at registered-message grain. Other source names are invalid. This is a sum of
+reported totals in the selected native currency, not all-currency spend, settled
+payments or distinct business orders. The event catalog does not certify old data.
+
+Known amounts are JSON Numbers exactly representable as Decimal(18,4); missing,
+null, wrong kinds and non-representable readings are unknown. No coercion,
+rounding, implicit USD, non-negative sign or finite domain for unknown historical
+amounts is inferred. Currency uses the same verbatim known-String contract as
+Count. An unknown amount certainly in another currency contributes zero.
+
+The execution subset has four ordered comparisons and one exact signed literal
+within the existing global precision 76/scale 37 limits, bounded lexically to
+4096 bytes. Sum equality/difference/intervals, extra event qualification and sample
+minima are explicitly unsupported, not invalid or UNKNOWN. Sum is admitted only
+through Profiles APIs/MCP and the internal path; Record pipeline behavior and
+`state.Where` persistence remain unchanged.
+
+Core resolves the reading and normalizes the terminal exactly on the 1e-4 grid.
+Greater becomes an inclusive threshold at floor(t*10000)+1, GreaterOrEqual at
+ceil(t*10000), and the symmetric formulas apply to upper bounds. Signed rational
+arithmetic is used, never Float. With at most MaxInt64 identities and known
+Decimal(18,4) contributions, every finite total is strictly within +/-1e33.
+Clipping an already normalized threshold to those outer sentinels is equivalent
+for finite totals and for unbounded unknown contributions; no threshold is
+rounded by a driver. The warehouse receives an inclusive half-line and a
+representable Decimal(38,4) bound, never the original 76-digit operand as Float
+or DECFLOAT. Occurrence-count overflow or arithmetic overflow is a technical error.
+
+For independent local qualification, a known certain contribution is fixed, and
+an optional known contribution contributes either zero or its signed value.
+Summing their respective minima and maxima gives reachable extrema. Intermediate
+totals can be sparse, so this is not a reachability algorithm for equality.
+A relevant unknown amount has no certified sign/bounds; both sides are unbounded.
+No governed shared fact is inferred from SQL NULL. Duplicate identities must agree
+on attribution, period, qualification and relevant amount reading; a known/missing
+mixture or two different known amounts fails the operation rather than becoming
+an optional value. All-unknown readings remain unknown, as in Count qualifications.
+
+Listing still uses its existing single-statement page/totals protocol. Explanations
+use the unchanged six-column protocol for filters without Sum, or two additional
+bounded text columns for Sum bounds. The decoder bounds text before decimal
+parsing, checks representability within 76/37 and lower<=upper for finite bounds,
+and discards all results on scan/iteration/cancellation/Close failure. Public Sum
+explanations include field/currency and the same temporal metadata as Count.
+Null `bounds.lower`/`upper` means no finite bound, never zero. Finite values use
+the existing exact JSON-number serializer. References stay in core, not drivers.
+
+PostgreSQL runtime tests include signed, optional and unknown contributions,
+exact precision, duplicate conflicts, profiles without events, empty pages,
+half-open time borders, cancellation, and an independent enumeration of sums for
+27 bases against all four comparisons. HTTP/MCP fixtures traverse the public
+codec, service, datastore, compiler, transport and decoder. Snowflake has mirrored
+local adapter tests but remains inactive pending actual runtime verification,
+including VARIANT numeric kinds, precision and overflow. Its current reading
+accepts only fixed-point VARIANT numbers; DOUBLE representations must be resolved
+and verified before activation. No remote conformance
+or infrastructure guarantee is inferred from these local tests.
 
 ## Results, resources and consistency
 
@@ -368,7 +432,7 @@ including `-00:00`; it does not impose the Record DateTime parser's offset rules
 The numeric limits of the executable backend remain capability errors.
 An older decoder rejects the unknown `count` member.
 
-The existing Record-only preparer explicitly rejects Count outside the admitted
+The existing Record-only preparer explicitly rejects Count and Sum outside the admitted
 Profiles path. Natural literals are validated and compared as decimal strings;
 fixed elapsed-unit multiplication is linear in their digit count. This preserves
 exact validation and invalid-before-unsupported precedence without large-integer
@@ -500,9 +564,9 @@ go test -mod=vendor ./core ./core/internal/unified ./core/internal/datastore \
 
 ## Profiles HTTP entry
 
-`GET /v1/profiles` uses `Workspace.QueryProfiles`. A request without Count delegates
+`GET /v1/profiles` uses `Workspace.QueryProfiles`. A request without Count or Sum delegates
 to the existing Record query and writer: no evaluation object, added warehouse
-query or changed response encoding. Requests containing Count return only MATCH
+query or changed response encoding. Requests containing Count or Sum return only MATCH
 profiles with the requested projection. `total` is the exact MATCH count. An
 additional object describes that request's complete evaluation, for example:
 

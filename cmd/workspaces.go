@@ -895,7 +895,7 @@ func (workspace workspace) Profiles(w http.ResponseWriter, r *http.Request) (any
 		if err != nil {
 			return nil, errors.BadRequest("invalid filter")
 		}
-		if filter.HasCount() && len(f) > maxRequestSize {
+		if filter.RequiresUnified() && len(f) > maxRequestSize {
 			return nil, errors.BadRequest("filter exceeds maximum request size")
 		}
 		if filter == nil {

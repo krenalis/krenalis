@@ -27,7 +27,7 @@ var ErrProfileResultTooLarge = errors.New("profile result exceeds the size limit
 // Filter is a backend-independent filter prepared by core. It has no wire or
 // persistence format. A nil Root matches every profile in the requested
 // population.
-// The execution subset contains profile Record, independent Count and AND/OR.
+// The subset contains profile Record, independent Count/Sum and AND/OR.
 type Filter struct {
 	Root FilterCondition
 }
@@ -209,10 +209,11 @@ type ProfileFilterExplanationWarehouse interface {
 	ExplainProfileFilter(context.Context, Filter, ProfileSource, string) ([]FilterNodeOutcome, error)
 }
 
-// FilterNodeOutcome contains a closed outcome and, only for Count, its bounds.
+// FilterNodeOutcome contains a closed outcome and applicable Count/Sum bounds.
 type FilterNodeOutcome struct {
 	Truth FilterTruth
 	Count *OccurrenceCountBounds
+	Sum   *OccurrenceSumBounds
 }
 
 // OccurrenceCountBounds bounds the reachable count for independent occurrence

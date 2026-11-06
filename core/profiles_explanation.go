@@ -10,6 +10,7 @@ import (
 
 	"github.com/krenalis/krenalis/core/internal/datastore"
 	"github.com/krenalis/krenalis/core/internal/unified"
+	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
@@ -24,13 +25,14 @@ type ProfileFilterExplanation struct {
 }
 
 // ProfileRuleExplanation follows the input filter's group and rule order.
-// Kind is and, or, record or count; Result is MATCH, NO_MATCH or UNKNOWN.
+// Kind is and, or, record, count or sum; Result is MATCH, NO_MATCH or UNKNOWN.
 // Record results do not identify which operand caused a SQL NULL.
 type ProfileRuleExplanation struct {
 	Kind   string                   `json:"kind"`
 	Result string                   `json:"result"`
 	Rules  []ProfileRuleExplanation `json:"rules,omitzero"`
 	Count  *ProfileCountExplanation `json:"count,omitzero"`
+	Sum    *ProfileSumExplanation   `json:"sum,omitzero"`
 }
 
 // ProfileCountExplanation describes independently qualified occurrences in
@@ -45,6 +47,24 @@ type ProfileCountExplanation struct {
 	Uncertain      int64          `json:"uncertain"`
 	UnboundedStart bool           `json:"unboundedStart,omitzero"`
 	History        *FilterHistory `json:"history,omitzero"`
+}
+
+// ProfileSumExplanation describes monetary bounds with the resolved reading.
+// Finite bounds are reachable extrema; intermediate values need not be.
+type ProfileSumExplanation struct {
+	Start          time.Time        `json:"start,omitzero"`
+	End            time.Time        `json:"end"`
+	UnboundedStart bool             `json:"unboundedStart,omitzero"`
+	History        *FilterHistory   `json:"history,omitzero"`
+	Field          FilterSumField   `json:"field"`
+	NativeCurrency string           `json:"nativeCurrency"`
+	Bounds         ProfileSumBounds `json:"bounds"`
+}
+
+// ProfileSumBounds contains exact reachable extrema. Null means unbounded.
+type ProfileSumBounds struct {
+	Lower *decimal.Decimal `json:"lower"`
+	Upper *decimal.Decimal `json:"upper"`
 }
 
 // ExplainProfileFilter explains a supported filter for the KPID in the URL.
@@ -162,6 +182,19 @@ func explainProfileRule(rule warehouses.FilterCondition, semantic unified.Rule, 
 		}
 	case *warehouses.RecordFilter:
 		result.Kind = "record"
+	case *warehouses.IndependentOccurrenceSum:
+		if node.Sum == nil || semantic.Sum == nil {
+			return ProfileRuleExplanation{}, errors.New("core: missing profile explanation sum")
+		}
+		definition, revision := semantic.Sum.Field.Reference()
+		result.Kind = "sum"
+		result.Sum = &ProfileSumExplanation{Start: rule.Start, End: rule.End, UnboundedStart: rule.UnboundedStart,
+			Field:          FilterSumField{Definition: definition, MeaningRevision: revision},
+			NativeCurrency: semantic.Sum.NativeCurrency, Bounds: ProfileSumBounds{Lower: node.Sum.Lower, Upper: node.Sum.Upper}}
+		if history := semantic.Sum.Scope.History; history != nil {
+			definition, revision := history.Reference()
+			result.Sum.History = &FilterHistory{Definition: definition, MeaningRevision: revision}
+		}
 	case *warehouses.IndependentOccurrenceCount:
 		if node.Count == nil || semantic.Count == nil {
 			return ProfileRuleExplanation{}, errors.New("core: missing profile explanation count")

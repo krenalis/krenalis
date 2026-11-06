@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Elastic License 2.0
 // that can be found in the LICENSE file.
 
-// Package unified implements the internal Record and Count Unified subset.
+// Package unified implements the internal Record, Count and Sum Unified subset.
 // It has no public JSON or persistence representation.
 package unified
 
@@ -18,7 +18,7 @@ import (
 	"github.com/krenalis/krenalis/warehouses"
 )
 
-// Comparison is a Count terminal, independent of the Record operator catalog.
+// Comparison identifies numeric terminals independently of Record operators.
 type Comparison uint8
 
 const (
@@ -122,12 +122,13 @@ type Result struct {
 	At       time.Time
 }
 
-// Rule is a profile Record condition, Count or AND/OR group.
+// Rule is a profile Record condition, Count, Sum or AND/OR group.
 // Root nil means AllProfiles. Record contains schema-prepared operands.
 // Validation is separate from canonicalization and never mutates state.Where.
 type Rule struct {
 	Record   *state.WhereCondition
 	Count    *Count
+	Sum      *Sum
 	Operator state.WhereLogical
 	Children []Rule
 }
@@ -287,7 +288,7 @@ func validateRule(rule Rule, at time.Time, depth int, nodes *int) error {
 		return fmt.Errorf("Unified root exceeds 100 descendant nodes")
 	}
 	if rule.Record != nil {
-		if rule.Count != nil || rule.Operator != 0 || len(rule.Children) != 0 {
+		if rule.Count != nil || rule.Sum != nil || rule.Operator != 0 || len(rule.Children) != 0 {
 			return fmt.Errorf("profile Record condition cannot contain other rules")
 		}
 		c := rule.Record
@@ -295,6 +296,12 @@ func validateRule(rule Rule, at time.Time, depth int, nodes *int) error {
 			return fmt.Errorf("invalid prepared profile Record condition")
 		}
 		return nil
+	}
+	if rule.Sum != nil {
+		if rule.Count != nil || rule.Operator != 0 || len(rule.Children) != 0 {
+			return fmt.Errorf("Sum cannot contain other rules")
+		}
+		return rule.Sum.validate(at)
 	}
 	if rule.Count == nil {
 		if depth >= 4 || (rule.Operator != state.OpAnd && rule.Operator != state.OpOr) || len(rule.Children) == 0 {

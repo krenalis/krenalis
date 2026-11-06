@@ -17,8 +17,8 @@ import (
 	"github.com/krenalis/krenalis/warehouses"
 )
 
-// ProfileQuery selects a profile page. At optionally fixes the Count reference
-// instant; it does not select a historical snapshot of profile data.
+// ProfileQuery selects a profile page. At optionally fixes the Unified
+// reference instant; it does not select a historical snapshot of profile data.
 type ProfileQuery struct {
 	Properties   []string
 	Filter       *Filter
@@ -29,7 +29,7 @@ type ProfileQuery struct {
 }
 
 // ProfileQueryResult is a complete profile page and its matching total.
-// Evaluation is present only when the request contains Count.
+// Evaluation is present only when the request contains Count or Sum.
 type ProfileQueryResult struct {
 	Profiles   []Profile
 	Schema     types.Type
@@ -46,7 +46,7 @@ type ProfileEvaluation struct {
 	Unknown int64     `json:"unknown"`
 }
 
-// QueryProfiles returns matching profiles and Count evaluation metadata.
+// QueryProfiles returns matching profiles and Unified evaluation metadata.
 // It returns errors.BadRequestError for invalid request values,
 // errors.NotFoundError if the workspace no longer exists,
 // errors.UnavailableError on warehouse failure, and
@@ -61,9 +61,9 @@ func (this *Workspace) QueryProfiles(ctx context.Context, query ProfileQuery) (*
 
 	this.core.mustBeOpen()
 
-	if !query.Filter.HasCount() {
+	if !query.Filter.RequiresUnified() {
 		if query.At != "" {
-			return nil, errors.BadRequest("at requires a Count filter")
+			return nil, errors.BadRequest("at requires a Count or Sum filter")
 		}
 		filter := query.Filter
 		if filter != nil && filter.DefaultCalendar != nil {

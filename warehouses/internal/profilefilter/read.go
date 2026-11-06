@@ -50,7 +50,8 @@ func Read(ctx context.Context, rows warehouses.Rows, request warehouses.ProfileO
 			return nil, fmt.Errorf("warehouses/internal/profilefilter: invalid source diagnostic")
 		}
 		if failures != 0 {
-			return nil, fmt.Errorf("warehouses/internal/profilefilter: occurrence source violates the prepared Count contract")
+			return nil, fmt.Errorf("warehouses/internal/profilefilter: " +
+				"occurrence source violates the prepared occurrence contract")
 		}
 		oversized, ok := values[7].(bool)
 		if !ok {

@@ -26,7 +26,8 @@ type SourceBinding struct {
 	Record        func(*state.Where) (warehouses.Expr, error)
 }
 
-// Prepare resolves and specializes the Record and Count subset for execution.
+// Prepare specializes the Record, Count and Sum subset for execution.
+// It preserves every main-tree node and child order one to one.
 // It returns *UnsupportedError for valid-language forms outside this subset.
 // The supplied bindings already determine source meaning and evidence model;
 // NativeCurrency retains its current verbatim known-JSON-String reading.
@@ -113,6 +114,9 @@ func prepareRule(rule Rule, bindings Bindings, at time.Time, source SourceBindin
 			return nil, err
 		}
 		return &warehouses.RecordFilter{Expr: expr}, nil
+	}
+	if rule.Sum != nil {
+		return rule.Sum.prepare(at, source)
 	}
 	if rule.Count == nil {
 		var operator warehouses.LogicalOperator

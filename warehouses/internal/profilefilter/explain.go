@@ -10,15 +10,17 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
 )
 
 type explanationTerm struct {
 	truth, lower, upper string
+	sum                 bool
 }
 
-// BuildExplanation reuses the closed Record/Count expressions and emits one
+// BuildExplanation reuses the closed Record/Count/Sum expressions and emits one
 // bounded row per node for the requested profile, including non-matches.
 func BuildExplanation(filter warehouses.Filter, population warehouses.ProfileSource, profile string, dialect Dialect) (Statement, error) {
 
@@ -60,18 +62,39 @@ func BuildExplanation(filter warehouses.Filter, population warehouses.ProfileSou
 	c.ctes = append(c.ctes, "population AS (SELECT CAST("+q(population.Key.Name)+" AS VARCHAR(36)) AS "+
 		q("$profile_id")+projection+" FROM "+q(population.Table)+
 		" WHERE CAST("+q(population.Key.Name)+" AS VARCHAR(36))="+c.profile+")")
+	hasSums := false
+	for _, node := range c.nodes {
+		hasSums = hasSums || node.sum
+	}
+	var sums []bool
+	if hasSums {
+		if dialect.ValueSize == nil {
+			return Statement{}, fmt.Errorf("warehouses/internal/profilefilter: missing value size operation")
+		}
+		sums = make([]bool, len(c.nodes))
+	}
 	terms, rows, counts := []string{}, []string{}, make([]bool, len(c.nodes))
 	for i, node := range c.nodes {
 		n := strconv.Itoa(i)
 		terms = append(terms, "("+node.truth+") AS "+q("$truth"+n))
 		lo, hi := "CAST(NULL AS BIGINT)", "CAST(NULL AS BIGINT)"
 		if node.lower != "" {
-			counts[i] = true
+			counts[i] = !node.sum
 			terms = append(terms, node.lower+" AS "+q("$lo"+n), node.upper+" AS "+q("$hi"+n))
 			lo, hi = q("$lo"+n), q("$hi"+n)
 		}
+		extra := ""
+		if hasSums {
+			sumLo, sumHi := "CAST(NULL AS VARCHAR(128))", "CAST(NULL AS VARCHAR(128))"
+			if node.sum {
+				sums[i] = true
+				sumLo, sumHi = boundedSumText(lo, dialect), boundedSumText(hi, dialect)
+				lo, hi = "CAST(NULL AS BIGINT)", "CAST(NULL AS BIGINT)"
+			}
+			extra = "," + sumLo + " AS sum_lo," + sumHi + " AS sum_hi"
+		}
 		rows = append(rows, "SELECT profile_id,"+n+" AS node,"+q("$truth"+n)+" AS truth,"+
-			lo+" AS lo,"+hi+" AS hi FROM evaluated")
+			lo+" AS lo,"+hi+" AS hi"+extra+" FROM evaluated")
 	}
 	c.ctes = append(c.ctes, "evaluated AS (SELECT p."+q("$profile_id")+" AS profile_id,"+
 		strings.Join(terms, ",")+" FROM population p "+strings.Join(c.joins, " ")+")")
@@ -85,20 +108,42 @@ func BuildExplanation(filter warehouses.Filter, population warehouses.ProfileSou
 	}
 	c.ctes = append(c.ctes, "explanation AS ("+strings.Join(rows, " UNION ALL ")+")")
 
-	return Statement{SQL: "WITH " + strings.Join(c.ctes, ",\n") +
-		"\nSELECT profile_id,node,truth,lo,hi,(" + failures + ") FROM explanation ORDER BY node LIMIT " +
-		strconv.Itoa(len(c.nodes)+1), Arguments: c.arguments, CountNodes: counts,
+	extra := ""
+	if hasSums {
+		extra = ",sum_lo,sum_hi"
+	}
+	statement := Statement{SQL: "WITH " + strings.Join(c.ctes, ",\n") +
+		"\nSELECT profile_id,node,truth,lo,hi,(" + failures + ")" + extra + " FROM explanation ORDER BY node LIMIT " +
+		strconv.Itoa(len(c.nodes)+1), Arguments: c.arguments, CountNodes: counts, SumNodes: sums,
 		Columns: []warehouses.Column{
 			{Name: "profile_id", Type: types.UUID()}, {Name: "node", Type: types.Int(64)},
 			{Name: "truth", Type: types.Boolean(), Nullable: true},
 			{Name: "lo", Type: types.Int(64), Nullable: true}, {Name: "hi", Type: types.Int(64), Nullable: true},
 			{Name: "source_failures", Type: types.Int(64)},
-		}}, nil
+		}}
+	if hasSums {
+		statement.Columns = append(statement.Columns,
+			warehouses.Column{Name: "sum_lo", Type: types.String(), Nullable: true},
+			warehouses.Column{Name: "sum_hi", Type: types.String(), Nullable: true})
+	}
+
+	return statement, nil
 }
 
 // ReadExplanation consumes and closes a fixed-width explanation cursor.
 // Missing profiles return nil; any failure discards the complete result.
-func ReadExplanation(ctx context.Context, rows warehouses.Rows, countNodes []bool, profile string) (result []warehouses.FilterNodeOutcome, err error) {
+func ReadExplanation(ctx context.Context, rows warehouses.Rows, countNodes []bool, profile string) ([]warehouses.FilterNodeOutcome, error) {
+	return readExplanation(ctx, rows, countNodes, nil, profile)
+}
+
+// boundedSumText bounds the transport at its source without truncating numbers.
+func boundedSumText(value string, dialect Dialect) string {
+	text := "CAST(" + value + " AS VARCHAR)"
+	return "CASE WHEN " + dialect.ValueSize(text) + "<=128 THEN " + text +
+		" WHEN " + value + " IS NULL THEN NULL ELSE 'invalid' END"
+}
+
+func readExplanation(ctx context.Context, rows warehouses.Rows, countNodes, sumNodes []bool, profile string) (result []warehouses.FilterNodeOutcome, err error) {
 
 	if rows == nil {
 		return nil, fmt.Errorf("warehouses/internal/profilefilter: missing explanation cursor")
@@ -109,7 +154,7 @@ func ReadExplanation(ctx context.Context, rows warehouses.Rows, countNodes []boo
 			result, err = nil, closeErr
 		}
 	}()
-	if len(countNodes) < 1 || len(countNodes) > 101 {
+	if len(countNodes) < 1 || len(countNodes) > 101 || sumNodes != nil && len(sumNodes) != len(countNodes) {
 		return nil, fmt.Errorf("warehouses/internal/profilefilter: invalid explanation node count")
 	}
 	if id, ok := types.NormalizeUUID(profile); !ok || id != profile {
@@ -120,8 +165,12 @@ func ReadExplanation(ctx context.Context, rows warehouses.Rows, countNodes []boo
 		if len(result) >= len(countNodes) {
 			return nil, fmt.Errorf("warehouses/internal/profilefilter: explanation row limit exceeded")
 		}
-		var values [6]any
-		err := rows.Scan(values[:]...)
+		var storage [8]any
+		values := storage[:6]
+		if sumNodes != nil {
+			values = storage[:]
+		}
+		err := rows.Scan(values...)
 		if err != nil {
 			return nil, err
 		}
@@ -132,7 +181,8 @@ func ReadExplanation(ctx context.Context, rows warehouses.Rows, countNodes []boo
 			return nil, fmt.Errorf("warehouses/internal/profilefilter: invalid explanation row")
 		}
 		if failures != 0 {
-			return nil, fmt.Errorf("warehouses/internal/profilefilter: occurrence source violates the prepared Count contract")
+			return nil, fmt.Errorf("warehouses/internal/profilefilter: " +
+				"occurrence source violates the prepared occurrence contract")
 		}
 		node := warehouses.FilterNodeOutcome{Truth: warehouses.FilterUnknown}
 		if values[2] != nil {
@@ -154,6 +204,35 @@ func ReadExplanation(ctx context.Context, rows warehouses.Rows, countNodes []boo
 			node.Count = &warehouses.OccurrenceCountBounds{Certain: int64(lo), Possible: int64(hi)}
 		} else if values[3] != nil || values[4] != nil {
 			return nil, fmt.Errorf("warehouses/internal/profilefilter: unexpected explanation count bounds")
+		}
+		if sumNodes != nil && sumNodes[index] {
+			if countNodes[index] {
+				return nil, fmt.Errorf("warehouses/internal/profilefilter: conflicting explanation node kinds")
+			}
+			bounds := &warehouses.OccurrenceSumBounds{}
+			for i, target := range []**decimal.Decimal{&bounds.Lower, &bounds.Upper} {
+				if values[6+i] == nil {
+					continue
+				}
+				text, ok := values[6+i].(string)
+				if !ok || len(text) > 128 {
+					return nil, fmt.Errorf("warehouses/internal/profilefilter: invalid explanation Sum bound")
+				}
+				value, err := decimal.Parse(text, 0, 0)
+				if err != nil {
+					return nil, fmt.Errorf("warehouses/internal/profilefilter: invalid explanation Sum bound")
+				}
+				if !types.IsDecimal(value) {
+					return nil, fmt.Errorf("warehouses/internal/profilefilter: invalid explanation Sum bound")
+				}
+				*target = &value
+			}
+			if bounds.Lower != nil && bounds.Upper != nil && bounds.Lower.Greater(*bounds.Upper) {
+				return nil, fmt.Errorf("warehouses/internal/profilefilter: inverted explanation Sum bounds")
+			}
+			node.Sum = bounds
+		} else if sumNodes != nil && (values[6] != nil || values[7] != nil) {
+			return nil, fmt.Errorf("warehouses/internal/profilefilter: unexpected explanation Sum bounds")
 		}
 		result = append(result, node)
 	}
