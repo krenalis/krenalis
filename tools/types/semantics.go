@@ -128,7 +128,7 @@ const (
 	Day         // day
 	Week        // week
 	Month       // month
-	YearUnit    // year; TODO: add a reference to the issue about this name
+	YearUnit    // year; TODO: rename to Year if https://github.com/krenalis/krenalis/issues/2632 removes the year type
 )
 
 // unitName contains the JSON names of all valid units.
