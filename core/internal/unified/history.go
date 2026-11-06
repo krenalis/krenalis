@@ -24,3 +24,11 @@ func ResolveHistory(definition, meaningRevision string) (*History, error) {
 	}
 	return &History{definition: definition, meaningRevision: meaningRevision}, nil
 }
+
+// Reference returns the resolved definition and immutable meaning revision.
+func (history *History) Reference() (definition, meaningRevision string) {
+	if history == nil || history.definition == "" {
+		panic("core/internal/unified: unresolved recorded history")
+	}
+	return history.definition, history.meaningRevision
+}

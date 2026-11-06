@@ -37,12 +37,14 @@ type ProfileRuleExplanation struct {
 // [Start,End). Every integer from Certain to Certain+Uncertain is reachable.
 // These are recorded occurrences, not deduplicated business entities.
 // UnboundedStart means all queryable history before End; Start is then omitted.
+// History identifies the resolved definition and meaning revision when present.
 type ProfileCountExplanation struct {
-	Start          time.Time `json:"start,omitzero"`
-	End            time.Time `json:"end"`
-	Certain        int64     `json:"certain"`
-	Uncertain      int64     `json:"uncertain"`
-	UnboundedStart bool      `json:"unboundedStart,omitzero"`
+	Start          time.Time      `json:"start,omitzero"`
+	End            time.Time      `json:"end"`
+	Certain        int64          `json:"certain"`
+	Uncertain      int64          `json:"uncertain"`
+	UnboundedStart bool           `json:"unboundedStart,omitzero"`
+	History        *FilterHistory `json:"history,omitzero"`
 }
 
 // ExplainProfileFilter explains a supported filter for the KPID in the URL.
@@ -109,7 +111,7 @@ func (this *Workspace) ExplainProfileFilter(ctx context.Context, kpid string, fi
 		return nil, errors.NotFound("profile does not exist")
 	}
 	index := 0
-	explanation, err := explainProfileRule(result.Filter.Root, result.Nodes, &index)
+	explanation, err := explainProfileRule(result.Filter.Root, root, result.Nodes, &index)
 	if err != nil {
 		return nil, err
 	}
@@ -120,9 +122,9 @@ func (this *Workspace) ExplainProfileFilter(ctx context.Context, kpid string, fi
 	return &ProfileFilterExplanation{KPID: profile, At: result.At, Rule: explanation}, nil
 }
 
-// explainProfileRule attaches measured outcomes to the prepared filter shape.
-// It neither reevaluates conditions nor infers reasons from raw SQL NULLs.
-func explainProfileRule(rule warehouses.FilterCondition, nodes []warehouses.FilterNodeOutcome, index *int) (ProfileRuleExplanation, error) {
+// explainProfileRule attaches measured outcomes and resolved references to the
+// unchanged prepared filter shape, without reevaluating conditions.
+func explainProfileRule(rule warehouses.FilterCondition, semantic unified.Rule, nodes []warehouses.FilterNodeOutcome, index *int) (ProfileRuleExplanation, error) {
 
 	if *index >= len(nodes) {
 		return ProfileRuleExplanation{}, errors.New("core: incomplete profile explanation")
@@ -143,6 +145,9 @@ func explainProfileRule(rule warehouses.FilterCondition, nodes []warehouses.Filt
 
 	switch rule := rule.(type) {
 	case *warehouses.FilterGroup:
+		if len(rule.Children) != len(semantic.Children) {
+			return ProfileRuleExplanation{}, errors.New("core: inconsistent profile explanation group")
+		}
 		result.Kind = "and"
 		if rule.Operator == warehouses.OpOr {
 			result.Kind = "or"
@@ -150,7 +155,7 @@ func explainProfileRule(rule warehouses.FilterCondition, nodes []warehouses.Filt
 		result.Rules = make([]ProfileRuleExplanation, len(rule.Children))
 		for i, child := range rule.Children {
 			var err error
-			result.Rules[i], err = explainProfileRule(child, nodes, index)
+			result.Rules[i], err = explainProfileRule(child, semantic.Children[i], nodes, index)
 			if err != nil {
 				return ProfileRuleExplanation{}, err
 			}
@@ -158,12 +163,16 @@ func explainProfileRule(rule warehouses.FilterCondition, nodes []warehouses.Filt
 	case *warehouses.RecordFilter:
 		result.Kind = "record"
 	case *warehouses.IndependentOccurrenceCount:
-		if node.Count == nil {
+		if node.Count == nil || semantic.Count == nil {
 			return ProfileRuleExplanation{}, errors.New("core: missing profile explanation count")
 		}
 		result.Kind = "count"
 		result.Count = &ProfileCountExplanation{Start: rule.Start, End: rule.End, Certain: node.Count.Certain,
 			Uncertain: node.Count.Possible - node.Count.Certain, UnboundedStart: rule.UnboundedStart}
+		if history := semantic.Count.Scope.History; history != nil {
+			definition, revision := history.Reference()
+			result.Count.History = &FilterHistory{Definition: definition, MeaningRevision: revision}
+		}
 	default:
 		return ProfileRuleExplanation{}, errors.New("core: invalid profile explanation condition")
 	}

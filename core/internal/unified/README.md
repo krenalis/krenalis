@@ -96,6 +96,9 @@ property-reference comparison or a governed current-profile dependency.
   the descriptor and passes `UnboundedStart` with a zero `Start` and resolved UTC
   `End=T` to the warehouse. The shared compiler omits the lower predicate and
   parameter; it does not replace it with year 1, the first event or retention.
+  This descriptor is currently resolved for the checked `recordedEvents` source.
+  Any additional source/repertoire must verify compatibility with the history
+  definition before adopting it.
 - Prepared Record qualification on Event properties, with the existing 26
   operators, literal payloads and schema-aware preparation. Local groups have
   the occurrence-body limit of two levels; this does not restrict existing root
@@ -156,6 +159,8 @@ and UNKNOWNs. It is not a listing of UNKNOWN profiles or a new selection policy.
 Each Count includes its resolved UTC `[start,end)` period, `certain` qualifying
 occurrences and `uncertain` qualifications. For full history, `start` is omitted
 and `unboundedStart:true` makes the absent lower bound explicit; `end` is T.
+The `history` object reports the resolved `definition` and `meaningRevision`
+from the semantic model in core; these references are not warehouse concerns.
 Existing bounded-period responses remain unchanged. Under this subset's
 independent occurrence contract, the reachable count is every integer from `certain` through
 `certain + uncertain`. For example, 1 certain and 1 uncertain makes Count >= 2

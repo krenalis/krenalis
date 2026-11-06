@@ -259,9 +259,19 @@ INSERT INTO unified_v.krenalis_events VALUES
 			leaf := result.Rule.Rules[0]
 			if leaf.Kind != "count" || leaf.Result != expected.truth || leaf.Count == nil ||
 				leaf.Count.Certain != expected.certain || leaf.Count.Uncertain != expected.uncertain ||
-				!leaf.Count.Start.Equal(at.AddDate(0, 0, -31)) || !leaf.Count.End.Equal(at) {
+				!leaf.Count.Start.Equal(at.AddDate(0, 0, -31)) || !leaf.Count.End.Equal(at) ||
+				leaf.Count.History != nil || leaf.Count.UnboundedStart {
 				t.Fatalf("expected Count %d certain and %d uncertain with exact period, got %+v",
 					expected.certain, expected.uncertain, leaf)
+			}
+			data, err := json.Marshal(leaf.Count)
+			if err != nil {
+				t.Fatalf("expected bounded Count encoding, got %v", err)
+			}
+			expectedJSON := fmt.Sprintf(`{"start":"2026-01-01T00:00:00Z","end":"2026-02-01T00:00:00Z",`+
+				`"certain":%d,"uncertain":%d}`, expected.certain, expected.uncertain)
+			if string(data) != expectedJSON {
+				t.Fatalf("expected unchanged bounded Count JSON %s, got %s", expectedJSON, data)
 			}
 		}
 
@@ -453,7 +463,8 @@ INSERT INTO unified_v.krenalis_events VALUES
 			}
 			count := explained.Rule.Rules[0].Count
 			if count == nil || !count.UnboundedStart || !count.Start.IsZero() || !count.End.Equal(at) ||
-				count.Certain != expected || count.Uncertain != 0 {
+				count.Certain != expected || count.Uncertain != 0 || count.History == nil ||
+				count.History.Definition != "registered-queryable-events" || count.History.MeaningRevision != "1" {
 				t.Fatalf("expected unbounded history before T with %d occurrences, got %+v", expected, count)
 			}
 			data, err := json.Marshal(explained)
@@ -488,6 +499,19 @@ INSERT INTO unified_v.krenalis_events VALUES
 			result.Profiles[0].Attributes["profile_id"] != "customer-1" ||
 			result.Profiles[1].Attributes["profile_id"] != "customer-3" {
 			t.Fatalf("expected two historical-only profiles, got %+v", result)
+		}
+		mixed := &Filter{Operator: OpOr, Rules: []FilterRule{
+			&FilterCondition{Property: "profile_id", Operator: OpIs, Values: filterValues("unmatched")}, &restored}}
+		explained, err := workspace.ExplainProfileFilter(t.Context(), result.Profiles[0].KPID, mixed, query.At)
+		if err != nil {
+			t.Fatalf("expected nested Record and Count explanation, got %v", err)
+		}
+		children := explained.Rule.Rules[1].Rules
+		if explained.Rule.Result != "MATCH" || explained.Rule.Rules[0].Kind != "record" ||
+			children[0].Count.History == nil || children[0].Count.History.Definition != "registered-queryable-events" ||
+			children[0].Count.History.MeaningRevision != "1" || children[1].Count.History != nil ||
+			children[1].Count.UnboundedStart || children[1].Count.Start.IsZero() {
+			t.Fatalf("expected history reference only on the corresponding Count, got %+v", children)
 		}
 		after, err := json.Marshal(filter)
 		if err != nil {

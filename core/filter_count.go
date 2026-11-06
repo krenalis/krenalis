@@ -230,7 +230,8 @@ func (duration FilterDuration) elapsed() (filterCountInteger, error) {
 
 // FilterPeriod describes an absoluteHalfOpen, elapsedLookback, elapsedAgoBand,
 // lastCompleteCalendarPeriods or fullRelevantHistory period. Calendar periods
-// require root defaultCalendar; fullRelevantHistory requires an explicit History.
+// require root defaultCalendar; fullRelevantHistory requires an explicit
+// History reference.
 // Exactly the fields belonging to Kind must be supplied. Absolute instants use
 // RFC 3339 with an explicit offset. Relative periods remain relative when
 // serialized; their UTC bounds are resolved only for execution.

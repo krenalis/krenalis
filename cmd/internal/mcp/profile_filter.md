@@ -199,7 +199,9 @@ as `at`. It returns `{kpid,at,rule}`. Each rule has `kind` (`and`, `or`, `record
 for groups. Count adds `{start,end,certain,uncertain}`: the reachable count is
 every integer in `[certain,certain+uncertain]` for this supported subset.
 For fullRelevantHistory, `start` is omitted and `unboundedStart:true` is present;
-`end` is T. There is no inferred beginning of the customer's real relationship.
+`end` is T. `history:{definition,meaningRevision}` identifies the resolved
+recorded-history definition. There is no inferred beginning of the customer's
+real relationship.
 
 For example, 1 certain and 1 uncertain occurrence means Count >= 2 is UNKNOWN,
 but Count >= 1 is MATCH. An OR can MATCH while a child is UNKNOWN; retain that

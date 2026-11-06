@@ -180,7 +180,7 @@ func (s Scope) bounds(at time.Time) (time.Time, time.Time, error) {
 		if !start.IsZero() || !end.IsZero() {
 			return time.Time{}, time.Time{}, fmt.Errorf("full relevant history cannot have explicit bounds")
 		}
-		if s.History.definition != "registered-queryable-events" || s.History.meaningRevision != "1" {
+		if s.History.definition == "" {
 			return time.Time{}, time.Time{}, fmt.Errorf("unresolved recorded history")
 		}
 		err := validateTime(at)

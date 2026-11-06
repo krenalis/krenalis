@@ -290,6 +290,9 @@ GRANT SELECT (_kpid,country) ON profiles TO mcp_profile_reader;`)
 				leaf.Count.Start != "2026-01-01T00:00:00Z" || leaf.Count.End != at {
 				t.Fatalf("expected Count %d certain and %d uncertain in January, got %s", lo, uncertain, actual)
 			}
+			if strings.Contains(actual, `"history":`) || strings.Contains(actual, `"unboundedStart":`) {
+				t.Fatalf("expected unchanged bounded explanation without history metadata, got %s", actual)
+			}
 		})
 	}
 	for _, test := range []struct {
@@ -318,7 +321,8 @@ GRANT SELECT (_kpid,country) ON profiles TO mcp_profile_reader;`)
 			map[string]any{"kpid": profile, "filter": historyCount, "at": at}))
 		if actual != string(expected) || !strings.Contains(actual, `"unboundedStart":true`) ||
 			strings.Contains(actual, `"start":`) || !strings.Contains(actual, `"end":"`+at+`"`) ||
-			!strings.Contains(actual, `"result":"UNKNOWN"`) || !strings.Contains(actual, `"uncertain":1`) {
+			!strings.Contains(actual, `"result":"UNKNOWN"`) || !strings.Contains(actual, `"uncertain":1`) ||
+			!strings.Contains(actual, `"history":{"definition":"registered-queryable-events","meaningRevision":"1"}`) {
 			t.Fatalf("expected HTTP-identical UNKNOWN history explanation without a lower date, got %s", actual)
 		}
 	})

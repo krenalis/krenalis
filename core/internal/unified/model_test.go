@@ -16,6 +16,10 @@ import (
 // TestValidate checks capability admission and canonical structural limits.
 func TestValidate(t *testing.T) {
 	at := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
+	history, err := ResolveHistory("registered-queryable-events", "1")
+	if err != nil {
+		t.Fatalf("expected resolved history fixture, got %v", err)
+	}
 	base := Count{Scope: Scope{Event: "Purchase", Grain: "registered-message", Start: at.AddDate(0, -1, 0),
 		End: at}, Test: CountTest{Operator: Equal}}
 	for _, test := range []struct {
@@ -30,7 +34,7 @@ func TestValidate(t *testing.T) {
 		{"missing grain", func(c *Count) { c.Scope.Grain = "" }, false},
 		{"too large", func(c *Count) { c.Test.Value = 1 << 63 }, true},
 		{"invalid period", func(c *Count) { c.Scope.Start = at; c.Scope.End = at }, false},
-		{"history bounds", func(c *Count) { c.Scope.History = &History{} }, false},
+		{"history bounds", func(c *Count) { c.Scope.History = history }, false},
 		{"empty local group", func(c *Count) { c.Where = &state.Where{Operator: state.OpAnd} }, false},
 		{"incompatible guard", func(c *Count) { c.Minimum = 2; c.Test.Value = 1 }, false},
 	} {
@@ -53,7 +57,7 @@ func TestValidate(t *testing.T) {
 	for range 4 {
 		rule = Rule{Operator: state.OpAnd, Children: []Rule{rule}}
 	}
-	err := Validate(&rule, at, Page{Limit: 1})
+	err = Validate(&rule, at, Page{Limit: 1})
 	if err != nil {
 		t.Fatalf("expected four groups including root, got %v", err)
 	}
