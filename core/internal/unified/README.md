@@ -134,6 +134,44 @@ input remains an error, distinct from unsupported valid-language capability.
 
 ## Results, resources and consistency
 
+### Single-profile explanations
+
+`Workspace.ExplainProfileFilter` exposes a separate read-only operation through
+`GET /v1/profiles/{kpid}/filter-explanation?filter=JSON&at=RFC3339` and MCP
+`explain-profile-filter`. The filter is the same public Record/Count document;
+neither membership selection nor listing responses change. The operation returns
+every main-tree rule outcome for one KPID, in input order, including non-matches
+and UNKNOWNs. It is not a listing of UNKNOWN profiles or a new selection policy.
+
+Each Count includes its resolved UTC `[start,end)` period, `certain` qualifying
+occurrences and `uncertain` qualifications. Under this subset's independent
+occurrence contract, the reachable count is every integer from `certain` through
+`certain + uncertain`. For example, 1 certain and 1 uncertain makes Count >= 2
+UNKNOWN. A parent OR may still MATCH because another child matches. Record
+qualifications are closed before counting: this explanation does not identify
+which JSON path or operand produced a NULL, infer a governed fact, or report
+individual event payloads. It does not explain unsupported E/K/P/T constructs.
+
+Core preserves the prepared shape and periods. The optional warehouse
+`ProfileFilterExplanationWarehouse` capability uses the same Record renderers,
+Count reductions and terminals as listing. One statement restricts the profile
+population and returns at most one row per node, with a fixed six-column schema.
+Count identity seeds include copies attributed to the target profile outside
+the period too; all copies of seeded identities are checked for attribution,
+period and qualification conflicts. Other profiles' filters are not evaluated.
+
+The decoder bounds node rows to 101, checks profile identity, preorder indices,
+nonnegative count bounds and source diagnostics, and always closes the cursor.
+Cancellation, scan, iteration, source or Close errors discard the entire result.
+A missing profile is NotFound. PostgreSQL is verified through the full Go path;
+Snowflake has the same adapter and local rendering tests but remains gated.
+
+An explanation is a new evaluation. Reusing listing's `evaluation.at` anchors
+the periods but does not freeze the data or the runtime tzdb. Source coherence
+is assumed, as for listing; the deferred infrastructure is not implemented here.
+
+### Profile pages
+
 One statement computes the profile outcomes, all three profile totals and a
 deterministically ordered UUID page from the same evaluation. The Profiles
 platea is the left input; an empty event population yields Count zero. A join

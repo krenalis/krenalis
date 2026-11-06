@@ -101,6 +101,26 @@ INSERT INTO krenalis_events
 			root := unified.Rule{Operator: test.operator, Children: []unified.Rule{record, count}}
 			all := query(t, &root, page)
 			assertUnifiedTruths(t, all, test.want)
+			for i, expected := range test.want {
+				explained, err := store.ExplainUnifiedProfile(t.Context(), &root, bindings, at, unifiedTestID(i+1))
+				if err != nil {
+					t.Fatalf("expected explained Record/Count composition, got %v", err)
+				}
+				if explained == nil || len(explained.Nodes) != 3 || explained.Nodes[0].Truth != expected ||
+					explained.Nodes[1].Count != nil || explained.Nodes[2].Count == nil || !explained.At.Equal(at) {
+					t.Fatalf("expected three explained nodes with root %v, got %+v", expected, explained)
+				}
+				lo, hi := int64(0), int64(0)
+				if i%3 == 1 {
+					lo, hi = 1, 1
+				}
+				if i%3 == 2 {
+					hi = 1
+				}
+				if explained.Nodes[2].Count.Certain != lo || explained.Nodes[2].Count.Possible != hi {
+					t.Fatalf("expected NativeCurrency Count bounds [%d,%d], got %+v", lo, hi, explained.Nodes[2].Count)
+				}
+			}
 
 			matched := query(t, &root, unified.Page{Limit: 100, MatchingOnly: true})
 			var ids []string

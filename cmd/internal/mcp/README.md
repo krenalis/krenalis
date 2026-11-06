@@ -7,6 +7,14 @@ tool remains available for discovery and other analysis. Server instructions
 direct profile/segment questions to Unified and prohibit SQL fallback for
 unavailable filtering capabilities.
 
+`explain-profile-filter` calls `Workspace.ExplainProfileFilter`, also available as
+`GET /v1/profiles/{kpid}/filter-explanation`. It accepts `kpid`, JSON-text `filter`
+and optional `at`, and returns the ordered rule tree with ternary outcomes and
+resolved Count periods/counters. It uses the same MCP enablement and unrestricted
+main connection as `query-profiles`. No event payloads are returned. It is a new
+evaluation, not a snapshot or an alternative segment-membership policy; all
+explanations remain unavailable on the unverified Snowflake backend.
+
 ## Event catalog
 
 `list-event-definitions` returns metadata summaries, with optional literal

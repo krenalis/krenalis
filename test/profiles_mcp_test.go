@@ -121,6 +121,7 @@ GRANT SELECT (_kpid,country) ON profiles TO mcp_profile_reader;`)
 		return result.Result.Content[0].Text
 	}
 	assertToolError(t, tool(t, "query-profiles", map[string]any{}), "MCPNotConfigured")
+	assertToolError(t, tool(t, "explain-profile-filter", map[string]any{}), "MCPNotConfigured")
 
 	// Metadata discovery needs only the scoped MCP key, not warehouse MCP settings.
 	catalog := assertResult(t, tool(t, "list-event-definitions", map[string]any{"query": "ORDER COMPLETED"}))
@@ -243,6 +244,68 @@ GRANT SELECT (_kpid,country) ON profiles TO mcp_profile_reader;`)
 		`"duration":{"value":31,"unit":"day"}},"where":{"operator":"and","rules":[` +
 		`{"property":"properties.currency","operator":"is","values":["EUR"]}]}},"operator":"is","values":[0]}]}`
 	const at = "2026-02-01T00:00:00Z"
+	for i, expected := range []string{"MATCH", "NO_MATCH", "MATCH", "UNKNOWN"} {
+		t.Run("explanation "+strconv.Itoa(i+1), func(t *testing.T) {
+			profile := "00000000-0000-0000-0000-00000000000" + strconv.Itoa(i+1)
+			var httpResult json.RawMessage
+			k.Call("GET", "/v1/profiles/"+profile+"/filter-explanation?filter="+url.QueryEscape(count)+
+				"&at="+url.QueryEscape(at), nil, nil, &httpResult)
+			actual := assertResult(t, tool(t, "explain-profile-filter",
+				map[string]any{"kpid": profile, "filter": count, "at": at}))
+			if actual != string(httpResult) {
+				t.Fatalf("expected HTTP-identical explanation %s, got %s", httpResult, actual)
+			}
+			var explanation struct {
+				KPID string `json:"kpid"`
+				Rule struct {
+					Result string `json:"result"`
+					Rules  []struct {
+						Result string `json:"result"`
+						Count  struct {
+							Certain, Uncertain int
+							Start, End         string
+						} `json:"count"`
+					} `json:"rules"`
+				} `json:"rule"`
+			}
+			err := json.Unmarshal([]byte(actual), &explanation)
+			if err != nil {
+				t.Fatalf("expected decoded explanation, got %v", err)
+			}
+			if explanation.KPID != profile || explanation.Rule.Result != expected || len(explanation.Rule.Rules) != 1 {
+				t.Fatalf("expected explained %s for profile %s, got %s", expected, profile, actual)
+			}
+			leaf := explanation.Rule.Rules[0]
+			lo, uncertain := 0, 0
+			if i == 1 {
+				lo = 1
+			}
+			if i == 3 {
+				uncertain = 1
+			}
+			if leaf.Result != expected || leaf.Count.Certain != lo || leaf.Count.Uncertain != uncertain ||
+				leaf.Count.Start != "2026-01-01T00:00:00Z" || leaf.Count.End != at {
+				t.Fatalf("expected Count %d certain and %d uncertain in January, got %s", lo, uncertain, actual)
+			}
+		})
+	}
+	for _, test := range []struct {
+		name, code string
+		args       any
+	}{
+		{"missing profile", "ProfileNotFound", map[string]any{"kpid": "00000000-0000-0000-0000-000000000099", "filter": count, "at": at}},
+		{"missing filter", "InvalidArguments", map[string]any{"kpid": "00000000-0000-0000-0000-000000000001"}},
+		{"invalid KPID", "InvalidArguments", map[string]any{"kpid": "bad", "filter": count}},
+		{"filter object", "InvalidArguments", map[string]any{"kpid": "00000000-0000-0000-0000-000000000001", "filter": map[string]any{}}},
+		{"filter null", "InvalidArguments", map[string]any{"kpid": "00000000-0000-0000-0000-000000000001", "filter": "null"}},
+		{"null at", "InvalidArguments", map[string]any{"kpid": "00000000-0000-0000-0000-000000000001", "filter": count, "at": nil}},
+		{"empty at", "InvalidArguments", map[string]any{"kpid": "00000000-0000-0000-0000-000000000001", "filter": count, "at": ""}},
+		{"unknown argument", "InvalidArguments", map[string]any{"kpid": "00000000-0000-0000-0000-000000000001", "filter": count, "sql": "SELECT 1"}},
+	} {
+		t.Run("explanation "+test.name, func(t *testing.T) {
+			assertToolError(t, tool(t, "explain-profile-filter", test.args), test.code)
+		})
+	}
 	calendarCount := strings.Replace(count,
 		`{"kind":"elapsedLookback","duration":{"value":31,"unit":"day"}}`,
 		`{"kind":"lastCompleteCalendarPeriods","unit":"month","count":1}`, 1)
@@ -362,6 +425,7 @@ GRANT SELECT (_kpid,country) ON profiles TO mcp_profile_reader;`)
 	// accessible, and SQL retains its own missing-configuration behavior.
 	k.Call("PUT", "/v1/warehouse", nil, map[string]any{"mode": "Normal", "settings": settings}, nil)
 	assertToolError(t, tool(t, "query-profiles", map[string]any{"filter": count}), "MCPNotConfigured")
+	assertToolError(t, tool(t, "explain-profile-filter", map[string]any{"filter": count}), "MCPNotConfigured")
 	assertResult(t, tool(t, "profile-filter-doc", map[string]any{}))
 	k.Call("PUT", "/v1/warehouse", nil, map[string]any{"mode": "Normal", "settings": settings,
 		"mcpSettings": mcpSettings}, nil)
@@ -375,6 +439,12 @@ GRANT SELECT (_kpid,country) ON profiles TO mcp_profile_reader;`)
 	if failed.Error == nil || len(failed.Result.Content) != 0 ||
 		failed.Error.Message != "cmd/internal/mcp: profile query failed" {
 		t.Fatalf("expected opaque operation failure without data, got %+v", failed)
+	}
+	failed = tool(t, "explain-profile-filter", map[string]any{
+		"kpid": "00000000-0000-0000-0000-000000000001", "filter": count, "at": at})
+	if failed.Error == nil || len(failed.Result.Content) != 0 ||
+		failed.Error.Message != "cmd/internal/mcp: profile query failed" {
+		t.Fatalf("expected opaque explanation failure without data, got %+v", failed)
 	}
 	_, err = pool.Exec(t.Context(), "ALTER VIEW profiles RENAME TO hidden_profile_fixture")
 	if err != nil {

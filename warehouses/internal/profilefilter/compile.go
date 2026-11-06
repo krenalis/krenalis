@@ -22,6 +22,40 @@ type compiler struct {
 	records   []string
 	arguments []Argument
 	counts    int
+	explain   bool
+	profile   string
+	nodes     []explanationTerm
+}
+
+func (c *compiler) condition(node warehouses.FilterCondition) (string, error) {
+	switch n := node.(type) {
+	case *warehouses.RecordFilter:
+		text, err := c.dialect.Record(n.Expr)
+		if err != nil {
+			return "", err
+		}
+		alias := c.dialect.QuoteIdentifier("$record" + strconv.Itoa(len(c.records)))
+		c.records = append(c.records, "("+text+") AS "+alias)
+		return "p." + alias, nil
+	case *warehouses.IndependentOccurrenceCount:
+		return c.count(n)
+	case *warehouses.FilterGroup:
+		parts := make([]string, len(n.Children))
+		for i, child := range n.Children {
+			text, err := c.rule(child)
+			if err != nil {
+				return "", err
+			}
+			parts[i] = "(" + text + ")"
+		}
+		operator := " AND "
+		if n.Operator == warehouses.OpOr {
+			operator = " OR "
+		}
+		return strings.Join(parts, operator), nil
+	default:
+		return "", fmt.Errorf("warehouses/internal/profilefilter: unexpected condition %T", node)
+	}
 }
 
 func (c *compiler) count(node *warehouses.IndependentOccurrenceCount) (string, error) {
@@ -52,7 +86,14 @@ func (c *compiler) count(node *warehouses.IndependentOccurrenceCount) (string, e
 	// Seed identities by period, then inspect all copies, including those outside
 	// it. Grouping by (profile,identity) or filtering the copies first would hide
 	// attribution and period conflicts. Qualification is consumed only inside.
-	c.ctes = append(c.ctes, "ids"+n+" AS (SELECT DISTINCT "+id+" AS occurrence_id FROM "+table+" WHERE "+within+")")
+	profileOnly, identityProfile := "", ""
+	if c.profile != "" {
+		profileOnly = " AND CAST(" + profile + " AS VARCHAR(36))=" + c.profile
+		identityProfile = " AND " + id + " IN (SELECT " + id + " FROM " + table +
+			" WHERE CAST(" + profile + " AS VARCHAR(36))=" + c.profile + ")"
+	}
+	c.ctes = append(c.ctes, "ids"+n+" AS (SELECT DISTINCT "+id+" AS occurrence_id FROM "+table+
+		" WHERE "+within+identityProfile+")")
 	c.ctes = append(c.ctes, "copies"+n+" AS (SELECT "+profile+" AS profile_id,"+id+" AS occurrence_id,"+
 		"CASE WHEN "+within+" THEN 1 ELSE 0 END AS in_period,"+
 		"CASE WHEN "+within+" THEN ("+qual+") ELSE CAST(NULL AS BOOLEAN) END AS qualification FROM "+table+
@@ -78,7 +119,8 @@ func (c *compiler) count(node *warehouses.IndependentOccurrenceCount) (string, e
  (SELECT COALESCE(SUM(CASE WHEN profile_id IS NOT NULL AND
  (profiles>1 OR period_min<>period_max OR state_min<>state_max) THEN 1 ELSE 0 END),0) FROM facts`+n+`)
  +(SELECT COUNT(*) FROM cnt`+n+` WHERE lo>9223372036854775807 OR hi>9223372036854775807)
- +(SELECT COUNT(*) FROM `+table+" WHERE "+within+" AND "+profile+" IS NOT NULL AND "+id+" IS NULL) AS failures)")
+ +(SELECT COUNT(*) FROM `+table+" WHERE "+within+profileOnly+
+		" AND "+profile+" IS NOT NULL AND "+id+" IS NULL) AS failures)")
 	c.faults = append(c.faults, "fault"+n)
 	alias := "v" + n
 	c.joins = append(c.joins, "LEFT JOIN cnt"+n+" "+alias+" ON "+alias+".profile_id=p."+q("$profile_id"))
@@ -130,34 +172,22 @@ func (c *compiler) qualification(node warehouses.RowQualification) (string, erro
 }
 
 func (c *compiler) rule(node warehouses.FilterCondition) (string, error) {
-	switch n := node.(type) {
-	case *warehouses.RecordFilter:
-		text, err := c.dialect.Record(n.Expr)
-		if err != nil {
-			return "", err
-		}
-		alias := c.dialect.QuoteIdentifier("$record" + strconv.Itoa(len(c.records)))
-		c.records = append(c.records, "("+text+") AS "+alias)
-		return "p." + alias, nil
-	case *warehouses.IndependentOccurrenceCount:
-		return c.count(n)
-	case *warehouses.FilterGroup:
-		parts := make([]string, len(n.Children))
-		for i, child := range n.Children {
-			text, err := c.rule(child)
-			if err != nil {
-				return "", err
-			}
-			parts[i] = "(" + text + ")"
-		}
-		operator := " AND "
-		if n.Operator == warehouses.OpOr {
-			operator = " OR "
-		}
-		return strings.Join(parts, operator), nil
-	default:
-		return "", fmt.Errorf("warehouses/internal/profilefilter: unexpected condition %T", node)
+	if !c.explain {
+		return c.condition(node)
 	}
+	index, count := len(c.nodes), c.counts
+	c.nodes = append(c.nodes, explanationTerm{})
+	text, err := c.condition(node)
+	if err != nil {
+		return "", err
+	}
+	term := explanationTerm{truth: text}
+	if _, ok := node.(*warehouses.IndependentOccurrenceCount); ok {
+		alias := "v" + strconv.Itoa(count)
+		term.lower, term.upper = "COALESCE("+alias+".lo,0)", "COALESCE("+alias+".hi,0)"
+	}
+	c.nodes[index] = term
+	return text, nil
 }
 
 // Build renders the prepared subset into one statement for the page and totals.

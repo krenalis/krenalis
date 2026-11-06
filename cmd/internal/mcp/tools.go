@@ -110,6 +110,7 @@ var tools = []server.ServerTool{
 	},
 
 	queryProfilesTool,
+	explainProfileFilterTool,
 	profileFilterDocumentationTool,
 	listEventDefinitionsTool,
 	getEventDefinitionTool,

@@ -92,6 +92,17 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,event text,timestamp tim
 				execUnifiedFixture(t, dw, fmt.Sprintf("INSERT INTO krenalis_events VALUES (%s,%s,'Purchase','%s','%s')",
 					profile, id, r.date, strings.ReplaceAll(r.properties, "'", "''")))
 			}
+			explained, err := store.ExplainUnifiedProfile(t.Context(), &rule, bindings, at, unifiedTestID(1))
+			if err != nil {
+				if !test.conflict || explained != nil {
+					t.Fatalf("expected explanation conflict=%v without partial data, got %+v, %v",
+						test.conflict, explained, err)
+				}
+			}
+			if err == nil && (test.conflict || explained == nil || len(explained.Nodes) != 1 ||
+				explained.Nodes[0].Truth != test.want) {
+				t.Fatalf("expected explanation conflict=%v and truth %v, got %+v", test.conflict, test.want, explained)
+			}
 			result, err := store.UnifiedProfiles(t.Context(), &rule, bindings, at, unified.Page{Limit: 10})
 			if err != nil {
 				if !test.conflict {

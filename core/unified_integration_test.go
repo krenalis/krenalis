@@ -225,6 +225,108 @@ INSERT INTO unified_v.krenalis_events VALUES
 	at := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
 	count := document.Rules[0].(*FilterCountCondition)
 	countRoot := &document
+
+	t.Run("filter explanations", func(t *testing.T) {
+
+		record := &Filter{Operator: OpAnd, Rules: []FilterRule{
+			&FilterCondition{Property: "country", Operator: OpIs, Values: filterValues("IT")}},
+			DefaultCalendar: &FilterCalendar{Definition: "gregorian-monday/Europe/Rome", MeaningRevision: "1"}}
+		for i, expected := range []string{"MATCH", "NO_MATCH", "UNKNOWN", "MATCH"} {
+			result, err := workspace.ExplainProfileFilter(t.Context(),
+				fmt.Sprintf("00000000-0000-0000-0000-%012d", i+1), record, at.Format(time.RFC3339))
+			if err != nil {
+				t.Fatalf("expected explained Record result, got %v", err)
+			}
+			if result.Rule.Result != expected || len(result.Rule.Rules) != 1 ||
+				result.Rule.Rules[0].Kind != "record" || result.Rule.Rules[0].Count != nil {
+				t.Fatalf("expected Record %s without count details, got %+v", expected, result)
+			}
+		}
+
+		for i, expected := range []struct {
+			truth              string
+			certain, uncertain int64
+		}{{"MATCH", 0, 0}, {"NO_MATCH", 1, 0}, {"MATCH", 0, 0}, {"UNKNOWN", 0, 1}} {
+			profile := fmt.Sprintf("00000000-0000-0000-0000-%012d", i+1)
+			result, err := workspace.ExplainProfileFilter(t.Context(), profile, countRoot, at.Format(time.RFC3339))
+			if err != nil {
+				t.Fatalf("expected complete explanation for profile %d, got %v", i+1, err)
+			}
+			if result.KPID != profile || !result.At.Equal(at) || result.Rule.Result != expected.truth ||
+				result.Rule.Kind != "and" || len(result.Rule.Rules) != 1 {
+				t.Fatalf("expected %s at %s for profile %s, got %+v", expected.truth, at, profile, result)
+			}
+			leaf := result.Rule.Rules[0]
+			if leaf.Kind != "count" || leaf.Result != expected.truth || leaf.Count == nil ||
+				leaf.Count.Certain != expected.certain || leaf.Count.Uncertain != expected.uncertain ||
+				!leaf.Count.Start.Equal(at.AddDate(0, 0, -31)) || !leaf.Count.End.Equal(at) {
+				t.Fatalf("expected Count %d certain and %d uncertain with exact period, got %+v",
+					expected.certain, expected.uncertain, leaf)
+			}
+		}
+
+		_, err := database.Exec(t.Context(), `INSERT INTO unified_v.krenalis_events VALUES
+('00000000-0000-0000-0000-000000000004','explain-certain','Explain','2026-01-15','{"currency":"EUR"}'),
+('00000000-0000-0000-0000-000000000004','explain-uncertain','Explain','2026-01-15','{}'),
+('00000000-0000-0000-0000-000000000004','explain-outside','Explain','2026-02-02','{"currency":"EUR"}'),
+('00000000-0000-0000-0000-000000000002','explain-other','Explain','2026-01-15','{"currency":"EUR"}')`)
+		if err != nil {
+			t.Fatalf("expected mixed evidence fixtures, got %v", err)
+		}
+		mixed := *count
+		mixed.Count.Source.Name = "Explain"
+		mixed.Operator, mixed.Values = OpIsGreaterThanOrEqualTo, filterValues(2)
+		result, err := workspace.ExplainProfileFilter(t.Context(), "00000000-0000-0000-0000-000000000004",
+			&Filter{Operator: OpOr, Rules: []FilterRule{
+				&Filter{Operator: OpAnd, Rules: []FilterRule{&mixed}},
+				&FilterCondition{Property: "country", Operator: OpIs, Values: filterValues("IT")}}}, at.Format(time.RFC3339))
+		if err != nil {
+			t.Fatalf("expected explained mixed evidence and nested composition, got %v", err)
+		}
+		child := result.Rule.Rules[0]
+		if result.Rule.Kind != "or" || result.Rule.Result != "MATCH" || child.Kind != "and" ||
+			child.Result != "UNKNOWN" || child.Rules[0].Count.Certain != 1 || child.Rules[0].Count.Uncertain != 1 ||
+			result.Rule.Rules[1].Kind != "record" || result.Rule.Rules[1].Result != "MATCH" {
+			t.Fatalf("expected MATCH OR with UNKNOWN [1,2] Count, got %+v", result)
+		}
+
+		root := &Filter{Operator: OpAnd, Rules: []FilterRule{count}}
+		for range 99 {
+			root.Rules = append(root.Rules, &FilterCondition{Property: "country", Operator: OpExists})
+		}
+		result, err = workspace.ExplainProfileFilter(t.Context(), "00000000-0000-0000-0000-000000000004",
+			root, at.Format(time.RFC3339))
+		if err != nil {
+			t.Fatalf("expected explanation of all 101 nodes, got %v", err)
+		}
+		if len(result.Rule.Rules) != 100 || result.Rule.Result != "UNKNOWN" {
+			t.Fatalf("expected 100 children and UNKNOWN, got %+v", result)
+		}
+		ctx, cancel := context.WithCancel(t.Context())
+		cancel()
+		result, err = workspace.ExplainProfileFilter(ctx, "00000000-0000-0000-0000-000000000004",
+			countRoot, at.Format(time.RFC3339))
+		if err != nil {
+			if result != nil {
+				t.Fatalf("expected cancellation without explanation, got %+v", result)
+			}
+		}
+		if err == nil {
+			t.Fatal("expected cancellation error, got success")
+		}
+
+		result, err = workspace.ExplainProfileFilter(t.Context(), "00000000-0000-0000-0000-000000000099",
+			countRoot, at.Format(time.RFC3339))
+		if err != nil {
+			if _, ok := errors.AsType[*errors.NotFoundError](err); !ok || result != nil {
+				t.Fatalf("expected missing profile without explanation, got %+v, %v", result, err)
+			}
+			return
+		}
+		t.Fatal("expected profile not found, got success")
+
+	})
+
 	t.Run("unverified backend API error", func(t *testing.T) {
 		store, ok := ds.Store("222222222222")
 		if !ok {
@@ -246,6 +348,16 @@ INSERT INTO unified_v.krenalis_events VALUES
 		if err == nil || result != nil {
 			t.Fatalf("expected unavailable backend without semantic result, got %+v, %v", result, err)
 		}
+		explained, err := unverified.ExplainProfileFilter(t.Context(), "00000000-0000-0000-0000-000000000001",
+			countRoot, at.Format(time.RFC3339))
+		if err != nil {
+			failure, ok := errors.AsType[*errors.UnprocessableError](err)
+			if !ok || failure.Code != UnifiedFilteringUnavailable || explained != nil {
+				t.Fatalf("expected unavailable explanation backend, got %+v, %v", explained, err)
+			}
+			return
+		}
+		t.Fatal("expected unavailable explanation backend, got success")
 	})
 	result, err := workspace.unifiedProfiles(t.Context(), unifiedQuery{
 		Root: countRoot, At: at, Page: unified.Page{Limit: 10},
@@ -341,6 +453,18 @@ INSERT INTO unified_v.krenalis_events VALUES
 				for i, id := range test.ids {
 					if result.Profiles[i].Attributes["profile_id"] != "customer-"+id {
 						t.Fatalf("expected calendar member customer-%s, got %+v", id, result.Profiles[i])
+					}
+				}
+				if test.zone == "Europe/Rome" && test.unit == "month" && string(test.count) == "1" {
+					explained, err := workspace.ExplainProfileFilter(t.Context(), result.Profiles[0].KPID, &filter, query.At)
+					if err != nil {
+						t.Fatalf("expected calendar explanation, got %v", err)
+					}
+					period := explained.Rule.Rules[0].Count
+					if period == nil || period.Start.Format(time.RFC3339) != "2026-09-30T22:00:00Z" ||
+						period.End.Format(time.RFC3339) != "2026-10-31T23:00:00Z" || period.Certain != 1 ||
+						period.Uncertain != 0 || explained.Rule.Result != "MATCH" {
+						t.Fatalf("expected resolved Rome October period and one certain occurrence, got %+v", period)
 					}
 				}
 

@@ -42,6 +42,16 @@ func TestProfileFilterDialect(t *testing.T) {
 		if original.String() != actual {
 			t.Fatalf("expected original Record expression %s, got %s", original.String(), actual)
 		}
+		population := warehouses.ProfileSource{Table: "profiles",
+			Key: warehouses.Column{Name: "_kpid", Type: types.UUID()}}
+		statement, err := profilefilter.BuildExplanation(warehouses.Filter{Root: &warehouses.RecordFilter{Expr: expr}},
+			population, "00000000-0000-0000-0000-000000000001", dialect)
+		if err != nil {
+			t.Fatalf("expected original Record renderer in explanation, got %v", err)
+		}
+		if !strings.Contains(statement.SQL, actual) {
+			t.Fatalf("expected original Record expression %s in explanation, got %s", actual, statement.SQL)
+		}
 	}
 	for _, c := range warehouseexpr.ValueCases() {
 		t.Run(c.Name, func(t *testing.T) {

@@ -176,6 +176,25 @@ or complete a Unified feature that `query-profiles` cannot execute.
 
 ## Examples
 
+To understand a known profile's result, call `explain-profile-filter` with its
+`kpid`, the same JSON-text `filter`, and optionally the listing's `evaluation.at`
+as `at`. It returns `{kpid,at,rule}`. Each rule has `kind` (`and`, `or`, `record`,
+`count`), `result` (`MATCH`, `NO_MATCH`, `UNKNOWN`), and ordered child `rules`
+for groups. Count adds `{start,end,certain,uncertain}`: the reachable count is
+every integer in `[certain,certain+uncertain]` for this supported subset.
+
+For example, 1 certain and 1 uncertain occurrence means Count >= 2 is UNKNOWN,
+but Count >= 1 is MATCH. An OR can MATCH while a child is UNKNOWN; retain that
+distinction. These are recorded occurrences, not deduplicated business orders.
+Do not infer the missing field from these counters: the tool does not explain
+individual qualification operands or return event payloads. It does not make
+unsupported capabilities available and cannot reconstruct an earlier data view.
+
+The tool uses the same MCP enablement and main connection as query-profiles.
+It returns `ProfileNotFound` for a missing KPID; technical errors return no
+partial explanation. Explanations, including Record-only ones, require the
+verified Unified backend and are currently unavailable on Snowflake.
+
 The following are filter documents; pass each as the text of `filter`. Names and
 paths are examples: verify them against the actual workspace.
 

@@ -20,6 +20,7 @@ import (
 
 const serverInstructions = "Krenalis MCP tools must be used only through this MCP server." +
 	" For profiles and segments, use query-profiles." +
+	" Use explain-profile-filter for the measured outcome of a filter on a single known KPID." +
 	" Read profile-filter-doc before constructing a filter." +
 	" Discover business events with list-event-definitions." +
 	" Inspect get-event-definition before choosing a track event." +

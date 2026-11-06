@@ -107,7 +107,9 @@ func TestQueryProfilesToolMetadata(t *testing.T) {
 			}
 		}
 	}
-	for _, name := range []string{"query-profiles", "profile-filter-doc", "query-data-warehouse"} {
+	for _, name := range []string{
+		"query-profiles", "explain-profile-filter", "profile-filter-doc", "query-data-warehouse",
+	} {
 		if !found[name] {
 			t.Fatalf("expected tool %s, got absent", name)
 		}

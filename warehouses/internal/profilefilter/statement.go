@@ -18,6 +18,8 @@ type Statement struct {
 	SQL       string
 	Arguments []Argument
 	Columns   []warehouses.Column
+	// CountNodes identifies the Count rows in an explanation's preorder.
+	CountNodes []bool
 }
 
 // Values validates the transport envelope and returns driver arguments.

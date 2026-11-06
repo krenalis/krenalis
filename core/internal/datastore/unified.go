@@ -49,16 +49,7 @@ func (store *Store) UnifiedProfiles(ctx context.Context, root *unified.Rule, bin
 		return nil, ErrUnifiedUnavailable
 	}
 	columns := store.profileColumnByProperty()
-	source := unified.SourceBinding{
-		Profiles: warehouses.ProfileSource{Table: "profiles", Key: warehouses.Column{Name: "_kpid", Type: types.UUID()}},
-		ProfileRecord: func(where *state.Where) (warehouses.Expr, error) {
-			return convertWhere(where, columns)
-		},
-		Occurrences: warehouses.OccurrenceSource{Table: "krenalis_events", Profile: eventColumnByProperty["kpid"],
-			Identity: eventColumnByProperty["messageId"], Timestamp: eventColumnByProperty["timestamp"]},
-		Properties: eventColumnByProperty["properties"],
-		Record:     func(where *state.Where) (warehouses.Expr, error) { return convertWhere(where, eventColumnByProperty) },
-	}
+	source := unifiedSourceBinding(columns)
 	filter, err := unified.Prepare(root, bindings, at, source)
 	if err != nil {
 		return nil, err
@@ -100,4 +91,18 @@ func (store *Store) UnifiedProfiles(ctx context.Context, root *unified.Rule, bin
 	}
 	return &unified.Result{Profiles: profiles, Match: result.Match, NoMatch: result.NoMatch,
 		Unknown: result.Unknown, At: at.UTC()}, nil
+}
+
+// unifiedSourceBinding binds readers against one profile-column snapshot.
+func unifiedSourceBinding(columns map[string]warehouses.Column) unified.SourceBinding {
+	return unified.SourceBinding{
+		Profiles: warehouses.ProfileSource{Table: "profiles", Key: warehouses.Column{Name: "_kpid", Type: types.UUID()}},
+		ProfileRecord: func(where *state.Where) (warehouses.Expr, error) {
+			return convertWhere(where, columns)
+		},
+		Occurrences: warehouses.OccurrenceSource{Table: "krenalis_events", Profile: eventColumnByProperty["kpid"],
+			Identity: eventColumnByProperty["messageId"], Timestamp: eventColumnByProperty["timestamp"]},
+		Properties: eventColumnByProperty["properties"],
+		Record:     func(where *state.Where) (warehouses.Expr, error) { return convertWhere(where, eventColumnByProperty) },
+	}
 }

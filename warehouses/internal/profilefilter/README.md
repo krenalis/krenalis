@@ -11,6 +11,15 @@ MATCH, NO_MATCH and UNKNOWN totals. Empty pages still carry totals in a marked m
 `Statement` and `Dialect` are internal physical implementation details. Existing
 Record renderers own the 26 operations; this package does not reinterpret them.
 
+`BuildExplanation` uses the same compiler for a single determined profile,
+retaining all main-tree outcomes and Count bounds. A fixed six-column protocol
+returns at most 101 node rows in preorder. `ReadExplanation` validates the node
+sequence, target identity and nonnegative bounds and closes the cursor on every
+path. Source, cancellation, scan, iteration or Close failures return no partial
+explanation. Unlike population listing, identity seeds are restricted to those
+having any copy attributed to the target profile, including outside the period;
+all copies of each seeded identity still participate in conflict checks.
+
 Each profile Record leaf is projected only in the population-table SELECT,
 without joins, a prefilter or NULL coalescing. The resulting nullable columns
 are combined with closed Count outcomes in the shared AND/OR tree. Aliases for

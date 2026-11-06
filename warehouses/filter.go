@@ -198,3 +198,23 @@ type ProfileFilterWarehouse interface {
 	ProfileFilterVerified() bool
 	ProfileOutcomes(context.Context, Filter, ProfileOutcomeRequest) (*ProfileOutcomes, error)
 }
+
+// ProfileFilterExplanationWarehouse evaluates every node for one profile.
+// Outcomes are in preorder, including groups. A missing profile returns nil.
+// The result is complete or the operation returns an error.
+type ProfileFilterExplanationWarehouse interface {
+	ProfileFilterWarehouse
+	ExplainProfileFilter(context.Context, Filter, ProfileSource, string) ([]FilterNodeOutcome, error)
+}
+
+// FilterNodeOutcome contains a closed outcome and, only for Count, its bounds.
+type FilterNodeOutcome struct {
+	Truth FilterTruth
+	Count *OccurrenceCountBounds
+}
+
+// OccurrenceCountBounds bounds the reachable count for independent occurrence
+// qualifications. Certain is the lower bound; Possible includes Certain.
+type OccurrenceCountBounds struct {
+	Certain, Possible int64
+}
