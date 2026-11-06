@@ -166,6 +166,7 @@ INSERT INTO unified_v.krenalis_events VALUES
 		t.Fatal("expected workspace state, got none")
 	}
 	workspace := &Workspace{core: &Core{}, store: store, workspace: ws}
+
 	t.Run("Record-only default calendar", func(t *testing.T) {
 
 		filter := &Filter{Operator: OpAnd, Rules: []FilterRule{
@@ -197,6 +198,7 @@ INSERT INTO unified_v.krenalis_events VALUES
 		}
 
 	})
+
 	var document Filter
 	err = json.Unmarshal([]byte(`{"operator":"and","rules":[{"count":{`+
 		`"source":{"kind":"recordedEvents","name":"Purchase","grain":"registered-message"},`+

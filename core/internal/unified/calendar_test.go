@@ -9,6 +9,8 @@ import (
 	"io"
 	"path/filepath"
 	"runtime"
+	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -36,6 +38,7 @@ func TestCalendarPeriodBounds(t *testing.T) {
 		{"west of UTC", "America/New_York", "month", 1, "2026-11-06T12:00:00Z", "2026-10-01T04:00:00Z", "2026-11-01T04:00:00Z"},
 		{"last supported year", "UTC", "month", 1, "9999-12-31T23:59:59Z", "9999-11-01T00:00:00Z", "9999-12-01T00:00:00Z"},
 		{"local year beyond UTC domain", "Pacific/Kiritimati", "day", 1, "9999-12-31T23:00:00Z", "9999-12-30T10:00:00Z", "9999-12-31T10:00:00Z"},
+		{"ambiguous midnight inside period", "America/Havana", "month", 2, "2026-12-15T12:00:00Z", "2026-10-01T04:00:00Z", "2026-12-01T05:00:00Z"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			calendar, err := ResolveCalendar("gregorian-monday/"+test.zone, "1")
@@ -127,6 +130,9 @@ func TestCalendarPeriodUnavailable(t *testing.T) {
 		count                uint64
 	}{
 		{"ambiguous midnight", "America/Havana", "day", "2026-11-02T12:00:00Z", 1},
+		{"ambiguous month end", "America/Havana", "month", "2026-11-15T12:00:00Z", 1},
+		{"ambiguous month start", "America/Havana", "month", "2026-12-15T12:00:00Z", 1},
+		{"ambiguous two-month start", "America/Havana", "month", "2027-01-15T12:00:00Z", 2},
 		{"nonexistent midnight", "America/Sao_Paulo", "day", "2018-11-05T12:00:00Z", 1},
 		{"skipped date", "Pacific/Apia", "day", "2011-12-31T12:00:00Z", 2},
 		{"before timestamp domain", "UTC", "month", "0001-02-01T00:00:00Z", 2},
@@ -151,6 +157,25 @@ func TestCalendarPeriodUnavailable(t *testing.T) {
 			}
 			t.Fatal("expected unavailable calendar capability, got success")
 		})
+	}
+}
+
+func TestCalendarZones(t *testing.T) {
+	archive, err := zip.OpenReader(filepath.Join(runtime.GOROOT(), "lib", "time", "zoneinfo.zip"))
+	if err != nil {
+		t.Fatalf("expected Go timezone archive, got %v", err)
+	}
+	t.Cleanup(func() { _ = archive.Close() })
+	names := make([]string, 0, len(archive.File))
+	for _, file := range archive.File {
+		if file.Name != "Factory" {
+			names = append(names, file.Name)
+		}
+	}
+	slices.Sort(names)
+	if expected := "\n" + strings.Join(names, "\n") + "\n"; calendarZones != expected {
+		t.Fatalf("expected timezone names matching %s zoneinfo.zip without Factory, got a different embedded list",
+			runtime.Version())
 	}
 }
 

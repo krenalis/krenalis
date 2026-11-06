@@ -73,7 +73,11 @@ func (calendar *Calendar) midnight(civil time.Time) (time.Time, error) {
 			// Go's TZif tail approximates the last zone interval with a
 			// 365-day year. On December 31 of a leap year its end can be in
 			// the past, although the offset lasts until the next UTC year.
-			end = time.Date(cursor.UTC().Year()+1, time.January, 1, 0, 0, 0, 0, time.UTC)
+			nextYear := time.Date(cursor.UTC().Year()+1, time.January, 1, 0, 0, 0, 0, time.UTC)
+			if cursor.UTC().YearDay() != 366 || !end.Equal(nextYear.Add(-24*time.Hour)) {
+				return time.Time{}, fmt.Errorf("core/internal/unified: non-increasing calendar zone boundary")
+			}
+			end = nextYear
 		}
 		if end.IsZero() || end.After(limit) {
 			break

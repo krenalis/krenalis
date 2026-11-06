@@ -279,7 +279,8 @@ format or materialized UTC period added by this increment.
 
 Nonexistent or ambiguous midnight boundaries require an unavailable capability,
 not a hidden DST choice or semantic UNKNOWN. For example, Havana's ambiguous
-midnight on 2026-11-01 also prevents evaluating October as a complete month.
+midnight on 2026-11-01 makes any window starting or ending at that boundary
+unavailable, including October and November 2026 as single complete months.
 Counts whose bounds exceed the timestamp domain also remain unavailable.
 Missing decisive event values retain
 the ordinary ternary rules. These changes add no SQL dialect features; Snowflake

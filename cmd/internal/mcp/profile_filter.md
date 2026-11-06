@@ -154,8 +154,8 @@ profile-timezone overrides are unavailable. Keep the same filter reference and
 reuse `evaluation.at` when paging. This does not freeze data or the tzdb version.
 Ambiguous/nonexistent midnight boundaries and out-of-range calendar windows
 return capability errors, never UNKNOWN or approximate elapsed windows.
-This can affect whole-month queries: Havana's midnight on 2026-11-01 is ambiguous,
-so October 2026 cannot be evaluated as a complete month in that timezone.
+Havana's midnight on 2026-11-01 is ambiguous: any window starting or ending there
+is unavailable, including October and November 2026 as single complete months.
 
 No relevant recorded events means Count zero. The history is the events recorded
 and queryable in Krenalis, not a certification of events in external systems.
