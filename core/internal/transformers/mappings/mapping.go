@@ -55,6 +55,7 @@ type mappingExpr struct {
 	nullable       bool
 	createRequired bool
 	updateRequired bool
+	convert        bool // if true, non-null results must pass through convert
 }
 
 // New returns a new mapping that transforms values according to the provided
@@ -96,6 +97,7 @@ func New(expressions map[string]string, inSchema, outSchema types.Type) (*Mappin
 		me[i].nullable = p.Nullable
 		me[i].createRequired = p.CreateRequired
 		me[i].updateRequired = p.UpdateRequired
+		me[i].convert = needsConversion(me[i].expr.parts, p.Type)
 		i++
 	}
 	err := sortMappingExpressions(me)
@@ -175,7 +177,7 @@ func (mapping *Mapping) Transform(attributes map[string]any, purpose Purpose) (m
 			}
 			return nil, TransformationError{fmt.Sprintf("%s while mapping to «%s»", err, code(e.path))}
 		}
-		if v != nil {
+		if v != nil && e.convert {
 			v, err = convert(v, vt, e.dt, true, purpose)
 			if err != nil {
 				var msg string

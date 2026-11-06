@@ -963,6 +963,36 @@ func isSimpleFloat(s string) bool {
 	return true
 }
 
+// needsConversion reports whether non-null results of expr must pass through
+// convert to apply conversions or validation checks.
+func needsConversion(expr []part, dt types.Type) bool {
+	if len(expr) == 1 && expr[0].value == nil {
+		p := expr[0]
+		if p.path.elements == nil {
+			return false
+		}
+		if p.args != nil {
+			args := p.args
+			switch p.path.elements[0] {
+			case "if":
+				args = args[1:]
+			case "coalesce":
+				// Each argument can supply the result.
+			default:
+				// Constructed values can still need validation.
+				return true
+			}
+			for _, arg := range args {
+				if needsConversion(arg, dt) {
+					return true
+				}
+			}
+			return false
+		}
+	}
+	return typeNeedsConversion(typeOf(expr), dt)
+}
+
 func parseUint(s string) int {
 	var n int
 	for _, c := range []byte(s) {
@@ -975,4 +1005,43 @@ func parseUint(s string) int {
 		}
 	}
 	return n
+}
+
+// typeNeedsConversion reports whether a value of type st needs conversion to dt
+// for any purpose, including conversion-specific checks.
+// st and dt cannot be the invalid type.
+func typeNeedsConversion(st, dt types.Type) bool {
+	if st.Kind() != dt.Kind() {
+		return true
+	}
+	if types.Equal(st, dt) {
+		return false
+	}
+	switch st.Kind() {
+	case types.ObjectKind:
+		sp, dp := st.Properties(), dt.Properties()
+		if sp.Len() != dp.Len() {
+			return true
+		}
+		for _, p := range sp.All() {
+			d, ok := dp.ByName(p.Name)
+			if !ok || p.Nullable && !d.Nullable {
+				return true
+			}
+			if p.ReadOptional && (d.CreateRequired || d.UpdateRequired) {
+				return true
+			}
+			if typeNeedsConversion(p.Type, d.Type) {
+				return true
+			}
+		}
+		return false
+	case types.ArrayKind:
+		return st.MinElements() != dt.MinElements() || st.MaxElements() != dt.MaxElements() ||
+			st.Unique() != dt.Unique() || typeNeedsConversion(st.Elem(), dt.Elem())
+	case types.MapKind:
+		return typeNeedsConversion(st.Elem(), dt.Elem())
+	default:
+		return true
+	}
 }

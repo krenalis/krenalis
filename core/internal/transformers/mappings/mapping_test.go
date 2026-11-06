@@ -6,12 +6,15 @@ package mappings
 
 import (
 	"bytes"
+	"maps"
 	"reflect"
 	"slices"
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
@@ -46,6 +49,228 @@ func TestMappingFailedConversionPreservesInput(t *testing.T) {
 
 	if !reflect.DeepEqual(input, expected) {
 		t.Errorf("expected unchanged input %#v, got %#v", expected, input)
+	}
+
+}
+
+// TestMappingReusePreservesBehavior checks that skipping conversions preserves
+// results and validation errors for each purpose.
+func TestMappingReusePreservesBehavior(t *testing.T) {
+
+	var clone func(any) any
+	clone = func(value any) any {
+		switch value := value.(type) {
+		case map[string]any:
+			copied := maps.Clone(value)
+			for key, item := range copied {
+				copied[key] = clone(item)
+			}
+			return copied
+		case []any:
+			copied := slices.Clone(value)
+			for i, item := range copied {
+				copied[i] = clone(item)
+			}
+			return copied
+		case json.Value:
+			return slices.Clone(value)
+		default:
+			return value
+		}
+	}
+
+	object := types.Object([]types.Property{
+		{Name: "name", Type: types.String(), CreateRequired: true, UpdateRequired: true},
+		{Name: "value", Type: types.Int(32), CreateRequired: true, UpdateRequired: true},
+	})
+	metadata := types.Object([]types.Property{
+		{Name: "value", Type: types.Int(32), CreateRequired: true, UpdateRequired: true},
+		{
+			Name:           "name",
+			Type:           types.String(),
+			CreateRequired: true,
+			UpdateRequired: true,
+			Prefilled:      "preset",
+			DisplayName:    "Name",
+			Description:    "Display name",
+		},
+	})
+	differentName := types.Object([]types.Property{
+		{Name: "name", Type: types.String()},
+		{Name: "other", Type: types.Int(32)},
+	})
+	optional := types.Object([]types.Property{
+		{Name: "name", Type: types.String(), ReadOptional: true, CreateRequired: true, UpdateRequired: true},
+	})
+	createRequired := types.Object([]types.Property{
+		{Name: "name", Type: types.String(), ReadOptional: true, CreateRequired: true},
+	})
+	updateRequired := types.Object([]types.Property{
+		{Name: "name", Type: types.String(), ReadOptional: true, UpdateRequired: true},
+	})
+	payload := types.Object([]types.Property{{Name: "payload", Type: types.JSON(), CreateRequired: true}})
+	nullablePayload := types.Object([]types.Property{
+		{Name: "payload", Type: types.JSON(), Nullable: true, CreateRequired: true},
+	})
+	nullable := types.Object([]types.Property{{Name: "name", Type: types.String(), Nullable: true}})
+	nonNullable := types.Object([]types.Property{{Name: "name", Type: types.String()}})
+	readOptional := types.Object([]types.Property{{Name: "name", Type: types.String(), ReadOptional: true}})
+	// Profile properties are read-optional and not nullable; destination properties are not read-optional.
+	profile := types.Object([]types.Property{
+		{Name: "name", Type: types.String(), ReadOptional: true},
+		{Name: "value", Type: types.Int(32), ReadOptional: true},
+	})
+	destination := types.Object([]types.Property{
+		{Name: "name", Type: types.String(), Nullable: true},
+		{Name: "value", Type: types.Int(32)},
+	})
+	nestedProfile := types.Object([]types.Property{{Name: "child", Type: profile, ReadOptional: true}})
+	nestedDestination := types.Object([]types.Property{{Name: "child", Type: destination}})
+	wide := types.Object([]types.Property{{Name: "number", Type: types.Int(32)}})
+	narrow := types.Object([]types.Property{{Name: "number", Type: types.Int(8)}})
+	array := types.Array(object)
+	alternatives := types.Object([]types.Property{
+		{Name: "text", Type: types.String(), Nullable: true},
+		{Name: "number", Type: types.Int(32)},
+	})
+	value := map[string]any{"name": "value", "value": 1}
+	allPurposes := []Purpose{None, Create, Update}
+	writePurposes := []Purpose{Create, Update}
+	tests := []struct {
+		name          string
+		source        types.Type
+		target        types.Type
+		value         any
+		expression    string
+		wantConvert   bool
+		errorPurposes []Purpose
+	}{
+		{"string", types.String(), types.String(), "", "source", false, nil},
+		{"boolean", types.Boolean(), types.Boolean(), false, "source", false, nil},
+		{"unsigned", types.Int(32).Unsigned(), types.Int(32).Unsigned(), uint(0), "source", false, nil},
+		{"float", types.Float(64), types.Float(64), 1.5, "source", false, nil},
+		{"decimal", types.Decimal(5, 0), types.Decimal(5, 0), decimal.MustInt(123), "source", false, nil},
+		{"datetime", types.DateTime(), types.DateTime(), time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC), "source", false, nil},
+		{"equal optional object", optional, optional, map[string]any{}, "source", false, nil},
+		{"property metadata", types.AsRole(object, types.Source), metadata, value, "source", false, nil},
+		{"added required property", nonNullable, object, map[string]any{"name": "value"}, "source", true, writePurposes},
+		{"different property name", object, differentName, value, "source", true, nil},
+		{"read optional", readOptional, nonNullable, map[string]any{}, "source", false, nil},
+		{"empty profile object", profile, destination, map[string]any{}, "source", false, nil},
+		{"partial profile object", profile, destination, map[string]any{"value": 1}, "source", false, nil},
+		{"complete profile object", profile, destination, value, "source", false, nil},
+		{"nested profile object", nestedProfile, nestedDestination, map[string]any{"child": map[string]any{"value": 1}}, "source", false, nil},
+		{"profile object array", types.Array(profile), types.Array(destination), []any{map[string]any{}, value}, "source", false, nil},
+		{"profile object map", types.Map(profile), types.Map(destination), map[string]any{"key": map[string]any{"name": "value"}}, "source", false, nil},
+		{"required profile property", profile, object, map[string]any{"value": 1}, "source", true, writePurposes},
+		{"empty array", types.Array(types.Int(32)), types.Array(types.Int(32)), []any{}, "source", false, nil},
+		{"nil map", types.Map(types.String()), types.Map(types.String()), map[string]any(nil), "source", false, nil},
+		{"array write metadata", types.Array(types.AsRole(object, types.Source)), array, []any{value}, "source", false, nil},
+		{"map write metadata", types.Map(types.AsRole(object, types.Source)), types.Map(object), map[string]any{"key": value}, "source", false, nil},
+		{"optional create field", types.AsRole(createRequired, types.Source), createRequired, map[string]any{}, "source", true, []Purpose{Create}},
+		{"optional update field", types.AsRole(updateRequired, types.Source), updateRequired, map[string]any{}, "source", true, []Purpose{Update}},
+		{"array element constraints", types.Array(wide), types.Array(narrow), []any{map[string]any{"number": 1000}}, "source", true, allPurposes},
+		{"optional map write field", types.Map(types.AsRole(optional, types.Source)), types.Map(optional), map[string]any{"key": map[string]any{}}, "source", true, writePurposes},
+		{"JSON null write metadata", types.AsRole(payload, types.Source), payload, map[string]any{"payload": json.Value("null")}, "source", false, nil},
+		{"nullable JSON write metadata", types.AsRole(nullablePayload, types.Source), nullablePayload, map[string]any{"payload": nil}, "source", false, nil},
+		{"nullable widening", nonNullable, nullable, map[string]any{"name": "value"}, "source", false, nil},
+		{"nullability", nullable, nonNullable, map[string]any{"name": nil}, "source", true, allPurposes},
+		{"array minimum", types.Array(types.Int(32)), types.Array(types.Int(32)).WithMinElements(2), []any{1}, "source", true, allPurposes},
+		{"array maximum", types.Array(types.Int(32)), types.Array(types.Int(32)).WithMaxElements(1), []any{1, 2}, "source", true, allPurposes},
+		{"array uniqueness", types.Array(types.Int(32)), types.Array(types.Int(32)).WithUnique(), []any{1, 1}, "source", true, allPurposes},
+		{"semantics", types.String(), types.String().AsCountry(types.ISO3166Alpha2), "ZZ", "source", true, allPurposes},
+		{"JSON null", types.JSON(), types.JSON(), json.Value("null"), "source", false, nil},
+		{"nil JSON", types.JSON(), types.JSON(), nil, "source", false, writePurposes},
+		{"JSON array", types.Array(types.JSON()), types.Array(types.JSON()), []any{json.Value("null")}, "source", false, nil},
+		{"nested conditionals", array, array, []any{value}, "coalesce(if(false, null, source), source)", false, nil},
+		{"coalesce conversion", alternatives, types.String(), map[string]any{"text": nil, "number": 1}, "coalesce(source.text, source.number)", true, nil},
+		{"conditional conversion", types.String(), types.Int(32), "10", "if(true, source, null)", true, nil},
+		{"else conversion", types.String(), types.String(), "value", "if(false, source, len(source))", true, nil},
+		{"function", types.String(), types.String(), "VALUE", "lower(source)", true, nil},
+		{"constant", types.String(), types.Int(32), "value", "'10'", false, nil},
+		{"concatenation", types.Int(32), types.String(), 7, "'prefix' source", false, nil},
+		{"multiple parts", types.Int(32), types.String(), 7, "source '-' source", false, nil},
+		{"conditional prefix", types.Int(32), types.Int(32), 7, "'prefix' if(true, source, source)", true, allPurposes},
+		{"conditional suffix", types.Int(32), types.Int(32), 7, "if(true, source, source) 'suffix'", true, allPurposes},
+	}
+	purposes := []struct {
+		name    string
+		purpose Purpose
+	}{
+		{"none", None},
+		{"create", Create},
+		{"update", Update},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+
+			inSchema := types.Object([]types.Property{{Name: "source", Type: test.source, Nullable: true}})
+			outSchema := types.Object([]types.Property{
+				{Name: "target", Type: test.target, CreateRequired: true, UpdateRequired: true},
+			})
+			expressions := map[string]string{"target": test.expression}
+			mapping, err := New(expressions, inSchema, outSchema)
+			if err != nil {
+				t.Fatalf("expected mapping creation to succeed, got %v", err)
+			}
+			gotConvert := mapping.expressions[0].convert
+			if gotConvert != test.wantConvert {
+				t.Fatalf("expected conversion %v, got %v", test.wantConvert, gotConvert)
+			}
+			reference, err := New(expressions, inSchema, outSchema)
+			if err != nil {
+				t.Fatalf("expected reference mapping creation to succeed, got %v", err)
+			}
+			for i := range reference.expressions {
+				reference.expressions[i].convert = true
+			}
+
+			for _, purpose := range purposes {
+				t.Run(purpose.name, func(t *testing.T) {
+
+					wantError := slices.Contains(test.errorPurposes, purpose.purpose)
+					referenceInput := map[string]any{"source": clone(test.value)}
+					input := map[string]any{"source": clone(test.value)}
+					refOut, refErr := reference.Transform(referenceInput, purpose.purpose)
+					got, err := mapping.Transform(input, purpose.purpose)
+
+					expectedInput := map[string]any{"source": test.value}
+					if !reflect.DeepEqual(referenceInput, expectedInput) {
+						t.Fatalf("expected unchanged reference input %#v, got %#v", expectedInput, referenceInput)
+					}
+					if !reflect.DeepEqual(input, expectedInput) {
+						t.Fatalf("expected unchanged input %#v, got %#v", expectedInput, input)
+					}
+					if err != nil {
+						if !wantError {
+							t.Fatalf("expected transformation to succeed, got %v", err)
+						}
+						if _, ok := errors.AsType[ValidationError](err); !ok {
+							t.Fatalf("expected ValidationError, got %T: %v", err, err)
+						}
+						if refErr == nil {
+							t.Fatalf("expected reference validation error, got %#v", refOut)
+						}
+						if reflect.TypeOf(err) != reflect.TypeOf(refErr) || err.Error() != refErr.Error() {
+							t.Fatalf("expected error %T: %v, got %T: %v", refErr, refErr, err, err)
+						}
+						return
+					}
+					if refErr != nil {
+						t.Fatalf("expected error %T: %v, got %#v", refErr, refErr, got)
+					}
+					if wantError {
+						t.Fatalf("expected validation error, got %#v", got)
+					}
+					if !reflect.DeepEqual(got, refOut) {
+						t.Fatalf("expected output %#v, got %#v", refOut, got)
+					}
+
+				})
+			}
+
+		})
 	}
 
 }
