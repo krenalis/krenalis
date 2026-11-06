@@ -7,6 +7,7 @@ const IS_DOCKER_KEY = 'krenalis_admin_is_docker';
 const PROFILES_TAB_KEY = 'krenalis_admin_profiles_tab';
 const PROFILES_EXPANDED_ATTRIBUTES_KEY = 'krenalis_admin_profiles_expanded_attributes';
 const PROFILES_PROPERTIES_KEY = 'krenalis_admin_profiles_properties';
+const JAVASCRIPT_SNIPPET_CMP_KEY = 'krenalis_admin_javascript_snippet_cmp';
 
 // storageKeysToBeRemoved contains the list of keys in browser localStorage that
 // can be cleared when resetting the client state, for example to attempt fixing
@@ -20,6 +21,7 @@ const storageKeysToBeRemoved = [
 	PROFILES_TAB_KEY,
 	PROFILES_EXPANDED_ATTRIBUTES_KEY,
 	PROFILES_PROPERTIES_KEY,
+	JAVASCRIPT_SNIPPET_CMP_KEY,
 ];
 
 export {
@@ -32,5 +34,6 @@ export {
 	PROFILES_TAB_KEY,
 	PROFILES_EXPANDED_ATTRIBUTES_KEY,
 	PROFILES_PROPERTIES_KEY,
+	JAVASCRIPT_SNIPPET_CMP_KEY,
 	storageKeysToBeRemoved,
 };
