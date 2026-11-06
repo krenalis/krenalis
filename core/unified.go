@@ -53,6 +53,18 @@ func prepareUnifiedRecordCount(scope unified.Scope, filter *Filter, test unified
 }
 
 func prepareUnifiedRule(rule FilterRule, schema types.Type, depth int, nodes *int) (unified.Rule, error) {
+	var calendar *unified.Calendar
+	if filter, ok := rule.(*Filter); ok && filter != nil && depth == 0 && filter.DefaultCalendar != nil {
+		var err error
+		calendar, err = unified.ResolveCalendar(filter.DefaultCalendar.Definition, filter.DefaultCalendar.MeaningRevision)
+		if err != nil {
+			return unified.Rule{}, err
+		}
+	}
+	return prepareUnifiedRuleInCalendar(rule, schema, depth, nodes, calendar)
+}
+
+func prepareUnifiedRuleInCalendar(rule FilterRule, schema types.Type, depth int, nodes *int, calendar *unified.Calendar) (unified.Rule, error) {
 	*nodes++
 	if *nodes > 101 {
 		return unified.Rule{}, fmt.Errorf("Unified filter exceeds 100 descendant nodes")
@@ -63,11 +75,14 @@ func prepareUnifiedRule(rule FilterRule, schema types.Type, depth int, nodes *in
 			len(rule.Rules) == 0 || len(rule.Rules) > 100 {
 			return unified.Rule{}, fmt.Errorf("invalid Unified filter group")
 		}
+		if depth > 0 && rule.DefaultCalendar != nil {
+			return unified.Rule{}, fmt.Errorf("defaultCalendar is only allowed on the root group")
+		}
 		result := unified.Rule{Operator: convertLogicalToWhere(rule.Operator),
 			Children: make([]unified.Rule, len(rule.Rules))}
 		var unavailable error
 		for i, child := range rule.Rules {
-			prepared, err := prepareUnifiedRule(child, schema, depth+1, nodes)
+			prepared, err := prepareUnifiedRuleInCalendar(child, schema, depth+1, nodes, calendar)
 			if err != nil {
 				if _, unsupported := errors.AsType[*unified.UnsupportedError](err); !unsupported {
 					return unified.Rule{}, err
@@ -88,7 +103,7 @@ func prepareUnifiedRule(rule FilterRule, schema types.Type, depth int, nodes *in
 		}
 		return unified.Rule{Record: where.Rules[0].(*state.WhereCondition)}, nil
 	case *FilterCountCondition:
-		return prepareFilterCount(rule)
+		return prepareFilterCount(rule, calendar)
 	default:
 		return unified.Rule{}, fmt.Errorf("unsupported Unified filter rule %T", rule)
 	}

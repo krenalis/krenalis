@@ -133,7 +133,7 @@ type Rule struct {
 }
 
 // Scope qualifies recorded track events by their raw name at message_id grain.
-// Start/End define a mature [Start,End) period, alternatively Elapsed resolves
+// Start/End define a mature [Start,End) period; Elapsed and Calendar resolve
 // against the operation's single T. FullHistory is recognized but requires a
 // governed history binding not implemented by this first vertical.
 // All event timestamps are known and every event has a determined message_id
@@ -144,6 +144,7 @@ type Scope struct {
 	Start       time.Time
 	End         time.Time
 	Elapsed     *ElapsedPeriod
+	Calendar    *CalendarPeriod
 	FullHistory bool
 }
 
@@ -152,7 +153,16 @@ func (s Scope) bounds(at time.Time) (time.Time, time.Time, error) {
 
 	start, end := s.Start, s.End
 	var unavailable error
-	if s.Elapsed != nil {
+	if s.Calendar != nil {
+		if s.Elapsed != nil || s.FullHistory || !start.IsZero() || !end.IsZero() {
+			return time.Time{}, time.Time{}, fmt.Errorf("calendar period cannot have other temporal forms")
+		}
+		var err error
+		start, end, err = s.Calendar.bounds(at)
+		if err != nil {
+			return time.Time{}, time.Time{}, err
+		}
+	} else if s.Elapsed != nil {
 		if s.FullHistory || !start.IsZero() || !end.IsZero() {
 			return time.Time{}, time.Time{}, fmt.Errorf("elapsed period cannot have explicit bounds or FullHistory")
 		}
@@ -178,6 +188,10 @@ func (s Scope) bounds(at time.Time) (time.Time, time.Time, error) {
 			if s.Elapsed != nil {
 				return time.Time{}, time.Time{}, &UnsupportedError{
 					Capability: "elapsed period outside supported timestamp range"}
+			}
+			if s.Calendar != nil {
+				return time.Time{}, time.Time{}, &UnsupportedError{
+					Capability: "calendar period outside supported timestamp range"}
 			}
 			if _, unsupported := errors.AsType[*UnsupportedError](err); !unsupported {
 				return time.Time{}, time.Time{}, err

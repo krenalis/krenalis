@@ -31,6 +31,8 @@ const (
 type Filter struct {
 	Operator FilterLogical `json:"operator"`
 	Rules    []FilterRule  `json:"rules"`
+	// DefaultCalendar is admitted only on the Unified root group.
+	DefaultCalendar *FilterCalendar `json:"defaultCalendar,omitzero"`
 }
 
 // FilterRule represents a condition or a nested filter group.
@@ -377,7 +379,15 @@ func marshalFilterJSON(b *json.Buffer, filter *Filter) error {
 			return fmt.Errorf("unsupported filter rule type %T", rule)
 		}
 	}
-	b.WriteString(`]}`)
+	b.WriteByte(']')
+	if filter.DefaultCalendar != nil {
+		b.WriteString(`,"defaultCalendar":`)
+		err = b.Encode(filter.DefaultCalendar)
+		if err != nil {
+			return err
+		}
+	}
+	b.WriteByte('}')
 	return nil
 }
 
@@ -426,6 +436,8 @@ func unmarshalFilterRule(dec *json.Decoder, depth int, expectGroup, occurrence b
 	var values []json.Value
 	var count FilterCount
 	var hasCount bool
+	var calendar *FilterCalendar
+	var hasCalendar bool
 	var descendantRuleCount int
 	var hasOperator, hasProperty, hasRules, hasValues bool
 
@@ -436,6 +448,17 @@ func unmarshalFilterRule(dec *json.Decoder, depth int, expectGroup, occurrence b
 		}
 		name := tok.String()
 		switch name {
+		case "defaultCalendar":
+			if hasCalendar {
+				return nil, 0, errors.New("duplicate filter property defaultCalendar")
+			}
+			if depth != 1 || occurrence || dec.PeekKind() == json.Null {
+				return nil, 0, errors.New("defaultCalendar requires a non-null root calendar")
+			}
+			hasCalendar = true
+			var decoded FilterCalendar
+			err = dec.Decode(&decoded)
+			calendar = &decoded
 		case "operator":
 			if hasOperator {
 				return nil, 0, fmt.Errorf("duplicate filter property %q", name)
@@ -498,6 +521,9 @@ func unmarshalFilterRule(dec *json.Decoder, depth int, expectGroup, occurrence b
 
 	_ = dec.SkipToken() // skip '}'
 
+	if hasCalendar && (!hasRules || hasCount || hasProperty) {
+		return nil, 0, errors.New("defaultCalendar is only allowed on the root group")
+	}
 	if hasCount {
 		if expectGroup {
 			return nil, 0, errors.New("filter must be a group")
@@ -520,7 +546,7 @@ func unmarshalFilterRule(dec *json.Decoder, depth int, expectGroup, occurrence b
 		if !hasOperator {
 			return nil, 0, errors.New("filter group must contain operator and rules")
 		}
-		return &Filter{Operator: FilterLogical(operator), Rules: rules}, descendantRuleCount, nil
+		return &Filter{Operator: FilterLogical(operator), Rules: rules, DefaultCalendar: calendar}, descendantRuleCount, nil
 	}
 	if expectGroup {
 		if hasProperty || hasValues {
@@ -794,6 +820,9 @@ func prepareFilterCondition(cond *FilterCondition, validation *filterValidation)
 // prepareFilterGroup validates and prepares a group and its descendant rules.
 func prepareFilterGroup(filter *Filter, validation *filterValidation, depth int) (*state.Where, error) {
 
+	if filter.DefaultCalendar != nil {
+		return nil, errors.New("defaultCalendar requires Unified profile filtering")
+	}
 	if depth > validation.maxDepth {
 		return nil, fmt.Errorf("filter exceeds maximum depth of %d", validation.maxDepth)
 	}

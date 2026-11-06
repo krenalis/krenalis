@@ -243,6 +243,11 @@ GRANT SELECT (_kpid,country) ON profiles TO mcp_profile_reader;`)
 		`"duration":{"value":31,"unit":"day"}},"where":{"operator":"and","rules":[` +
 		`{"property":"properties.currency","operator":"is","values":["EUR"]}]}},"operator":"is","values":[0]}]}`
 	const at = "2026-02-01T00:00:00Z"
+	calendarCount := strings.Replace(count,
+		`{"kind":"elapsedLookback","duration":{"value":31,"unit":"day"}}`,
+		`{"kind":"lastCompleteCalendarPeriods","unit":"month","count":1}`, 1)
+	calendarCount = strings.TrimSuffix(calendarCount, `}`) +
+		`,"defaultCalendar":{"definition":"gregorian-monday/Europe/Rome","meaningRevision":"1"}}`
 	for _, test := range []struct {
 		name   string
 		filter string
@@ -255,6 +260,8 @@ GRANT SELECT (_kpid,country) ON profiles TO mcp_profile_reader;`)
 		{"Count next page", count, at, 1},
 		{"mixed Record and Count", strings.Replace(count, `"rules":[{"count":`, `"rules":[{"property":"country","operator":"is","values":["FR"]},{"count":`, 1), at, 0},
 		{"Count empty page", count, at, 99},
+		{"Count calendar month", calendarCount, at, 0},
+		{"Count calendar empty page", calendarCount, at, 99},
 		{"exact JSON number", strings.Replace(count, `"property":"properties.currency","operator":"is","values":["EUR"]`, `"property":"properties.amount","operator":"is","values":[9007199254740993]`, 1), at, 0},
 	} {
 		t.Run(test.name, func(t *testing.T) {
@@ -279,7 +286,7 @@ GRANT SELECT (_kpid,country) ON profiles TO mcp_profile_reader;`)
 				!strings.Contains(actual, `"match":2,"noMatch":1,"unknown":1`) {
 				t.Fatalf("expected ternary totals 2/1/1, got %s", actual)
 			}
-			if test.name == "Count empty page" && !strings.HasPrefix(actual, `{"profiles":[]`) {
+			if strings.HasSuffix(test.name, "empty page") && !strings.HasPrefix(actual, `{"profiles":[]`) {
 				t.Fatalf("expected empty array with retained totals, got %s", actual)
 			}
 		})

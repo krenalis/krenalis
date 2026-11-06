@@ -125,7 +125,7 @@ rejected with `*UnsupportedError` before SQL execution. They are not declared
 invalid under 1.2 and do not yield UNKNOWN.
 
 The following also remain outside this vertical: governed FullRelevantHistory
-and AvailableHistory bindings, future/unmatured windows (06 §17.4), calendar
+and AvailableHistory bindings, future/unmatured windows (06 §17.4), other calendar
 constructors, personal anchors, unknown timestamps/attribution/grain,
 business deduplication, source unions, property-reference terminals, other
 governed predicates, owned-member traversal, E/K/P/T, sums and shares. Count
@@ -233,6 +233,50 @@ Italy with no recorded Purchase in the previous 30 elapsed days:
   Values are multiplied with checked integer arithmetic; months/years are not
   elapsed units. Relative periods retain their kind, offsets and units on the
   wire instead of becoming bounds resolved against one T.
+
+For complete calendar periods, the root Count filter declares its calendar:
+
+```json
+{
+  "operator": "and",
+  "rules": [{
+    "count": {
+      "source": {"kind": "recordedEvents", "name": "Order Completed", "grain": "registered-message"},
+      "period": {"kind": "lastCompleteCalendarPeriods", "unit": "month", "count": 1}
+    },
+    "operator": "is greater than or equal to",
+    "values": [2]
+  }],
+  "defaultCalendar": {"definition": "gregorian-monday/Europe/Rome", "meaningRevision": "1"}
+}
+```
+
+`unit` admits `day`, `week` and `month`; `count` is a positive JSON integer.
+They select one contiguous interval of the last N complete periods, excluding
+the current one. Count still counts occurrences, not qualified periods. Core
+resolves both UTC bounds against the operation's T before calling the warehouse;
+days can be 23 or 25 hours. Weeks run Monday through Sunday.
+
+Built-in calendar definitions use `gregorian-monday/TIMEZONE`, at immutable
+meaning revision `1`. TIMEZONE is an explicit IANA name, including `UTC`;
+`Local`, unknown definitions/revisions and implicit workspace calendars are not
+admitted. Timezone offsets follow the runtime IANA database, with Go's embedded
+database available as a fallback; the meaning revision does not pin a tzdb build.
+No configurable registry or workspace setting is introduced.
+
+`defaultCalendar` is optional for existing Count forms and mandatory for this
+calendar form. It is allowed only on the main root and applies to every calendar
+Count, including inside nested groups. Condition overrides and profile timezones
+are not implemented. Record-only paths reject calendar metadata rather than
+dropping it through `state.Where`. Relative periods and the explicit reference
+survive encode/decode and preparation unchanged. There is no Unified persistence
+format or materialized UTC period added by this increment.
+
+Nonexistent or ambiguous midnight boundaries require an unavailable capability,
+not a hidden DST choice or semantic UNKNOWN. Counts whose bounds exceed the
+timestamp domain also remain unavailable. Missing decisive event values retain
+the ordinary ternary rules. These changes add no SQL dialect features; Snowflake
+retains its unverified-backend gate.
 
 Required Count configuration members must be present and non-null. Omitting
 `minimum` means no extra sample guard; `minimum:null` is invalid. Omitting

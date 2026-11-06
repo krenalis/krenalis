@@ -176,7 +176,7 @@ func TestFilterCountInstants(t *testing.T) {
 				}
 				count := countFilterCondition()
 				count.Count.Period = period
-				rule, err := prepareFilterCount(count)
+				rule, err := prepareFilterCount(count, nil)
 				if err != nil {
 					t.Fatalf("expected exact Count preparation, got %v", err)
 				}
@@ -357,7 +357,7 @@ func TestFilterCountIntegerArithmetic(t *testing.T) {
 		if invalid {
 			c.Values[1] = json.Value("1")
 		}
-		_, err := prepareFilterCount(c)
+		_, err := prepareFilterCount(c, nil)
 		if err != nil {
 			_, unsupported := errors.AsType[*unified.UnsupportedError](err)
 			if unsupported == invalid {
@@ -514,7 +514,7 @@ func TestFilterCountPeriodRanges(t *testing.T) {
 		t.Run(test.unit+"/"+test.value, func(t *testing.T) {
 			count := countFilterCondition()
 			count.Count.Period.Duration = &FilterDuration{Value: json.Value(test.value), Unit: test.unit}
-			rule, err := prepareFilterCount(count)
+			rule, err := prepareFilterCount(count, nil)
 			if err == nil {
 				err = unified.Validate(&rule, time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC), unified.Page{Limit: 1})
 			}
@@ -543,7 +543,7 @@ func TestFilterCountPeriods(t *testing.T) {
 	} {
 		condition := countFilterCondition()
 		condition.Count.Period.Duration = &FilterDuration{Value: json.Value(`1`), Unit: test.unit}
-		rule, err := prepareFilterCount(condition)
+		rule, err := prepareFilterCount(condition, nil)
 		if err != nil {
 			t.Fatalf("expected fixed unit %s, got %v", test.unit, err)
 		}
@@ -575,7 +575,7 @@ func TestFilterCountPeriods(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			condition := countFilterCondition()
 			test.change(condition)
-			rule, err := prepareFilterCount(condition)
+			rule, err := prepareFilterCount(condition, nil)
 			if err == nil {
 				err = unified.Validate(&rule, time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC), unified.Page{Limit: 1})
 			}
@@ -653,7 +653,7 @@ func TestPrepareFilterCount(t *testing.T) {
 		if op == OpIsBetween {
 			condition.Values = filterValues(0, 2)
 		}
-		_, err := prepareFilterCount(condition)
+		_, err := prepareFilterCount(condition, nil)
 		allowed := op == OpIs || op == OpIsNot || op == OpIsLessThan || op == OpIsLessThanOrEqualTo ||
 			op == OpIsGreaterThan || op == OpIsGreaterThanOrEqualTo || op == OpIsBetween
 		if err != nil {
@@ -677,7 +677,7 @@ func TestPrepareFilterCount(t *testing.T) {
 		t.Run(test.value, func(t *testing.T) {
 			condition := countFilterCondition()
 			condition.Values = []json.Value{json.Value(test.value)}
-			rule, err := prepareFilterCount(condition)
+			rule, err := prepareFilterCount(condition, nil)
 			if err == nil {
 				err = unified.Validate(&rule, time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC), unified.Page{Limit: 1})
 			}
@@ -695,7 +695,7 @@ func TestPrepareFilterCount(t *testing.T) {
 	for _, literal := range []string{`-0`, `9007199254740993`, `9223372036854775807`} {
 		condition := countFilterCondition()
 		condition.Values = []json.Value{json.Value(literal)}
-		rule, err := prepareFilterCount(condition)
+		rule, err := prepareFilterCount(condition, nil)
 		if err != nil {
 			t.Fatalf("expected exact Count literal %s, got %v", literal, err)
 		}
@@ -715,7 +715,7 @@ func TestPrepareFilterCount(t *testing.T) {
 	} {
 		condition := countFilterCondition()
 		change(condition)
-		_, err := prepareFilterCount(condition)
+		_, err := prepareFilterCount(condition, nil)
 		if err == nil {
 			t.Fatal("expected invalid Count rejection, got success")
 		}

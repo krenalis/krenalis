@@ -228,8 +228,8 @@ func (duration FilterDuration) elapsed() (filterCountInteger, error) {
 	return value.scaled(uint64(unit)), nil
 }
 
-// FilterPeriod describes an absoluteHalfOpen, elapsedLookback or elapsedAgoBand
-// period. Exactly the fields belonging to Kind must be supplied. Absolute
+// FilterPeriod describes an absolute, elapsed or complete calendar period.
+// Exactly the fields belonging to Kind must be supplied. Absolute
 // instants use RFC 3339 with an explicit offset. Relative periods remain
 // relative when serialized; their UTC bounds are resolved only for execution.
 type FilterPeriod struct {
@@ -239,6 +239,8 @@ type FilterPeriod struct {
 	Duration *FilterDuration `json:"duration,omitzero"`
 	Older    *FilterDuration `json:"older,omitzero"`
 	Newer    *FilterDuration `json:"newer,omitzero"`
+	Unit     string          `json:"unit,omitzero"`
+	Count    json.Value      `json:"count,omitzero"`
 }
 
 // UnmarshalJSON decodes a period and rejects unknown or null fields.
@@ -249,6 +251,7 @@ func (period *FilterPeriod) UnmarshalJSON(data []byte) error {
 	if !json.Valid(data) || !json.Value(data).IsObject() {
 		return errors.New("filter period must be an object")
 	}
+	var calendarFields bool
 	for name, value := range json.Value(data).Properties() {
 		switch name {
 		case "start", "end":
@@ -258,6 +261,11 @@ func (period *FilterPeriod) UnmarshalJSON(data []byte) error {
 			_, err := parseFilterInstant(value.String())
 			if err != nil {
 				return err
+			}
+		case "unit", "count":
+			calendarFields = true
+			if value.IsNull() {
+				return errors.New("filter period fields cannot be null")
 			}
 		case "kind", "duration", "older", "newer":
 			if value.IsNull() {
@@ -273,11 +281,14 @@ func (period *FilterPeriod) UnmarshalJSON(data []byte) error {
 	if err != nil {
 		return errors.New("invalid filter period fields")
 	}
+	if calendarFields && decoded.Kind != "lastCompleteCalendarPeriods" {
+		return errors.New("calendar period fields require lastCompleteCalendarPeriods")
+	}
 	*period = FilterPeriod(decoded)
 	return nil
 }
 
-func (period FilterPeriod) scope(source FilterCountSource) (unified.Scope, error) {
+func (period FilterPeriod) scope(source FilterCountSource, calendar *unified.Calendar) (unified.Scope, error) {
 	if source.Kind != "recordedEvents" {
 		return unified.Scope{}, errors.New("invalid Count source kind")
 	}
@@ -290,7 +301,32 @@ func (period FilterPeriod) scope(source FilterCountSource) (unified.Scope, error
 	}
 	scope := unified.Scope{Event: source.Name, Grain: source.Grain}
 	var older, newer filterCountInteger
+	if period.Kind != "lastCompleteCalendarPeriods" && (period.Unit != "" || period.Count != nil) {
+		return unified.Scope{}, errors.New("calendar period fields require lastCompleteCalendarPeriods")
+	}
 	switch period.Kind {
+	case "lastCompleteCalendarPeriods":
+		if period.Start != nil || period.End != nil || period.Duration != nil ||
+			period.Older != nil || period.Newer != nil || calendar == nil {
+			return unified.Scope{}, errors.New("complete calendar periods require defaultCalendar, unit and count only")
+		}
+		switch period.Unit {
+		case "day", "week", "month":
+		default:
+			return unified.Scope{}, errors.New("invalid calendar period unit")
+		}
+		count, err := parseFilterCountInteger(period.Count)
+		if err != nil {
+			return unified.Scope{}, err
+		}
+		if count == "0" {
+			return unified.Scope{}, errors.New("calendar period count must be positive")
+		}
+		n, ok := count.uint64()
+		if !ok {
+			return unified.Scope{}, &unified.UnsupportedError{Capability: "calendar count beyond 64-bit representation"}
+		}
+		scope.Calendar = &unified.CalendarPeriod{Calendar: calendar, Unit: period.Unit, Count: n}
 	case "absoluteHalfOpen":
 		if period.Start == nil || period.End == nil || period.Duration != nil ||
 			period.Older != nil || period.Newer != nil {
@@ -429,7 +465,7 @@ func parseFilterInstant(text string) (time.Time, error) {
 	return instant, nil
 }
 
-func prepareFilterCount(condition *FilterCountCondition) (unified.Rule, error) {
+func prepareFilterCount(condition *FilterCountCondition, calendar *unified.Calendar) (unified.Rule, error) {
 
 	if condition == nil {
 		return unified.Rule{}, errors.New("filter count condition cannot be nil")
@@ -498,7 +534,7 @@ func prepareFilterCount(condition *FilterCountCondition) (unified.Rule, error) {
 	}
 
 	// Validate the period, source and Record qualification before availability.
-	scope, periodErr := condition.Count.Period.scope(condition.Count.Source)
+	scope, periodErr := condition.Count.Period.scope(condition.Count.Source, calendar)
 	if periodErr != nil {
 		if _, unsupported := errors.AsType[*unified.UnsupportedError](periodErr); !unsupported {
 			return unified.Rule{}, periodErr

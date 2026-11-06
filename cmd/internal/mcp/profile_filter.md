@@ -88,7 +88,8 @@ are MCP diagnostic prefixes, not additional core error codes.
 
 ## Filter syntax and supported subset
 
-The root is `{"operator":"and"|"or","rules":[...]}`. Rules are Record
+The root is `{"operator":"and"|"or","rules":[...]}`, with optional
+`defaultCalendar` for Count as described below. Rules are Record
 conditions, Count conditions or nested AND/OR groups. At most four main group
 levels including the root, and 100 descendants excluding the root, are allowed.
 
@@ -131,11 +132,31 @@ Count is `{"count":{"source":...,"period":...,"where":...,"minimum":...},
   Periods are [start,end); events exactly at end/T are excluded. Elapsed units
   do not mean calendar days, weeks or months.
 
+For the last complete calendar days, weeks or months, use
+`{"kind":"lastCompleteCalendarPeriods","unit":"month","count":1}` as
+`period`. Units are `day`, `week`, `month`; count is a positive JSON integer.
+The current period is excluded. This counts occurrences across the complete
+interval, not the number of active periods. Weeks are Monday through Sunday.
+
+The main root must also contain, for example,
+`"defaultCalendar":{"definition":"gregorian-monday/Europe/Rome","meaningRevision":"1"}`.
+Use an explicit IANA timezone (or UTC) after `gregorian-monday/`; only revision 1
+is resolved. There is no implicit workspace or server-local calendar. Do not add
+this metadata to Record-only filters, nested groups or occurrence `where`.
+Use the timezone agreed with the user; ask if none has been established. Do not
+infer it from the user's language, locale, server or event context. The calendar
+does not reinterpret absolute instants, elapsed durations or raw JSON values.
+It is optional for existing absolute/elapsed Count filters. Per-condition and
+profile-timezone overrides are unavailable. Keep the same filter reference and
+reuse `evaluation.at` when paging. This does not freeze data or the tzdb version.
+Ambiguous/nonexistent midnight boundaries and out-of-range calendar windows
+return capability errors, never UNKNOWN or approximate elapsed windows.
+
 No relevant recorded events means Count zero. The history is the events recorded
 and queryable in Krenalis, not a certification of events in external systems.
 Unknown decisive local values can yield UNKNOWN; independent qualification
 uncertainty is supported. Shared governed facts, ambiguous identity/timestamps,
-business deduplication, calendar/history/personal-anchor constructors, sums,
+business deduplication, other calendar/history/personal-anchor constructors, sums,
 shares and E/K/P/T are not available through this tool.
 
 Raw JSON and governed business properties differ. With `properties.currency is

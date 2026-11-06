@@ -94,7 +94,7 @@ with their classification/code. Technical execution errors are opaque operation
 failures without profile data. The profile path does not reuse the old SQL tool's
 partial-result handling.
 
-No Admin filter editor, calendar constructor, governed public
+No Admin filter editor, governed public
 binding, E/K/P/T, persistence or destination execution is introduced. Coherent
 source views remain an infrastructure prerequisite, not a guarantee established
 by this MCP adapter.
