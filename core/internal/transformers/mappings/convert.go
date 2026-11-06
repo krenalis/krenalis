@@ -395,7 +395,7 @@ func convert(v any, st, dt types.Type, nullable bool, purpose Purpose) (any, err
 		if n > max {
 			return v, errMaxConversion
 		}
-		// Bounds may overflow when converted to float(32).
+		// Check bounds first to report more specific errors for infinities.
 		if dt.IsReal() && (math.IsNaN(n) || math.IsInf(n, 0)) {
 			return v, errRangeConversion
 		}
