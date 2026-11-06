@@ -5,11 +5,54 @@
 package transformers
 
 import (
+	"reflect"
 	"slices"
 	"testing"
 
+	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/tools/types"
 )
+
+// TestMappingMatching checks that the transformer passes the separately
+// supplied matching property to the mapping, as in a Mailchimp export.
+func TestMappingMatching(t *testing.T) {
+
+	pipeline := &state.Pipeline{
+		InSchema: types.Object([]types.Property{
+			{Name: "email", Type: types.String()},
+			{Name: "status", Type: types.String()},
+		}),
+		OutSchema: types.Object([]types.Property{
+			{Name: "email_address", Type: types.String(), CreateRequired: true, UpdateRequired: true},
+			{Name: "status", Type: types.String(), CreateRequired: true},
+		}),
+		Matching:       state.Matching{In: "email", Out: "email_address"},
+		Transformation: state.Transformation{Mapping: map[string]string{"status": "status"}},
+	}
+	transformer, err := New("organization", pipeline, nil)
+	if err != nil {
+		t.Fatalf("expected transformer construction to succeed, got %v", err)
+	}
+
+	records := []Record{
+		{Purpose: Create, Attributes: map[string]any{"email": "user@example.com", "status": "subscribed"}},
+		{Purpose: Update, Attributes: map[string]any{"email": "user@example.com", "status": "subscribed"}},
+	}
+	err = transformer.Transform(t.Context(), records)
+	if err != nil {
+		t.Fatalf("expected transformation to succeed, got %v", err)
+	}
+	for _, record := range records {
+		if record.Err != nil {
+			t.Fatalf("expected record transformation to succeed, got %v", record.Err)
+		}
+		expected := map[string]any{"status": "subscribed"}
+		if !reflect.DeepEqual(record.Attributes, expected) {
+			t.Fatalf("expected output %#v, got %#v", expected, record.Attributes)
+		}
+	}
+
+}
 
 func TestSchemaSubset(t *testing.T) {
 	base := types.Object([]types.Property{

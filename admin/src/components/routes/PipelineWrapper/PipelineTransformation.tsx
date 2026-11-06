@@ -1892,7 +1892,14 @@ const FullscreenTransformation = ({
 					: 'Create';
 		let res: TransformDataResponse;
 		try {
-			res = await api.transformData(s, inSchema, pipelineToSet.outSchema, pipelineToSet.transformation, purpose);
+			res = await api.transformData(
+				s,
+				inSchema,
+				pipelineToSet.outSchema,
+				pipelineToSet.transformation,
+				purpose,
+				pipelineToSet.matching?.out,
+			);
 		} catch (err) {
 			setOutput('');
 			if (err instanceof UnprocessableError && err.code === 'TransformationFailed') {
@@ -1992,6 +1999,7 @@ const FullscreenTransformation = ({
 				pipelineToSet.outSchema,
 				pipelineToSet.transformation,
 				purpose,
+				pipelineToSet.matching?.out,
 			);
 		} catch (err) {
 			setOutput('');

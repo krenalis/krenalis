@@ -484,12 +484,16 @@ func (api api) TransformData(_ http.ResponseWriter, r *http.Request) (any, error
 		OutSchema      types.Type              `json:"outSchema"`
 		Transformation core.DataTransformation `json:"transformation"`
 		Purpose        core.Purpose            `json:"purpose"`
+		MatchingOut    string                  `json:"matchingOut"`
 	}
 	err = json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	data, err := api.core.TransformData(r.Context(), org.ID, body.Data, body.InSchema, body.OutSchema, body.Transformation, body.Purpose)
+	data, err := api.core.TransformData(
+		r.Context(), org.ID, body.Data, body.InSchema, body.OutSchema,
+		body.Transformation, body.Purpose, body.MatchingOut,
+	)
 	if err != nil {
 		return nil, err
 	}

@@ -59,15 +59,15 @@ type Transformer struct {
 // transformer provider used for transformation functions and should be nil for
 // mappings.
 //
-// It only accesses the ID, InSchema, OutSchema, and Transformation fields of
-// pipeline.
+// It only accesses the ID, InSchema, OutSchema, Matching, TableName, and
+// Transformation fields of pipeline.
 //
 // It returns a types.PathNotExistError error if a path in the mapping does not
 // exist in the source schema.
 func New(organization string, pipeline *state.Pipeline, provider FunctionProvider) (*Transformer, error) {
 
 	if m := pipeline.Transformation.Mapping; m != nil {
-		mapping, err := mappings.New(m, pipeline.InSchema, pipeline.OutSchema)
+		mapping, err := mappings.New(m, pipeline.InSchema, pipeline.OutSchema, pipeline.Matching.Out)
 		if err != nil {
 			return nil, err
 		}

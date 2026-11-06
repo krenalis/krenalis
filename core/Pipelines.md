@@ -38,6 +38,8 @@ For Destination / Application / Event, the transformation is not supported if th
 | Destination / Database / User     | User                      | Table                                              | Filter properties + transformed properties                                       | Transformed properties + table key                  |
 | Destination / FileStorage / User  | User                      | (none)                                             | Profile schema properties                                                        | (none)                                              |
 
+For Destination / Application / User, the external matching property is added after transformation. Mapping transformations exclude it from required-property checks. Its missing ancestors are checked as empty objects when the matching value will be inserted: always on creation, and on update only if the matching property is `UpdateRequired`. Other required properties remain checked, and the transformation output is not changed by these checks. Function transformations retain their existing validation behavior.
+
 ### Input schema property fields
 
 "Schema of" tells what the input schema describes. When it describes events, the pipeline receives no input schema and uses the event schema, so these rules do not apply.

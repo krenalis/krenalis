@@ -5,8 +5,8 @@
 package mappings
 
 import (
-	"errors"
 	"fmt"
+	"maps"
 	"math"
 	"slices"
 	"strconv"
@@ -16,6 +16,7 @@ import (
 
 	"github.com/krenalis/krenalis/core/internal/util"
 	"github.com/krenalis/krenalis/tools/decimal"
+	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/tools/validation"
@@ -693,18 +694,31 @@ func convert(v any, st, dt types.Type, nullable bool, purpose Purpose) (any, err
 			}
 			it1 := st.Elem()
 			it2 := dt.Elem()
-			sameType := types.Equal(it1, it2)
-			if !sameType {
-				d = make([]any, len(s))
-				var err error
-				for i, item := range s {
-					d[i], err = convert(item, it1, it2, false, purpose)
+			if types.Equal(it1, it2) {
+				converted, _, err := convertEqual(v, dt, nullable, purpose)
+				if err != nil {
+					return nil, err
+				}
+				if dt.Unique() && !st.Unique() {
+					duplicate, err := types.FirstDuplicate(converted.([]any), it2)
 					if err != nil {
-						return nil, err
+						return v, errInvalidConversion
+					}
+					if duplicate != -1 {
+						return v, errInvalidConversion
 					}
 				}
+				return converted, nil
 			}
-			if dt.Unique() && (!sameType || !st.Unique()) {
+			d = make([]any, len(s))
+			var err error
+			for i, item := range s {
+				d[i], err = convert(item, it1, it2, false, purpose)
+				if err != nil {
+					return nil, err
+				}
+			}
+			if dt.Unique() {
 				duplicate, err := types.FirstDuplicate(d, it2)
 				if err != nil {
 					return v, errInvalidConversion
@@ -721,7 +735,8 @@ func convert(v any, st, dt types.Type, nullable bool, purpose Purpose) (any, err
 		switch sk {
 		case types.ObjectKind:
 			if types.Equal(st, dt) {
-				return v, nil
+				converted, _, err := convertEqual(v, dt, nullable, purpose)
+				return converted, err
 			}
 			s := v.(map[string]any)
 			d = map[string]any{}
@@ -730,13 +745,6 @@ func convert(v any, st, dt types.Type, nullable bool, purpose Purpose) (any, err
 			for name, value := range s {
 				dp, ok := dProperties.ByName(name)
 				if !ok {
-					continue
-				}
-				if value == nil {
-					if !dp.Nullable {
-						return v, errInvalidConversion
-					}
-					d[name] = nil
 					continue
 				}
 				sp, ok := sProperties.ByName(name)
@@ -816,7 +824,8 @@ func convert(v any, st, dt types.Type, nullable bool, purpose Purpose) (any, err
 			vt1 := st.Elem()
 			vt2 := dt.Elem()
 			if types.Equal(vt1, vt2) {
-				return v, nil
+				converted, _, err := convertEqual(v, dt, nullable, purpose)
+				return converted, err
 			}
 			s := v.(map[string]any)
 			d := make(map[string]any, len(s))
@@ -835,7 +844,7 @@ func convert(v any, st, dt types.Type, nullable bool, purpose Purpose) (any, err
 			var err error
 			for _, p := range st.Properties().All() {
 				if value, ok := s[p.Name]; ok {
-					d[p.Name], err = convert(value, p.Type, vt, true, purpose)
+					d[p.Name], err = convert(value, p.Type, vt, false, purpose)
 					if err != nil {
 						return nil, err
 					}
@@ -860,6 +869,90 @@ func convert(v any, st, dt types.Type, nullable bool, purpose Purpose) (any, err
 		}
 	}
 	return v, errInvalidConversion
+}
+
+// convertEqual enforces nullability and required properties for equal types
+// without reconverting scalar values. It copies containers only when a nested
+// nil must become JSON null, and reports whether the value changed.
+func convertEqual(v any, t types.Type, nullable bool, purpose Purpose) (any, bool, error) {
+	if v == nil {
+		if nullable {
+			return nil, false, nil
+		}
+		if t.IsJSON() {
+			return json.Value("null"), true, nil
+		}
+		return v, false, errInvalidConversion
+	}
+	switch t.Kind() {
+	case types.ArrayKind:
+		s := v.([]any)
+		if t.Elem().IsJSON() && !slices.Contains(s, nil) {
+			return v, false, nil
+		}
+		var d []any
+		for i, value := range s {
+			value, changed, err := convertEqual(value, t.Elem(), false, purpose)
+			if err != nil {
+				return nil, false, err
+			}
+			if changed {
+				if d == nil {
+					d = slices.Clone(s)
+				}
+				d[i] = value
+			}
+		}
+		if d != nil {
+			return d, true, nil
+		}
+	case types.ObjectKind:
+		s := v.(map[string]any)
+		var d map[string]any
+		for _, p := range t.Properties().All() {
+			value, ok := s[p.Name]
+			if !ok {
+				if purpose == Create && p.CreateRequired || purpose == Update && p.UpdateRequired {
+					return v, false, errInvalidConversion
+				}
+				continue
+			}
+			value, changed, err := convertEqual(value, p.Type, p.Nullable, purpose)
+			if err != nil {
+				return nil, false, err
+			}
+			if changed {
+				if d == nil {
+					d = maps.Clone(s)
+				}
+				d[p.Name] = value
+			}
+		}
+		if d != nil {
+			return d, true, nil
+		}
+	case types.MapKind:
+		s := v.(map[string]any)
+		var d map[string]any
+		for key, value := range s {
+			value, changed, err := convertEqual(value, t.Elem(), false, purpose)
+			if err != nil {
+				return nil, false, err
+			}
+			if changed {
+				if d == nil {
+					d = maps.Clone(s)
+				}
+				d[key] = value
+			}
+		}
+		if d != nil {
+			return d, true, nil
+		}
+	default:
+		// Scalar values already conform to their source type.
+	}
+	return v, false, nil
 }
 
 // convertStringToDate parses dates in YYYY-MM-DD format and Excel serial dates.
@@ -963,8 +1056,8 @@ func isSimpleFloat(s string) bool {
 	return true
 }
 
-// needsConversion reports whether non-null results of expr must pass through
-// convert to apply conversions or validation checks.
+// needsConversion reports whether non-null results of expr need conversion
+// beyond JSON null normalization. Evaluation assumes valid input values.
 func needsConversion(expr []part, dt types.Type) bool {
 	if len(expr) == 1 && expr[0].value == nil {
 		p := expr[0]
@@ -993,6 +1086,26 @@ func needsConversion(expr []part, dt types.Type) bool {
 	return typeNeedsConversion(typeOf(expr), dt)
 }
 
+// needsJSONNormalization reports whether nil can occur in a non-nullable JSON
+// destination, including within containers.
+func needsJSONNormalization(t types.Type, nullable bool) bool {
+	switch t.Kind() {
+	case types.JSONKind:
+		return !nullable
+	case types.ArrayKind, types.MapKind:
+		return needsJSONNormalization(t.Elem(), false)
+	case types.ObjectKind:
+		for _, p := range t.Properties().All() {
+			if needsJSONNormalization(p.Type, p.Nullable) {
+				return true
+			}
+		}
+	default:
+		// Other scalar types require no JSON null normalization.
+	}
+	return false
+}
+
 func parseUint(s string) int {
 	var n int
 	for _, c := range []byte(s) {
@@ -1007,15 +1120,12 @@ func parseUint(s string) int {
 	return n
 }
 
-// typeNeedsConversion reports whether a value of type st needs conversion to dt
-// for any purpose, including conversion-specific checks.
+// typeNeedsConversion reports whether values need conversion beyond JSON null
+// normalization. Write requirements and property labels need no conversion.
 // st and dt cannot be the invalid type.
 func typeNeedsConversion(st, dt types.Type) bool {
 	if st.Kind() != dt.Kind() {
 		return true
-	}
-	if types.Equal(st, dt) {
-		return false
 	}
 	switch st.Kind() {
 	case types.ObjectKind:
@@ -1026,9 +1136,6 @@ func typeNeedsConversion(st, dt types.Type) bool {
 		for _, p := range sp.All() {
 			d, ok := dp.ByName(p.Name)
 			if !ok || p.Nullable && !d.Nullable {
-				return true
-			}
-			if p.ReadOptional && (d.CreateRequired || d.UpdateRequired) {
 				return true
 			}
 			if typeNeedsConversion(p.Type, d.Type) {
@@ -1042,6 +1149,6 @@ func typeNeedsConversion(st, dt types.Type) bool {
 	case types.MapKind:
 		return typeNeedsConversion(st.Elem(), dt.Elem())
 	default:
-		return true
+		return !types.Equal(st, dt)
 	}
 }
