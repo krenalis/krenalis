@@ -18,9 +18,9 @@ import (
 
 var jsonArrayType = types.Array(types.JSON())
 
-// Expression represents a mapping expression used to transform data from a
-// source to a destination. An Expression can contain strings, numbers, true,
-// false, null, property paths and function calls.
+// Expression represents a mapping expression used to transform data from an
+// input schema to an output type. An Expression can contain strings, numbers,
+// true, false, null, property paths and function calls.
 type Expression struct {
 	parts  []part // parts.
 	source string // source code used for error messages.
