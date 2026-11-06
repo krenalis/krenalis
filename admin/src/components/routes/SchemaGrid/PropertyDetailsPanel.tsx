@@ -3,13 +3,12 @@ import './PropertyDetailsPanel.css';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
 import { getCompatibleProfilePropertyRoles, getProfilePropertyRole } from '../../helpers/profilePropertyRoles';
 import {
-	DURATION_UNIT_OPTIONS,
 	getPropertyValueType,
 	getTypeSemantics,
 	isSuitableAsIdentifier,
 	toKrenalisStringType,
 	toSemanticsLabel,
-	UNIT_OF_MEASURE_OPTIONS,
+	UNIT_OPTIONS,
 } from '../../helpers/types';
 import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
 import { Property } from '../../../lib/api/types/types';
@@ -134,15 +133,8 @@ const getSemanticsDetail = (property: Property): { label: string; value?: string
 	if (type?.kind === 'decimal' && type.semantics === 'money') {
 		return { label: 'Currency', value: type.currency };
 	}
-	if (type != null && 'semantics' in type && type.semantics === 'measurement') {
-		const option = UNIT_OF_MEASURE_OPTIONS.find((candidate) => candidate.value === type.unit);
-		return {
-			label: 'Unit',
-			value: option == null ? undefined : `${option.label} · ${option.symbol ?? option.value}`,
-		};
-	}
-	if (type != null && 'semantics' in type && type.semantics === 'duration') {
-		const option = DURATION_UNIT_OPTIONS.find((candidate) => candidate.value === type.unit);
+	if (type != null && 'semantics' in type && (type.semantics === 'measurement' || type.semantics === 'duration')) {
+		const option = UNIT_OPTIONS.find((candidate) => candidate.value === type.unit);
 		return { label: 'Unit', value: option == null ? undefined : `${option.label} · ${option.symbol}` };
 	}
 	return null;

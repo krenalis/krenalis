@@ -2189,7 +2189,7 @@ test(`Create profile schema properties with default semantics and options`, asyn
 	await expect(emptyDurationUnit).toBeHidden();
 	await expect(durationUnit.locator('wa-option[value="millisecond"]')).toHaveJSProperty('current', false);
 	await durationUnit.locator('wa-option[value="second"]').click();
-	await expect(durationUnit.locator('[part="display-input"]')).toHaveValue('Seconds · s');
+	await expect(durationUnit.locator('[part="display-input"]')).toHaveValue('Second · s');
 	await expect(emptyDurationUnit).toHaveCount(0);
 	await expect(propertyPanel.locator('[data-error-on="duration-unit"]')).toHaveCount(0);
 	await expect(propertyPanel.locator('.property-panel__save')).not.toHaveAttribute('disabled');
@@ -2762,7 +2762,7 @@ test(`Keep applied property types read-only and preserve their configuration`, a
 		materialized_money: 'EUR · Euro',
 		materialized_money_without_currency: 'No currency specified',
 		materialized_measurement: 'Kilogram · kg',
-		materialized_duration: 'Seconds · s',
+		materialized_duration: 'Second · s',
 		materialized_country: '3-letter ISO code',
 	};
 	for (const name of Object.keys(appliedTypes)) {
