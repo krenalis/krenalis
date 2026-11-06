@@ -228,11 +228,43 @@ func Test_TypeSemanticsCopyOnWrite(t *testing.T) {
 	if decimalType.Semantics() != NoSemantics {
 		t.Fatalf("expected receiver semantics %s, got %s", NoSemantics, decimalType.Semantics())
 	}
+	if decimalType.HasSemantics() {
+		t.Fatalf("expected HasSemantics to return false, got true")
+	}
 	if currency, ok := money.Currency(); ok || currency != "" {
 		t.Fatalf("expected no currency and false, got %q and %t", currency, ok)
 	}
 	if currency, ok := euros.Currency(); !ok || currency != "EUR" {
 		t.Fatalf("expected EUR and true, got %q and %t", currency, ok)
+	}
+}
+
+// Test_TypeHasSemantics tests whether a type has semantics.
+func Test_TypeHasSemantics(t *testing.T) {
+	tests := []struct {
+		name  string
+		type_ Type
+		want  bool
+	}{
+		{"zero", Type{}, false},
+		{"string", String(), false},
+		{"constrained string", String().WithMaxLength(10), false},
+		{"nested semantics", Array(String().AsEmail()), false},
+		{"email", String().AsEmail(), true},
+		{"phone", String().AsPhone(), true},
+		{"URL", String().AsURL(), true},
+		{"country", String().AsCountry(ISO3166Alpha2), true},
+		{"money", Decimal(10, 2).AsMoney(), true},
+		{"percentage", Decimal(10, 2).AsPercentage(), true},
+		{"measurement", Int(64).AsMeasurement(Kilogram), true},
+		{"duration", Int(32).AsDuration(Second), true},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := test.type_.HasSemantics(); got != test.want {
+				t.Fatalf("expected HasSemantics to return %t, got %t", test.want, got)
+			}
+		})
 	}
 }
 
