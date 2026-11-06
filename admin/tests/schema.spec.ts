@@ -2163,6 +2163,7 @@ test(`Create profile schema properties with default semantics and options`, asyn
 	const emptyMeasurementUnit = measurementUnit.locator('wa-option[value=""]');
 	await expect(emptyMeasurementUnit).toBeHidden();
 	await expect(measurementUnit.locator('wa-option[value="g"]')).toHaveJSProperty('current', false);
+	await expect(measurementUnit.locator('wa-option[value="second"]')).toHaveText('Second · s');
 	await measurementUnit.locator('wa-option[value="kg"]').click();
 	await expect(measurementUnit).toHaveJSProperty('value', 'kg');
 	await expect(measurementUnit.locator('[part="display-input"]')).toHaveValue('Kilogram · kg');
@@ -2188,6 +2189,8 @@ test(`Create profile schema properties with default semantics and options`, asyn
 	const emptyDurationUnit = durationUnit.locator('wa-option[value=""]');
 	await expect(emptyDurationUnit).toBeHidden();
 	await expect(durationUnit.locator('wa-option[value="millisecond"]')).toHaveJSProperty('current', false);
+	await expect(durationUnit.locator('wa-option[value="year"]')).toHaveText('Year · yr');
+	await expect(durationUnit.locator('wa-option[value="kg"]')).toHaveCount(0);
 	await durationUnit.locator('wa-option[value="second"]').click();
 	await expect(durationUnit.locator('[part="display-input"]')).toHaveValue('Second · s');
 	await expect(emptyDurationUnit).toHaveCount(0);
