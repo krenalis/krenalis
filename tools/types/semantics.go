@@ -98,7 +98,7 @@ func (f CountryFormat) String() string {
 type Unit int8
 
 const (
-	// Units usable as measurement.
+	// Units usable for measurements.
 	Gram       Unit = iota + 1 // gram
 	Kilogram                   // kilogram
 	Millimeter                 // millimeter
@@ -120,7 +120,7 @@ const (
 	Yard                       // yard
 	Mile                       // mile
 
-	// Units usable as measurement and duration.
+	// Units usable for measurements and durations.
 	Millisecond // millisecond
 	Second      // second
 	Minute      // minute
