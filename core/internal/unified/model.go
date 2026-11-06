@@ -132,7 +132,7 @@ type Rule struct {
 	Children []Rule
 }
 
-// Scope qualifies recorded events by their raw name at message_id grain.
+// Scope qualifies recorded track events by their raw name at message_id grain.
 // Start/End define a mature [Start,End) period, alternatively Elapsed resolves
 // against the operation's single T. FullHistory is recognized but requires a
 // governed history binding not implemented by this first vertical.

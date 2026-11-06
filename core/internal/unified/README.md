@@ -202,7 +202,7 @@ Italy with no recorded Purchase in the previous 30 elapsed days:
 }
 ```
 
-- Source kind is `recordedEvents`; `name` is a raw event name. `grain` is
+- Source kind is `recordedEvents`; `name` is a raw track event name. `grain` is
   mandatory and admits only the built-in `registered-message` projection.
   Other names are invalid input in both the public preparer and internal
   model, not unavailable capabilities. A bare string cannot identify a

@@ -50,7 +50,8 @@ func TestUnifiedProfileRecordPostgreSQL(t *testing.T) {
 	// All fixtures are published before their query; no asynchronous writer runs.
 	execUnifiedFixture(t, dw, `CREATE TABLE profiles (_kpid uuid PRIMARY KEY,country text,
  profile_id text,event text,document jsonb,amount numeric(38,10),settings_value text,settings_json jsonb);
-CREATE TABLE krenalis_events (kpid uuid,message_id text,event text,timestamp timestamp(3) NOT NULL,properties jsonb);
+CREATE TABLE krenalis_events (kpid uuid,message_id text,event text,timestamp timestamp(3) NOT NULL,
+ properties jsonb,type text NOT NULL DEFAULT 'track');
 INSERT INTO profiles (_kpid,country,profile_id,event,document,amount,settings_value,settings_json)
 SELECT ('00000000-0000-0000-0000-'||lpad(n::text,12,'0'))::uuid,
  CASE WHEN n<=3 THEN 'IT' WHEN n<=6 THEN 'FR' END,'customer-'||n,'Refund',

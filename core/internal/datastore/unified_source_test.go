@@ -22,7 +22,8 @@ func TestUnifiedSourcePostgreSQL(t *testing.T) {
 	store.wh.Store(dw)
 	execUnifiedFixture(t, dw, `CREATE TABLE profiles (_kpid uuid PRIMARY KEY);
 INSERT INTO profiles VALUES ('00000000-0000-0000-0000-000000000001'),('00000000-0000-0000-0000-000000000002');
-CREATE TABLE krenalis_events (kpid uuid,message_id text,event text,timestamp timestamp(3) NOT NULL,properties jsonb)`)
+CREATE TABLE krenalis_events (kpid uuid,message_id text,event text,timestamp timestamp(3) NOT NULL,
+ properties jsonb,type text NOT NULL DEFAULT 'track')`)
 	at := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
 	rule := unified.Rule{Count: &unified.Count{Scope: unified.Scope{Event: "Purchase",
 		Grain: "registered-message", Start: at.AddDate(0, -1, 0), End: at},

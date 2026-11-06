@@ -32,7 +32,7 @@ func TestUnifiedProfilesPostgreSQL(t *testing.T) {
 	execUnifiedFixture(t, dw, `CREATE TABLE profile_fixture (_kpid uuid PRIMARY KEY);
 CREATE VIEW profiles AS SELECT * FROM profile_fixture;
 CREATE TABLE event_fixture (kpid uuid NOT NULL, message_id text PRIMARY KEY,
- event text, timestamp timestamp(3) NOT NULL, properties jsonb);
+ event text, timestamp timestamp(3) NOT NULL, properties jsonb,type text NOT NULL DEFAULT 'track');
 CREATE VIEW krenalis_events AS SELECT * FROM event_fixture;
 INSERT INTO profile_fixture SELECT ('00000000-0000-0000-0000-'||lpad(n::text,12,'0'))::uuid FROM generate_series(1,8) n;
 INSERT INTO event_fixture VALUES
@@ -85,6 +85,43 @@ INSERT INTO event_fixture VALUES
 		result := query(t, &raw, page)
 		assertUnifiedTruths(t, result, []unified.Truth{unified.Match, unified.NoMatch, unified.Match,
 			unified.Unknown, unified.Match, unified.NoMatch, unified.NoMatch, unified.Match})
+	})
+
+	t.Run("non-track events", func(t *testing.T) {
+
+		execUnifiedFixture(t, dw, `INSERT INTO event_fixture (kpid,message_id,event,timestamp,properties,type)
+SELECT _kpid,'non-track/'||event_type||'/'||_kpid,NULL,'2026-01-15',NULL,event_type
+FROM profile_fixture CROSS JOIN (VALUES ('identify'),('page'),('screen'),('group'),('alias')) types(event_type);
+INSERT INTO event_fixture VALUES
+('00000000-0000-0000-0000-000000000002','review/2','Review','2026-01-15','{}'),
+('00000000-0000-0000-0000-000000000008','review/8','Review','2026-01-15','{}')`)
+		absence := unified.Rule{Count: &unified.Count{Scope: scope, Test: unified.CountTest{Operator: unified.Equal}}}
+		purchase := unified.Rule{Count: &unified.Count{Scope: scope,
+			Test: unified.CountTest{Operator: unified.GreaterOrEqual, Value: 1}}}
+		reviewScope := scope
+		reviewScope.Event = "Review"
+		review := unified.Rule{Count: &unified.Count{Scope: reviewScope,
+			Test: unified.CountTest{Operator: unified.GreaterOrEqual, Value: 1}}}
+
+		for _, test := range []struct {
+			name string
+			rule unified.Rule
+			want []unified.Truth
+		}{
+			{"absence", absence, []unified.Truth{unified.Match, unified.NoMatch, unified.NoMatch, unified.NoMatch, unified.NoMatch, unified.NoMatch, unified.NoMatch, unified.Match}},
+			{"existence", purchase, []unified.Truth{unified.NoMatch, unified.Match, unified.Match, unified.Match, unified.Match, unified.Match, unified.Match, unified.NoMatch}},
+			{"raw qualification", raw, []unified.Truth{unified.Match, unified.NoMatch, unified.Match, unified.Unknown, unified.Match, unified.NoMatch, unified.NoMatch, unified.Match}},
+			{"governed qualification", governed, []unified.Truth{unified.Match, unified.NoMatch, unified.Unknown, unified.Unknown, unified.Match, unified.NoMatch, unified.NoMatch, unified.Match}},
+			{"order and review", unified.Rule{Operator: state.OpAnd, Children: []unified.Rule{purchase, review}}, []unified.Truth{unified.NoMatch, unified.Match, unified.NoMatch, unified.NoMatch, unified.NoMatch, unified.NoMatch, unified.NoMatch, unified.NoMatch}},
+			{"order or review", unified.Rule{Operator: state.OpOr, Children: []unified.Rule{purchase, review}}, []unified.Truth{unified.NoMatch, unified.Match, unified.Match, unified.Match, unified.Match, unified.Match, unified.Match, unified.Match}},
+		} {
+			t.Run(test.name, func(t *testing.T) {
+				assertUnifiedTruths(t, query(t, &test.rule, page), test.want)
+			})
+		}
+		execUnifiedFixture(t, dw, `DELETE FROM event_fixture
+WHERE message_id LIKE 'non-track/%' OR message_id LIKE 'review/%'`)
+
 	})
 
 	t.Run("unknown event name retains possible evidence", func(t *testing.T) {
@@ -332,7 +369,7 @@ SELECT e.* FROM event_fixture e CROSS JOIN (VALUES (1),(2),(3)) copies(n)`)
 		}
 		execUnifiedFixture(t, dw,
 			`CREATE OR REPLACE VIEW krenalis_events AS SELECT kpid,message_id,event,timestamp,
-jsonb_build_object('currency',(1/(length(message_id)-length(message_id)))::text) AS properties FROM event_fixture`)
+jsonb_build_object('currency',(1/(length(message_id)-length(message_id)))::text) AS properties,type FROM event_fixture`)
 		result, err = store.UnifiedProfiles(t.Context(), &raw, bindings, at, page)
 		if err == nil || result != nil {
 			t.Fatalf("expected execution failure without result, got %+v, %v", result, err)

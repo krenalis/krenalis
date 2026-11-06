@@ -48,10 +48,13 @@ func TestUnifiedPrepare(t *testing.T) {
 		t.Fatalf("expected resolved source and period, got %+v", count)
 	}
 	quals := count.Qualification.(*warehouses.QualificationGroup)
-	selector := quals.Children[0].(*warehouses.RecordQualification).Expr.(*warehouses.MultiExpr).Operands[0].(*warehouses.BaseExpr)
-	if selector.Values[0] != "Purchase'" || selector.Operator != warehouses.OpIs ||
-		selector.Column.Name != "event" || calls != 1 {
-		t.Fatalf("expected existing raw name binding, got %+v and %d calls", selector, calls)
+	selector := quals.Children[0].(*warehouses.RecordQualification).Expr
+	wantSelector := &warehouses.MultiExpr{Operator: warehouses.OpAnd, Operands: []warehouses.Expr{
+		&warehouses.BaseExpr{Column: eventColumnByProperty["event"], Operator: warehouses.OpIs, Values: []any{"Purchase'"}},
+		&warehouses.BaseExpr{Column: eventColumnByProperty["type"], Operator: warehouses.OpIs, Values: []any{"track"}},
+	}}
+	if !reflect.DeepEqual(selector, wantSelector) || calls != 1 {
+		t.Fatalf("expected exact track name binding, got %+v and %d calls", selector, calls)
 	}
 	currency := quals.Children[1].(*warehouses.KnownTextEqual)
 	if currency.Value != "EUR" || !reflect.DeepEqual(currency.Keys, []string{"a.b"}) {

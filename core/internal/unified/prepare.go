@@ -152,6 +152,7 @@ func prepareRule(rule Rule, bindings Bindings, at time.Time, source SourceBindin
 	c := rule.Count
 	selector, err := source.Record(&state.Where{Operator: state.OpAnd, Rules: []state.WhereRule{
 		&state.WhereCondition{Property: []string{"event"}, Operator: state.OpIs, Values: []any{c.Scope.Event}},
+		&state.WhereCondition{Property: []string{"type"}, Operator: state.OpIs, Values: []any{"track"}},
 	}})
 	if err != nil {
 		return nil, err

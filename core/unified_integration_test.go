@@ -91,7 +91,7 @@ CREATE TABLE unified_v.profiles (_kpid uuid PRIMARY KEY,country text,profile_id 
  _updated_at timestamp(6) NOT NULL DEFAULT '2026-01-31 12:00:00.123456',document jsonb,amount numeric(38,10),
  settings_value text,tags text[]);
 CREATE TABLE unified_v.krenalis_events (kpid uuid,message_id text PRIMARY KEY,
- event text,timestamp timestamp(3) NOT NULL,properties jsonb);
+ event text,timestamp timestamp(3) NOT NULL,properties jsonb,type text NOT NULL DEFAULT 'track');
 INSERT INTO unified_v.profiles (_kpid)
  SELECT ('00000000-0000-0000-0000-'||lpad(n::text,12,'0'))::uuid FROM generate_series(1,4) n;
 UPDATE unified_v.profiles SET event='Refund',profile_id='customer-'||right(_kpid::text,1),

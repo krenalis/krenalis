@@ -75,6 +75,11 @@ INSERT INTO krenalis_events
  CASE n WHEN 2 THEN '{"currency":"EUR"}' WHEN 3 THEN '{"currency":null,"amount":9007199254740993}'
  ELSE '{"amount":"9007199254740993"}' END::jsonb
  FROM (SELECT _kpid,right(_kpid::text,1)::int n FROM profiles) p WHERE n>1;
+INSERT INTO krenalis_events
+ (kpid,message_id,event,timestamp,received_at,sent_at,type,connection_id,anonymous_id,traits)
+ SELECT _kpid,'non-track/'||event_type||'/'||_kpid,NULL,'2026-01-15','2026-02-01','2026-02-01',
+ event_type::event_type,'fixture','a','{}'
+ FROM profiles CROSS JOIN (VALUES ('identify'),('page'),('screen'),('group'),('alias')) types(event_type);
 CREATE ROLE mcp_profile_reader LOGIN PASSWORD 'mcp-profile-fixture';
 GRANT USAGE ON SCHEMA public TO mcp_profile_reader;
 GRANT SELECT ON krenalis_profile_schema_versions TO mcp_profile_reader;
