@@ -109,13 +109,16 @@ func (my *MySQL) Query(ctx context.Context, query string) (connectors.Rows, []co
 // SQLLiteral returns the SQL literal representation of v according to the
 // provided Krenalis type t. It supports nil values and the following Krenalis
 // types: string, datetime, date, and json.
-func (my *MySQL) SQLLiteral(value any, typ types.Type) string {
+func (my *MySQL) SQLLiteral(value any, typ types.Type) (string, error) {
 	if value == nil {
-		return "NULL"
+		return "NULL", nil
 	}
 	var b strings.Builder
-	_ = quoteValue(&b, value, typ)
-	return b.String()
+	err := quoteValue(&b, value, typ)
+	if err != nil {
+		return "", err
+	}
+	return b.String(), nil
 }
 
 // ServeUI serves the connector's user interface.
