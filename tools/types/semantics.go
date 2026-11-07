@@ -24,7 +24,7 @@ const (
 	PercentageSemantics                   // percentage
 	PhoneSemantics                        // phone number
 	URLSemantics                          // web URL
-	YearSemantics                         // calendar year in [1,9999]
+	YearSemantics                         // year
 )
 
 // semanticsName contains the JSON names of all semantics except NoSemantics.
@@ -277,9 +277,9 @@ func (t Type) AsURL() Type {
 	return t
 }
 
-// AsYear returns t with calendar year semantics. It narrows t's range to
+// AsYear returns t with year semantics. It narrows t's range to
 // values in [1,9999]. It panics if t is not an int type, already has
-// semantics, or its range contains no calendar years.
+// semantics, or its range lies entirely outside [1,9999].
 func (t Type) AsYear() Type {
 	t, err := t.withSemantics(YearSemantics, nil)
 	if err != nil {
@@ -412,22 +412,23 @@ func (t Type) withSemantics(semantics Semantics, option any) (Type, error) {
 		if option != nil {
 			return Type{}, errors.New("year semantics do not accept an option")
 		}
-		t.semantics = semantics
 		if t.unsigned {
-			lo, hi := t.UnsignedRange()
-			if hi < lo {
-				return Type{}, errors.New("int range does not include a calendar year")
+			originalMin, originalMax := t.UnsignedRange()
+			min, max := max(originalMin, MinYear), min(originalMax, MaxYear)
+			if max < min {
+				return Type{}, errors.New("int range is entirely outside [1,9999]")
 			}
-			t = t.WithUnsignedRange(lo, hi)
+			t.semantics = semantics
+			t = t.WithUnsignedRange(min, max)
 		} else {
-			lo, hi := t.IntRange()
-			if hi < lo {
-				return Type{}, errors.New("int range does not include a calendar year")
+			originalMin, originalMax := t.IntRange()
+			min, max := max(originalMin, MinYear), min(originalMax, MaxYear)
+			if max < min {
+				return Type{}, errors.New("int range is entirely outside [1,9999]")
 			}
-			t = t.WithIntRange(lo, hi)
+			t.semantics = semantics
+			t = t.WithIntRange(min, max)
 		}
-	default:
-		return Type{}, fmt.Errorf("tools/types: unexpected semantics %d", semantics)
 	}
 	if (semantics == CountrySemantics || semantics == PhoneSemantics) && (t.p != 0 || t.s != 0 || t.vl != nil) {
 		return Type{}, fmt.Errorf("%s semantics cannot be combined with other string constraints", semantics)
