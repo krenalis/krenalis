@@ -40,13 +40,16 @@ type ProfileRuleExplanation struct {
 // These are recorded occurrences, not deduplicated business entities.
 // UnboundedStart means all queryable history before End; Start is then omitted.
 // History identifies the resolved definition and meaning revision when present.
+// CurrencyField and NativeCurrency identify the governed reading when used.
 type ProfileCountExplanation struct {
-	Start          time.Time      `json:"start,omitzero"`
-	End            time.Time      `json:"end"`
-	Certain        int64          `json:"certain"`
-	Uncertain      int64          `json:"uncertain"`
-	UnboundedStart bool           `json:"unboundedStart,omitzero"`
-	History        *FilterHistory `json:"history,omitzero"`
+	Start          time.Time            `json:"start,omitzero"`
+	End            time.Time            `json:"end"`
+	Certain        int64                `json:"certain"`
+	Uncertain      int64                `json:"uncertain"`
+	UnboundedStart bool                 `json:"unboundedStart,omitzero"`
+	History        *FilterHistory       `json:"history,omitzero"`
+	CurrencyField  *FilterCurrencyField `json:"currencyField,omitzero"`
+	NativeCurrency string               `json:"nativeCurrency,omitzero"`
 }
 
 // ProfileSumExplanation describes monetary bounds with the resolved reading.
@@ -212,6 +215,11 @@ func explainProfileRule(rule warehouses.FilterCondition, semantic unified.Rule, 
 		if history := semantic.Count.Scope.History; history != nil {
 			definition, revision := history.Reference()
 			result.Count.History = &FilterHistory{Definition: definition, MeaningRevision: revision}
+		}
+		if currency := semantic.Count.Currency; currency != nil {
+			result.Count.CurrencyField = &FilterCurrencyField{Definition: currency.Definition,
+				MeaningRevision: currency.Revision}
+			result.Count.NativeCurrency = currency.Value
 		}
 	default:
 		return ProfileRuleExplanation{}, errors.New("core: invalid profile explanation condition")

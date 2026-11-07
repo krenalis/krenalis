@@ -183,6 +183,40 @@ uncertainty is supported. Shared governed facts, ambiguous identity/timestamps,
 business deduplication, AvailableHistory and other calendar/personal-anchor constructors,
 other reductions, shares and E/K/P/T are not available through this tool.
 
+## Governed Count currency
+
+For Count of messages in a governed native currency, supply both
+`currencyField` and `nativeCurrency` inside `count`:
+
+```json
+{"operator":"and","rules":[{"count":{"source":{"kind":"recordedEvents","name":"Order Completed","grain":"registered-message"},"period":{"kind":"elapsedLookback","duration":{"value":30,"unit":"day"}},"currencyField":{"definition":"commerce.order_completed.currency","meaningRevision":"1"},"nativeCurrency":"EUR"},"operator":"is","values":[0]}]}
+```
+
+This asks for no recorded `Order Completed` messages in native EUR. Only that
+currency definition/revision and source are currently resolved. The fields are
+optional as a pair, and neither accepts null. The literal requires three
+uppercase ASCII letters, as for Sum. It does not convert currencies or deduplicate
+business orders. Missing, JSON null and non-String currency values are unknown;
+other Strings, including `"eur"`, are compared verbatim. There is no implicit USD
+default. No relevant messages means Count zero and absence MATCH. One message
+with an unknown business currency can make absence UNKNOWN. In particular, with
+one message containing `"currency":null`, this governed absence is UNKNOWN while
+the distinct raw JSON absence is MATCH. Never substitute one for the other.
+
+An independent Record `where` can be combined with governed currency. Temporarily,
+paths overlapping its reading (`properties`, `properties.currency` and descendants
+of that currency path) return `FilterCapabilityNotImplemented`. This applies in
+every nested group, with exact case-sensitive key segments; `properties.Currency`,
+`properties.currency_code`, `properties.total` and `properties.coupon` remain
+admissible. Unlike Sum, Count does not read the amount. A false `where` excludes
+the occurrence even with unknown currency. A missing coupon still follows raw
+Record UNKNOWN; do not reinterpret it as a governed no-coupon value.
+The sample minimum counts this qualified population and retains Kleene AND.
+These are temporary execution limits, not changes to the full language.
+
+Count explanations include the resolved `currencyField` and `nativeCurrency`
+only when used. Existing raw Count explanations keep their original fields.
+
 ## Monetary Sum
 
 Sum adds the totals reported by recorded `Order Completed` messages in one
@@ -285,8 +319,8 @@ and omit trailing fractional zeroes; compare their numeric value, not their spel
 Raw JSON and governed business properties differ. With `properties.currency is
 "EUR"`, a present JSON null is FALSE and a missing path is UNKNOWN; Number 100
 is different from String "100". Negative comparisons do not make missing values
-match. Count NativeCurrency bindings remain internal; do not infer one from raw JSON.
-Sum resolves its currency reading through the explicit monetary field reference.
+match. Count resolves governed currency through its explicit `currencyField`
+reference; Sum through its monetary field, without a separate currency override.
 
 Event names and arbitrary JSON contents are workspace-specific. Ask the user or
 use `query-data-warehouse` to discover them before constructing a filter. SQL may

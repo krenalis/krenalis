@@ -104,23 +104,33 @@ property-reference comparison or a governed current-profile dependency.
   the occurrence-body limit of two levels; this does not restrict existing root
   Record filters. The binder retains JSON key segments, typed JSON mode and
   flattened object-presence handling. No filter SQL comes from users.
-- Alternatively, one governed `NativeCurrency = literal` predicate. The Count
+- Optionally, one governed `NativeCurrency = literal` predicate. The Count
   contains an immutable meaning reference and the currency literal; separate
   `Bindings.Currencies` resolve the exact reference/revision to its JSON path
   and evidence contract. Missing, JSON null and non-String values are unknown
   business currency. Known Strings are compared verbatim: `"eur"` and
   `"not-a-code"` are known values different from `"EUR"`. No domain attestation,
   normalization or `KnownCanonicalStrings` flag is introduced. A future closed
-  domain requires a distinct resolved reading contract. Bindings are supplied by an internal caller; this change does not
-  implement a registry, infer a business meaning from raw JSON, or automatically
-  adopt meaning revisions. Missing or duplicate bindings fail before execution.
+  domain requires a distinct resolved reading contract. The public
+  `currencyField` reference resolves `commerce.order_completed.currency`, revision
+  1, for `Order Completed`, with an immutable path/evidence descriptor. Sum's
+  monetary definition obtains its currency path from the same definition.
+  Existing internal callers can still supply `Bindings.Currencies` explicitly;
+  missing or duplicate bindings fail before execution. Neither path infers a
+  business meaning from raw JSON or automatically adopts meaning revisions.
 
 The supported governed contract is `IndependentOccurrenceValues`: an unknown
 value is local to one occurrence, admits both qualifying and non-qualifying
 completions, and has no declared cross-occurrence constraint. Raw Record
 predicates have their existing local ternary contract; SQL NULL alone creates
-neither a governed fact nor a cross-occurrence dependency. Combining raw and
-governed qualification in the same Count is currently unsupported.
+neither a governed fact nor a cross-occurrence dependency. A resolved currency
+predicate can combine with a Record `where` whose paths do not overlap the
+currency reading. The check visits all groups and compares exact key segments:
+`properties`, `properties.currency` and its descendants are unavailable, while
+`properties.currency_code`, `properties.Currency` and `properties.total` remain
+admissible. Count and Sum share that admission check but supply their own reading
+paths; Sum also excludes its amount path. Predicates using caller-supplied currency bindings
+still reject mixed qualification, since their path is unavailable to validation.
 
 For a determined deduplicated population, let S be the number of TRUE qualifiers
 and U the number of NULL qualifiers. With the admitted independent memberships,
@@ -614,7 +624,14 @@ UNKNOWN profiles are excluded from membership without being relabelled NO_MATCH.
 The existing raw JSON contract remains: a present JSON null compared with the
 String `"EUR"` is FALSE; a missing raw JSON path is NULL. No governed currency
 binding or shared latent fact is inferred from either value. Governed
-NativeCurrency remains an internal, explicitly bound capability.
+NativeCurrency is available publicly as the optional `count.currencyField` and
+`count.nativeCurrency` pair. Only `commerce.order_completed.currency` revision
+1, on `Order Completed`, is resolved. Explicit null, a missing half of the pair,
+unknown reference/revision or incompatible source is invalid. The literal is
+three uppercase ASCII letters, with no normalization or implicit default. The
+same source, period, grain, terminals, sample minimum and limits still apply.
+Count explanations add the resolved reference and literal only for governed
+currency Counts; existing documents and raw Count explanation JSON are unchanged.
 
 `at` optionally anchors Count periods. It is an RFC 3339 instant, not in the
 future, exactly representable at microsecond precision; omission fixes T once

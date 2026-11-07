@@ -21,11 +21,15 @@ import (
 // FilterCount describes the occurrence population counted by a condition.
 // Where is a Record filter on events, limited to two group levels and 100
 // descendants. Minimum, when supplied, is a positive JSON integer sample guard.
+// CurrencyField and NativeCurrency must be supplied together when restricting
+// the population by governed currency; they never convert currencies.
 type FilterCount struct {
-	Source  FilterCountSource `json:"source"`
-	Period  FilterPeriod      `json:"period"`
-	Where   *Filter           `json:"where,omitzero"`
-	Minimum json.Value        `json:"minimum,omitzero"`
+	Source         FilterCountSource    `json:"source"`
+	Period         FilterPeriod         `json:"period"`
+	Where          *Filter              `json:"where,omitzero"`
+	Minimum        json.Value           `json:"minimum,omitzero"`
+	CurrencyField  *FilterCurrencyField `json:"currencyField,omitzero"`
+	NativeCurrency *string              `json:"nativeCurrency,omitzero"`
 }
 
 // UnmarshalJSON decodes the Count subject without preparing its operands.
@@ -60,6 +64,16 @@ func (count *FilterCount) UnmarshalJSON(data []byte) error {
 			err = dec.Decode(&decoded.Period)
 		case "minimum":
 			err = dec.Decode(&decoded.Minimum)
+		case "currencyField":
+			if dec.PeekKind() == json.Null {
+				return errors.New("currencyField cannot be null")
+			}
+			err = dec.Decode(&decoded.CurrencyField)
+		case "nativeCurrency":
+			if dec.PeekKind() == json.Null {
+				return errors.New("nativeCurrency cannot be null")
+			}
+			err = dec.Decode(&decoded.NativeCurrency)
 		case "where":
 			if dec.PeekKind() == json.Null {
 				err = dec.SkipValue()
@@ -560,6 +574,21 @@ func prepareFilterCount(condition *FilterCountCondition, calendar *unified.Calen
 	rule, err := prepareUnifiedRecordCount(scope, condition.Count.Where, unified.CountTest{})
 	if err != nil {
 		return unified.Rule{}, err
+	}
+	count := condition.Count
+	if (count.CurrencyField == nil) != (count.NativeCurrency == nil) {
+		return unified.Rule{}, errors.New("Count requires currencyField and nativeCurrency together")
+	}
+	if count.CurrencyField != nil {
+		rule.Count.Currency, err = unified.ResolveNativeCurrency(count.CurrencyField.Definition,
+			count.CurrencyField.MeaningRevision, *count.NativeCurrency, count.Source.Name)
+		if err != nil {
+			return unified.Rule{}, err
+		}
+		err = rule.Count.Currency.ValidateWhere(rule.Count.Where)
+		if err != nil {
+			return unified.Rule{}, err
+		}
 	}
 	if periodErr != nil {
 		return unified.Rule{}, periodErr

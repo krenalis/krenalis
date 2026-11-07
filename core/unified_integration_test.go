@@ -524,6 +524,189 @@ INSERT INTO unified_v.krenalis_events VALUES
 
 	})
 
+	t.Run("public Count currency", func(t *testing.T) {
+
+		_, err := database.Exec(t.Context(), `INSERT INTO unified_v.krenalis_events VALUES
+('00000000-0000-0000-0000-000000000002','native-count/2','Order Completed','2026-01-15',
+'{"currency":"EUR","coupon":"PROMO","total":20}'),
+('00000000-0000-0000-0000-000000000003','native-count/3','Order Completed','2026-01-15',
+'{"currency":null,"coupon":"PROMO"}'),
+('00000000-0000-0000-0000-000000000004','native-count/4','Order Completed','2026-01-15',
+'{"coupon":"OTHER"}')`)
+		if err != nil {
+			t.Fatalf("expected governed currency fixtures, got %v", err)
+		}
+		defer func() {
+			_, err := database.Exec(t.Context(), "DELETE FROM unified_v.krenalis_events WHERE message_id LIKE 'native-count/%'")
+			if err != nil {
+				t.Errorf("expected currency fixture cleanup, got %v", err)
+			}
+		}()
+		var stored []byte
+		err = database.QueryRow(t.Context(), "SELECT $1::jsonb",
+			`{"operator":"and","rules":[`+currencyCountConditionJSON+`]}`).Scan(&stored)
+		if err != nil {
+			t.Fatalf("expected currency reference JSONB round-trip, got %v", err)
+		}
+		var filter Filter
+		err = json.Unmarshal(stored, &filter)
+		if err != nil {
+			t.Fatalf("expected decoded reference after JSONB, got %v", err)
+		}
+		condition := filter.Rules[0].(*FilterCountCondition)
+		for _, test := range []struct {
+			name, payload, truth string
+			certain, uncertain   int64
+			period               FilterPeriod
+		}{
+			{"JSON null", `{"currency":null}`, "UNKNOWN", 0, 1, condition.Count.Period},
+			{"missing", `{}`, "UNKNOWN", 0, 1, condition.Count.Period},
+			{"Number", `{"currency":100}`, "UNKNOWN", 0, 1, condition.Count.Period},
+			{"Boolean", `{"currency":true}`, "UNKNOWN", 0, 1, condition.Count.Period},
+			{"Object", `{"currency":{}}`, "UNKNOWN", 0, 1, condition.Count.Period},
+			{"Array", `{"currency":[]}`, "UNKNOWN", 0, 1, condition.Count.Period},
+			{"lowercase", `{"currency":"eur"}`, "MATCH", 0, 0, condition.Count.Period},
+			{"empty String", `{"currency":""}`, "MATCH", 0, 0, condition.Count.Period},
+			{"USD", `{"currency":"USD"}`, "MATCH", 0, 0, condition.Count.Period},
+			{"EUR", `{"currency":"EUR"}`, "NO_MATCH", 1, 0, condition.Count.Period},
+			{"calendar", `{"currency":null}`, "UNKNOWN", 0, 1, FilterPeriod{Kind: "lastCompleteCalendarPeriods", Unit: "month", Count: json.Value(`1`)}},
+			{"recorded history", `{"currency":null}`, "UNKNOWN", 0, 1, FilterPeriod{Kind: "fullRelevantHistory", History: &FilterHistory{Definition: "registered-queryable-events", MeaningRevision: "1"}}},
+		} {
+			t.Run(test.name, func(t *testing.T) {
+
+				_, err := database.Exec(t.Context(), "UPDATE unified_v.krenalis_events SET properties=$1::jsonb "+
+					"WHERE message_id='native-count/3'", test.payload)
+				if err != nil {
+					t.Fatalf("expected currency fixture update, got %v", err)
+				}
+				condition.Count.Period = test.period
+				filter.DefaultCalendar = &FilterCalendar{Definition: "gregorian-monday/UTC", MeaningRevision: "1"}
+				query := ProfileQuery{Filter: &filter, At: at.Format(time.RFC3339),
+					Properties: []string{"profile_id"}, Order: "profile_id", Limit: 10}
+				page, err := workspace.QueryProfiles(t.Context(), query)
+				if err != nil {
+					t.Fatalf("expected public governed Count listing, got %v", err)
+				}
+				truths := []string{"MATCH", "NO_MATCH", test.truth, "UNKNOWN"}
+				totals := [3]int64{}
+				for i, truth := range truths {
+					profile := fmt.Sprintf("00000000-0000-0000-0000-%012d", i+1)
+					explained, err := workspace.ExplainProfileFilter(t.Context(), profile, &filter, query.At)
+					if err != nil {
+						t.Fatalf("expected public currency explanation, got %v", err)
+					}
+					if explained.Rule.Result != truth || len(explained.Rule.Rules) != 1 {
+						t.Fatalf("expected profile %s to be %s, got %+v", profile, truth, explained)
+					}
+					bounds := explained.Rule.Rules[0].Count
+					if bounds == nil || bounds.CurrencyField == nil || bounds.NativeCurrency != "EUR" ||
+						bounds.CurrencyField.Definition != "commerce.order_completed.currency" ||
+						bounds.CurrencyField.MeaningRevision != "1" {
+						t.Fatalf("expected measured currency reference, got %+v", bounds)
+					}
+					if i == 2 && (bounds.Certain != test.certain || bounds.Uncertain != test.uncertain) {
+						t.Fatalf("expected currency count %d/%d, got %+v", test.certain, test.uncertain, bounds)
+					}
+					switch truth {
+					case "MATCH":
+						totals[0]++
+					case "NO_MATCH":
+						totals[1]++
+					case "UNKNOWN":
+						totals[2]++
+					default:
+						t.Fatalf("expected a ternary fixture result, got %s", truth)
+					}
+				}
+				if page.Evaluation == nil || page.Total != int(totals[0]) || len(page.Profiles) != page.Total ||
+					page.Evaluation.Match != totals[0] || page.Evaluation.NoMatch != totals[1] ||
+					page.Evaluation.Unknown != totals[2] {
+					t.Fatalf("expected currency totals %v, got %+v", totals, page)
+				}
+				query.First = 99
+				empty, err := workspace.QueryProfiles(t.Context(), query)
+				if err != nil {
+					t.Fatalf("expected empty currency page, got %v", err)
+				}
+				if len(empty.Profiles) != 0 || empty.Total != page.Total || *empty.Evaluation != *page.Evaluation {
+					t.Fatalf("expected unchanged totals on empty page, got %+v", empty)
+				}
+
+			})
+		}
+
+		raw := *condition
+		raw.Count.CurrencyField, raw.Count.NativeCurrency = nil, nil
+		raw.Count.Where = &Filter{Operator: OpAnd, Rules: []FilterRule{
+			&FilterCondition{Property: "properties.currency", Operator: OpIs, Values: filterValues("EUR")}}}
+		rawFilter := &Filter{Operator: OpAnd, Rules: []FilterRule{&raw}}
+		rawPage, err := workspace.QueryProfiles(t.Context(), ProfileQuery{Filter: rawFilter,
+			At: at.Format(time.RFC3339), Limit: 10})
+		if err != nil {
+			t.Fatalf("expected distinct raw currency query, got %v", err)
+		}
+		if rawPage.Evaluation.Match != 2 || rawPage.Evaluation.NoMatch != 1 || rawPage.Evaluation.Unknown != 1 {
+			t.Fatalf("expected raw JSON null FALSE and missing UNKNOWN, got %+v", rawPage)
+		}
+
+		// A false raw qualification excludes an unknown currency. A missing raw
+		// coupon remains uncertain; it does not mean that no coupon was used.
+		_, err = database.Exec(t.Context(), `UPDATE unified_v.krenalis_events
+SET properties='{"currency":null,"coupon":"OTHER"}' WHERE message_id='native-count/3'`)
+		if err != nil {
+			t.Fatalf("expected independent qualification fixture, got %v", err)
+		}
+		condition.Count.Where = &Filter{Operator: OpAnd, Rules: []FilterRule{
+			&FilterCondition{Property: "properties.coupon", Operator: OpIs, Values: filterValues("PROMO")}}}
+		query := ProfileQuery{Filter: &filter, At: at.Format(time.RFC3339), Limit: 10}
+		page, err := workspace.QueryProfiles(t.Context(), query)
+		if err != nil {
+			t.Fatalf("expected mixed independent qualification, got %v", err)
+		}
+		if page.Evaluation.Match != 3 || page.Evaluation.NoMatch != 1 || page.Evaluation.Unknown != 0 {
+			t.Fatalf("expected false where to exclude unknown currencies, got %+v", page)
+		}
+		_, err = database.Exec(t.Context(), `INSERT INTO unified_v.krenalis_events VALUES
+('00000000-0000-0000-0000-000000000002','native-count/optional-1','Order Completed','2026-01-15','{}'),
+('00000000-0000-0000-0000-000000000002','native-count/optional-2','Order Completed','2026-01-15','{}')`)
+		if err != nil {
+			t.Fatalf("expected independent optional currency occurrences, got %v", err)
+		}
+		condition.Count.Where = nil
+		condition.Count.Minimum = json.Value(`3`)
+		condition.Operator, condition.Values = OpIsNot, filterValues(3)
+		explained, err := workspace.ExplainProfileFilter(t.Context(), "00000000-0000-0000-0000-000000000002",
+			&filter, query.At)
+		if err != nil {
+			t.Fatalf("expected currency sample guard explanation, got %v", err)
+		}
+		bounds := explained.Rule.Rules[0].Count
+		if explained.Rule.Result != "UNKNOWN" || bounds == nil || bounds.Certain != 1 || bounds.Uncertain != 2 {
+			t.Fatalf("expected separate Kleene guard over [1,3], got %+v", explained)
+		}
+
+		unverifiedStore, ok := ds.Store("222222222222")
+		if !ok {
+			t.Fatal("expected unverified store, got none")
+		}
+		unverifiedState, ok := st.Workspace("222222222222")
+		if !ok {
+			t.Fatal("expected unverified state, got none")
+		}
+		unverified := &Workspace{core: &Core{}, store: unverifiedStore, workspace: unverifiedState}
+		page, err = unverified.QueryProfiles(t.Context(), query)
+		if err != nil {
+			failure, ok := errors.AsType[*errors.UnprocessableError](err)
+			if !ok || failure.Code != UnifiedFilteringUnavailable || page != nil {
+				t.Fatalf("expected currency request blocked on unverified backend, got %+v, %v", page, err)
+			}
+		}
+		if err == nil {
+			t.Fatal("expected unavailable backend, got success")
+		}
+
+	})
+
 	t.Run("public Sum", func(t *testing.T) {
 
 		_, err := database.Exec(t.Context(), `INSERT INTO unified_v.krenalis_events VALUES

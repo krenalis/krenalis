@@ -164,10 +164,15 @@ func prepareRule(rule Rule, bindings Bindings, at time.Time, source SourceBindin
 	}
 	if c.Currency != nil {
 		var binding *CurrencyBinding
-		for i, b := range bindings.Currencies {
-			if b.Definition == c.Currency.Definition && b.Revision == c.Currency.Revision {
-				binding = &bindings.Currencies[i]
-				break
+		if field := c.Currency.field; field != nil {
+			binding = &CurrencyBinding{Definition: field.definition, Revision: field.revision,
+				Path: field.path, Evidence: IndependentOccurrenceValues}
+		} else {
+			for i, b := range bindings.Currencies {
+				if b.Definition == c.Currency.Definition && b.Revision == c.Currency.Revision {
+					binding = &bindings.Currencies[i]
+					break
+				}
 			}
 		}
 		if binding == nil {

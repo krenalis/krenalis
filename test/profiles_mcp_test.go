@@ -389,6 +389,117 @@ GRANT SELECT (_kpid,country) ON profiles TO mcp_profile_reader;`)
 		})
 	}
 
+	t.Run("Count currency", func(t *testing.T) {
+
+		_, err := pool.Exec(t.Context(), `UPDATE krenalis_events SET properties='{"currency":"USD"}'
+WHERE event='Order Completed';
+INSERT INTO krenalis_events
+(kpid,message_id,event,timestamp,received_at,sent_at,type,connection_id,anonymous_id,traits,properties) VALUES
+('00000000-0000-0000-0000-000000000002','native-mcp/2','Order Completed','2026-01-15',
+'2026-02-01','2026-02-01','track','fixture','a','{}','{"currency":"EUR","coupon":"PROMO"}'),
+('00000000-0000-0000-0000-000000000003','native-mcp/3','Order Completed','2026-01-15',
+'2026-02-01','2026-02-01','track','fixture','a','{}','{"currency":null,"coupon":"PROMO"}'),
+('00000000-0000-0000-0000-000000000004','native-mcp/4','Order Completed','2026-01-15',
+'2026-02-01','2026-02-01','track','fixture','a','{}','{"coupon":"OTHER"}')`)
+		if err != nil {
+			t.Fatalf("expected governed currency fixture, got %v", err)
+		}
+		defer func() {
+			_, err := pool.Exec(t.Context(), `DELETE FROM krenalis_events WHERE message_id LIKE 'native-mcp/%';
+UPDATE krenalis_events SET properties='{}' WHERE event='Order Completed'`)
+			if err != nil {
+				t.Errorf("expected restored catalog fixture, got %v", err)
+			}
+		}()
+
+		const currencyFields = `"currencyField":{"definition":"commerce.order_completed.currency",` +
+			`"meaningRevision":"1"},"nativeCurrency":"EUR"`
+		const native = `{"operator":"and","rules":[{"count":{"source":{"kind":"recordedEvents",` +
+			`"name":"Order Completed","grain":"registered-message"},"period":{"kind":"elapsedLookback",` +
+			`"duration":{"value":30,"unit":"day"}},` + currencyFields + `},"operator":"is","values":[0]}]}`
+		raw := strings.Replace(native, currencyFields, `"where":{"operator":"and","rules":[`+
+			`{"property":"properties.currency","operator":"is","values":["EUR"]}]}`, 1)
+		qualified := strings.Replace(native, `"nativeCurrency":"EUR"`,
+			`"nativeCurrency":"EUR","where":{"operator":"and","rules":[`+
+				`{"property":"properties.coupon","operator":"is","values":["PROMO"]}]}`, 1)
+		minimum := strings.Replace(native, `"nativeCurrency":"EUR"`, `"nativeCurrency":"EUR","minimum":2`, 1)
+		minimum = strings.Replace(minimum, `"operator":"is","values":[0]`,
+			`"operator":"is greater than or equal to","values":[1]`, 1)
+		for _, test := range []struct{ name, filter, totals string }{
+			{"governed", native, `"match":1,"noMatch":1,"unknown":2`},
+			{"raw", raw, `"match":2,"noMatch":1,"unknown":1`},
+			{"independent where", qualified, `"match":2,"noMatch":1,"unknown":1`},
+			{"unreachable minimum", minimum, `"match":0,"noMatch":4,"unknown":0`},
+		} {
+			t.Run(test.name, func(t *testing.T) {
+				for _, first := range []int{0, 99} {
+					var expected json.RawMessage
+					path := "/v1/profiles?filter=" + url.QueryEscape(test.filter) +
+						"&at=" + url.QueryEscape(at) + "&first=" + strconv.Itoa(first)
+					k.Call("GET", path, nil, nil, &expected)
+					actual := assertResult(t, tool(t, "query-profiles", map[string]any{
+						"filter": test.filter, "at": at, "first": first,
+					}))
+					if actual != string(expected) || !strings.Contains(actual, test.totals) ||
+						first == 99 && !strings.HasPrefix(actual, `{"profiles":[]`) {
+						t.Fatalf("expected identical HTTP/MCP result with %s, got %s", test.totals, actual)
+					}
+				}
+			})
+		}
+
+		for _, test := range []struct{ name, filter, profile, truth, counts string }{
+			{"governed null", native, "3", "UNKNOWN", `"certain":0,"uncertain":1`},
+			{"governed missing", native, "4", "UNKNOWN", `"certain":0,"uncertain":1`},
+			{"raw null", raw, "3", "MATCH", `"certain":0,"uncertain":0`},
+			{"raw missing", raw, "4", "UNKNOWN", `"certain":0,"uncertain":1`},
+			{"false where", qualified, "4", "MATCH", `"certain":0,"uncertain":0`},
+		} {
+			t.Run("explain "+test.name, func(t *testing.T) {
+				profile := "00000000-0000-0000-0000-00000000000" + test.profile
+				var expected json.RawMessage
+				path := "/v1/profiles/" + profile + "/filter-explanation?filter=" +
+					url.QueryEscape(test.filter) + "&at=" + url.QueryEscape(at)
+				k.Call("GET", path, nil, nil, &expected)
+				actual := assertResult(t, tool(t, "explain-profile-filter", map[string]any{
+					"kpid": profile, "filter": test.filter, "at": at,
+				}))
+				if actual != string(expected) || !strings.Contains(actual, `"result":"`+test.truth+`"`) ||
+					!strings.Contains(actual, test.counts) {
+					t.Fatalf("expected HTTP-identical %s with %s, got %s", test.truth, test.counts, actual)
+				}
+				if strings.HasPrefix(test.name, "raw") {
+					if strings.Contains(actual, `"currencyField":`) || strings.Contains(actual, `"nativeCurrency":`) {
+						t.Fatalf("expected unchanged raw explanation without currency metadata, got %s", actual)
+					}
+					return
+				}
+				if !strings.Contains(actual, currencyFields) {
+					t.Fatalf("expected resolved currency reference and literal, got %s", actual)
+				}
+			})
+		}
+
+		for _, test := range []struct{ name, filter, code string }{
+			{"unresolved field", strings.Replace(native, `commerce.order_completed.currency`, `unknown`, 1), "InvalidArguments"},
+			{"unresolved revision", strings.Replace(native, `"meaningRevision":"1"`, `"meaningRevision":"2"`, 1), "InvalidArguments"},
+			{"missing field", strings.Replace(native, currencyFields, `"nativeCurrency":"EUR"`, 1), "InvalidArguments"},
+			{"null currency", strings.Replace(native, `"nativeCurrency":"EUR"`, `"nativeCurrency":null`, 1), "InvalidArguments"},
+			{"different source", strings.Replace(native, `Order Completed`, `Refund`, 1), "InvalidArguments"},
+			{"dependent where", strings.Replace(qualified, `properties.coupon`, `properties.currency`, 1), "FilterCapabilityNotImplemented"},
+		} {
+			t.Run(test.name, func(t *testing.T) {
+				assertToolError(t, tool(t, "query-profiles", map[string]any{
+					"filter": test.filter, "at": at,
+				}), test.code)
+				assertToolError(t, tool(t, "explain-profile-filter", map[string]any{
+					"kpid": "00000000-0000-0000-0000-000000000003", "filter": test.filter, "at": at,
+				}), test.code)
+			})
+		}
+
+	})
+
 	t.Run("Sum", func(t *testing.T) {
 
 		_, err := pool.Exec(t.Context(), `UPDATE krenalis_events SET properties='{"total":20,"currency":"EUR"}'

@@ -12,6 +12,7 @@ import (
 
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/core/internal/unified"
+	"github.com/krenalis/krenalis/tools/json"
 )
 
 // TestUnifiedSourcePostgreSQL checks the determined-identity source contract on
@@ -120,6 +121,65 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,event text,timestamp tim
 			assertUnifiedTruths(t, result, []unified.Truth{test.want, unified.NoMatch})
 		})
 	}
+
+	t.Run("resolved currency and independent where", func(t *testing.T) {
+		currency, err := unified.ResolveNativeCurrency("commerce.order_completed.currency", "1", "EUR", "Order Completed")
+		if err != nil {
+			t.Fatalf("expected resolved currency, got %v", err)
+		}
+		count := *rule.Count
+		count.Scope.Event, count.Currency = "Order Completed", currency
+		count.Where = &state.Where{Operator: state.OpAnd, Rules: []state.WhereRule{
+			&state.WhereCondition{Property: []string{"properties", "coupon"}, Operator: state.OpIs,
+				Values: []any{json.Value(`"PROMO"`)}},
+		}}
+		bound := unified.Rule{Count: &count}
+		for _, test := range []struct {
+			name                    string
+			rows                    string
+			conflict, otherConflict bool
+			truth                   unified.Truth
+		}{
+			{"same copies", `('1','same','{"currency":"EUR","coupon":"PROMO"}'),('1','same','{"currency":"EUR","coupon":"PROMO"}')`, false, false, unified.Match},
+			{"distinct identities", `('1','a','{"currency":"EUR","coupon":"PROMO"}'),('1','b','{"currency":"EUR","coupon":"PROMO"}')`, false, false, unified.NoMatch},
+			{"different where", `('1','same','{"currency":"EUR","coupon":"PROMO"}'),('1','same','{"currency":"EUR"}')`, true, false, 0},
+			{"different currency", `('1','same','{"currency":"EUR","coupon":"PROMO"}'),('1','same','{"currency":null,"coupon":"PROMO"}')`, true, false, 0},
+			{"false where unknown currency", `('1','a','{"coupon":"OTHER"}')`, false, false, unified.NoMatch},
+			{"unknown where EUR", `('1','a','{"currency":"EUR"}')`, false, false, unified.Unknown},
+			{"PROMO unknown currency", `('1','a','{"coupon":"PROMO"}')`, false, false, unified.Unknown},
+			{"both unknown", `('1','a','{}')`, false, false, unified.Unknown},
+			{"fault in other profile", `('1','target','{"currency":"EUR","coupon":"PROMO"}'),('2','other','{"currency":"EUR","coupon":"PROMO"}'),('2','other','{"coupon":"PROMO"}')`, false, true, unified.Match},
+		} {
+			t.Run(test.name, func(t *testing.T) {
+				execUnifiedFixture(t, dw, "TRUNCATE krenalis_events")
+				execUnifiedFixture(t, dw, `INSERT INTO krenalis_events (kpid,message_id,event,timestamp,properties)
+SELECT ('00000000-0000-0000-0000-'||lpad(profile,12,'0'))::uuid,id,'Order Completed','2026-01-15',properties::jsonb
+FROM (VALUES `+test.rows+`) input(profile,id,properties)`)
+				explained, err := store.ExplainUnifiedProfile(t.Context(), &bound, unified.Bindings{}, at, unifiedTestID(1))
+				if err != nil {
+					if !test.conflict || explained != nil || !strings.Contains(err.Error(), "occurrence source violates") {
+						t.Fatalf("expected target source fault=%v, got %+v, %v", test.conflict, explained, err)
+					}
+				}
+				if err == nil && (test.conflict || explained == nil || len(explained.Nodes) != 1 ||
+					explained.Nodes[0].Truth != test.truth) {
+					t.Fatalf("expected target fault=%v/truth=%v, got %+v", test.conflict, test.truth, explained)
+				}
+				result, err := store.UnifiedProfiles(t.Context(), &bound, unified.Bindings{}, at, unified.Page{Limit: 10})
+				if err != nil {
+					if !(test.conflict || test.otherConflict) || result != nil ||
+						!strings.Contains(err.Error(), "occurrence source violates") {
+						t.Fatalf("expected population source fault without partial result, got %+v, %v", result, err)
+					}
+					return
+				}
+				if test.conflict || test.otherConflict {
+					t.Fatal("expected population source fault, got success")
+				}
+				assertUnifiedTruths(t, result, []unified.Truth{test.truth, unified.NoMatch})
+			})
+		}
+	})
 
 	t.Run("unbounded history identity contract", func(t *testing.T) {
 

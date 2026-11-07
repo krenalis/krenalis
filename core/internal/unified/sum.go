@@ -33,8 +33,12 @@ func ResolveMonetaryField(definition, revision string) (*MonetaryField, error) {
 	if definition != "commerce.order_completed.total" || revision != "1" {
 		return nil, fmt.Errorf("unresolved monetary field meaning revision")
 	}
+	currency, err := resolveCurrencyField("commerce.order_completed.currency", "1")
+	if err != nil {
+		return nil, err
+	}
 	return &MonetaryField{definition: definition, revision: revision,
-		amountPath: []string{"properties", "total"}, currencyPath: []string{"properties", "currency"},
+		amountPath: []string{"properties", "total"}, currencyPath: currency.path,
 		amountType: types.Decimal(18, 4)}, nil
 }
 
@@ -49,41 +53,11 @@ func (field *MonetaryField) Reference() (definition, revision string) {
 // ValidateWhere checks a prepared occurrence filter against this reading.
 // It returns *UnsupportedError for paths overlapping amount or currency.
 func (field *MonetaryField) ValidateWhere(where *state.Where) error {
-
 	if field == nil || field.definition == "" {
 		return fmt.Errorf("unresolved monetary field")
 	}
-	if where == nil {
-		return nil
-	}
-	nodes := 0
-	err := validateWhere(where, 1, &nodes)
-	if err != nil {
-		return err
-	}
-
-	stack := []*state.Where{where}
-	for len(stack) > 0 {
-		group := stack[len(stack)-1]
-		stack = stack[:len(stack)-1]
-		for _, rule := range group.Rules {
-			switch rule := rule.(type) {
-			case *state.Where:
-				stack = append(stack, rule)
-			case *state.WhereCondition:
-				for _, path := range [][]string{field.amountPath, field.currencyPath} {
-					n := min(len(rule.Property), len(path))
-					if slices.Equal(rule.Property[:n], path[:n]) {
-						return &UnsupportedError{Capability: "Sum qualification dependent on amount or currency"}
-					}
-				}
-			default:
-				return fmt.Errorf("core/internal/unified: unexpected prepared Record node %T", rule)
-			}
-		}
-	}
-
-	return nil
+	return validateIndependentWhere(where, [][]string{field.amountPath, field.currencyPath},
+		"Sum qualification dependent on amount or currency")
 }
 
 // Sum adds independently qualified recorded messages in one native currency.

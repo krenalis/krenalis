@@ -102,7 +102,14 @@ with their classification/code. Technical execution errors are opaque operation
 failures without profile data. The profile path does not reuse the old SQL tool's
 partial-result handling.
 
-No Admin filter editor, public Count currency
-binding, E/K/P/T, persistence or destination execution is introduced. Coherent
+Count accepts an explicit `currencyField` meaning reference paired with
+`nativeCurrency`; only `commerce.order_completed.currency` revision 1 for
+`Order Completed` is resolved. Its governed reading is the same as Sum's currency
+reading, including UNKNOWN for missing/null/non-String values. Independent Record
+`where` is allowed except on paths overlapping that currency reading; dependent
+forms return `FilterCapabilityNotImplemented`. Explanations include the reference
+and currency only when supplied; existing raw Count documents/results are unchanged.
+
+No Admin filter editor, E/K/P/T, persistence or destination execution is introduced. Coherent
 source views remain an infrastructure prerequisite, not a guarantee established
 by this MCP adapter.

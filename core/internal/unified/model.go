@@ -85,15 +85,6 @@ type ElapsedPeriod struct {
 	Newer time.Duration
 }
 
-// NativeCurrency binds a resolved occurrence-local currency definition.
-// Missing, JSON null and non-text values are unknown business currency.
-// The definition must guarantee independent unknown values per occurrence.
-type NativeCurrency struct {
-	Definition string
-	Revision   string
-	Value      string
-}
-
 // Page selects an internal outcome page. MatchingOnly requests segment
 // membership; otherwise every profile is listed with its ternary outcome.
 // Neither choice changes the filter or its totals.
@@ -340,15 +331,9 @@ func validateRule(rule Rule, at time.Time, depth int, nodes *int) error {
 		return fmt.Errorf("Count sample minimum and terminal are statically incompatible")
 	}
 	if c.Currency != nil {
-		p := c.Currency
-		if p.Definition == "" || p.Revision == "" || len(p.Definition) > 256 || len(p.Revision) > 256 ||
-			len(p.Value) != 3 {
-			return fmt.Errorf("invalid resolved NativeCurrency predicate")
-		}
-		for _, c := range p.Value {
-			if c < 'A' || c > 'Z' {
-				return fmt.Errorf("invalid currency literal")
-			}
+		err := c.Currency.validate(c.Scope.Event)
+		if err != nil {
+			return err
 		}
 	}
 	if c.Where != nil {
@@ -372,7 +357,7 @@ func validateRule(rule Rule, at time.Time, depth int, nodes *int) error {
 		return &UnsupportedError{Capability: "Count threshold requiring values beyond signed 64-bit range"}
 	}
 	if c.Currency != nil && c.Where != nil {
-		return &UnsupportedError{Capability: "mixed governed and raw occurrence predicates"}
+		return c.Currency.ValidateWhere(c.Where)
 	}
 	return nil
 }
