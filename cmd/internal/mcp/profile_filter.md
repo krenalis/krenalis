@@ -1,4 +1,4 @@
-# Querying profiles with Record, Count, Sum and Average filters
+# Querying profiles with Record, Count, Sum, Average and Experience filters
 
 Use `query-profiles` for questions about profiles and segments. It runs the same
 `core.Filter` and `Workspace.QueryProfiles` path as `GET /v1/profiles`.
@@ -45,7 +45,7 @@ restrictions apply to `query-data-warehouse` only. They do not restrict which
 profile or event properties `query-profiles` can read or use in conditions.
 
 On Snowflake, `query-profiles` uses the main virtual warehouse, even if a different
-virtual warehouse is configured for MCP. Record queries remain available; Count, Sum and Average
+virtual warehouse is configured for MCP. Record queries remain available; Count, Sum, Average and Experience
 are currently unavailable on Snowflake. Do not work around that gate using SQL.
 
 ## Arguments and results
@@ -65,7 +65,7 @@ An oversized result is an error: reduce `limit` or request fewer `properties`.
 Rows are never silently dropped to fit that budget.
 
 The returned text is JSON with `profiles`, `schema` and exact matching `total`.
-With Count, Sum or Average, it also contains `evaluation: {at, match, noMatch, unknown}`. Totals
+With Count, Sum, Average or Experience, it also contains `evaluation: {at, match, noMatch, unknown}`. Totals
 refer to the entire profile population before pagination, from the same
 evaluation as the page. The page contains only MATCH profiles. UNKNOWN is not
 NO_MATCH and is not an execution error. An empty page still returns totals.
@@ -91,7 +91,7 @@ are MCP diagnostic prefixes, not additional core error codes.
 
 The root is `{"operator":"and"|"or","rules":[...]}`, with optional
 `defaultCalendar` as described below. Rules are Record
-conditions, Count/Sum/Average conditions or nested AND/OR groups. At most four main group
+conditions, Count/Sum/Average/Experience conditions or nested AND/OR groups. At most four main group
 levels including the root, and 100 descendants excluding the root, are allowed.
 
 A Record condition is `{"property":"path","operator":"...","values":[...]}`.
@@ -211,7 +211,7 @@ and queryable in Krenalis, not a certification of events in external systems.
 Unknown decisive local values can yield UNKNOWN; independent qualification
 uncertainty is supported. Shared governed facts, ambiguous identity/timestamps,
 business deduplication, AvailableHistory and other calendar/personal-anchor constructors,
-reductions other than Count, Sum and Average, shares and E/K/P/T are not available through this tool.
+reductions other than Count, Sum and Average, shares, other E forms and K/P/T are not available through this tool.
 
 ## Governed Count currency
 
@@ -403,12 +403,86 @@ neither is a rounded average. Count is null when membership is uncertain. Sum is
 null unless membership and all amounts are known. Null never means zero. An
 empty population reports sum=0 and count=0, while its required guard fails.
 
+## Selected Experience: Last then verify
+
+An `experience` rule selects the last recorded message from a declared base,
+then verifies that message. It is a complete predicate, without an outer
+`operator` or `values`. For profiles whose last Order Completed reports an
+order ID starting with WEB-:
+
+```json
+{"operator":"and","rules":[{"experience":{"base":{"source":{"kind":"recordedEvents","name":"Order Completed","grain":"registered-message"},"period":{"kind":"fullRelevantHistory","history":{"definition":"registered-queryable-events","meaningRevision":"1"}}},"select":{"kind":"last"},"verify":{"operator":"and","rules":[{"property":"properties.order_id","operator":"starts with","values":["WEB-"]}]}}}]}
+```
+
+`base.source` and `base.period` reuse the available Count sources and periods,
+including named/unnamed page and screen sources, calendars and recorded history.
+`base.where` optionally qualifies events **before** selection. `verify` is a
+mandatory nonempty Record filter evaluated **after** selection. Both use the
+Event schema, the 26 Record operators, at most two group levels and 100 descendant
+nodes. Neither admits behavioral rules or a local defaultCalendar. Omitted/null
+base.where means no additional qualification. Null/omitted verify is invalid in
+this public subset; the canonical NoAdditionalVerification form is not exposed.
+An explicit select.kind is required. Only last executes; first and nth (positions
+1 through 10) are valid but return FilterCapabilityNotImplemented.
+
+Moving a predicate from verify into base.where changes the request. In the
+example, verify tests the latest Order Completed. In base.where, the same test
+would instead select the latest qualifying WEB- message, even if a later order
+has another ID. Never fall back to an older message that passes verify or to the
+latest non-null value. These are messages, not deduplicated business orders.
+
+**The period restricts the base.** With Last and a period ending exactly at T,
+this is equivalent to a recency check on the last occurrence of the same source
+and qualification. If the end is before T, it means **last within that period**,
+not that the overall latest occurrence lies there. Elapsed ago bands and complete
+calendar periods normally have an earlier end; use the actual resolved bounds
+(a calendar boundary can coincide with T).
+
+For "the last order was 60–90 elapsed days ago", combine Count is 0 in
+elapsedLookback(60 days) AND Count >= 1 in elapsedAgoBand(older=90 days,
+newer=60 days), with identical sources and qualifications. The band is
+[T-90 days,T-60 days); exactly T-60 belongs to the recent window. Do not use
+Experience on that band alone: it would ignore more recent orders.
+
+The admitted evidence is local Record qualification with independent uncertainty
+across determined message identities and known timestamps. With at least one
+certainly qualified message, the candidate winners are all certain/possible
+messages at or after the latest certain timestamp. Without any certain message,
+all possible messages are candidates and the empty selection is possible.
+The empty alternative is NO_MATCH. The rule is MATCH only when every candidate
+passes verify and emptiness is impossible; NO_MATCH when every alternative fails;
+otherwise UNKNOWN. A tie never uses message ID or reception time as a semantic
+tie-break. All tied candidates passing can give MATCH; mixed results give UNKNOWN.
+Older optional messages cannot affect Last after a later certain message.
+
+Copies of an identity must agree on attribution, the exact stored timestamp,
+base qualification and relevant verification. A mismatch is a source-contract
+execution failure, including two timestamps inside the same period. No partial
+listing or invented UNKNOWN is returned. Unknown timestamps are outside this
+determined-time source contract, not silently excluded candidates.
+
+Explanations have kind experience and an experience object with the standard
+period fields, select and selection:{kind,absence,candidates}. Selection kind is
+absent, unique or ambiguous. Absence is certain (zero candidates), possible
+(candidates exist but all can be excluded) or impossible. A single candidate
+with possible absence is still ambiguous. Candidate counts refer to distinct
+possible last-message identities, not all events or completed business orders.
+No arbitrary witness is selected or unbounded event list returned. Ambiguous
+selection can still have a determined result when every alternative agrees.
+
+Verify retains raw Record semantics: JSON null, missing paths and incompatible
+kinds behave exactly as documented above. Raw currency is not governed
+NativeCurrency. Governed money predicates in verify, shared governed facts,
+cross-profile references, Latest N, relative scopes and following events are not
+implemented here. Do not approximate those requests with raw predicates, Count
+or SQL unless they express the same explicitly requested meaning.
+
 ## Examples
 
 To understand a known profile's result, call `explain-profile-filter` with its
 `kpid`, the same JSON-text `filter`, and optionally the listing's `evaluation.at`
 as `at`. It returns `{kpid,at,rule}`. Each rule has `kind` (`and`, `or`, `record`,
-`count`, `sum`), `result` (`MATCH`, `NO_MATCH`, `UNKNOWN`), and ordered child `rules`
+`count`, `sum`, `average`, `experience`), `result` (`MATCH`, `NO_MATCH`, `UNKNOWN`), and ordered child `rules`
 for groups. Count adds `{start,end,certain,uncertain}`: the reachable count is
 every integer in `[certain,certain+uncertain]` for this supported subset.
 For fullRelevantHistory, `start` is omitted and `unboundedStart:true` is present;

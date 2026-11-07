@@ -1,8 +1,8 @@
-# Internal Unified Record, Count, Sum and Average vertical
+# Internal Unified Record, Count, Sum, Average and Experience vertical
 
 This package implements the first backend subset of the B architecture consolidated
 in `filtering/14-confronto-architetture-interrogazione-unified-fase-4b.md`. The
-normative baseline remains 06/07/08 version 1.2. Count, Sum and Average are exposed by the existing
+normative baseline remains 06/07/08 version 1.2. Count, Sum, Average and Experience are exposed by the existing
 Profiles HTTP endpoint and MCP `query-profiles` tool on the verified backend;
 Admin and destination connections do not expose it yet. The prepared-filter
 boundary refines the SQL transport described in report 14 §5.4: generated SQL is
@@ -11,7 +11,7 @@ now an internal detail of the warehouse implementation.
 ## Executable path
 
 `Workspace.QueryProfiles` receives one `core.Filter`, decoded using the
-public Record/Count/Sum/Average JSON contract below. The temporary private `unifiedRule` and
+public Record/Count/Sum/Average/Experience JSON contract below. The temporary private `unifiedRule` and
 `unifiedCount` input trees have been removed. Profile predicates reuse
 `prepareFilter` with the workspace Profile schema; Count qualification uses the
 Event schema. Every prepared profile condition becomes one Record leaf in the
@@ -160,7 +160,7 @@ The following also remain outside this vertical: AvailableHistory bindings,
 future/unmatured windows (06 §17.4), other calendar constructors, personal
 anchors, unknown timestamps/attribution/grain,
 business deduplication, source unions, property-reference terminals, other
-governed predicates, owned-member traversal, E/K/P/T, reductions other than Count/Sum/Average and shares. Count
+governed predicates, owned-member traversal, other E forms and K/P/T, reductions other than Count/Sum/Average and shares. Count
 literal bounds above signed 64-bit range are unsupported. Structurally invalid
 input remains an error, distinct from unsupported valid-language capability.
 
@@ -311,7 +311,7 @@ independent occurrence contract, the reachable count is every integer from `cert
 UNKNOWN. A parent OR may still MATCH because another child matches. Record
 qualifications are closed before counting: this explanation does not identify
 which JSON path or operand produced a NULL, infer a governed fact, or report
-individual event payloads. It does not explain unsupported E/K/P/T constructs.
+individual event payloads. It does not explain unsupported E forms or K/P/T constructs.
 
 Core preserves the prepared shape and periods. The optional warehouse
 `ProfileFilterExplanationWarehouse` capability uses the same Record renderers,
@@ -650,7 +650,7 @@ go test -mod=vendor ./core ./core/internal/unified ./core/internal/datastore \
 
 `GET /v1/profiles` uses `Workspace.QueryProfiles`. A request without behavioral conditions delegates
 to the existing Record query and writer: no evaluation object, added warehouse
-query or changed response encoding. Requests containing Count, Sum or Average return only MATCH
+query or changed response encoding. Requests containing Count, Sum, Average or Experience return only MATCH
 profiles with the requested projection. `total` is the exact MATCH count. An
 additional object describes that request's complete evaluation, for example:
 
@@ -730,3 +730,54 @@ The SQL tool stays available for discovery/other analysis, with instructions
 prohibiting fallback to SQL for unsupported Unified features. See
 [`cmd/internal/mcp/README.md`](../../../cmd/internal/mcp/README.md) and the
 model-facing `profile-filter-doc` tool for transport, limits and examples.
+
+## Selected Experience subset
+
+`FilterExperienceCondition` extends the same public `core.Filter` rule union.
+Its `experience` has `base:{source,period,where?}`, `select:{kind:"last"}` and a
+mandatory nonempty Record `verify`. There is no outer operator/values, and no
+implicit selector or empty-body constructor. Where and verify use independent
+local budgets (two groups, 100 descendants), not the main four-level/100-node
+budget. Source and period binding reuse the existing recorded-event Count path;
+no dialect or SQL enters core. The canonical owner retains base and verification
+separately. First/Nth are explicitly unimplemented, not UNKNOWN. Record-only
+pipeline validation still rejects the new rule and state.Where is unchanged.
+
+`warehouses.LastOccurrence` declares a determined message identity, attribution
+and timestamp, row-local qualification and verification. The shared SQL keeps
+all compatible winners: MAX(certain timestamp) per profile excludes older
+optional rows; if no certain row exists, every possible row and the empty
+alternative remain. Equal timestamps retain all identities. It returns TRUE
+only with certain nonemptiness and all candidate verifications TRUE, FALSE when
+all alternatives are FALSE (including certain emptiness), NULL otherwise.
+NULL Record outcomes do not create governed shared facts or value completions.
+No shared-fact or cross-profile predicate is admitted by this subset.
+
+Copies are inspected before selection, including outside-period copies of a
+seeded identity. They must agree on exact stored timestamp as well as attribution,
+period, qualification and relevant verification. Timestamp disagreement inside
+the same period is a source fault, as are missing relevant timestamps. This
+strengthens only the E source contract; Count/Sum/Average behavior is unchanged.
+Excluded rows do not need a known verify result. Source faults are complete
+operation errors; explanations remain scoped to the requested profile.
+
+Listing/count reuse the single-statement page/totals path. Explanation rows reuse
+its two integer slots for candidate count and an empty-alternative flag, marked
+as Experience by internal statement metadata, never as Count bounds. The decoder
+checks domains and the guaranteed nonempty/empty relationship before projection.
+Public explanations add period metadata, select and selection:{kind,absence,
+candidates}. Absence is certain, possible or impossible; one candidate with
+possible absence is ambiguous. No witness identity is invented or event payload
+list transported. The result alone does not identify the missing Record operand.
+
+The period always restricts the base. A window ending at T can express recency
+of Last; a window ending earlier selects Last inside that window, ignoring later
+messages. "Last order 60–90 days ago" uses absence in the last 60 days and
+existence in the 60–90-day band, with the same source and qualification.
+
+PostgreSQL tests exercise the real Go/Record/warehouse path, duplicated identities,
+exact timestamp conflicts, missing timestamps, named and unnamed page/screen,
+empty and uncertain bases, ties, no fallback, scoping, full history, independent
+completion enumeration and HTTP/MCP. Snowflake has the same shared composer and
+local adapter tests; its existing verification gate remains closed. No remote
+Snowflake execution or infrastructure coherence guarantee is claimed.

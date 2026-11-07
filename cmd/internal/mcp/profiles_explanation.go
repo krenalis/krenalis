@@ -20,6 +20,7 @@ var explainProfileFilterTool = server.ServerTool{
 		mcp.WithDescription("Explain a supported profile filter for one KPID, including MATCH/NO_MATCH/UNKNOWN"+
 			" for each rule, resolved periods, Count occurrence bounds and exact Sum bounds with field and currency."+
 			" Average reports exact sum and count inputs instead of a rounded quotient."+
+			" Experience reports candidate count, selection ambiguity and certain/possible/impossible absence."+
 			" Read profile-filter-doc first. Reuse query-profiles evaluation.at to anchor the periods;"+
 			" this is a new evaluation, not a snapshot. It does not identify which Record operand caused NULL."+
 			" Requires configured MCP settings but uses the main warehouse connection, whose data access is"+

@@ -25,13 +25,15 @@ type Statement struct {
 	SumNodes []bool
 	// AverageNodes distinguishes Average inputs from Sum bounds.
 	AverageNodes []bool
+	// ExperienceNodes identifies selection candidate/absence metadata rows.
+	ExperienceNodes []bool
 }
 
 // ReadExplanation consumes the explanation protocol compiled by this statement.
 // Decoding, cancellation, source or Close failure discards the whole result.
 func (q Statement) ReadExplanation(ctx context.Context, rows warehouses.Rows, profile string) ([]warehouses.FilterNodeOutcome, error) {
 
-	result, err := readExplanation(ctx, rows, q.CountNodes, q.SumNodes, profile)
+	result, err := readExplanation(ctx, rows, q.CountNodes, q.SumNodes, q.ExperienceNodes, profile)
 	if err != nil {
 		return nil, err
 	}

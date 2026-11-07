@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Elastic License 2.0
 // that can be found in the LICENSE file.
 
-// Package unified implements the internal Record/Count/Sum/Average subset.
+// Package unified implements the Record/Count/Sum/Average/Last subset.
 // It has no public JSON or persistence representation.
 package unified
 
@@ -113,16 +113,17 @@ type Result struct {
 	At       time.Time
 }
 
-// Rule is a profile Record condition, Count, Sum, Average or AND/OR group.
+// Rule is a Record condition, Count, Sum, Average, Experience or AND/OR group.
 // Root nil means AllProfiles. Record contains schema-prepared operands.
 // Validation is separate from canonicalization and never mutates state.Where.
 type Rule struct {
-	Record   *state.WhereCondition
-	Count    *Count
-	Sum      *Sum
-	Average  *Average
-	Operator state.WhereLogical
-	Children []Rule
+	Record     *state.WhereCondition
+	Count      *Count
+	Sum        *Sum
+	Average    *Average
+	Experience *Experience
+	Operator   state.WhereLogical
+	Children   []Rule
 }
 
 // Scope qualifies recorded track/page/screen messages at message_id grain.
@@ -316,7 +317,8 @@ func validateRule(rule Rule, at time.Time, depth int, nodes *int) error {
 		return fmt.Errorf("Unified root exceeds 100 descendant nodes")
 	}
 	if rule.Record != nil {
-		if rule.Count != nil || rule.Sum != nil || rule.Average != nil || rule.Operator != 0 || len(rule.Children) != 0 {
+		if rule.Count != nil || rule.Sum != nil || rule.Average != nil || rule.Experience != nil ||
+			rule.Operator != 0 || len(rule.Children) != 0 {
 			return fmt.Errorf("profile Record condition cannot contain other rules")
 		}
 		c := rule.Record
@@ -324,6 +326,12 @@ func validateRule(rule Rule, at time.Time, depth int, nodes *int) error {
 			return fmt.Errorf("invalid prepared profile Record condition")
 		}
 		return nil
+	}
+	if rule.Experience != nil {
+		if rule.Count != nil || rule.Sum != nil || rule.Average != nil || rule.Operator != 0 || len(rule.Children) != 0 {
+			return fmt.Errorf("experience cannot contain other rules")
+		}
+		return rule.Experience.validate(at)
 	}
 	if rule.Average != nil {
 		if rule.Count != nil || rule.Sum != nil || rule.Operator != 0 || len(rule.Children) != 0 {

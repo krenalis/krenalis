@@ -588,6 +588,89 @@ UPDATE krenalis_events SET properties='{}' WHERE event='Order Completed'`)
 
 	})
 
+	t.Run("Experience", func(t *testing.T) {
+
+		_, err := pool.Exec(t.Context(), `INSERT INTO krenalis_events
+(kpid,message_id,event,timestamp,received_at,sent_at,type,connection_id,anonymous_id,traits,properties)
+SELECT ('00000000-0000-0000-0000-'||lpad(n::text,12,'0'))::uuid,'experience/'||id,
+'Order Completed',stamp::timestamp,'2026-02-01','2026-02-01','track','fixture','a','{}',payload::jsonb
+FROM (VALUES
+(1,'old','2026-01-01','{"experience_fixture":true,"q":"yes","v":"no"}'),
+(1,'new','2026-01-02','{"experience_fixture":true,"q":"yes","v":"yes"}'),
+(2,'tie-a','2026-01-10','{"experience_fixture":true,"q":"yes","v":"yes"}'),
+(2,'tie-b','2026-01-10','{"experience_fixture":true,"q":"yes","v":"no"}'),
+(3,'possible','2026-01-15','{"experience_fixture":true,"v":"yes"}')
+) v(n,id,stamp,payload)`)
+		if err != nil {
+			t.Fatalf("expected coherent experience fixtures, got %v", err)
+		}
+		defer func() {
+			_, err := pool.Exec(t.Context(), "DELETE FROM krenalis_events WHERE message_id LIKE 'experience/%'")
+			if err != nil {
+				t.Errorf("expected experience fixture cleanup, got %v", err)
+			}
+		}()
+
+		const experience = `{"operator":"and","rules":[{"experience":{"base":{` +
+			`"source":{"kind":"recordedEvents","name":"Order Completed","grain":"registered-message"},` +
+			`"period":{"kind":"elapsedLookback","duration":{"value":31,"unit":"day"}},` +
+			`"where":{"operator":"and","rules":[{"property":"properties.experience_fixture","operator":"exists"},` +
+			`{"property":"properties.q","operator":"is","values":["yes"]}]}},"select":{"kind":"last"},` +
+			`"verify":{"operator":"and","rules":[{"property":"properties.v","operator":"is","values":["yes"]}]}}}]}`
+		for _, test := range []struct{ name, filter, totals string }{
+			{"last", experience, `"match":1,"noMatch":1,"unknown":2`},
+			{"outer OR", strings.Replace(strings.Replace(experience, `"operator":"and"`, `"operator":"or"`, 1), `"rules":[{"experience"`, `"rules":[{"property":"country","operator":"is","values":["FR"]},{"experience"`, 1), `"match":3,"noMatch":0,"unknown":1`},
+			{"outer AND", strings.Replace(experience, `"rules":[{"experience"`, `"rules":[{"property":"country","operator":"is","values":["IT"]},{"experience"`, 1), `"match":1,"noMatch":2,"unknown":1`},
+		} {
+			t.Run(test.name, func(t *testing.T) {
+				for _, first := range []int{0, 99} {
+					var expected json.RawMessage
+					k.Call("GET", "/v1/profiles?filter="+url.QueryEscape(test.filter)+"&at="+
+						url.QueryEscape(at)+"&first="+strconv.Itoa(first), nil, nil, &expected)
+					actual := assertResult(t, tool(t, "query-profiles", map[string]any{
+						"filter": test.filter, "at": at, "first": first}))
+					if actual != string(expected) || !strings.Contains(actual, test.totals) ||
+						first == 99 && !strings.HasPrefix(actual, `{"profiles":[]`) {
+						t.Fatalf("expected identical complete HTTP/MCP experience with %s, got %s", test.totals, actual)
+					}
+				}
+			})
+		}
+
+		for _, test := range []struct{ id, kind, absence, result string }{
+			{"00000000-0000-0000-0000-000000000001", "unique", "impossible", "MATCH"},
+			{"00000000-0000-0000-0000-000000000002", "ambiguous", "impossible", "UNKNOWN"},
+			{"00000000-0000-0000-0000-000000000003", "ambiguous", "possible", "UNKNOWN"},
+			{"00000000-0000-0000-0000-000000000004", "absent", "certain", "NO_MATCH"},
+		} {
+			t.Run("explain "+test.id, func(t *testing.T) {
+				var expected json.RawMessage
+				k.Call("GET", "/v1/profiles/"+test.id+"/filter-explanation?filter="+url.QueryEscape(experience)+
+					"&at="+url.QueryEscape(at), nil, nil, &expected)
+				actual := assertResult(t, tool(t, "explain-profile-filter", map[string]any{
+					"kpid": test.id, "filter": experience, "at": at}))
+				if actual != string(expected) || !strings.Contains(actual, `"kind":"experience"`) ||
+					!strings.Contains(actual, `"selection":{"kind":"`+test.kind+`","absence":"`+test.absence+`"`) ||
+					!strings.Contains(actual, `"result":"`+test.result+`"`) {
+					t.Fatalf("expected %s selection, %s absence and %s, got %s", test.kind, test.absence, test.result, actual)
+				}
+			})
+		}
+
+		for _, test := range []struct{ name, filter, code string }{
+			{"first unavailable", strings.Replace(experience, `"kind":"last"`, `"kind":"first"`, 1), "FilterCapabilityNotImplemented"},
+			{"verify required", strings.Replace(experience, `,"verify":{"operator":"and","rules":[{"property":"properties.v","operator":"is","values":["yes"]}]}`, ``, 1), "InvalidArguments"},
+			{"invalid verify", strings.Replace(experience, `properties.v`, `unknown`, 1), "PropertyNotExist"},
+		} {
+			t.Run(test.name, func(t *testing.T) {
+				assertToolError(t, tool(t, "query-profiles", map[string]any{"filter": test.filter, "at": at}), test.code)
+				assertToolError(t, tool(t, "explain-profile-filter", map[string]any{
+					"kpid": "00000000-0000-0000-0000-000000000001", "filter": test.filter, "at": at}), test.code)
+			})
+		}
+
+	})
+
 	t.Run("Average", func(t *testing.T) {
 
 		_, err := pool.Exec(t.Context(), `INSERT INTO krenalis_events

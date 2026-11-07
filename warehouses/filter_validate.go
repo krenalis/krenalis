@@ -70,6 +70,18 @@ func validateFilterCondition(node FilterCondition, depth int, nodes, physical *i
 			return fmt.Errorf("warehouses: nil profile Record condition")
 		}
 		return validateRecordQualification(n.Expr, 1, physical)
+	case *LastOccurrence:
+		if n == nil || n.Verify == nil {
+			return fmt.Errorf("warehouses: experience requires verification")
+		}
+		population := &IndependentOccurrenceCount{Source: n.Source, Start: n.Start, End: n.End,
+			UnboundedStart: n.UnboundedStart, Qualification: n.Qualification}
+		populationNodes := 0
+		err := validateFilterCondition(population, depth, &populationNodes, physical)
+		if err != nil {
+			return err
+		}
+		return validateQualification(n.Verify, 1, physical)
 	case *DeterminedOccurrenceAverage:
 		err := n.validate()
 		if err != nil {

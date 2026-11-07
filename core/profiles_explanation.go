@@ -25,16 +25,37 @@ type ProfileFilterExplanation struct {
 }
 
 // ProfileRuleExplanation follows the input filter's group and rule order.
-// Kind is and, or, record, count, sum or average.
+// Kind is and, or, record, count, sum, average or experience.
 // Result is MATCH, NO_MATCH or UNKNOWN.
 // Record results do not identify which operand caused a SQL NULL.
 type ProfileRuleExplanation struct {
-	Kind    string                     `json:"kind"`
-	Result  string                     `json:"result"`
-	Rules   []ProfileRuleExplanation   `json:"rules,omitzero"`
-	Count   *ProfileCountExplanation   `json:"count,omitzero"`
-	Sum     *ProfileSumExplanation     `json:"sum,omitzero"`
-	Average *ProfileAverageExplanation `json:"average,omitzero"`
+	Kind       string                        `json:"kind"`
+	Result     string                        `json:"result"`
+	Rules      []ProfileRuleExplanation      `json:"rules,omitzero"`
+	Count      *ProfileCountExplanation      `json:"count,omitzero"`
+	Sum        *ProfileSumExplanation        `json:"sum,omitzero"`
+	Average    *ProfileAverageExplanation    `json:"average,omitzero"`
+	Experience *ProfileExperienceExplanation `json:"experience,omitzero"`
+}
+
+// ProfileExperienceExplanation describes selection before Record verification.
+// Period metadata has the same meaning and omission rules as Count.
+type ProfileExperienceExplanation struct {
+	Start          time.Time                  `json:"start,omitzero"`
+	End            time.Time                  `json:"end"`
+	UnboundedStart bool                       `json:"unboundedStart,omitzero"`
+	History        *FilterHistory             `json:"history,omitzero"`
+	Select         FilterExperienceSelector   `json:"select"`
+	Selection      ProfileExperienceSelection `json:"selection"`
+}
+
+// ProfileExperienceSelection retains ambiguity without inventing a witness.
+// Kind is absent, unique or ambiguous. Absence is certain, possible or
+// impossible. Candidates counts distinct possible last-message identities.
+type ProfileExperienceSelection struct {
+	Kind       string `json:"kind"`
+	Absence    string `json:"absence"`
+	Candidates int64  `json:"candidates"`
 }
 
 // ProfileAverageExplanation reports exact inputs without a rounded quotient.
@@ -210,6 +231,27 @@ func explainProfileRule(rule warehouses.FilterCondition, semantic unified.Rule, 
 		}
 	case *warehouses.RecordFilter:
 		result.Kind = "record"
+	case *warehouses.LastOccurrence:
+		if node.Experience == nil || semantic.Experience == nil {
+			return ProfileRuleExplanation{}, errors.New("core: missing profile explanation experience")
+		}
+		selection := ProfileExperienceSelection{Kind: "ambiguous", Absence: "impossible",
+			Candidates: node.Experience.Candidates}
+		if node.Experience.AbsencePossible {
+			selection.Absence = "possible"
+		}
+		if selection.Candidates == 0 {
+			selection.Kind, selection.Absence = "absent", "certain"
+		} else if selection.Candidates == 1 && !node.Experience.AbsencePossible {
+			selection.Kind = "unique"
+		}
+		result.Kind = "experience"
+		result.Experience = &ProfileExperienceExplanation{Start: rule.Start, End: rule.End,
+			UnboundedStart: rule.UnboundedStart, Select: FilterExperienceSelector{Kind: "last"}, Selection: selection}
+		if history := semantic.Experience.Scope.History; history != nil {
+			definition, revision := history.Reference()
+			result.Experience.History = &FilterHistory{Definition: definition, MeaningRevision: revision}
+		}
 	case *warehouses.DeterminedOccurrenceAverage:
 		if node.Average == nil || semantic.Average == nil {
 			return ProfileRuleExplanation{}, errors.New("core: missing profile explanation average")

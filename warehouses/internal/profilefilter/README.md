@@ -142,3 +142,14 @@ PostgreSQL has real service/datastore/driver and numeric probes. The mirrored
 Snowflake adapter is locally tested but remains gated until real conformance,
 number/type/NULL, timestamp and resource probes pass. No current Snowflake
 credentials or runtime measurements are claimed.
+
+
+LastOccurrence adds no ranking or relational IR. Its independent local base
+keeps all winners at/after the latest certainly included timestamp, or every
+possible winner plus absence when no certain row exists. Shared governed facts
+are outside this prepared contract. Verification closes only after preserving
+selection alternatives; no ID breaks ties and no older passing row is substituted.
+Copy inspection additionally requires equal exact timestamps, not just equal
+period membership. The node reuses page/totals and the six-column explanation
+transport, whose two integer slots carry candidate count and a 0/1 absence flag
+under a distinct ExperienceNodes tag. Count/Sum/Average decoding is unchanged.

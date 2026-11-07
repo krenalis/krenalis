@@ -19,6 +19,7 @@ type explanationTerm struct {
 	truth, lower, upper string
 	sumLower, sumUpper  string
 	average             bool
+	experience          bool
 }
 
 // BuildExplanation reuses the closed filter expressions and emits one
@@ -69,6 +70,7 @@ func BuildExplanation(filter warehouses.Filter, population warehouses.ProfileSou
 	}
 	var sums []bool
 	var averages []bool
+	var experiences []bool
 	if hasSums {
 		if dialect.ValueSize == nil {
 			return Statement{}, fmt.Errorf("warehouses/internal/profilefilter: missing value size operation")
@@ -81,7 +83,7 @@ func BuildExplanation(filter warehouses.Filter, population warehouses.ProfileSou
 		terms = append(terms, "("+node.truth+") AS "+q("$truth"+n))
 		lo, hi := "CAST(NULL AS BIGINT)", "CAST(NULL AS BIGINT)"
 		if node.lower != "" {
-			counts[i] = node.sumLower == ""
+			counts[i] = node.sumLower == "" && !node.experience
 			terms = append(terms, node.lower+" AS "+q("$lo"+n), node.upper+" AS "+q("$hi"+n))
 			lo, hi = q("$lo"+n), q("$hi"+n)
 		}
@@ -90,6 +92,12 @@ func BuildExplanation(filter warehouses.Filter, population warehouses.ProfileSou
 				averages = make([]bool, len(c.nodes))
 			}
 			averages[i] = true
+		}
+		if node.experience {
+			if experiences == nil {
+				experiences = make([]bool, len(c.nodes))
+			}
+			experiences[i] = true
 		}
 		extra := ""
 		if hasSums {
@@ -124,6 +132,7 @@ func BuildExplanation(filter warehouses.Filter, population warehouses.ProfileSou
 	statement := Statement{SQL: "WITH " + strings.Join(c.ctes, ",\n") +
 		"\nSELECT profile_id,node,truth,lo,hi,(" + failures + ")" + extra + " FROM explanation ORDER BY node LIMIT " +
 		strconv.Itoa(len(c.nodes)+1), Arguments: c.arguments, CountNodes: counts, SumNodes: sums, AverageNodes: averages,
+		ExperienceNodes: experiences,
 		Columns: []warehouses.Column{
 			{Name: "profile_id", Type: types.UUID()}, {Name: "node", Type: types.Int(64)},
 			{Name: "truth", Type: types.Boolean(), Nullable: true},
@@ -142,7 +151,7 @@ func BuildExplanation(filter warehouses.Filter, population warehouses.ProfileSou
 // ReadExplanation consumes and closes a fixed-width explanation cursor.
 // Missing profiles return nil; any failure discards the complete result.
 func ReadExplanation(ctx context.Context, rows warehouses.Rows, countNodes []bool, profile string) ([]warehouses.FilterNodeOutcome, error) {
-	return readExplanation(ctx, rows, countNodes, nil, profile)
+	return readExplanation(ctx, rows, countNodes, nil, nil, profile)
 }
 
 // boundedSumText bounds the transport at its source without truncating numbers.
@@ -152,7 +161,7 @@ func boundedSumText(value string, dialect Dialect) string {
 		" WHEN " + value + " IS NULL THEN NULL ELSE 'invalid' END"
 }
 
-func readExplanation(ctx context.Context, rows warehouses.Rows, countNodes, sumNodes []bool, profile string) (result []warehouses.FilterNodeOutcome, err error) {
+func readExplanation(ctx context.Context, rows warehouses.Rows, countNodes, sumNodes, experienceNodes []bool, profile string) (result []warehouses.FilterNodeOutcome, err error) {
 
 	if rows == nil {
 		return nil, fmt.Errorf("warehouses/internal/profilefilter: missing explanation cursor")
@@ -163,11 +172,17 @@ func readExplanation(ctx context.Context, rows warehouses.Rows, countNodes, sumN
 			result, err = nil, closeErr
 		}
 	}()
-	if len(countNodes) < 1 || len(countNodes) > 101 || sumNodes != nil && len(sumNodes) != len(countNodes) {
+	if len(countNodes) < 1 || len(countNodes) > 101 || sumNodes != nil && len(sumNodes) != len(countNodes) ||
+		experienceNodes != nil && len(experienceNodes) != len(countNodes) {
 		return nil, fmt.Errorf("warehouses/internal/profilefilter: invalid explanation node count")
 	}
 	if id, ok := types.NormalizeUUID(profile); !ok || id != profile {
 		return nil, fmt.Errorf("warehouses/internal/profilefilter: invalid explanation profile")
+	}
+	for i, experience := range experienceNodes {
+		if experience && (countNodes[i] || sumNodes != nil && sumNodes[i]) {
+			return nil, fmt.Errorf("warehouses/internal/profilefilter: conflicting explanation node kinds")
+		}
 	}
 
 	for rows.Next() {
@@ -215,6 +230,13 @@ func readExplanation(ctx context.Context, rows warehouses.Rows, countNodes, sumN
 			if countNodes[index] {
 				node.Count = &counts
 			}
+		} else if experienceNodes != nil && experienceNodes[index] {
+			candidates, cok := values[3].(int)
+			absent, aok := values[4].(int)
+			if !cok || !aok || candidates < 0 || absent < 0 || absent > 1 || candidates == 0 && absent == 0 {
+				return nil, fmt.Errorf("warehouses/internal/profilefilter: invalid experience selection")
+			}
+			node.Experience = &warehouses.OccurrenceSelection{Candidates: int64(candidates), AbsencePossible: absent == 1}
 		} else if values[3] != nil || values[4] != nil {
 			return nil, fmt.Errorf("warehouses/internal/profilefilter: unexpected explanation count bounds")
 		}
