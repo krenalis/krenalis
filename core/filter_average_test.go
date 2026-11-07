@@ -158,6 +158,25 @@ func TestFilterAverageDiagnostics(t *testing.T) {
 		}
 		t.Fatal("expected null minimum rejected, got success")
 	})
+
+	invalid := strings.Replace(averageConditionJSON, `"minimum":2`, `"minimum":null`, 1)
+	for _, test := range []struct{ name, rules, path string }{
+		{"second Average", averageConditionJSON + "," + invalid, "/rules/1/average"},
+		{"nested Average", averageConditionJSON + "," + averageConditionJSON + `,{"operator":"or","rules":[` + averageConditionJSON + "," + invalid + `]}`, "/rules/2/rules/1/average"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			var filter Filter
+			err := json.Unmarshal([]byte(`{"operator":"and","rules":[`+test.rules+`]}`), &filter)
+			if err != nil {
+				message := `within "` + test.path + `": monetary fields cannot be null`
+				if !strings.Contains(err.Error(), message) || strings.Contains(err.Error(), "Sum") {
+					t.Fatalf("expected located Average diagnostic %q, got %v", message, err)
+				}
+				return
+			}
+			t.Fatal("expected null minimum rejected, got success")
+		})
+	}
 }
 
 // TestFilterAverageInvalidBeforeUnsupported preserves full-filter validity.

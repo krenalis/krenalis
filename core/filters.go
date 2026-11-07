@@ -567,6 +567,9 @@ func unmarshalFilterRule(dec *json.Decoder, depth int, expectGroup, occurrence b
 					return nil, 0, err
 				}
 				err = average.UnmarshalJSON(value)
+				if err != nil {
+					return nil, 0, fmt.Errorf("within %q: %w", dec.StackPointer(), err)
+				}
 			}
 		case "values":
 			if hasValues {

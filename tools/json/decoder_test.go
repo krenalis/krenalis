@@ -80,4 +80,36 @@ func Test_Decoder(t *testing.T) {
 		}
 	})
 
+	t.Run("StackPointer", func(t *testing.T) {
+		dec := NewDecoder(strings.NewReader(`{"rules":[{"a~/b":{}},42]}`))
+		for _, test := range []struct {
+			token bool
+			path  string
+		}{
+			{true, ""},
+			{true, "/rules"},
+			{true, "/rules"},
+			{true, "/rules/0"},
+			{true, "/rules/0/a~0~1b"},
+			{false, "/rules/0/a~0~1b"},
+			{true, "/rules/0"},
+			{false, "/rules/1"},
+			{true, "/rules"},
+			{true, ""},
+		} {
+			var err error
+			if test.token {
+				_, err = dec.ReadToken()
+			} else {
+				_, err = dec.ReadValue()
+			}
+			if err != nil {
+				t.Fatalf("expected valid JSON read, got %v", err)
+			}
+			if got := dec.StackPointer(); got != test.path {
+				t.Fatalf("expected JSON pointer %q, got %q", test.path, got)
+			}
+		}
+	})
+
 }

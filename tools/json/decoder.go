@@ -126,3 +126,8 @@ func (d *Decoder) SkipValue() error {
 	}
 	return err
 }
+
+// StackPointer returns a JSON Pointer (RFC 6901) to the most recently read value.
+func (d *Decoder) StackPointer() string {
+	return string(d.dec.StackPointer())
+}

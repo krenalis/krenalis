@@ -732,6 +732,25 @@ UPDATE krenalis_events SET properties='{}' WHERE event='Order Completed'`)
 			})
 		}
 
+		t.Run("nested Average error location", func(t *testing.T) {
+			rule := strings.TrimSuffix(strings.TrimPrefix(average, `{"operator":"and","rules":[`), `]}`)
+			invalid := strings.Replace(rule, `"minimum":2`, `"minimum":null`, 1)
+			filter := `{"operator":"and","rules":[` + rule + "," + rule +
+				`,{"operator":"or","rules":[` + rule + "," + invalid + `]}]}`
+			query := tool(t, "query-profiles", map[string]any{"filter": filter, "at": at})
+			assertToolError(t, query, "InvalidArguments")
+			explanation := tool(t, "explain-profile-filter", map[string]any{
+				"kpid": "00000000-0000-0000-0000-000000000001", "filter": filter, "at": at})
+			assertToolError(t, explanation, "InvalidArguments")
+			for _, result := range []profileMCPResponse{query, explanation} {
+				message := result.Result.Content[0].Text
+				if !strings.Contains(message, `within "/rules/2/rules/1/average": monetary fields cannot be null`) ||
+					strings.Contains(message, "Sum") {
+					t.Fatalf("expected nested Average path and neutral InvalidArguments diagnostic, got %s", message)
+				}
+			}
+		})
+
 	})
 
 	t.Run("Sum", func(t *testing.T) {
