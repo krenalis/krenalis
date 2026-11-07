@@ -247,6 +247,9 @@ Sum explanations add `sum` with the same `start`, `end`, `unboundedStart`, and
 `history` names and omission rules as Count, plus `field`, `nativeCurrency` and
 `bounds:{lower,upper}`. Finite numbers are tight extrema under independent
 per-event qualification outcomes; values between them need not be reachable.
+For example, 20 EUR plus 20 of unknown currency has bounds 20 and 40, with only
+those two totals possible.
+
 Record `where` keeps Kleene logic without solving constraints between leaves
 over the same missing field. For example, with a missing coupon, both
 `coupon is PROMO AND coupon is not PROMO` and the corresponding OR yield UNKNOWN.
@@ -254,11 +257,11 @@ The occurrence can therefore remain optional in this qualification model, even
 when joint reasoning about possible coupon values would determine the predicate.
 Reachability refers to those ternary qualification outcomes, not to all possible
 assignments of raw fields. This distinction also applies to Count.
-For example, 20 EUR plus 20 of unknown currency has
-bounds 20 and 40, with only those two totals possible. A null bound means no
-finite bound in that direction, never zero. References identify the reading
-actually resolved by core; bounds do not certify external history or explain
-every individual event. An explanation does not make unsupported forms available.
+
+A null bound means no finite bound in that direction, never zero. References
+identify the reading actually resolved by core; bounds do not certify external
+history or explain every individual event. An explanation does not make
+unsupported forms available.
 Exact JSON Numbers can use exponent notation (1000 can be serialized as `1E+3`)
 and omit trailing fractional zeroes; compare their numeric value, not their spelling.
 

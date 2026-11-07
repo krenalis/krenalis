@@ -483,13 +483,19 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,
 	}
 
 	// Reachability is relative to Record/Kleene outcomes, not raw completions.
-	for _, operator := range []state.WhereLogical{state.OpAnd, state.OpOr} {
-		t.Run(fmt.Sprintf("correlated Record leaves/%d", operator), func(t *testing.T) {
+	for _, test := range []struct {
+		name     string
+		operator state.WhereLogical
+	}{
+		{"and", state.OpAnd},
+		{"or", state.OpOr},
+	} {
+		t.Run("correlated Record leaves/"+test.name, func(t *testing.T) {
 			execUnifiedFixture(t, dw, "TRUNCATE krenalis_events")
 			execUnifiedFixture(t, dw, fmt.Sprintf(`INSERT INTO krenalis_events VALUES
 ('%s','correlated','track','Order Completed','2026-01-15','{"total":40,"currency":"EUR"}')`, unifiedTestID(1)))
 			qualified := sum
-			qualified.Where = &state.Where{Operator: operator, Rules: []state.WhereRule{
+			qualified.Where = &state.Where{Operator: test.operator, Rules: []state.WhereRule{
 				&state.WhereCondition{Property: []string{"properties", "coupon"}, Operator: state.OpIs,
 					Values: []any{json.Value(`"PROMO"`)}},
 				&state.WhereCondition{Property: []string{"properties", "coupon"}, Operator: state.OpIsNot,
