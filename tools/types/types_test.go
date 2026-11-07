@@ -319,6 +319,7 @@ func Test_IsUnsigned(t *testing.T) {
 func Test_Ranges(t *testing.T) {
 
 	for _, s := range []int{8, 16, 24, 32, 64} {
+
 		if min, max := Int(s).IntRange(); min != -1<<(s-1) || max != 1<<(s-1)-1 {
 			t.Errorf("Int(%d).IntRange(): expected (%d, %d), got (%d, %d)", s, -1<<(s-1), 1<<(s-1)-1, min, max)
 		}
@@ -335,6 +336,63 @@ func Test_Ranges(t *testing.T) {
 		if !Equal(year, Int(s).AsYear().Unsigned()) {
 			t.Fatal("expected equivalent unsigned year types, got different construction results")
 		}
+		if !Equal(year, Int(s).AsYear().WithIntRange(2, 100).Unsigned()) {
+			t.Fatal("expected the default unsigned year type, got previous signed bounds")
+		}
+
+		for _, year := range []Type{Int(s).AsYear(), year} {
+			lo, hi := int64(MinYear), int64(MaxYear)
+			if s == 8 {
+				hi = MaxInt8
+				if year.IsUnsigned() {
+					hi = MaxUint8
+				}
+			}
+			tests := []struct {
+				name     string
+				min, max int64
+			}{
+				{"defaults", lo, hi},
+				{"minimum", 2, hi},
+				{"maximum", lo, 100},
+				{"both bounds", 2, 100},
+				{"single value", 2, 2},
+			}
+			for _, test := range tests {
+				t.Run(fmt.Sprintf("%s/year/%s", year, test.name), func(t *testing.T) {
+
+					var yearFirst, rangeFirst, restored Type
+					var gotMin, gotMax int64
+					if year.IsUnsigned() {
+						yearFirst = year.WithUnsignedRange(uint64(test.min), uint64(test.max))
+						rangeFirst = Int(s).Unsigned().WithUnsignedRange(uint64(test.min), uint64(test.max)).AsYear()
+						restored = yearFirst.WithUnsignedRange(uint64(lo), uint64(hi))
+						min, max := yearFirst.UnsignedRange()
+						gotMin, gotMax = int64(min), int64(max)
+					} else {
+						yearFirst = year.WithIntRange(test.min, test.max)
+						rangeFirst = Int(s).WithIntRange(test.min, test.max).AsYear()
+						restored = yearFirst.WithIntRange(lo, hi)
+						gotMin, gotMax = yearFirst.IntRange()
+					}
+
+					if gotMin != test.min || gotMax != test.max {
+						t.Fatalf("expected range [%d,%d], got [%d,%d]", test.min, test.max, gotMin, gotMax)
+					}
+					if !Equal(yearFirst, rangeFirst) {
+						t.Fatalf("expected equal construction results, got %#v and %#v", yearFirst, rangeFirst)
+					}
+					if test.min == lo && test.max == hi && !Equal(year, yearFirst) {
+						t.Fatal("expected the default year type, got redundant bounds")
+					}
+					if !Equal(year, restored) {
+						t.Fatal("expected replacement of previous year bounds, got a different type")
+					}
+
+				})
+			}
+		}
+
 	}
 
 	for _, s := range []int{32, 64} {

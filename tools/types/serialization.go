@@ -831,16 +831,15 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 			return Type{}, errors.New("unexpected minimum for non-number type")
 		}
 	}
-	if maximum == "" {
-		if t.kind == IntKind && t.size < 4 {
-			// 8, 16, 24, and 32 bits.
-			if t.unsigned {
-				t.s = int32(maxUnsigned[t.size])
-			} else {
-				t.s = int32(maxInt[t.size])
-			}
+	if t.kind == IntKind && t.size < 4 {
+		// 8, 16, 24, and 32 bits.
+		if t.unsigned {
+			t.s = int32(maxUnsigned[t.size])
+		} else {
+			t.s = int32(maxInt[t.size])
 		}
-	} else {
+	}
+	if maximum != "" {
 		switch t.kind {
 		case IntKind:
 			if t.unsigned {

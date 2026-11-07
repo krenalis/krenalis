@@ -412,16 +412,15 @@ func (t Type) withSemantics(semantics Semantics, option any) (Type, error) {
 		if option != nil {
 			return Type{}, errors.New("year semantics do not accept an option")
 		}
+		t.semantics = semantics
 		if t.unsigned {
 			lo, hi := t.UnsignedRange()
-			lo, hi = max(lo, MinYear), min(hi, MaxYear)
 			if hi < lo {
 				return Type{}, errors.New("int range does not include a calendar year")
 			}
 			t = t.WithUnsignedRange(lo, hi)
 		} else {
 			lo, hi := t.IntRange()
-			lo, hi = max(lo, MinYear), min(hi, MaxYear)
 			if hi < lo {
 				return Type{}, errors.New("int range does not include a calendar year")
 			}
