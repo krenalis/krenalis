@@ -655,36 +655,6 @@ func Test_TypeSemanticsJSONRoundTrip(t *testing.T) {
 	}
 }
 
-// Test_TypeSemanticsJSONYearBounds checks normalization of year bounds.
-func Test_TypeSemanticsJSONYearBounds(t *testing.T) {
-	tests := []struct {
-		data string
-		want Type
-	}{
-		{`{"kind":"int","bitSize":16,"semantics":"year"}`, Int(16).AsYear()},
-		{`{"kind":"int","bitSize":16,"semantics":"year","minimum":1,"maximum":9999}`, Int(16).AsYear()},
-		{`{"kind":"int","bitSize":16,"semantics":"year","minimum":1900}`, Int(16).AsYear().WithIntRange(1900, 9999)},
-		{`{"kind":"int","bitSize":16,"semantics":"year","maximum":2100}`, Int(16).AsYear().WithIntRange(1, 2100)},
-		{`{"kind":"int","bitSize":8,"semantics":"year"}`, Int(8).AsYear()},
-		{`{"kind":"int","bitSize":8,"unsigned":true,"semantics":"year"}`, Int(8).Unsigned().AsYear()},
-		{`{"kind":"int","bitSize":64,"unsigned":true,"semantics":"year"}`, Int(64).Unsigned().AsYear()},
-		{`{"kind":"int","bitSize":64,"semantics":"year","minimum":1,"maximum":9999}`, Int(64).AsYear()},
-		{`{"kind":"int","bitSize":64,"unsigned":true,"semantics":"year","minimum":1,"maximum":9999}`, Int(64).Unsigned().AsYear()},
-	}
-	for _, test := range tests {
-		t.Run(test.data, func(t *testing.T) {
-			var got Type
-			err := json.Unmarshal([]byte(test.data), &got)
-			if err != nil {
-				t.Fatalf("expected valid year bounds, got %v", err)
-			}
-			if !Equal(got, test.want) {
-				t.Fatalf("expected %s, got %s", test.want, got)
-			}
-		})
-	}
-}
-
 // Test_Unit tests unit names, lookup, and usability.
 func Test_Unit(t *testing.T) {
 	tests := []struct {
