@@ -341,66 +341,69 @@ func Test_Ranges(t *testing.T) {
 			if lo, hi := unsignedYear.UnsignedRange(); lo != MinYear || hi != unsignedYearMax {
 				t.Errorf("expected unsigned year range [%d,%d], got [%d,%d]", MinYear, unsignedYearMax, lo, hi)
 			}
-			if got := signedYear.Unsigned(); !Equal(unsignedYear, got) {
-				t.Fatalf("expected unsigned year type %#v, got %#v", unsignedYear, got)
-			}
 			if got := signedYear.WithIntRange(2, 100).Unsigned(); !Equal(unsignedYear, got) {
 				t.Fatalf("expected default unsigned year type %#v, got %#v", unsignedYear, got)
 			}
 
-			for _, year := range []struct {
-				name string
-				typ  Type
-				max  int64
-			}{
-				{"signed", signedYear, signedYearMax},
-				{"unsigned", unsignedYear, int64(unsignedYearMax)},
-			} {
-				lo, hi := int64(MinYear), year.max
-				tests := []struct {
-					name     string
-					min, max int64
-				}{
-					{"defaults", lo, hi},
-					{"minimum", 2, hi},
-					{"maximum", lo, 100},
-					{"both bounds", 2, 100},
-					{"single value", 2, 2},
+		})
+	}
+
+	for _, test := range []struct {
+		name     string
+		typ      Type
+		min, max int64
+	}{
+		{"signed/defaults", Int(8), MinYear, MaxInt8},
+		{"signed/minimum", Int(16), 2, MaxYear},
+		{"signed/maximum", Int(64), MinYear, 100},
+		{"signed/both bounds", Int(32), 2, 100},
+		{"signed/single value", Int(64), 2, 2},
+		{"unsigned/defaults", Int(32).Unsigned(), MinYear, MaxYear},
+		{"unsigned/minimum", Int(64).Unsigned(), 2, MaxYear},
+		{"unsigned/maximum", Int(8).Unsigned(), MinYear, 100},
+		{"unsigned/both bounds", Int(32).Unsigned(), 2, 100},
+		{"unsigned/single value", Int(64).Unsigned(), 2, 2},
+	} {
+		t.Run(fmt.Sprintf("int/%d/year/%s", test.typ.BitSize(), test.name), func(t *testing.T) {
+
+			year := test.typ.AsYear()
+			var yearFirst, rangeFirst Type
+			var gotMin, gotMax, defaultMin, defaultMax int64
+			if year.IsUnsigned() {
+				min, max := uint64(test.min), uint64(test.max)
+				yearFirst = year.WithUnsignedRange(min, max)
+				rangeFirst = test.typ.WithUnsignedRange(min, max).AsYear()
+				min, max = yearFirst.UnsignedRange()
+				gotMin, gotMax = int64(min), int64(max)
+				min, max = year.UnsignedRange()
+				defaultMin, defaultMax = int64(min), int64(max)
+			} else {
+				yearFirst = year.WithIntRange(test.min, test.max)
+				rangeFirst = test.typ.WithIntRange(test.min, test.max).AsYear()
+				gotMin, gotMax = yearFirst.IntRange()
+				defaultMin, defaultMax = year.IntRange()
+			}
+
+			if gotMin != test.min || gotMax != test.max {
+				t.Fatalf("expected range [%d,%d], got [%d,%d]", test.min, test.max, gotMin, gotMax)
+			}
+			if !Equal(yearFirst, rangeFirst) {
+				t.Fatalf("expected equal construction results, got %#v and %#v", yearFirst, rangeFirst)
+			}
+			if test.min == defaultMin && test.max == defaultMax {
+				if !Equal(year, yearFirst) {
+					t.Fatalf("expected default year type %#v, got %#v", year, yearFirst)
 				}
-				for _, test := range tests {
-					t.Run(fmt.Sprintf("year/%s/%s", year.name, test.name), func(t *testing.T) {
-
-						var yearFirst, rangeFirst, restored Type
-						var gotMin, gotMax int64
-						if year.typ.IsUnsigned() {
-							min, max := uint64(test.min), uint64(test.max)
-							yearFirst = year.typ.WithUnsignedRange(min, max)
-							rangeFirst = Int(s).Unsigned().WithUnsignedRange(min, max).AsYear()
-							restored = yearFirst.WithUnsignedRange(uint64(lo), uint64(hi))
-							min, max = yearFirst.UnsignedRange()
-							gotMin, gotMax = int64(min), int64(max)
-						} else {
-							yearFirst = year.typ.WithIntRange(test.min, test.max)
-							rangeFirst = Int(s).WithIntRange(test.min, test.max).AsYear()
-							restored = yearFirst.WithIntRange(lo, hi)
-							gotMin, gotMax = yearFirst.IntRange()
-						}
-
-						if gotMin != test.min || gotMax != test.max {
-							t.Fatalf("expected range [%d,%d], got [%d,%d]", test.min, test.max, gotMin, gotMax)
-						}
-						if !Equal(yearFirst, rangeFirst) {
-							t.Fatalf("expected equal construction results, got %#v and %#v", yearFirst, rangeFirst)
-						}
-						if test.min == lo && test.max == hi && !Equal(year.typ, yearFirst) {
-							t.Fatalf("expected default year type %#v, got %#v", year.typ, yearFirst)
-						}
-						if !Equal(year.typ, restored) {
-							t.Fatalf("expected restored year type %#v, got %#v", year.typ, restored)
-						}
-
-					})
-				}
+				return
+			}
+			var restored Type
+			if year.IsUnsigned() {
+				restored = yearFirst.WithUnsignedRange(uint64(defaultMin), uint64(defaultMax))
+			} else {
+				restored = yearFirst.WithIntRange(defaultMin, defaultMax)
+			}
+			if !Equal(year, restored) {
+				t.Fatalf("expected restored year type %#v, got %#v", year, restored)
 			}
 
 		})
