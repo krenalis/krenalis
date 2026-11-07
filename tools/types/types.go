@@ -706,10 +706,10 @@ func (t Type) WithUnsignedRange(min, max uint64) Type {
 	if !t.unsigned {
 		panic("type is not an unsigned int type")
 	}
-	Max := maxUnsigned[t.size]
 	if t.semantics == YearSemantics && (min < MinYear || max > MaxYear) {
 		panic("tools/types: year range must be within [1,9999]")
 	}
+	Max := maxUnsigned[t.size]
 	if min == 0 && max == Max {
 		return t
 	}

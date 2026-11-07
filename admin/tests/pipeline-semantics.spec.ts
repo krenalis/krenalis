@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import Type, { IntType, ObjectType, Property } from '../src/lib/api/types/types';
 import TransformedConnection from '../src/lib/core/connection';
+import { getIntegerTypeRange } from '../src/components/helpers/types';
 import {
 	FILTER_OPERATORS,
 	computeDefaultTransformationFunction,
@@ -165,5 +166,15 @@ test('Integer transformation examples respect ranges and language representation
 		expect(result.matching, example.name).toBe(example.value);
 		const python = computeDefaultTransformationFunction(schema, 'Python', connection, pipelineType);
 		expect(python, example.name).toContain(`"matching": ${example.value},`);
+	}
+});
+
+test('Year integer ranges respect calendar and bit-size bounds', () => {
+	for (const bitSize of [8, 16, 64] as const) {
+		for (const unsigned of [false, true]) {
+			const type: IntType = { kind: 'int', bitSize, unsigned, semantics: 'year' };
+			const maximum = bitSize === 8 ? (unsigned ? 255 : 127) : 9999;
+			expect(getIntegerTypeRange(type)).toEqual([BigInt(1), BigInt(maximum)]);
+		}
 	}
 });

@@ -345,7 +345,23 @@ func Test_TypeSemanticsJSONErrors(t *testing.T) {
 		{"year on string", `{"kind":"string","semantics":"year"}`, "year semantics require an int type"},
 		{
 			"year outside range", `{"kind":"int","bitSize":16,"semantics":"year","minimum":10000}`,
-			"int range does not include a calendar year",
+			"year range must be within [1,9999]",
+		},
+		{
+			"year lower bound", `{"kind":"int","bitSize":16,"semantics":"year","minimum":0}`,
+			"year range must be within [1,9999]",
+		},
+		{
+			"year upper bound", `{"kind":"int","bitSize":16,"semantics":"year","maximum":20000}`,
+			"year range must be within [1,9999]",
+		},
+		{
+			"unsigned year lower bound", `{"kind":"int","bitSize":16,"semantics":"year","unsigned":true,"minimum":0}`,
+			"year range must be within [1,9999]",
+		},
+		{
+			"unsigned year upper bound", `{"kind":"int","bitSize":16,"semantics":"year","unsigned":true,"maximum":20000}`,
+			"year range must be within [1,9999]",
 		},
 		{
 			"year with unit", `{"kind":"int","bitSize":16,"semantics":"year","unit":"year"}`,
@@ -598,6 +614,33 @@ func Test_TypeSemanticsJSONRoundTrip(t *testing.T) {
 			}
 			if !Equal(test.type_, type_) {
 				t.Fatalf("expected round trip type %v, got %v", test.type_, type_)
+			}
+		})
+	}
+}
+
+// Test_TypeSemanticsJSONYearBounds checks defaults for omitted year bounds.
+func Test_TypeSemanticsJSONYearBounds(t *testing.T) {
+	tests := []struct {
+		data string
+		want Type
+	}{
+		{`{"kind":"int","bitSize":16,"semantics":"year"}`, Int(16).AsYear()},
+		{`{"kind":"int","bitSize":16,"semantics":"year","minimum":1900}`, Int(16).AsYear().WithIntRange(1900, 9999)},
+		{`{"kind":"int","bitSize":16,"semantics":"year","maximum":2100}`, Int(16).AsYear().WithIntRange(1, 2100)},
+		{`{"kind":"int","bitSize":8,"semantics":"year"}`, Int(8).AsYear()},
+		{`{"kind":"int","bitSize":8,"unsigned":true,"semantics":"year"}`, Int(8).Unsigned().AsYear()},
+		{`{"kind":"int","bitSize":64,"unsigned":true,"semantics":"year"}`, Int(64).Unsigned().AsYear()},
+	}
+	for _, test := range tests {
+		t.Run(test.data, func(t *testing.T) {
+			var got Type
+			err := json.Unmarshal([]byte(test.data), &got)
+			if err != nil {
+				t.Fatalf("expected valid year bounds, got %v", err)
+			}
+			if !Equal(got, test.want) {
+				t.Fatalf("expected %s, got %s", test.want, got)
 			}
 		})
 	}

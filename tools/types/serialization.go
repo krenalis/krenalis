@@ -1097,6 +1097,20 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		semanticsOption = durationUnit
 	}
 
+	if semantics == YearSemantics && t.kind == IntKind {
+		for _, bound := range []json.Number{minimum, maximum} {
+			if bound == "" {
+				continue
+			}
+			year, err := bound.Int64()
+			if err != nil {
+				return Type{}, errors.New("year range must be within [1,9999]")
+			}
+			if year < MinYear || year > MaxYear {
+				return Type{}, errors.New("year range must be within [1,9999]")
+			}
+		}
+	}
 	t, err = t.withSemantics(semantics, semanticsOption)
 	if err != nil {
 		return Type{}, err
