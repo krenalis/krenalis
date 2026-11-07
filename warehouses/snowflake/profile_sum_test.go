@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/krenalis/krenalis/tools/decimal"
+	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
 	"github.com/krenalis/krenalis/warehouses/internal/profilefilter"
@@ -88,4 +89,42 @@ func TestProfileSumSQL(t *testing.T) {
 		t.Fatal("expected invalid prepared threshold rejection, got success")
 	}
 
+}
+
+// TestProfileSumWhereSQL composes the real Record JSON renderer into Sum.
+func TestProfileSumWhereSQL(t *testing.T) {
+	end := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
+	properties := warehouses.Column{Name: "properties", Type: types.JSON()}
+	where := &warehouses.BaseExpr{Column: properties, Keys: []string{"coupon"}, Operator: warehouses.OpIs,
+		Values: []any{json.Value(`"PROMO"`)}, JSONComparison: warehouses.JSONTypedComparison}
+	sum := &warehouses.IndependentOccurrenceSum{Source: warehouses.OccurrenceSource{Table: "events",
+		Profile:   warehouses.Column{Name: "kpid", Type: types.UUID()},
+		Identity:  warehouses.Column{Name: "message_id", Type: types.String()},
+		Timestamp: warehouses.Column{Name: "timestamp", Type: types.DateTime()}},
+		UnboundedStart: true, End: end, AtLeast: true, Threshold: decimal.MustParse("30"),
+		Value: warehouses.DecimalReading{Column: properties, Keys: []string{"total"}, Type: types.Decimal(18, 4)},
+		Qualification: &warehouses.QualificationGroup{Operator: warehouses.OpAnd,
+			Children: []warehouses.RowQualification{
+				&warehouses.KnownTextEqual{Column: properties, Keys: []string{"currency"}, Value: "EUR"},
+				&warehouses.RecordQualification{Expr: where},
+			}}}
+	filter := warehouses.Filter{Root: sum}
+	request := warehouses.ProfileOutcomeRequest{Population: warehouses.ProfileSource{Table: "profiles",
+		Key: warehouses.Column{Name: "_kpid", Type: types.UUID()}}, Limit: 10}
+	query, err := profilefilter.Build(filter, request, profileFilterDialect())
+	if err != nil {
+		t.Fatalf("expected qualified Sum SQL, got %v", err)
+	}
+	record, err := profileRecord(where)
+	if err != nil {
+		t.Fatalf("expected Record JSON rendering, got %v", err)
+	}
+	values, err := query.Values()
+	if err != nil {
+		t.Fatalf("expected qualified Sum arguments, got %v", err)
+	}
+	if !strings.Contains(query.SQL, " AND ("+record+")") || !strings.Contains(record, "coupon") ||
+		!strings.Contains(record, "PROMO") || len(values) != 2 || values[1] != "EUR" {
+		t.Fatalf("expected conjunctive typed Record qualification and native currency, got %s, %v", query.SQL, values)
+	}
 }

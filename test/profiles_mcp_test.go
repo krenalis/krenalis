@@ -489,6 +489,59 @@ SET properties='{"total":150,"currency":"EUR"}' WHERE message_id='sum-two'`)
 			})
 		}
 
+		_, err = pool.Exec(t.Context(), `UPDATE krenalis_events
+SET properties=jsonb_set(properties,'{coupon}','"PROMO"')
+WHERE event='Order Completed' AND kpid='00000000-0000-0000-0000-000000000001';
+UPDATE krenalis_events SET properties=jsonb_set(properties,'{coupon}','"OTHER"') WHERE message_id='sum-two';
+UPDATE krenalis_events SET properties=jsonb_set(properties,'{coupon}','"PROMO"') WHERE message_id='sum-three'`)
+		if err != nil {
+			t.Fatalf("expected independent coupon fixtures, got %v", err)
+		}
+		qualified := strings.Replace(sum, `"nativeCurrency":"EUR"`,
+			`"nativeCurrency":"EUR","where":{"operator":"and","rules":[`+
+				`{"property":"properties.coupon","operator":"is","values":["PROMO"]}]}`, 1)
+		for _, first := range []int{0, 99} {
+			var expected json.RawMessage
+			path := "/v1/profiles?filter=" + url.QueryEscape(qualified) +
+				"&at=" + url.QueryEscape(at) + "&first=" + strconv.Itoa(first)
+			k.Call("GET", path, nil, nil, &expected)
+			actual := assertResult(t, tool(t, "query-profiles",
+				map[string]any{"filter": qualified, "at": at, "first": first}))
+			if actual != string(expected) || !strings.Contains(actual, `"match":1,"noMatch":2,"unknown":1`) ||
+				first == 0 && !strings.Contains(actual, `"profile-1@example.com"`) ||
+				first == 99 && !strings.HasPrefix(actual, `{"profiles":[]`) {
+				t.Fatalf("expected only the PROMO member with complete totals, got %s", actual)
+			}
+		}
+		profile = "00000000-0000-0000-0000-000000000002"
+		path = "/v1/profiles/" + profile + "/filter-explanation?filter=" +
+			url.QueryEscape(qualified) + "&at=" + url.QueryEscape(at)
+		k.Call("GET", path, nil, nil, &expected)
+		actual = assertResult(t, tool(t, "explain-profile-filter",
+			map[string]any{"kpid": profile, "filter": qualified, "at": at}))
+		if actual != string(expected) || !strings.Contains(actual, `"result":"NO_MATCH"`) {
+			t.Fatalf("expected matching HTTP/MCP explanation of the coupon exclusion, got %s", actual)
+		}
+		err = json.Unmarshal([]byte(actual), &explanation)
+		if err != nil {
+			t.Fatalf("expected qualified bounds JSON, got %v", err)
+		}
+		if len(explanation.Rule.Rules) != 1 {
+			t.Fatalf("expected one qualified Sum, got %s", actual)
+		}
+		lower, lok = new(big.Rat).SetString(string(explanation.Rule.Rules[0].Sum.Bounds.Lower))
+		upper, uok = new(big.Rat).SetString(string(explanation.Rule.Rules[0].Sum.Bounds.Upper))
+		if !lok || !uok || lower.Sign() != 0 || upper.Sign() != 0 {
+			t.Fatalf("expected excluded coupon orders to contribute [0,0], got %s", actual)
+		}
+		for _, property := range []string{"properties", "properties.total.x", "properties.currency"} {
+			filter := strings.Replace(qualified, `properties.coupon`, property, 1)
+			assertToolError(t, tool(t, "query-profiles", map[string]any{"filter": filter, "at": at}),
+				"FilterCapabilityNotImplemented")
+			assertToolError(t, tool(t, "explain-profile-filter",
+				map[string]any{"kpid": profile, "filter": filter, "at": at}), "FilterCapabilityNotImplemented")
+		}
+
 	})
 
 	// The SQL tool still uses the restricted connection, unlike query-profiles.

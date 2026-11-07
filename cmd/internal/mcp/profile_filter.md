@@ -211,9 +211,28 @@ Use the four ordered operators (`is less than`, `is less than or equal to`,
 Thresholds are exact, up to precision 76 and scale 37, independently of the
 field's four decimal places. They never pass through a float. Input literal
 spelling is bounded to 4096 bytes. Equality, inequality and intervals are valid
-language capabilities not yet implemented for Sum. Additional event `where`
-qualification and sample `minimum` are also unavailable; do not replace their
-meaning with separate profile conditions or SQL.
+language capabilities not yet implemented for Sum. Sample `minimum` is also
+unavailable.
+
+Optional `where` qualifies the individual events before adding their amounts.
+It uses the existing Record operators, at most two group levels and 100
+descendant nodes, as in Count. For example, merge these fields into `sum` to
+restrict the total to orders with coupon PROMO:
+
+```json
+{"where":{"operator":"and","rules":[{"property":"properties.coupon","operator":"is","values":["PROMO"]}]}}
+```
+
+This first implementation temporarily excludes paths that overlap the monetary
+reading: `properties` itself, `properties.total`, `properties.currency`, and any
+descendants of the latter two. The restriction applies to every operator and
+every nested AND/OR branch, with exact case-sensitive key segments.
+`properties.total_discount` and `properties.Total` are different paths and remain
+admissible. A valid filter using an excluded path returns
+`FilterCapabilityNotImplemented`, not UNKNOWN or an invalid-filter diagnosis.
+These are temporary execution limits, not restrictions of the full language.
+Do not replace `sum.where` or sample requirements with separate profile
+conditions or SQL: those do not select the same contributing events.
 
 Amounts are known only when JSON Numbers exactly representable as Decimal(18,4).
 Missing, null, other kinds and non-representable readings are unknown, never zero

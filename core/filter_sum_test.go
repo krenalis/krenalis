@@ -156,11 +156,12 @@ func TestFilterSumValidation(t *testing.T) {
 		{"unary operator", `is greater than or equal to`, `exists`, false},
 		{"empty minimum", `"nativeCurrency":"EUR"`, `"nativeCurrency":"EUR","minimum":0`, false},
 		{"sample minimum", `"nativeCurrency":"EUR"`, `"nativeCurrency":"EUR","minimum":1`, true},
+		{"minimum with where", `"nativeCurrency":"EUR"`, `"nativeCurrency":"EUR","minimum":1,"where":{"operator":"and","rules":[{"property":"properties.coupon","operator":"exists"}]}`, true},
 		{"equality", `is greater than or equal to`, `is`, true},
 		{"different", `is greater than or equal to`, `is not`, true},
 		{"interval", `"operator":"is greater than or equal to","values":[30]`, `"operator":"is between","values":[20,30]`, true},
 		{"reversed interval", `"operator":"is greater than or equal to","values":[30]`, `"operator":"is between","values":[40,30]`, false},
-		{"extra where", `"nativeCurrency":"EUR"`, `"nativeCurrency":"EUR","where":{"operator":"and","rules":[{"property":"properties.flag","operator":"exists"}]}`, true},
+		{"dependent where", `"nativeCurrency":"EUR"`, `"nativeCurrency":"EUR","where":{"operator":"and","rules":[{"property":"properties.total","operator":"exists"}]}`, true},
 		{"invalid where", `"nativeCurrency":"EUR"`, `"nativeCurrency":"EUR","where":{"operator":"and","rules":[{"property":"absent","operator":"exists"}]}`, false},
 		{"nested Count", `"nativeCurrency":"EUR"`, `"nativeCurrency":"EUR","where":{"operator":"and","rules":[` + countConditionJSON + `]}`, false},
 		{"dual subject", `"sum":`, `"property":"country","sum":`, false},
@@ -181,5 +182,140 @@ func TestFilterSumValidation(t *testing.T) {
 			}
 			t.Fatal("expected rejected input, got success")
 		})
+	}
+}
+
+// TestFilterSumWhere checks independent paths and invalidity precedence.
+func TestFilterSumWhere(t *testing.T) {
+
+	for _, test := range []struct {
+		name, where string
+		unsupported bool
+	}{
+		{"parent", `{"operator":"and","rules":[{"property":"properties","operator":"exists"}]}`, true},
+		{"amount", `{"operator":"and","rules":[{"property":"properties.total","operator":"exists"}]}`, true},
+		{"amount descendant", `{"operator":"and","rules":[{"property":"properties.total.x","operator":"exists"}]}`, true},
+		{"currency", `{"operator":"and","rules":[{"property":"properties.currency","operator":"exists"}]}`, true},
+		{"currency descendant", `{"operator":"and","rules":[{"property":"properties.currency.x","operator":"exists"}]}`, true},
+		{"nested OR", `{"operator":"and","rules":[{"operator":"or","rules":[{"property":"properties.coupon","operator":"is","values":["PROMO"]},{"property":"properties.currency","operator":"exists"}]}]}`, true},
+		{"near amount", `{"operator":"and","rules":[{"property":"properties.total_discount","operator":"exists"}]}`, false},
+		{"near currency", `{"operator":"and","rules":[{"property":"properties.currency_code","operator":"exists"}]}`, false},
+		{"amount case", `{"operator":"and","rules":[{"property":"properties.Total","operator":"exists"}]}`, false},
+		{"currency case", `{"operator":"and","rules":[{"property":"properties.Currency","operator":"exists"}]}`, false},
+		{"traits", `{"operator":"and","rules":[{"property":"traits.total","operator":"exists"}]}`, false},
+		{"coupon", `{"operator":"and","rules":[{"property":"properties.coupon","operator":"is","values":["PROMO"]}]}`, false},
+		{"nested independent", `{"operator":"or","rules":[{"operator":"and","rules":[{"property":"properties.Total","operator":"exists"},{"property":"properties.coupon","operator":"is","values":["PROMO"]}]}]}`, false},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+
+			input := strings.Replace(sumConditionJSON, `"nativeCurrency":"EUR"`,
+				`"nativeCurrency":"EUR","where":`+test.where, 1)
+			var condition FilterSumCondition
+			err := json.Unmarshal([]byte(input), &condition)
+			if err != nil {
+				t.Fatalf("expected decodable Sum where, got %v", err)
+			}
+			rule, err := prepareFilterSum(&condition, nil)
+			if err != nil {
+				if _, unsupported := errors.AsType[*unified.UnsupportedError](err); !test.unsupported || !unsupported {
+					t.Fatalf("expected unsupported=%v, got %v", test.unsupported, err)
+				}
+			}
+			if err == nil {
+				if test.unsupported || rule.Sum == nil || rule.Sum.Where == nil {
+					t.Fatalf("expected independent prepared where, got %+v", rule)
+				}
+				encoded, err := json.Marshal(&condition)
+				if err != nil {
+					t.Fatalf("expected where round-trip, got %v", err)
+				}
+				if string(encoded) != input {
+					t.Fatalf("expected unchanged filter %s, got %s", input, encoded)
+				}
+			}
+
+			bad := `{"property":"absent","operator":"exists"}`
+			for _, rules := range []string{input + "," + bad, bad + "," + input} {
+				var filter Filter
+				err := json.Unmarshal([]byte(`{"operator":"and","rules":[`+rules+`]}`), &filter)
+				if err != nil {
+					t.Fatalf("expected decodable invalid sibling, got %v", err)
+				}
+				nodes := 0
+				schema := types.Object([]types.Property{{Name: "country", Type: types.String()}})
+				_, err = prepareUnifiedRule(&filter, schema, 0, &nodes)
+				if err != nil {
+					if _, unsupported := errors.AsType[*unified.UnsupportedError](err); unsupported {
+						t.Fatalf("expected invalidity before availability in either order, got %v", err)
+					}
+					continue
+				}
+				t.Fatal("expected invalid sibling rejection, got success")
+			}
+
+		})
+	}
+
+	// A dependent leaf must not mask an invalid sibling inside its own where.
+	dependent := `{"property":"properties.total","operator":"exists"}`
+	invalid := `{"property":"properties.coupon","operator":"is","values":[]}`
+	for _, rules := range []string{dependent + "," + invalid, invalid + "," + dependent} {
+		input := strings.Replace(sumConditionJSON, `"nativeCurrency":"EUR"`,
+			`"nativeCurrency":"EUR","where":{"operator":"and","rules":[`+rules+`]}`, 1)
+		var condition FilterSumCondition
+		err := json.Unmarshal([]byte(input), &condition)
+		if err != nil {
+			t.Fatalf("expected decodable where, got %v", err)
+		}
+		_, err = prepareFilterSum(&condition, nil)
+		if err != nil {
+			if _, unsupported := errors.AsType[*unified.UnsupportedError](err); unsupported {
+				t.Fatalf("expected invalid where before availability, got %v", err)
+			}
+			continue
+		}
+		t.Fatal("expected invalid where rejection, got success")
+	}
+
+}
+
+// TestFilterSumWhereLimits preserves the Count occurrence-body limits.
+func TestFilterSumWhereLimits(t *testing.T) {
+	var condition FilterSumCondition
+	err := json.Unmarshal([]byte(sumConditionJSON), &condition)
+	if err != nil {
+		t.Fatalf("expected Sum fixture, got %v", err)
+	}
+	for _, size := range []int{100, 101} {
+		where := &Filter{Operator: OpAnd, Rules: make([]FilterRule, size)}
+		for i := range where.Rules {
+			where.Rules[i] = &FilterCondition{Property: "properties.coupon", Operator: OpExists}
+		}
+		condition.Sum.Where = where
+		_, err := prepareFilterSum(&condition, nil)
+		if err != nil {
+			if size == 100 {
+				t.Fatalf("expected 100 occurrence nodes, got %v", err)
+			}
+			continue
+		}
+		if size == 101 {
+			t.Fatal("expected rejection at 101 occurrence nodes, got success")
+		}
+	}
+	var rule FilterRule = &FilterCondition{Property: "properties.coupon", Operator: OpExists}
+	for depth := 1; depth <= 3; depth++ {
+		rule = &Filter{Operator: OpOr, Rules: []FilterRule{rule}}
+		condition.Sum.Where = rule.(*Filter)
+		_, err := prepareFilterSum(&condition, nil)
+		if err != nil {
+			if depth <= 2 {
+				t.Fatalf("expected two occurrence group levels, got %v", err)
+			}
+			continue
+		}
+		if depth == 3 {
+			t.Fatal("expected third occurrence group rejection, got success")
+		}
 	}
 }

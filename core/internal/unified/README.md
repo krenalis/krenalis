@@ -163,10 +163,22 @@ Count. An unknown amount certainly in another currency contributes zero.
 
 The execution subset has four ordered comparisons and one exact signed literal
 within the existing global precision 76/scale 37 limits, bounded lexically to
-4096 bytes. Sum equality/difference/intervals, extra event qualification and sample
-minima are explicitly unsupported, not invalid or UNKNOWN. Sum is admitted only
+4096 bytes. Sum equality/difference/intervals and sample minima are explicitly
+unsupported, not invalid or UNKNOWN. Sum is admitted only
 through Profiles APIs/MCP and the internal path; Record pipeline behavior and
 `state.Where` persistence remain unchanged.
+
+Optional Sum `where` uses the same schema-aware Record preparation, two group
+levels and 100 descendant nodes as Count. The resolved monetary definition owns
+the amount/currency paths and the exact amount type. Both reading and dependency
+admission use those paths. To retain independent contributions and reachable
+extrema, overlapping paths are temporarily unsupported: the ancestor `properties`,
+the exact amount/currency paths, and their descendants, in every AND/OR branch.
+Segments are case-sensitive; `properties.Total` and `properties.total_discount`
+remain separate from `properties.total`. Full validity checking precedes the
+capability error. The compiler combines the source selector, Record `where` and
+native currency with AND before reading amounts; false qualification makes even
+an unknown amount irrelevant. Copies must agree on the combined qualification.
 
 Core resolves the reading and normalizes the terminal exactly on the 1e-4 grid.
 Greater becomes an inclusive threshold at floor(t*10000)+1, GreaterOrEqual at

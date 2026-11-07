@@ -7,11 +7,13 @@ package unified
 import (
 	"fmt"
 	"math/big"
+	"slices"
 	"strings"
 	"time"
 
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/tools/decimal"
+	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
 )
@@ -19,7 +21,9 @@ import (
 // MonetaryField is a resolved reading of a reported monetary event value.
 // Its reading precision does not attest a domain for unknown historical values.
 type MonetaryField struct {
-	definition, revision string
+	definition, revision     string
+	amountPath, currencyPath []string
+	amountType               types.Type
 }
 
 // ResolveMonetaryField resolves the Order Completed reported total, revision 1.
@@ -28,7 +32,9 @@ func ResolveMonetaryField(definition, revision string) (*MonetaryField, error) {
 	if definition != "commerce.order_completed.total" || revision != "1" {
 		return nil, fmt.Errorf("unresolved monetary field meaning revision")
 	}
-	return &MonetaryField{definition: definition, revision: revision}, nil
+	return &MonetaryField{definition: definition, revision: revision,
+		amountPath: []string{"properties", "total"}, currencyPath: []string{"properties", "currency"},
+		amountType: types.Decimal(18, 4)}, nil
 }
 
 // Reference returns the resolved definition and immutable meaning revision.
@@ -39,12 +45,53 @@ func (field *MonetaryField) Reference() (definition, revision string) {
 	return field.definition, field.revision
 }
 
+// ValidateWhere checks a prepared occurrence filter against this reading.
+// It returns *UnsupportedError for paths overlapping amount or currency.
+func (field *MonetaryField) ValidateWhere(where *state.Where) error {
+
+	if field == nil || field.definition == "" {
+		return fmt.Errorf("unresolved monetary field")
+	}
+	if where == nil {
+		return nil
+	}
+	nodes := 0
+	err := validateWhere(where, 1, &nodes)
+	if err != nil {
+		return err
+	}
+
+	stack := []*state.Where{where}
+	for len(stack) > 0 {
+		group := stack[len(stack)-1]
+		stack = stack[:len(stack)-1]
+		for _, rule := range group.Rules {
+			switch rule := rule.(type) {
+			case *state.Where:
+				stack = append(stack, rule)
+			case *state.WhereCondition:
+				for _, path := range [][]string{field.amountPath, field.currencyPath} {
+					n := min(len(rule.Property), len(path))
+					if slices.Equal(rule.Property[:n], path[:n]) {
+						return &UnsupportedError{Capability: "Sum qualification dependent on amount or currency"}
+					}
+				}
+			default:
+				return fmt.Errorf("core/internal/unified: unexpected prepared Record node %T", rule)
+			}
+		}
+	}
+
+	return nil
+}
+
 // Sum adds independently qualified recorded messages in one native currency.
 // Unknown amounts have no certified sign or finite business-domain bounds.
 type Sum struct {
 	Scope          Scope
 	Field          *MonetaryField
 	NativeCurrency string
+	Where          *state.Where
 	Test           SumTest
 }
 
@@ -68,6 +115,16 @@ func (sum *Sum) prepare(at time.Time, source SourceBinding) (warehouses.FilterCo
 	if err != nil {
 		return nil, err
 	}
+	qualifiers := []warehouses.RowQualification{&warehouses.RecordQualification{Expr: selector}}
+	if sum.Where != nil {
+		expr, err := source.Record(sum.Where)
+		if err != nil {
+			return nil, err
+		}
+		qualifiers = append(qualifiers, &warehouses.RecordQualification{Expr: expr})
+	}
+	qualifiers = append(qualifiers, &warehouses.KnownTextEqual{Column: source.Properties,
+		Keys: slices.Clone(sum.Field.currencyPath[1:]), Value: sum.NativeCurrency})
 	start, end, err := sum.Scope.bounds(at)
 	if err != nil {
 		return nil, err
@@ -79,11 +136,9 @@ func (sum *Sum) prepare(at time.Time, source SourceBinding) (warehouses.FilterCo
 
 	return &warehouses.IndependentOccurrenceSum{
 		Source: source.Occurrences, Start: start, End: end, UnboundedStart: sum.Scope.History != nil,
-		Qualification: &warehouses.QualificationGroup{Operator: warehouses.OpAnd, Children: []warehouses.RowQualification{
-			&warehouses.RecordQualification{Expr: selector},
-			&warehouses.KnownTextEqual{Column: source.Properties, Keys: []string{"currency"}, Value: sum.NativeCurrency},
-		}},
-		Value:     warehouses.DecimalReading{Column: source.Properties, Keys: []string{"total"}, Type: types.Decimal(18, 4)},
+		Qualification: &warehouses.QualificationGroup{Operator: warehouses.OpAnd, Children: qualifiers},
+		Value: warehouses.DecimalReading{Column: source.Properties,
+			Keys: slices.Clone(sum.Field.amountPath[1:]), Type: sum.Field.amountType},
 		Threshold: threshold, AtLeast: atLeast,
 	}, nil
 }
@@ -107,6 +162,12 @@ func (sum *Sum) validate(at time.Time) error {
 		!types.IsDecimal(sum.Test.Upper) || sum.Test.Operator == Between && sum.Test.Upper.Less(sum.Test.Value) {
 		return fmt.Errorf("invalid Sum terminal")
 	}
+	whereErr := sum.Field.ValidateWhere(sum.Where)
+	if whereErr != nil {
+		if _, unsupported := errors.AsType[*UnsupportedError](whereErr); !unsupported {
+			return whereErr
+		}
+	}
 	_, _, err := sum.Scope.bounds(at)
 	if err != nil {
 		return err
@@ -114,7 +175,7 @@ func (sum *Sum) validate(at time.Time) error {
 	if sum.Test.Operator == Equal || sum.Test.Operator == Different || sum.Test.Operator == Between {
 		return &UnsupportedError{Capability: "Sum equality or interval reachability"}
 	}
-	return nil
+	return whereErr
 }
 
 // SumTest compares an exact monetary total with an exact signed literal.

@@ -18,7 +18,8 @@ import (
 
 // FilterSum describes a monetary sum at registered-message grain.
 // NativeCurrency restricts the population; it never converts currencies.
-// Additional Where qualification and Minimum are not implemented yet.
+// Where supports Record paths independent of the amount and currency reading.
+// Minimum is not implemented yet.
 type FilterSum struct {
 	Source         FilterCountSource `json:"source"`
 	Period         FilterPeriod      `json:"period"`
@@ -218,23 +219,29 @@ func prepareFilterSum(condition *FilterSumCondition, calendar *unified.Calendar)
 			return unified.Rule{}, errors.New("Sum minimum must be positive")
 		}
 	}
+	var where *state.Where
 	if sum.Where != nil {
 		validation := filterValidation{maxDepth: 2, properties: schemas.Event.Properties()}
-		_, err := prepareFilterGroup(sum.Where, &validation, 1)
+		var err error
+		where, err = prepareFilterGroup(sum.Where, &validation, 1)
 		if err != nil {
 			return unified.Rule{}, err
 		}
 	}
+	err = field.ValidateWhere(where)
+	if err != nil {
+		return unified.Rule{}, err
+	}
 	if unavailable != nil {
 		return unified.Rule{}, unavailable
 	}
-	if sum.Where != nil || sum.Minimum != nil {
-		return unified.Rule{}, &unified.UnsupportedError{Capability: "Sum additional qualification or sample minimum"}
+	if sum.Minimum != nil {
+		return unified.Rule{}, &unified.UnsupportedError{Capability: "Sum sample minimum"}
 	}
 	if operator == unified.Equal || operator == unified.Different || operator == unified.Between {
 		return unified.Rule{}, &unified.UnsupportedError{Capability: "Sum equality or interval reachability"}
 	}
 
 	return unified.Rule{Sum: &unified.Sum{Scope: scope, Field: field, NativeCurrency: sum.NativeCurrency,
-		Test: unified.SumTest{Operator: operator, Value: values[0]}}}, nil
+		Where: where, Test: unified.SumTest{Operator: operator, Value: values[0]}}}, nil
 }
