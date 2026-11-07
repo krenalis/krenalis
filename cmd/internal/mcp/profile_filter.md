@@ -1,4 +1,4 @@
-# Querying profiles with Record, Count and Sum filters
+# Querying profiles with Record, Count, Sum and Average filters
 
 Use `query-profiles` for questions about profiles and segments. It runs the same
 `core.Filter` and `Workspace.QueryProfiles` path as `GET /v1/profiles`.
@@ -45,8 +45,8 @@ restrictions apply to `query-data-warehouse` only. They do not restrict which
 profile or event properties `query-profiles` can read or use in conditions.
 
 On Snowflake, `query-profiles` uses the main virtual warehouse, even if a different
-virtual warehouse is configured for MCP. Record queries remain available; Count
-and Sum are currently unavailable on Snowflake. Do not work around that gate using SQL.
+virtual warehouse is configured for MCP. Record queries remain available; Count, Sum and Average
+are currently unavailable on Snowflake. Do not work around that gate using SQL.
 
 ## Arguments and results
 
@@ -57,7 +57,7 @@ String, JSON `null`, unknown arguments and explicit null arguments are invalid.
 
 Other arguments: optional `properties` (top-level property names; omission requests
 all), `order` (a sortable profile property), `orderDesc` (default false), `first`
-(default 0), `limit` (default 20, range 1–1000), and `at` (Count or Sum only).
+(default 0), `limit` (default 20, range 1–1000), and `at` (behavioral filters only).
 Arguments are limited to 500 KiB. The full HTTP POST, including its JSON-RPC
 envelope, is limited to 1 MiB; oversize is HTTP 413 before the tool runs.
 The complete result JSON is limited to 128 KiB.
@@ -65,7 +65,7 @@ An oversized result is an error: reduce `limit` or request fewer `properties`.
 Rows are never silently dropped to fit that budget.
 
 The returned text is JSON with `profiles`, `schema` and exact matching `total`.
-With Count or Sum, it also contains `evaluation: {at, match, noMatch, unknown}`. Totals
+With Count, Sum or Average, it also contains `evaluation: {at, match, noMatch, unknown}`. Totals
 refer to the entire profile population before pagination, from the same
 evaluation as the page. The page contains only MATCH profiles. UNKNOWN is not
 NO_MATCH and is not an execution error. An empty page still returns totals.
@@ -91,7 +91,7 @@ are MCP diagnostic prefixes, not additional core error codes.
 
 The root is `{"operator":"and"|"or","rules":[...]}`, with optional
 `defaultCalendar` as described below. Rules are Record
-conditions, Count/Sum conditions or nested AND/OR groups. At most four main group
+conditions, Count/Sum/Average conditions or nested AND/OR groups. At most four main group
 levels including the root, and 100 descendants excluding the root, are allowed.
 
 A Record condition is `{"property":"path","operator":"...","values":[...]}`.
@@ -176,13 +176,13 @@ The main root must also contain, for example,
 Use an explicit IANA timezone (or UTC), with exact spelling and case, after
 `gregorian-monday/`; only revision 1 is resolved. Host-local names such as
 `posixrules` are rejected. There is no implicit workspace or server-local calendar.
-The reference can remain on a Profiles filter without Count or Sum; it is validated but
+The reference can remain on a Profiles filter without behavioral conditions; it is validated but
 does not change Record results or add evaluation metadata. It is not allowed on
 nested groups, occurrence `where` or in contexts restricted to Record filtering.
 Use the timezone agreed with the user; ask if none has been established. Do not
 infer it from the user's language, locale, server or event context. The calendar
 does not reinterpret absolute instants, elapsed durations or raw JSON values.
-It is optional for existing absolute/elapsed Count/Sum filters. Per-condition and
+It is optional for existing absolute/elapsed Count/Sum/Average filters. Per-condition and
 profile-timezone overrides are unavailable. Keep the same filter reference and
 reuse `evaluation.at` when paging. This does not freeze data or the tzdb version.
 Ambiguous/nonexistent midnight boundaries and out-of-range calendar windows
@@ -211,7 +211,7 @@ and queryable in Krenalis, not a certification of events in external systems.
 Unknown decisive local values can yield UNKNOWN; independent qualification
 uncertainty is supported. Shared governed facts, ambiguous identity/timestamps,
 business deduplication, AvailableHistory and other calendar/personal-anchor constructors,
-other reductions, shares and E/K/P/T are not available through this tool.
+reductions other than Count, Sum and Average, shares and E/K/P/T are not available through this tool.
 
 ## Governed Count currency
 
@@ -358,6 +358,50 @@ Event names and arbitrary JSON contents are workspace-specific. Ask the user or
 use `query-data-warehouse` to discover them before constructing a filter. SQL may
 also serve other exploratory analysis. It must not be used to emulate a segment
 or complete a Unified feature that `query-profiles` cannot execute.
+
+## Monetary Average
+
+Average is available for reported totals of track Order Completed messages in
+one native currency. It uses the monetary field, periods and independent `where`
+restrictions of Sum. For a reported average of at least 100 EUR with at least two
+qualifying messages in thirty elapsed days:
+
+```json
+{"operator":"and","rules":[{"average":{"source":{"kind":"recordedEvents","name":"Order Completed","grain":"registered-message"},"period":{"kind":"elapsedLookback","duration":{"value":30,"unit":"day"}},"field":{"definition":"commerce.order_completed.total","meaningRevision":"1"},"nativeCurrency":"EUR","minimum":2},"operator":"is greater than or equal to","values":[100]}]}
+```
+
+`minimum` is required: omission, null and zero are invalid. It counts qualified
+messages, including those with unknown amounts, and combines independently with
+the value test using Kleene AND. An unreachable minimum is NO_MATCH even when
+the average is unknown or undefined. Empty populations do not have a zero average.
+
+The four ordered comparisons are supported. Thresholds are exact signed JSON
+Numbers within the global 76-digit/37-scale limits and must be representable
+with at most four fractional decimal places; trailing zeros do not matter.
+Finer thresholds return FilterCapabilityNotImplemented, without rounding.
+Equality, inequality and intervals remain unavailable in this first increment.
+No division or rounded average is used to decide membership.
+The scale limit applies to the threshold, not to the mathematical average.
+
+The value test requires a determined population and known amounts for every
+qualified message. Missing/null/incompatible amounts are not skipped or replaced
+by zero. Uncertain qualification or unknown relevant amounts retain UNKNOWN,
+unless the sample guard is certainly false. Values certainly in another currency
+or excluded by where do not count. Even out-of-domain thresholds do not turn
+unknown amounts into known values or certify their business domain.
+
+This is the average of reported message totals in the selected native currency,
+excluding other currencies without conversion. It is not an all-currency average
+or a deduplicated business-order average. Keep coupon qualifications inside
+`average.where`, not in sibling profile conditions. The same temporarily excluded
+amount/currency paths as Sum apply.
+
+Average explanations have kind `average`, with the usual period fields, field
+reference and native currency, plus `sum`, `count`, `certain` and `uncertain`.
+`sum` and `count` are exact JSON numbers, possibly using exponent notation;
+neither is a rounded average. Count is null when membership is uncertain. Sum is
+null unless membership and all amounts are known. Null never means zero. An
+empty population reports sum=0 and count=0, while its required guard fails.
 
 ## Examples
 

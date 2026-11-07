@@ -14,15 +14,15 @@ import (
 	"github.com/krenalis/krenalis/warehouses/internal/profilefilter"
 )
 
-// profileFilterVerified gates Record/Count/Sum pending real-database tests.
+// profileFilterVerified gates prepared filters pending real-database tests.
 const profileFilterVerified = false
 
-// ProfileFilterVerified reports backend verification of Record/Count/Sum.
+// ProfileFilterVerified reports backend verification of prepared filters.
 func (warehouse *Snowflake) ProfileFilterVerified() bool {
 	return profileFilterVerified
 }
 
-// ProfileOutcomes returns a complete Record/Count/Sum page and exact ternary
+// ProfileOutcomes returns a complete Profiles page and exact ternary
 // totals from one statement. Source, execution, cancellation, scan and Close
 // failures return no partial result. It returns
 // warehouses.ErrProfileProjectionTooWide or warehouses.ErrProfileResultTooLarge

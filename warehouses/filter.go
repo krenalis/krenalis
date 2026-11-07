@@ -213,9 +213,10 @@ type ProfileFilterExplanationWarehouse interface {
 
 // FilterNodeOutcome contains a closed outcome and applicable Count/Sum bounds.
 type FilterNodeOutcome struct {
-	Truth FilterTruth
-	Count *OccurrenceCountBounds
-	Sum   *OccurrenceSumBounds
+	Truth   FilterTruth
+	Count   *OccurrenceCountBounds
+	Sum     *OccurrenceSumBounds
+	Average *OccurrenceAverageValues
 }
 
 // OccurrenceCountBounds bounds the reachable count for independent occurrence

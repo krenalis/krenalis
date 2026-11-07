@@ -70,6 +70,14 @@ func validateFilterCondition(node FilterCondition, depth int, nodes, physical *i
 			return fmt.Errorf("warehouses: nil profile Record condition")
 		}
 		return validateRecordQualification(n.Expr, 1, physical)
+	case *DeterminedOccurrenceAverage:
+		err := n.validate()
+		if err != nil {
+			return err
+		}
+		if n.Qualification != nil {
+			return validateQualification(n.Qualification, 1, physical)
+		}
 	case *IndependentOccurrenceSum:
 		err := n.validate()
 		if err != nil {

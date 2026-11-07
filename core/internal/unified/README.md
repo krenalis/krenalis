@@ -1,8 +1,8 @@
-# Internal Unified Record, Count and Sum vertical
+# Internal Unified Record, Count, Sum and Average vertical
 
 This package implements the first backend subset of the B architecture consolidated
 in `filtering/14-confronto-architetture-interrogazione-unified-fase-4b.md`. The
-normative baseline remains 06/07/08 version 1.2. Count and Sum are exposed by the existing
+normative baseline remains 06/07/08 version 1.2. Count, Sum and Average are exposed by the existing
 Profiles HTTP endpoint and MCP `query-profiles` tool on the verified backend;
 Admin and destination connections do not expose it yet. The prepared-filter
 boundary refines the SQL transport described in report 14 §5.4: generated SQL is
@@ -11,7 +11,7 @@ now an internal detail of the warehouse implementation.
 ## Executable path
 
 `Workspace.QueryProfiles` receives one `core.Filter`, decoded using the
-public Record/Count/Sum JSON contract below. The temporary private `unifiedRule` and
+public Record/Count/Sum/Average JSON contract below. The temporary private `unifiedRule` and
 `unifiedCount` input trees have been removed. Profile predicates reuse
 `prepareFilter` with the workspace Profile schema; Count qualification uses the
 Event schema. Every prepared profile condition becomes one Record leaf in the
@@ -160,7 +160,7 @@ The following also remain outside this vertical: AvailableHistory bindings,
 future/unmatured windows (06 §17.4), other calendar constructors, personal
 anchors, unknown timestamps/attribution/grain,
 business deduplication, source unions, property-reference terminals, other
-governed predicates, owned-member traversal, E/K/P/T, other reductions and shares. Count
+governed predicates, owned-member traversal, E/K/P/T, reductions other than Count/Sum/Average and shares. Count
 literal bounds above signed 64-bit range are unsupported. Structurally invalid
 input remains an error, distinct from unsupported valid-language capability.
 
@@ -257,6 +257,37 @@ including VARIANT numeric kinds, precision and overflow. Its current reading
 accepts only fixed-point VARIANT numbers; DOUBLE representations must be resolved
 and verified before activation. No remote conformance
 or infrastructure guarantee is inferred from these local tests.
+
+## Monetary Average subset
+
+`average` shares Sum's strict subject codec and monetary configuration, with an
+obligatory positive `minimum`. The aliases describe the same payload fields;
+validation of the distinct Average condition enforces the required guard.
+It has the same registered-message grain, native-currency restriction, governed
+Decimal(18,4) reading, periods and independent where paths as Sum.
+
+Only the four ordered literal comparisons are activated. Exact thresholds must
+fit the global 76/37 domain and have effective scale <=4; finer values are valid
+language but unimplemented. Core predecides the value test at thresholds outside
+the open (-1e14,1e14) range of determined averages, without attributing such a
+business bound to missing amounts. Otherwise it passes the exact threshold,
+direction and strictness. With n<=MaxInt64, t*n fits Decimal(38,4).
+
+The shared warehouse composer reuses the monetary population, copy checks and
+count/sum statistics. It compares S to t*n, without AVG or division, only when
+population is determined, nonempty and all relevant readings are known. The
+baseline otherwise returns UNKNOWN for the value test; the independent minimum
+guard composes using Kleene AND. This does not use Sum's reachable extrema as
+average extrema or infer a mean from non-null values alone.
+
+Explanations reuse the bounded numeric transport, identified by Average node
+metadata, and expose exact sum/count inputs with certain/uncertain counts. No
+quotient is serialized. Unknown population means count=null and sum=null;
+known population with an unknown amount has an exact count and sum=null.
+An empty population has sum=0/count=0 with a false mandatory guard.
+
+PostgreSQL has executable datastore and HTTP/MCP fixtures; both dialects have
+local compilation tests. Snowflake remains gated and unverified on a real server.
 
 ## Results, resources and consistency
 
@@ -485,7 +516,7 @@ including `-00:00`; it does not impose the Record DateTime parser's offset rules
 The numeric limits of the executable backend remain capability errors.
 An older decoder rejects the unknown `count` member.
 
-The existing Record-only preparer explicitly rejects Count and Sum outside the admitted
+The existing Record-only preparer explicitly rejects behavioral subjects outside the admitted
 Profiles path. Natural literals are validated and compared as decimal strings;
 fixed elapsed-unit multiplication is linear in their digit count. This preserves
 exact validation and invalid-before-unsupported precedence without large-integer
@@ -617,9 +648,9 @@ go test -mod=vendor ./core ./core/internal/unified ./core/internal/datastore \
 
 ## Profiles HTTP entry
 
-`GET /v1/profiles` uses `Workspace.QueryProfiles`. A request without Count or Sum delegates
+`GET /v1/profiles` uses `Workspace.QueryProfiles`. A request without behavioral conditions delegates
 to the existing Record query and writer: no evaluation object, added warehouse
-query or changed response encoding. Requests containing Count or Sum return only MATCH
+query or changed response encoding. Requests containing Count, Sum or Average return only MATCH
 profiles with the requested projection. `total` is the exact MATCH count. An
 additional object describes that request's complete evaluation, for example:
 

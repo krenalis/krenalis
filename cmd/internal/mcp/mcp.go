@@ -31,7 +31,7 @@ const serverInstructions = "Krenalis MCP tools must be used only through this MC
 	" query-profiles requires configured MCP settings but uses the main Krenalis warehouse connection." +
 	" The separate MCP credentials do not restrict its data access." +
 	" On Snowflake it uses the main virtual warehouse, not the MCP virtual warehouse." +
-	" Count and Sum remain unavailable on Snowflake until their backend gate is enabled." +
+	" Behavioral filters remain unavailable on Snowflake until their backend gate is enabled." +
 	" The workspace data warehouse is managed directly by Krenalis." +
 	" Writes and schema changes for Krenalis-managed tables and views must be performed only by Krenalis itself." +
 	" If a user wants to modify data, schema, or configuration, explain clearly and professionally that user-driven changes must be done only through the Krenalis Admin console or the Krenalis APIs, not through direct SQL on the warehouse." +

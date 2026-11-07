@@ -2,9 +2,9 @@
 
 This MIT package is shared by the warehouse drivers. `core` supplies a prepared
 `warehouses.Filter`; it does not supply SQL or dialect functions. The initial
-subset is profile Record, independent occurrence Count/Sum and outer AND/OR. The
+subset is profile Record, independent Count/Sum, determined Average and outer AND/OR. The
 source, typed Record operands, known-JSON-String reads, mature period and accepted cardinalities
-are already determined. Each Count or Sum closes its own evidence before composition.
+are already determined. Each behavioral condition closes its own evidence before composition.
 
 `Build` emits one statement for a projected, ordered profile page and exact
 MATCH, NO_MATCH and UNKNOWN totals. Empty pages still carry totals in a marked metadata row.
@@ -34,6 +34,20 @@ threshold representable in Decimal(38,4), so no driver sees the original 76-digi
 threshold as a Float or DECFLOAT. Relevant amount disagreements between copies
 are source faults. Certainly excluded amounts are not read. A per-profile
 occurrence count beyond MaxInt64 or arithmetic overflow fails the operation.
+
+Average reuses the monetary population and statistics of Sum, preserving copy
+and source checks. Its distinct prepared node requires a positive sample guard
+and accepts an exact threshold at scale <=4, direction and strictness, or a
+predecided value test from core. Only determined, nonempty populations with all
+relevant amounts known use S versus t*n. It never divides or invokes AVG.
+For |t|<1e14 and n<=MaxInt64 the product fits Decimal(38,4). Evidence adequacy and
+the Kleene sample guard still apply to a predecided out-of-domain value test.
+
+Average node metadata reuses the bounded total/count explanation transport and
+returns exact inputs instead of a quotient. Count is absent for uncertain
+membership and sum is absent unless both population and amounts are determined.
+No Sum bounds are exposed as average bounds. Existing Count/Sum protocol rows
+and public response shapes remain unchanged.
 
 Count and Sum carry an optional sample minimum separately from the terminal.
 Both use `withSampleMinimum` to compose the independently closed guard and test

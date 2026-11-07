@@ -18,9 +18,10 @@ import (
 type explanationTerm struct {
 	truth, lower, upper string
 	sumLower, sumUpper  string
+	average             bool
 }
 
-// BuildExplanation reuses the closed Record/Count/Sum expressions and emits one
+// BuildExplanation reuses the closed filter expressions and emits one
 // bounded row per node for the requested profile, including non-matches.
 func BuildExplanation(filter warehouses.Filter, population warehouses.ProfileSource, profile string, dialect Dialect) (Statement, error) {
 
@@ -67,6 +68,7 @@ func BuildExplanation(filter warehouses.Filter, population warehouses.ProfileSou
 		hasSums = hasSums || node.sumLower != ""
 	}
 	var sums []bool
+	var averages []bool
 	if hasSums {
 		if dialect.ValueSize == nil {
 			return Statement{}, fmt.Errorf("warehouses/internal/profilefilter: missing value size operation")
@@ -82,6 +84,12 @@ func BuildExplanation(filter warehouses.Filter, population warehouses.ProfileSou
 			counts[i] = node.sumLower == ""
 			terms = append(terms, node.lower+" AS "+q("$lo"+n), node.upper+" AS "+q("$hi"+n))
 			lo, hi = q("$lo"+n), q("$hi"+n)
+		}
+		if node.average {
+			if averages == nil {
+				averages = make([]bool, len(c.nodes))
+			}
+			averages[i] = true
 		}
 		extra := ""
 		if hasSums {
@@ -115,7 +123,7 @@ func BuildExplanation(filter warehouses.Filter, population warehouses.ProfileSou
 	}
 	statement := Statement{SQL: "WITH " + strings.Join(c.ctes, ",\n") +
 		"\nSELECT profile_id,node,truth,lo,hi,(" + failures + ")" + extra + " FROM explanation ORDER BY node LIMIT " +
-		strconv.Itoa(len(c.nodes)+1), Arguments: c.arguments, CountNodes: counts, SumNodes: sums,
+		strconv.Itoa(len(c.nodes)+1), Arguments: c.arguments, CountNodes: counts, SumNodes: sums, AverageNodes: averages,
 		Columns: []warehouses.Column{
 			{Name: "profile_id", Type: types.UUID()}, {Name: "node", Type: types.Int(64)},
 			{Name: "truth", Type: types.Boolean(), Nullable: true},

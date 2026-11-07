@@ -1,6 +1,6 @@
 # Profile queries through MCP
 
-`query-profiles` calls `Workspace.QueryProfiles`, with the same Record/Count/Sum
+`query-profiles` calls `Workspace.QueryProfiles`, with the same Record/Count/Sum/Average
 document and execution path as `GET /v1/profiles`. `profile-filter-doc` exposes
 the supported syntax, examples and limitations to the model. The existing SQL
 tool remains available for discovery and other analysis. Server instructions
@@ -55,7 +55,7 @@ user-supplied SQL through the profile path.
 
 On Snowflake this also selects the main virtual warehouse instead of the one
 possibly configured for MCP. Record-only queries use the existing Record path.
-Count and Sum preserve the unverified-backend gate and return an actionable capability
+Count, Sum and Average preserve the unverified-backend gate and return an actionable capability
 error. Local tests do not establish Snowflake runtime conformance.
 
 ## Transport and limits
@@ -94,9 +94,9 @@ bound the allocation used to encode one profile's attributes. The legacy Record
 page is already loaded before that step.
 
 Record attributes use `types.Marshal`, preserving Decimal, Int64 and raw JSON
-encoding. Count and Sum return only MATCH profiles, plus `evaluation` with all three
+encoding. Count, Sum and Average return only MATCH profiles, plus `evaluation` with all three
 totals and T. Empty pages use `profiles: []` and retain totals. Reusing `at`
-anchors relative periods; it does not freeze the data between calls. Count and Sum
+anchors relative periods; it does not freeze the data between calls. Count, Sum and Average
 retain their deterministic tie-break, not a new Record sorting contract.
 
 `BadRequestError` and `UnprocessableError` become bounded actionable tool errors
@@ -122,3 +122,10 @@ remain restricted to track Order Completed, including through internal entry poi
 No Admin filter editor, E/K/P/T, persistence or destination execution is introduced. Coherent
 source views remain an infrastructure prerequisite, not a guarantee established
 by this MCP adapter.
+
+Average uses the same monetary source/reading as Sum, with mandatory minimum,
+four ordered comparisons and effective threshold scale <=4. It compares the
+exact sum to threshold times count and returns exact input numbers in its
+explanations; it never divides or reports a rounded average. Unknown population
+or amounts retain UNKNOWN, subject to the independent Kleene sample guard.
+It excludes other native currencies without conversion or business deduplication.

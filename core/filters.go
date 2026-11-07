@@ -37,7 +37,7 @@ type Filter struct {
 
 // FilterRule represents a condition or a nested filter group.
 // It is implemented by *FilterCondition, *FilterCountCondition,
-// *FilterSumCondition and *Filter.
+// *FilterSumCondition, *FilterAverageCondition and *Filter.
 type FilterRule interface {
 	filterRule()
 }
@@ -61,7 +61,7 @@ func (filter *Filter) MarshalJSON() ([]byte, error) {
 	return b.Bytes(), nil
 }
 
-// RequiresUnified reports Count or Sum within the admitted main-tree bounds.
+// RequiresUnified reports behavioral conditions in the main-tree bounds.
 // It does not validate the filter.
 func (filter *Filter) RequiresUnified() bool {
 	return filter.hasBehavior(true)
@@ -81,7 +81,7 @@ func (filter *Filter) UnmarshalJSON(data []byte) error {
 // filterRule marks Filter as a filter rule.
 func (*Filter) filterRule() {}
 
-func (filter *Filter) hasBehavior(includeSum bool) bool {
+func (filter *Filter) hasBehavior(includeMonetary bool) bool {
 	type entry struct {
 		group *Filter
 		depth int
@@ -102,8 +102,8 @@ func (filter *Filter) hasBehavior(includeSum bool) bool {
 			switch rule := rule.(type) {
 			case *FilterCountCondition:
 				return true
-			case *FilterSumCondition:
-				if includeSum {
+			case *FilterSumCondition, *FilterAverageCondition:
+				if includeMonetary {
 					return true
 				}
 			case *Filter:
@@ -396,6 +396,14 @@ func marshalFilterJSON(b *json.Buffer, filter *Filter) error {
 			if err != nil {
 				return err
 			}
+		case *FilterAverageCondition:
+			if rule == nil {
+				return errors.New("filter average condition cannot be nil")
+			}
+			err = b.Encode(rule)
+			if err != nil {
+				return err
+			}
 		case nil:
 			return errors.New("filter rule cannot be nil")
 		default:
@@ -461,6 +469,8 @@ func unmarshalFilterRule(dec *json.Decoder, depth int, expectGroup, occurrence b
 	var hasCount bool
 	var sum FilterSum
 	var hasSum bool
+	var average FilterAverage
+	var hasAverage bool
 	var calendar *FilterCalendar
 	var hasCalendar bool
 	var descendantRuleCount int
@@ -539,6 +549,19 @@ func unmarshalFilterRule(dec *json.Decoder, depth int, expectGroup, occurrence b
 			} else {
 				err = dec.Decode(&sum)
 			}
+		case "average":
+			if occurrence {
+				return nil, 0, errors.New("Average is not allowed in an occurrence Record filter")
+			}
+			if hasAverage {
+				return nil, 0, errors.New("duplicate filter property average")
+			}
+			hasAverage = true
+			if expectGroup {
+				err = dec.SkipValue()
+			} else {
+				err = dec.Decode(&average)
+			}
 		case "values":
 			if hasValues {
 				return nil, 0, fmt.Errorf("duplicate filter property %q", name)
@@ -559,8 +582,20 @@ func unmarshalFilterRule(dec *json.Decoder, depth int, expectGroup, occurrence b
 
 	_ = dec.SkipToken() // skip '}'
 
-	if hasCalendar && (!hasRules || hasCount || hasSum || hasProperty) {
+	if hasCalendar && (!hasRules || hasCount || hasSum || hasAverage || hasProperty) {
 		return nil, 0, errors.New("defaultCalendar is only allowed on the root group")
+	}
+	if hasAverage {
+		if expectGroup {
+			return nil, 0, errors.New("filter must be a group")
+		}
+		if hasRules || hasProperty || hasCount || hasSum {
+			return nil, 0, errors.New("filter rule cannot combine average with another subject")
+		}
+		if !hasOperator || !hasValues {
+			return nil, 0, errors.New("Average condition must contain operator and values")
+		}
+		return &FilterAverageCondition{Average: average, Operator: FilterOperator(operator), Values: values}, 0, nil
 	}
 	if hasSum {
 		if expectGroup {
@@ -921,6 +956,8 @@ func prepareFilterGroup(filter *Filter, validation *filterValidation, depth int)
 			return nil, errors.New("Count requires Unified profile filtering")
 		case *FilterSumCondition:
 			return nil, errors.New("Sum requires Unified profile filtering")
+		case *FilterAverageCondition:
+			return nil, errors.New("Average requires Unified profile filtering")
 		default:
 			return nil, errors.New("unsupported filter rule")
 		}

@@ -29,7 +29,7 @@ type ProfileQuery struct {
 }
 
 // ProfileQueryResult is a complete profile page and its matching total.
-// Evaluation is present only when the request contains Count or Sum.
+// Evaluation is present only when the request contains a behavioral condition.
 type ProfileQueryResult struct {
 	Profiles   []Profile
 	Schema     types.Type
@@ -63,7 +63,7 @@ func (this *Workspace) QueryProfiles(ctx context.Context, query ProfileQuery) (*
 
 	if !query.Filter.RequiresUnified() {
 		if query.At != "" {
-			return nil, errors.BadRequest("at requires a Count or Sum filter")
+			return nil, errors.BadRequest("at requires a behavioral filter")
 		}
 		filter := query.Filter
 		if filter != nil && filter.DefaultCalendar != nil {

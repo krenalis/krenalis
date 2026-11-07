@@ -25,14 +25,33 @@ type ProfileFilterExplanation struct {
 }
 
 // ProfileRuleExplanation follows the input filter's group and rule order.
-// Kind is and, or, record, count or sum; Result is MATCH, NO_MATCH or UNKNOWN.
+// Kind is and, or, record, count, sum or average.
+// Result is MATCH, NO_MATCH or UNKNOWN.
 // Record results do not identify which operand caused a SQL NULL.
 type ProfileRuleExplanation struct {
-	Kind   string                   `json:"kind"`
-	Result string                   `json:"result"`
-	Rules  []ProfileRuleExplanation `json:"rules,omitzero"`
-	Count  *ProfileCountExplanation `json:"count,omitzero"`
-	Sum    *ProfileSumExplanation   `json:"sum,omitzero"`
+	Kind    string                     `json:"kind"`
+	Result  string                     `json:"result"`
+	Rules   []ProfileRuleExplanation   `json:"rules,omitzero"`
+	Count   *ProfileCountExplanation   `json:"count,omitzero"`
+	Sum     *ProfileSumExplanation     `json:"sum,omitzero"`
+	Average *ProfileAverageExplanation `json:"average,omitzero"`
+}
+
+// ProfileAverageExplanation reports exact inputs without a rounded quotient.
+// Count is null for uncertain membership; Sum is null unless membership and
+// amounts are determined. Certain/Uncertain retain the sample count bounds.
+// Zero inputs on an empty population do not define a zero average.
+type ProfileAverageExplanation struct {
+	Start          time.Time        `json:"start,omitzero"`
+	End            time.Time        `json:"end"`
+	UnboundedStart bool             `json:"unboundedStart,omitzero"`
+	History        *FilterHistory   `json:"history,omitzero"`
+	Field          FilterSumField   `json:"field"`
+	NativeCurrency string           `json:"nativeCurrency"`
+	Sum            *decimal.Decimal `json:"sum"`
+	Count          *int64           `json:"count"`
+	Certain        int64            `json:"certain"`
+	Uncertain      int64            `json:"uncertain"`
 }
 
 // ProfileCountExplanation describes independently qualified occurrences in
@@ -191,6 +210,21 @@ func explainProfileRule(rule warehouses.FilterCondition, semantic unified.Rule, 
 		}
 	case *warehouses.RecordFilter:
 		result.Kind = "record"
+	case *warehouses.DeterminedOccurrenceAverage:
+		if node.Average == nil || semantic.Average == nil {
+			return ProfileRuleExplanation{}, errors.New("core: missing profile explanation average")
+		}
+		definition, revision := semantic.Average.Field.Reference()
+		result.Kind = "average"
+		result.Average = &ProfileAverageExplanation{Start: rule.Start, End: rule.End,
+			UnboundedStart: rule.UnboundedStart,
+			Field:          FilterSumField{Definition: definition, MeaningRevision: revision},
+			NativeCurrency: semantic.Average.NativeCurrency, Sum: node.Average.Sum, Count: node.Average.Count,
+			Certain: node.Average.Certain, Uncertain: node.Average.Possible - node.Average.Certain}
+		if history := semantic.Average.Scope.History; history != nil {
+			definition, revision := history.Reference()
+			result.Average.History = &FilterHistory{Definition: definition, MeaningRevision: revision}
+		}
 	case *warehouses.IndependentOccurrenceSum:
 		if node.Sum == nil || semantic.Sum == nil {
 			return ProfileRuleExplanation{}, errors.New("core: missing profile explanation sum")

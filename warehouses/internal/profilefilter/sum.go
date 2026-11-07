@@ -12,7 +12,7 @@ import (
 	"github.com/krenalis/krenalis/warehouses"
 )
 
-func (c *compiler) sum(node *warehouses.IndependentOccurrenceSum) (string, error) {
+func (c *compiler) monetaryPopulation(node *warehouses.IndependentOccurrenceSum) (string, error) {
 
 	if c.dialect.ExactDecimal == nil {
 		return "", fmt.Errorf("warehouses/internal/profilefilter: missing exact decimal reading")
@@ -100,6 +100,16 @@ func (c *compiler) sum(node *warehouses.IndependentOccurrenceSum) (string, error
 	c.faults = append(c.faults, "fault"+n)
 	alias := "v" + n
 	c.joins = append(c.joins, "LEFT JOIN cnt"+n+" "+alias+" ON "+alias+".profile_id=p."+q("$profile_id"))
+
+	return alias, nil
+}
+
+func (c *compiler) sum(node *warehouses.IndependentOccurrenceSum) (string, error) {
+
+	alias, err := c.monetaryPopulation(node)
+	if err != nil {
+		return "", err
+	}
 	lo, hi := sumBounds(alias)
 	threshold := fmt.Sprintf("CAST('%.4f' AS DECIMAL(38,4))", node.Threshold)
 	test := "CASE WHEN (" + hi + ")<=" + threshold + " THEN TRUE WHEN (" + lo + ")>" + threshold +

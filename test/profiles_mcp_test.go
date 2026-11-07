@@ -17,6 +17,7 @@ import (
 	"testing"
 
 	"github.com/krenalis/krenalis/test/krenalistester"
+	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/types"
 )
 
@@ -582,6 +583,135 @@ UPDATE krenalis_events SET properties='{}' WHERE event='Order Completed'`)
 				assertToolError(t, tool(t, "explain-profile-filter", map[string]any{
 					"kpid": "00000000-0000-0000-0000-000000000003", "filter": test.filter, "at": at,
 				}), test.code)
+			})
+		}
+
+	})
+
+	t.Run("Average", func(t *testing.T) {
+
+		_, err := pool.Exec(t.Context(), `INSERT INTO krenalis_events
+ (kpid,message_id,event,timestamp,received_at,sent_at,type,connection_id,anonymous_id,traits,properties)
+ SELECT ('00000000-0000-0000-0000-'||lpad(n::text,12,'0'))::uuid,'average/'||id,'Order Completed',
+ '2026-01-15','2026-02-01','2026-02-01','track','fixture','a','{}',payload::jsonb
+ FROM (VALUES
+ (1,'a','{"total":120,"currency":"EUR","coupon":"PROMO","average_fixture":true}'),
+ (1,'b','{"total":100,"currency":"EUR","coupon":"PROMO","average_fixture":true}'),
+ (1,'excluded','{"coupon":"OTHER","average_fixture":true}'),
+ (1,'foreign','{"currency":"USD","coupon":"PROMO","average_fixture":true}'),
+ (2,'c','{"total":100,"currency":"EUR","coupon":"PROMO","average_fixture":true}'),
+ (2,'d','{"total":99.9999,"currency":"EUR","coupon":"PROMO","average_fixture":true}'),
+ (3,'e','{"total":120,"currency":"EUR","coupon":"PROMO","average_fixture":true}'),
+ (3,'f','{"currency":"EUR","coupon":"PROMO","average_fixture":true}')
+ ) v(n,id,payload)`)
+		if err != nil {
+			t.Fatalf("expected coherent Average fixtures, got %v", err)
+		}
+		defer func() {
+			_, err := pool.Exec(t.Context(), "DELETE FROM krenalis_events WHERE message_id LIKE 'average/%'")
+			if err != nil {
+				t.Errorf("expected Average fixture cleanup, got %v", err)
+			}
+		}()
+
+		const average = `{"operator":"and","rules":[{"average":{"source":{"kind":"recordedEvents",` +
+			`"name":"Order Completed","grain":"registered-message"},"period":{"kind":"elapsedLookback",` +
+			`"duration":{"value":31,"unit":"day"}},"field":{"definition":"commerce.order_completed.total",` +
+			`"meaningRevision":"1"},"nativeCurrency":"EUR","minimum":2,` +
+			`"where":{"operator":"and","rules":[{"property":"properties.average_fixture","operator":"exists"},` +
+			`{"property":"properties.coupon","operator":"is","values":["PROMO"]}]}},` +
+			`"operator":"is greater than or equal to","values":[100]}]}`
+		for _, test := range []struct{ name, filter, totals string }{
+			{"exact average", average, `"match":1,"noMatch":2,"unknown":1`},
+			{"fractional average", strings.Replace(average, `"values":[100]`, `"values":[99.9999]`, 1), `"match":2,"noMatch":1,"unknown":1`},
+			{"strict boundary", strings.Replace(strings.Replace(average, `is greater than or equal to`, `is greater than`, 1), `"values":[100]`, `"values":[110]`, 1), `"match":0,"noMatch":3,"unknown":1`},
+			{"minimum false", strings.Replace(average, `"minimum":2`, `"minimum":3`, 1), `"match":0,"noMatch":4,"unknown":0`},
+			{"large threshold", strings.Replace(average, `"values":[100]`, `"values":[1e75]`, 1), `"match":0,"noMatch":3,"unknown":1`},
+			{"outer OR", strings.Replace(strings.Replace(average, `"operator":"and"`, `"operator":"or"`, 1), `"rules":[{"average"`, `"rules":[{"property":"country","operator":"is","values":["FR"]},{"average"`, 1), `"match":3,"noMatch":0,"unknown":1`},
+		} {
+			t.Run(test.name, func(t *testing.T) {
+				for _, first := range []int{0, 99} {
+					var expected json.RawMessage
+					k.Call("GET", "/v1/profiles?filter="+url.QueryEscape(test.filter)+"&at="+
+						url.QueryEscape(at)+"&first="+strconv.Itoa(first), nil, nil, &expected)
+					actual := assertResult(t, tool(t, "query-profiles", map[string]any{
+						"filter": test.filter, "at": at, "first": first}))
+					if actual != string(expected) || !strings.Contains(actual, test.totals) ||
+						first == 99 && !strings.HasPrefix(actual, `{"profiles":[]`) {
+						t.Fatalf("expected identical complete HTTP/MCP Average with %s, got %s", test.totals, actual)
+					}
+				}
+			})
+		}
+		for _, test := range []struct{ id, sum, count string }{
+			{"00000000-0000-0000-0000-000000000001", "220", "2"},
+			{"00000000-0000-0000-0000-000000000002", "199.9999", "2"},
+			{"00000000-0000-0000-0000-000000000003", "null", "2"},
+			{"00000000-0000-0000-0000-000000000004", "0", "0"},
+		} {
+			t.Run("explain "+test.id, func(t *testing.T) {
+				var expected json.RawMessage
+				k.Call("GET", "/v1/profiles/"+test.id+"/filter-explanation?filter="+url.QueryEscape(average)+
+					"&at="+url.QueryEscape(at), nil, nil, &expected)
+				actual := assertResult(t, tool(t, "explain-profile-filter", map[string]any{
+					"kpid": test.id, "filter": average, "at": at}))
+				var decoded struct {
+					Rule struct {
+						Rules []struct {
+							Average struct {
+								Sum, Count json.RawMessage
+							}
+						}
+					}
+				}
+				err := json.Unmarshal([]byte(actual), &decoded)
+				if err != nil {
+					t.Fatalf("expected exact JSON inputs decoded, got %v", err)
+				}
+				if len(decoded.Rule.Rules) != 1 {
+					t.Fatalf("expected one Average explanation, got %s", actual)
+				}
+				values := decoded.Rule.Rules[0].Average
+				matches := string(values.Sum) == test.sum
+				if test.sum != "null" {
+					value, ok := new(big.Rat).SetString(string(values.Sum))
+					want, _ := new(big.Rat).SetString(test.sum)
+					matches = ok && value.Cmp(want) == 0
+				}
+				if actual != string(expected) || !strings.Contains(actual, `"kind":"average"`) ||
+					!matches || string(values.Count) != test.count {
+					t.Fatalf("expected exact Average inputs sum=%s count=%s, got %s", test.sum, test.count, actual)
+				}
+			})
+		}
+		for _, test := range []struct {
+			name, filter, code string
+			status             int
+		}{
+			{"omitted minimum", strings.Replace(average, `,"minimum":2`, ``, 1), "InvalidArguments", 400},
+			{"zero minimum", strings.Replace(average, `"minimum":2`, `"minimum":0`, 1), "InvalidArguments", 400},
+			{"finer threshold", strings.Replace(average, `"values":[100]`, `"values":[0.00001]`, 1), "FilterCapabilityNotImplemented", 422},
+			{"excessive precision", strings.Replace(average, `"values":[100]`, `"values":[1e76]`, 1), "InvalidArguments", 400},
+			{"non-track source", strings.Replace(average, `"kind":"recordedEvents"`, `"kind":"recordedEvents","type":"page"`, 1), "InvalidArguments", 400},
+			{"dependent where", strings.Replace(average, `properties.coupon`, `properties.total`, 1), "FilterCapabilityNotImplemented", 422},
+			{"equality", strings.Replace(average, `is greater than or equal to`, `is`, 1), "FilterCapabilityNotImplemented", 422},
+		} {
+			t.Run(test.name, func(t *testing.T) {
+				assertToolError(t, tool(t, "query-profiles", map[string]any{
+					"filter": test.filter, "at": at}), test.code)
+				assertToolError(t, tool(t, "explain-profile-filter", map[string]any{
+					"kpid": "00000000-0000-0000-0000-000000000001", "filter": test.filter, "at": at}), test.code)
+				var body json.RawMessage
+				err := k.TryCall("GET", "/v1/profiles?filter="+url.QueryEscape(test.filter)+"&at="+
+					url.QueryEscape(at), nil, nil, &body)
+				if err != nil {
+					status, ok := errors.AsType[*krenalistester.StatusCodeError](err)
+					if !ok || status.Response.Code != test.status {
+						t.Fatalf("expected HTTP %d, got %v", test.status, err)
+					}
+					return
+				}
+				t.Fatalf("expected HTTP %d without a result, got %s", test.status, body)
 			})
 		}
 

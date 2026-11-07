@@ -21,14 +21,52 @@ type Statement struct {
 	Columns   []warehouses.Column
 	// CountNodes identifies the Count rows in an explanation's preorder.
 	CountNodes []bool
-	// SumNodes identifies Sum rows; nil retains the six-column Count protocol.
+	// SumNodes identifies total rows; nil retains the Count-only protocol.
 	SumNodes []bool
+	// AverageNodes distinguishes Average inputs from Sum bounds.
+	AverageNodes []bool
 }
 
 // ReadExplanation consumes the explanation protocol compiled by this statement.
 // Decoding, cancellation, source or Close failure discards the whole result.
 func (q Statement) ReadExplanation(ctx context.Context, rows warehouses.Rows, profile string) ([]warehouses.FilterNodeOutcome, error) {
-	return readExplanation(ctx, rows, q.CountNodes, q.SumNodes, profile)
+
+	result, err := readExplanation(ctx, rows, q.CountNodes, q.SumNodes, profile)
+	if err != nil {
+		return nil, err
+	}
+
+	if q.AverageNodes != nil && len(q.AverageNodes) != len(q.CountNodes) {
+		return nil, fmt.Errorf("warehouses/internal/profilefilter: invalid Average explanation nodes")
+	}
+	for i, average := range q.AverageNodes {
+		if average && (q.SumNodes == nil || !q.SumNodes[i] || q.CountNodes[i]) {
+			return nil, fmt.Errorf("warehouses/internal/profilefilter: invalid Average explanation inputs")
+		}
+	}
+
+	for i := range result {
+		if q.AverageNodes == nil || !q.AverageNodes[i] {
+			continue
+		}
+		bounds := result[i].Sum
+		if bounds == nil {
+			return nil, fmt.Errorf("warehouses/internal/profilefilter: missing Average explanation inputs")
+		}
+		values := &warehouses.OccurrenceAverageValues{Certain: bounds.Certain, Possible: bounds.Possible}
+		if bounds.Certain == bounds.Possible {
+			values.Count = &bounds.Certain
+			if bounds.Lower != nil && bounds.Upper != nil {
+				if !bounds.Lower.Equal(*bounds.Upper) {
+					return nil, fmt.Errorf("warehouses/internal/profilefilter: inconsistent Average total")
+				}
+				values.Sum = bounds.Lower
+			}
+		}
+		result[i].Sum, result[i].Average = nil, values
+	}
+
+	return result, nil
 }
 
 // Values validates the transport envelope and returns driver arguments.

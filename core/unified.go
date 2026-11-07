@@ -106,6 +106,8 @@ func prepareUnifiedRuleInCalendar(rule FilterRule, schema types.Type, depth int,
 		return prepareFilterCount(rule, calendar)
 	case *FilterSumCondition:
 		return prepareFilterSum(rule, calendar)
+	case *FilterAverageCondition:
+		return prepareFilterAverage(rule, calendar)
 	default:
 		return unified.Rule{}, fmt.Errorf("unsupported Unified filter rule %T", rule)
 	}

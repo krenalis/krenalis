@@ -29,7 +29,7 @@ var profileFilterDocumentation string
 
 var profileFilterDocumentationTool = server.ServerTool{
 	Tool: mcp.NewTool("profile-filter-doc",
-		mcp.WithDescription("Read the supported Record/Count/Sum filter syntax before using query-profiles."),
+		mcp.WithDescription("Read the supported Record/Count/Sum/Average filter syntax before using query-profiles."),
 		mcp.WithTitleAnnotation("Profile filtering documentation"),
 		mcp.WithReadOnlyHintAnnotation(true),
 		mcp.WithDestructiveHintAnnotation(false),
@@ -58,7 +58,7 @@ var queryProfilesTool = server.ServerTool{
 			" Reuse evaluation.at on later pages to anchor periods; this does not freeze the data."+
 			" Configured MCP settings enable access, but execution uses the main Krenalis connection."+
 			" The separate MCP user's table/column permissions do not restrict this tool or its event conditions."+
-			" Snowflake uses the main virtual warehouse, not the MCP virtual warehouse; Count and Sum remain unavailable."+
+			" Snowflake uses the main virtual warehouse, not the MCP virtual warehouse; behavioral filters remain unavailable."+
 			" Do not use SQL to emulate unsupported Unified capabilities."),
 		mcp.WithString("filter", mcp.Description("core.Filter encoded as JSON text, not an object or SQL."+
 			" Numbers inside the text retain exact digits. Omit to list all profiles; null is invalid.")),
@@ -69,7 +69,7 @@ var queryProfilesTool = server.ServerTool{
 		mcp.WithInteger("first", mcp.Min(0), mcp.Max(2147483647), mcp.DefaultNumber(0)),
 		mcp.WithInteger("limit", mcp.Min(1), mcp.Max(1000), mcp.DefaultNumber(20)),
 		mcp.WithString("at", mcp.Description("Optional nonfuture RFC3339 instant with microsecond precision."+
-			" Only allowed with Count or Sum. Reuse evaluation.at when fetching subsequent pages.")),
+			" Only allowed with behavioral filters. Reuse evaluation.at when fetching subsequent pages.")),
 		mcp.WithTitleAnnotation("Query unified profiles"),
 		mcp.WithReadOnlyHintAnnotation(true),
 		mcp.WithDestructiveHintAnnotation(false),
