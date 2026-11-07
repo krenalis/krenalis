@@ -182,6 +182,7 @@ test('Year integer ranges respect calendar and bit-size bounds', () => {
 
 test('Years cannot be identifiers, matching properties or table keys', () => {
 	const integer: IntType = { kind: 'int', bitSize: 16, unsigned: false };
+	expect(isSuitableAsIdentifier(integer)).toBe(true);
 	for (const unsigned of [false, true]) {
 		const year: IntType = { ...integer, unsigned, semantics: 'year', minimum: 1, maximum: 9999 };
 		const schema: ObjectType = {
@@ -191,7 +192,6 @@ test('Years cannot be identifiers, matching properties or table keys', () => {
 				{ ...matchingProperty(year), name: 'year' },
 			],
 		};
-		expect(isSuitableAsIdentifier(integer)).toBe(true);
 		expect(isSuitableAsIdentifier(year)).toBe(false);
 		expect(getMatchingComboboxItems(flattenSchema(schema)).map((item) => item.term)).toEqual(['integer']);
 		expect(getTableKeyComboboxItems(schema).map((item) => item.term)).toEqual(['integer']);

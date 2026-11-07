@@ -1832,6 +1832,10 @@ func (this *Workspace) UpdateIdentityResolutionSettings(ctx context.Context, run
 					return nil, errors.Unprocessable(PropertyNotExist, "property %q does not exist in the profile schema", path)
 				}
 				if !suitableAsIdentifier(p.Type) {
+					if p.Type.Semantics() == types.YearSemantics {
+						return nil, errors.Unprocessable(TypeNotAllowed,
+							"property %q cannot be used as an identifier because it has year semantics", path)
+					}
 					return nil, errors.Unprocessable(TypeNotAllowed, "property %q has a type %s, which is not allowed for identifiers", path, p.Type)
 				}
 			}

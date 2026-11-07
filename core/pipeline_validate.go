@@ -314,6 +314,9 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 			return errors.BadRequest("input matching property %q not found within the input schema", pipeline.Matching.In)
 		}
 		if !canBeUsedAsMatchingProp(in.Type) {
+			if in.Type.Semantics() == types.YearSemantics {
+				return errors.BadRequest("properties with year semantics cannot be used for matching")
+			}
 			return errors.BadRequest("type %s cannot be used as matching property", in.Type)
 		}
 		// Validate the output matching property.
@@ -328,6 +331,9 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 			return errors.BadRequest("output matching property %q not found within the output schema", pipeline.Matching.Out)
 		}
 		if !canBeUsedAsMatchingProp(out.Type) {
+			if out.Type.Semantics() == types.YearSemantics {
+				return errors.BadRequest("properties with year semantics cannot be used for matching")
+			}
 			return errors.BadRequest("type %s cannot be used as matching property", out.Type)
 		}
 		// Check that the input property can be converted to the output property.
@@ -632,6 +638,9 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 			return errors.BadRequest("table key %q not found within output schema", pipeline.TableKey)
 		}
 		if !canBeUsedAsTableKey(p.Type) {
+			if p.Type.Semantics() == types.YearSemantics {
+				return errors.BadRequest("properties with year semantics cannot be used as table keys")
+			}
 			return errors.BadRequest("type %s cannot be used as table key", p.Type)
 		}
 		if tr := pipeline.Transformation; tr != nil {
