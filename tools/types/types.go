@@ -600,7 +600,6 @@ func (t Type) Unsigned() Type {
 	}
 	t.vl = nil
 	t.unsigned = true
-
 	return t
 }
 
@@ -651,7 +650,7 @@ func (t Type) WithIntRange(min, max int64) Type {
 		panic("cannot set int range for an unsigned int")
 	}
 	if t.semantics == YearSemantics && (min < MinYear || max > MaxYear) {
-		panic("tools/types: year range must be within [1,9999]")
+		panic("year range must be within [1,9999]")
 	}
 	Min, Max := minInt[t.size], maxInt[t.size]
 	if min == Min && max == Max {
@@ -727,7 +726,7 @@ func (t Type) WithUnsignedRange(min, max uint64) Type {
 		panic("type is not an unsigned int type")
 	}
 	if t.semantics == YearSemantics && (min < MinYear || max > MaxYear) {
-		panic("tools/types: year range must be within [1,9999]")
+		panic("year range must be within [1,9999]")
 	}
 	Max := maxUnsigned[t.size]
 	if min == 0 && max == Max {
