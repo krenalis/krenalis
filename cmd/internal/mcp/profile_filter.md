@@ -2,7 +2,7 @@
 
 Use `query-profiles` for questions about profiles and segments. It runs the same
 `core.Filter` and `Workspace.QueryProfiles` path as `GET /v1/profiles`.
-Read `profile-schema` and, for Count qualification, `event-schema`. Use the schema
+Read `profile-schema` and, for event qualification, `event-schema`. Use the schema
 property `path`, not its physical warehouse column name. Fetch only the profile
 properties needed to answer the user.
 
@@ -45,7 +45,7 @@ profile or event properties `query-profiles` can read or use in conditions.
 
 On Snowflake, `query-profiles` uses the main virtual warehouse, even if a different
 virtual warehouse is configured for MCP. Record queries remain available; Count
-is currently unavailable on Snowflake. Do not work around that gate using SQL.
+and Sum are currently unavailable on Snowflake. Do not work around that gate using SQL.
 
 ## Arguments and results
 
@@ -56,7 +56,7 @@ String, JSON `null`, unknown arguments and explicit null arguments are invalid.
 
 Other arguments: optional `properties` (top-level property names; omission requests
 all), `order` (a sortable profile property), `orderDesc` (default false), `first`
-(default 0), `limit` (default 20, range 1–1000), and `at` (Count only).
+(default 0), `limit` (default 20, range 1–1000), and `at` (Count or Sum only).
 Arguments are limited to 500 KiB. The full HTTP POST, including its JSON-RPC
 envelope, is limited to 1 MiB; oversize is HTTP 413 before the tool runs.
 The complete result JSON is limited to 128 KiB.
@@ -64,7 +64,7 @@ An oversized result is an error: reduce `limit` or request fewer `properties`.
 Rows are never silently dropped to fit that budget.
 
 The returned text is JSON with `profiles`, `schema` and exact matching `total`.
-With Count, it also contains `evaluation: {at, match, noMatch, unknown}`. Totals
+With Count or Sum, it also contains `evaluation: {at, match, noMatch, unknown}`. Totals
 refer to the entire profile population before pagination, from the same
 evaluation as the page. The page contains only MATCH profiles. UNKNOWN is not
 NO_MATCH and is not an execution error. An empty page still returns totals.
@@ -72,7 +72,7 @@ NO_MATCH and is not an execution error. An empty page still returns totals.
 `at` is a nonfuture RFC3339 instant, exactly representable at microsecond
 precision. Omission fixes T once. Reuse the returned `evaluation.at` for subsequent
 pages to anchor relative periods. It does not freeze the data, identity mappings
-or profile values between requests. Count sorting uses NULLS LAST and KPID as a
+or profile values between requests. Unified sorting uses NULLS LAST and KPID as a
 deterministic tie-break; Record-only ordering retains the existing API behavior.
 
 Invalid filters and unavailable capabilities return tool errors with actionable
@@ -90,7 +90,7 @@ are MCP diagnostic prefixes, not additional core error codes.
 
 The root is `{"operator":"and"|"or","rules":[...]}`, with optional
 `defaultCalendar` as described below. Rules are Record
-conditions, Count conditions or nested AND/OR groups. At most four main group
+conditions, Count/Sum conditions or nested AND/OR groups. At most four main group
 levels including the root, and 100 descendants excluding the root, are allowed.
 
 A Record condition is `{"property":"path","operator":"...","values":[...]}`.
@@ -146,13 +146,13 @@ The main root must also contain, for example,
 Use an explicit IANA timezone (or UTC), with exact spelling and case, after
 `gregorian-monday/`; only revision 1 is resolved. Host-local names such as
 `posixrules` are rejected. There is no implicit workspace or server-local calendar.
-The reference can remain on a Profiles filter without Count; it is validated but
+The reference can remain on a Profiles filter without Count or Sum; it is validated but
 does not change Record results or add evaluation metadata. It is not allowed on
 nested groups, occurrence `where` or in contexts restricted to Record filtering.
 Use the timezone agreed with the user; ask if none has been established. Do not
 infer it from the user's language, locale, server or event context. The calendar
 does not reinterpret absolute instants, elapsed durations or raw JSON values.
-It is optional for existing absolute/elapsed Count filters. Per-condition and
+It is optional for existing absolute/elapsed Count/Sum filters. Per-condition and
 profile-timezone overrides are unavailable. Keep the same filter reference and
 reuse `evaluation.at` when paging. This does not freeze data or the tzdb version.
 Ambiguous/nonexistent midnight boundaries and out-of-range calendar windows

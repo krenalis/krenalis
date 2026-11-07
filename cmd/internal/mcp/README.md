@@ -1,6 +1,6 @@
 # Profile queries through MCP
 
-`query-profiles` calls `Workspace.QueryProfiles`, with the same Record/Count
+`query-profiles` calls `Workspace.QueryProfiles`, with the same Record/Count/Sum
 document and execution path as `GET /v1/profiles`. `profile-filter-doc` exposes
 the supported syntax, examples and limitations to the model. The existing SQL
 tool remains available for discovery and other analysis. Server instructions
@@ -10,8 +10,8 @@ unavailable filtering capabilities.
 `explain-profile-filter` calls `Workspace.ExplainProfileFilter`, also available as
 `GET /v1/profiles/{kpid}/filter-explanation`. It accepts `kpid`, JSON-text `filter`
 and optional `at`, and returns the ordered rule tree with ternary outcomes and
-resolved Count periods/counters. It uses the same MCP enablement and unrestricted
-main connection as `query-profiles`. No event payloads are returned. It is a new
+resolved periods, occurrence counters and monetary bounds. It uses the same MCP
+enablement and unrestricted main connection as `query-profiles`. No event payloads are returned. It is a new
 evaluation, not a snapshot or an alternative segment-membership policy; all
 explanations remain unavailable on the unverified Snowflake backend.
 
@@ -53,7 +53,7 @@ user-supplied SQL through the profile path.
 
 On Snowflake this also selects the main virtual warehouse instead of the one
 possibly configured for MCP. Record-only queries use the existing Record path.
-Count preserves the unverified-backend gate and returns an actionable capability
+Count and Sum preserve the unverified-backend gate and return an actionable capability
 error. Local tests do not establish Snowflake runtime conformance.
 
 ## Transport and limits
@@ -92,17 +92,17 @@ bound the allocation used to encode one profile's attributes. The legacy Record
 page is already loaded before that step.
 
 Record attributes use `types.Marshal`, preserving Decimal, Int64 and raw JSON
-encoding. Count returns only MATCH profiles, plus `evaluation` with all three
+encoding. Count and Sum return only MATCH profiles, plus `evaluation` with all three
 totals and T. Empty pages use `profiles: []` and retain totals. Reusing `at`
-anchors relative periods; it does not freeze the data between calls. Only Count
-gets its existing deterministic tie-break, not a new Record sorting contract.
+anchors relative periods; it does not freeze the data between calls. Count and Sum
+retain their deterministic tie-break, not a new Record sorting contract.
 
 `BadRequestError` and `UnprocessableError` become bounded actionable tool errors
 with their classification/code. Technical execution errors are opaque operation
 failures without profile data. The profile path does not reuse the old SQL tool's
 partial-result handling.
 
-No Admin filter editor, governed public
+No Admin filter editor, public Count currency
 binding, E/K/P/T, persistence or destination execution is introduced. Coherent
 source views remain an infrastructure prerequisite, not a guarantee established
 by this MCP adapter.
