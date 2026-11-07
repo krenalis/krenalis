@@ -269,7 +269,7 @@ func Test_Unmarshal(t *testing.T) {
 		},
 		{
 			Name: "Year",
-			Type: types.Year(),
+			Type: types.Int(16).AsYear(),
 		},
 		{
 			Name: "UUID",

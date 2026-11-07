@@ -133,8 +133,6 @@ func convert(v any, st, dt types.Type, nullable bool, purpose Purpose) (any, err
 			s = v.(time.Time).Format(time.DateOnly)
 		case types.TimeKind:
 			s = v.(time.Time).Format("15:04:05.999999999")
-		case types.YearKind:
-			s = strconv.Itoa(v.(int))
 		case types.UUIDKind, types.IPKind:
 			s = v.(string)
 		case types.JSONKind:
@@ -267,8 +265,6 @@ func convert(v any, st, dt types.Type, nullable bool, purpose Purpose) (any, err
 				if err != nil {
 					return v, err
 				}
-			case types.YearKind:
-				n = uint(v.(int))
 			case types.JSONKind:
 				v := v.(json.Value)
 				n, err = v.Uint()
@@ -327,8 +323,6 @@ func convert(v any, st, dt types.Type, nullable bool, purpose Purpose) (any, err
 			if err != nil {
 				return v, err
 			}
-		case types.YearKind:
-			n = v.(int)
 		case types.JSONKind:
 			v := v.(json.Value)
 			n, err = v.Int()
@@ -536,50 +530,6 @@ func convert(v any, st, dt types.Type, nullable bool, purpose Purpose) (any, err
 			return v, errInvalidConversion
 		}
 		return t, nil
-	case types.YearKind:
-		var err error
-		var n int
-		switch sk {
-		case types.StringKind:
-			s := v.(string)
-			if l := len(s); l == 0 || l > 4 || s[0] == '+' || s[0] == '-' || s[0] == '0' {
-				return v, errParseConversion
-			}
-			n, err = strconv.Atoi(s)
-			if err != nil {
-				if e := err.(*strconv.NumError); e.Err == strconv.ErrRange {
-					return v, errYearRangeConversion
-				}
-				return v, errParseConversion
-			}
-		case types.YearKind:
-			return v.(int), nil
-		case types.IntKind:
-			if st.IsUnsigned() {
-				u := v.(uint)
-				if u > math.MaxInt64 {
-					return v, errYearRangeConversion
-				}
-				n = int(u)
-			} else {
-				n = v.(int)
-			}
-		case types.JSONKind:
-			v := v.(json.Value)
-			n, err = v.Int()
-			if err != nil {
-				if err == json.ErrRange {
-					return v, errYearRangeConversion
-				}
-				return v, errInvalidConversion
-			}
-		default:
-			return v, errInvalidConversion
-		}
-		if n < 1 || n > 9999 {
-			return v, errYearRangeConversion
-		}
-		return n, nil
 	case types.UUIDKind:
 		switch sk {
 		case types.StringKind:

@@ -367,7 +367,7 @@ func propertyType(t *sql.ColumnType) (types.Type, string, error) {
 	case "TINYINT":
 		return types.Int(8), "", nil
 	case "YEAR":
-		return types.Year(), "", nil
+		return types.Int(16).AsYear(), "", nil
 	}
 	issue := fmt.Sprintf("Column %q has an unsupported type %q.", t.Name(), t.DatabaseTypeName())
 	return types.Type{}, issue, nil

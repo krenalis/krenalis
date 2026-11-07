@@ -246,6 +246,9 @@ func typeToPostgresType(t types.Type) string {
 	case types.BooleanKind:
 		return "boolean"
 	case types.IntKind:
+		if t.Semantics() == types.YearSemantics {
+			return "smallint"
+		}
 		if t.IsUnsigned() {
 			switch t.BitSize() {
 			case 8:
@@ -288,8 +291,6 @@ func typeToPostgresType(t types.Type) string {
 		return "date"
 	case types.TimeKind:
 		return "time without time zone"
-	case types.YearKind:
-		return "smallint"
 	case types.UUIDKind:
 		return "uuid"
 	case types.JSONKind:

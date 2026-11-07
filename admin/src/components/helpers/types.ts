@@ -1,4 +1,4 @@
-import Type, { Semantics, Unit } from '../../lib/api/types/types';
+import Type, { IntType, Semantics, Unit } from '../../lib/api/types/types';
 
 interface UnitOption {
 	groupLabel?: string;
@@ -46,6 +46,17 @@ const UNIT_OPTIONS: UnitOption[] = [
 
 const DURATION_UNIT_OPTIONS = UNIT_OPTIONS.filter((option) => option.isDurationUnit === true);
 
+function getIntegerTypeRange(type: IntType): [bigint, bigint] {
+	const one = BigInt(1);
+	const magnitude = one << BigInt(type.bitSize - (type.unsigned ? 0 : 1));
+	if (type.semantics === 'year') {
+		const maximum = magnitude - one;
+		const yearMaximum = BigInt(9999);
+		return [one, maximum < yearMaximum ? maximum : yearMaximum];
+	}
+	return type.unsigned ? [BigInt(0), magnitude - one] : [-magnitude, magnitude - one];
+}
+
 function getPropertyValueType(type: Type | null): Type | null {
 	if (type?.kind === 'array' || type?.kind === 'map') {
 		return type.elementType;
@@ -92,6 +103,9 @@ function getTypeSemantics(type: Type | null): Semantics | undefined {
 }
 
 function isSuitableAsIdentifier(type: Type): boolean {
+	if (getTypeSemantics(type) === 'year') {
+		return false;
+	}
 	switch (type.kind) {
 		case 'string':
 		case 'int':
@@ -145,6 +159,7 @@ function toSemanticsLabel(semantics: Semantics): string {
 		case 'percentage':
 		case 'measurement':
 		case 'duration':
+		case 'year':
 			return semantics;
 		default:
 			throw new Error(`unknown property semantics ${semantics satisfies never}`);
@@ -251,9 +266,6 @@ function toJavascriptType(type: Type, preserveJSON: boolean, nullable?: boolean)
 		case 'time':
 			t = 'Date';
 			break;
-		case 'year':
-			t = 'number';
-			break;
 		case 'uuid':
 			t = 'string';
 			break;
@@ -318,9 +330,6 @@ function toPythonType(type: Type, preserveJSON: boolean, nullable?: boolean) {
 		case 'time':
 			t = 'datetime.time';
 			break;
-		case 'year':
-			t = 'int';
-			break;
 		case 'uuid':
 			t = 'uuid.UUID';
 			break;
@@ -362,6 +371,7 @@ function toPythonType(type: Type, preserveJSON: boolean, nullable?: boolean) {
 export {
 	DURATION_UNIT_OPTIONS,
 	UNIT_OPTIONS,
+	getIntegerTypeRange,
 	getPropertyValueType,
 	getProfileSchemaTypePresentation,
 	getTypeSemantics,

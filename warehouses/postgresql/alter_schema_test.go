@@ -333,7 +333,8 @@ func Test_typeToPostgresType(t *testing.T) {
 		{types.Time(), "time without time zone"},
 
 		// year.
-		{types.Year(), "smallint"},
+		{types.Int(16).AsYear(), "smallint"},
+		{types.Int(64).Unsigned().AsYear(), "smallint"},
 
 		// uuid.
 		{types.UUID(), "uuid"},

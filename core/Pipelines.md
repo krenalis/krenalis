@@ -92,6 +92,9 @@ Source / SDK or Webhook / Event and Destination / FileStorage / User have no out
 
 Source / FileStorage / User and Destination / FileStorage / User require a file format and a path, and can have a compression. They require a sheet if the file format has sheets, and format settings if the file format has settings for the role of the connection; otherwise, they cannot have them.
 
+Properties with `year` semantics cannot be used as matching properties for
+Destination / Application / User or as table keys for Destination / Database / User.
+
 ### Pipeline steps
 
 Every pipeline has the `Receive` and `Finalize` steps. The other steps depend on the pipeline:

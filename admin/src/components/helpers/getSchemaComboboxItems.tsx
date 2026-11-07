@@ -5,6 +5,7 @@ import { ComboboxItem } from '../base/Combobox/Combobox.types';
 import { TypeIcon } from '../base/TypeIcon/TypeIcon';
 import { PipelineTarget } from '../../lib/api/types/pipeline';
 import TransformedConnection from '../../lib/core/connection';
+import { getTypeSemantics } from './types';
 
 const getSchemaComboboxItems = (schema: ObjectType | FlatSchema, toHide?: string[]): ComboboxItem[] => {
 	if (schema == null) {
@@ -30,6 +31,9 @@ const getMatchingComboboxItems = (schema: FlatSchema): ComboboxItem[] => {
 	}
 	const filteredSchema: FlatSchema = {};
 	for (const [k, v] of Object.entries(schema)) {
+		if (getTypeSemantics(v.full.type) === 'year') {
+			continue;
+		}
 		const typ = schema[k].type;
 		if (typ !== 'array' && typ !== 'object' && typ !== 'map') {
 			filteredSchema[k] = v;
@@ -138,6 +142,9 @@ const getTableKeyComboboxItems = (schema: ObjectType): ComboboxItem[] => {
 	const flatSchema = flattenSchema(schema);
 	const filteredSchema: FlatSchema = {};
 	for (const [k, v] of Object.entries(flatSchema)) {
+		if (getTypeSemantics(v.full.type) === 'year') {
+			continue;
+		}
 		const typ = flatSchema[k].type;
 		if (typ === 'int' || typ === 'uuid' || typ === 'string') {
 			filteredSchema[k] = v;

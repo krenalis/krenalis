@@ -6,7 +6,6 @@ type TypeKind =
 	| 'datetime'
 	| 'date'
 	| 'time'
-	| 'year'
 	| 'uuid'
 	| 'json'
 	| 'ip'
@@ -51,7 +50,7 @@ type Unit =
 	| 'month'
 	| 'year';
 
-type Semantics = 'email' | 'phone' | 'url' | 'country' | 'money' | 'percentage' | 'measurement' | 'duration';
+type Semantics = 'email' | 'phone' | 'url' | 'country' | 'money' | 'percentage' | 'measurement' | 'duration' | 'year';
 
 interface Property {
 	name: string;
@@ -74,7 +73,6 @@ type Type =
 	| DateTimeType
 	| DateType
 	| TimeType
-	| YearType
 	| UUIDType
 	| JSONType
 	| IPType
@@ -98,7 +96,7 @@ interface BooleanType {
 
 interface IntType {
 	kind: 'int';
-	semantics?: 'measurement' | 'duration';
+	semantics?: 'measurement' | 'duration' | 'year';
 	unit?: Unit;
 	bitSize: IntBitSize;
 	unsigned: boolean;
@@ -137,10 +135,6 @@ interface DateType {
 
 interface TimeType {
 	kind: 'time';
-}
-
-interface YearType {
-	kind: 'year';
 }
 
 interface UUIDType {

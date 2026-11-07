@@ -24,6 +24,7 @@ const (
 	PercentageSemantics                   // percentage
 	PhoneSemantics                        // phone number
 	URLSemantics                          // web URL
+	YearSemantics                         // calendar year in [1,9999]
 )
 
 // semanticsName contains the JSON names of all semantics except NoSemantics.
@@ -36,6 +37,7 @@ var semanticsName = [...]string{
 	"percentage",
 	"phone",
 	"url",
+	"year",
 }
 
 // SemanticsByName returns the semantics identified by name.
@@ -128,7 +130,7 @@ const (
 	Day         // day
 	Week        // week
 	Month       // month
-	YearUnit    // year; TODO: rename to Year if https://github.com/krenalis/krenalis/issues/2632 removes the year type
+	Year        // year
 )
 
 // unitName contains the JSON names of all valid units.
@@ -275,6 +277,17 @@ func (t Type) AsURL() Type {
 	return t
 }
 
+// AsYear returns t with calendar year semantics. It narrows t's range to
+// values in [1,9999]. It panics if t is not an int type, already has
+// semantics, or its range contains no calendar years.
+func (t Type) AsYear() Type {
+	t, err := t.withSemantics(YearSemantics, nil)
+	if err != nil {
+		panic("tools/types: " + err.Error())
+	}
+	return t
+}
+
 // CountryFormat returns the country format of t. It panics unless t has
 // country semantics.
 func (t Type) CountryFormat() CountryFormat {
@@ -392,6 +405,29 @@ func (t Type) withSemantics(semantics Semantics, option any) (Type, error) {
 		if !ok || !unit.IsDurationUnit() {
 			return Type{}, errors.New("invalid duration unit")
 		}
+	case YearSemantics:
+		if t.kind != IntKind {
+			return Type{}, errors.New("year semantics require an int type")
+		}
+		if option != nil {
+			return Type{}, errors.New("year semantics do not accept an option")
+		}
+		t.semantics = semantics
+		if t.unsigned {
+			lo, hi := t.UnsignedRange()
+			if hi < lo {
+				return Type{}, errors.New("int range does not include a calendar year")
+			}
+			t = t.WithUnsignedRange(lo, hi)
+		} else {
+			lo, hi := t.IntRange()
+			if hi < lo {
+				return Type{}, errors.New("int range does not include a calendar year")
+			}
+			t = t.WithIntRange(lo, hi)
+		}
+	default:
+		return Type{}, fmt.Errorf("tools/types: unexpected semantics %d", semantics)
 	}
 	if (semantics == CountrySemantics || semantics == PhoneSemantics) && (t.p != 0 || t.s != 0 || t.vl != nil) {
 		return Type{}, fmt.Errorf("%s semantics cannot be combined with other string constraints", semantics)
