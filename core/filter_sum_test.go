@@ -168,6 +168,29 @@ func TestFilterSumMinimum(t *testing.T) {
 	}
 }
 
+// TestFilterSumMinimumErrors checks sample guard validation messages.
+func TestFilterSumMinimumErrors(t *testing.T) {
+	for _, minimum := range []string{`-1`, `1.0`, `"1"`} {
+		t.Run(minimum, func(t *testing.T) {
+			input := strings.Replace(sumConditionJSON, `"nativeCurrency":"EUR"`,
+				`"nativeCurrency":"EUR","minimum":`+minimum, 1)
+			var condition FilterSumCondition
+			err := json.Unmarshal([]byte(input), &condition)
+			if err != nil {
+				t.Fatalf("expected decodable minimum fixture, got %v", err)
+			}
+			_, err = prepareFilterSum(&condition, nil)
+			if err != nil {
+				if err.Error() != "Sum sample minimum must be a positive JSON integer" {
+					t.Fatalf("expected Sum sample minimum validation error, got %v", err)
+				}
+				return
+			}
+			t.Fatal("expected minimum validation failure, got success")
+		})
+	}
+}
+
 // TestFilterSumRoundTrip preserves exact operands and references.
 func TestFilterSumRoundTrip(t *testing.T) {
 	for _, literal := range []string{"30", "-30.00001", "1e75", "1e-37"} {

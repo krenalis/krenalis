@@ -265,6 +265,7 @@ SELECT e.* FROM event_fixture e CROSS JOIN (VALUES (1),(2),(3)) copies(n)`)
 	t.Run("sample minimum uses Kleene", func(t *testing.T) {
 		execUnifiedFixture(t, dw, `INSERT INTO event_fixture VALUES
 ('00000000-0000-0000-0000-000000000006','p6c','Purchase','2026-01-15','{}')`)
+		defer execUnifiedFixture(t, dw, `DELETE FROM event_fixture WHERE message_id='p6c'`)
 		count := *governed.Count
 		count.Minimum, count.Test = 3, unified.CountTest{Operator: unified.Different, Value: 3}
 		rule := unified.Rule{Count: &count}
@@ -280,7 +281,6 @@ SELECT e.* FROM event_fixture e CROSS JOIN (VALUES (1),(2),(3)) copies(n)`)
 			explained.Nodes[0].Count.Possible != 3 {
 			t.Fatalf("expected UNKNOWN with count [1,3], got %+v", explained)
 		}
-		execUnifiedFixture(t, dw, `DELETE FROM event_fixture WHERE message_id='p6c'`)
 	})
 
 	t.Run("independent memberships exhaustive oracle", func(t *testing.T) {

@@ -106,6 +106,7 @@ func TestNumericPostgreSQL(t *testing.T) {
 			}
 		}
 	}
+
 	// Guard and terminal close separately, even when their conjunction has no
 	// satisfying count. Probe actual SQL NULL behavior and signed-64-bit edges.
 	two := int64(2)

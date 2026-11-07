@@ -51,7 +51,8 @@ type ProfileCountExplanation struct {
 
 // ProfileSumExplanation describes monetary bounds with the resolved reading.
 // Finite bounds are tight under independent occurrence qualifications.
-// Certain and Uncertain count qualified occurrences, including unknown amounts.
+// Certain counts certainly included occurrences; Uncertain counts only
+// additional occurrences with uncertain inclusion. Unknown amounts still count.
 type ProfileSumExplanation struct {
 	Start          time.Time        `json:"start,omitzero"`
 	End            time.Time        `json:"end"`

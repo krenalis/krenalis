@@ -561,8 +561,14 @@ INSERT INTO unified_v.krenalis_events VALUES
 				result.Profiles[0].Attributes["profile_id"] != "customer-1" {
 				t.Fatalf("expected one Sum member and totals 1/2/1, got %+v", result)
 			}
-			for i, expected := range []struct{ truth, lower, upper string }{
-				{"MATCH", "35", "35"}, {"NO_MATCH", "20", "20"}, {"UNKNOWN", "20", "40"}, {"NO_MATCH", "0", "0"},
+			for i, expected := range []struct {
+				truth, lower, upper string
+				certain, uncertain  int64
+			}{
+				{"MATCH", "35", "35", 2, 0},
+				{"NO_MATCH", "20", "20", 1, 0},
+				{"UNKNOWN", "20", "40", 1, 1},
+				{"NO_MATCH", "0", "0", 0, 0},
 			} {
 				profile := fmt.Sprintf("00000000-0000-0000-0000-%012d", i+1)
 				explained, err := workspace.ExplainProfileFilter(t.Context(), profile, &filter, query.At)
@@ -577,6 +583,10 @@ INSERT INTO unified_v.krenalis_events VALUES
 					!value.Bounds.Upper.Equal(decimal.MustParse(expected.upper)) || !value.End.Equal(at) {
 					t.Fatalf("expected %s Sum bounds [%s,%s] and resolved metadata, got %+v",
 						expected.truth, expected.lower, expected.upper, value)
+				}
+				if value.Certain != expected.certain || value.Uncertain != expected.uncertain {
+					t.Fatalf("expected %d certain and %d uncertain Sum occurrences, got %+v",
+						expected.certain, expected.uncertain, value)
 				}
 				if period.Kind == "fullRelevantHistory" && (!value.UnboundedStart || !value.Start.IsZero() ||
 					value.History == nil || value.History.Definition != "registered-queryable-events" ||

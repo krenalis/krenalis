@@ -6,6 +6,7 @@ package datastore
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -34,6 +35,7 @@ CREATE VIEW krenalis_events AS SELECT e.* FROM event_fixture e CROSS JOIN (VALUE
 	}
 	sum := unified.Sum{Scope: unified.Scope{Event: "Order Completed", Grain: "registered-message",
 		Start: at.AddDate(0, -1, 0), End: at}, Field: field, NativeCurrency: "EUR"}
+
 	for _, test := range []struct {
 		name, threshold string
 		op              unified.Comparison
@@ -126,6 +128,7 @@ CREATE VIEW krenalis_events AS SELECT e.* FROM event_fixture e CROSS JOIN (VALUE
 
 		})
 	}
+
 	t.Run("mixed Count and Sum guards", func(t *testing.T) {
 
 		execUnifiedFixture(t, dw, "TRUNCATE event_fixture")
@@ -161,6 +164,7 @@ CREATE VIEW krenalis_events AS SELECT e.* FROM event_fixture e CROSS JOIN (VALUE
 		}
 
 	})
+
 	t.Run("false minimum preserves faults", func(t *testing.T) {
 
 		execUnifiedFixture(t, dw, "TRUNCATE event_fixture")
@@ -170,11 +174,12 @@ CREATE VIEW krenalis_events AS SELECT e.* FROM event_fixture e CROSS JOIN (VALUE
 		}
 
 		sum.Minimum, sum.Where = 100, nil
+		sum.Test = unified.SumTest{Operator: unified.GreaterOrEqual, Value: decimal.MustParse("30")}
 		rule := unified.Rule{Sum: &sum}
 		result, err := store.UnifiedProfiles(t.Context(), &rule, unified.Bindings{}, at, unified.Page{Limit: 10})
 		if err != nil {
-			if result != nil {
-				t.Fatalf("expected source failure without partial result, got %+v", result)
+			if result != nil || !strings.Contains(err.Error(), "occurrence source violates") {
+				t.Fatalf("expected source failure without partial result, got %+v, %v", result, err)
 			}
 		}
 		if err == nil {
@@ -183,8 +188,8 @@ CREATE VIEW krenalis_events AS SELECT e.* FROM event_fixture e CROSS JOIN (VALUE
 
 		explained, err := store.ExplainUnifiedProfile(t.Context(), &rule, unified.Bindings{}, at, unifiedTestID(1))
 		if err != nil {
-			if explained != nil {
-				t.Fatalf("expected source failure without explanation, got %+v", explained)
+			if explained != nil || !strings.Contains(err.Error(), "occurrence source violates") {
+				t.Fatalf("expected source failure without explanation, got %+v, %v", explained, err)
 			}
 			return
 		}

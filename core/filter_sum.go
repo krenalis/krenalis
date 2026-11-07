@@ -215,7 +215,7 @@ func prepareFilterSum(condition *FilterSumCondition, calendar *unified.Calendar)
 	if sum.Minimum != nil {
 		minimum, err = parseFilterCountInteger(sum.Minimum)
 		if err != nil {
-			return unified.Rule{}, err
+			return unified.Rule{}, errors.New("Sum sample minimum must be a positive JSON integer")
 		}
 		if minimum == "0" {
 			return unified.Rule{}, errors.New("Sum minimum must be positive")

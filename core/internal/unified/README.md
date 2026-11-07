@@ -176,8 +176,9 @@ MaxInt64. It counts qualified events, including those with unknown amounts.
 Count and Sum retain this guard separately and share the same SQL composition:
 the guard and terminal comparison close independently, then combine with
 Kleene AND. An unreachable minimum is NO_MATCH even with unbounded amounts.
-For certain 50 EUR plus two optional 60 EUR, minimum 3 and sum<=100 is UNKNOWN,
-although no joint completion satisfies both. Sum bounds remain unconditioned.
+For one certain 50 EUR order and two amounts of 60 with unknown currency,
+minimum 3 and sum<=100 is UNKNOWN, although no joint completion satisfies both.
+Sum bounds remain unconditioned.
 
 Optional Sum `where` uses the same schema-aware Record preparation, two group
 levels and 100 descendant nodes as Count. The resolved monetary definition owns
