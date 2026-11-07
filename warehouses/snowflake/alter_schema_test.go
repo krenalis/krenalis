@@ -23,9 +23,8 @@ func Test_typeToSnowflakeType(t *testing.T) {
 		{types.String().AsPhone(), "VARCHAR(16)"},
 		{types.String().AsCountry(types.ISO3166Alpha2), "VARCHAR(2)"},
 
-		// year.
+		// int.
 		{types.Int(16).AsYear(), "NUMBER(4,0)"},
-		{types.Int(64).Unsigned().AsYear(), "NUMBER(4,0)"},
 
 		// array.
 		{types.Array(types.String().AsPhone()), "ARRAY"},

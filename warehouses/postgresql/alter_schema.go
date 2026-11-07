@@ -246,9 +246,6 @@ func typeToPostgresType(t types.Type) string {
 	case types.BooleanKind:
 		return "boolean"
 	case types.IntKind:
-		if t.Semantics() == types.YearSemantics {
-			return "smallint"
-		}
 		if t.IsUnsigned() {
 			switch t.BitSize() {
 			case 8:
