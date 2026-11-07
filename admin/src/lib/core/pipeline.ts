@@ -22,7 +22,7 @@ import Type, { ArrayType, FloatType, IntType, MapType, ObjectType, Property, Str
 import API from '../api/api';
 import TransformedConnection from './connection';
 import { filterOrderingPropertySchema } from '../../components/helpers/getSchemaComboboxItems';
-import { getIntegerTypeRange } from '../../components/helpers/types';
+import { getIntegerTypeRange, getTypeSemantics } from '../../components/helpers/types';
 import {
 	formatString,
 	isDate,
@@ -1042,6 +1042,9 @@ const transformInPipelineToSet = async (
 		const property = flattenedOutputSchema[pipeline.tableKey];
 		if (property == null) {
 			throw new Error('Table key must be a valid property');
+		}
+		if (getTypeSemantics(property.full.type) === 'year') {
+			throw new Error('Properties with year semantics cannot be used as table keys');
 		}
 
 		// the table key must necessarily be transformed and there must
@@ -2235,6 +2238,9 @@ const validateFilterConditionValues = (type: Type, values: string[], propertyNam
 };
 
 const validateMatching = (inMatching: Property, outMatching: Property) => {
+	if (getTypeSemantics(inMatching.type) === 'year' || getTypeSemantics(outMatching.type) === 'year') {
+		throw new Error('Properties with year semantics cannot be used for matching');
+	}
 	const inTyp = inMatching.type.kind;
 	if (inTyp !== 'int' && inTyp !== 'string' && inTyp !== 'uuid') {
 		throw new Error(`Matching property cannot be of type "${inTyp}"`);

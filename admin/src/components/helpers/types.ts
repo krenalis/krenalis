@@ -103,6 +103,9 @@ function getTypeSemantics(type: Type | null): Semantics | undefined {
 }
 
 function isSuitableAsIdentifier(type: Type): boolean {
+	if (getTypeSemantics(type) === 'year') {
+		return false;
+	}
 	switch (type.kind) {
 		case 'string':
 		case 'int':

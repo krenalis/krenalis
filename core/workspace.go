@@ -2276,6 +2276,9 @@ func (mode *WarehouseMode) UnmarshalJSON(data []byte) error {
 // suitableAsIdentifier reports whether a property with type t can be used as
 // identifier.
 func suitableAsIdentifier(t types.Type) bool {
+	if t.Semantics() == types.YearSemantics {
+		return false
+	}
 	switch t.Kind() {
 	case types.StringKind,
 		types.IntKind,

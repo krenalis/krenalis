@@ -14,3 +14,5 @@
 
 Profile schema properties with `year` semantics must use signed `int(16)`
 with the full `[1,9999]` range. This also applies to array and map elements.
+
+Profile properties with `year` semantics cannot be used as identifiers.

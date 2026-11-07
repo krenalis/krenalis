@@ -1,7 +1,8 @@
 import { test, expect } from '@playwright/test';
+import { getMatchingComboboxItems, getTableKeyComboboxItems } from '../src/components/helpers/getSchemaComboboxItems';
 import Type, { IntType, ObjectType, Property } from '../src/lib/api/types/types';
 import TransformedConnection from '../src/lib/core/connection';
-import { getIntegerTypeRange } from '../src/components/helpers/types';
+import { getIntegerTypeRange, isSuitableAsIdentifier } from '../src/components/helpers/types';
 import {
 	FILTER_OPERATORS,
 	computeDefaultTransformationFunction,
@@ -176,5 +177,29 @@ test('Year integer ranges respect calendar and bit-size bounds', () => {
 			const maximum = bitSize === 8 ? (unsigned ? 255 : 127) : 9999;
 			expect(getIntegerTypeRange(type)).toEqual([BigInt(1), BigInt(maximum)]);
 		}
+	}
+});
+
+test('Years cannot be identifiers, matching properties or table keys', () => {
+	const integer: IntType = { kind: 'int', bitSize: 16, unsigned: false };
+	for (const unsigned of [false, true]) {
+		const year: IntType = { ...integer, unsigned, semantics: 'year', minimum: 1, maximum: 9999 };
+		const schema: ObjectType = {
+			kind: 'object',
+			properties: [
+				{ ...matchingProperty(integer), name: 'integer' },
+				{ ...matchingProperty(year), name: 'year' },
+			],
+		};
+		expect(isSuitableAsIdentifier(integer)).toBe(true);
+		expect(isSuitableAsIdentifier(year)).toBe(false);
+		expect(getMatchingComboboxItems(flattenSchema(schema)).map((item) => item.term)).toEqual(['integer']);
+		expect(getTableKeyComboboxItems(schema).map((item) => item.term)).toEqual(['integer']);
+		expect(() => validateMatching(matchingProperty(year), matchingProperty(integer))).toThrow(
+			'Properties with year semantics cannot be used for matching',
+		);
+		expect(() => validateMatching(matchingProperty(integer), matchingProperty(year))).toThrow(
+			'Properties with year semantics cannot be used for matching',
+		);
 	}
 });

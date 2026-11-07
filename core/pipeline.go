@@ -1591,7 +1591,7 @@ func onlyForMatching(schema types.Type) types.Type {
 	properties := schema.Properties()
 	return types.Prune(schema, func(path string) bool {
 		p, _ := properties.ByPath(path)
-		return canBeUsedAsMatchingProp(p.Type.Kind())
+		return canBeUsedAsMatchingProp(p.Type)
 	})
 }
 
