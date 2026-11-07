@@ -2305,7 +2305,7 @@ func Test_validatePipeline(t *testing.T) {
 			target:                  state.TargetUser,
 			connectionRole:          state.Destination,
 			connectionConnectorType: state.Database,
-			err:                     "properties with year semantics cannot be used as table keys",
+			err:                     "property with year semantics cannot be used as table key",
 		},
 		{
 			name: "BAD: Destination/Database/User - unmapped property in input schema",
@@ -3853,9 +3853,9 @@ func TestMatchingPropertySemantics(t *testing.T) {
 		},
 
 		// Types that cannot be used for matching.
-		{"input year", types.Int(16).AsYear(), types.String(), CreateOrUpdate, "properties with year semantics cannot be used for matching"},
-		{"output year", types.String(), types.Int(16).AsYear(), CreateOrUpdate, "properties with year semantics cannot be used for matching"},
-		{"unsigned year", types.Int(64).Unsigned().AsYear(), types.String(), CreateOrUpdate, "properties with year semantics cannot be used for matching"},
+		{"input year", types.Int(16).AsYear(), types.String(), CreateOrUpdate, "type with year semantics cannot be used as matching property"},
+		{"output year", types.String(), types.Int(16).AsYear(), CreateOrUpdate, "type with year semantics cannot be used as matching property"},
+		{"unsigned year", types.Int(64).Unsigned().AsYear(), types.String(), CreateOrUpdate, "type with year semantics cannot be used as matching property"},
 		{
 			"money cannot be used for matching", types.Decimal(18, 4).AsMoney().WithCurrency("EUR"),
 			types.Decimal(18, 4).AsMoney().WithCurrency("USD"), CreateOrUpdate,

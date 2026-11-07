@@ -315,7 +315,7 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 		}
 		if !canBeUsedAsMatchingProp(in.Type) {
 			if in.Type.Semantics() == types.YearSemantics {
-				return errors.BadRequest("properties with year semantics cannot be used for matching")
+				return errors.BadRequest("type with year semantics cannot be used as matching property")
 			}
 			return errors.BadRequest("type %s cannot be used as matching property", in.Type)
 		}
@@ -332,7 +332,7 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 		}
 		if !canBeUsedAsMatchingProp(out.Type) {
 			if out.Type.Semantics() == types.YearSemantics {
-				return errors.BadRequest("properties with year semantics cannot be used for matching")
+				return errors.BadRequest("type with year semantics cannot be used as matching property")
 			}
 			return errors.BadRequest("type %s cannot be used as matching property", out.Type)
 		}
@@ -639,7 +639,7 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 		}
 		if !canBeUsedAsTableKey(p.Type) {
 			if p.Type.Semantics() == types.YearSemantics {
-				return errors.BadRequest("properties with year semantics cannot be used as table keys")
+				return errors.BadRequest("property with year semantics cannot be used as table key")
 			}
 			return errors.BadRequest("type %s cannot be used as table key", p.Type)
 		}
