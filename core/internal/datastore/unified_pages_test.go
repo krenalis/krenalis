@@ -24,25 +24,29 @@ INSERT INTO profiles VALUES ('00000000-0000-0000-0000-000000000001'),('00000000-
 CREATE TABLE krenalis_events (kpid uuid,message_id text,event text,name text,type text NOT NULL,
  timestamp timestamp(3) NOT NULL,properties jsonb)`)
 	at := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
+
 	for _, typ := range []string{"page", "screen"} {
 		for _, test := range []struct {
-			name, rows string
-			conflict   bool
-			truth      unified.Truth
-			count      int64
+			name, rows, selector string
+			conflict             bool
+			truth                unified.Truth
+			count                int64
 		}{
-			{"same copies", `('same','Pricing'),('same','Pricing')`, false, unified.Match, 1},
-			{"distinct identities", `('a','Pricing'),('b','Pricing')`, false, unified.NoMatch, 2},
-			{"unnamed", `('null',NULL),('empty',''),('lower','pricing')`, false, unified.NoMatch, 0},
-			{"selection conflict", `('same','Pricing'),('same',NULL)`, true, 0, 0},
+			{"same copies", `('same','Pricing'),('same','Pricing')`, "Pricing", false, unified.Match, 1},
+			{"distinct identities", `('a','Pricing'),('b','Pricing')`, "Pricing", false, unified.NoMatch, 2},
+			{"unnamed", `('null',NULL),('empty',''),('lower','pricing')`, "Pricing", false, unified.NoMatch, 0},
+			{"selection conflict", `('same','Pricing'),('same',NULL)`, "Pricing", true, 0, 0},
+			{"all names", `('null',NULL),('empty',''),('named','Pricing')`, "", false, unified.NoMatch, 3},
 		} {
 			t.Run(typ+"/"+test.name, func(t *testing.T) {
 				execUnifiedFixture(t, dw, "TRUNCATE krenalis_events")
 				execUnifiedFixture(t, dw, `INSERT INTO krenalis_events
  (kpid,message_id,event,name,type,timestamp,properties)
  SELECT '00000000-0000-0000-0000-000000000001',id,NULL,name,'`+typ+`','2026-01-15','{}'
- FROM (VALUES `+test.rows+`) v(id,name)`)
-				root := &unified.Rule{Count: &unified.Count{Scope: unified.Scope{Type: typ, Event: "Pricing",
+ FROM (VALUES `+test.rows+`) v(id,name);
+INSERT INTO krenalis_events (kpid,message_id,event,name,type,timestamp,properties)
+ VALUES ('00000000-0000-0000-0000-000000000001','other-type','Pricing','Pricing','track','2026-01-15','{}')`)
+				root := &unified.Rule{Count: &unified.Count{Scope: unified.Scope{Type: typ, Event: test.selector,
 					Grain: "registered-message", Start: at.AddDate(0, -1, 0), End: at},
 					Test: unified.CountTest{Operator: unified.Equal, Value: 1}}}
 				result, err := store.UnifiedProfiles(t.Context(), root, unified.Bindings{}, at, unified.Page{Limit: 10})

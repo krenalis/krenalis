@@ -145,8 +145,8 @@ func (condition *FilterCountCondition) UnmarshalJSON(data []byte) error {
 func (*FilterCountCondition) filterRule() {}
 
 // FilterCountSource selects recorded events at registered-message grain.
-// Type defaults to track. Name selects event for track and name for page/screen;
-// omitting Name for page/screen selects all messages of that type.
+// Type defaults to track. Name selects event for track and name for
+// page/screen; omitting Name selects all messages of that page/screen type.
 // It is not a reference to a governed business definition.
 type FilterCountSource struct {
 	Kind  string `json:"kind"`
