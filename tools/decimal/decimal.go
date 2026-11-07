@@ -681,11 +681,9 @@ func Parse[T ~string | ~[]byte](n T, precision, scale int) (Decimal, error) {
 		}
 	}
 	if x.s != "" && dot != 0 {
-		if x.s[len(x.s)-zeros-1] == '0' {
-			zeros--
-		}
 		if zeros > 0 {
-			x.s = x.s[:len(x.s)-zeros]
+			// Nonzero exponents disable trimming; s+zeros gives the number of fractional digits.
+			x.s = x.s[:len(x.s)-min(zeros, s+zeros)]
 		}
 		x.s = strings.TrimSuffix(x.s, ".")
 	}
