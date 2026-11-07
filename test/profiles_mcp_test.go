@@ -395,10 +395,14 @@ GRANT SELECT (_kpid,country) ON profiles TO mcp_profile_reader;`)
 WHERE event='Order Completed';
 INSERT INTO krenalis_events
 (kpid,message_id,event,timestamp,received_at,sent_at,type,connection_id,anonymous_id,traits,properties) VALUES
-('00000000-0000-0000-0000-000000000002','sum-two','Order Completed','2026-01-15','2026-02-01','2026-02-01','track','fixture','a','{}','{"total":20,"currency":"EUR"}'),
-('00000000-0000-0000-0000-000000000002','sum-usd','Order Completed','2026-01-15','2026-02-01','2026-02-01','track','fixture','a','{}','{"currency":"USD"}'),
-('00000000-0000-0000-0000-000000000003','sum-three','Order Completed','2026-01-15','2026-02-01','2026-02-01','track','fixture','a','{}','{"total":20,"currency":"EUR"}'),
-('00000000-0000-0000-0000-000000000003','sum-unknown','Order Completed','2026-01-15','2026-02-01','2026-02-01','track','fixture','a','{}','{"total":20}')`)
+('00000000-0000-0000-0000-000000000002','sum-two','Order Completed','2026-01-15',
+'2026-02-01','2026-02-01','track','fixture','a','{}','{"total":20,"currency":"EUR"}'),
+('00000000-0000-0000-0000-000000000002','sum-usd','Order Completed','2026-01-15',
+'2026-02-01','2026-02-01','track','fixture','a','{}','{"currency":"USD"}'),
+('00000000-0000-0000-0000-000000000003','sum-three','Order Completed','2026-01-15',
+'2026-02-01','2026-02-01','track','fixture','a','{}','{"total":20,"currency":"EUR"}'),
+('00000000-0000-0000-0000-000000000003','sum-unknown','Order Completed','2026-01-15',
+'2026-02-01','2026-02-01','track','fixture','a','{}','{"total":20}')`)
 		if err != nil {
 			t.Fatalf("expected coherent monetary fixtures, got %v", err)
 		}

@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"strings"
 	"testing"
 	"time"
 
@@ -167,7 +168,8 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,
 		t.Run(test.name, func(t *testing.T) {
 			execUnifiedFixture(t, dw, "TRUNCATE krenalis_events")
 			execUnifiedFixture(t, dw, `INSERT INTO krenalis_events VALUES
-('00000000-0000-0000-0000-000000000001','target','track','Order Completed','2026-01-15','{"total":40,"currency":"EUR"}'),`+test.rows)
+('00000000-0000-0000-0000-000000000001','target','track','Order Completed','2026-01-15',
+'{"total":40,"currency":"EUR"}'),`+test.rows)
 			rule := unified.Rule{Sum: &sum}
 			explained, err := store.ExplainUnifiedProfile(t.Context(), &rule, unified.Bindings{}, at, unifiedTestID(1))
 			if err != nil {
@@ -181,8 +183,8 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,
 			}
 			explained, err = store.ExplainUnifiedProfile(t.Context(), &rule, unified.Bindings{}, at, unifiedTestID(2))
 			if err != nil {
-				if explained != nil {
-					t.Fatalf("expected affected profile failure without explanation, got %+v", explained)
+				if explained != nil || !strings.Contains(err.Error(), "occurrence source violates") {
+					t.Fatalf("expected source-contract failure without explanation, got %+v, %v", explained, err)
 				}
 			}
 			if err == nil {
@@ -190,8 +192,8 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,
 			}
 			result, err := store.UnifiedProfiles(t.Context(), &rule, unified.Bindings{}, at, unified.Page{Limit: 10})
 			if err != nil {
-				if result != nil {
-					t.Fatalf("expected source-contract failure without partial result, got %+v", result)
+				if result != nil || !strings.Contains(err.Error(), "occurrence source violates") {
+					t.Fatalf("expected source-contract failure without partial result, got %+v, %v", result, err)
 				}
 				return
 			}
