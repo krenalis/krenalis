@@ -59,12 +59,15 @@ func (currency *NativeCurrency) ValidateWhere(where *state.Where) error {
 
 func (currency *NativeCurrency) validate(event string) error {
 	if currency == nil || currency.Definition == "" || currency.Revision == "" ||
-		len(currency.Definition) > 256 || len(currency.Revision) > 256 || len(currency.Value) != 3 {
+		len(currency.Definition) > 256 || len(currency.Revision) > 256 {
 		return fmt.Errorf("invalid resolved NativeCurrency predicate")
+	}
+	if len(currency.Value) != 3 {
+		return fmt.Errorf("nativeCurrency requires three uppercase letters")
 	}
 	for _, c := range currency.Value {
 		if c < 'A' || c > 'Z' {
-			return fmt.Errorf("invalid currency literal")
+			return fmt.Errorf("nativeCurrency requires three uppercase letters")
 		}
 	}
 	if field := currency.field; field != nil {

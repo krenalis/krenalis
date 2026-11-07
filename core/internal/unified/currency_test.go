@@ -114,7 +114,7 @@ func TestNativeCurrencyPaths(t *testing.T) {
 	}
 }
 
-// TestNativeCurrencyValidation protects admission through internal entry points.
+// TestNativeCurrencyValidation protects internal admission of invalid inputs.
 func TestNativeCurrencyValidation(t *testing.T) {
 	for _, test := range []struct{ definition, revision, value, event string }{
 		{"NativeCurrency", "1", "EUR", "Order Completed"},
@@ -156,5 +156,82 @@ func TestNativeCurrencyValidation(t *testing.T) {
 			continue
 		}
 		t.Fatal("expected invalid bound currency Count, got success")
+	}
+}
+
+// TestNativeCurrencyWhereAdmission checks both internal entry points, including
+// valid predicates with unavailable qualification dependencies.
+func TestNativeCurrencyWhereAdmission(t *testing.T) {
+	for _, test := range []struct {
+		name                  string
+		path                  []string
+		resolved, unsupported bool
+	}{
+		{"resolved currency path", []string{"properties", "currency"}, true, true},
+		{"resolved parent path", []string{"properties"}, true, true},
+		{"resolved descendant path", []string{"properties", "currency", "code"}, true, true},
+		{"resolved independent path", []string{"properties", "coupon"}, true, false},
+		{"caller binding with where", []string{"properties", "coupon"}, false, true},
+		{"caller binding without where", nil, false, false},
+	} {
+		for _, entry := range []string{"Validate", "Prepare"} {
+			t.Run(test.name+"/"+entry, func(t *testing.T) {
+				at := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
+				currency := &NativeCurrency{Definition: "NativeCurrency", Revision: "1", Value: "EUR"}
+				bindings := Bindings{Currencies: []CurrencyBinding{{Definition: currency.Definition,
+					Revision: currency.Revision, Path: []string{"properties", "currency"},
+					Evidence: IndependentOccurrenceValues}}}
+				if test.resolved {
+					var err error
+					currency, err = ResolveNativeCurrency("commerce.order_completed.currency", "1", "EUR", "Order Completed")
+					if err != nil {
+						t.Fatalf("expected resolved currency fixture, got %v", err)
+					}
+					bindings = Bindings{}
+				}
+				count := &Count{Scope: Scope{Event: "Order Completed", Grain: "registered-message",
+					Start: at.Add(-time.Hour), End: at}, Currency: currency}
+				if test.path != nil {
+					count.Where = &state.Where{Operator: state.OpAnd, Rules: []state.WhereRule{
+						&state.WhereCondition{Property: test.path, Operator: state.OpExists},
+					}}
+				}
+				source := SourceBinding{Occurrences: warehouses.OccurrenceSource{Table: "events",
+					Profile:   warehouses.Column{Name: "kpid", Type: types.UUID()},
+					Identity:  warehouses.Column{Name: "message_id", Type: types.String()},
+					Timestamp: warehouses.Column{Name: "timestamp", Type: types.DateTime()}},
+					Properties: warehouses.Column{Name: "properties", Type: types.JSON()},
+					Record: func(*state.Where) (warehouses.Expr, error) {
+						return warehouses.NewBaseExpr(warehouses.Column{Name: "event", Type: types.String()},
+							warehouses.OpIs, "Order Completed"), nil
+					}}
+				root := &Rule{Count: count}
+				var prepared warehouses.Filter
+				var err error
+				switch entry {
+				case "Validate":
+					err = Validate(root, at, Page{Limit: 1})
+				case "Prepare":
+					prepared, err = Prepare(root, bindings, at, source)
+				default:
+					t.Fatalf("expected known internal entry point, got %s", entry)
+				}
+				if err != nil {
+					if _, unsupported := errors.AsType[*UnsupportedError](err); !test.unsupported || !unsupported {
+						t.Fatalf("expected unsupported=%v, got %v", test.unsupported, err)
+					}
+					if prepared.Root != nil {
+						t.Fatalf("expected no partially prepared filter, got %+v", prepared)
+					}
+					return
+				}
+				if test.unsupported {
+					t.Fatal("expected unavailable currency qualification, got success")
+				}
+				if entry == "Prepare" && prepared.Root == nil {
+					t.Fatal("expected valid fixture to compile completely, got an empty filter")
+				}
+			})
+		}
 	}
 }

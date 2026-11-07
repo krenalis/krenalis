@@ -105,19 +105,20 @@ property-reference comparison or a governed current-profile dependency.
   Record filters. The binder retains JSON key segments, typed JSON mode and
   flattened object-presence handling. No filter SQL comes from users.
 - Optionally, one governed `NativeCurrency = literal` predicate. The Count
-  contains an immutable meaning reference and the currency literal; separate
-  `Bindings.Currencies` resolve the exact reference/revision to its JSON path
-  and evidence contract. Missing, JSON null and non-String values are unknown
-  business currency. Known Strings are compared verbatim: `"eur"` and
+  contains an immutable meaning reference and the currency literal; its resolved
+  descriptor specifies the JSON path and evidence contract. Missing, JSON null
+  and non-String values are unknown business currency. Known Strings are compared
+  verbatim: `"eur"` and
   `"not-a-code"` are known values different from `"EUR"`. No domain attestation,
   normalization or `KnownCanonicalStrings` flag is introduced. A future closed
   domain requires a distinct resolved reading contract. The public
   `currencyField` reference resolves `commerce.order_completed.currency`, revision
   1, for `Order Completed`, with an immutable path/evidence descriptor. Sum's
   monetary definition obtains its currency path from the same definition.
-  Existing internal callers can still supply `Bindings.Currencies` explicitly;
-  missing or duplicate bindings fail before execution. Neither path infers a
-  business meaning from raw JSON or automatically adopts meaning revisions.
+  Currently only internal tests supply `Bindings.Currencies` explicitly;
+  production entry points pass empty bindings and use resolved descriptors.
+  Missing or duplicate caller-supplied bindings fail before execution. Neither
+  path infers a business meaning from raw JSON or automatically adopts meaning revisions.
 
 The supported governed contract is `IndependentOccurrenceValues`: an unknown
 value is local to one occurrence, admits both qualifying and non-qualifying

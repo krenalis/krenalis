@@ -54,12 +54,50 @@ func TestFilterCountCurrencyDecoding(t *testing.T) {
 
 }
 
+// TestFilterCountCurrencyLiteralErrors matches Sum's actionable diagnostics.
+func TestFilterCountCurrencyLiteralErrors(t *testing.T) {
+	for _, literal := range []string{"", "EURO", "eur", "€", "1UR"} {
+		t.Run(literal, func(t *testing.T) {
+			var count FilterCountCondition
+			err := json.Unmarshal([]byte(currencyCountConditionJSON), &count)
+			if err != nil {
+				t.Fatalf("expected valid Count fixture, got %v", err)
+			}
+			var sum FilterSumCondition
+			err = json.Unmarshal([]byte(sumConditionJSON), &sum)
+			if err != nil {
+				t.Fatalf("expected valid Sum fixture, got %v", err)
+			}
+			count.Count.NativeCurrency, sum.Sum.NativeCurrency = &literal, literal
+			_, countErr := prepareFilterCount(&count, nil)
+			_, sumErr := prepareFilterSum(&sum, nil)
+			for _, test := range []struct {
+				name string
+				err  error
+			}{
+				{"Count", countErr},
+				{"Sum", sumErr},
+			} {
+				t.Run(test.name, func(t *testing.T) {
+					if test.err != nil {
+						_, unsupported := errors.AsType[*unified.UnsupportedError](test.err)
+						if unsupported || test.err.Error() != "nativeCurrency requires three uppercase letters" {
+							t.Fatalf("expected actionable invalid currency error, got %v", test.err)
+						}
+						return
+					}
+					t.Fatal("expected invalid currency error, got success")
+				})
+			}
+		})
+	}
+}
+
 // TestFilterCountCurrencyRoundTrip retains the reference without changing raw
 // Record or existing Count documents.
 func TestFilterCountCurrencyRoundTrip(t *testing.T) {
 	for _, literal := range []string{"EUR", "USD", "ZZZ"} {
 		t.Run(literal, func(t *testing.T) {
-
 			input := `{"operator":"and","rules":[` +
 				strings.Replace(currencyCountConditionJSON, `"nativeCurrency":"EUR"`,
 					`"nativeCurrency":"`+literal+`"`, 1) + `]}`
@@ -101,7 +139,6 @@ func TestFilterCountCurrencyRoundTrip(t *testing.T) {
 			if err == nil {
 				t.Fatal("expected Record-only context rejection, got success")
 			}
-
 		})
 	}
 }

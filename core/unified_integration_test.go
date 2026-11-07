@@ -573,7 +573,6 @@ INSERT INTO unified_v.krenalis_events VALUES
 			{"recorded history", `{"currency":null}`, "UNKNOWN", 0, 1, FilterPeriod{Kind: "fullRelevantHistory", History: &FilterHistory{Definition: "registered-queryable-events", MeaningRevision: "1"}}},
 		} {
 			t.Run(test.name, func(t *testing.T) {
-
 				_, err := database.Exec(t.Context(), "UPDATE unified_v.krenalis_events SET properties=$1::jsonb "+
 					"WHERE message_id='native-count/3'", test.payload)
 				if err != nil {
@@ -631,7 +630,6 @@ INSERT INTO unified_v.krenalis_events VALUES
 				if len(empty.Profiles) != 0 || empty.Total != page.Total || *empty.Evaluation != *page.Evaluation {
 					t.Fatalf("expected unchanged totals on empty page, got %+v", empty)
 				}
-
 			})
 		}
 
