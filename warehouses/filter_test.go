@@ -51,6 +51,7 @@ func TestValidateProfileFilter(t *testing.T) {
 		change func(*IndependentOccurrenceCount)
 	}{
 		{"source", func(c *IndependentOccurrenceCount) { c.Source.Table = "bad.name" }},
+		{"negative minimum", func(c *IndependentOccurrenceCount) { c.Minimum = -1 }},
 		{"identity", func(c *IndependentOccurrenceCount) { c.Source.Identity.Nullable = true }},
 		{"unknown time", func(c *IndependentOccurrenceCount) { c.Source.Timestamp.Nullable = true }},
 		{"empty period", func(c *IndependentOccurrenceCount) { c.Start = c.End }},

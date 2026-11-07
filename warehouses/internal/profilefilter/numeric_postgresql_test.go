@@ -22,6 +22,7 @@ import (
 // TestNumericPostgreSQL probes physical types and actual SQL decisions at int64
 // boundaries. This is a PostgreSQL probe, not Snowflake execution evidence.
 func TestNumericPostgreSQL(t *testing.T) {
+
 	if testing.Short() {
 		t.Skip("requires PostgreSQL")
 	}
@@ -105,4 +106,40 @@ func TestNumericPostgreSQL(t *testing.T) {
 			}
 		}
 	}
+	// Guard and terminal close separately, even when their conjunction has no
+	// satisfying count. Probe actual SQL NULL behavior and signed-64-bit edges.
+	two := int64(2)
+	differentThree := []warehouses.CountRange{{Upper: &two}, {Lower: 4}}
+	for _, test := range []struct {
+		lo, hi, minimum int64
+		want            uint8
+	}{
+		{1, 3, 3, 2},
+		{1, 2, 3, 0},
+		{3, 3, 3, 0},
+		{4, 4, 3, 1},
+		{2, 3, 2, 2},
+		{1, 3, 0, 2},
+		{m - 1, m, m, 2},
+		{m, m, m, 1},
+	} {
+		sql := "SELECT " + withSampleMinimum(test.minimum, "lo", "hi", decision(differentThree, "lo", "hi")) +
+			fmt.Sprintf(" FROM (VALUES (%d::bigint,%d::bigint)) input(lo,hi)", test.lo, test.hi)
+		var result *bool
+		err := conn.QueryRow(t.Context(), sql).Scan(&result)
+		if err != nil {
+			t.Fatalf("expected guarded numeric decision, got %v", err)
+		}
+		got := uint8(2)
+		if result != nil {
+			got = 0
+			if *result {
+				got = 1
+			}
+		}
+		if got != test.want {
+			t.Fatalf("expected truth %d for %+v, got %d", test.want, test, got)
+		}
+	}
+
 }

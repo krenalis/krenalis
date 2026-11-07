@@ -262,6 +262,27 @@ SELECT e.* FROM event_fixture e CROSS JOIN (VALUES (1),(2),(3)) copies(n)`)
 		}
 	})
 
+	t.Run("sample minimum uses Kleene", func(t *testing.T) {
+		execUnifiedFixture(t, dw, `INSERT INTO event_fixture VALUES
+('00000000-0000-0000-0000-000000000006','p6c','Purchase','2026-01-15','{}')`)
+		count := *governed.Count
+		count.Minimum, count.Test = 3, unified.CountTest{Operator: unified.Different, Value: 3}
+		rule := unified.Rule{Count: &count}
+		result := query(t, &rule, page)
+		assertUnifiedTruths(t, result, []unified.Truth{unified.NoMatch, unified.NoMatch, unified.NoMatch,
+			unified.NoMatch, unified.NoMatch, unified.Unknown, unified.NoMatch, unified.NoMatch})
+		explained, err := store.ExplainUnifiedProfile(t.Context(), &rule, bindings, at, unifiedTestID(6))
+		if err != nil {
+			t.Fatalf("expected sample guard explanation, got %v", err)
+		}
+		if explained == nil || len(explained.Nodes) != 1 || explained.Nodes[0].Truth != unified.Unknown ||
+			explained.Nodes[0].Count == nil || explained.Nodes[0].Count.Certain != 1 ||
+			explained.Nodes[0].Count.Possible != 3 {
+			t.Fatalf("expected UNKNOWN with count [1,3], got %+v", explained)
+		}
+		execUnifiedFixture(t, dw, `DELETE FROM event_fixture WHERE message_id='p6c'`)
+	})
+
 	t.Run("independent memberships exhaustive oracle", func(t *testing.T) {
 		var histories [][]int
 		for i := range 27 {
@@ -278,7 +299,7 @@ SELECT e.* FROM event_fixture e CROSS JOIN (VALUES (1),(2),(3)) copies(n)`)
 		for _, op := range []unified.Comparison{unified.Equal, unified.Different, unified.Less,
 			unified.LessOrEqual, unified.Greater, unified.GreaterOrEqual, unified.Between} {
 			for threshold := uint64(0); threshold <= 4; threshold++ {
-				for _, minimum := range []uint64{0, 2} {
+				for _, minimum := range []uint64{0, 2, 3} {
 					if minimum > 0 && ((op == unified.Equal && threshold < minimum) || (op == unified.Less && threshold <= minimum) ||
 						(op == unified.LessOrEqual && threshold < minimum) || (op == unified.Between && threshold+1 < minimum)) {
 						continue // The same-condition parameters are statically incompatible.
@@ -523,7 +544,7 @@ func execUnifiedFixtureStatement(t *testing.T, dw warehouses.Warehouse, statemen
 // independentCountOracle enumerates boolean completions; it uses no compiler
 // bounds, terminal rendering or production evaluation helpers.
 func independentCountOracle(flags []int, minimum uint64, test unified.CountTest) unified.Truth {
-	var outcomes []bool
+	testYes, testNo, guardYes, guardNo := false, false, false, false
 	var visit func(int, uint64)
 	visit = func(index int, count uint64) {
 		if index < len(flags) {
@@ -554,21 +575,17 @@ func independentCountOracle(flags []int, minimum uint64, test unified.CountTest)
 		default:
 			panic(fmt.Sprintf("core/internal/datastore: unexpected oracle comparison %d", test.Operator))
 		}
-		outcomes = append(outcomes, count >= minimum && ok)
+		testYes, testNo = testYes || ok, testNo || !ok
+		guardYes, guardNo = guardYes || count >= minimum, guardNo || count < minimum
 	}
 	visit(0, 0)
-	yes, no := false, false
-	for _, outcome := range outcomes {
-		yes = yes || outcome
-		no = no || !outcome
+	if !testYes || !guardYes {
+		return unified.NoMatch
 	}
-	if yes && no {
+	if testNo || guardNo {
 		return unified.Unknown
 	}
-	if yes {
-		return unified.Match
-	}
-	return unified.NoMatch
+	return unified.Match
 }
 
 func unifiedTestID(n int) string { return fmt.Sprintf("00000000-0000-0000-0000-%012d", n) }

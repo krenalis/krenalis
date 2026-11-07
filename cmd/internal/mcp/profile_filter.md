@@ -120,7 +120,10 @@ Count is `{"count":{"source":...,"period":...,"where":...,"minimum":...},
   supports signed 64-bit natural values; larger valid integers are unavailable
   capabilities, not a reason to round the literal.
 - Optional positive integer `minimum` is a sample guard, separate from values.
-  Omission means no guard; explicit null is invalid.
+  Omission means no guard; explicit null is invalid. Evaluate the guard and
+  comparison separately, then combine their results with Kleene AND. For
+  example, count in [1,3], minimum 3 and `is not 3` gives UNKNOWN, even though
+  no count satisfies both requirements jointly.
 - Optional `where` is a Record filter on Event properties with at most two group
   levels and 100 descendants. Omission/null means no extra qualification. Count
   cannot be nested inside it. Main Record conditions refer to profile properties.

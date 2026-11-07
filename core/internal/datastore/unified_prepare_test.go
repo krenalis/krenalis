@@ -60,9 +60,12 @@ func TestUnifiedPrepare(t *testing.T) {
 	if currency.Value != "EUR" || !reflect.DeepEqual(currency.Keys, []string{"a.b"}) {
 		t.Fatalf("expected exact bound currency path, got %+v", currency)
 	}
-	if len(count.Accept) != 2 || count.Accept[0].Lower != 1 || *count.Accept[0].Upper != 1 ||
+	if len(count.Accept) != 2 || count.Accept[0].Lower != 0 || *count.Accept[0].Upper != 1 ||
 		count.Accept[1].Lower != 3 || count.Accept[1].Upper != nil {
-		t.Fatalf("expected [1,1] and [3,infinity], got %+v", count.Accept)
+		t.Fatalf("expected [0,1] and [3,infinity], got %+v", count.Accept)
+	}
+	if count.Minimum != 1 {
+		t.Fatalf("expected separate sample minimum 1, got %d", count.Minimum)
 	}
 	history, err := unified.ResolveHistory("registered-queryable-events", "1")
 	if err != nil {

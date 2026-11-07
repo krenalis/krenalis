@@ -125,10 +125,13 @@ governed qualification in the same Count is currently unsupported.
 For a determined deduplicated population, let S be the number of TRUE qualifiers
 and U the number of NULL qualifiers. With the admitted independent memberships,
 every integer in `[S,S+U]` is reachable: choose any k of the U occurrences for
-each k between 0 and U. Core normalizes the test and sample minimum into at
-most two sorted, disjoint, non-adjacent accepted integer ranges. The physical
-helper compares the reachable integer interval with that accepted set. This proof does not apply to E, K, shares or arbitrary
-correlated bases. It does not treat an arbitrary real interval as reachable.
+each k between 0 and U. Core normalizes the test into at most two sorted,
+disjoint, non-adjacent accepted integer ranges and retains the sample minimum
+separately. The physical helper compares the reachable integer interval with
+each requirement and composes their ternary results using Kleene AND. Thus
+`is not 3` with minimum 3 over [1,3] is UNKNOWN, not NO_MATCH. This proof does
+not apply to E, K, shares or arbitrary correlated bases. It does not treat an
+arbitrary real interval as reachable.
 
 `SharedBoolean` records a governed `EqualCurrentProfile` dependency explicitly
 outside this implementation. With two known occurrence flags both true and one

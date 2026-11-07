@@ -133,7 +133,8 @@ func (c *compiler) count(node *warehouses.IndependentOccurrenceCount) (string, e
 	alias := "v" + n
 	c.joins = append(c.joins, "LEFT JOIN cnt"+n+" "+alias+" ON "+alias+".profile_id=p."+q("$profile_id"))
 
-	return decision(node.Accept, "COALESCE("+alias+".lo,0)", "COALESCE("+alias+".hi,0)"), nil
+	lo, hi := "COALESCE("+alias+".lo,0)", "COALESCE("+alias+".hi,0)"
+	return withSampleMinimum(node.Minimum, lo, hi, decision(node.Accept, lo, hi)), nil
 }
 
 func (c *compiler) parameter(typ types.Type, value any) (string, error) {
@@ -335,4 +336,13 @@ func decision(ranges []warehouses.CountRange, lo, hi string) string {
 	}
 	return "CASE WHEN (" + strings.Join(yes, " OR ") + ") THEN TRUE WHEN (" + strings.Join(no,
 		" AND ") + ") THEN FALSE ELSE CAST(NULL AS BOOLEAN) END"
+}
+
+// withSampleMinimum composes the sample guard and test using Kleene AND.
+func withSampleMinimum(minimum int64, lo, hi, test string) string {
+	if minimum == 0 {
+		return test
+	}
+	guard := decision([]warehouses.CountRange{{Lower: minimum}}, lo, hi)
+	return "(" + guard + ") AND (" + test + ")"
 }

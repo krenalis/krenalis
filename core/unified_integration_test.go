@@ -722,6 +722,7 @@ INSERT INTO unified_v.krenalis_events VALUES
 		{OpIsGreaterThanOrEqualTo, filterValues(1), nil, []unified.Truth{unified.NoMatch, unified.Match, unified.NoMatch, unified.Unknown}},
 		{OpIsBetween, filterValues(0, 1), nil, []unified.Truth{unified.Match, unified.Match, unified.Match, unified.Match}},
 		{OpIsGreaterThanOrEqualTo, filterValues(0), json.Value(`1`), []unified.Truth{unified.NoMatch, unified.Match, unified.NoMatch, unified.Unknown}},
+		{OpIsNot, filterValues(1), json.Value(`1`), []unified.Truth{unified.NoMatch, unified.NoMatch, unified.NoMatch, unified.Unknown}},
 	} {
 		t.Run(fmt.Sprintf("public %s minimum %s", test.op, test.minimum), func(t *testing.T) {
 			c := *count

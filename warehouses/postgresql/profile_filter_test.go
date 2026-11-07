@@ -109,7 +109,7 @@ func TestProfileFilterSQL(t *testing.T) {
 	selector := warehouses.NewBaseExpr(warehouses.Column{Name: "event", Type: types.String(), Nullable: true},
 		warehouses.OpIs, "Purchase'")
 	count := &warehouses.IndependentOccurrenceCount{Source: source, Start: end.AddDate(0, -1, 0), End: end,
-		Accept: []warehouses.CountRange{{Lower: 1}},
+		Accept: []warehouses.CountRange{{Lower: 1}}, Minimum: 1,
 		Qualification: &warehouses.QualificationGroup{Operator: warehouses.OpAnd, Children: []warehouses.RowQualification{
 			&warehouses.RecordQualification{Expr: selector},
 			&warehouses.KnownTextEqual{Column: warehouses.Column{Name: "properties", Type: types.JSON()},

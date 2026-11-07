@@ -82,6 +82,9 @@ func validateFilterCondition(node FilterCondition, depth int, nodes, physical *i
 		if n == nil {
 			return fmt.Errorf("warehouses: nil prepared Count")
 		}
+		if n.Minimum < 0 {
+			return fmt.Errorf("warehouses: invalid prepared sample minimum")
+		}
 		err := n.Source.Validate()
 		if err != nil {
 			return err

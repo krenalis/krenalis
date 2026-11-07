@@ -59,8 +59,9 @@ func (*RecordFilter) filterCondition() {}
 // UnboundedStart omits the lower bound and requires Start to be zero.
 // Core must establish these preconditions before constructing the node.
 // For valid source data every integer between the certain and possible counts
-// is reachable. Accept is the normalized set of counts satisfying the terminal
-// and its sample guard. Empty Accept accepts no count.
+// is reachable. Accept is the normalized set of counts satisfying the terminal.
+// Empty Accept accepts no count. Minimum is a separate sample guard, composed
+// with the terminal using Kleene AND; zero means no extra sample minimum.
 //
 // One identity denotes one recorded event. Copies must agree on attribution,
 // period membership and qualification within the period. Relevant conflicts
@@ -72,6 +73,7 @@ type IndependentOccurrenceCount struct {
 	UnboundedStart bool
 	Qualification  RowQualification
 	Accept         []CountRange
+	Minimum        int64
 }
 
 func (*IndependentOccurrenceCount) filterCondition() {}

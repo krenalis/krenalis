@@ -12,8 +12,8 @@ import (
 // TestAcceptedCountRanges checks decisions against an independent enumeration.
 // Static invalid-parameter admission is separately tested by TestValidate.
 func TestAcceptedCountRanges(t *testing.T) {
-	check := func(test CountTest, minimum uint64, lo, hi int64) {
-		ranges := acceptedCountRanges(test, minimum)
+	check := func(test CountTest, lo, hi int64) {
+		ranges := acceptedCountRanges(test)
 		got := uint8(0)
 		intersects := false
 		for _, r := range ranges {
@@ -48,7 +48,6 @@ func TestAcceptedCountRanges(t *testing.T) {
 			default:
 				t.Fatalf("expected known comparison, got %d", test.Operator)
 			}
-			ok = ok && uint64(n) >= minimum
 			yes = yes || ok
 			no = no || !ok
 			if n == hi {
@@ -63,16 +62,14 @@ func TestAcceptedCountRanges(t *testing.T) {
 			want = 2
 		}
 		if got != want {
-			t.Fatalf("expected %d for %+v/min%d [%d,%d], got %d", want, test, minimum, lo, hi, got)
+			t.Fatalf("expected %d for %+v [%d,%d], got %d", want, test, lo, hi, got)
 		}
 	}
 	for _, op := range []Comparison{Equal, Different, Less, LessOrEqual, Greater, GreaterOrEqual, Between} {
 		for v := uint64(0); v <= 6; v++ {
-			for m := uint64(0); m <= 6; m++ {
-				for lo := int64(0); lo <= 8; lo++ {
-					for hi := lo; hi <= 8; hi++ {
-						check(CountTest{Operator: op, Value: v, Upper: v + 2}, m, lo, hi)
-					}
+			for lo := int64(0); lo <= 8; lo++ {
+				for hi := lo; hi <= 8; hi++ {
+					check(CountTest{Operator: op, Value: v, Upper: v + 2}, lo, hi)
 				}
 			}
 		}
@@ -80,16 +77,14 @@ func TestAcceptedCountRanges(t *testing.T) {
 			if op == Greater && v == math.MaxInt64 {
 				continue
 			}
-			for _, m := range []uint64{0, math.MaxInt64 - 1, math.MaxInt64} {
-				for _, n := range []int64{math.MaxInt64 - 2, math.MaxInt64 - 1, math.MaxInt64} {
-					check(CountTest{Operator: op, Value: v, Upper: math.MaxInt64}, m, n, n)
-				}
+			for _, n := range []int64{math.MaxInt64 - 2, math.MaxInt64 - 1, math.MaxInt64} {
+				check(CountTest{Operator: op, Value: v, Upper: math.MaxInt64}, n, n)
 			}
 		}
 	}
 	// A pointer distinguishes an explicit finite upper limit from no upper limit.
-	finite := acceptedCountRanges(CountTest{Operator: LessOrEqual, Value: math.MaxInt64}, 0)
-	infinite := acceptedCountRanges(CountTest{Operator: GreaterOrEqual}, 0)
+	finite := acceptedCountRanges(CountTest{Operator: LessOrEqual, Value: math.MaxInt64})
+	infinite := acceptedCountRanges(CountTest{Operator: GreaterOrEqual})
 	if finite[0].Upper == nil || infinite[0].Upper != nil {
 		t.Fatal("expected finite maximum distinct from unbounded, got same representation")
 	}

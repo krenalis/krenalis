@@ -60,8 +60,8 @@ func Prepare(root *Rule, bindings Bindings, at time.Time, source SourceBinding) 
 	return warehouses.Filter{Root: node}, nil
 }
 
-func acceptedCountRanges(test CountTest, minimum uint64) []warehouses.CountRange {
-	lower, value := int64(minimum), int64(test.Value)
+func acceptedCountRanges(test CountTest) []warehouses.CountRange {
+	value := int64(test.Value)
 	upper := func(n int64) *int64 { return &n }
 	var candidates []warehouses.CountRange
 	switch test.Operator {
@@ -89,14 +89,7 @@ func acceptedCountRanges(test CountTest, minimum uint64) []warehouses.CountRange
 	default:
 		panic(fmt.Sprintf("core/internal/unified: unexpected Count comparison %d", test.Operator))
 	}
-	var accepted []warehouses.CountRange
-	for _, r := range candidates {
-		r.Lower = max(r.Lower, lower)
-		if r.Upper == nil || r.Lower <= *r.Upper {
-			accepted = append(accepted, r)
-		}
-	}
-	return accepted
+	return candidates
 }
 
 func prepareRule(rule Rule, bindings Bindings, at time.Time, source SourceBinding) (warehouses.FilterCondition, error) {
@@ -196,6 +189,6 @@ func prepareRule(rule Rule, bindings Bindings, at time.Time, source SourceBindin
 	return &warehouses.IndependentOccurrenceCount{
 		Source: source.Occurrences, Start: start, End: end, UnboundedStart: c.Scope.History != nil,
 		Qualification: &warehouses.QualificationGroup{Operator: warehouses.OpAnd, Children: qualifiers},
-		Accept:        acceptedCountRanges(c.Test, c.Minimum),
+		Accept:        acceptedCountRanges(c.Test), Minimum: int64(c.Minimum),
 	}, nil
 }
