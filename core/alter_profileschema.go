@@ -248,6 +248,15 @@ func checkAllowedSemanticsProfileSchema(t types.Type) error {
 		if !t.IsFloat(64) {
 			return errors.New("profile schema properties with duration semantics must have real float(64) values")
 		}
+	case types.YearSemantics:
+		if !t.IsInt(16) || t.IsUnsigned() {
+			return errors.New("profile schema properties with year semantics must have signed int(16) values")
+		}
+		if min, max := t.IntRange(); min != types.MinYear || max != types.MaxYear {
+			return errors.New("profile schema properties with year semantics must have range [1,9999]")
+		}
+	default:
+		// Other semantics have no profile-specific restrictions.
 	}
 	return nil
 }

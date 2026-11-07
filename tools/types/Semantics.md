@@ -10,4 +10,7 @@
 | `percentage`  | `decimal`                                                                             |
 | `phone`       | `string` without `maxBytes`, `maxLength`, `pattern` or `values`                       |
 | `url`         | `string`                                                                              |
-| `year`        | signed or unsigned `int`; values are restricted to `[1,9999]`                          |
+| `year`        | signed or unsigned `int`; values are restricted to `[1,9999]`                         |
+
+Profile schema properties with `year` semantics must use signed `int(16)`
+with the full `[1,9999]` range. This also applies to array and map elements.
