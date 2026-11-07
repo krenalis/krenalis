@@ -175,6 +175,8 @@ func prepareFilterSum(condition *FilterSumCondition, calendar *unified.Calendar)
 			return unified.Rule{}, errors.New("nativeCurrency requires three uppercase letters")
 		}
 	}
+
+	// Prepare the exact comparison operands.
 	operator, ok := map[FilterOperator]unified.Comparison{
 		OpIs: unified.Equal, OpIsNot: unified.Different, OpIsLessThan: unified.Less,
 		OpIsLessThanOrEqualTo: unified.LessOrEqual, OpIsGreaterThan: unified.Greater,
@@ -205,6 +207,8 @@ func prepareFilterSum(condition *FilterSumCondition, calendar *unified.Calendar)
 	if arity == 2 && values[1].Less(values[0]) {
 		return unified.Rule{}, errors.New("invalid Sum interval")
 	}
+
+	// Validate optional forms before reporting unavailable capabilities.
 	if sum.Minimum != nil {
 		minimum, err := parseFilterCountInteger(sum.Minimum)
 		if err != nil {
@@ -230,6 +234,7 @@ func prepareFilterSum(condition *FilterSumCondition, calendar *unified.Calendar)
 	if operator == unified.Equal || operator == unified.Different || operator == unified.Between {
 		return unified.Rule{}, &unified.UnsupportedError{Capability: "Sum equality or interval reachability"}
 	}
+
 	return unified.Rule{Sum: &unified.Sum{Scope: scope, Field: field, NativeCurrency: sum.NativeCurrency,
 		Test: unified.SumTest{Operator: operator, Value: values[0]}}}, nil
 }

@@ -27,6 +27,7 @@ func TestProfileSumSQL(t *testing.T) {
 	if strings.Contains(value, "DECFLOAT") || !strings.Contains(value, "literal.key") || !strings.Contains(value, "18,4") {
 		t.Fatalf("expected exact typed reading without floating point conversion, got %s", value)
 	}
+
 	end := time.Date(2026, 2, 1, 0, 0, 0, 123456000, time.UTC)
 	sum := &warehouses.IndependentOccurrenceSum{Source: warehouses.OccurrenceSource{Table: "events",
 		Profile:   warehouses.Column{Name: "kpid", Type: types.UUID(), Nullable: true},
@@ -35,7 +36,8 @@ func TestProfileSumSQL(t *testing.T) {
 		UnboundedStart: true, End: end, Value: reading, AtLeast: true, Threshold: decimal.MustParse("30.0001")}
 	filter := warehouses.Filter{Root: sum}
 	population := warehouses.ProfileSource{Table: "profiles", Key: warehouses.Column{Name: "_kpid", Type: types.UUID()}}
-	query, err := profilefilter.Build(filter, warehouses.ProfileOutcomeRequest{Population: population, Limit: 10}, profileFilterDialect())
+	request := warehouses.ProfileOutcomeRequest{Population: population, Limit: 10}
+	query, err := profilefilter.Build(filter, request, profileFilterDialect())
 	if err != nil {
 		t.Fatalf("expected Sum listing SQL, got %v", err)
 	}
@@ -45,17 +47,35 @@ func TestProfileSumSQL(t *testing.T) {
 	}
 	if len(values) != 1 || values[0] != "2026-02-01 00:00:00.123456" || strings.Contains(query.SQL, "lower_bound") ||
 		!strings.Contains(query.SQL, "known_min<>known_max") || !strings.Contains(query.SQL, "amount_min<>amount_max") ||
-		!strings.Contains(query.SQL, "occurrences>9223372036854775807") || !strings.Contains(query.SQL, "CAST('30.0001' AS DECIMAL(38,4))") {
+		!strings.Contains(query.SQL, "occurrences>9223372036854775807") ||
+		!strings.Contains(query.SQL, "CAST('30.0001' AS DECIMAL(38,4))") {
 		t.Fatalf("expected exact Sum, source faults and upper-only period, got %s and %v", query.SQL, values)
 	}
-	explained, err := profilefilter.BuildExplanation(filter, population, "00000000-0000-0000-0000-000000000001", profileFilterDialect())
+	profile := "00000000-0000-0000-0000-000000000001"
+	explained, err := profilefilter.BuildExplanation(filter, population, profile, profileFilterDialect())
 	if err != nil {
 		t.Fatalf("expected Sum explanation SQL, got %v", err)
 	}
-	if len(explained.Columns) != 8 || len(explained.SumNodes) != 1 || !explained.SumNodes[0] || explained.CountNodes[0] ||
+	if len(explained.Columns) != 8 || len(explained.SumNodes) != 1 ||
+		!explained.SumNodes[0] || explained.CountNodes[0] ||
 		!strings.Contains(explained.SQL, "sum_lo") || !strings.Contains(explained.SQL, "<=128") {
 		t.Fatalf("expected bounded Sum explanation transport, got %+v", explained)
 	}
+
+	for _, literal := range []string{"1000.0000", "5000.0000", "-2000.0000",
+		"1000000000000000000000000000000000.0000", "-1000000000000000000000000000000000.0000"} {
+		t.Run(literal, func(t *testing.T) {
+			sum.Threshold = decimal.MustParse(literal)
+			query, err := profilefilter.Build(filter, request, profileFilterDialect())
+			if err != nil {
+				t.Fatalf("expected exact Sum threshold SQL, got %v", err)
+			}
+			if !strings.Contains(query.SQL, "CAST('"+literal+"' AS DECIMAL(38,4))") {
+				t.Fatalf("expected unchanged threshold %s in SQL, got %s", literal, query.SQL)
+			}
+		})
+	}
+
 	bad := reading
 	bad.Type = types.Float(64)
 	_, err = profileExactDecimal(bad)
@@ -63,7 +83,7 @@ func TestProfileSumSQL(t *testing.T) {
 		t.Fatal("expected invalid reading rejection, got success")
 	}
 	sum.Threshold = decimal.MustParse("1e38")
-	_, err = profilefilter.Build(filter, warehouses.ProfileOutcomeRequest{Population: population, Limit: 10}, profileFilterDialect())
+	_, err = profilefilter.Build(filter, request, profileFilterDialect())
 	if err == nil {
 		t.Fatal("expected invalid prepared threshold rejection, got success")
 	}

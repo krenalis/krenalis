@@ -232,6 +232,8 @@ bounds 20 and 40, with only those two totals possible. A null bound means no
 finite bound in that direction, never zero. References identify the reading
 actually resolved by core; bounds do not certify external history or explain
 every individual event. An explanation does not make unsupported forms available.
+Exact JSON Numbers can use exponent notation (1000 can be serialized as `1E+3`)
+and omit trailing fractional zeroes; compare their numeric value, not their spelling.
 
 Raw JSON and governed business properties differ. With `properties.currency is
 "EUR"`, a present JSON null is FALSE and a missing path is UNKNOWN; Number 100

@@ -77,7 +77,8 @@ func TestFilterSumInvalidBeforeUnsupported(t *testing.T) {
 				t.Fatalf("expected decodable input, got %v", err)
 			}
 			nodes := 0
-			_, err = prepareUnifiedRule(&filter, types.Object([]types.Property{{Name: "country", Type: types.String()}}), 0, &nodes)
+			schema := types.Object([]types.Property{{Name: "country", Type: types.String()}})
+			_, err = prepareUnifiedRule(&filter, schema, 0, &nodes)
 			if err != nil {
 				if _, unsupported := errors.AsType[*unified.UnsupportedError](err); unsupported {
 					t.Fatalf("expected invalidity before unavailable Sum, got %v", err)

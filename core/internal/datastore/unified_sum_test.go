@@ -49,6 +49,9 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,
 		{"negative optional", []string{`{"total":35,"currency":"EUR"}`, `{"total":-20}`}, "15", "35", unified.Unknown},
 		{"negative certain", []string{`{"total":-20,"currency":"EUR"}`}, "-20", "-20", unified.NoMatch},
 		{"missing amount", []string{`{"total":35,"currency":"EUR"}`, `{"currency":"EUR"}`}, "", "", unified.Unknown},
+		{"missing currency and amount", []string{`{"total":35,"currency":"EUR"}`, `{}`}, "", "", unified.Unknown},
+		{"missing currency null amount", []string{`{"total":35,"currency":"EUR"}`, `{"total":null}`}, "", "", unified.Unknown},
+		{"null properties", []string{`{"total":35,"currency":"EUR"}`, `null`}, "", "", unified.Unknown},
 		{"null amount", []string{`{"total":null,"currency":"EUR"}`}, "", "", unified.Unknown},
 		{"string amount", []string{`{"total":"35","currency":"EUR"}`}, "", "", unified.Unknown},
 		{"Boolean amount", []string{`{"total":true,"currency":"EUR"}`}, "", "", unified.Unknown},
@@ -108,13 +111,15 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,
 
 	t.Run("copies", func(t *testing.T) {
 		for _, test := range []struct {
-			name, first, second string
-			conflict            bool
+			name, first, second, lower string
+			conflict                   bool
 		}{
-			{"equal", `{"total":20,"currency":"EUR"}`, `{"total":20.0000,"currency":"EUR"}`, false},
-			{"different", `{"total":20,"currency":"EUR"}`, `{"total":30,"currency":"EUR"}`, true},
-			{"known missing", `{"total":20,"currency":"EUR"}`, `{"currency":"EUR"}`, true},
-			{"both unknown", `{"total":null,"currency":"EUR"}`, `{"currency":"EUR"}`, false},
+			{"equal", `{"total":20,"currency":"EUR"}`, `{"total":20.0000,"currency":"EUR"}`, "20", false},
+			{"different", `{"total":20,"currency":"EUR"}`, `{"total":30,"currency":"EUR"}`, "", true},
+			{"known missing", `{"total":20,"currency":"EUR"}`, `{"currency":"EUR"}`, "", true},
+			{"both unknown", `{"total":null,"currency":"EUR"}`, `{"currency":"EUR"}`, "", false},
+			{"excluded different amounts", `{"total":20,"currency":"USD"}`, `{"total":30,"currency":"USD"}`, "0", false},
+			{"excluded missing amount", `{"total":20,"currency":"USD"}`, `{"currency":"USD"}`, "0", false},
 		} {
 			t.Run(test.name, func(t *testing.T) {
 				execUnifiedFixture(t, dw, "TRUNCATE krenalis_events")
@@ -142,12 +147,120 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,
 				if test.conflict || explained == nil || explained.Nodes[0].Sum == nil {
 					t.Fatalf("expected consistent deduplicated Sum, got %+v", explained)
 				}
-				if test.name == "equal" && !explained.Nodes[0].Sum.Lower.Equal(decimal.MustParse("20")) {
-					t.Fatalf("expected one contribution of 20, got %+v", explained.Nodes[0].Sum)
+				bounds := explained.Nodes[0].Sum
+				if (bounds.Lower == nil) != (test.lower == "") || (bounds.Upper == nil) != (test.lower == "") {
+					t.Fatalf("expected deduplicated bounds %s, got %+v", test.lower, bounds)
+				}
+				if test.lower != "" && (!bounds.Lower.Equal(decimal.MustParse(test.lower)) ||
+					!bounds.Upper.Equal(decimal.MustParse(test.lower))) {
+					t.Fatalf("expected one contribution of %s, got %+v", test.lower, bounds)
 				}
 			})
 		}
 	})
+
+	for _, test := range []struct{ name, rows string }{
+		{"unrelated missing identity", `('00000000-0000-0000-0000-000000000002',NULL,'track','Order Completed','2026-01-15','{"total":20,"currency":"EUR"}')`},
+		{"unrelated amount conflict", `('00000000-0000-0000-0000-000000000002','other','track','Order Completed','2026-01-15','{"total":20,"currency":"EUR"}'),('00000000-0000-0000-0000-000000000002','other','track','Order Completed','2026-01-15','{"total":30,"currency":"EUR"}')`},
+		{"unrelated attribution conflict", `('00000000-0000-0000-0000-000000000002','other','track','Order Completed','2026-01-15','{"total":20,"currency":"EUR"}'),(NULL,'other','track','Order Completed','2026-01-15','{"total":20,"currency":"EUR"}')`},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			execUnifiedFixture(t, dw, "TRUNCATE krenalis_events")
+			execUnifiedFixture(t, dw, `INSERT INTO krenalis_events VALUES
+('00000000-0000-0000-0000-000000000001','target','track','Order Completed','2026-01-15','{"total":40,"currency":"EUR"}'),`+test.rows)
+			rule := unified.Rule{Sum: &sum}
+			explained, err := store.ExplainUnifiedProfile(t.Context(), &rule, unified.Bindings{}, at, unifiedTestID(1))
+			if err != nil {
+				t.Fatalf("expected unaffected Sum explanation, got %v", err)
+			}
+			if explained == nil || len(explained.Nodes) != 1 || explained.Nodes[0].Truth != unified.Match ||
+				explained.Nodes[0].Sum == nil || explained.Nodes[0].Sum.Lower == nil ||
+				explained.Nodes[0].Sum.Upper == nil || !explained.Nodes[0].Sum.Lower.Equal(decimal.MustParse("40")) ||
+				!explained.Nodes[0].Sum.Upper.Equal(decimal.MustParse("40")) {
+				t.Fatalf("expected target MATCH with exact Sum [40,40], got %+v", explained)
+			}
+			explained, err = store.ExplainUnifiedProfile(t.Context(), &rule, unified.Bindings{}, at, unifiedTestID(2))
+			if err != nil {
+				if explained != nil {
+					t.Fatalf("expected affected profile failure without explanation, got %+v", explained)
+				}
+			}
+			if err == nil {
+				t.Fatal("expected affected profile source-contract failure, got success")
+			}
+			result, err := store.UnifiedProfiles(t.Context(), &rule, unified.Bindings{}, at, unified.Page{Limit: 10})
+			if err != nil {
+				if result != nil {
+					t.Fatalf("expected source-contract failure without partial result, got %+v", result)
+				}
+				return
+			}
+			t.Fatal("expected population source-contract failure, got success")
+		})
+	}
+
+	for _, test := range []struct {
+		name, literal string
+		operator      unified.Comparison
+		large         bool
+		want          []unified.Truth
+	}{
+		{"at least 1000", "1000", unified.GreaterOrEqual, false, []unified.Truth{unified.NoMatch, unified.NoMatch, unified.Match, unified.Match}},
+		{"above 999.9999", "999.9999", unified.Greater, false, []unified.Truth{unified.NoMatch, unified.NoMatch, unified.Match, unified.Match}},
+		{"at most 1000", "1000", unified.LessOrEqual, false, []unified.Truth{unified.Match, unified.Match, unified.Match, unified.NoMatch}},
+		{"below 1000.0001", "1000.0001", unified.Less, false, []unified.Truth{unified.Match, unified.Match, unified.Match, unified.NoMatch}},
+		{"at least 5000", "5000", unified.GreaterOrEqual, false, []unified.Truth{unified.NoMatch, unified.NoMatch, unified.NoMatch, unified.NoMatch}},
+		{"positive clipped lower", "1e75", unified.GreaterOrEqual, true, []unified.Truth{unified.NoMatch, unified.NoMatch, unified.NoMatch, unified.Unknown}},
+		{"positive clipped upper", "1e75", unified.LessOrEqual, true, []unified.Truth{unified.Match, unified.Match, unified.Match, unified.Unknown}},
+		{"negative clipped lower", "-1e75", unified.GreaterOrEqual, true, []unified.Truth{unified.Match, unified.Match, unified.Match, unified.Unknown}},
+		{"negative clipped upper", "-1e75", unified.Less, true, []unified.Truth{unified.NoMatch, unified.NoMatch, unified.NoMatch, unified.Unknown}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			execUnifiedFixture(t, dw, "TRUNCATE krenalis_events")
+			amounts := [][]string{{"150"}, {"999.9999"}, {"1000"}, {"1500"}}
+			totals := []string{"150", "999.9999", "1000", "1500"}
+			if test.large {
+				amounts = [][]string{
+					{"99999999999999.9999", "99999999999999.9999", "99999999999999.9999"},
+					{"-99999999999999.9999", "-99999999999999.9999", "-99999999999999.9999"}, nil, {"null"},
+				}
+				totals = []string{"299999999999999.9997", "-299999999999999.9997", "0", ""}
+			}
+			for i, values := range amounts {
+				for j, value := range values {
+					execUnifiedFixture(t, dw, fmt.Sprintf(`INSERT INTO krenalis_events VALUES
+('%s','threshold-%d-%d','track','Order Completed','2026-01-15','{"total":%s,"currency":"EUR"}')`,
+						unifiedTestID(i+1), i, j, value))
+				}
+			}
+			thresholdSum := sum
+			thresholdSum.Test = unified.SumTest{Operator: test.operator, Value: decimal.MustParse(test.literal)}
+			rule := unified.Rule{Sum: &thresholdSum}
+			result, err := store.UnifiedProfiles(t.Context(), &rule, unified.Bindings{}, at, unified.Page{Limit: 10})
+			if err != nil {
+				t.Fatalf("expected exact Sum threshold evaluation, got %v", err)
+			}
+			assertUnifiedTruths(t, result, test.want)
+			for i, want := range test.want {
+				explained, err := store.ExplainUnifiedProfile(t.Context(), &rule, unified.Bindings{}, at, unifiedTestID(i+1))
+				if err != nil {
+					t.Fatalf("expected exact Sum threshold explanation, got %v", err)
+				}
+				if explained == nil || len(explained.Nodes) != 1 || explained.Nodes[0].Truth != want ||
+					explained.Nodes[0].Sum == nil {
+					t.Fatalf("expected explanation outcome %v, got %+v", want, explained)
+				}
+				bounds := explained.Nodes[0].Sum
+				if (bounds.Lower == nil) != (totals[i] == "") || (bounds.Upper == nil) != (totals[i] == "") {
+					t.Fatalf("expected threshold bounds %s, got %+v", totals[i], bounds)
+				}
+				if totals[i] != "" && (!bounds.Lower.Equal(decimal.MustParse(totals[i])) ||
+					!bounds.Upper.Equal(decimal.MustParse(totals[i]))) {
+					t.Fatalf("expected exact bounds %s, got %+v", totals[i], bounds)
+				}
+			}
+		})
+	}
 
 	// Independent oracle enumerates actual discrete sums; bounds are not assumed.
 	execUnifiedFixture(t, dw, "TRUNCATE krenalis_events,profiles")

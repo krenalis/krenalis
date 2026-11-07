@@ -99,7 +99,7 @@ func (c *compiler) sum(node *warehouses.IndependentOccurrenceSum) (string, error
 	alias := "v" + n
 	c.joins = append(c.joins, "LEFT JOIN cnt"+n+" "+alias+" ON "+alias+".profile_id=p."+q("$profile_id"))
 	lo, hi := sumBounds(alias)
-	threshold := "CAST('" + node.Threshold.String() + "' AS DECIMAL(38,4))"
+	threshold := fmt.Sprintf("CAST('%.4f' AS DECIMAL(38,4))", node.Threshold)
 	if node.AtLeast {
 		return "CASE WHEN (" + lo + ")>=" + threshold + " THEN TRUE WHEN (" + hi + ")<" + threshold +
 			" THEN FALSE ELSE NULL END", nil

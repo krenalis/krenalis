@@ -60,6 +60,7 @@ func (sum *Sum) prepare(at time.Time, source SourceBinding) (warehouses.FilterCo
 	if !warehouses.IsValidIdentifier(source.Properties.Name) || !source.Properties.Type.IsJSON() {
 		return nil, fmt.Errorf("core/internal/unified: invalid resolved monetary column")
 	}
+
 	selector, err := source.Record(&state.Where{Operator: state.OpAnd, Rules: []state.WhereRule{
 		&state.WhereCondition{Property: []string{"event"}, Operator: state.OpIs, Values: []any{sum.Scope.Event}},
 		&state.WhereCondition{Property: []string{"type"}, Operator: state.OpIs, Values: []any{"track"}},
@@ -128,7 +129,8 @@ type SumTest struct {
 // exact, including for unbounded unknown amounts. Overflow remains a fault.
 func (test SumTest) threshold() (decimal.Decimal, bool, error) {
 
-	rational, ok := new(big.Rat).SetString(test.Value.String())
+	_, scale := test.Value.PrecisionScale()
+	rational, ok := new(big.Rat).SetString(fmt.Sprintf("%.*f", scale, test.Value))
 	if !ok {
 		return decimal.Decimal{}, false, fmt.Errorf("core/internal/unified: invalid prepared Sum literal")
 	}
@@ -154,12 +156,14 @@ func (test SumTest) threshold() (decimal.Decimal, bool, error) {
 	default:
 		return decimal.Decimal{}, false, fmt.Errorf("core/internal/unified: unsupported prepared Sum comparison")
 	}
+
 	limit := new(big.Int).Exp(big.NewInt(10), big.NewInt(37), nil)
 	if coefficient.Cmp(limit) > 0 {
 		coefficient.Set(limit)
 	} else if negative := new(big.Int).Neg(limit); coefficient.Cmp(negative) < 0 {
 		coefficient.Set(negative)
 	}
+
 	negative := coefficient.Sign() < 0
 	text := new(big.Int).Abs(coefficient).String()
 	if len(text) < 5 {

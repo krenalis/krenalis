@@ -536,6 +536,7 @@ INSERT INTO unified_v.krenalis_events VALUES
 		if err != nil {
 			t.Fatalf("expected coherent monetary fixtures, got %v", err)
 		}
+
 		var filter Filter
 		err = json.Unmarshal([]byte(`{"operator":"and","rules":[`+sumConditionJSON+`]}`), &filter)
 		if err != nil {
@@ -563,7 +564,8 @@ INSERT INTO unified_v.krenalis_events VALUES
 			for i, expected := range []struct{ truth, lower, upper string }{
 				{"MATCH", "35", "35"}, {"NO_MATCH", "20", "20"}, {"UNKNOWN", "20", "40"}, {"NO_MATCH", "0", "0"},
 			} {
-				explained, err := workspace.ExplainProfileFilter(t.Context(), fmt.Sprintf("00000000-0000-0000-0000-%012d", i+1), &filter, query.At)
+				profile := fmt.Sprintf("00000000-0000-0000-0000-%012d", i+1)
+				explained, err := workspace.ExplainProfileFilter(t.Context(), profile, &filter, query.At)
 				if err != nil {
 					t.Fatalf("expected public Sum explanation, got %v", err)
 				}
@@ -573,19 +575,24 @@ INSERT INTO unified_v.krenalis_events VALUES
 					value.Bounds.Lower == nil || value.Bounds.Upper == nil ||
 					!value.Bounds.Lower.Equal(decimal.MustParse(expected.lower)) ||
 					!value.Bounds.Upper.Equal(decimal.MustParse(expected.upper)) || !value.End.Equal(at) {
-					t.Fatalf("expected %s Sum bounds [%s,%s] and resolved metadata, got %+v", expected.truth, expected.lower, expected.upper, value)
+					t.Fatalf("expected %s Sum bounds [%s,%s] and resolved metadata, got %+v",
+						expected.truth, expected.lower, expected.upper, value)
 				}
 				if period.Kind == "fullRelevantHistory" && (!value.UnboundedStart || !value.Start.IsZero() ||
-					value.History == nil || value.History.Definition != "registered-queryable-events" || value.History.MeaningRevision != "1") {
+					value.History == nil || value.History.Definition != "registered-queryable-events" ||
+					value.History.MeaningRevision != "1") {
 					t.Fatalf("expected full history metadata, got %+v", value)
 				}
 			}
 		}
+
 		// The same explanation transports both numeric Sum and integer Count bounds.
 		filter.DefaultCalendar = nil
 		mixed := &Filter{Operator: OpOr, DefaultCalendar: calendar,
-			Rules: []FilterRule{&filter, &FilterCondition{Property: "country", Operator: OpIs, Values: filterValues("IT")}, count}}
-		explained, err := workspace.ExplainProfileFilter(t.Context(), "00000000-0000-0000-0000-000000000003", mixed, at.Format(time.RFC3339))
+			Rules: []FilterRule{&filter,
+				&FilterCondition{Property: "country", Operator: OpIs, Values: filterValues("IT")}, count}}
+		profile := "00000000-0000-0000-0000-000000000003"
+		explained, err := workspace.ExplainProfileFilter(t.Context(), profile, mixed, at.Format(time.RFC3339))
 		if err != nil {
 			t.Fatalf("expected mixed Record/Count/Sum explanation, got %v", err)
 		}
@@ -602,7 +609,8 @@ INSERT INTO unified_v.krenalis_events VALUES
 			t.Fatal("expected unverified workspace, got none")
 		}
 		unverified := &Workspace{core: &Core{}, store: unverifiedStore, workspace: unverifiedState}
-		unavailable, err := unverified.QueryProfiles(t.Context(), ProfileQuery{Filter: mixed, At: at.Format(time.RFC3339), Limit: 1})
+		query := ProfileQuery{Filter: mixed, At: at.Format(time.RFC3339), Limit: 1}
+		unavailable, err := unverified.QueryProfiles(t.Context(), query)
 		if err != nil {
 			failure, ok := errors.AsType[*errors.UnprocessableError](err)
 			if !ok || failure.Code != UnifiedFilteringUnavailable || unavailable != nil {

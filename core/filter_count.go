@@ -294,7 +294,7 @@ func (period *FilterPeriod) UnmarshalJSON(data []byte) error {
 
 func (period FilterPeriod) scope(source FilterCountSource, calendar *unified.Calendar) (unified.Scope, error) {
 	if source.Kind != "recordedEvents" {
-		return unified.Scope{}, errors.New("invalid Count source kind")
+		return unified.Scope{}, errors.New("invalid recorded event source kind")
 	}
 	if source.Grain != "registered-message" {
 		return unified.Scope{}, errors.New("invalid recorded event grain")
@@ -384,7 +384,7 @@ func (period FilterPeriod) scope(source FilterCountSource, calendar *unified.Cal
 			return unified.Scope{}, err
 		}
 	default:
-		return unified.Scope{}, errors.New("invalid Count period kind")
+		return unified.Scope{}, errors.New("invalid filter period kind")
 	}
 	if older != "" {
 		if older.compare(newer) <= 0 {

@@ -402,10 +402,16 @@ INSERT INTO krenalis_events
 		if err != nil {
 			t.Fatalf("expected coherent monetary fixtures, got %v", err)
 		}
-		const sum = `{"operator":"and","rules":[{"sum":{"source":{"kind":"recordedEvents","name":"Order Completed","grain":"registered-message"},"period":{"kind":"elapsedLookback","duration":{"value":31,"unit":"day"}},"field":{"definition":"commerce.order_completed.total","meaningRevision":"1"},"nativeCurrency":"EUR"},"operator":"is greater than or equal to","values":[30]}]}`
+
+		const sum = `{"operator":"and","rules":[{"sum":{"source":{"kind":"recordedEvents",` +
+			`"name":"Order Completed","grain":"registered-message"},"period":{"kind":"elapsedLookback",` +
+			`"duration":{"value":31,"unit":"day"}},"field":{"definition":"commerce.order_completed.total",` +
+			`"meaningRevision":"1"},"nativeCurrency":"EUR"},"operator":"is greater than or equal to","values":[30]}]}`
 		for _, first := range []int{0, 99} {
 			var expected json.RawMessage
-			k.Call("GET", "/v1/profiles?filter="+url.QueryEscape(sum)+"&at="+url.QueryEscape(at)+"&first="+strconv.Itoa(first), nil, nil, &expected)
+			path := "/v1/profiles?filter=" + url.QueryEscape(sum) +
+				"&at=" + url.QueryEscape(at) + "&first=" + strconv.Itoa(first)
+			k.Call("GET", path, nil, nil, &expected)
 			actual := assertResult(t, tool(t, "query-profiles", map[string]any{"filter": sum, "at": at, "first": first}))
 			if actual != string(expected) || !strings.Contains(actual, `"match":1,"noMatch":2,"unknown":1`) {
 				t.Fatalf("expected identical HTTP/MCP Sum listing and totals 1/2/1, got %s", actual)
@@ -416,10 +422,13 @@ INSERT INTO krenalis_events
 		}
 		var expected json.RawMessage
 		profile := "00000000-0000-0000-0000-000000000003"
-		k.Call("GET", "/v1/profiles/"+profile+"/filter-explanation?filter="+url.QueryEscape(sum)+"&at="+url.QueryEscape(at), nil, nil, &expected)
+		path := "/v1/profiles/" + profile + "/filter-explanation?filter=" +
+			url.QueryEscape(sum) + "&at=" + url.QueryEscape(at)
+		k.Call("GET", path, nil, nil, &expected)
 		actual := assertResult(t, tool(t, "explain-profile-filter", map[string]any{"kpid": profile, "filter": sum, "at": at}))
 		if actual != string(expected) || !strings.Contains(actual, `"result":"UNKNOWN"`) ||
-			!strings.Contains(actual, `"definition":"commerce.order_completed.total"`) || !strings.Contains(actual, `"nativeCurrency":"EUR"`) {
+			!strings.Contains(actual, `"definition":"commerce.order_completed.total"`) ||
+			!strings.Contains(actual, `"nativeCurrency":"EUR"`) {
 			t.Fatalf("expected measured Sum explanation with reference and currency, got %s", actual)
 		}
 		var explanation struct {
@@ -456,6 +465,24 @@ INSERT INTO krenalis_events
 		actual = assertResult(t, tool(t, "query-profiles", map[string]any{"filter": negative, "at": at}))
 		if !strings.Contains(actual, `"match":4,"noMatch":0,"unknown":0`) {
 			t.Fatalf("expected negative threshold with empty sum zero, got %s", actual)
+		}
+
+		_, err = pool.Exec(t.Context(), `UPDATE krenalis_events
+SET properties='{"total":150,"currency":"EUR"}' WHERE message_id='sum-two'`)
+		if err != nil {
+			t.Fatalf("expected large threshold fixture, got %v", err)
+		}
+		for _, literal := range []string{"1000", "1000.0000", "1e75"} {
+			t.Run(literal, func(t *testing.T) {
+				filter := strings.Replace(sum, `[30]`, `[`+literal+`]`, 1)
+				var expected json.RawMessage
+				path := "/v1/profiles?filter=" + url.QueryEscape(filter) + "&at=" + url.QueryEscape(at)
+				k.Call("GET", path, nil, nil, &expected)
+				actual := assertResult(t, tool(t, "query-profiles", map[string]any{"filter": filter, "at": at}))
+				if actual != string(expected) || !strings.Contains(actual, `"match":0,"noMatch":4,"unknown":0`) {
+					t.Fatalf("expected exact large threshold with no members in HTTP and MCP, got %s", actual)
+				}
+			})
 		}
 
 	})
