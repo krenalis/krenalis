@@ -255,8 +255,6 @@ func checkAllowedSemanticsProfileSchema(t types.Type) error {
 		if min, max := t.IntRange(); min != types.MinYear || max != types.MaxYear {
 			return errors.New("profile schema properties with year semantics must have range [1,9999]")
 		}
-	default:
-		// Other semantics have no profile-specific restrictions.
 	}
 	return nil
 }

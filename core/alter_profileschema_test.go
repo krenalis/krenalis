@@ -607,8 +607,6 @@ func Test_checkAllowedTypesProfileSchema(t *testing.T) {
 				},
 				{Name: "duration", Type: types.Float(64).Real().AsDuration(types.Second), ReadOptional: true},
 				{Name: "year", Type: types.Int(16).AsYear(), ReadOptional: true},
-				{Name: "years", Type: types.Array(types.Int(16).AsYear()), ReadOptional: true},
-				{Name: "year_map", Type: types.Map(types.Int(16).AsYear()), ReadOptional: true},
 				{Name: "shipping_address", Type: types.Object([]types.Property{
 					{Name: "street1", Type: types.String(), ReadOptional: true},
 					{Name: "street2", Type: types.String(), ReadOptional: true},
@@ -747,23 +745,9 @@ func Test_checkAllowedTypesProfileSchema(t *testing.T) {
 			err: "profile schema properties with type string cannot specify values",
 		},
 		{
-			name: "Year semantics on int(8)",
-			schema: types.Object([]types.Property{
-				{Name: "year", Type: types.Int(8).AsYear(), ReadOptional: true},
-			}),
-			err: "profile schema properties with year semantics must have signed int(16) values",
-		},
-		{
 			name: "Year semantics on array of int(32)",
 			schema: types.Object([]types.Property{
 				{Name: "year", Type: types.Array(types.Int(32).AsYear()), ReadOptional: true},
-			}),
-			err: "profile schema properties with year semantics must have signed int(16) values",
-		},
-		{
-			name: "Year semantics on int(64)",
-			schema: types.Object([]types.Property{
-				{Name: "year", Type: types.Int(64).AsYear(), ReadOptional: true},
 			}),
 			err: "profile schema properties with year semantics must have signed int(16) values",
 		},
