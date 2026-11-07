@@ -560,7 +560,13 @@ func unmarshalFilterRule(dec *json.Decoder, depth int, expectGroup, occurrence b
 			if expectGroup {
 				err = dec.SkipValue()
 			} else {
-				err = dec.Decode(&average)
+				// Avoid identifying the shared subject as Sum in diagnostics.
+				var value json.Value
+				value, err = dec.ReadValue()
+				if err != nil {
+					return nil, 0, err
+				}
+				err = average.UnmarshalJSON(value)
 			}
 		case "values":
 			if hasValues {

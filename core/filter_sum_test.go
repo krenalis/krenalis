@@ -181,7 +181,7 @@ func TestFilterSumMinimumErrors(t *testing.T) {
 			}
 			_, err = prepareFilterSum(&condition, nil)
 			if err != nil {
-				if err.Error() != "Sum sample minimum must be a positive JSON integer" {
+				if err.Error() != "sample minimum must be a positive JSON integer" {
 					t.Fatalf("expected Sum sample minimum validation error, got %v", err)
 				}
 				return

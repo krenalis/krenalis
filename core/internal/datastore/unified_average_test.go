@@ -46,6 +46,7 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,
 	}{
 		{"empty", nil, unified.NoMatch, "0", 0, 0, 0},
 		{"one large insufficient", []string{`{"total":500,"currency":"EUR"}`}, unified.NoMatch, "500", 1, 1, 1},
+		{"uncertain population below minimum", []string{`{"total":100}`}, unified.NoMatch, "", -1, 0, 1},
 		{"two known", []string{`{"total":120,"currency":"EUR"}`, `{"total":100,"currency":"EUR"}`}, unified.Match, "220", 2, 2, 2},
 		{"below", []string{`{"total":99,"currency":"EUR"}`, `{"total":99,"currency":"EUR"}`}, unified.NoMatch, "198", 2, 2, 2},
 		{"negative", []string{`{"total":-120,"currency":"EUR"}`, `{"total":-100,"currency":"EUR"}`}, unified.NoMatch, "-220", 2, 2, 2},
@@ -159,22 +160,25 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,
 	})
 
 	t.Run("exact comparisons", func(t *testing.T) {
-		for _, amounts := range [][2]string{{"0.0001", "0"}, {"0.0001", "0.0001"},
-			{"-0.0001", "0"}, {"90071992547409.1234", "90071992547409.1233"}} {
+		for _, amounts := range [][]string{{"0.0001", "0"}, {"0.0001", "0.0001"},
+			{"-0.0001", "0"}, {"90071992547409.1234", "90071992547409.1233"}, {"100", "100", "101"}} {
 			execUnifiedFixture(t, dw, "TRUNCATE krenalis_events")
 			for i, amount := range amounts {
 				execUnifiedFixture(t, dw, fmt.Sprintf(`INSERT INTO krenalis_events VALUES
 ('%s','a%d','track','Order Completed','2026-01-15','{"total":%s,"currency":"EUR"}')`, unifiedTestID(1), i, amount))
 			}
 			for _, threshold := range []string{"0", "0.0001", "-0.0001", "90071992547409.1234",
-				"1e14", "-1e14", "1e75", "-1e75"} {
+				"1e14", "-1e14", "1e75", "-1e75", "100.3333", "100.3334"} {
 				for _, operator := range []unified.Comparison{unified.Less, unified.LessOrEqual,
 					unified.Greater, unified.GreaterOrEqual} {
 					average.Test = unified.SumTest{Operator: operator, Value: decimal.MustParse(threshold)}
-					left, _ := new(big.Rat).SetString(amounts[0])
-					right, _ := new(big.Rat).SetString(amounts[1])
+					total := new(big.Rat)
+					for _, amount := range amounts {
+						value, _ := new(big.Rat).SetString(amount)
+						total.Add(total, value)
+					}
 					test, _ := new(big.Rat).SetString(threshold)
-					cmp := new(big.Rat).Add(left, right).Cmp(new(big.Rat).Mul(test, big.NewRat(2, 1)))
+					cmp := total.Cmp(new(big.Rat).Mul(test, big.NewRat(int64(len(amounts)), 1)))
 					want := operator == unified.Less && cmp < 0 || operator == unified.LessOrEqual && cmp <= 0 ||
 						operator == unified.Greater && cmp > 0 || operator == unified.GreaterOrEqual && cmp >= 0
 					result, err := store.UnifiedProfiles(t.Context(), &unified.Rule{Average: &average},

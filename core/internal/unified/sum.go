@@ -57,7 +57,7 @@ func (field *MonetaryField) ValidateWhere(where *state.Where) error {
 		return fmt.Errorf("unresolved monetary field")
 	}
 	return validateIndependentWhere(where, [][]string{field.amountPath, field.currencyPath},
-		"Sum qualification dependent on amount or currency")
+		"monetary qualification dependent on amount or currency")
 }
 
 // Sum adds independently qualified recorded messages in one native currency.
@@ -142,7 +142,7 @@ func (sum *Sum) validate(at time.Time) error {
 	}
 	if sum.Test.Operator > Between || !types.IsDecimal(sum.Test.Value) ||
 		!types.IsDecimal(sum.Test.Upper) || sum.Test.Operator == Between && sum.Test.Upper.Less(sum.Test.Value) {
-		return fmt.Errorf("invalid Sum terminal")
+		return fmt.Errorf("invalid monetary terminal")
 	}
 	whereErr := sum.Field.ValidateWhere(sum.Where)
 	if whereErr != nil {
@@ -155,10 +155,10 @@ func (sum *Sum) validate(at time.Time) error {
 		return err
 	}
 	if sum.Test.Operator == Equal || sum.Test.Operator == Different || sum.Test.Operator == Between {
-		return &UnsupportedError{Capability: "Sum equality or interval reachability"}
+		return &UnsupportedError{Capability: "monetary equality or interval comparisons"}
 	}
 	if sum.Minimum > math.MaxInt64 {
-		return &UnsupportedError{Capability: "Sum sample minimum exceeds the execution integer range"}
+		return &UnsupportedError{Capability: "monetary sample minimum exceeds the execution integer range"}
 	}
 	return whereErr
 }

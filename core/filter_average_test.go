@@ -115,6 +115,51 @@ func TestFilterAverageCodec(t *testing.T) {
 	}
 }
 
+// TestFilterAverageDiagnostics keeps shared monetary errors operation-neutral.
+func TestFilterAverageDiagnostics(t *testing.T) {
+	for _, test := range []struct {
+		name, old, value, message string
+		unsupported               bool
+	}{
+		{"zero minimum", `"minimum":2`, `"minimum":0`, "sample minimum must be positive", false},
+		{"negative minimum", `"minimum":2`, `"minimum":-1`, "sample minimum must be a positive JSON integer", false},
+		{"oversize minimum", `"minimum":2`, `"minimum":9223372036854775808`, "monetary sample minimum exceeds the execution integer range", true},
+		{"equality", `is greater than or equal to`, `is`, "monetary equality or interval comparisons", true},
+		{"dependent where", `"minimum":2`, `"minimum":2,"where":{"operator":"and","rules":[{"property":"properties.total","operator":"is","values":[100]}]}`, "monetary qualification dependent on amount or currency", true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			var condition FilterAverageCondition
+			err := json.Unmarshal([]byte(strings.Replace(averageConditionJSON, test.old, test.value, 1)), &condition)
+			if err != nil {
+				t.Fatalf("expected decodable Average, got %v", err)
+			}
+			_, err = prepareFilterAverage(&condition, nil)
+			if err != nil {
+				if _, unsupported := errors.AsType[*unified.UnsupportedError](err); unsupported != test.unsupported {
+					t.Fatalf("expected unsupported=%v, got %v", test.unsupported, err)
+				}
+				if !strings.Contains(err.Error(), test.message) || strings.Contains(err.Error(), "Sum") {
+					t.Fatalf("expected operation-neutral diagnostic %q, got %v", test.message, err)
+				}
+				return
+			}
+			t.Fatal("expected Average rejected, got success")
+		})
+	}
+	t.Run("null minimum", func(t *testing.T) {
+		var condition FilterAverageCondition
+		err := json.Unmarshal([]byte(strings.Replace(averageConditionJSON, `"minimum":2`, `"minimum":null`, 1)),
+			&condition)
+		if err != nil {
+			if !strings.Contains(err.Error(), "monetary fields cannot be null") || strings.Contains(err.Error(), "Sum") {
+				t.Fatalf("expected neutral Average decoder diagnostic, got %v", err)
+			}
+			return
+		}
+		t.Fatal("expected null minimum rejected, got success")
+	})
+}
+
 // TestFilterAverageInvalidBeforeUnsupported preserves full-filter validity.
 func TestFilterAverageInvalidBeforeUnsupported(t *testing.T) {
 	schema := types.Object([]types.Property{{Name: "country", Type: types.String()}})

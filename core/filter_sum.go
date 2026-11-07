@@ -33,15 +33,15 @@ type FilterSum struct {
 // UnmarshalJSON decodes a Sum subject without resolving its field reference.
 func (sum *FilterSum) UnmarshalJSON(data []byte) error {
 	if sum == nil {
-		return errors.New("core: cannot unmarshal Sum into nil")
+		return errors.New("core: cannot unmarshal a monetary condition into nil")
 	}
 	if !json.Valid(data) || !json.Value(data).IsObject() {
-		return errors.New("sum must be an object")
+		return errors.New("monetary condition must be an object")
 	}
 	var decoded FilterSum
 	for name, value := range json.Value(data).Properties() {
 		if value.IsNull() && name != "where" {
-			return errors.New("Sum fields cannot be null")
+			return errors.New("monetary fields cannot be null")
 		}
 		var err error
 		switch name {
@@ -64,7 +64,7 @@ func (sum *FilterSum) UnmarshalJSON(data []byte) error {
 				}
 			}
 		default:
-			return errors.New("unknown sum property")
+			return errors.New("unknown monetary condition property")
 		}
 		if err != nil {
 			return errors.New(err.Error())
@@ -123,19 +123,19 @@ type FilterSumField struct {
 // UnmarshalJSON decodes a field reference without resolving it.
 func (field *FilterSumField) UnmarshalJSON(data []byte) error {
 	if field == nil {
-		return errors.New("core: cannot unmarshal a Sum field into nil")
+		return errors.New("core: cannot unmarshal a monetary field into nil")
 	}
 	if !json.Valid(data) || !json.Value(data).IsObject() {
-		return errors.New("Sum field must be an object")
+		return errors.New("monetary field must be an object")
 	}
 	for name, value := range json.Value(data).Properties() {
 		switch name {
 		case "definition", "meaningRevision":
 			if !value.IsString() || len(value) > 260 {
-				return errors.New("invalid Sum field reference")
+				return errors.New("invalid monetary field reference")
 			}
 		default:
-			return errors.New("unknown Sum field reference property")
+			return errors.New("unknown monetary field reference property")
 		}
 	}
 	type encoded FilterSumField
@@ -185,20 +185,20 @@ func prepareFilterSum(condition *FilterSumCondition, calendar *unified.Calendar)
 		OpIsGreaterThanOrEqualTo: unified.GreaterOrEqual, OpIsBetween: unified.Between,
 	}[condition.Operator]
 	if !ok {
-		return unified.Rule{}, errors.New("invalid Sum comparison")
+		return unified.Rule{}, errors.New("invalid monetary comparison")
 	}
 	arity := 1
 	if operator == unified.Between {
 		arity = 2
 	}
 	if len(condition.Values) != arity {
-		return unified.Rule{}, errors.New("invalid Sum operand count")
+		return unified.Rule{}, errors.New("invalid monetary operand count")
 	}
 	values := make([]decimal.Decimal, arity)
 	for i, value := range condition.Values {
 		// Bound lexical work before parsing arbitrary precision decimal literals.
 		if len(value) > 4096 {
-			return unified.Rule{}, errors.New("Sum literal exceeds the input length limit")
+			return unified.Rule{}, errors.New("monetary literal exceeds the input length limit")
 		}
 		decoded, err := state.DecodeFilterOperand(value, types.Decimal(18, 4), state.OpIs)
 		if err != nil {
@@ -207,7 +207,7 @@ func prepareFilterSum(condition *FilterSumCondition, calendar *unified.Calendar)
 		values[i] = decoded.(decimal.Decimal)
 	}
 	if arity == 2 && values[1].Less(values[0]) {
-		return unified.Rule{}, errors.New("invalid Sum interval")
+		return unified.Rule{}, errors.New("invalid monetary interval")
 	}
 
 	// Validate optional forms before reporting unavailable capabilities.
@@ -215,10 +215,10 @@ func prepareFilterSum(condition *FilterSumCondition, calendar *unified.Calendar)
 	if sum.Minimum != nil {
 		minimum, err = parseFilterCountInteger(sum.Minimum)
 		if err != nil {
-			return unified.Rule{}, errors.New("Sum sample minimum must be a positive JSON integer")
+			return unified.Rule{}, errors.New("sample minimum must be a positive JSON integer")
 		}
 		if minimum == "0" {
-			return unified.Rule{}, errors.New("Sum minimum must be positive")
+			return unified.Rule{}, errors.New("sample minimum must be positive")
 		}
 	}
 	var where *state.Where
@@ -239,10 +239,11 @@ func prepareFilterSum(condition *FilterSumCondition, calendar *unified.Calendar)
 	}
 	m, ok := minimum.uint64()
 	if !ok || m > math.MaxInt64 {
-		return unified.Rule{}, &unified.UnsupportedError{Capability: "Sum sample minimum exceeds the execution integer range"}
+		return unified.Rule{}, &unified.UnsupportedError{
+			Capability: "monetary sample minimum exceeds the execution integer range"}
 	}
 	if operator == unified.Equal || operator == unified.Different || operator == unified.Between {
-		return unified.Rule{}, &unified.UnsupportedError{Capability: "Sum equality or interval reachability"}
+		return unified.Rule{}, &unified.UnsupportedError{Capability: "monetary equality or interval comparisons"}
 	}
 
 	return unified.Rule{Sum: &unified.Sum{Scope: scope, Field: field, NativeCurrency: sum.NativeCurrency,

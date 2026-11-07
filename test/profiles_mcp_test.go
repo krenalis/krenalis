@@ -602,7 +602,8 @@ UPDATE krenalis_events SET properties='{}' WHERE event='Order Completed'`)
  (2,'c','{"total":100,"currency":"EUR","coupon":"PROMO","average_fixture":true}'),
  (2,'d','{"total":99.9999,"currency":"EUR","coupon":"PROMO","average_fixture":true}'),
  (3,'e','{"total":120,"currency":"EUR","coupon":"PROMO","average_fixture":true}'),
- (3,'f','{"currency":"EUR","coupon":"PROMO","average_fixture":true}')
+ (3,'f','{"currency":"EUR","coupon":"PROMO","average_fixture":true}'),
+ (4,'g','{"total":100,"coupon":"PROMO","average_fixture":true}')
  ) v(n,id,payload)`)
 		if err != nil {
 			t.Fatalf("expected coherent Average fixtures, got %v", err)
@@ -643,11 +644,11 @@ UPDATE krenalis_events SET properties='{}' WHERE event='Order Completed'`)
 				}
 			})
 		}
-		for _, test := range []struct{ id, sum, count string }{
-			{"00000000-0000-0000-0000-000000000001", "220", "2"},
-			{"00000000-0000-0000-0000-000000000002", "199.9999", "2"},
-			{"00000000-0000-0000-0000-000000000003", "null", "2"},
-			{"00000000-0000-0000-0000-000000000004", "0", "0"},
+		for _, test := range []struct{ id, sum, count, counts, result string }{
+			{"00000000-0000-0000-0000-000000000001", "220", "2", `"certain":2,"uncertain":0`, "MATCH"},
+			{"00000000-0000-0000-0000-000000000002", "199.9999", "2", `"certain":2,"uncertain":0`, "NO_MATCH"},
+			{"00000000-0000-0000-0000-000000000003", "null", "2", `"certain":2,"uncertain":0`, "UNKNOWN"},
+			{"00000000-0000-0000-0000-000000000004", "null", "null", `"certain":0,"uncertain":1`, "NO_MATCH"},
 		} {
 			t.Run("explain "+test.id, func(t *testing.T) {
 				var expected json.RawMessage
@@ -679,34 +680,50 @@ UPDATE krenalis_events SET properties='{}' WHERE event='Order Completed'`)
 					matches = ok && value.Cmp(want) == 0
 				}
 				if actual != string(expected) || !strings.Contains(actual, `"kind":"average"`) ||
-					!matches || string(values.Count) != test.count {
+					!matches || string(values.Count) != test.count || !strings.Contains(actual, test.counts) ||
+					!strings.Contains(actual, `"result":"`+test.result+`"`) {
 					t.Fatalf("expected exact Average inputs sum=%s count=%s, got %s", test.sum, test.count, actual)
 				}
 			})
 		}
 		for _, test := range []struct {
-			name, filter, code string
-			status             int
+			name, filter, code, message string
+			status                      int
 		}{
-			{"omitted minimum", strings.Replace(average, `,"minimum":2`, ``, 1), "InvalidArguments", 400},
-			{"zero minimum", strings.Replace(average, `"minimum":2`, `"minimum":0`, 1), "InvalidArguments", 400},
-			{"finer threshold", strings.Replace(average, `"values":[100]`, `"values":[0.00001]`, 1), "FilterCapabilityNotImplemented", 422},
-			{"excessive precision", strings.Replace(average, `"values":[100]`, `"values":[1e76]`, 1), "InvalidArguments", 400},
-			{"non-track source", strings.Replace(average, `"kind":"recordedEvents"`, `"kind":"recordedEvents","type":"page"`, 1), "InvalidArguments", 400},
-			{"dependent where", strings.Replace(average, `properties.coupon`, `properties.total`, 1), "FilterCapabilityNotImplemented", 422},
-			{"equality", strings.Replace(average, `is greater than or equal to`, `is`, 1), "FilterCapabilityNotImplemented", 422},
+			{"omitted minimum", strings.Replace(average, `,"minimum":2`, ``, 1), "InvalidArguments", "Average requires a positive sample minimum", 400},
+			{"zero minimum", strings.Replace(average, `"minimum":2`, `"minimum":0`, 1), "InvalidArguments", "sample minimum must be positive", 400},
+			{"negative minimum", strings.Replace(average, `"minimum":2`, `"minimum":-1`, 1), "InvalidArguments", "sample minimum must be a positive JSON integer", 400},
+			{"oversize minimum", strings.Replace(average, `"minimum":2`, `"minimum":9223372036854775808`, 1), "FilterCapabilityNotImplemented", "monetary sample minimum exceeds the execution integer range", 422},
+			{"null minimum", strings.Replace(average, `"minimum":2`, `"minimum":null`, 1), "InvalidArguments", "monetary fields cannot be null", 400},
+			{"finer threshold", strings.Replace(average, `"values":[100]`, `"values":[0.00001]`, 1), "FilterCapabilityNotImplemented", "Average threshold finer", 422},
+			{"excessive precision", strings.Replace(average, `"values":[100]`, `"values":[1e76]`, 1), "InvalidArguments", "", 400},
+			{"non-track source", strings.Replace(average, `"kind":"recordedEvents"`, `"kind":"recordedEvents","type":"page"`, 1), "InvalidArguments", "monetary field is incompatible", 400},
+			{"dependent where", strings.Replace(average, `properties.coupon`, `properties.total`, 1), "FilterCapabilityNotImplemented", "monetary qualification dependent", 422},
+			{"equality", strings.Replace(average, `is greater than or equal to`, `is`, 1), "FilterCapabilityNotImplemented", "monetary equality or interval comparisons", 422},
 		} {
 			t.Run(test.name, func(t *testing.T) {
-				assertToolError(t, tool(t, "query-profiles", map[string]any{
-					"filter": test.filter, "at": at}), test.code)
-				assertToolError(t, tool(t, "explain-profile-filter", map[string]any{
-					"kpid": "00000000-0000-0000-0000-000000000001", "filter": test.filter, "at": at}), test.code)
+				query := tool(t, "query-profiles", map[string]any{"filter": test.filter, "at": at})
+				assertToolError(t, query, test.code)
+				explanation := tool(t, "explain-profile-filter", map[string]any{
+					"kpid": "00000000-0000-0000-0000-000000000001", "filter": test.filter, "at": at})
+				assertToolError(t, explanation, test.code)
+				for _, result := range []profileMCPResponse{query, explanation} {
+					message := result.Result.Content[0].Text
+					if !strings.Contains(message, test.message) || strings.Contains(message, "Sum") {
+						t.Fatalf("expected neutral diagnostic %q with code %s, got %s", test.message, test.code, message)
+					}
+				}
 				var body json.RawMessage
 				err := k.TryCall("GET", "/v1/profiles?filter="+url.QueryEscape(test.filter)+"&at="+
 					url.QueryEscape(at), nil, nil, &body)
 				if err != nil {
 					status, ok := errors.AsType[*krenalistester.StatusCodeError](err)
-					if !ok || status.Response.Code != test.status {
+					message := test.message
+					if test.name == "null minimum" {
+						message = "invalid filter"
+					}
+					if !ok || status.Response.Code != test.status ||
+						!strings.Contains(status.Response.Text, message) || strings.Contains(status.Response.Text, "Sum") {
 						t.Fatalf("expected HTTP %d, got %v", test.status, err)
 					}
 					return
