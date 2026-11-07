@@ -301,8 +301,31 @@ func TestTypeSerialization(t *testing.T) {
 			Data: `{"kind":"int","bitSize":8,"minimum":10}`,
 			Type: Int(8).WithIntRange(10, MaxInt8),
 		}, {
+			Data:      `{"kind":"int","bitSize":8}`,
+			ParseData: `{"kind":"int","bitSize":8,"minimum":-128}`,
+			Type:      Int(8),
+		}, {
+			Data:      `{"kind":"int","bitSize":16,"maximum":-1}`,
+			ParseData: `{"kind":"int","bitSize":16,"minimum":-32768,"maximum":-1}`,
+			Type:      Int(16).WithIntRange(MinInt16, -1),
+		}, {
+			Data:      `{"kind":"int","bitSize":24}`,
+			ParseData: `{"kind":"int","bitSize":24,"maximum":8388607}`,
+			Type:      Int(24),
+		}, {
+			Data:      `{"kind":"int","bitSize":8,"unsigned":true,"minimum":1}`,
+			ParseData: `{"kind":"int","bitSize":8,"unsigned":true,"minimum":1,"maximum":255}`,
+			Type:      Int(8).Unsigned().WithUnsignedRange(1, MaxUint8),
+		}, {
+			Data:      `{"kind":"int","bitSize":32,"unsigned":true}`,
+			ParseData: `{"kind":"int","bitSize":32,"unsigned":true,"maximum":4294967295}`,
+			Type:      Int(32).Unsigned(),
+		}, {
 			Data: `{"kind":"int","bitSize":32,"unsigned":true,"minimum":20,"maximum":30}`,
 			Type: Int(32).Unsigned().WithUnsignedRange(20, 30),
+		}, {
+			Data: `{"kind":"int","bitSize":32,"unsigned":true,"minimum":3000000000,"maximum":4000000000}`,
+			Type: Int(32).Unsigned().WithUnsignedRange(3000000000, 4000000000),
 		}, {
 			Data: `{"kind":"float","bitSize":64,"minimum":-3.9936173,"maximum":8.00002312}`,
 			Type: Float(64).WithFloatRange(-3.9936173, 8.00002312),
