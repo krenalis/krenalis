@@ -357,23 +357,27 @@ func Test_TypeSemanticsJSONErrors(t *testing.T) {
 		{"year on string", `{"kind":"string","semantics":"year"}`, "year semantics require an int type"},
 		{
 			"year outside range", `{"kind":"int","bitSize":16,"semantics":"year","minimum":10000}`,
-			"year range must be within [1,9999]",
+			"minimum must be within the year range [1,9999]",
 		},
 		{
 			"year lower bound", `{"kind":"int","bitSize":16,"semantics":"year","minimum":0}`,
-			"year range must be within [1,9999]",
+			"minimum must be within the year range [1,9999]",
 		},
 		{
 			"year upper bound", `{"kind":"int","bitSize":16,"semantics":"year","maximum":20000}`,
-			"year range must be within [1,9999]",
+			"maximum must be within the year range [1,9999]",
+		},
+		{
+			"year maximum below range", `{"kind":"int","bitSize":16,"semantics":"year","maximum":0}`,
+			"maximum must be within the year range [1,9999]",
 		},
 		{
 			"unsigned year lower bound", `{"kind":"int","bitSize":16,"semantics":"year","unsigned":true,"minimum":0}`,
-			"year range must be within [1,9999]",
+			"minimum must be within the year range [1,9999]",
 		},
 		{
 			"unsigned year upper bound", `{"kind":"int","bitSize":16,"semantics":"year","unsigned":true,"maximum":20000}`,
-			"year range must be within [1,9999]",
+			"maximum must be within the year range [1,9999]",
 		},
 		{
 			"year with unit", `{"kind":"int","bitSize":16,"semantics":"year","unit":"year"}`,
