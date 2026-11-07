@@ -2283,7 +2283,7 @@ func Test_validatePipeline(t *testing.T) {
 			err:                     "type array(string) cannot be used as table key",
 		},
 		{
-			name: "BAD: Destination/Database/User - table key has year semantics",
+			name: "GOOD: Destination/Database/User - table key has year semantics",
 			pipeline: PipelineToSet{
 				Name: "Export users",
 				InSchema: types.Object([]types.Property{
@@ -2305,7 +2305,6 @@ func Test_validatePipeline(t *testing.T) {
 			target:                  state.TargetUser,
 			connectionRole:          state.Destination,
 			connectionConnectorType: state.Database,
-			err:                     "property with year semantics cannot be used as table key",
 		},
 		{
 			name: "BAD: Destination/Database/User - unmapped property in input schema",
@@ -3833,6 +3832,9 @@ func TestMatchingPropertySemantics(t *testing.T) {
 		{"output duration only", types.Int(64), types.Int(64).AsDuration(types.Second), CreateOrUpdate, ""},
 		{"input measurement only", types.Int(64).AsMeasurement(types.Meter), types.String(), CreateOrUpdate, ""},
 		{"output measurement only", types.String(), types.Int(64).AsMeasurement(types.Meter), CreateOrUpdate, ""},
+		{"input year", types.Int(16).AsYear(), types.String(), CreateOrUpdate, ""},
+		{"output year", types.String(), types.Int(16).AsYear(), CreateOrUpdate, ""},
+		{"unsigned year", types.Int(64).Unsigned().AsYear(), types.String(), CreateOrUpdate, ""},
 
 		// Both properties have semantics, but not the same semantics and options.
 		{
@@ -3853,9 +3855,6 @@ func TestMatchingPropertySemantics(t *testing.T) {
 		},
 
 		// Types that cannot be used for matching.
-		{"input year", types.Int(16).AsYear(), types.String(), CreateOrUpdate, "type with year semantics cannot be used as matching property"},
-		{"output year", types.String(), types.Int(16).AsYear(), CreateOrUpdate, "type with year semantics cannot be used as matching property"},
-		{"unsigned year", types.Int(64).Unsigned().AsYear(), types.String(), CreateOrUpdate, "type with year semantics cannot be used as matching property"},
 		{
 			"money cannot be used for matching", types.Decimal(18, 4).AsMoney().WithCurrency("EUR"),
 			types.Decimal(18, 4).AsMoney().WithCurrency("USD"), CreateOrUpdate,

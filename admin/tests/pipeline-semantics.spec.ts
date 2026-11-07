@@ -180,7 +180,7 @@ test('Year integer ranges respect calendar and bit-size bounds', () => {
 	}
 });
 
-test('Years cannot be identifiers, matching properties or table keys', () => {
+test('Years can be identifiers, matching properties or table keys', () => {
 	const integer: IntType = { kind: 'int', bitSize: 16, unsigned: false };
 	expect(isSuitableAsIdentifier(integer)).toBe(true);
 	for (const unsigned of [false, true]) {
@@ -192,14 +192,10 @@ test('Years cannot be identifiers, matching properties or table keys', () => {
 				{ ...matchingProperty(year), name: 'year' },
 			],
 		};
-		expect(isSuitableAsIdentifier(year)).toBe(false);
-		expect(getMatchingComboboxItems(flattenSchema(schema)).map((item) => item.term)).toEqual(['integer']);
-		expect(getTableKeyComboboxItems(schema).map((item) => item.term)).toEqual(['integer']);
-		expect(() => validateMatching(matchingProperty(year), matchingProperty(integer))).toThrow(
-			'Properties with year semantics cannot be used for matching',
-		);
-		expect(() => validateMatching(matchingProperty(integer), matchingProperty(year))).toThrow(
-			'Properties with year semantics cannot be used for matching',
-		);
+		expect(isSuitableAsIdentifier(year)).toBe(true);
+		expect(getMatchingComboboxItems(flattenSchema(schema)).map((item) => item.term)).toEqual(['integer', 'year']);
+		expect(getTableKeyComboboxItems(schema).map((item) => item.term)).toEqual(['integer', 'year']);
+		expect(() => validateMatching(matchingProperty(year), matchingProperty(integer))).not.toThrow();
+		expect(() => validateMatching(matchingProperty(integer), matchingProperty(year))).not.toThrow();
 	}
 });

@@ -313,10 +313,7 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 		if err != nil {
 			return errors.BadRequest("input matching property %q not found within the input schema", pipeline.Matching.In)
 		}
-		if !canBeUsedAsMatchingProp(in.Type) {
-			if in.Type.Semantics() == types.YearSemantics {
-				return errors.BadRequest("type with year semantics cannot be used as matching property")
-			}
+		if !canBeUsedAsMatchingProp(in.Type.Kind()) {
 			return errors.BadRequest("type %s cannot be used as matching property", in.Type)
 		}
 		// Validate the output matching property.
@@ -330,10 +327,7 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 		if err != nil {
 			return errors.BadRequest("output matching property %q not found within the output schema", pipeline.Matching.Out)
 		}
-		if !canBeUsedAsMatchingProp(out.Type) {
-			if out.Type.Semantics() == types.YearSemantics {
-				return errors.BadRequest("type with year semantics cannot be used as matching property")
-			}
+		if !canBeUsedAsMatchingProp(out.Type.Kind()) {
 			return errors.BadRequest("type %s cannot be used as matching property", out.Type)
 		}
 		// Check that the input property can be converted to the output property.
@@ -637,10 +631,7 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 		if !ok {
 			return errors.BadRequest("table key %q not found within output schema", pipeline.TableKey)
 		}
-		if !canBeUsedAsTableKey(p.Type) {
-			if p.Type.Semantics() == types.YearSemantics {
-				return errors.BadRequest("property with year semantics cannot be used as table key")
-			}
+		if !canBeUsedAsTableKey(p.Type.Kind()) {
 			return errors.BadRequest("type %s cannot be used as table key", p.Type)
 		}
 		if tr := pipeline.Transformation; tr != nil {
@@ -768,23 +759,15 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 	return nil
 }
 
-// canBeUsedAsMatchingProp reports whether t can be used as a
+// canBeUsedAsMatchingProp reports whether a type with kind k can be used as a
 // matching property when exporting users to an application.
-func canBeUsedAsMatchingProp(t types.Type) bool {
-	if t.Semantics() == types.YearSemantics {
-		return false
-	}
-	k := t.Kind()
+func canBeUsedAsMatchingProp(k types.Kind) bool {
 	return k == types.StringKind || k == types.IntKind || k == types.UUIDKind
 }
 
-// canBeUsedAsTableKey reports whether t can be used as a
+// canBeUsedAsTableKey reports whether a type with kind k can be used as a
 // table key when exporting users to databases.
-func canBeUsedAsTableKey(t types.Type) bool {
-	if t.Semantics() == types.YearSemantics {
-		return false
-	}
-	k := t.Kind()
+func canBeUsedAsTableKey(k types.Kind) bool {
 	return k == types.StringKind || k == types.IntKind || k == types.UUIDKind
 }
 
