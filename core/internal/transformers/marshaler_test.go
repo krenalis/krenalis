@@ -109,7 +109,7 @@ var schema = types.Object([]types.Property{
 	},
 	{
 		Name:         "Year",
-		Type:         types.Year(),
+		Type:         types.Int(16).AsYear(),
 		ReadOptional: true,
 	},
 	{

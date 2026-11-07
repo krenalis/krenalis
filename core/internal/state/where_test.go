@@ -35,7 +35,7 @@ func Test_unmarshalWhere(t *testing.T) {
 		{Name: "m", Type: types.Decimal(5, 3)},
 		{Name: "n", Type: types.UUID()},
 		{Name: "o", Type: types.IP()},
-		{Name: "p", Type: types.Year()},
+		{Name: "p", Type: types.Int(16).AsYear()},
 		{Name: "q", Type: types.Array(types.String())},
 		{Name: "r", Type: types.Array(types.JSON())},
 	})

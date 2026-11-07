@@ -70,8 +70,6 @@ func TestExportAndImportParquet(t *testing.T) {
 		{Name: "my_datetime", Type: types.DateTime(), ReadOptional: true},
 		{Name: "my_date", Type: types.Date(), ReadOptional: true},
 		{Name: "my_time", Type: types.Time(), ReadOptional: true},
-		// This cannot be tested as Parquet does not support years.
-		// {Name: "my_year", Type: types.Year(), ReadOptional: true},
 		{Name: "my_uuid", Type: types.UUID(), ReadOptional: true},
 		{Name: "my_json", Type: types.JSON(), ReadOptional: true},
 	}
@@ -294,7 +292,7 @@ func TestExport(t *testing.T) {
 	exportedColumns := []types.Property{
 		{Name: "rank_int24", Type: types.Int(24), ReadOptional: true},
 		{Name: "rank_uint24", Type: types.Int(24).Unsigned(), ReadOptional: true},
-		{Name: "p_year", Type: types.Year(), ReadOptional: true},
+		{Name: "p_year", Type: types.Int(16).AsYear(), ReadOptional: true},
 		{Name: "p_inet", Type: types.IP(), ReadOptional: true},
 		{Name: "address", Type: types.Object([]types.Property{
 			{Name: "street", Type: types.String(), ReadOptional: true},

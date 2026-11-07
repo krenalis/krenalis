@@ -42,7 +42,7 @@ func Test_checkSchemaAlignment(t *testing.T) {
 		{p1: types.Property{Type: types.DateTime()}, p2: types.Property{Type: types.DateTime()}},
 		{p1: types.Property{Type: types.Date()}, p2: types.Property{Type: types.Date()}},
 		{p1: types.Property{Type: types.Time()}, p2: types.Property{Type: types.Time()}},
-		{p1: types.Property{Type: types.Year()}, p2: types.Property{Type: types.Year()}},
+		{p1: types.Property{Type: types.Int(16).AsYear()}, p2: types.Property{Type: types.Int(16).AsYear()}},
 		{p1: types.Property{Type: types.UUID()}, p2: types.Property{Type: types.UUID()}, mode: &createOnlyMode},
 		{p1: types.Property{Type: types.JSON()}, p2: types.Property{Type: types.JSON()}},
 		{p1: types.Property{Type: types.IP()}, p2: types.Property{Type: types.IP()}},

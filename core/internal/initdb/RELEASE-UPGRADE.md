@@ -29,3 +29,18 @@ base release. See `.agents/skills/release-upgrade/SKILL.md`.
   the rest of the pending operation unchanged.
 - Drop `workspaces.ui_profile_image`, `ui_profile_first_name`,
   `ui_profile_last_name`, and `ui_profile_extra`, discarding their values.
+- Replace every `{"kind":"year"}` type with a signed `int` of `bitSize: 16`,
+  `semantics: "year"`, `minimum: 1`, and `maximum: 9999`, recursively in
+  `workspaces.profile_schema`, `workspaces.alter_profile_schema_schema`,
+  types in `workspaces.alter_profile_schema_operations`, and
+  `pipelines.in_schema` and `pipelines.out_schema`. Preserve all property
+  metadata and enclosing array, map, and object types. This representation
+  keeps the existing Go and JSON values and the warehouse column types;
+  no warehouse DDL or record conversion is required.
+- In `pipelines.filter`, recursively convert conditions on properties whose
+  input type was `year`: `IsBefore` to `IsLessThan`, `IsOnOrBefore` to
+  `IsLessThanOrEqualTo`, `IsAfter` to `IsGreaterThan`, and `IsOnOrAfter` to
+  `IsGreaterThanOrEqualTo`. Identify these properties from the original
+  input schema before replacing its types. Preserve condition values,
+  nested groups, and conditions on other types. Complete both schema and
+  filter conversions in the same upgrade transaction before loading state.

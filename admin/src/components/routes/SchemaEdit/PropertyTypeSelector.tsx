@@ -4,7 +4,7 @@ import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import WaDropdown, { WaAfterHideEvent, WaShowEvent } from '@awesome.me/webawesome/dist/react/dropdown/index.js';
 import WaDropdownItem from '@awesome.me/webawesome/dist/react/dropdown-item/index.js';
 import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
-import Type, { TypeKind, Unit } from '../../../lib/api/types/types';
+import Type, { Semantics, TypeKind, Unit } from '../../../lib/api/types/types';
 import {
 	getPropertyValueType,
 	getTypeSemantics,
@@ -15,16 +15,7 @@ import {
 
 type PropertyStructure = 'one' | 'array' | 'object' | 'map';
 
-type PropertyTypeOptionID =
-	| TypeKind
-	| 'email'
-	| 'phone'
-	| 'url'
-	| 'country'
-	| 'duration'
-	| 'money'
-	| 'percentage'
-	| 'measurement';
+type PropertyTypeOptionID = TypeKind | Semantics;
 
 interface PropertyStructureOption {
 	description: string;
@@ -183,9 +174,8 @@ const PROPERTY_TYPE_OPTIONS: PropertyTypeOption[] = [
 	},
 	{
 		id: 'year',
-		kind: 'year',
-		description: 'Year',
-		create: () => ({ kind: 'year' }),
+		kind: 'int',
+		create: () => ({ kind: 'int', bitSize: 16, unsigned: false, semantics: 'year', minimum: 1, maximum: 9999 }),
 	},
 	{
 		id: 'uuid',

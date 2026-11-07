@@ -22,6 +22,7 @@ import Type, { ArrayType, FloatType, IntType, MapType, ObjectType, Property, Str
 import API from '../api/api';
 import TransformedConnection from './connection';
 import { filterOrderingPropertySchema } from '../../components/helpers/getSchemaComboboxItems';
+import { getIntegerTypeRange } from '../../components/helpers/types';
 import {
 	formatString,
 	isDate,
@@ -34,7 +35,6 @@ import {
 	isUnsigned,
 	isUUID,
 	isValidPropertyPath,
-	isYear,
 	parseText,
 } from '../../utils/filters';
 import { RAW_TRANSFORMATION_FUNCTIONS } from '../../components/routes/PipelineWrapper/Pipeline.constants';
@@ -128,24 +128,24 @@ const UNARY_OPERATORS = new Set<FilterOperator>([
 ]);
 
 const typesByFilterOperator: string[][] = [
-	['int', 'float', 'decimal', 'datetime', 'date', 'time', 'year', 'uuid', 'json', 'ip', 'string'], // is
-	['int', 'float', 'decimal', 'datetime', 'date', 'time', 'year', 'uuid', 'json', 'ip', 'string'], // is not
+	['int', 'float', 'decimal', 'datetime', 'date', 'time', 'uuid', 'json', 'ip', 'string'], // is
+	['int', 'float', 'decimal', 'datetime', 'date', 'time', 'uuid', 'json', 'ip', 'string'], // is not
 	['int', 'float', 'decimal', 'json', 'string'], // is less than
 	['int', 'float', 'decimal', 'json', 'string'], // is less than or equal to
 	['int', 'float', 'decimal', 'json', 'string'], // is greater than
 	['int', 'float', 'decimal', 'json', 'string'], // is greater than or equal to
-	['int', 'float', 'decimal', 'year', 'datetime', 'date', 'time', 'json', 'string'], // is between
-	['int', 'float', 'decimal', 'year', 'datetime', 'date', 'time', 'json', 'string'], // is not between
+	['int', 'float', 'decimal', 'datetime', 'date', 'time', 'json', 'string'], // is between
+	['int', 'float', 'decimal', 'datetime', 'date', 'time', 'json', 'string'], // is not between
 	['json', 'string', 'array'], // contains
 	['json', 'string', 'array'], // does not contain
-	['int', 'float', 'decimal', 'year', 'datetime', 'date', 'time', 'json', 'string'], // is one of
-	['int', 'float', 'decimal', 'year', 'datetime', 'date', 'time', 'json', 'string'], // is not one of
+	['int', 'float', 'decimal', 'datetime', 'date', 'time', 'json', 'string'], // is one of
+	['int', 'float', 'decimal', 'datetime', 'date', 'time', 'json', 'string'], // is not one of
 	['json', 'string'], // starts with
 	['json', 'string'], // ends with
-	['datetime', 'date', 'time', 'year'], // is before
-	['datetime', 'date', 'time', 'year'], // is on or before
-	['datetime', 'date', 'time', 'year'], // is after
-	['datetime', 'date', 'time', 'year'], // is on or after
+	['datetime', 'date', 'time'], // is before
+	['datetime', 'date', 'time'], // is on or before
+	['datetime', 'date', 'time'], // is after
+	['datetime', 'date', 'time'], // is on or after
 	['boolean', 'json'], // is true
 	['boolean', 'json'], // is false
 	['json', 'string', 'array', 'map'], // is empty
@@ -157,7 +157,6 @@ const typesByFilterOperator: string[][] = [
 		'decimal',
 		'datetime',
 		'date',
-		'year',
 		'time',
 		'uuid',
 		'json',
@@ -174,7 +173,6 @@ const typesByFilterOperator: string[][] = [
 		'decimal',
 		'datetime',
 		'date',
-		'year',
 		'time',
 		'uuid',
 		'json',
@@ -191,7 +189,6 @@ const typesByFilterOperator: string[][] = [
 		'decimal',
 		'datetime',
 		'date',
-		'year',
 		'time',
 		'uuid',
 		'json',
@@ -208,7 +205,6 @@ const typesByFilterOperator: string[][] = [
 		'decimal',
 		'datetime',
 		'date',
-		'year',
 		'time',
 		'uuid',
 		'json',
@@ -2015,17 +2011,23 @@ const getTransformationFunctionReturnField = (
 		case 'boolean':
 			f += isPython ? 'False' : 'false';
 			break;
-		case 'int':
-			if (isPython) {
-				f += '0';
-			} else {
-				if (property.type.bitSize === 64) {
-					f += '0n'; // bigint
-				} else {
-					f += '0';
-				}
+		case 'int': {
+			const [typeMinimum, typeMaximum] = getIntegerTypeRange(property.type);
+			const minimum = BigInt(property.type.minimum ?? typeMinimum);
+			const maximum = BigInt(property.type.maximum ?? typeMaximum);
+			let value = BigInt(property.type.semantics === 'year' ? 2000 : 0);
+			if (value < minimum) {
+				value = minimum;
+			}
+			if (value > maximum) {
+				value = maximum;
+			}
+			f += value.toString();
+			if (!isPython && property.type.bitSize === 64) {
+				f += 'n';
 			}
 			break;
+		}
 		case 'float':
 			f += isPython ? '0.0' : '0';
 			break;
@@ -2040,9 +2042,6 @@ const getTransformationFunctionReturnField = (
 			break;
 		case 'time':
 			f += isPython ? 'datetime.time(0, 0, 0)' : "'00:00:00.000000000'";
-			break;
-		case 'year':
-			f += '2000';
 			break;
 		case 'uuid':
 			f += isPython
@@ -2223,8 +2222,6 @@ const validateFilterConditionValues = (type: Type, values: string[], propertyNam
 			throwIfInvalid(isDate(v), type.kind);
 		} else if (type.kind === 'time') {
 			throwIfInvalid(isTime(v), type.kind);
-		} else if (type.kind === 'year') {
-			throwIfInvalid(isYear(v), type.kind);
 		} else if (type.kind === 'uuid') {
 			throwIfInvalid(isUUID(v), type.kind);
 		} else if (type.kind === 'ip') {

@@ -182,7 +182,7 @@ func Test_IsFloat(t *testing.T) {
 		}
 	}
 
-	for _, typ := range []Type{Int(32), Int(64), Year(), String(), {}} {
+	for _, typ := range []Type{Int(32), Int(64), String(), {}} {
 		t.Run(fmt.Sprintf("other/type=%s", typ), func(t *testing.T) {
 			if got := typ.IsFloat(); got {
 				t.Errorf("IsFloat(): expected false, got %t", got)
@@ -234,7 +234,7 @@ func Test_IsInt(t *testing.T) {
 		}
 	}
 
-	for _, typ := range []Type{Float(32), Float(64), Year(), String(), {}} {
+	for _, typ := range []Type{Float(32), Float(64), String(), {}} {
 		t.Run(fmt.Sprintf("other/type=%s", typ), func(t *testing.T) {
 			if got := typ.IsInt(); got {
 				t.Errorf("IsInt(): expected false, got %t", got)
@@ -324,6 +324,16 @@ func Test_Ranges(t *testing.T) {
 		}
 		if min, max := Int(s).Unsigned().UnsignedRange(); min != 0 || max != 1<<s-1 {
 			t.Errorf("Int(%d).Unsigned().UnsignedRange(): expected (%d, %d), got (%d, %d)", s, 0, 1<<s-1, min, max)
+		}
+		if lo, hi := Int(s).AsYear().IntRange(); lo != MinYear || hi != min(int64(1)<<(s-1)-1, MaxYear) {
+			t.Errorf("expected year range [%d,%d], got [%d,%d]", MinYear, min(int64(1)<<(s-1)-1, MaxYear), lo, hi)
+		}
+		year := Int(s).Unsigned().AsYear()
+		if lo, hi := year.UnsignedRange(); lo != MinYear || hi != min(uint64(1)<<s-1, MaxYear) {
+			t.Errorf("expected year range [%d,%d], got [%d,%d]", MinYear, min(uint64(1)<<s-1, MaxYear), lo, hi)
+		}
+		if !Equal(year, Int(s).AsYear().Unsigned()) {
+			t.Fatal("expected equivalent unsigned year types, got different construction results")
 		}
 	}
 

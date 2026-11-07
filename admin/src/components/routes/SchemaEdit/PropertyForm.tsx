@@ -35,6 +35,7 @@ import {
 } from '../../helpers/profilePropertyRoles';
 import {
 	DURATION_UNIT_OPTIONS,
+	getIntegerTypeRange,
 	getProfileSchemaTypePresentation,
 	getPropertyValueType,
 	isSuitableAsIdentifier,
@@ -1399,12 +1400,6 @@ const getDecimalPlaces = (value: string): number => {
 	const decimalPlaces = Math.max(0, fractionalDigits - Number(exponentText || 0));
 	const trailingZeros = digits.match(/0+$/)?.[0].length ?? 0;
 	return Math.max(0, decimalPlaces - trailingZeros);
-};
-
-const getIntegerTypeRange = (type: IntType): [bigint, bigint] => {
-	const one = BigInt(1);
-	const magnitude = one << BigInt(type.bitSize - (type.unsigned ? 0 : 1));
-	return type.unsigned ? [BigInt(0), magnitude - one] : [-magnitude, magnitude - one];
 };
 
 const getNumericRangeInputs = (type: Type | null | undefined): NumericRangeInputs => {

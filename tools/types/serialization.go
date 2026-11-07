@@ -1023,7 +1023,7 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 
 	var semanticsOption any
 	switch semantics {
-	case EmailSemantics, PhoneSemantics, PercentageSemantics:
+	case EmailSemantics, PhoneSemantics, PercentageSemantics, YearSemantics:
 		if hasFormat {
 			return Type{}, fmt.Errorf("unexpected 'format' key for %s semantics", semantics)
 		}

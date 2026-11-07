@@ -54,8 +54,8 @@ const (
 	MaxDecimalScale     = 37             // Maximum scale for a decimal type
 	MaxElements         = math.MaxInt32  // Maximum number of elements of an array type
 	MaxStringLen        = math.MaxUint32 // Maximum length in bytes and characters for a string type
-	MaxYear             = 9999           // Maximum year for datetime, date and year types
-	MinYear             = 1              // Minimum year for datetime, date and year types
+	MaxYear             = 9999           // maximum year for date and datetime types and for year semantics
+	MinYear             = 1              // minimum year for date and datetime types and for year semantics
 
 	MaxInt16  = math.MaxInt16
 	MaxInt24  = 1<<23 - 1
@@ -86,7 +86,6 @@ const (
 	DateTimeKind
 	DateKind
 	TimeKind
-	YearKind
 	UUIDKind
 	JSONKind
 	IPKind
@@ -104,7 +103,6 @@ var kindName = []string{
 	"datetime",
 	"date",
 	"time",
-	"year",
 	"uuid",
 	"json",
 	"ip",
@@ -295,11 +293,6 @@ func Date() Type {
 // Time returns the time type.
 func Time() Type {
 	return Type{kind: TimeKind}
-}
-
-// Year returns the year type.
-func Year() Type {
-	return Type{kind: YearKind}
 }
 
 // UUID returns the uuid type.
@@ -521,11 +514,6 @@ func (t Type) IsUUID() bool {
 	return t.kind == UUIDKind
 }
 
-// IsYear reports whether t is a year type.
-func (t Type) IsYear() bool {
-	return t.kind == YearKind
-}
-
 // Valid indicates if t is valid.
 func (t Type) Valid() bool {
 	return t.kind != InvalidKind
@@ -587,8 +575,8 @@ func (t Type) BitSize() int {
 }
 
 // Unsigned returns t as an unsigned int with the maximum value range allowed by
-// its bit size. t must be an int type and must not already be unsigned,
-// otherwise it panics.
+// its bit size and semantics. t must be an int type and must not already be
+// unsigned, otherwise it panics.
 func (t Type) Unsigned() Type {
 	if t.kind != IntKind {
 		panic("type is not an int type")
@@ -612,6 +600,14 @@ func (t Type) Unsigned() Type {
 	}
 	t.vl = nil
 	t.unsigned = true
+	if t.semantics == YearSemantics {
+		if t.size < 4 {
+			t.p = MinYear
+			t.s = int32(min(maxUnsigned[t.size], MaxYear))
+		} else {
+			t.vl = intRange{MinYear, MaxYear}
+		}
+	}
 	return t
 }
 
@@ -644,13 +640,17 @@ func (t Type) IntRange() (min, max int64) {
 
 // WithIntRange returns t but with values in [min,max]. t must be an int type.
 // min cannot be greater than max. min and max must be within the range of
-// values of t. It panics it previous restrictions are not met.
+// values of t and, for year semantics, within [1,9999]. It panics if these
+// restrictions are not met.
 func (t Type) WithIntRange(min, max int64) Type {
 	if t.kind != IntKind {
 		panic("type is not an int type")
 	}
 	if t.unsigned {
 		panic("cannot set int range for an unsigned int")
+	}
+	if t.semantics == YearSemantics && (min < MinYear || max > MaxYear) {
+		panic("tools/types: year range must be within [1,9999]")
 	}
 	Min, Max := minInt[t.size], maxInt[t.size]
 	if min == Min && max == Max {
@@ -697,7 +697,8 @@ func (t Type) UnsignedRange() (min, max uint64) {
 
 // WithUnsignedRange returns t but with values in [min,max]. t must be an
 // unsigned int type. min cannot be greater than max. min and max must be within
-// the range of values of t. It panics it previous restrictions are not met.
+// the range of values of t and, for year semantics, within [1,9999]. It panics
+// if these restrictions are not met.
 func (t Type) WithUnsignedRange(min, max uint64) Type {
 	if t.kind != IntKind {
 		panic("type is not an int type")
@@ -706,6 +707,9 @@ func (t Type) WithUnsignedRange(min, max uint64) Type {
 		panic("type is not an unsigned int type")
 	}
 	Max := maxUnsigned[t.size]
+	if t.semantics == YearSemantics && (min < MinYear || max > MaxYear) {
+		panic("tools/types: year range must be within [1,9999]")
+	}
 	if min == 0 && max == Max {
 		return t
 	}

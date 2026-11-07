@@ -116,7 +116,7 @@ func Test_Decode(t *testing.T) {
 		},
 		{
 			Name: "Year",
-			Type: Year(),
+			Type: Int(16).AsYear(),
 		},
 		{
 			Name: "UUID",
@@ -787,7 +787,7 @@ var schema = Object([]Property{
 	},
 	{
 		Name: "Year",
-		Type: Year(),
+		Type: Int(16).AsYear(),
 	},
 	{
 		Name: "UUID",
@@ -897,7 +897,6 @@ func TestDecodeArrayUnique(t *testing.T) {
 		},
 		{"dates", Date(), `["2026-09-08","2026-09-08"]`, 1},
 		{"times", Time(), `["10:00:00.1","10:00:00.100"]`, 1},
-		{"years", Year(), `[2025,2026,2025]`, 2},
 		{
 			"UUID case", UUID(),
 			`["550e8400-e29b-41d4-a716-446655440000","550E8400-E29B-41D4-A716-446655440000"]`, 1,
@@ -1144,6 +1143,45 @@ func TestDecodeSemantics(t *testing.T) {
 
 	}
 
+}
+
+// TestDecodeYear checks year bounds for signed and unsigned integers,
+// including the JSON string representation used by 64-bit integers.
+func TestDecodeYear(t *testing.T) {
+	types := []Type{Int(16).AsYear(), Int(16).Unsigned().AsYear(), Int(64).AsYear(), Int(64).Unsigned().AsYear()}
+	for _, typ := range types {
+		for _, year := range []int{0, 1, 2024, 9999, 10000} {
+			t.Run(fmt.Sprintf("%s/unsigned=%t/%d", typ, typ.IsUnsigned(), year), func(t *testing.T) {
+
+				input := strconv.Itoa(year)
+				if typ.IsInt(64) {
+					input = strconv.Quote(input)
+				}
+				got, err := Decode[any](strings.NewReader(input), typ)
+				if err != nil {
+					if year >= MinYear && year <= MaxYear {
+						t.Fatalf("expected a valid year, got %v", err)
+					}
+					if _, ok := errors.AsType[*SchemaValidationError](err); !ok {
+						t.Fatalf("expected a SchemaValidationError, got %T", err)
+					}
+					return
+				}
+				if year < MinYear || year > MaxYear {
+					t.Fatalf("expected a SchemaValidationError, got year %v", got)
+				}
+
+				var want any = year
+				if typ.IsUnsigned() {
+					want = uint(year)
+				}
+				if got != want {
+					t.Fatalf("expected year %#v, got %#v", want, got)
+				}
+
+			})
+		}
+	}
 }
 
 // TestSemanticsConstraintsRoundTrip checks that semantics do not introduce

@@ -70,8 +70,6 @@ func appendAsString(b []byte, v any, t types.Type) ([]byte, error) {
 		return v.(time.Time).AppendFormat(b, time.DateOnly), nil
 	case types.TimeKind:
 		return v.(time.Time).AppendFormat(b, "15:04:05.999999999"), nil
-	case types.YearKind:
-		return strconv.AppendInt(b, int64(v.(int)), 10), nil
 	case types.JSONKind:
 		v := v.(json.Value)
 		switch v.Kind() {
