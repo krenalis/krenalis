@@ -164,6 +164,7 @@ func TestFilterSumValidation(t *testing.T) {
 		{"dependent where", `"nativeCurrency":"EUR"`, `"nativeCurrency":"EUR","where":{"operator":"and","rules":[{"property":"properties.total","operator":"exists"}]}`, true},
 		{"invalid where", `"nativeCurrency":"EUR"`, `"nativeCurrency":"EUR","where":{"operator":"and","rules":[{"property":"absent","operator":"exists"}]}`, false},
 		{"nested Count", `"nativeCurrency":"EUR"`, `"nativeCurrency":"EUR","where":{"operator":"and","rules":[` + countConditionJSON + `]}`, false},
+		{"nested Sum", `"nativeCurrency":"EUR"`, `"nativeCurrency":"EUR","where":{"operator":"and","rules":[` + sumConditionJSON + `]}`, false},
 		{"dual subject", `"sum":`, `"property":"country","sum":`, false},
 	} {
 		t.Run(test.name, func(t *testing.T) {

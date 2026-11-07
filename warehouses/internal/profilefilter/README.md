@@ -24,8 +24,12 @@ source-contract faults confined to other profiles. It does not certify the
 entire source or make the target explanation partial.
 
 Sum adds signed known Decimal(18,4) values, with independently optional
-contributions and unbounded unknown amounts. Finite extrema are reachable;
-intermediate sums need not be. Core supplies an exact grid-normalized inclusive
+contributions and unbounded unknown amounts. Finite extrema are tight under the
+independent per-occurrence qualification outcomes; intermediate sums need not be
+reachable. Record qualifications retain Kleene logic, without jointly solving
+constraints between leaves over a missing field. This is also Count's evidence
+model, not a reachability claim over all raw-field assignments.
+Core supplies an exact grid-normalized inclusive
 threshold representable in Decimal(38,4), so no driver sees the original 76-digit
 threshold as a Float or DECFLOAT. Relevant amount disagreements between copies
 are source faults. Certainly excluded amounts are not read. A per-profile

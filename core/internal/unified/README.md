@@ -195,6 +195,12 @@ For independent local qualification, a known certain contribution is fixed, and
 an optional known contribution contributes either zero or its signed value.
 Summing their respective minima and maxima gives reachable extrema. Intermediate
 totals can be sparse, so this is not a reachability algorithm for equality.
+Reachability here is relative to the independent ternary qualification outcomes
+of each occurrence, for Count as well as Sum. Record groups retain Kleene logic;
+constraints between leaves over the same missing field are not solved jointly.
+Thus a missing coupon leaves both `coupon is PROMO AND coupon is not PROMO` and
+the corresponding OR UNKNOWN. The qualification model can keep that event
+optional even when reasoning over joint raw-field assignments would decide it.
 A relevant unknown amount has no certified sign/bounds; both sides are unbounded.
 No governed shared fact is inferred from SQL NULL. Duplicate identities must agree
 on attribution, period, qualification and relevant amount reading; a known/missing

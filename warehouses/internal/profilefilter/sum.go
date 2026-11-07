@@ -109,7 +109,7 @@ func (c *compiler) sum(node *warehouses.IndependentOccurrenceSum) (string, error
 		" THEN FALSE ELSE NULL END", nil
 }
 
-// sumBounds returns finite reachable extrema, or NULL for an unbounded side.
+// sumBounds returns qualification extrema, or NULL for an unbounded side.
 func sumBounds(alias string) (string, string) {
 	prefix := "CASE WHEN COALESCE(" + alias + ".unknowns,0)=0 THEN COALESCE("
 	return prefix + alias + ".lo,0) END", prefix + alias + ".hi,0) END"

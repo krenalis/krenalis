@@ -50,7 +50,7 @@ type ProfileCountExplanation struct {
 }
 
 // ProfileSumExplanation describes monetary bounds with the resolved reading.
-// Finite bounds are reachable extrema; intermediate values need not be.
+// Finite bounds are tight under independent occurrence qualifications.
 type ProfileSumExplanation struct {
 	Start          time.Time        `json:"start,omitzero"`
 	End            time.Time        `json:"end"`
@@ -61,7 +61,9 @@ type ProfileSumExplanation struct {
 	Bounds         ProfileSumBounds `json:"bounds"`
 }
 
-// ProfileSumBounds contains exact reachable extrema. Null means unbounded.
+// ProfileSumBounds contains tight extrema for independent qualification
+// outcomes. Record groups keep Kleene logic without solving constraints
+// between predicates on missing raw fields. Null means unbounded.
 type ProfileSumBounds struct {
 	Lower *decimal.Decimal `json:"lower"`
 	Upper *decimal.Decimal `json:"upper"`

@@ -482,6 +482,39 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,
 		})
 	}
 
+	// Reachability is relative to Record/Kleene outcomes, not raw completions.
+	for _, operator := range []state.WhereLogical{state.OpAnd, state.OpOr} {
+		t.Run(fmt.Sprintf("correlated Record leaves/%d", operator), func(t *testing.T) {
+			execUnifiedFixture(t, dw, "TRUNCATE krenalis_events")
+			execUnifiedFixture(t, dw, fmt.Sprintf(`INSERT INTO krenalis_events VALUES
+('%s','correlated','track','Order Completed','2026-01-15','{"total":40,"currency":"EUR"}')`, unifiedTestID(1)))
+			qualified := sum
+			qualified.Where = &state.Where{Operator: operator, Rules: []state.WhereRule{
+				&state.WhereCondition{Property: []string{"properties", "coupon"}, Operator: state.OpIs,
+					Values: []any{json.Value(`"PROMO"`)}},
+				&state.WhereCondition{Property: []string{"properties", "coupon"}, Operator: state.OpIsNot,
+					Values: []any{json.Value(`"PROMO"`)}},
+			}}
+			rule := unified.Rule{Sum: &qualified}
+			result, err := store.UnifiedProfiles(t.Context(), &rule, unified.Bindings{}, at, unified.Page{Limit: 10})
+			if err != nil {
+				t.Fatalf("expected Record/Kleene Sum evaluation, got %v", err)
+			}
+			want := []unified.Truth{unified.Unknown, unified.NoMatch, unified.NoMatch, unified.NoMatch}
+			assertUnifiedTruths(t, result, want)
+			explained, err := store.ExplainUnifiedProfile(t.Context(), &rule, unified.Bindings{}, at, unifiedTestID(1))
+			if err != nil {
+				t.Fatalf("expected Record/Kleene Sum explanation, got %v", err)
+			}
+			if explained == nil || len(explained.Nodes) != 1 || explained.Nodes[0].Truth != unified.Unknown ||
+				explained.Nodes[0].Sum == nil || explained.Nodes[0].Sum.Lower == nil ||
+				explained.Nodes[0].Sum.Upper == nil || !explained.Nodes[0].Sum.Lower.Equal(decimal.MustInt(0)) ||
+				!explained.Nodes[0].Sum.Upper.Equal(decimal.MustInt(40)) {
+				t.Fatalf("expected UNKNOWN with qualification bounds [0,40], got %+v", explained)
+			}
+		})
+	}
+
 	for _, test := range []struct {
 		name, first, second, lower, upper string
 		conflict, distinct                bool

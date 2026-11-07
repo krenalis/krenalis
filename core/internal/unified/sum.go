@@ -107,6 +107,11 @@ func (sum *Sum) prepare(at time.Time, source SourceBinding) (warehouses.FilterCo
 	if !warehouses.IsValidIdentifier(source.Properties.Name) || !source.Properties.Type.IsJSON() {
 		return nil, fmt.Errorf("core/internal/unified: invalid resolved monetary column")
 	}
+	for _, path := range [][]string{sum.Field.amountPath, sum.Field.currencyPath} {
+		if len(path) < 2 || path[0] != "properties" {
+			return nil, fmt.Errorf("core/internal/unified: invalid resolved monetary path")
+		}
+	}
 
 	selector, err := source.Record(&state.Where{Operator: state.OpAnd, Rules: []state.WhereRule{
 		&state.WhereCondition{Property: []string{"event"}, Operator: state.OpIs, Values: []any{sum.Scope.Event}},

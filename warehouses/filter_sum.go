@@ -95,8 +95,10 @@ func (reading DecimalReading) Validate() error {
 	return nil
 }
 
-// OccurrenceSumBounds contains reachable finite extrema, or nil for no finite
-// bound. Intermediate values need not be reachable. These are not partial sums.
+// OccurrenceSumBounds contains tight finite extrema for independent occurrence
+// qualification outcomes, or nil for no finite bound. Record groups keep Kleene
+// logic without solving raw-field correlations. Intermediate values need not
+// be reachable. These are not partial sums.
 type OccurrenceSumBounds struct {
 	Lower, Upper *decimal.Decimal
 }

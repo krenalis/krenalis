@@ -81,6 +81,90 @@ func TestMonetaryFieldPaths(t *testing.T) {
 		t.Fatalf("expected immutable reading paths, got %v and %v", field.amountPath, field.currencyPath)
 	}
 
+	for _, paths := range [][2][]string{
+		{[]string{"context", "amount"}, field.currencyPath},
+		{field.amountPath, []string{"context", "unit"}},
+		{[]string{"properties"}, field.currencyPath},
+		{field.amountPath, nil},
+	} {
+		invalidField := *field
+		invalidField.amountPath, invalidField.currencyPath = paths[0], paths[1]
+		invalidSum := sum
+		invalidSum.Field = &invalidField
+		_, err := invalidSum.prepare(at, source)
+		if err != nil {
+			if err.Error() != "core/internal/unified: invalid resolved monetary path" {
+				t.Fatalf("expected invalid resolved monetary path, got %v", err)
+			}
+			continue
+		}
+		t.Fatal("expected rejection of an incompatible reading root, got success")
+	}
+
+}
+
+// TestSumInternalValidation protects admission without the public preparer.
+func TestSumInternalValidation(t *testing.T) {
+
+	field, err := ResolveMonetaryField("commerce.order_completed.total", "1")
+	if err != nil {
+		t.Fatalf("expected monetary field, got %v", err)
+	}
+	at := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
+	source := SourceBinding{Occurrences: warehouses.OccurrenceSource{Table: "events",
+		Profile:   warehouses.Column{Name: "kpid", Type: types.UUID()},
+		Identity:  warehouses.Column{Name: "message_id", Type: types.String()},
+		Timestamp: warehouses.Column{Name: "timestamp", Type: types.DateTime()}},
+		Properties: warehouses.Column{Name: "properties", Type: types.JSON()},
+		Record: func(*state.Where) (warehouses.Expr, error) {
+			return warehouses.NewBaseExpr(warehouses.Column{Name: "event", Type: types.String()},
+				warehouses.OpIs, "Order Completed"), nil
+		}}
+	for _, test := range []struct {
+		name                  string
+		depth                 int
+		inverted, unsupported bool
+	}{
+		{"dependent where", 1, false, true},
+		{"invalid where", 3, false, false},
+		{"inverted period", 1, true, false},
+	} {
+		for _, entry := range []string{"Validate", "Prepare"} {
+			t.Run(test.name+"/"+entry, func(t *testing.T) {
+				where := &state.Where{Operator: state.OpAnd, Rules: []state.WhereRule{
+					&state.WhereCondition{Property: []string{"properties", "total"}, Operator: state.OpExists},
+				}}
+				for depth := 1; depth < test.depth; depth++ {
+					where = &state.Where{Operator: state.OpAnd, Rules: []state.WhereRule{where}}
+				}
+				sum := Sum{Scope: Scope{Event: "Order Completed", Grain: "registered-message",
+					Start: at.AddDate(0, -1, 0), End: at}, Field: field, NativeCurrency: "EUR", Where: where,
+					Test: SumTest{Operator: GreaterOrEqual, Value: decimal.MustParse("30")}}
+				if test.inverted {
+					sum.Scope.Start = at.Add(time.Hour)
+				}
+				root := &Rule{Sum: &sum}
+				var err error
+				switch entry {
+				case "Validate":
+					err = Validate(root, at, Page{Limit: 1})
+				case "Prepare":
+					_, err = Prepare(root, Bindings{}, at, source)
+				default:
+					t.Fatalf("expected a known entry point, got %s", entry)
+				}
+				if err != nil {
+					_, unsupported := errors.AsType[*UnsupportedError](err)
+					if unsupported != test.unsupported {
+						t.Fatalf("expected unsupported=%v, got %v", test.unsupported, err)
+					}
+					return
+				}
+				t.Fatal("expected internal admission failure, got success")
+			})
+		}
+	}
+
 }
 
 // TestSumThreshold compares normalized tests against exact rational arithmetic.
