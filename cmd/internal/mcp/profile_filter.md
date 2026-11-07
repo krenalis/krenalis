@@ -32,7 +32,7 @@ The native schemas provide descriptions, units and nested structure. Conditions
 on traits/properties still use the raw JSON operators described below, not
 native date, currency or other governed semantics inferred from the catalog.
 Declared array elements do not enable traversal or same-element predicates.
-Sums, business-order deduplication and other unsupported constructions must be
+Business-order deduplication and other unsupported constructions must be
 reported as unsupported, without SQL fallback.
 
 ## Connection and access
