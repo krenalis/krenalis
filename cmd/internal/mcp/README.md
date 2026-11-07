@@ -34,7 +34,9 @@ Unknown IDs produce `EventDefinitionNotExist`; malformed arguments use the MCP
 The documentation distinguishes schema metadata from historical conformity,
 the catalog ID from the exact track event name, and native field meaning from
 raw JSON predicate semantics. It explicitly excludes inferred capabilities for
-arrays, sums, governed bindings and generic page/screen or identity definitions.
+arrays, sums, governed bindings and identity definitions. For page/screen Count,
+the generic catalog definition supplies metadata; the source uses `type` and an
+optional recorded `name`, never the catalog ID or display label.
 The catalog does not change invalid-event handling or ingestion conversions.
 
 ## Access and connections
@@ -109,6 +111,13 @@ reading, including UNKNOWN for missing/null/non-String values. Independent Recor
 `where` is allowed except on paths overlapping that currency reading; dependent
 forms return `FilterCapabilityNotImplemented`. Explanations include the reference
 and currency only when supplied; existing raw Count documents/results are unchanged.
+
+Count supports track (the default), page and screen. Page/screen may omit the
+name to count all messages of that type. A named source certainly excludes
+unnamed messages; a raw `where` on the optional name retains Record NULL.
+Path/URL comparisons retain their literal Record semantics without normalization
+or implicit fallback between context and properties. Sum and governed currency
+remain restricted to track Order Completed, including through internal entry points.
 
 No Admin filter editor, E/K/P/T, persistence or destination execution is introduced. Coherent
 source views remain an infrastructure prerequisite, not a guarantee established

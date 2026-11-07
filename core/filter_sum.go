@@ -166,7 +166,7 @@ func prepareFilterSum(condition *FilterSumCondition, calendar *unified.Calendar)
 	if err != nil {
 		return unified.Rule{}, err
 	}
-	if sum.Source.Name != "Order Completed" {
+	if sum.Source.Type != "" && sum.Source.Type != "track" || sum.Source.Name != "Order Completed" {
 		return unified.Rule{}, errors.New("monetary field is incompatible with the occurrence source")
 	}
 	if len(sum.NativeCurrency) != 3 {

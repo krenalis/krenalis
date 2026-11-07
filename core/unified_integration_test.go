@@ -524,6 +524,177 @@ INSERT INTO unified_v.krenalis_events VALUES
 
 	})
 
+	t.Run("page and screen Count", func(t *testing.T) {
+
+		_, err := database.Exec(t.Context(), `ALTER TABLE unified_v.krenalis_events
+ ADD COLUMN name text, ADD COLUMN context_page_path text, ADD COLUMN context_page_url text;
+INSERT INTO unified_v.krenalis_events
+ (kpid,message_id,type,name,context_page_path,context_page_url,event,timestamp,properties)
+ SELECT ('00000000-0000-0000-0000-'||lpad(n::text,12,'0'))::uuid,
+ 'visit/'||n||'/'||id,typ,name,path,'https://example.test'||path,event,'2026-01-15','{}'
+ FROM (VALUES
+ (1,'named','page','Pricing','/pricing',NULL),
+ (1,'empty','page','','/pricing',NULL),
+ (2,'null','page',NULL,'/pricing','Pricing'),
+ (2,'lower','page','pricing','/pricing',NULL),
+ (2,'empty','page','','/pricing',NULL),
+ (2,'slash','page','Other','/pricing/',NULL),
+ (3,'missing-path','page','Pricing',NULL,NULL),
+ (3,'catalog','page','Catalog','/catalog',NULL),
+ (3,'track','track','Pricing','/pricing','Pricing'),
+ (4,'named','screen','Pricing',NULL,NULL),
+ (4,'null','screen',NULL,NULL,NULL),
+ (4,'empty','screen','',NULL,NULL)
+ ) v(n,id,typ,name,path,event);
+INSERT INTO unified_v.krenalis_events (kpid,message_id,type,timestamp,context_page_path,context_page_url)
+ VALUES ('00000000-0000-0000-0000-000000000001','visit/omitted','page','2026-01-15',
+ '/pricing','https://example.test/pricing');
+INSERT INTO unified_v.krenalis_events (kpid,message_id,type,name,timestamp,context_page_path)
+ VALUES ('00000000-0000-0000-0000-000000000002','visit/end','page','Pricing','2026-02-01','/pricing')`)
+		if err != nil {
+			t.Fatalf("expected page/screen fixtures, got %v", err)
+		}
+		defer func() {
+			_, err := database.Exec(t.Context(), `DELETE FROM unified_v.krenalis_events WHERE message_id LIKE 'visit/%';
+ALTER TABLE unified_v.krenalis_events DROP COLUMN name, DROP COLUMN context_page_path, DROP COLUMN context_page_url`)
+			if err != nil {
+				t.Errorf("expected page/screen fixture cleanup, got %v", err)
+			}
+		}()
+		for _, test := range []struct {
+			name, typ, event, property, value string
+			operator                          FilterOperator
+			threshold                         int
+			truths                            [4]string
+			bounds                            [4][2]int64
+		}{
+			{"named pages", "page", "Pricing", "", "", OpIs, 0, [4]string{"NO_MATCH", "MATCH", "NO_MATCH", "MATCH"}, [4][2]int64{{1, 0}, {0, 0}, {1, 0}, {0, 0}}},
+			{"all pages", "page", "", "", "", OpIsGreaterThanOrEqualTo, 3, [4]string{"MATCH", "MATCH", "NO_MATCH", "NO_MATCH"}, [4][2]int64{{3, 0}, {4, 0}, {2, 0}, {0, 0}}},
+			{"raw name where", "page", "", "name", "Pricing", OpIs, 0, [4]string{"NO_MATCH", "UNKNOWN", "NO_MATCH", "MATCH"}, [4][2]int64{{1, 1}, {0, 1}, {1, 0}, {0, 0}}},
+			{"path frequency", "page", "", "context.page.path", "/pricing", OpIsGreaterThanOrEqualTo, 3, [4]string{"MATCH", "MATCH", "NO_MATCH", "NO_MATCH"}, [4][2]int64{{3, 0}, {3, 0}, {0, 1}, {0, 0}}},
+			{"path absence", "page", "", "context.page.path", "/pricing", OpIs, 0, [4]string{"NO_MATCH", "NO_MATCH", "UNKNOWN", "MATCH"}, [4][2]int64{{3, 0}, {3, 0}, {0, 1}, {0, 0}}},
+			{"path case", "page", "", "context.page.path", "/PRICING", OpIs, 0, [4]string{"MATCH", "MATCH", "UNKNOWN", "MATCH"}, [4][2]int64{{0, 0}, {0, 0}, {0, 1}, {0, 0}}},
+			{"path slash", "page", "", "context.page.path", "/pricing/", OpIsGreaterThanOrEqualTo, 1, [4]string{"NO_MATCH", "MATCH", "UNKNOWN", "NO_MATCH"}, [4][2]int64{{0, 0}, {1, 0}, {0, 1}, {0, 0}}},
+			{"literal URL", "page", "", "context.page.url", "https://example.test/pricing", OpIsGreaterThanOrEqualTo, 1, [4]string{"MATCH", "MATCH", "UNKNOWN", "NO_MATCH"}, [4][2]int64{{3, 0}, {3, 0}, {0, 1}, {0, 0}}},
+			{"named screens", "screen", "Pricing", "", "", OpIsGreaterThanOrEqualTo, 1, [4]string{"NO_MATCH", "NO_MATCH", "NO_MATCH", "MATCH"}, [4][2]int64{{0, 0}, {0, 0}, {0, 0}, {1, 0}}},
+			{"all screens", "screen", "", "", "", OpIs, 3, [4]string{"NO_MATCH", "NO_MATCH", "NO_MATCH", "MATCH"}, [4][2]int64{{0, 0}, {0, 0}, {0, 0}, {3, 0}}},
+			{"legacy track", "", "Pricing", "", "", OpIsGreaterThanOrEqualTo, 1, [4]string{"NO_MATCH", "NO_MATCH", "MATCH", "NO_MATCH"}, [4][2]int64{{0, 0}, {0, 0}, {1, 0}, {0, 0}}},
+			{"explicit track", "track", "Pricing", "", "", OpIsGreaterThanOrEqualTo, 1, [4]string{"NO_MATCH", "NO_MATCH", "MATCH", "NO_MATCH"}, [4][2]int64{{0, 0}, {0, 0}, {1, 0}, {0, 0}}},
+		} {
+			t.Run(test.name, func(t *testing.T) {
+				condition := &FilterCountCondition{Count: FilterCount{
+					Source: FilterCountSource{Kind: "recordedEvents", Type: test.typ,
+						Name: test.event, Grain: "registered-message"},
+					Period: FilterPeriod{Kind: "elapsedLookback",
+						Duration: &FilterDuration{Value: json.Value(`31`), Unit: "day"}}},
+					Operator: test.operator, Values: filterValues(test.threshold)}
+				if test.property != "" {
+					condition.Count.Where = &Filter{Operator: OpAnd, Rules: []FilterRule{
+						&FilterCondition{Property: test.property, Operator: OpIs, Values: filterValues(test.value)}}}
+				}
+				filter := &Filter{Operator: OpAnd, Rules: []FilterRule{condition}}
+				before, err := json.Marshal(filter)
+				if err != nil {
+					t.Fatalf("expected page/screen filter encoding, got %v", err)
+				}
+				query := ProfileQuery{Filter: filter, At: at.Format(time.RFC3339),
+					Properties: []string{"profile_id"}, Order: "profile_id", Limit: 10}
+				page, err := workspace.QueryProfiles(t.Context(), query)
+				if err != nil {
+					t.Fatalf("expected public page/screen Count, got %v", err)
+				}
+				totals := [3]int64{}
+				expectedProfiles := []string{}
+				for i, truth := range test.truths {
+					profile := fmt.Sprintf("00000000-0000-0000-0000-%012d", i+1)
+					explained, err := workspace.ExplainProfileFilter(t.Context(), profile, filter, query.At)
+					if err != nil {
+						t.Fatalf("expected page/screen explanation, got %v", err)
+					}
+					if explained.Rule.Result != truth || len(explained.Rule.Rules) != 1 {
+						t.Fatalf("expected %s for profile %s, got %+v", truth, profile, explained)
+					}
+					count := explained.Rule.Rules[0].Count
+					if count == nil || count.Certain != test.bounds[i][0] || count.Uncertain != test.bounds[i][1] {
+						t.Fatalf("expected occurrence bounds %v, got %+v", test.bounds[i], count)
+					}
+					switch truth {
+					case "MATCH":
+						totals[0]++
+						expectedProfiles = append(expectedProfiles, profile)
+					case "NO_MATCH":
+						totals[1]++
+					case "UNKNOWN":
+						totals[2]++
+					default:
+						t.Fatalf("expected ternary fixture result, got %s", truth)
+					}
+				}
+				if page.Total != len(expectedProfiles) || len(page.Profiles) != len(expectedProfiles) ||
+					page.Evaluation == nil || page.Evaluation.Match != totals[0] ||
+					page.Evaluation.NoMatch != totals[1] || page.Evaluation.Unknown != totals[2] {
+					t.Fatalf("expected totals %v and profiles %v, got %+v", totals, expectedProfiles, page)
+				}
+				for i, profile := range page.Profiles {
+					if profile.KPID != expectedProfiles[i] {
+						t.Fatalf("expected profile %s at %d, got %+v", expectedProfiles[i], i, profile)
+					}
+				}
+				query.First = 99
+				empty, err := workspace.QueryProfiles(t.Context(), query)
+				if err != nil {
+					t.Fatalf("expected empty page with complete totals, got %v", err)
+				}
+				if len(empty.Profiles) != 0 || empty.Total != page.Total || *empty.Evaluation != *page.Evaluation {
+					t.Fatalf("expected unchanged totals on empty page, got %+v", empty)
+				}
+				after, err := json.Marshal(filter)
+				if err != nil {
+					t.Fatalf("expected filter encoding after execution, got %v", err)
+				}
+				if string(before) != string(after) {
+					t.Fatalf("expected unchanged source document %s, got %s", before, after)
+				}
+			})
+		}
+
+		condition := &FilterCountCondition{Count: FilterCount{
+			Source: FilterCountSource{Kind: "recordedEvents", Type: "page",
+				Name: "Pricing", Grain: "registered-message"}},
+			Operator: OpIs, Values: filterValues(0)}
+		filter := &Filter{Operator: OpAnd, Rules: []FilterRule{condition},
+			DefaultCalendar: &FilterCalendar{Definition: "gregorian-monday/UTC", MeaningRevision: "1"}}
+		for _, period := range []FilterPeriod{
+			{Kind: "lastCompleteCalendarPeriods", Unit: "month", Count: json.Value(`1`)},
+			{Kind: "fullRelevantHistory", History: &FilterHistory{Definition: "registered-queryable-events", MeaningRevision: "1"}},
+		} {
+			condition.Count.Period = period
+			page, err := workspace.QueryProfiles(t.Context(), ProfileQuery{Filter: filter,
+				At: at.Format(time.RFC3339), Limit: 10})
+			if err != nil {
+				t.Fatalf("expected page Count with period %s, got %v", period.Kind, err)
+			}
+			if page.Evaluation.Match != 2 || page.Evaluation.NoMatch != 2 || page.Evaluation.Unknown != 0 {
+				t.Fatalf("expected named page totals 2/2/0 with %s, got %+v", period.Kind, page)
+			}
+		}
+		condition.Count.Source.Name = ""
+		condition.Count.Where = &Filter{Operator: OpAnd, Rules: []FilterRule{
+			&FilterCondition{Property: "context.page.path", Operator: OpIs, Values: filterValues("/pricing")}}}
+		condition.Count.Minimum = json.Value(`1`)
+		condition.Operator, condition.Values = OpIsNot, filterValues(1)
+		explained, err := workspace.ExplainProfileFilter(t.Context(), "00000000-0000-0000-0000-000000000003",
+			filter, at.Format(time.RFC3339))
+		if err != nil {
+			t.Fatalf("expected page sample guard explanation, got %v", err)
+		}
+		count := explained.Rule.Rules[0].Count
+		if explained.Rule.Result != "UNKNOWN" || count == nil || count.Certain != 0 || count.Uncertain != 1 {
+			t.Fatalf("expected separate Kleene guard on page count [0,1], got %+v", explained)
+		}
+
+	})
+
 	t.Run("public Count currency", func(t *testing.T) {
 
 		_, err := database.Exec(t.Context(), `INSERT INTO unified_v.krenalis_events VALUES

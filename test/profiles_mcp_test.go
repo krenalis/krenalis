@@ -389,6 +389,91 @@ GRANT SELECT (_kpid,country) ON profiles TO mcp_profile_reader;`)
 		})
 	}
 
+	t.Run("page and screen Count", func(t *testing.T) {
+
+		_, err := pool.Exec(t.Context(), `INSERT INTO krenalis_events
+(kpid,message_id,type,name,timestamp,received_at,sent_at,connection_id,anonymous_id,traits,properties,
+ context_page_path)
+ VALUES
+ ('00000000-0000-0000-0000-000000000001','visit-mcp/1','page','Pricing','2026-01-15',
+ '2026-02-01','2026-02-01','fixture','a','{}','{}','/pricing'),
+ ('00000000-0000-0000-0000-000000000002','visit-mcp/2','page','pricing','2026-01-15',
+ '2026-02-01','2026-02-01','fixture','a','{}','{}','/pricing'),
+ ('00000000-0000-0000-0000-000000000002','visit-mcp/empty','page','','2026-01-15',
+ '2026-02-01','2026-02-01','fixture','a','{}','{}','/pricing/'),
+ ('00000000-0000-0000-0000-000000000004','visit-mcp/4','screen','Pricing','2026-01-15',
+ '2026-02-01','2026-02-01','fixture','a','{}','{}',NULL)`)
+		if err != nil {
+			t.Fatalf("expected page/screen MCP fixtures, got %v", err)
+		}
+		defer func() {
+			_, err := pool.Exec(t.Context(), "DELETE FROM krenalis_events WHERE message_id LIKE 'visit-mcp/%'")
+			if err != nil {
+				t.Errorf("expected page/screen fixture cleanup, got %v", err)
+			}
+		}()
+
+		const pages = `{"operator":"and","rules":[{"count":{"source":{"kind":"recordedEvents",` +
+			`"type":"page","grain":"registered-message"},"period":{"kind":"elapsedLookback",` +
+			`"duration":{"value":31,"unit":"day"}}},"operator":"is greater than or equal to","values":[1]}]}`
+		named := strings.Replace(pages, `"type":"page"`, `"type":"page","name":"Pricing"`, 1)
+		named = strings.Replace(named, `"operator":"is greater than or equal to","values":[1]`,
+			`"operator":"is","values":[0]`, 1)
+		raw := strings.Replace(pages, `"duration":{"value":31,"unit":"day"}}`,
+			`"duration":{"value":31,"unit":"day"}},"where":{"operator":"and","rules":[`+
+				`{"property":"name","operator":"is","values":["Pricing"]}]}`, 1)
+		raw = strings.Replace(raw, `"operator":"is greater than or equal to","values":[1]`,
+			`"operator":"is","values":[0]`, 1)
+		path := strings.Replace(pages, `"duration":{"value":31,"unit":"day"}}`,
+			`"duration":{"value":31,"unit":"day"}},"where":{"operator":"and","rules":[`+
+				`{"property":"context.page.path","operator":"is","values":["/pricing"]}]}`, 1)
+		screens := strings.Replace(pages, `"type":"page"`, `"type":"screen"`, 1)
+		namedScreen := strings.Replace(screens, `"type":"screen"`, `"type":"screen","name":"Pricing"`, 1)
+		for _, test := range []struct{ name, filter, totals string }{
+			{"all pages", pages, `"match":4,"noMatch":0,"unknown":0`},
+			{"named page absence", named, `"match":3,"noMatch":1,"unknown":0`},
+			{"raw name absence", raw, `"match":0,"noMatch":1,"unknown":3`},
+			{"path qualification", path, `"match":2,"noMatch":0,"unknown":2`},
+			{"all screens", screens, `"match":4,"noMatch":0,"unknown":0`},
+			{"named screen", namedScreen, `"match":1,"noMatch":3,"unknown":0`},
+		} {
+			t.Run(test.name, func(t *testing.T) {
+				for _, first := range []int{0, 99} {
+					var expected json.RawMessage
+					k.Call("GET", "/v1/profiles?filter="+url.QueryEscape(test.filter)+"&at="+
+						url.QueryEscape(at)+"&first="+strconv.Itoa(first), nil, nil, &expected)
+					actual := assertResult(t, tool(t, "query-profiles", map[string]any{
+						"filter": test.filter, "at": at, "first": first,
+					}))
+					if actual != string(expected) || !strings.Contains(actual, test.totals) ||
+						first == 99 && !strings.HasPrefix(actual, `{"profiles":[]`) {
+						t.Fatalf("expected identical HTTP/MCP result with %s, got %s", test.totals, actual)
+					}
+				}
+			})
+		}
+
+		for _, test := range []struct{ name, filter, result, counts string }{
+			{"named source", named, "MATCH", `"certain":0,"uncertain":0`},
+			{"raw name where", raw, "UNKNOWN", `"certain":0,"uncertain":1`},
+		} {
+			t.Run("explain "+test.name, func(t *testing.T) {
+				profile := "00000000-0000-0000-0000-000000000002"
+				var expected json.RawMessage
+				k.Call("GET", "/v1/profiles/"+profile+"/filter-explanation?filter="+url.QueryEscape(test.filter)+
+					"&at="+url.QueryEscape(at), nil, nil, &expected)
+				actual := assertResult(t, tool(t, "explain-profile-filter", map[string]any{
+					"kpid": profile, "filter": test.filter, "at": at,
+				}))
+				if actual != string(expected) || !strings.Contains(actual, `"result":"`+test.result+`"`) ||
+					!strings.Contains(actual, test.counts) {
+					t.Fatalf("expected HTTP-identical %s with %s, got %s", test.result, test.counts, actual)
+				}
+			})
+		}
+
+	})
+
 	t.Run("Count currency", func(t *testing.T) {
 
 		_, err := pool.Exec(t.Context(), `UPDATE krenalis_events SET properties='{"currency":"USD"}'
@@ -486,6 +571,8 @@ UPDATE krenalis_events SET properties='{}' WHERE event='Order Completed'`)
 			{"missing field", strings.Replace(native, currencyFields, `"nativeCurrency":"EUR"`, 1), "InvalidArguments"},
 			{"null currency", strings.Replace(native, `"nativeCurrency":"EUR"`, `"nativeCurrency":null`, 1), "InvalidArguments"},
 			{"different source", strings.Replace(native, `Order Completed`, `Refund`, 1), "InvalidArguments"},
+			{"page with same name", strings.Replace(native, `"kind":"recordedEvents"`, `"kind":"recordedEvents","type":"page"`, 1), "InvalidArguments"},
+			{"screen with same name", strings.Replace(native, `"kind":"recordedEvents"`, `"kind":"recordedEvents","type":"screen"`, 1), "InvalidArguments"},
 			{"dependent where", strings.Replace(qualified, `properties.coupon`, `properties.currency`, 1), "FilterCapabilityNotImplemented"},
 		} {
 			t.Run(test.name, func(t *testing.T) {
@@ -614,6 +701,8 @@ INSERT INTO krenalis_events
 		}
 		for _, test := range []struct{ name, filter, code string }{
 			{"equality", strings.Replace(sum, `is greater than or equal to`, `is`, 1), "FilterCapabilityNotImplemented"},
+			{"page with same name", strings.Replace(sum, `"kind":"recordedEvents"`, `"kind":"recordedEvents","type":"page"`, 1), "InvalidArguments"},
+			{"screen with same name", strings.Replace(sum, `"kind":"recordedEvents"`, `"kind":"recordedEvents","type":"screen"`, 1), "InvalidArguments"},
 			{"missing currency", strings.Replace(sum, `,"nativeCurrency":"EUR"`, ``, 1), "InvalidArguments"},
 			{"incompatible source", strings.Replace(sum, `"name":"Order Completed"`, `"name":"Refund"`, 1), "InvalidArguments"},
 			{"zero minimum", strings.Replace(sum, `"nativeCurrency":"EUR"`, `"nativeCurrency":"EUR","minimum":0`, 1), "InvalidArguments"},

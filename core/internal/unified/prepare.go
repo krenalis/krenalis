@@ -147,10 +147,20 @@ func prepareRule(rule Rule, bindings Bindings, at time.Time, source SourceBindin
 		return nil, err
 	}
 	c := rule.Count
-	selector, err := source.Record(&state.Where{Operator: state.OpAnd, Rules: []state.WhereRule{
-		&state.WhereCondition{Property: []string{"event"}, Operator: state.OpIs, Values: []any{c.Scope.Event}},
-		&state.WhereCondition{Property: []string{"type"}, Operator: state.OpIs, Values: []any{"track"}},
-	}})
+	typ := c.Scope.eventType()
+	var selection []state.WhereRule
+	if c.Scope.Event != "" {
+		property := "event"
+		if typ != "track" {
+			property = "name"
+			selection = append(selection, &state.WhereCondition{Property: []string{property}, Operator: state.OpExists})
+		}
+		selection = append(selection, &state.WhereCondition{Property: []string{property},
+			Operator: state.OpIs, Values: []any{c.Scope.Event}})
+	}
+	selection = append(selection, &state.WhereCondition{Property: []string{"type"},
+		Operator: state.OpIs, Values: []any{typ}})
+	selector, err := source.Record(&state.Where{Operator: state.OpAnd, Rules: selection})
 	if err != nil {
 		return nil, err
 	}

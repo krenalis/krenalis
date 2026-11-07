@@ -124,7 +124,9 @@ type Rule struct {
 	Children []Rule
 }
 
-// Scope qualifies recorded track events by their raw name at message_id grain.
+// Scope qualifies recorded track/page/screen messages at message_id grain.
+// Type defaults to track. Event is the event/name selector; an empty selector
+// is allowed only for page/screen. Named page/screen exclude unnamed messages.
 // Start/End define a mature [Start,End) period; Elapsed and Calendar resolve
 // against the operation's single T. History selects all queryable recorded
 // events before T without an asserted lower bound.
@@ -132,12 +134,24 @@ type Rule struct {
 // and profile attribution in the coherent view supplied to this operation.
 type Scope struct {
 	Event    string
+	Type     string
 	Grain    string
 	Start    time.Time
 	End      time.Time
 	Elapsed  *ElapsedPeriod
 	Calendar *CalendarPeriod
 	History  *History
+}
+
+// RecordedScope validates an event selector and resolves its default type.
+func RecordedScope(typ, name, grain string) (Scope, error) {
+	scope := Scope{Type: typ, Event: name, Grain: grain}
+	err := scope.validateSource()
+	if err != nil {
+		return Scope{}, err
+	}
+	scope.Type = scope.eventType()
+	return scope, nil
 }
 
 // bounds validates the period and resolves it against validated T.
@@ -210,6 +224,28 @@ func (s Scope) bounds(at time.Time) (time.Time, time.Time, error) {
 	}
 
 	return start.UTC(), end.UTC(), nil
+}
+
+func (s Scope) eventType() string {
+	if s.Type == "" {
+		return "track"
+	}
+	return s.Type
+}
+
+func (s Scope) validateSource() error {
+	if s.Grain != "registered-message" {
+		return fmt.Errorf("invalid recorded event grain")
+	}
+	typ := s.eventType()
+	if typ != "track" && typ != "page" && typ != "screen" {
+		return fmt.Errorf("recorded event type must be track, page or screen")
+	}
+	if typ == "track" && s.Event == "" || len(s.Event) > 1024 ||
+		!utf8.ValidString(s.Event) || strings.ContainsRune(s.Event, 0) {
+		return fmt.Errorf("invalid recorded event selector")
+	}
+	return nil
 }
 
 // SharedBoolean identifies a single governed fact used by multiple occurrence
@@ -314,12 +350,9 @@ func validateRule(rule Rule, at time.Time, depth int, nodes *int) error {
 		return fmt.Errorf("Count cannot contain outer rules")
 	}
 	c := rule.Count
-	if c.Scope.Grain != "registered-message" {
-		return fmt.Errorf("invalid recorded event grain")
-	}
-	if len(c.Scope.Event) == 0 || len(c.Scope.Event) > 1024 ||
-		!utf8.ValidString(c.Scope.Event) || strings.ContainsRune(c.Scope.Event, 0) {
-		return fmt.Errorf("invalid recorded event selector")
+	err := c.Scope.validateSource()
+	if err != nil {
+		return err
 	}
 	if c.Test.Operator > Between || (c.Test.Operator == Between && c.Test.Upper < c.Test.Value) {
 		return fmt.Errorf("invalid Count terminal")
@@ -331,6 +364,9 @@ func validateRule(rule Rule, at time.Time, depth int, nodes *int) error {
 		return fmt.Errorf("Count sample minimum and terminal are statically incompatible")
 	}
 	if c.Currency != nil {
+		if c.Scope.eventType() != "track" {
+			return fmt.Errorf("currency field is incompatible with the occurrence source")
+		}
 		err := c.Currency.validate(c.Scope.Event)
 		if err != nil {
 			return err
@@ -343,7 +379,7 @@ func validateRule(rule Rule, at time.Time, depth int, nodes *int) error {
 			return err
 		}
 	}
-	_, _, err := c.Scope.bounds(at)
+	_, _, err = c.Scope.bounds(at)
 	if err != nil {
 		return err
 	}

@@ -128,7 +128,8 @@ func (sum *Sum) validate(at time.Time) error {
 	if sum == nil || sum.Field == nil || sum.Field.definition == "" {
 		return fmt.Errorf("unresolved monetary field")
 	}
-	if sum.Scope.Event != "Order Completed" || sum.Scope.Grain != "registered-message" {
+	if sum.Scope.eventType() != "track" || sum.Scope.Event != "Order Completed" ||
+		sum.Scope.Grain != "registered-message" {
 		return fmt.Errorf("monetary field is incompatible with the occurrence source")
 	}
 	if len(sum.NativeCurrency) != 3 {

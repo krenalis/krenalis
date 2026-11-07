@@ -24,8 +24,9 @@ orders in the last thirty elapsed days, use:
 
 This counts recorded messages, not deduplicated business orders. Catalog entries
 do not prove which events were received or that historical data follows the
-current schema. A page/screen definition with an empty event name does not make
-it a valid Count name; do not invent a track event for it. The legacy merge
+current schema. For page/screen, use `source.type` with an optional recorded
+`source.name`, never the generic catalog ID/display name. Do not invent a track
+event to represent a page or screen. The legacy merge
 definition is historical, not an enabled ingestion or query capability.
 
 The native schemas provide descriptions, units and nested structure. Conditions
@@ -110,8 +111,12 @@ Count is `{"count":{"source":...,"period":...,"where":...,"minimum":...},
 "operator":"...","values":[...]}`. It supports only:
 
 - Source `{"kind":"recordedEvents","name":"EXACT EVENT NAME",
-  "grain":"registered-message"}`. `name` matches the raw Event `event` value.
-  Grain is mandatory: Count counts registered
+  "grain":"registered-message"}`. Optional `type` is `track`, `page` or
+  `screen`; omission defaults to track without rewriting the document. Track
+  requires `name`, matching the raw Event `event` value. For page/screen, `name`
+  is optional and matches the Event `name` value. Omission selects all messages
+  of that type. Explicit null or an empty string is invalid for either field.
+  Names are literal and case-sensitive. Grain is mandatory: Count counts registered
   occurrence identities, not business orders or identical payloads.
 - Comparisons `is`, `is not`, the four numeric ordered operators, and inclusive
   `is between`. One nonnegative integer JSON operand, or two for between. No
@@ -134,6 +139,31 @@ Count is `{"count":{"source":...,"period":...,"where":...,"minimum":...},
   millisecond, second, minute, hour, day (24 hours), week (7 × 24 hours).
   Periods are [start,end); events exactly at end/T are excluded. Elapsed units
   do not mean calendar days, weeks or months.
+
+For three visits to `/pricing` in seven elapsed days, without requiring a page
+name, use:
+
+```json
+{"operator":"and","rules":[{"count":{"source":{"kind":"recordedEvents","type":"page","grain":"registered-message"},"period":{"kind":"elapsedLookback","duration":{"value":7,"unit":"day"}},"where":{"operator":"and","rules":[{"property":"context.page.path","operator":"is","values":["/pricing"]}]}},"operator":"is greater than or equal to","values":[3]}]}
+```
+
+`source.name` is a source selection by the name actually recorded. A page/screen
+with no name, SQL NULL name or an empty name is certainly excluded from a named
+source such as Pricing. It does not make absence UNKNOWN. Omitting source.name
+includes unnamed messages. In contrast, `where: name is "Pricing"` is a normal
+Record value comparison: a missing name gives NULL and can make Count uncertain.
+The two constructions are deliberately different; do not substitute one for the
+other or generalize source selection to all optional properties.
+
+Use `context.page.path` or `context.page.url` when those fields contain the
+required information, or `properties.url` for the distinct raw JSON field.
+There is no fallback between these paths. Comparisons are literal: `/pricing`,
+`/pricing/` and `/PRICING` are different. The filter does not normalize URLs,
+decode percent escapes, strip query strings or perform prefix matching for `is`.
+Use an explicit supported operator such as `starts with` when that is the request.
+Missing decisive path/URL values retain Record UNKNOWN. A screen can likewise
+use its recorded name or an appropriate Record qualification on its properties.
+All existing Count periods, sample guards and explanations apply to these types.
 
 For the last complete calendar days, weeks or months, use
 `{"kind":"lastCompleteCalendarPeriods","unit":"month","count":1}` as
@@ -193,7 +223,8 @@ For Count of messages in a governed native currency, supply both
 ```
 
 This asks for no recorded `Order Completed` messages in native EUR. Only that
-currency definition/revision and source are currently resolved. The fields are
+currency definition/revision and track source are currently resolved. A page or
+screen named Order Completed is an invalid monetary source. The fields are
 optional as a pair, and neither accepts null. The literal requires three
 uppercase ASCII letters, as for Sum. It does not convert currencies or deduplicate
 business orders. Missing, JSON null and non-String currency values are unknown;
@@ -232,7 +263,8 @@ contribute separately even when they refer to the same order.
 This is the only currently resolved monetary field reference. Do not invent
 other references by concatenating catalog IDs and property names. It fixes
 `properties.total`, exact Decimal(18,4) reading and the associated
-`properties.currency` field. The source must be `recordedEvents`, exact name
+`properties.currency` field. The source must be `recordedEvents`, type track
+(explicit or omitted), exact name
 `Order Completed`, grain `registered-message`; incompatible sources are invalid.
 All supported Count periods work, including complete calendar periods with the
 same root calendar requirement and fullRelevantHistory with its explicit reference.

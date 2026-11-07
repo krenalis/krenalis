@@ -11,7 +11,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"unicode/utf8"
 
 	"github.com/krenalis/krenalis/core/internal/unified"
 	"github.com/krenalis/krenalis/tools/errors"
@@ -145,13 +144,15 @@ func (condition *FilterCountCondition) UnmarshalJSON(data []byte) error {
 
 func (*FilterCountCondition) filterRule() {}
 
-// FilterCountSource selects recorded events by their raw name and occurrence
-// grain. The current source kind is recordedEvents, with registered-message
-// grain. It is not a reference to a governed Purchase definition.
+// FilterCountSource selects recorded events at registered-message grain.
+// Type defaults to track. Name selects event for track and name for page/screen;
+// omitting Name for page/screen selects all messages of that type.
+// It is not a reference to a governed business definition.
 type FilterCountSource struct {
 	Kind  string `json:"kind"`
-	Name  string `json:"name"`
+	Name  string `json:"name,omitzero"`
 	Grain string `json:"grain"`
+	Type  string `json:"type,omitzero"`
 }
 
 // UnmarshalJSON decodes a source and rejects unknown members.
@@ -162,10 +163,14 @@ func (source *FilterCountSource) UnmarshalJSON(data []byte) error {
 	if !json.Valid(data) || !json.Value(data).IsObject() {
 		return errors.New("Count source must be an object")
 	}
-	for name := range json.Value(data).Properties() {
+	for name, value := range json.Value(data).Properties() {
 		switch name {
-		case "kind", "name", "grain":
-			// These are the complete source fields.
+		case "name", "type":
+			if !value.IsString() || value.String() == "" {
+				return errors.New("source name and type must be nonempty strings when supplied")
+			}
+		case "kind", "grain":
+			// Kind and grain are checked during preparation.
 		default:
 			return errors.New("unknown Count source property")
 		}
@@ -310,14 +315,10 @@ func (period FilterPeriod) scope(source FilterCountSource, calendar *unified.Cal
 	if source.Kind != "recordedEvents" {
 		return unified.Scope{}, errors.New("invalid recorded event source kind")
 	}
-	if source.Grain != "registered-message" {
-		return unified.Scope{}, errors.New("invalid recorded event grain")
+	scope, err := unified.RecordedScope(source.Type, source.Name, source.Grain)
+	if err != nil {
+		return unified.Scope{}, err
 	}
-	if len(source.Name) == 0 || len(source.Name) > 1024 ||
-		!utf8.ValidString(source.Name) || strings.ContainsRune(source.Name, 0) {
-		return unified.Scope{}, errors.New("invalid recorded event selector")
-	}
-	scope := unified.Scope{Event: source.Name, Grain: source.Grain}
 	var older, newer filterCountInteger
 	if period.Kind != "lastCompleteCalendarPeriods" && (period.Unit != "" || period.Count != nil) {
 		return unified.Scope{}, errors.New("calendar period fields require lastCompleteCalendarPeriods")
@@ -580,6 +581,9 @@ func prepareFilterCount(condition *FilterCountCondition, calendar *unified.Calen
 		return unified.Rule{}, errors.New("Count requires currencyField and nativeCurrency together")
 	}
 	if count.CurrencyField != nil {
+		if count.Source.Type != "" && count.Source.Type != "track" {
+			return unified.Rule{}, errors.New("currency field is incompatible with the occurrence source")
+		}
 		rule.Count.Currency, err = unified.ResolveNativeCurrency(count.CurrencyField.Definition,
 			count.CurrencyField.MeaningRevision, *count.NativeCurrency, count.Source.Name)
 		if err != nil {

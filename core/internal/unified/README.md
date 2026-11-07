@@ -73,8 +73,13 @@ property-reference comparison or a governed current-profile dependency.
   join rows with the same identity and relevant state are deduplicated before
   counting. Source conflicts are execution errors under this determined-identity
   contract, not a general policy for semantic identity uncertainty.
-- The raw event-name equality is a local nullable qualifier. An unknown name is
-  retained as possible evidence; a certainly different name is excluded.
+- Track event-name equality retains its local nullable qualifier. Page/screen
+  sources select their type and optionally the recorded `name`. Named sources
+  require presence and equality, so an unnamed message is certainly excluded;
+  sources without a name include all messages of that type. A raw `where` on
+  `name` still retains NULL. The internal Scope carries the type; validation
+  and preparation reject types outside track/page/screen, and both monetary
+  consumers reject non-track sources even when named Order Completed.
 - Explicit absolute `[Start,End)` periods with `Start < End <= T`, or elapsed
   periods resolved by core against that same T. Internal `Scope.Elapsed` uses
   `Older=d, Newer=0` for `ElapsedLookback(d)` and `Older=a, Newer=b` for
@@ -368,8 +373,12 @@ Italy with no recorded Purchase in the previous 30 elapsed days:
 }
 ```
 
-- Source kind is `recordedEvents`; `name` is a raw track event name. `grain` is
-  mandatory and admits only the built-in `registered-message` projection.
+- Source kind is `recordedEvents`; optional `type` defaults to track. Track name
+  is mandatory and reads Event `event`. Page/screen name is optional and reads
+  Event `name`, with a presence guard only for named sources. Explicit empty or
+  null name/type fields are invalid; omission remains distinct. Preparation
+  resolves the default in the internal Scope without altering the public JSON.
+  `grain` is mandatory and admits only the built-in `registered-message` projection.
   Other names are invalid input in both the public preparer and internal
   model, not unavailable capabilities. A bare string cannot identify a
   governed grain definition and revision. Future governed references must

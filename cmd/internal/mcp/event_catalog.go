@@ -17,7 +17,9 @@ import (
 const eventCatalogNotice = "Catalog definitions are not evidence of recorded events or historical schema conformity." +
 	" Read profile-filter-doc and event-schema before building filters." +
 	" Use the exact track event name in Count source.name, never the catalog ID or display name." +
-	" Generic page/screen/identity and legacy merge definitions do not imply Count support." +
+	" For page/screen Count use source.type and an optional recorded source.name," +
+	" never the generic catalog ID or label." +
+	" Identity and legacy merge definitions do not imply Count support." +
 	" Native catalog schemas document meaning; traits/properties filters still use raw JSON semantics." +
 	" Do not infer governed bindings, array traversal, sums or other unsupported capabilities from a schema."
 
