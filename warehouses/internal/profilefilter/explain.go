@@ -17,7 +17,7 @@ import (
 
 type explanationTerm struct {
 	truth, lower, upper string
-	sum                 bool
+	sumLower, sumUpper  string
 }
 
 // BuildExplanation reuses the closed Record/Count/Sum expressions and emits one
@@ -64,7 +64,7 @@ func BuildExplanation(filter warehouses.Filter, population warehouses.ProfileSou
 		" WHERE CAST("+q(population.Key.Name)+" AS VARCHAR(36))="+c.profile+")")
 	hasSums := false
 	for _, node := range c.nodes {
-		hasSums = hasSums || node.sum
+		hasSums = hasSums || node.sumLower != ""
 	}
 	var sums []bool
 	if hasSums {
@@ -79,17 +79,18 @@ func BuildExplanation(filter warehouses.Filter, population warehouses.ProfileSou
 		terms = append(terms, "("+node.truth+") AS "+q("$truth"+n))
 		lo, hi := "CAST(NULL AS BIGINT)", "CAST(NULL AS BIGINT)"
 		if node.lower != "" {
-			counts[i] = !node.sum
+			counts[i] = node.sumLower == ""
 			terms = append(terms, node.lower+" AS "+q("$lo"+n), node.upper+" AS "+q("$hi"+n))
 			lo, hi = q("$lo"+n), q("$hi"+n)
 		}
 		extra := ""
 		if hasSums {
 			sumLo, sumHi := "CAST(NULL AS VARCHAR(128))", "CAST(NULL AS VARCHAR(128))"
-			if node.sum {
+			if node.sumLower != "" {
 				sums[i] = true
-				sumLo, sumHi = boundedSumText(lo, dialect), boundedSumText(hi, dialect)
-				lo, hi = "CAST(NULL AS BIGINT)", "CAST(NULL AS BIGINT)"
+				terms = append(terms, node.sumLower+" AS "+q("$sumlo"+n), node.sumUpper+" AS "+q("$sumhi"+n))
+				sumLo = boundedSumText(q("$sumlo"+n), dialect)
+				sumHi = boundedSumText(q("$sumhi"+n), dialect)
 			}
 			extra = "," + sumLo + " AS sum_lo," + sumHi + " AS sum_hi"
 		}
@@ -195,13 +196,17 @@ func readExplanation(ctx context.Context, rows warehouses.Rows, countNodes, sumN
 				node.Truth = warehouses.FilterMatch
 			}
 		}
-		if countNodes[index] {
+		var counts warehouses.OccurrenceCountBounds
+		if countNodes[index] || sumNodes != nil && sumNodes[index] {
 			lo, lok := values[3].(int)
 			hi, hok := values[4].(int)
 			if !lok || !hok || lo < 0 || hi < lo {
 				return nil, fmt.Errorf("warehouses/internal/profilefilter: invalid explanation count bounds")
 			}
-			node.Count = &warehouses.OccurrenceCountBounds{Certain: int64(lo), Possible: int64(hi)}
+			counts = warehouses.OccurrenceCountBounds{Certain: int64(lo), Possible: int64(hi)}
+			if countNodes[index] {
+				node.Count = &counts
+			}
 		} else if values[3] != nil || values[4] != nil {
 			return nil, fmt.Errorf("warehouses/internal/profilefilter: unexpected explanation count bounds")
 		}
@@ -209,7 +214,7 @@ func readExplanation(ctx context.Context, rows warehouses.Rows, countNodes, sumN
 			if countNodes[index] {
 				return nil, fmt.Errorf("warehouses/internal/profilefilter: conflicting explanation node kinds")
 			}
-			bounds := &warehouses.OccurrenceSumBounds{}
+			bounds := &warehouses.OccurrenceSumBounds{Certain: counts.Certain, Possible: counts.Possible}
 			for i, target := range []**decimal.Decimal{&bounds.Lower, &bounds.Upper} {
 				if values[6+i] == nil {
 					continue

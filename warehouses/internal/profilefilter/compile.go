@@ -196,8 +196,9 @@ func (c *compiler) rule(node warehouses.FilterCondition) (string, error) {
 		term.lower, term.upper = "COALESCE("+alias+".lo,0)", "COALESCE("+alias+".hi,0)"
 	}
 	if _, ok := node.(*warehouses.IndependentOccurrenceSum); ok {
-		term.sum = true
-		term.lower, term.upper = sumBounds("v" + strconv.Itoa(count))
+		alias := "v" + strconv.Itoa(count)
+		term.lower, term.upper = "COALESCE("+alias+".lo,0)", "COALESCE("+alias+".hi,0)"
+		term.sumLower, term.sumUpper = sumBounds(alias)
 	}
 	c.nodes[index] = term
 	return text, nil

@@ -5,6 +5,7 @@
 package snowflake
 
 import (
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -62,6 +63,33 @@ func TestProfileSumSQL(t *testing.T) {
 		!strings.Contains(explained.SQL, "sum_lo") || !strings.Contains(explained.SQL, "<=128") {
 		t.Fatalf("expected bounded Sum explanation transport, got %+v", explained)
 	}
+
+	for _, minimum := range []int64{1, 9223372036854775807, -1} {
+		sum.Minimum = minimum
+		query, err := profilefilter.Build(filter, request, profileFilterDialect())
+		if err != nil {
+			if minimum >= 0 {
+				t.Fatalf("expected supported sample minimum %d, got %v", minimum, err)
+			}
+			continue
+		}
+		if minimum < 0 {
+			t.Fatal("expected invalid prepared sample minimum, got success")
+		}
+		guard := "COALESCE(v0.lo,0)>=" + strconv.FormatInt(minimum, 10)
+		if !strings.Contains(query.SQL, guard) {
+			t.Fatalf("expected sample guard %s, got %s", guard, query.SQL)
+		}
+		explained, err := profilefilter.BuildExplanation(filter, population, profile, profileFilterDialect())
+		if err != nil {
+			t.Fatalf("expected guarded Sum explanation, got %v", err)
+		}
+		if len(explained.Columns) != 8 || explained.CountNodes[0] || !explained.SumNodes[0] ||
+			!strings.Contains(explained.SQL, guard) || !strings.Contains(explained.SQL, "COALESCE(v0.lo,0) AS") {
+			t.Fatalf("expected Sum count and monetary bounds with the same guard, got %+v", explained)
+		}
+	}
+	sum.Minimum = 0
 
 	for _, literal := range []string{"1000.0000", "5000.0000", "-2000.0000",
 		"1000000000000000000000000000000000.0000", "-1000000000000000000000000000000000.0000"} {

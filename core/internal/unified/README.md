@@ -166,10 +166,18 @@ Count. An unknown amount certainly in another currency contributes zero.
 
 The execution subset has four ordered comparisons and one exact signed literal
 within the existing global precision 76/scale 37 limits, bounded lexically to
-4096 bytes. Sum equality/difference/intervals and sample minima are explicitly
+4096 bytes. Sum equality/difference/intervals are explicitly
 unsupported, not invalid or UNKNOWN. Sum is admitted only
 through Profiles APIs/MCP and the internal path; Record pipeline behavior and
 `state.Where` persistence remain unchanged.
+
+Optional `minimum` is a positive integer sample guard, currently bounded to
+MaxInt64. It counts qualified events, including those with unknown amounts.
+Count and Sum retain this guard separately and share the same SQL composition:
+the guard and terminal comparison close independently, then combine with
+Kleene AND. An unreachable minimum is NO_MATCH even with unbounded amounts.
+For certain 50 EUR plus two optional 60 EUR, minimum 3 and sum<=100 is UNKNOWN,
+although no joint completion satisfies both. Sum bounds remain unconditioned.
 
 Optional Sum `where` uses the same schema-aware Record preparation, two group
 levels and 100 descendant nodes as Count. The resolved monetary definition owns
@@ -215,7 +223,10 @@ use the unchanged six-column protocol for filters without Sum, or two additional
 bounded text columns for Sum bounds. The decoder bounds text before decimal
 parsing, checks representability within 76/37 and lower<=upper for finite bounds,
 and discards all results on scan/iteration/cancellation/Close failure. Public Sum
-explanations include field/currency and the same temporal metadata as Count.
+explanations always include `certain` and `uncertain` qualified counts, even
+without a minimum, plus field/currency and the same temporal metadata as Count.
+Sum rows reuse the existing integer count columns; decimal bounds retain their
+two bounded text columns. Count and Sum counts are nonnegative and ordered.
 Null `bounds.lower`/`upper` means no finite bound, never zero. Finite values use
 the existing exact JSON-number serializer. References stay in core, not drivers.
 

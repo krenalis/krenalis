@@ -82,9 +82,11 @@ func (c *compiler) sum(node *warehouses.IndependentOccurrenceSum) (string, error
  MIN(amount) AS amount_min,MAX(amount) AS amount_max
  FROM reads`+n+" GROUP BY occurrence_id)")
 	c.ctes = append(c.ctes, "cnt"+n+` AS (SELECT profile_id,COUNT(*) AS occurrences,
+ SUM(CASE WHEN state_min=1 THEN 1 ELSE 0 END) AS lo,
+ SUM(CASE WHEN state_min=0 THEN 0 ELSE 1 END) AS hi,
  SUM(CASE WHEN state_min<>0 AND known_min=0 THEN 1 ELSE 0 END) AS unknowns,
- CAST(SUM(CASE WHEN state_min=1 OR state_min=2 AND amount_min<0 THEN amount_min ELSE 0 END) AS DECIMAL(38,4)) AS lo,
- CAST(SUM(CASE WHEN state_min=1 OR state_min=2 AND amount_min>0 THEN amount_min ELSE 0 END) AS DECIMAL(38,4)) AS hi
+ CAST(SUM(CASE WHEN state_min=1 OR state_min=2 AND amount_min<0 THEN amount_min ELSE 0 END) AS DECIMAL(38,4)) AS sum_lo,
+ CAST(SUM(CASE WHEN state_min=1 OR state_min=2 AND amount_min>0 THEN amount_min ELSE 0 END) AS DECIMAL(38,4)) AS sum_hi
  FROM facts`+n+` WHERE profile_id IS NOT NULL AND profiles=1 AND period_min=period_max
  AND state_min=state_max AND (known_min=known_max OR known_min IS NULL)
  AND (amount_min=amount_max OR amount_min IS NULL) GROUP BY profile_id)`)
@@ -100,17 +102,18 @@ func (c *compiler) sum(node *warehouses.IndependentOccurrenceSum) (string, error
 	c.joins = append(c.joins, "LEFT JOIN cnt"+n+" "+alias+" ON "+alias+".profile_id=p."+q("$profile_id"))
 	lo, hi := sumBounds(alias)
 	threshold := fmt.Sprintf("CAST('%.4f' AS DECIMAL(38,4))", node.Threshold)
+	test := "CASE WHEN (" + hi + ")<=" + threshold + " THEN TRUE WHEN (" + lo + ")>" + threshold +
+		" THEN FALSE ELSE NULL END"
 	if node.AtLeast {
-		return "CASE WHEN (" + lo + ")>=" + threshold + " THEN TRUE WHEN (" + hi + ")<" + threshold +
-			" THEN FALSE ELSE NULL END", nil
+		test = "CASE WHEN (" + lo + ")>=" + threshold + " THEN TRUE WHEN (" + hi + ")<" + threshold +
+			" THEN FALSE ELSE NULL END"
 	}
 
-	return "CASE WHEN (" + hi + ")<=" + threshold + " THEN TRUE WHEN (" + lo + ")>" + threshold +
-		" THEN FALSE ELSE NULL END", nil
+	return withSampleMinimum(node.Minimum, "COALESCE("+alias+".lo,0)", "COALESCE("+alias+".hi,0)", test), nil
 }
 
 // sumBounds returns qualification extrema, or NULL for an unbounded side.
 func sumBounds(alias string) (string, string) {
 	prefix := "CASE WHEN COALESCE(" + alias + ".unknowns,0)=0 THEN COALESCE("
-	return prefix + alias + ".lo,0) END", prefix + alias + ".hi,0) END"
+	return prefix + alias + ".sum_lo,0) END", prefix + alias + ".sum_hi,0) END"
 }

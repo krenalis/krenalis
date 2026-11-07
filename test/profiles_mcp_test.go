@@ -439,7 +439,9 @@ INSERT INTO krenalis_events
 			Rule struct {
 				Rules []struct {
 					Sum struct {
-						Bounds struct{ Lower, Upper json.Number } `json:"bounds"`
+						Bounds    struct{ Lower, Upper json.Number } `json:"bounds"`
+						Certain   int                                `json:"certain"`
+						Uncertain int                                `json:"uncertain"`
 					} `json:"sum"`
 				} `json:"rules"`
 			} `json:"rule"`
@@ -456,10 +458,55 @@ INSERT INTO krenalis_events
 		if !lok || !uok || lower.Cmp(big.NewRat(20, 1)) != 0 || upper.Cmp(big.NewRat(40, 1)) != 0 {
 			t.Fatalf("expected exact bounds [20,40], got %s", actual)
 		}
+		if explanation.Rule.Rules[0].Sum.Certain != 1 || explanation.Rule.Rules[0].Sum.Uncertain != 1 {
+			t.Fatalf("expected Sum count 1 certain and 1 uncertain without minimum, got %s", actual)
+		}
+		for _, test := range []struct{ minimum, threshold, totals string }{
+			{"2", "30", `"match":1,"noMatch":2,"unknown":1`},
+			{"2", "0", `"match":1,"noMatch":2,"unknown":1`},
+			{"3", "30", `"match":0,"noMatch":4,"unknown":0`},
+		} {
+			t.Run("minimum "+test.minimum+" threshold "+test.threshold, func(t *testing.T) {
+				filter := strings.Replace(sum, `"nativeCurrency":"EUR"`,
+					`"nativeCurrency":"EUR","minimum":`+test.minimum, 1)
+				filter = strings.Replace(filter, `[30]`, `[`+test.threshold+`]`, 1)
+				for _, first := range []int{0, 99} {
+					var expected json.RawMessage
+					path := "/v1/profiles?filter=" + url.QueryEscape(filter) +
+						"&at=" + url.QueryEscape(at) + "&first=" + strconv.Itoa(first)
+					k.Call("GET", path, nil, nil, &expected)
+					actual := assertResult(t, tool(t, "query-profiles",
+						map[string]any{"filter": filter, "at": at, "first": first}))
+					if actual != string(expected) || !strings.Contains(actual, test.totals) {
+						t.Fatalf("expected identical guarded HTTP/MCP totals %s, got %s", test.totals, actual)
+					}
+				}
+			})
+		}
+		for _, test := range []struct{ id, counts string }{
+			{"00000000-0000-0000-0000-000000000003", `"certain":1,"uncertain":1`},
+			{"00000000-0000-0000-0000-000000000004", `"certain":0,"uncertain":0`},
+		} {
+			for _, minimum := range []string{"", `,"minimum":3`} {
+				filter := strings.Replace(sum, `"nativeCurrency":"EUR"`, `"nativeCurrency":"EUR"`+minimum, 1)
+				var expected json.RawMessage
+				path := "/v1/profiles/" + test.id + "/filter-explanation?filter=" +
+					url.QueryEscape(filter) + "&at=" + url.QueryEscape(at)
+				k.Call("GET", path, nil, nil, &expected)
+				actual := assertResult(t, tool(t, "explain-profile-filter",
+					map[string]any{"kpid": test.id, "filter": filter, "at": at}))
+				if actual != string(expected) || !strings.Contains(actual, test.counts) ||
+					minimum != "" && !strings.Contains(actual, `"result":"NO_MATCH"`) {
+					t.Fatalf("expected explicit qualified counts %s with minimum %s, got %s", test.counts, minimum, actual)
+				}
+			}
+		}
 		for _, test := range []struct{ name, filter, code string }{
 			{"equality", strings.Replace(sum, `is greater than or equal to`, `is`, 1), "FilterCapabilityNotImplemented"},
 			{"missing currency", strings.Replace(sum, `,"nativeCurrency":"EUR"`, ``, 1), "InvalidArguments"},
 			{"incompatible source", strings.Replace(sum, `"name":"Order Completed"`, `"name":"Refund"`, 1), "InvalidArguments"},
+			{"zero minimum", strings.Replace(sum, `"nativeCurrency":"EUR"`, `"nativeCurrency":"EUR","minimum":0`, 1), "InvalidArguments"},
+			{"large minimum", strings.Replace(sum, `"nativeCurrency":"EUR"`, `"nativeCurrency":"EUR","minimum":9223372036854775808`, 1), "FilterCapabilityNotImplemented"},
 		} {
 			t.Run(test.name, func(t *testing.T) {
 				assertToolError(t, tool(t, "query-profiles", map[string]any{"filter": test.filter, "at": at}), test.code)

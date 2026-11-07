@@ -6,6 +6,7 @@ package core
 
 import (
 	"bytes"
+	"math"
 
 	"github.com/krenalis/krenalis/core/internal/schemas"
 	"github.com/krenalis/krenalis/core/internal/state"
@@ -19,7 +20,7 @@ import (
 // FilterSum describes a monetary sum at registered-message grain.
 // NativeCurrency restricts the population; it never converts currencies.
 // Where supports Record paths independent of the amount and currency reading.
-// Minimum is not implemented yet.
+// Minimum is a positive integer sample guard, composed using Kleene AND.
 type FilterSum struct {
 	Source         FilterCountSource `json:"source"`
 	Period         FilterPeriod      `json:"period"`
@@ -210,8 +211,9 @@ func prepareFilterSum(condition *FilterSumCondition, calendar *unified.Calendar)
 	}
 
 	// Validate optional forms before reporting unavailable capabilities.
+	minimum := filterCountInteger("0")
 	if sum.Minimum != nil {
-		minimum, err := parseFilterCountInteger(sum.Minimum)
+		minimum, err = parseFilterCountInteger(sum.Minimum)
 		if err != nil {
 			return unified.Rule{}, err
 		}
@@ -235,13 +237,14 @@ func prepareFilterSum(condition *FilterSumCondition, calendar *unified.Calendar)
 	if unavailable != nil {
 		return unified.Rule{}, unavailable
 	}
-	if sum.Minimum != nil {
-		return unified.Rule{}, &unified.UnsupportedError{Capability: "Sum sample minimum"}
+	m, ok := minimum.uint64()
+	if !ok || m > math.MaxInt64 {
+		return unified.Rule{}, &unified.UnsupportedError{Capability: "Sum sample minimum exceeds the execution integer range"}
 	}
 	if operator == unified.Equal || operator == unified.Different || operator == unified.Between {
 		return unified.Rule{}, &unified.UnsupportedError{Capability: "Sum equality or interval reachability"}
 	}
 
 	return unified.Rule{Sum: &unified.Sum{Scope: scope, Field: field, NativeCurrency: sum.NativeCurrency,
-		Where: where, Test: unified.SumTest{Operator: operator, Value: values[0]}}}, nil
+		Where: where, Minimum: m, Test: unified.SumTest{Operator: operator, Value: values[0]}}}, nil
 }

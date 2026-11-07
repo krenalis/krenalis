@@ -6,6 +6,7 @@ package core
 
 import (
 	"bytes"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -90,6 +91,83 @@ func TestFilterSumInvalidBeforeUnsupported(t *testing.T) {
 	}
 }
 
+// TestFilterSumMinimum preserves exact sample guards and classifies limits.
+func TestFilterSumMinimum(t *testing.T) {
+	for _, minimum := range []string{"1", "3", "9223372036854775807"} {
+		input := strings.Replace(sumConditionJSON, `"nativeCurrency":"EUR"`,
+			`"nativeCurrency":"EUR","minimum":`+minimum+
+				`,"where":{"operator":"and","rules":[{"property":"properties.coupon","operator":"exists"}]}`, 1)
+		var condition FilterSumCondition
+		err := json.Unmarshal([]byte(input), &condition)
+		if err != nil {
+			t.Fatalf("expected minimum decoding, got %v", err)
+		}
+		rule, err := prepareFilterSum(&condition, nil)
+		if err != nil {
+			t.Fatalf("expected supported minimum %s, got %v", minimum, err)
+		}
+		if strconv.FormatUint(rule.Sum.Minimum, 10) != minimum || string(condition.Sum.Minimum) != minimum ||
+			rule.Sum.Where == nil {
+			t.Fatalf("expected preserved positive minimum %s and where, got %+v", minimum, rule.Sum)
+		}
+		encoded, err := json.Marshal(&condition)
+		if err != nil {
+			t.Fatalf("expected minimum encoding, got %v", err)
+		}
+		var restored FilterSumCondition
+		err = json.Unmarshal(encoded, &restored)
+		if err != nil {
+			t.Fatalf("expected minimum round trip, got %v", err)
+		}
+		if string(restored.Sum.Minimum) != minimum {
+			t.Fatalf("expected minimum %s after round trip, got %s", minimum, restored.Sum.Minimum)
+		}
+	}
+	for _, minimum := range []string{"9223372036854775808", "18446744073709551616"} {
+		input := strings.Replace(sumConditionJSON, `"nativeCurrency":"EUR"`,
+			`"nativeCurrency":"EUR","minimum":`+minimum, 1)
+		var condition FilterSumCondition
+		err := json.Unmarshal([]byte(input), &condition)
+		if err != nil {
+			t.Fatalf("expected large minimum decoding, got %v", err)
+		}
+		_, err = prepareFilterSum(&condition, nil)
+		if err != nil {
+			if _, unsupported := errors.AsType[*unified.UnsupportedError](err); !unsupported {
+				t.Fatalf("expected unsupported large minimum, got %v", err)
+			}
+			continue
+		}
+		t.Fatal("expected execution limit rejection, got success")
+	}
+	// Invalidity in the same rule or a sibling still precedes the new limit.
+	large := strings.Replace(sumConditionJSON, `"nativeCurrency":"EUR"`,
+		`"nativeCurrency":"EUR","minimum":9223372036854775808`, 1)
+	for _, invalid := range []string{
+		strings.Replace(sumConditionJSON, `"EUR"`, `"eur"`, 1),
+		strings.Replace(large, `"nativeCurrency":"EUR"`,
+			`"nativeCurrency":"EUR","where":{"operator":"and","rules":[{"property":"absent","operator":"exists"}]}`, 1),
+	} {
+		for _, rules := range []string{large + "," + invalid, invalid + "," + large} {
+			var filter Filter
+			err := json.Unmarshal([]byte(`{"operator":"and","rules":[`+rules+`]}`), &filter)
+			if err != nil {
+				t.Fatalf("expected decodable minimum fixture, got %v", err)
+			}
+			nodes := 0
+			_, err = prepareUnifiedRule(&filter, types.Object([]types.Property{{Name: "country", Type: types.String()}}),
+				0, &nodes)
+			if err != nil {
+				if _, unsupported := errors.AsType[*unified.UnsupportedError](err); unsupported {
+					t.Fatalf("expected invalidity before unsupported minimum, got %v", err)
+				}
+				continue
+			}
+			t.Fatal("expected invalidity, got success")
+		}
+	}
+}
+
 // TestFilterSumRoundTrip preserves exact operands and references.
 func TestFilterSumRoundTrip(t *testing.T) {
 	for _, literal := range []string{"30", "-30.00001", "1e75", "1e-37"} {
@@ -155,8 +233,11 @@ func TestFilterSumValidation(t *testing.T) {
 		{"literal arity", `[30]`, `[30,40]`, false},
 		{"unary operator", `is greater than or equal to`, `exists`, false},
 		{"empty minimum", `"nativeCurrency":"EUR"`, `"nativeCurrency":"EUR","minimum":0`, false},
-		{"sample minimum", `"nativeCurrency":"EUR"`, `"nativeCurrency":"EUR","minimum":1`, true},
-		{"minimum with where", `"nativeCurrency":"EUR"`, `"nativeCurrency":"EUR","minimum":1,"where":{"operator":"and","rules":[{"property":"properties.coupon","operator":"exists"}]}`, true},
+		{"null minimum", `"nativeCurrency":"EUR"`, `"nativeCurrency":"EUR","minimum":null`, false},
+		{"negative minimum", `"nativeCurrency":"EUR"`, `"nativeCurrency":"EUR","minimum":-1`, false},
+		{"fractional minimum", `"nativeCurrency":"EUR"`, `"nativeCurrency":"EUR","minimum":1.0`, false},
+		{"exponent minimum", `"nativeCurrency":"EUR"`, `"nativeCurrency":"EUR","minimum":1e0`, false},
+		{"string minimum", `"nativeCurrency":"EUR"`, `"nativeCurrency":"EUR","minimum":"1"`, false},
 		{"equality", `is greater than or equal to`, `is`, true},
 		{"different", `is greater than or equal to`, `is not`, true},
 		{"interval", `"operator":"is greater than or equal to","values":[30]`, `"operator":"is between","values":[20,30]`, true},

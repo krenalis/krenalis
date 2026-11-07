@@ -6,6 +6,7 @@ package unified
 
 import (
 	"fmt"
+	"math"
 	"math/big"
 	"slices"
 	"strings"
@@ -92,6 +93,7 @@ type Sum struct {
 	Field          *MonetaryField
 	NativeCurrency string
 	Where          *state.Where
+	Minimum        uint64
 	Test           SumTest
 }
 
@@ -144,7 +146,7 @@ func (sum *Sum) prepare(at time.Time, source SourceBinding) (warehouses.FilterCo
 		Qualification: &warehouses.QualificationGroup{Operator: warehouses.OpAnd, Children: qualifiers},
 		Value: warehouses.DecimalReading{Column: source.Properties,
 			Keys: slices.Clone(sum.Field.amountPath[1:]), Type: sum.Field.amountType},
-		Threshold: threshold, AtLeast: atLeast,
+		Threshold: threshold, AtLeast: atLeast, Minimum: int64(sum.Minimum),
 	}, nil
 }
 
@@ -179,6 +181,9 @@ func (sum *Sum) validate(at time.Time) error {
 	}
 	if sum.Test.Operator == Equal || sum.Test.Operator == Different || sum.Test.Operator == Between {
 		return &UnsupportedError{Capability: "Sum equality or interval reachability"}
+	}
+	if sum.Minimum > math.MaxInt64 {
+		return &UnsupportedError{Capability: "Sum sample minimum exceeds the execution integer range"}
 	}
 	return whereErr
 }

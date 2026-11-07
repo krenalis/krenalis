@@ -5,6 +5,7 @@
 package unified
 
 import (
+	"math"
 	"math/big"
 	"slices"
 	"testing"
@@ -55,7 +56,7 @@ func TestMonetaryFieldPaths(t *testing.T) {
 	at := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
 	sum := Sum{Scope: Scope{Event: "Order Completed", Grain: "registered-message",
 		Start: at.AddDate(0, -1, 0), End: at}, Field: field, NativeCurrency: "EUR",
-		Test: SumTest{Operator: GreaterOrEqual, Value: decimal.MustParse("30")}}
+		Test: SumTest{Operator: GreaterOrEqual, Value: decimal.MustParse("30")}, Minimum: 3}
 	source := SourceBinding{Occurrences: warehouses.OccurrenceSource{Table: "events",
 		Profile:   warehouses.Column{Name: "kpid", Type: types.UUID()},
 		Identity:  warehouses.Column{Name: "message_id", Type: types.String()},
@@ -73,7 +74,7 @@ func TestMonetaryFieldPaths(t *testing.T) {
 	currency := reading.Qualification.(*warehouses.QualificationGroup).Children[1].(*warehouses.KnownTextEqual)
 	if !slices.Equal(reading.Value.Keys, []string{"amount"}) ||
 		!slices.Equal(currency.Keys, []string{"unit"}) || reading.Value.Column.Name != "payload" ||
-		currency.Column.Name != "payload" || !types.Equal(reading.Value.Type, field.amountType) {
+		currency.Column.Name != "payload" || !types.Equal(reading.Value.Type, field.amountType) || reading.Minimum != 3 {
 		t.Fatalf("expected paths and type from the resolved reading, got %+v and %+v", reading.Value, currency)
 	}
 	reading.Value.Keys[0], currency.Keys[0] = "changed", "changed"
@@ -162,6 +163,35 @@ func TestSumInternalValidation(t *testing.T) {
 				}
 				t.Fatal("expected internal admission failure, got success")
 			})
+		}
+	}
+	for _, minimum := range []uint64{0, 1, math.MaxInt64, math.MaxInt64 + 1} {
+		root := &Rule{Sum: &Sum{Scope: Scope{Event: "Order Completed", Grain: "registered-message",
+			Start: at.AddDate(0, -1, 0), End: at}, Field: field, NativeCurrency: "EUR", Minimum: minimum,
+			Test: SumTest{Operator: GreaterOrEqual, Value: decimal.MustParse("30")}}}
+		for _, entry := range []string{"Validate", "Prepare"} {
+			var prepared warehouses.Filter
+			var err error
+			switch entry {
+			case "Validate":
+				err = Validate(root, at, Page{Limit: 1})
+			case "Prepare":
+				prepared, err = Prepare(root, Bindings{}, at, source)
+			default:
+				t.Fatalf("expected a known entry point, got %s", entry)
+			}
+			if err != nil {
+				if _, unsupported := errors.AsType[*UnsupportedError](err); !unsupported || minimum <= math.MaxInt64 {
+					t.Fatalf("expected unsupported only beyond int64, got %v", err)
+				}
+				continue
+			}
+			if minimum > math.MaxInt64 {
+				t.Fatal("expected unsupported sample minimum, got success")
+			}
+			if entry == "Prepare" && prepared.Root.(*warehouses.IndependentOccurrenceSum).Minimum != int64(minimum) {
+				t.Fatalf("expected preserved sample minimum %d, got %+v", minimum, prepared.Root)
+			}
 		}
 	}
 

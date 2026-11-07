@@ -35,9 +35,16 @@ threshold as a Float or DECFLOAT. Relevant amount disagreements between copies
 are source faults. Certainly excluded amounts are not read. A per-profile
 occurrence count beyond MaxInt64 or arithmetic overflow fails the operation.
 
+Count and Sum carry an optional sample minimum separately from the terminal.
+Both use `withSampleMinimum` to compose the independently closed guard and test
+using SQL Kleene AND. The Sum sample counts all qualified occurrences, including
+unknown amounts. Monetary bounds are not conditioned on satisfying the guard.
+
 Filters containing Sum use two additional bounded text columns in explanations,
-leaving Count's six-column protocol unchanged otherwise. Statement.ReadExplanation
-uses its compiled Count/Sum node metadata and validates finite bounds within the
+leaving Count's six-column protocol unchanged otherwise. Both kinds use the
+integer lo/hi columns for certain/possible qualified counts, even without a
+minimum. Statement.ReadExplanation uses its compiled Count/Sum node metadata
+and validates the count bounds as well as finite monetary bounds within the
 global 76/37 domain, lower<=upper, cursor completion and Close. Nil bounds mean
 no finite bound. Source, time, identity and logical structure are still prepared
 by core; business references never enter this package.

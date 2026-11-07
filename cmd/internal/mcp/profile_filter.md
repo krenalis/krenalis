@@ -214,8 +214,19 @@ Use the four ordered operators (`is less than`, `is less than or equal to`,
 Thresholds are exact, up to precision 76 and scale 37, independently of the
 field's four decimal places. They never pass through a float. Input literal
 spelling is bounded to 4096 bytes. Equality, inequality and intervals are valid
-language capabilities not yet implemented for Sum. Sample `minimum` is also
-unavailable.
+language capabilities not yet implemented for Sum.
+
+Optional positive integer `minimum` counts the events qualified by the source,
+period, `where` and native currency, including events with an unknown amount.
+Certainly excluded events do not count. Omission means no extra sample guard;
+null and zero are invalid. Values beyond signed 64-bit range are unsupported.
+Evaluate the sample guard and sum comparison separately, then combine their
+results with Kleene AND, as for Count. Do not condition the sum bounds on the
+minimum. For example, one certain EUR order of 50 and two orders of 60 with
+unknown currency have `certain:1`, `uncertain:2` and bounds [50,170]. At
+`minimum:3` and `is less than or equal to 100`, the result is UNKNOWN: each
+requirement is individually uncertain, even though no joint choice satisfies
+both. A certainly unreachable minimum gives NO_MATCH even with unknown amounts.
 
 Optional `where` qualifies the individual events before adding their amounts.
 It uses the existing Record operators, at most two group levels and 100
@@ -248,7 +259,10 @@ overflow and exhausted resources fail the complete operation, never yield UNKNOW
 
 Sum explanations add `sum` with the same `start`, `end`, `unboundedStart`, and
 `history` names and omission rules as Count, plus `field`, `nativeCurrency` and
-`bounds:{lower,upper}`. Finite numbers are tight extrema under independent
+`bounds:{lower,upper}`. They always include `certain` and `uncertain`, even
+without a minimum: the latter counts additional potentially qualified events,
+not the total possible count (`certain + uncertain`). Unknown amounts still
+count. Finite monetary numbers are tight extrema under independent
 per-event qualification outcomes; values between them need not be reachable.
 For example, 20 EUR plus 20 of unknown currency has bounds 20 and 40, with only
 those two totals possible.

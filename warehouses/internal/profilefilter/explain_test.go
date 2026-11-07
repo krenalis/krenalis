@@ -98,7 +98,7 @@ func TestReadSumExplanation(t *testing.T) {
 		{"oversize", strings.Repeat("1", 129), nil, true},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			rows := &outcomeRows{rows: [][]any{{profile, 0, nil, nil, nil, 0, test.lower, test.upper}}}
+			rows := &outcomeRows{rows: [][]any{{profile, 0, nil, 1, 3, 0, test.lower, test.upper}}}
 			statement := Statement{CountNodes: []bool{false}, SumNodes: []bool{true}}
 			result, err := statement.ReadExplanation(t.Context(), rows, profile)
 			if err != nil {
@@ -110,11 +110,26 @@ func TestReadSumExplanation(t *testing.T) {
 			if test.fail || !rows.closed || len(result) != 1 || result[0].Sum == nil || result[0].Count != nil {
 				t.Fatalf("expected valid Sum bounds with failure=%v, got %+v", test.fail, result)
 			}
+			if result[0].Sum.Certain != 1 || result[0].Sum.Possible != 3 {
+				t.Fatalf("expected qualified count [1,3], got %+v", result[0].Sum)
+			}
 		})
 	}
+	for _, pair := range [][2]any{{nil, nil}, {-1, 1}, {2, 1}, {0, nil}, {"0", 1}} {
+		rows := &outcomeRows{rows: [][]any{{profile, 0, nil, pair[0], pair[1], 0, "0", "30"}}}
+		statement := Statement{CountNodes: []bool{false}, SumNodes: []bool{true}}
+		result, err := statement.ReadExplanation(t.Context(), rows, profile)
+		if err != nil {
+			if result != nil || !rows.closed {
+				t.Fatalf("expected invalid count failure with closed cursor, got %+v", result)
+			}
+			continue
+		}
+		t.Fatal("expected invalid Sum qualification counts, got success")
+	}
 	for _, rows := range []*outcomeRows{
-		{rows: [][]any{{profile, 0, nil, nil, nil, 0, "0", "30"}}, errorAtEnd: errors.New("iterate")},
-		{rows: [][]any{{profile, 0, nil, nil, nil, 0, "0", "30"}}, closeError: errors.New("close")},
+		{rows: [][]any{{profile, 0, nil, 0, 1, 0, "0", "30"}}, errorAtEnd: errors.New("iterate")},
+		{rows: [][]any{{profile, 0, nil, 0, 1, 0, "0", "30"}}, closeError: errors.New("close")},
 		{rows: [][]any{{}}, scanError: errors.New("scan")},
 	} {
 		statement := Statement{CountNodes: []bool{false}, SumNodes: []bool{true}}

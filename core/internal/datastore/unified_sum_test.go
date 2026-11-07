@@ -291,10 +291,17 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,
 			threshold, _ := new(big.Rat).SetString(literal)
 			for i := range 27 {
 				possible := []int{0}
+				certain, uncertain := int64(0), int64(0)
 				flags := i
 				for _, amount := range []int{-2, 1, 3} {
 					flag := flags % 3
 					flags /= 3
+					if flag == 1 {
+						certain++
+					}
+					if flag == 2 {
+						uncertain++
+					}
 					next := []int{}
 					for _, total := range possible {
 						if flag != 1 {
@@ -342,12 +349,35 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,
 					}
 					bounds := explained.Nodes[0].Sum
 					if bounds == nil || bounds.Lower == nil || bounds.Upper == nil ||
-						!bounds.Lower.Equal(decimal.MustInt(lo)) || !bounds.Upper.Equal(decimal.MustInt(hi)) {
+						!bounds.Lower.Equal(decimal.MustInt(lo)) || !bounds.Upper.Equal(decimal.MustInt(hi)) ||
+						bounds.Certain != certain || bounds.Possible != certain+uncertain {
 						t.Fatalf("expected reachable extrema [%d,%d] from %v, got %+v", lo, hi, possible, bounds)
 					}
 				}
 			}
 			assertUnifiedTruths(t, result, want)
+			for _, minimum := range []uint64{1, 2, 3, 4} {
+				sum.Minimum = minimum
+				guarded := make([]unified.Truth, len(want))
+				for i, truth := range want {
+					flags := []int{i % 3, i / 3 % 3, i / 9 % 3}
+					guard := independentCountOracle(flags, minimum,
+						unified.CountTest{Operator: unified.GreaterOrEqual})
+					guarded[i] = unified.Match
+					if guard == unified.Unknown || truth == unified.Unknown {
+						guarded[i] = unified.Unknown
+					}
+					if guard == unified.NoMatch || truth == unified.NoMatch {
+						guarded[i] = unified.NoMatch
+					}
+				}
+				result, err := store.UnifiedProfiles(t.Context(), &rule, unified.Bindings{}, at, unified.Page{Limit: 100})
+				if err != nil {
+					t.Fatalf("expected guarded oracle query minimum %d op%d %s, got %v", minimum, op, literal, err)
+				}
+				assertUnifiedTruths(t, result, guarded)
+			}
+			sum.Minimum = 0
 		}
 	}
 

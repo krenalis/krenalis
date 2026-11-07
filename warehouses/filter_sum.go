@@ -23,6 +23,8 @@ import (
 // the relevant value reading. Conflicts and overflow fail the whole operation.
 // Threshold is a core-normalized inclusive test on the Decimal(18,4) grid:
 // at least Threshold when AtLeast, otherwise at most Threshold.
+// Minimum counts qualified occurrences, including those with unknown amounts;
+// zero means no extra sample guard. Guard and test compose using Kleene AND.
 type IndependentOccurrenceSum struct {
 	Source         OccurrenceSource
 	Start, End     time.Time
@@ -31,6 +33,7 @@ type IndependentOccurrenceSum struct {
 	Value          DecimalReading
 	Threshold      decimal.Decimal
 	AtLeast        bool
+	Minimum        int64
 }
 
 func (*IndependentOccurrenceSum) filterCondition() {}
@@ -38,6 +41,9 @@ func (*IndependentOccurrenceSum) filterCondition() {}
 func (sum *IndependentOccurrenceSum) validate() error {
 	if sum == nil {
 		return fmt.Errorf("warehouses: nil prepared Sum")
+	}
+	if sum.Minimum < 0 {
+		return fmt.Errorf("warehouses: invalid prepared sample minimum")
 	}
 	err := sum.Source.Validate()
 	if err != nil {
@@ -99,6 +105,9 @@ func (reading DecimalReading) Validate() error {
 // qualification outcomes, or nil for no finite bound. Record groups keep Kleene
 // logic without solving raw-field correlations. Intermediate values need not
 // be reachable. These are not partial sums.
+// Certain and Possible bound the qualified count, including unknown amounts;
+// Possible includes Certain.
 type OccurrenceSumBounds struct {
-	Lower, Upper *decimal.Decimal
+	Lower, Upper      *decimal.Decimal
+	Certain, Possible int64
 }

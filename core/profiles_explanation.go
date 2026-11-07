@@ -51,6 +51,7 @@ type ProfileCountExplanation struct {
 
 // ProfileSumExplanation describes monetary bounds with the resolved reading.
 // Finite bounds are tight under independent occurrence qualifications.
+// Certain and Uncertain count qualified occurrences, including unknown amounts.
 type ProfileSumExplanation struct {
 	Start          time.Time        `json:"start,omitzero"`
 	End            time.Time        `json:"end"`
@@ -59,6 +60,8 @@ type ProfileSumExplanation struct {
 	Field          FilterSumField   `json:"field"`
 	NativeCurrency string           `json:"nativeCurrency"`
 	Bounds         ProfileSumBounds `json:"bounds"`
+	Certain        int64            `json:"certain"`
+	Uncertain      int64            `json:"uncertain"`
 }
 
 // ProfileSumBounds contains tight extrema for independent qualification
@@ -192,7 +195,8 @@ func explainProfileRule(rule warehouses.FilterCondition, semantic unified.Rule, 
 		result.Kind = "sum"
 		result.Sum = &ProfileSumExplanation{Start: rule.Start, End: rule.End, UnboundedStart: rule.UnboundedStart,
 			Field:          FilterSumField{Definition: definition, MeaningRevision: revision},
-			NativeCurrency: semantic.Sum.NativeCurrency, Bounds: ProfileSumBounds{Lower: node.Sum.Lower, Upper: node.Sum.Upper}}
+			NativeCurrency: semantic.Sum.NativeCurrency, Bounds: ProfileSumBounds{Lower: node.Sum.Lower, Upper: node.Sum.Upper},
+			Certain: node.Sum.Certain, Uncertain: node.Sum.Possible - node.Sum.Certain}
 		if history := semantic.Sum.Scope.History; history != nil {
 			definition, revision := history.Reference()
 			result.Sum.History = &FilterHistory{Definition: definition, MeaningRevision: revision}
