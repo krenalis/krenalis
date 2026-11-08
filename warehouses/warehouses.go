@@ -428,10 +428,12 @@ type RowQuery struct {
 	// Where, when not nil, filters the records to return.
 	Where Expr
 
-	// OrderBy specifies the columns by which the returned rows are ordered.
+	// OrderBy, when provided, specifies the columns used to order the returned
+	// rows.
 	OrderBy []Column
 
-	// OrderDesc applies descending order to every OrderBy column.
+	// OrderDesc, when true and OrderBy is provided, orders the returned rows in
+	// descending order instead of ascending order.
 	OrderDesc bool
 
 	// First is the index of the first returned row and must be >= 0.
