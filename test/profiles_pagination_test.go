@@ -247,9 +247,7 @@ func TestProfilesPagination(t *testing.T) {
 		t.Fatalf("unexpected empty range: profiles=%d hasNext=%t", len(empty), emptyHasNext)
 	}
 
-	// Even properties unused by the query must be aligned.
 	emailProperty, _ := requestSchema.Properties().ByName("email")
-	partialSchema := types.Object([]types.Property{emailProperty})
 	unrelatedSchema := types.Object([]types.Property{
 		emailProperty,
 		{Name: "no_longer_present", Type: types.String()},
@@ -265,7 +263,7 @@ func TestProfilesPagination(t *testing.T) {
 		t.Fatalf("expected %d profiles, got %d", expectedTotal, countResponse.Total)
 	}
 
-	// Check schema alignment and invalid arguments.
+	// Check schema alignment, including unused properties, and invalid arguments.
 	for _, tc := range []struct {
 		name    string
 		path    string
@@ -331,10 +329,28 @@ func TestProfilesPagination(t *testing.T) {
 			code:   "SchemaNotAligned",
 		},
 		{
-			name:   "count needs filter schema",
-			path:   "/v1/profiles/count",
-			query:  url.Values{"filter": []string{string(filter)}},
-			status: http.StatusBadRequest,
+			name:    "count needs filter schema",
+			path:    "/v1/profiles/count",
+			query:   url.Values{"filter": []string{string(filter)}},
+			status:  http.StatusBadRequest,
+			code:    "BadRequest",
+			message: "schema is required",
+		},
+		{
+			name:    "count empty schema",
+			path:    "/v1/profiles/count",
+			query:   url.Values{"schema": []string{""}},
+			status:  http.StatusBadRequest,
+			code:    "BadRequest",
+			message: "invalid schema: unexpected EOF",
+		},
+		{
+			name:    "count malformed schema",
+			path:    "/v1/profiles/count",
+			query:   url.Values{"schema": []string{"{"}},
+			status:  http.StatusBadRequest,
+			code:    "BadRequest",
+			message: "invalid schema: unexpected EOF",
 		},
 		{
 			name:   "count checks unused schema with filter",
@@ -448,6 +464,7 @@ func TestProfilesPagination(t *testing.T) {
 		Name: "new_property", Type: types.String(), ReadOptional: true,
 	})
 	k.AlterProfileSchemaAndWait(types.Object(newProperties), nil, nil)
+	partialSchema := types.Object([]types.Property{emailProperty})
 	page, _, _ := k.ProfilesWithSchema(partialSchema, nil, "", true, 0, 1)
 	if len(page) != 1 {
 		t.Fatalf("expected one profile, got %d", len(page))

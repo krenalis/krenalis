@@ -16,31 +16,60 @@ import (
 	"github.com/krenalis/krenalis/warehouses"
 )
 
-// profileQueryWarehouse returns an empty result set and records the last query
-// and the number of Query calls.
+// profileQueryWarehouse records the last query and the number of Query calls.
+// It returns empty results unless rows or an error are configured.
 type profileQueryWarehouse struct {
 	warehouses.Warehouse
 	query warehouses.RowQuery
 	calls int
+	err   error
+	rows  *profileQueryRows
 }
 
-// Query records the query and returns an empty result set.
+// Counts returns zero or the configured error.
+func (w *profileQueryWarehouse) Counts(_ context.Context, _ string, _ []warehouses.Join, _ []warehouses.Expr) ([]int, error) {
+	if w.err != nil {
+		return nil, w.err
+	}
+	return []int{0}, nil
+}
+
+// Query records the query and returns the configured result or error.
 func (w *profileQueryWarehouse) Query(_ context.Context, query warehouses.RowQuery, _ bool) (warehouses.Rows, int, error) {
 	w.calls++
 	w.query = query
+	if w.err != nil {
+		return nil, 0, w.err
+	}
+	if w.rows != nil {
+		return w.rows, w.rows.remaining, nil
+	}
 	return &profileQueryRows{}, 0, nil
 }
 
-// profileQueryRows represents an empty result set.
-type profileQueryRows struct{}
+// profileQueryRows simulates iteration and scanning failures.
+type profileQueryRows struct {
+	remaining int
+	err       error
+	scanErr   error
+}
 
 func (r *profileQueryRows) Close() error { return nil }
 
-func (r *profileQueryRows) Err() error { return nil }
+func (r *profileQueryRows) Err() error { return r.err }
 
-func (r *profileQueryRows) Next() bool { return false }
+func (r *profileQueryRows) Next() bool {
+	if r.remaining == 0 {
+		return false
+	}
+	r.remaining--
+	return true
+}
 
 func (r *profileQueryRows) Scan(dest ...any) error {
+	if r.scanErr != nil {
+		return r.scanErr
+	}
 	return errors.New("core/internal/datastore: no current row")
 }
 
@@ -63,6 +92,23 @@ func TestCountIdentitiesEmptyPipelines(t *testing.T) {
 		t.Fatalf("expected three empty identity count maps, got %#v", counts)
 	}
 
+}
+
+// TestProfileCountWarehouseError verifies the classification of Counts errors
+// without requiring a schema or workspace state for an unfiltered count.
+func TestProfileCountWarehouseError(t *testing.T) {
+	warehouseErr := errors.New("warehouse count failed")
+	store := &Store{mc: newModeCoordinator(state.Normal)}
+	store.wh.Store(warehouses.Warehouse(&profileQueryWarehouse{err: warehouseErr}))
+	_, err := store.ProfileCount(t.Context(), nil, types.Type{})
+	if err != nil {
+		unavailable, ok := errors.AsType[*UnavailableError](err)
+		if !ok || unavailable.Err != warehouseErr {
+			t.Fatalf("expected UnavailableError with cause %v, got %v", warehouseErr, err)
+		}
+		return
+	}
+	t.Fatal("expected a warehouse error, got nil")
 }
 
 // TestProfileQueryArguments verifies that invalid arguments are rejected and
@@ -104,6 +150,45 @@ func TestProfileQueryArguments(t *testing.T) {
 	}
 }
 
+// TestProfileQueryErrors distinguishes query preparation failures from
+// warehouse query, scanning, and iteration failures.
+func TestProfileQueryErrors(t *testing.T) {
+	warehouseErr := errors.New("warehouse query failed")
+	for _, tc := range []struct {
+		name        string
+		where       *state.Where
+		warehouse   profileQueryWarehouse
+		unavailable bool
+	}{
+		{name: "invalid where", where: &state.Where{}},
+		{name: "query", warehouse: profileQueryWarehouse{err: warehouseErr}, unavailable: true},
+		{name: "scan", warehouse: profileQueryWarehouse{rows: &profileQueryRows{remaining: 1, scanErr: warehouseErr}}, unavailable: true},
+		{name: "iteration", warehouse: profileQueryWarehouse{rows: &profileQueryRows{err: warehouseErr}}, unavailable: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			store := &Store{}
+			store.wh.Store(warehouses.Warehouse(&tc.warehouse))
+			_, _, err := store.query(t.Context(), Query{
+				table: "profiles", Properties: []string{"email"}, Where: tc.where, Limit: 1,
+			}, map[string]warehouses.Column{"email": {Name: "email", Type: types.String()}}, true)
+			if err != nil {
+				unavailable, ok := errors.AsType[*UnavailableError](err)
+				if ok != tc.unavailable {
+					t.Fatalf("expected warehouse error classification %t, got %T: %v", tc.unavailable, err, err)
+				}
+				if ok && unavailable.Err != warehouseErr {
+					t.Fatalf("expected cause %v, got %v", warehouseErr, unavailable.Err)
+				}
+				if tc.warehouse.calls != 0 && !tc.unavailable {
+					t.Fatalf("expected no warehouse queries, got %d", tc.warehouse.calls)
+				}
+				return
+			}
+			t.Fatal("expected an error, got nil")
+		})
+	}
+}
+
 // TestQueryOrdering checks that properties are mapped to the correct columns
 // and that queries preserve the requested sort order and direction.
 func TestQueryOrdering(t *testing.T) {
@@ -137,6 +222,9 @@ func TestQueryOrdering(t *testing.T) {
 				}
 				if err.Error() != tc.wantError {
 					t.Fatalf("expected error %q, got %v", tc.wantError, err)
+				}
+				if _, ok := errors.AsType[*UnavailableError](err); ok {
+					t.Fatalf("expected an internal query error, got %T", err)
 				}
 				if warehouse.calls != 0 {
 					t.Fatalf("expected no warehouse queries, got %d", warehouse.calls)

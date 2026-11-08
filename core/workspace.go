@@ -1322,7 +1322,10 @@ func (this *Workspace) ProfileCount(ctx context.Context, filter *Filter, schema 
 
 	this.core.mustBeOpen()
 
-	if (schema.Valid() || filter != nil) && !schema.IsObject() {
+	if filter != nil && !schema.Valid() {
+		return 0, errors.BadRequest("schema is required")
+	}
+	if schema.Valid() && !schema.IsObject() {
 		return 0, errors.BadRequest("schema is not an object type")
 	}
 

@@ -980,7 +980,7 @@ func (workspace workspace) ProfileCount(_ http.ResponseWriter, r *http.Request) 
 	if value, ok := q["schema"]; ok {
 		err = json.Unmarshal([]byte(value[0]), &schema)
 		if err != nil {
-			return nil, errors.BadRequest("invalid schema")
+			return nil, errors.BadRequest("invalid schema: %s", err)
 		}
 	}
 	total, err := ws.ProfileCount(r.Context(), filter, schema)
@@ -1028,10 +1028,8 @@ func (workspace workspace) Profiles(w http.ResponseWriter, r *http.Request) (any
 			return nil, errors.BadRequest("filter cannot be null")
 		}
 	}
-
 	order := q.Get("order")
 	orderDesc := q.Get("orderDesc") == "true"
-
 	var first int
 	if f := q.Get("first"); f != "" {
 		first, err = strconv.Atoi(f)
@@ -1039,7 +1037,6 @@ func (workspace workspace) Profiles(w http.ResponseWriter, r *http.Request) (any
 			return nil, errors.BadRequest("invalid first")
 		}
 	}
-
 	var limit int
 	if l := q.Get("limit"); l != "" {
 		limit, err = strconv.Atoi(l)
@@ -1055,7 +1052,6 @@ func (workspace workspace) Profiles(w http.ResponseWriter, r *http.Request) (any
 	if err != nil {
 		return nil, err
 	}
-
 	w.Header().Set("Content-Type", "application/json")
 	b := newBodyWriter(w)
 	b.writeString(`{"profiles":[`)

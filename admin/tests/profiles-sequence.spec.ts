@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { ResponseProfile } from '../src/lib/api/types/responses';
-import { Filter } from '../src/lib/api/types/pipeline';
+import { Filter, FilterCondition } from '../src/lib/api/types/pipeline';
 import { ObjectType } from '../src/lib/api/types/types';
 import { validateAndNormalizeFilter } from '../src/lib/core/pipeline';
 import {
@@ -252,6 +252,16 @@ test(`Normalize filter drafts without silently accepting partial conditions`, ()
 			filterSchema,
 		),
 	).toThrow('cannot be empty');
+	for (const [condition, message] of [
+		[{ property: '', operator: 'is', values: ['Ada'] }, 'Property of filter condition is required'],
+		[{ property: '', operator: '', values: ['Ada'] }, 'Property of filter condition is required'],
+		[{ property: 'email', operator: 'is between', values: ['a'] }, 'is required'],
+		[{ property: 'email', operator: 'is true', values: [] }, 'cannot be used with property'],
+	] satisfies [FilterCondition, string][]) {
+		expect(() => validateAndNormalizeFilter({ operator: 'and', rules: [condition] }, filterSchema)).toThrow(
+			message,
+		);
+	}
 	expect(
 		validateAndNormalizeFilter(
 			{ operator: 'and', rules: [{ property: 'email', operator: 'does not exist', values: [] }] },
