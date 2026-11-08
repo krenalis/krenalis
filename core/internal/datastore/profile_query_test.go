@@ -6,9 +6,12 @@ package datastore
 
 import (
 	"context"
+	"math"
 	"slices"
 	"testing"
 
+	"github.com/krenalis/krenalis/core/internal/state"
+	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
 )
@@ -35,7 +38,7 @@ func (r *profileQueryRows) Next() bool {
 	return r.remaining >= 0
 }
 
-// Scan supplies a value without allocating a payload for surplus rows.
+// Scan supplies a fixed column value.
 func (r *profileQueryRows) Scan(dest ...any) error {
 	r.scanned++
 	dest[0] = "email@example.com"
@@ -59,70 +62,59 @@ func (w profileQueryWarehouse) Query(_ context.Context, query warehouses.RowQuer
 }
 
 // TestProfileQueryArguments verifies argument rejection before starting a
-// warehouse operation.
+// warehouse operation and acceptance of valid boundary values.
 func TestProfileQueryArguments(t *testing.T) {
 	schema := types.Object([]types.Property{{Name: "email", Type: types.String()}})
 	for _, tc := range []struct {
 		name   string
 		query  Query
 		schema types.Type
+		valid  bool
 	}{
 		{name: "missing schema", query: Query{Limit: 1}},
 		{name: "non-object schema", query: Query{Limit: 1}, schema: types.String()},
 		{name: "negative offset", query: Query{First: -1, Limit: 1}, schema: schema},
 		{name: "excess offset", query: Query{First: 2147483648, Limit: 1}, schema: schema},
 		{name: "missing limit", schema: schema},
+		{name: "negative limit", query: Query{Limit: -1}, schema: schema},
 		{name: "excess limit", query: Query{Limit: 1001}, schema: schema},
+		{name: "minimum bounds", query: Query{First: 0, Limit: 1}, schema: schema, valid: true},
+		{name: "maximum bounds", query: Query{First: math.MaxInt32, Limit: 1000}, schema: schema, valid: true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			_, _, _, err := (&Store{}).Profiles(t.Context(), tc.query, tc.schema)
+			store := &Store{}
+			if tc.valid {
+				store.mc = newModeCoordinator(state.Maintenance)
+			}
+			_, _, _, err := store.Profiles(t.Context(), tc.query, tc.schema)
 			if err != nil {
+				if tc.valid && !errors.Is(err, ErrMaintenanceMode) {
+					t.Fatalf("expected %v, got %v", ErrMaintenanceMode, err)
+				}
 				return
 			}
-			t.Fatal("expected an invalid argument error, got nil")
+			t.Fatal("expected an error, got nil")
 		})
 	}
 }
 
-// TestProfileQueryBounds verifies safety limits without enforcing count/row
-// agreement.
-func TestProfileQueryBounds(t *testing.T) {
-	for _, tc := range []struct {
-		name      string
-		total     int
-		rows      int
-		scanned   int
-		wantError bool
-	}{
-		{name: "negative count", total: -1, rows: 1, wantError: true},
-		{name: "excess rows", total: 3, rows: 3, scanned: 2, wantError: true},
-		{name: "independent observations", total: 0, rows: 2, scanned: 2},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			rows := &profileQueryRows{remaining: tc.rows}
-			store := &Store{}
-			store.wh.Store(warehouses.Warehouse(profileQueryWarehouse{rows: rows, total: tc.total}))
-			records, total, err := store.query(t.Context(), Query{
-				table: "profiles", Properties: []string{"email"}, Limit: 2,
-			}, map[string]warehouses.Column{"email": {Name: "email", Type: types.String()}}, true)
-			if !rows.closed || rows.scanned != tc.scanned {
-				t.Fatalf("expected closed true and scanned %d, got closed %t and scanned %d",
-					tc.scanned, rows.closed, rows.scanned)
-			}
-			if err != nil {
-				if !tc.wantError {
-					t.Fatalf("expected no error, got %v", err)
-				}
-				return
-			}
-			if tc.wantError {
-				t.Fatal("expected an error, got nil")
-			}
-			if total != tc.total || len(records) != tc.rows {
-				t.Fatalf("expected total %d and rows %d, got total %d and rows %d",
-					tc.total, tc.rows, total, len(records))
-			}
-		})
+// TestProfileQueryCount verifies that the estimated total and returned rows
+// remain independent observations.
+func TestProfileQueryCount(t *testing.T) {
+	rows := &profileQueryRows{remaining: 2}
+	store := &Store{}
+	store.wh.Store(warehouses.Warehouse(profileQueryWarehouse{rows: rows, total: 0}))
+	records, total, err := store.query(t.Context(), Query{
+		table: "profiles", Properties: []string{"email"}, Limit: 2,
+	}, map[string]warehouses.Column{"email": {Name: "email", Type: types.String()}}, true)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if !rows.closed || rows.scanned != 2 {
+		t.Fatalf("expected closed true and scanned 2, got closed %t and scanned %d", rows.closed, rows.scanned)
+	}
+	if total != 0 || len(records) != 2 {
+		t.Fatalf("expected total 0 and rows 2, got total %d and rows %d", total, len(records))
 	}
 }
 

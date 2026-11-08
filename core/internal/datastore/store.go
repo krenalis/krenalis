@@ -974,16 +974,9 @@ func (store *Store) query(ctx context.Context, query Query, columnByProperty map
 	}
 
 	defer rows.Close()
-	if query.table == "profiles" && total < 0 {
-		return nil, 0, errors.New("profile count is negative")
-	}
-
 	records := []map[string]any{}
 	row := make([]any, len(columns))
 	for rows.Next() {
-		if query.table == "profiles" && len(records) >= query.Limit {
-			return nil, 0, errors.New("profile row count exceeds requested limit")
-		}
 		err = rows.Scan(row...)
 		if err != nil {
 			return nil, 0, err
