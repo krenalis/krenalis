@@ -502,56 +502,6 @@ func (store *Store) ProfileRecords(ctx context.Context, query Query, consentCond
 	return records(ctx, store.warehouse(), query, consentCondition, "_kpid", store.profileColumnByProperty(), true, matching)
 }
 
-// ProfileCount returns the number of profiles matched by where.
-// schema describes the properties used by where and may be invalid only when
-// where is nil. It returns *schemas.Error if schema is not aligned,
-// ErrWorkspaceNotExist if the workspace no longer exists, ErrMaintenanceMode
-// in maintenance mode, or *UnavailableError for a warehouse failure.
-func (store *Store) ProfileCount(ctx context.Context, where *state.Where, schema types.Type) (int, error) {
-
-	store.mustBeOpen()
-
-	if (where != nil || schema.Valid()) && !schema.IsObject() {
-		return 0, errors.New("schema is not an object type")
-	}
-	ctx, done, err := store.mc.StartOperation(ctx, normalMode|inspectionMode)
-	if err != nil {
-		return 0, err
-	}
-	defer done()
-
-	if schema.Valid() {
-
-		workspace, ok := store.ds.state.Workspace(store.workspace)
-		if !ok {
-			return 0, ErrWorkspaceNotExist
-		}
-		err = schemas.CheckAlignment(schema, workspace.ProfileSchema, nil)
-		if err != nil {
-			return 0, err
-		}
-
-	}
-
-	var expression warehouses.Expr
-	if where != nil {
-		expression, err = convertWhere(where, profileColumnByProperty(schema))
-		if err != nil {
-			return 0, unavailableError(err)
-		}
-	}
-	counts, err := store.warehouse().Counts(ctx, "profiles", nil, []warehouses.Expr{expression})
-	if err != nil {
-		return 0, unavailableError(err)
-	}
-	total := counts[0]
-	if total < 0 {
-		return 0, unavailableError(errors.New("profile count is negative"))
-	}
-
-	return total, nil
-}
-
 // Profiles returns profiles matching query, their total count, and whether
 // another row follows the requested range. schema describes all properties
 // used by query, excluding the built-in KPID and update time.
@@ -630,6 +580,56 @@ func (store *Store) PurgePipelines(ctx context.Context, pipelines []string) erro
 		return err
 	}
 	return store.warehouse().Delete(ctx, "krenalis_destination_profiles", where)
+}
+
+// ProfileCount returns the number of profiles matched by where.
+// schema describes the properties used by where and may be invalid only when
+// where is nil. It returns *schemas.Error if schema is not aligned,
+// ErrWorkspaceNotExist if the workspace no longer exists, ErrMaintenanceMode
+// in maintenance mode, or *UnavailableError for a warehouse failure.
+func (store *Store) ProfileCount(ctx context.Context, where *state.Where, schema types.Type) (int, error) {
+
+	store.mustBeOpen()
+
+	if (where != nil || schema.Valid()) && !schema.IsObject() {
+		return 0, errors.New("schema is not an object type")
+	}
+	ctx, done, err := store.mc.StartOperation(ctx, normalMode|inspectionMode)
+	if err != nil {
+		return 0, err
+	}
+	defer done()
+
+	if schema.Valid() {
+
+		workspace, ok := store.ds.state.Workspace(store.workspace)
+		if !ok {
+			return 0, ErrWorkspaceNotExist
+		}
+		err = schemas.CheckAlignment(schema, workspace.ProfileSchema, nil)
+		if err != nil {
+			return 0, err
+		}
+
+	}
+
+	var expression warehouses.Expr
+	if where != nil {
+		expression, err = convertWhere(where, profileColumnByProperty(schema))
+		if err != nil {
+			return 0, unavailableError(err)
+		}
+	}
+	counts, err := store.warehouse().Counts(ctx, "profiles", nil, []warehouses.Expr{expression})
+	if err != nil {
+		return 0, unavailableError(err)
+	}
+	total := counts[0]
+	if total < 0 {
+		return 0, unavailableError(errors.New("profile count is negative"))
+	}
+
+	return total, nil
 }
 
 // Repair repairs the database objects on the data warehouse needed by Krenalis.
