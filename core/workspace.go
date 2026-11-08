@@ -282,7 +282,7 @@ func (this *Workspace) Attributes(ctx context.Context, kpid string, schema types
 			Values:   []any{kpid},
 		}},
 	}
-	profiles, _, _, err := this.store.Profiles(ctx, datastore.Query{
+	profiles, _, err := this.store.Profiles(ctx, datastore.Query{
 		Properties: schema.Properties().Names(),
 		Where:      where,
 		Limit:      1,
@@ -1478,13 +1478,13 @@ func (this *Workspace) Profiles(ctx context.Context, schema types.Type, properti
 	if order != "_kpid" {
 		orderBy = append(orderBy, "_kpid")
 	}
-	rows, total, hasNext, err := this.store.Profiles(ctx, datastore.Query{
+	rows, total, err := this.store.Profiles(ctx, datastore.Query{
 		Properties: append([]string{"_kpid", "_updated_at"}, properties...),
 		Where:      where,
 		OrderBy:    orderBy,
 		OrderDesc:  orderDesc,
 		First:      first,
-		Limit:      limit,
+		Limit:      limit + 1,
 	}, schema)
 	if err != nil {
 		if err == datastore.ErrMaintenanceMode {
@@ -1502,6 +1502,11 @@ func (this *Workspace) Profiles(ctx context.Context, schema types.Type, properti
 		return nil, 0, false, err
 	}
 
+	hasNext := len(rows) > limit
+	if hasNext {
+		rows[limit] = nil
+		rows = rows[:limit]
+	}
 	profiles := make([]Profile, len(rows))
 	for i, row := range rows {
 		profiles[i].KPID = row["_kpid"].(string)

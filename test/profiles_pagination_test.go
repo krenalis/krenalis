@@ -97,6 +97,12 @@ func TestProfilesPagination(t *testing.T) {
 	if !hasNext {
 		t.Fatal("expected the first profile page to have a continuation")
 	}
+	maximumPage, maximumTotal, maximumHasNext := k.ProfilesWithSchema(
+		requestSchema, []string{"email"}, "", true, 0, 1000)
+	if len(maximumPage) != profileCount || maximumTotal != profileCount || maximumHasNext {
+		t.Fatalf("expected %d profiles, total %d and no continuation, got %d profiles, total %d and continuation %t",
+			profileCount, profileCount, len(maximumPage), maximumTotal, maximumHasNext)
+	}
 	var summaryResponse map[string]any
 	k.Call("GET", "/v1/profiles?"+url.Values{
 		"properties": []string{"email"},

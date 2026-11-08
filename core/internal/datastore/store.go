@@ -502,48 +502,48 @@ func (store *Store) ProfileRecords(ctx context.Context, query Query, consentCond
 	return records(ctx, store.warehouse(), query, consentCondition, "_kpid", store.profileColumnByProperty(), true, matching)
 }
 
-// Profiles returns profiles matching query, their total count, and whether
-// more results are available for a subsequent call with the next range.
+// Profiles returns the profiles matching query and an estimate of their
+// total number.
 //
 // schema must be an object type with the properties in query.Properties,
 // query.Where, and query.OrderBy. It may describe other profile properties.
 // The meta properties "_kpid" and "_updated_at" can be used in query but must
 // not be included in schema.
 //
-// query.First must be in [0, math.MaxInt32] and query.Limit in [1, 1000].
+// query.First must be in [0, math.MaxInt32] and query.Limit must be positive.
 //
 // If the workspace no longer exists, it returns the ErrWorkspaceNotExist error.
 // If the data warehouse is in maintenance mode, it returns the
 // ErrMaintenanceMode error. If schema is not aligned with the workspace's
 // profile schema, it returns a *schemas.Error error. If an error occurs with
 // the data warehouse, it returns an *UnavailableError error.
-func (store *Store) Profiles(ctx context.Context, query Query, schema types.Type) ([]map[string]any, int, bool, error) {
+func (store *Store) Profiles(ctx context.Context, query Query, schema types.Type) ([]map[string]any, int, error) {
 
 	store.mustBeOpen()
 
 	if query.First < 0 || query.First > 2147483647 {
-		return nil, 0, false, errors.New("offset is out of range")
+		return nil, 0, errors.New("offset is out of range")
 	}
-	if query.Limit < 1 || query.Limit > 1000 {
-		return nil, 0, false, errors.New("limit is out of range")
+	if query.Limit < 1 {
+		return nil, 0, errors.New("limit is out of range")
 	}
 	if !schema.IsObject() {
-		return nil, 0, false, errors.New("schema is not an object type")
+		return nil, 0, errors.New("schema is not an object type")
 	}
 
 	ctx, done, err := store.mc.StartOperation(ctx, normalMode|inspectionMode)
 	if err != nil {
-		return nil, 0, false, err
+		return nil, 0, err
 	}
 	defer done()
 
 	workspace, ok := store.ds.state.Workspace(store.workspace)
 	if !ok {
-		return nil, 0, false, ErrWorkspaceNotExist
+		return nil, 0, ErrWorkspaceNotExist
 	}
 	err = schemas.CheckAlignment(schema, workspace.ProfileSchema, nil)
 	if err != nil {
-		return nil, 0, false, err
+		return nil, 0, err
 	}
 
 	columns := profileColumnByProperty(schema)
@@ -551,19 +551,12 @@ func (store *Store) Profiles(ctx context.Context, query Query, schema types.Type
 	columns["_updated_at"] = warehouses.Column{Name: "_updated_at", Type: types.DateTime()}
 	query.table = "profiles"
 	query.total = true
-	limit := query.Limit
-	query.Limit++
 	profiles, total, err := store.query(ctx, query, columns, true)
 	if err != nil {
-		return nil, 0, false, unavailableError(err)
-	}
-	hasNext := len(profiles) > limit
-	if hasNext {
-		profiles[limit] = nil
-		profiles = profiles[:limit]
+		return nil, 0, unavailableError(err)
 	}
 
-	return profiles, total, hasNext, nil
+	return profiles, total, nil
 }
 
 // PurgePipelines purges the provided pipelines from the data warehouse,

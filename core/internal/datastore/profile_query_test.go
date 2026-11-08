@@ -63,16 +63,16 @@ func TestProfileQueryArguments(t *testing.T) {
 		{name: "excess offset", query: Query{First: 2147483648, Limit: 1}, schema: schema},
 		{name: "missing limit", schema: schema},
 		{name: "negative limit", query: Query{Limit: -1}, schema: schema},
-		{name: "excess limit", query: Query{Limit: 1001}, schema: schema},
 		{name: "minimum bounds", query: Query{First: 0, Limit: 1}, schema: schema, valid: true},
-		{name: "maximum bounds", query: Query{First: math.MaxInt32, Limit: 1000}, schema: schema, valid: true},
+		{name: "maximum offset", query: Query{First: math.MaxInt32, Limit: 1}, schema: schema, valid: true},
+		{name: "large limit", query: Query{Limit: math.MaxInt}, schema: schema, valid: true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			store := &Store{}
 			if tc.valid {
 				store.mc = newModeCoordinator(state.Maintenance)
 			}
-			_, _, _, err := store.Profiles(t.Context(), tc.query, tc.schema)
+			_, _, err := store.Profiles(t.Context(), tc.query, tc.schema)
 			if err != nil {
 				if tc.valid && !errors.Is(err, ErrMaintenanceMode) {
 					t.Fatalf("expected %v, got %v", ErrMaintenanceMode, err)
