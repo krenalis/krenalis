@@ -46,6 +46,9 @@ func TestProfileFilterExperienceSQL(t *testing.T) {
 		if strings.Contains(statement.SQL, "ROW_NUMBER") {
 			t.Fatalf("expected all compatible winners, got %s", statement.SQL)
 		}
+		if strings.Contains(statement.SQL, " IS NOT FALSE") || !strings.Contains(statement.SQL, " IS DISTINCT FROM FALSE") {
+			t.Fatalf("expected portable ternary qualification, got %s", statement.SQL)
+		}
 		values, err := statement.Values()
 		if err != nil {
 			t.Fatalf("expected typed time arguments, got %v", err)

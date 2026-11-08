@@ -149,7 +149,8 @@ keeps all winners at/after the latest certainly included timestamp, or every
 possible winner plus absence when no certain row exists. Shared governed facts
 are outside this prepared contract. Verification closes only after preserving
 selection alternatives; no ID breaks ties and no older passing row is substituted.
-Copy inspection additionally requires equal exact timestamps, not just equal
-period membership. The node reuses page/totals and the six-column explanation
-transport, whose two integer slots carry candidate count and a 0/1 absence flag
-under a distinct ExperienceNodes tag. Count/Sum/Average decoding is unchanged.
+Copy inspection additionally requires equal exact timestamps for identities not
+certainly excluded, not just equal period membership. The node reuses page/totals
+and the six-column explanation transport, whose two integer slots carry candidate
+count and a 0/1 absence flag under a distinct ExperienceNodes tag.
+Count/Sum/Average decoding is unchanged.

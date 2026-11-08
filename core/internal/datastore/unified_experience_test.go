@@ -65,10 +65,14 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,nam
 		{"optional tie", `('a','2026-01-01','{"q":"yes","v":"yes"}'),('b','2026-01-01','{"v":"no"}')`, unified.Unknown, 2, false, false},
 		{"same copies", `('a','2026-01-01','{"q":"yes","v":"yes"}'),('a','2026-01-01','{"q":"yes","v":"yes"}')`, unified.Match, 1, false, false},
 		{"exact timestamp conflict", `('a','2026-01-01','{"q":"yes","v":"yes"}'),('a','2026-01-01 00:00:00.000001','{"q":"yes","v":"yes"}')`, 0, 0, false, true},
+		{"possible timestamp conflict", `('a','2026-01-01','{"v":"yes"}'),('a','2026-01-02','{"v":"yes"}')`, 0, 0, false, true},
+		{"excluded timestamp conflict", `('a','2026-01-01','{"q":"no"}'),('a','2026-01-02','{"q":"no"}')`, unified.NoMatch, 0, true, false},
+		{"mixed qualification and timestamp conflict", `('a','2026-01-01','{"q":"no"}'),('a','2026-01-02','{"q":"yes"}')`, 0, 0, false, true},
 		{"period conflict", `('a','2026-01-01','{"q":"yes","v":"yes"}'),('a','2026-02-01','{"q":"yes","v":"yes"}')`, 0, 0, false, true},
 		{"qualification conflict", `('a','2026-01-01','{"q":"yes","v":"yes"}'),('a','2026-01-01','{"v":"yes"}')`, 0, 0, false, true},
 		{"verify conflict", `('a','2026-01-01','{"q":"yes","v":"yes"}'),('a','2026-01-01','{"q":"yes"}')`, 0, 0, false, true},
 		{"irrelevant verify copies", `('a','2026-01-01','{"q":"no","v":"yes"}'),('a','2026-01-01','{"q":"no"}')`, unified.NoMatch, 0, true, false},
+		{"excluded period conflict", `('a','2026-01-01','{"q":"no"}'),('a','2026-02-01','{"q":"no"}')`, 0, 0, false, true},
 		{"start included end excluded", `('a','2026-01-01','{"q":"yes","v":"yes"}'),('b','2026-02-01','{"q":"yes","v":"no"}')`, unified.Match, 1, false, false},
 		{"microseconds order", `('a','2026-01-01 00:00:00.000002','{"q":"yes","v":"yes"}'),('b','2026-01-01 00:00:00.000001','{"q":"yes","v":"no"}')`, unified.Match, 1, false, false},
 		{"missing timestamp", `('a',NULL,'{"q":"yes","v":"yes"}')`, 0, 0, false, true},
@@ -134,6 +138,18 @@ INSERT INTO krenalis_events VALUES
 		if explained.Nodes[0].Truth != unified.NoMatch {
 			t.Fatalf("expected NO_MATCH, got %+v", explained)
 		}
+	})
+
+	t.Run("unrelated source timestamp conflict", func(t *testing.T) {
+		execUnifiedFixture(t, dw, `TRUNCATE krenalis_events;
+INSERT INTO krenalis_events VALUES
+('`+unifiedTestID(2)+`','other','track','Product Viewed',NULL,'2026-01-01','{}'),
+('`+unifiedTestID(2)+`','other','track','Product Viewed',NULL,'2026-01-02','{}')`)
+		result, err := store.UnifiedProfiles(t.Context(), root, unified.Bindings{}, at, unified.Page{Limit: 10})
+		if err != nil {
+			t.Fatalf("expected irrelevant timestamp conflict ignored, got %v", err)
+		}
+		assertUnifiedTruths(t, result, []unified.Truth{unified.NoMatch, unified.NoMatch, unified.NoMatch})
 	})
 
 	t.Run("attribution conflicts", func(t *testing.T) {
@@ -238,12 +254,12 @@ INSERT INTO krenalis_events VALUES
 			}
 		}
 	})
+
 }
 
 // TestUnifiedExperienceOraclePostgreSQL enumerates independent completions,
 // including every tied winner, instead of using the compiler's cutoff rule.
 func TestUnifiedExperienceOraclePostgreSQL(t *testing.T) {
-
 	dw := newJSONFilterTestWarehouse(t, "PostgreSQL")
 	store := &Store{mc: newModeCoordinator(state.Normal)}
 	store.wh.Store(dw)

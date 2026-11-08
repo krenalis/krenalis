@@ -9,7 +9,8 @@ import "time"
 // LastOccurrence selects before verifying, preserving all compatible winners.
 // Qualifications are independent local Record outcomes. An unknown qualifier
 // makes that identity optional; it does not declare a latent governed fact.
-// Copies must agree on attribution, exact timestamp, qualification and relevant
+// Copies must agree on attribution and period membership. Identities not
+// certainly excluded also require equal timestamps, qualification and relevant
 // verification. Identity and timestamps are determined, with no ID tie-break.
 type LastOccurrence struct {
 	Source         OccurrenceSource

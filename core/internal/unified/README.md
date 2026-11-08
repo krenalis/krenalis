@@ -754,10 +754,11 @@ NULL Record outcomes do not create governed shared facts or value completions.
 No shared-fact or cross-profile predicate is admitted by this subset.
 
 Copies are inspected before selection, including outside-period copies of a
-seeded identity. They must agree on exact stored timestamp as well as attribution,
-period, qualification and relevant verification. Timestamp disagreement inside
-the same period is a source fault, as are missing relevant timestamps. This
-strengthens only the E source contract; Count/Sum/Average behavior is unchanged.
+seeded identity. Attribution and period membership must agree. Timestamp
+disagreement inside the same period is ignored only for identities certainly
+excluded from the base. Qualification and relevant verification conflicts remain
+source faults, as do missing relevant timestamps. These checks apply only to
+the E source contract; Count/Sum/Average behavior is unchanged.
 Excluded rows do not need a known verify result. Source faults are complete
 operation errors; explanations remain scoped to the requested profile.
 

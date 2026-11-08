@@ -74,8 +74,8 @@ func (c *compiler) experience(node *warehouses.LastOccurrence) (string, error) {
  MIN(in_period) AS period_min,MAX(in_period) AS period_max,
  MIN(CASE WHEN in_period=1 THEN `+state+` END) AS state_min,
  MAX(CASE WHEN in_period=1 THEN `+state+` END) AS state_max,
- MIN(CASE WHEN in_period=1 AND (qualification IS NOT FALSE) THEN `+body+` END) AS verify_min,
- MAX(CASE WHEN in_period=1 AND (qualification IS NOT FALSE) THEN `+body+` END) AS verify_max
+ MIN(CASE WHEN in_period=1 AND (qualification IS DISTINCT FROM FALSE) THEN `+body+` END) AS verify_min,
+ MAX(CASE WHEN in_period=1 AND (qualification IS DISTINCT FROM FALSE) THEN `+body+` END) AS verify_max
  FROM copies`+n+` GROUP BY occurrence_id)`)
 	c.ctes = append(c.ctes, "base"+n+` AS (SELECT profile_id,time_min,state_min,verify_min,
  MAX(CASE WHEN state_min=1 THEN time_min END) OVER (PARTITION BY profile_id) AS certain_time
@@ -89,11 +89,11 @@ func (c *compiler) experience(node *warehouses.LastOccurrence) (string, error) {
  FROM base`+n+` WHERE certain_time IS NULL OR time_min>=certain_time GROUP BY profile_id)`)
 	c.ctes = append(c.ctes, "fault"+n+` AS (SELECT
  (SELECT COALESCE(SUM(CASE WHEN profile_id IS NOT NULL AND
- (profiles>1 OR period_min<>period_max OR missing_times<>0 OR time_min<>time_max
+ (profiles>1 OR period_min<>period_max OR missing_times<>0 OR (time_min<>time_max AND state_max<>0)
  OR state_min<>state_max OR verify_min<>verify_max) THEN 1 ELSE 0 END),0) FROM facts`+n+`)
  +(SELECT COUNT(*) FROM selected`+n+` WHERE candidates>9223372036854775807)
  +(SELECT COUNT(*) FROM `+table+" WHERE (("+within+" AND "+id+" IS NULL) OR ("+
-		timestamp+" IS NULL AND ("+qual+") IS NOT FALSE)) AND "+profile+" IS NOT NULL"+profileOnly+") AS failures)")
+		timestamp+" IS NULL AND ("+qual+") IS DISTINCT FROM FALSE)) AND "+profile+" IS NOT NULL"+profileOnly+") AS failures)")
 	c.faults = append(c.faults, "fault"+n)
 	alias := "v" + n
 	c.joins = append(c.joins, "LEFT JOIN selected"+n+" "+alias+" ON "+alias+".profile_id=p."+q("$profile_id"))

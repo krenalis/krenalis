@@ -455,11 +455,12 @@ otherwise UNKNOWN. A tie never uses message ID or reception time as a semantic
 tie-break. All tied candidates passing can give MATCH; mixed results give UNKNOWN.
 Older optional messages cannot affect Last after a later certain message.
 
-Copies of an identity must agree on attribution, the exact stored timestamp,
-base qualification and relevant verification. A mismatch is a source-contract
-execution failure, including two timestamps inside the same period. No partial
-listing or invented UNKNOWN is returned. Unknown timestamps are outside this
-determined-time source contract, not silently excluded candidates.
+Copies of an identity must agree on attribution and period membership. For an
+identity not certainly excluded from the base, they must also agree on the exact
+stored timestamp, qualification and relevant verification. A mismatch is a
+source-contract execution failure, including two timestamps inside the same
+period. No partial listing or invented UNKNOWN is returned. Unknown timestamps
+are outside this determined-time source contract, not silently excluded candidates.
 
 Explanations have kind experience and an experience object with the standard
 period fields, select and selection:{kind,absence,candidates}. Selection kind is
