@@ -264,8 +264,8 @@ func (this *Workspace) Attributes(ctx context.Context, kpid string, schema types
 		return nil, errors.BadRequest("profile %q is not a valid profile identifier", kpid)
 	}
 	kpid = id.String()
-	if schema.Kind() != types.ObjectKind || schema.Generic() {
-		return nil, errors.BadRequest("schema is not a concrete object type")
+	if schema.Kind() != types.ObjectKind {
+		return nil, errors.BadRequest("schema is not an object type")
 	}
 
 	where := &state.Where{
@@ -1317,8 +1317,8 @@ func (this *Workspace) ProfileCount(ctx context.Context, filter *Filter, schema 
 
 	this.core.mustBeOpen()
 
-	if (schema.Valid() || filter != nil) && (schema.Kind() != types.ObjectKind || schema.Generic()) {
-		return 0, errors.BadRequest("schema is not a concrete object type")
+	if (schema.Valid() || filter != nil) && schema.Kind() != types.ObjectKind {
+		return 0, errors.BadRequest("schema is not an object type")
 	}
 	var where *state.Where
 	var dependencies types.Type
@@ -1397,8 +1397,8 @@ func (this *Workspace) Profiles(ctx context.Context, schema types.Type, properti
 
 	this.core.mustBeOpen()
 
-	if schema.Kind() != types.ObjectKind || schema.Generic() {
-		return nil, 0, false, errors.BadRequest("schema is not a concrete object type")
+	if schema.Kind() != types.ObjectKind {
+		return nil, 0, false, errors.BadRequest("schema is not an object type")
 	}
 	profileProperties := schema.Properties()
 

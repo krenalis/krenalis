@@ -511,8 +511,8 @@ func (store *Store) ProfileCount(ctx context.Context, where *state.Where, schema
 
 	store.mustBeOpen()
 
-	if (where != nil || schema.Valid()) && (schema.Kind() != types.ObjectKind || schema.Generic()) {
-		return 0, errors.New("schema is not a concrete object type")
+	if (where != nil || schema.Valid()) && schema.Kind() != types.ObjectKind {
+		return 0, errors.New("schema is not an object type")
 	}
 	ctx, done, err := store.mc.StartOperation(ctx, normalMode|inspectionMode)
 	if err != nil {
@@ -562,8 +562,8 @@ func (store *Store) Profiles(ctx context.Context, query Query, schema types.Type
 
 	store.mustBeOpen()
 
-	if schema.Kind() != types.ObjectKind || schema.Generic() {
-		return nil, 0, false, errors.New("schema is not a concrete object type")
+	if schema.Kind() != types.ObjectKind {
+		return nil, 0, false, errors.New("schema is not an object type")
 	}
 	if query.First < 0 || query.First > 2147483647 {
 		return nil, 0, false, errors.New("profile offset is out of range")
