@@ -16,35 +16,32 @@ import (
 	"github.com/krenalis/krenalis/warehouses"
 )
 
-// profileQueryRows supplies an empty result set.
-type profileQueryRows struct{}
-
-// Close closes the result set.
-func (r *profileQueryRows) Close() error { return nil }
-
-// Err reports successful iteration.
-func (r *profileQueryRows) Err() error { return nil }
-
-// Next reports that there are no rows.
-func (r *profileQueryRows) Next() bool { return false }
-
-// Scan reports that there is no current row.
-func (r *profileQueryRows) Scan(dest ...any) error {
-	return errors.New("core/internal/datastore: no current row")
-}
-
-// profileQueryWarehouse returns an empty result set and records the query.
+// profileQueryWarehouse returns an empty result set and records the last query
+// and the number of Query calls.
 type profileQueryWarehouse struct {
 	warehouses.Warehouse
-	query *warehouses.RowQuery
+	query warehouses.RowQuery
+	calls int
 }
 
 // Query records the query and returns an empty result set.
-func (w profileQueryWarehouse) Query(_ context.Context, query warehouses.RowQuery, _ bool) (warehouses.Rows, int, error) {
-	if w.query != nil {
-		*w.query = query
-	}
+func (w *profileQueryWarehouse) Query(_ context.Context, query warehouses.RowQuery, _ bool) (warehouses.Rows, int, error) {
+	w.calls++
+	w.query = query
 	return &profileQueryRows{}, 0, nil
+}
+
+// profileQueryRows represents an empty result set.
+type profileQueryRows struct{}
+
+func (r *profileQueryRows) Close() error { return nil }
+
+func (r *profileQueryRows) Err() error { return nil }
+
+func (r *profileQueryRows) Next() bool { return false }
+
+func (r *profileQueryRows) Scan(dest ...any) error {
+	return errors.New("core/internal/datastore: no current row")
 }
 
 // TestCountIdentitiesEmptyPipelines verifies that an empty pipeline list
@@ -125,9 +122,9 @@ func TestQueryOrdering(t *testing.T) {
 		{name: "unknown secondary property", orderBy: []string{"contact.email", "unknown"}, wantError: "property path unknown does not exist"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			var query warehouses.RowQuery
+			warehouse := &profileQueryWarehouse{}
 			store := &Store{}
-			store.wh.Store(warehouses.Warehouse(profileQueryWarehouse{query: &query}))
+			store.wh.Store(warehouses.Warehouse(warehouse))
 			_, _, err := store.query(t.Context(), Query{
 				table: "profiles", Properties: []string{"name"}, OrderBy: tc.orderBy, OrderDesc: tc.orderDesc, Limit: 1,
 			}, map[string]warehouses.Column{
@@ -141,14 +138,18 @@ func TestQueryOrdering(t *testing.T) {
 				if err.Error() != tc.wantError {
 					t.Fatalf("expected error %q, got %v", tc.wantError, err)
 				}
-				if query.Table != "" {
-					t.Fatal("expected no warehouse query for an unknown property, got a query")
+				if warehouse.calls != 0 {
+					t.Fatalf("expected no warehouse queries, got %d", warehouse.calls)
 				}
 				return
 			}
 			if tc.wantError != "" {
 				t.Fatalf("expected error %q, got nil", tc.wantError)
 			}
+			if warehouse.calls != 1 {
+				t.Fatalf("expected one warehouse query, got %d", warehouse.calls)
+			}
+			query := warehouse.query
 			if query.Table != "profiles" {
 				t.Fatalf("expected warehouse query for profiles, got %q", query.Table)
 			}
