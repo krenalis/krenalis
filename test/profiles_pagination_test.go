@@ -200,7 +200,7 @@ func TestProfilesPagination(t *testing.T) {
 		t.Fatalf("unexpected empty range: profiles=%d hasNext=%t", len(empty), emptyHasNext)
 	}
 
-	// An unrelated schema difference is irrelevant to a request's dependencies.
+	// An unrelated schema difference is irrelevant to a profiles request.
 	emailProperty, _ := requestSchema.Properties().ByName("email")
 	partialSchema := types.Object([]types.Property{emailProperty})
 	unrelatedSchema := types.Object([]types.Property{
@@ -216,14 +216,19 @@ func TestProfilesPagination(t *testing.T) {
 	}
 	k.Call("GET", "/v1/profiles?"+query.Encode(), nil, nil, &summaryResponse)
 	k.Call("GET", "/v1/profiles/count?"+url.Values{
-		"schema": []string{string(unrelatedJSON)}, "filter": []string{string(filter)},
+		"schema": []string{string(schemaJSON)}, "filter": []string{string(filter)},
 	}.Encode(), nil, nil, &countResponse)
 	if countResponse.Total != 1 {
 		t.Fatalf("unexpected filtered count %d", countResponse.Total)
 	}
+	k.Call("GET", "/v1/profiles/count?"+url.Values{
+		"schema": []string{string(schemaJSON)},
+	}.Encode(), nil, nil, &countResponse)
+	if countResponse.Total != expectedTotal {
+		t.Fatalf("expected %d profiles, got %d", expectedTotal, countResponse.Total)
+	}
 
-	// Referenced properties must align, even when they occur only in a filter
-	// or order. Invalid arguments must be rejected before querying.
+	// Check schema alignment and invalid arguments.
 	for _, tc := range []struct {
 		name   string
 		path   string
@@ -281,6 +286,20 @@ func TestProfilesPagination(t *testing.T) {
 			path:   "/v1/profiles/count",
 			query:  url.Values{"filter": []string{string(filter)}},
 			status: http.StatusBadRequest,
+		},
+		{
+			name:   "count checks unused schema with filter",
+			path:   "/v1/profiles/count",
+			query:  url.Values{"schema": []string{string(unrelatedJSON)}, "filter": []string{string(filter)}},
+			status: http.StatusUnprocessableEntity,
+			code:   "SchemaNotAligned",
+		},
+		{
+			name:   "count checks schema without filter",
+			path:   "/v1/profiles/count",
+			query:  url.Values{"schema": []string{string(unrelatedJSON)}},
+			status: http.StatusUnprocessableEntity,
+			code:   "SchemaNotAligned",
 		},
 		{
 			name:   "attributes need schema",

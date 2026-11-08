@@ -1043,9 +1043,7 @@ func (this *Workspace) Events(ctx context.Context, properties []string, filter *
 //
 //   - MaintenanceMode, if the data warehouse is in maintenance mode.
 func (this *Workspace) Identities(ctx context.Context, kpid string, first, limit int) ([]Identity, int, error) {
-
 	this.core.mustBeOpen()
-
 	id, err := uuid.Parse(kpid)
 	if err != nil {
 		return nil, 0, errors.BadRequest("profile %q is not a valid KPID", kpid)
@@ -1079,7 +1077,6 @@ func (this *Workspace) Identities(ctx context.Context, kpid string, first, limit
 	if identities == nil {
 		identities = []Identity{}
 	}
-
 	return identities, total, nil
 }
 
@@ -1311,19 +1308,17 @@ func (this *Workspace) PipelineRuns(ctx context.Context) ([]*PipelineRun, error)
 // ProfileCount returns the number of profiles matching filter. If filter is
 // nil, it returns the total number of profiles.
 //
-// If filter is not nil, schema must be an object type describing the properties
-// used by filter. Only those properties must align with the current profile
-// schema. If filter is nil, schema may be invalid; if valid, it must be an
-// object type.
+// If filter is not nil, schema must be an object type with the properties used
+// by filter. If filter is nil, schema can be the invalid type.
 //
-// It returns errors.NotFoundError error if filter is not nil and the workspace
-// no longer exists. It returns an errors.UnavailableError error if the data
-// warehouse is unavailable.
+// It returns errors.NotFoundError error if the workspace does not exist.
+// It returns an errors.UnavailableError error if the data warehouse is
+// unavailable.
 // It returns an errors.UnprocessableError error with code
 //   - MaintenanceMode, if the data warehouse is in maintenance mode.
 //   - PropertyNotExist, if a property in filter does not exist in schema.
-//   - SchemaNotAligned, if a property used by filter is not aligned with
-//     the profile schema.
+//   - SchemaNotAligned, if schema is valid and is not aligned with the profile
+//     schema.
 func (this *Workspace) ProfileCount(ctx context.Context, filter *Filter, schema types.Type) (int, error) {
 
 	this.core.mustBeOpen()
@@ -1331,43 +1326,33 @@ func (this *Workspace) ProfileCount(ctx context.Context, filter *Filter, schema 
 	if (schema.Valid() || filter != nil) && !schema.IsObject() {
 		return 0, errors.BadRequest("schema is not an object type")
 	}
-	var where *state.Where
-	var dependencies types.Type
-	if filter != nil {
 
-		paths, err := validateFilter(filter, schema, state.Destination, state.TargetUser)
+	var where *state.Where
+	if filter != nil {
+		_, err := validateFilter(filter, schema, state.Destination, state.TargetUser)
 		if err != nil {
-			if pathErr, ok := errors.AsType[types.PathNotExistError](err); ok {
-				return 0, errors.Unprocessable(PropertyNotExist, "filter's property %s does not exist", pathErr.Path)
+			if err, ok := errors.AsType[types.PathNotExistError](err); ok {
+				return 0, errors.Unprocessable(PropertyNotExist, "filter's property %s does not exist", err.Path)
 			}
 			return 0, errors.BadRequest("filter is not valid: %s", err)
 		}
 		where = convertFilterToWhere(filter, schema)
-		dependencies = types.Prune(schema, func(path string) bool {
-			for _, dependency := range paths {
-				if path == dependency || strings.HasPrefix(path, dependency+".") {
-					return true
-				}
-			}
-			return false
-		})
-
 	}
-	total, err := this.store.ProfileCount(ctx, where, dependencies)
+	total, err := this.store.ProfileCount(ctx, where, schema)
 	if err != nil {
+		if errors.Is(err, datastore.ErrWorkspaceNotExist) {
+			return 0, errors.NotFound("workspace %s does not exist", this.workspace.ID)
+		}
 		if errors.Is(err, datastore.ErrMaintenanceMode) {
 			return 0, errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
 		}
-		if errors.Is(err, datastore.ErrWorkspaceNotExist) {
-			return 0, errors.NotFound("workspace does not exist")
+		if err, ok := errors.AsType[*schemas.Error](err); ok {
+			return 0, errors.Unprocessable(SchemaNotAligned, "%s", err)
 		}
-		if schemaErr, ok := errors.AsType[*schemas.Error](err); ok {
-			return 0, errors.Unprocessable(SchemaNotAligned, "%s", schemaErr)
+		if err, ok := errors.AsType[*datastore.UnavailableError](err); ok {
+			return 0, errors.Unavailable("%s", err)
 		}
-		if warehouseErr, ok := errors.AsType[*datastore.UnavailableError](err); ok {
-			return 0, errors.Unavailable("%s", warehouseErr)
-		}
-		return 0, errors.New(err.Error())
+		return 0, err
 	}
 
 	return total, nil
