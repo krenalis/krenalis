@@ -146,7 +146,7 @@ func records(ctx context.Context, warehouse warehouses.Warehouse, query Query, c
 			columnByProperty[idProperty],
 			externalIDColumn,
 		}
-		orderDesc = false
+		query.OrderDesc = false
 
 	}
 
