@@ -250,24 +250,30 @@ func (this *Workspace) PipelineErrors(ctx context.Context, start, end time.Time,
 	return errs, nil
 }
 
-// Attributes returns the attributes described by schema for the profile kpid.
-// It returns errors.BadRequestError for invalid arguments, errors.NotFoundError
-// if the profile or workspace does not exist, errors.UnprocessableError with
-// code MaintenanceMode or SchemaNotAligned, or errors.UnavailableError for a
-// warehouse failure.
+// Attributes returns the attributes defined by the specified schema for the
+// given profile.
+//
+// It returns errors.NotFoundError error, if the workspace or profile does not
+// exist.
+// It returns an errors.UnprocessableError error with code
+//   - MaintenanceMode, if the data warehouse is in maintenance mode.
+//   - SchemaNotAligned, if schema is not aligned with the profile schema.
 func (this *Workspace) Attributes(ctx context.Context, kpid string, schema types.Type) (json.Value, error) {
 
 	this.core.mustBeOpen()
 
+	// Parse the KPID.
 	id, err := uuid.Parse(kpid)
 	if err != nil {
 		return nil, errors.BadRequest("profile %q is not a valid profile identifier", kpid)
 	}
 	kpid = id.String()
+
 	if !schema.IsObject() {
 		return nil, errors.BadRequest("schema is not an object type")
 	}
 
+	// Retrieve the profile attributes.
 	where := &state.Where{
 		Operator: state.OpAnd,
 		Rules: []state.WhereRule{&state.WhereCondition{
@@ -282,29 +288,25 @@ func (this *Workspace) Attributes(ctx context.Context, kpid string, schema types
 		Limit:      1,
 	}, schema)
 	if err != nil {
-		if errors.Is(err, datastore.ErrMaintenanceMode) {
+		if err == datastore.ErrWorkspaceNotExist {
+			return nil, errors.NotFound("workspace %s does not exist", this.workspace.ID)
+		}
+		if err == datastore.ErrMaintenanceMode {
 			return nil, errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
 		}
-		if errors.Is(err, datastore.ErrWorkspaceNotExist) {
-			return nil, errors.NotFound("workspace does not exist")
+		if err, ok := err.(*datastore.UnavailableError); ok {
+			return nil, errors.Unavailable("%s", err)
 		}
-		if schemaErr, ok := errors.AsType[*schemas.Error](err); ok {
-			return nil, errors.Unprocessable(SchemaNotAligned, "%s", schemaErr)
+		if err, ok := err.(*schemas.Error); ok {
+			return nil, errors.Unprocessable(SchemaNotAligned, "%s", err)
 		}
-		if warehouseErr, ok := errors.AsType[*datastore.UnavailableError](err); ok {
-			return nil, errors.Unavailable("%s", warehouseErr)
-		}
-		return nil, errors.New(err.Error())
+		return nil, err
 	}
 	if len(profiles) == 0 {
 		return nil, errors.NotFound("profile %q does not exist", kpid)
 	}
-	attributes, err := types.Marshal(profiles[0], schema)
-	if err != nil {
-		return nil, errors.New(err.Error())
-	}
 
-	return attributes, nil
+	return types.Marshal(profiles[0], schema)
 }
 
 // ColumnTypeDescription returns a description for the warehouse column type
