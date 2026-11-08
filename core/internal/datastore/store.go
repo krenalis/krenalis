@@ -511,7 +511,7 @@ func (store *Store) ProfileCount(ctx context.Context, where *state.Where, schema
 
 	store.mustBeOpen()
 
-	if (where != nil || schema.Valid()) && schema.Kind() != types.ObjectKind {
+	if (where != nil || schema.Valid()) && !schema.IsObject() {
 		return 0, errors.New("schema is not an object type")
 	}
 	ctx, done, err := store.mc.StartOperation(ctx, normalMode|inspectionMode)
@@ -562,7 +562,7 @@ func (store *Store) Profiles(ctx context.Context, query Query, schema types.Type
 
 	store.mustBeOpen()
 
-	if schema.Kind() != types.ObjectKind {
+	if !schema.IsObject() {
 		return nil, 0, false, errors.New("schema is not an object type")
 	}
 	if query.First < 0 || query.First > 2147483647 {
