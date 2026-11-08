@@ -1484,19 +1484,18 @@ func (this *Workspace) Profiles(ctx context.Context, schema types.Type, properti
 	}, schema)
 	if err != nil {
 		if err == datastore.ErrMaintenanceMode {
-			return nil, 0, false, errors.Unprocessable(
-				MaintenanceMode, "data warehouse is in maintenance mode")
+			return nil, 0, false, errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
 		}
-		if errors.Is(err, datastore.ErrWorkspaceNotExist) {
-			return nil, 0, false, errors.NotFound("workspace does not exist")
+		if err == datastore.ErrWorkspaceNotExist {
+			return nil, 0, false, errors.NotFound("workspace %s does not exist", this.workspace.ID)
 		}
-		if schemaErr, ok := errors.AsType[*schemas.Error](err); ok {
-			return nil, 0, false, errors.Unprocessable(SchemaNotAligned, "%s", schemaErr)
+		if err, ok := err.(*schemas.Error); ok {
+			return nil, 0, false, errors.Unprocessable(SchemaNotAligned, "%s", err)
 		}
-		if err, ok := errors.AsType[*datastore.UnavailableError](err); ok {
+		if err, ok := err.(*datastore.UnavailableError); ok {
 			return nil, 0, false, errors.Unavailable("%s", err)
 		}
-		return nil, 0, false, errors.New(err.Error())
+		return nil, 0, false, err
 	}
 
 	profiles := make([]Profile, len(rows))
