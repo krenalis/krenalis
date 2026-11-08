@@ -26,14 +26,23 @@ func TestProfileFilterExperienceSQL(t *testing.T) {
 		Operator: warehouses.OpStartsWith, Values: []any{"WEB-"}}}
 	request := warehouses.ProfileOutcomeRequest{Population: warehouses.ProfileSource{Table: "profiles",
 		Key: warehouses.Column{Name: "_kpid", Type: types.UUID()}}, Limit: 10}
-	for _, test := range []struct{ first, unbounded bool }{
-		{false, false}, {false, true}, {true, false}, {true, true},
+	for _, test := range []struct{ first, unbounded, temporal bool }{
+		{false, false, false}, {false, true, false}, {true, false, false}, {true, true, false},
+		{false, false, true}, {true, true, true},
 	} {
 		first, unbounded := test.first, test.unbounded
 		node := &warehouses.SelectedOccurrence{First: first, Source: source, End: end,
 			UnboundedStart: unbounded, Verify: verify}
 		if !unbounded {
 			node.Start = end.AddDate(0, -1, 0)
+		}
+		if test.temporal {
+			start := time.Date(2026, 1, 10, 0, 0, 0, 123456000, time.UTC)
+			node.Verify = &warehouses.RecordQualification{Expr: warehouses.NewMultiExpr(warehouses.OpAnd,
+				[]warehouses.Expr{
+					warehouses.NewBaseExpr(source.Timestamp, warehouses.OpIsOnOrAfter, start),
+					warehouses.NewBaseExpr(source.Timestamp, warehouses.OpIsBefore, start.Add(3*time.Microsecond)),
+				})}
 		}
 		statement, err := profilefilter.Build(warehouses.Filter{Root: node}, request, profileFilterDialect())
 		if err != nil {
@@ -50,6 +59,16 @@ func TestProfileFilterExperienceSQL(t *testing.T) {
 		} {
 			if !strings.Contains(statement.SQL, fragment) {
 				t.Fatalf("expected selection invariant %q, got %s", fragment, statement.SQL)
+			}
+		}
+		if test.temporal {
+			for _, fragment := range []string{
+				quoteIdent(source.Timestamp.Name) + ` >= '2026-01-10 00:00:00.123456'`,
+				quoteIdent(source.Timestamp.Name) + ` < '2026-01-10 00:00:00.123459'`,
+			} {
+				if !strings.Contains(statement.SQL, fragment) {
+					t.Fatalf("expected exact half-open microsecond comparison %q, got %s", fragment, statement.SQL)
+				}
 			}
 		}
 		if strings.Contains(statement.SQL, "ROW_NUMBER") {

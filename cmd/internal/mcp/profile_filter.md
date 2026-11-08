@@ -417,9 +417,10 @@ order ID starting with WEB-:
 `base.source` and `base.period` reuse the available Count sources and periods,
 including named/unnamed page and screen sources, calendars and recorded history.
 `base.where` optionally qualifies events **before** selection. `verify` is a
-mandatory nonempty Record filter evaluated **after** selection. Both use the
-Event schema, the 26 Record operators, at most two group levels and 100 descendant
-nodes. Neither admits behavioral rules or a local defaultCalendar. Omitted/null
+mandatory nonempty filter evaluated **after** selection. Both use the
+Event schema and the 26 Record operators, at most two group levels and 100
+descendant nodes. Verify additionally admits the occurredIn leaf described below.
+Neither admits behavioral rules or a local defaultCalendar. Omitted/null
 base.where means no additional qualification. Null/omitted verify is invalid in
 this public subset; the canonical NoAdditionalVerification form is not exposed.
 An explicit select.kind is required. First and last execute; nth (positions 1 through 10) is valid but returns
@@ -447,9 +448,51 @@ Experience on that band alone: it would ignore more recent orders.
 **First means first recorded, not first in real life.** Retention, deletions and
 late imports of older events can change the first identified occurrence. First
 on elapsedLookback(30 days) means first within those 30 days; it does not identify
-customers whose first historical order is recent. To check that today, select
-First on fullRelevantHistory and compare timestamp in verify to absolute bounds
-computed for a fixed at. Do not present First in a recent base as new customers.
+customers whose first historical order is recent. Use First on fullRelevantHistory
+with occurredIn in verify for the recent window. Do not present First in a recent
+base as new customers.
+
+### Verify when the selected event occurred
+
+Only experience.verify admits `{"occurredIn":{...period...}}`, as a complete
+leaf without operator or values. It can be combined with Record predicates in
+AND/OR. It accepts elapsedLookback, elapsedAgoBand, lastCompleteCalendarPeriods
+and absoluteHalfOpen. Calendar periods inherit the main filter's defaultCalendar;
+a local calendar is invalid. Every window is [start,end), using the same T and
+microsecond precision as the base. No history reference is allowed in those
+four period forms. FullRelevantHistory here is valid but returns
+FilterCapabilityNotImplemented; it is not a reason to change Record predicates.
+The leaf is invalid in base.where, Count/Sum/Average.where, Profiles root or
+Record-only pipelines.
+
+For profiles whose **first recorded Order Completed** is within the last 30
+elapsed days, select First over the entire queryable history, then check its time:
+
+```json
+{"operator":"and","rules":[{"experience":{"base":{"source":{"kind":"recordedEvents","name":"Order Completed","grain":"registered-message"},"period":{"kind":"fullRelevantHistory","history":{"definition":"registered-queryable-events","meaningRevision":"1"}}},"select":{"kind":"first"},"verify":{"operator":"and","rules":[{"occurredIn":{"kind":"elapsedLookback","duration":{"value":30,"unit":"day"}}}]}}}]}
+```
+
+This covers the temporal part of the request, without asserting a real-world
+new customer or applying governed monetary conditions. A customer with an older
+recorded order and another recent order does not match; First over a recent base
+would match instead.
+
+For "the last recorded order was 60–90 elapsed days ago", use the same full
+history base, select Last, and verify
+`{"occurredIn":{"kind":"elapsedAgoBand","older":{"value":90,"unit":"day"},"newer":{"value":60,"unit":"day"}}}`.
+This replaces the equivalent two-Count recipe above with the same source and
+qualification. Profiles without any recorded order do not match either form.
+Last on a base ending at T expresses the same recency requirement as Last on
+full history with occurredIn for that base window, provided any additional
+qualification and verification are the same. A base ending before T does not.
+
+OccurredIn is TRUE or FALSE for each candidate's determined timestamp. It can
+still leave the experience UNKNOWN: a possible winner inside the window and a
+certain winner outside disagree, or the only in-window winner can be absent.
+Explanations add `experience.occurredIn:[{path,start,end}]`. Path is the zero-based
+sequence of rule indexes within verify; each leaf has its resolved half-open
+bounds, without inventing a selected witness. Use these bounds to explain a date
+failure and keep uncertainty about the selection separate from the time test.
 
 The admitted evidence is local Record qualification with independent uncertainty
 across determined message identities and known timestamps. With at least one

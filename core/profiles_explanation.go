@@ -6,6 +6,7 @@ package core
 
 import (
 	"context"
+	"slices"
 	"time"
 
 	"github.com/krenalis/krenalis/core/internal/datastore"
@@ -38,15 +39,16 @@ type ProfileRuleExplanation struct {
 	Experience *ProfileExperienceExplanation `json:"experience,omitzero"`
 }
 
-// ProfileExperienceExplanation describes selection before Record verification.
+// ProfileExperienceExplanation describes selection before verification.
 // Period metadata has the same meaning and omission rules as Count.
 type ProfileExperienceExplanation struct {
-	Start          time.Time                  `json:"start,omitzero"`
-	End            time.Time                  `json:"end"`
-	UnboundedStart bool                       `json:"unboundedStart,omitzero"`
-	History        *FilterHistory             `json:"history,omitzero"`
-	Select         FilterExperienceSelector   `json:"select"`
-	Selection      ProfileExperienceSelection `json:"selection"`
+	Start          time.Time                      `json:"start,omitzero"`
+	End            time.Time                      `json:"end"`
+	UnboundedStart bool                           `json:"unboundedStart,omitzero"`
+	History        *FilterHistory                 `json:"history,omitzero"`
+	Select         FilterExperienceSelector       `json:"select"`
+	Selection      ProfileExperienceSelection     `json:"selection"`
+	OccurredIn     []ProfileOccurredInExplanation `json:"occurredIn,omitzero"`
 }
 
 // ProfileExperienceSelection retains ambiguity without inventing a witness.
@@ -56,6 +58,14 @@ type ProfileExperienceSelection struct {
 	Kind       string `json:"kind"`
 	Absence    string `json:"absence"`
 	Candidates int64  `json:"candidates"`
+}
+
+// ProfileOccurredInExplanation reports a resolved half-open verify window.
+// Path contains zero-based rule indexes relative to the experience verify root.
+type ProfileOccurredInExplanation struct {
+	Path  []int     `json:"path"`
+	Start time.Time `json:"start"`
+	End   time.Time `json:"end"`
 }
 
 // ProfileAverageExplanation reports exact inputs without a rounded quotient.
@@ -180,7 +190,7 @@ func (this *Workspace) ExplainProfileFilter(ctx context.Context, kpid string, fi
 		return nil, errors.NotFound("profile does not exist")
 	}
 	index := 0
-	explanation, err := explainProfileRule(result.Filter.Root, root, result.Nodes, &index)
+	explanation, err := explainProfileRule(result.Filter.Root, root, result.Nodes, &index, result.At)
 	if err != nil {
 		return nil, err
 	}
@@ -191,9 +201,32 @@ func (this *Workspace) ExplainProfileFilter(ctx context.Context, kpid string, fi
 	return &ProfileFilterExplanation{KPID: profile, At: result.At, Rule: explanation}, nil
 }
 
+// explainOccurrencePeriods attaches resolved windows to their input positions.
+func explainOccurrencePeriods(verify *unified.ExperienceVerification, at time.Time, path []int) ([]ProfileOccurredInExplanation, error) {
+	if verify == nil {
+		return nil, nil
+	}
+	if verify.OccurredIn != nil {
+		start, end, err := verify.OccurredIn.Bounds(at)
+		if err != nil {
+			return nil, errors.New("core: unresolved occurredIn explanation period")
+		}
+		return []ProfileOccurredInExplanation{{Path: slices.Clone(path), Start: start, End: end}}, nil
+	}
+	var result []ProfileOccurredInExplanation
+	for i := range verify.Children {
+		periods, err := explainOccurrencePeriods(&verify.Children[i], at, append(slices.Clone(path), i))
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, periods...)
+	}
+	return result, nil
+}
+
 // explainProfileRule attaches measured outcomes and resolved references to the
 // unchanged prepared filter shape, without reevaluating conditions.
-func explainProfileRule(rule warehouses.FilterCondition, semantic unified.Rule, nodes []warehouses.FilterNodeOutcome, index *int) (ProfileRuleExplanation, error) {
+func explainProfileRule(rule warehouses.FilterCondition, semantic unified.Rule, nodes []warehouses.FilterNodeOutcome, index *int, at time.Time) (ProfileRuleExplanation, error) {
 
 	if *index >= len(nodes) {
 		return ProfileRuleExplanation{}, errors.New("core: incomplete profile explanation")
@@ -224,7 +257,7 @@ func explainProfileRule(rule warehouses.FilterCondition, semantic unified.Rule, 
 		result.Rules = make([]ProfileRuleExplanation, len(rule.Children))
 		for i, child := range rule.Children {
 			var err error
-			result.Rules[i], err = explainProfileRule(child, semantic.Children[i], nodes, index)
+			result.Rules[i], err = explainProfileRule(child, semantic.Children[i], nodes, index, at)
 			if err != nil {
 				return ProfileRuleExplanation{}, err
 			}
@@ -251,6 +284,11 @@ func explainProfileRule(rule warehouses.FilterCondition, semantic unified.Rule, 
 		if rule.First {
 			result.Experience.Select.Kind = "first"
 		}
+		periods, err := explainOccurrencePeriods(semantic.Experience.Verify, at, nil)
+		if err != nil {
+			return ProfileRuleExplanation{}, err
+		}
+		result.Experience.OccurredIn = periods
 		if history := semantic.Experience.Scope.History; history != nil {
 			definition, revision := history.Reference()
 			result.Experience.History = &FilterHistory{Definition: definition, MeaningRevision: revision}

@@ -156,6 +156,16 @@ func RecordedScope(typ, name, grain string) (Scope, error) {
 	return scope, nil
 }
 
+// Bounds validates and resolves the period against at without source binding.
+// It returns *UnsupportedError when the valid period exceeds this subset.
+func (s Scope) Bounds(at time.Time) (time.Time, time.Time, error) {
+	err := validateTime(at)
+	if err != nil {
+		return time.Time{}, time.Time{}, err
+	}
+	return s.bounds(at)
+}
+
 // bounds validates the period and resolves it against validated T.
 // A zero start denotes an unbounded period only with a resolved History.
 func (s Scope) bounds(at time.Time) (time.Time, time.Time, error) {

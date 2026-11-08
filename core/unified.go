@@ -108,6 +108,8 @@ func prepareUnifiedRuleInCalendar(rule FilterRule, schema types.Type, depth int,
 		return prepareFilterSum(rule, calendar)
 	case *FilterAverageCondition:
 		return prepareFilterAverage(rule, calendar)
+	case *FilterOccurredInCondition:
+		return unified.Rule{}, errors.New("occurredIn requires experience verify")
 	case *FilterExperienceCondition:
 		return prepareFilterExperience(rule, calendar)
 	default:

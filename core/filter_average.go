@@ -43,7 +43,7 @@ func (condition *FilterAverageCondition) UnmarshalJSON(data []byte) error {
 	if condition == nil {
 		return errors.New("core: cannot unmarshal an Average condition into nil")
 	}
-	rule, _, err := unmarshalFilterRule(json.NewDecoder(bytes.NewReader(data)), 1, expectAnyFilterRule, false)
+	rule, _, err := unmarshalFilterRule(json.NewDecoder(bytes.NewReader(data)), 1, expectAnyFilterRule, profileFilterRule)
 	if err != nil {
 		return errors.New(err.Error())
 	}

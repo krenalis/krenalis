@@ -31,10 +31,9 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,nam
 		&state.WhereCondition{Property: []string{"properties", "q"},
 			Operator: state.OpIs, Values: []any{json.Value(`"yes"`)}},
 	}}
-	verify := &state.Where{Operator: state.OpAnd, Rules: []state.WhereRule{
-		&state.WhereCondition{Property: []string{"properties", "v"},
-			Operator: state.OpIs, Values: []any{json.Value(`"yes"`)}},
-	}}
+	verify := &unified.ExperienceVerification{Record: &state.WhereCondition{Property: []string{"properties", "v"},
+		Operator: state.OpIs, Values: []any{json.Value(`"yes"`)}},
+	}
 	experience := unified.Experience{Scope: unified.Scope{Event: "Order Completed", Grain: "registered-message",
 		Start: at.AddDate(0, -1, 0), End: at}, Where: qualify, Verify: verify}
 	root := &unified.Rule{Experience: &experience}
@@ -344,7 +343,8 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,tim
 				}}
 			}
 			root := &unified.Rule{Experience: &unified.Experience{First: first, Scope: unified.Scope{Event: "Order Completed",
-				Grain: "registered-message", Start: at.AddDate(0, -1, 0), End: at}, Where: predicate("q"), Verify: predicate("v")}}
+				Grain: "registered-message", Start: at.AddDate(0, -1, 0), End: at}, Where: predicate("q"),
+				Verify: &unified.ExperienceVerification{Record: predicate("v").Rules[0].(*state.WhereCondition)}}}
 			result, err := store.UnifiedProfiles(t.Context(), root, unified.Bindings{}, at, unified.Page{Limit: 1000})
 			if err != nil {
 				t.Fatalf("expected exact enumeration result, got %v", err)
@@ -352,4 +352,132 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,tim
 			assertUnifiedTruths(t, result, want)
 		})
 	}
+}
+
+// TestUnifiedExperienceTimePostgreSQL checks timestamp verification through
+// the real Record binder and renderer, independently of the selection period.
+func TestUnifiedExperienceTimePostgreSQL(t *testing.T) {
+
+	dw := newJSONFilterTestWarehouse(t, "PostgreSQL")
+	store := &Store{mc: newModeCoordinator(state.Normal)}
+	store.wh.Store(dw)
+	execUnifiedFixture(t, dw, `CREATE TABLE profiles (_kpid uuid PRIMARY KEY);
+INSERT INTO profiles SELECT ('00000000-0000-0000-0000-'||lpad(n::text,12,'0'))::uuid FROM generate_series(1,7) n;
+CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,timestamp timestamp,properties jsonb)`)
+	at := time.Date(2026, 3, 30, 10, 0, 0, 123456000, time.UTC)
+	history, err := unified.ResolveHistory("registered-queryable-events", "1")
+	if err != nil {
+		t.Fatalf("expected recorded history resolved, got %v", err)
+	}
+	calendar, err := unified.ResolveCalendar("gregorian-monday/Europe/Rome", "1")
+	if err != nil {
+		t.Fatalf("expected fixed calendar resolved, got %v", err)
+	}
+	for _, test := range []struct {
+		name       string
+		period     unified.Scope
+		start, end time.Time
+	}{
+		{"absolute microseconds", unified.Scope{Start: at.Add(-2 * time.Hour), End: at.Add(-time.Hour)}, at.Add(-2 * time.Hour), at.Add(-time.Hour)},
+		{"lookback", unified.Scope{Elapsed: &unified.ElapsedPeriod{Older: 24 * time.Hour}}, at.Add(-24 * time.Hour), at},
+		{"band", unified.Scope{Elapsed: &unified.ElapsedPeriod{Older: 72 * time.Hour, Newer: 48 * time.Hour}}, at.Add(-72 * time.Hour), at.Add(-48 * time.Hour)},
+		{"Rome DST day", unified.Scope{Calendar: &unified.CalendarPeriod{Calendar: calendar, Unit: "day", Count: 1}}, time.Date(2026, 3, 28, 23, 0, 0, 0, time.UTC), time.Date(2026, 3, 29, 22, 0, 0, 0, time.UTC)},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			execUnifiedFixture(t, dw, "TRUNCATE krenalis_events")
+			stamps := []time.Time{test.start.Add(-time.Microsecond), test.start, test.start.Add(time.Microsecond),
+				test.end.Add(-time.Microsecond), test.end, test.end.Add(time.Microsecond)}
+			for i, stamp := range stamps {
+				execUnifiedFixture(t, dw, fmt.Sprintf(`INSERT INTO krenalis_events VALUES
+('%s','edge-%d','track','Order Completed','%s','{}')`, unifiedTestID(i+1), i,
+					stamp.Format("2006-01-02 15:04:05.999999")))
+			}
+			for _, first := range []bool{false, true} {
+				experience := &unified.Experience{First: first,
+					Scope:  unified.Scope{Event: "Order Completed", Grain: "registered-message", History: history},
+					Verify: &unified.ExperienceVerification{OccurredIn: &test.period}}
+				result, err := store.UnifiedProfiles(t.Context(), &unified.Rule{Experience: experience},
+					unified.Bindings{}, at, unified.Page{Limit: 10})
+				if err != nil {
+					t.Fatalf("expected exact temporal verification, got %v", err)
+				}
+				assertUnifiedTruths(t, result, []unified.Truth{unified.NoMatch, unified.Match, unified.Match,
+					unified.Match, unified.NoMatch, unified.NoMatch, unified.NoMatch})
+			}
+		})
+	}
+
+	for _, first := range []bool{false, true} {
+		t.Run(fmt.Sprintf("uncertain first=%v", first), func(t *testing.T) {
+			execUnifiedFixture(t, dw, "TRUNCATE krenalis_events")
+			certain := at.Add(-96 * time.Hour)
+			if first {
+				certain = at.Add(-12 * time.Hour)
+			}
+			for _, event := range []struct {
+				profile int
+				hours   int
+				payload string
+			}{
+				{1, 0, `{"q":"yes","v":"yes"}`},
+				{1, 48, `{}`},
+				{2, 48, `{}`},
+				{3, 48, `{"q":"yes"}`},
+				{3, 47, `{"q":"yes"}`},
+			} {
+				stamp := at.Add(-time.Duration(event.hours) * time.Hour)
+				if event.hours == 0 {
+					stamp = certain
+				}
+				execUnifiedFixture(t, dw, fmt.Sprintf(`INSERT INTO krenalis_events VALUES
+('%s','p%d-%d','track','Order Completed','%s','%s')`, unifiedTestID(event.profile), event.profile, event.hours,
+					stamp.Format("2006-01-02 15:04:05.999999"), event.payload))
+			}
+			period := unified.Scope{Elapsed: &unified.ElapsedPeriod{Older: 72 * time.Hour, Newer: 24 * time.Hour}}
+			experience := &unified.Experience{First: first,
+				Scope: unified.Scope{Event: "Order Completed", Grain: "registered-message", History: history},
+				Where: &state.Where{Operator: state.OpAnd, Rules: []state.WhereRule{
+					&state.WhereCondition{Property: []string{"properties", "q"}, Operator: state.OpIs,
+						Values: []any{json.Value(`"yes"`)}},
+				}}, Verify: &unified.ExperienceVerification{OccurredIn: &period}}
+			root := &unified.Rule{Experience: experience}
+			for _, or := range []bool{false, true} {
+				if or {
+					experience.Verify = &unified.ExperienceVerification{Operator: state.OpOr,
+						Children: []unified.ExperienceVerification{
+							{OccurredIn: &period}, {Record: &state.WhereCondition{Property: []string{"properties", "v"},
+								Operator: state.OpIs, Values: []any{json.Value(`"yes"`)}}},
+						}}
+				}
+				result, err := store.UnifiedProfiles(t.Context(), root, unified.Bindings{}, at, unified.Page{Limit: 10})
+				if err != nil {
+					t.Fatalf("expected candidate-local time with OR=%v, got %v", or, err)
+				}
+				want := unified.Unknown
+				if or {
+					want = unified.Match
+				}
+				assertUnifiedTruths(t, result, []unified.Truth{want, unified.Unknown, unified.Match,
+					unified.NoMatch, unified.NoMatch, unified.NoMatch, unified.NoMatch})
+				explained, err := store.ExplainUnifiedProfile(t.Context(), root, unified.Bindings{}, at, unifiedTestID(1))
+				if err != nil {
+					t.Fatalf("expected temporal explanation, got %v", err)
+				}
+				if explained.Nodes[0].Truth != want || explained.Nodes[0].Experience.Candidates != 2 ||
+					explained.Nodes[0].Experience.AbsencePossible {
+					t.Fatalf("expected two candidates with certain nonemptiness and %v, got %+v", want, explained)
+				}
+			}
+			experience.Verify = &unified.ExperienceVerification{OccurredIn: &period}
+			experience.Scope.History = nil
+			experience.Scope.Elapsed = &unified.ElapsedPeriod{Older: 24 * time.Hour}
+			result, err := store.UnifiedProfiles(t.Context(), root, unified.Bindings{}, at, unified.Page{Limit: 10})
+			if err != nil {
+				t.Fatalf("expected disjoint base and verification, got %v", err)
+			}
+			assertUnifiedTruths(t, result, []unified.Truth{unified.NoMatch, unified.NoMatch, unified.NoMatch,
+				unified.NoMatch, unified.NoMatch, unified.NoMatch, unified.NoMatch})
+		})
+	}
+
 }

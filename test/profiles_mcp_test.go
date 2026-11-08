@@ -595,6 +595,7 @@ UPDATE krenalis_events SET properties='{}' WHERE event='Order Completed'`)
 SELECT ('00000000-0000-0000-0000-'||lpad(n::text,12,'0'))::uuid,'experience/'||id,
 'Order Completed',stamp::timestamp,'2026-02-01','2026-02-01','track','fixture','a','{}',payload::jsonb
 FROM (VALUES
+(1,'historical','2025-12-15','{"experience_fixture":true,"q":"yes","v":"yes"}'),
 (1,'old','2026-01-01','{"experience_fixture":true,"q":"yes","v":"no"}'),
 (1,'new','2026-01-02','{"experience_fixture":true,"q":"yes","v":"yes"}'),
 (2,'tie-a','2026-01-10','{"experience_fixture":true,"q":"yes","v":"yes"}'),
@@ -617,7 +618,17 @@ FROM (VALUES
 			`"where":{"operator":"and","rules":[{"property":"properties.experience_fixture","operator":"exists"},` +
 			`{"property":"properties.q","operator":"is","values":["yes"]}]}},"select":{"kind":"last"},` +
 			`"verify":{"operator":"and","rules":[{"property":"properties.v","operator":"is","values":["yes"]}]}}}]}`
+		temporal := strings.Replace(experience,
+			`{"property":"properties.v","operator":"is","values":["yes"]}`,
+			`{"occurredIn":{"kind":"elapsedLookback","duration":{"value":31,"unit":"day"}}}`, 1)
+		firstInPeriod := strings.Replace(temporal, `"kind":"last"`, `"kind":"first"`, 1)
+		firstInHistory := strings.Replace(firstInPeriod,
+			`"period":{"kind":"elapsedLookback","duration":{"value":31,"unit":"day"}}`,
+			`"period":{"kind":"fullRelevantHistory",`+
+				`"history":{"definition":"registered-queryable-events","meaningRevision":"1"}}`, 1)
 		for _, test := range []struct{ name, filter, totals string }{
+			{"first recorded recent", firstInHistory, `"match":1,"noMatch":2,"unknown":1`},
+			{"first within recent base", firstInPeriod, `"match":2,"noMatch":1,"unknown":1`},
 			{"last", experience, `"match":1,"noMatch":1,"unknown":2`},
 			{"first", strings.Replace(experience, `"kind":"last"`, `"kind":"first"`, 1), `"match":0,"noMatch":2,"unknown":2`},
 			{"outer OR", strings.Replace(strings.Replace(experience, `"operator":"and"`, `"operator":"or"`, 1), `"rules":[{"experience"`, `"rules":[{"property":"country","operator":"is","values":["FR"]},{"experience"`, 1), `"match":3,"noMatch":0,"unknown":1`},
@@ -658,7 +669,27 @@ FROM (VALUES
 			})
 		}
 
+		for _, test := range []struct{ filter, result string }{
+			{firstInHistory, "NO_MATCH"}, {firstInPeriod, "MATCH"},
+		} {
+			t.Run("time explanation "+test.result, func(t *testing.T) {
+				const id = "00000000-0000-0000-0000-000000000001"
+				var expected json.RawMessage
+				k.Call("GET", "/v1/profiles/"+id+"/filter-explanation?filter="+url.QueryEscape(test.filter)+
+					"&at="+url.QueryEscape(at), nil, nil, &expected)
+				actual := assertResult(t, tool(t, "explain-profile-filter", map[string]any{
+					"kpid": id, "filter": test.filter, "at": at}))
+				if actual != string(expected) || !strings.Contains(actual, `"result":"`+test.result+`"`) ||
+					!strings.Contains(actual, `"occurredIn":[{"path":[0],"start":"2026-01-01T00:00:00Z","end":"`+at+`"}]`) {
+					t.Fatalf("expected identical complete temporal explanations with %s, got %s", test.result, actual)
+				}
+			})
+		}
+
 		for _, test := range []struct{ name, filter, code string }{
+			{"time history unavailable", strings.Replace(firstInHistory,
+				`{"occurredIn":{"kind":"elapsedLookback","duration":{"value":31,"unit":"day"}}}`,
+				`{"occurredIn":{"kind":"fullRelevantHistory","history":{"definition":"registered-queryable-events","meaningRevision":"1"}}}`, 1), "FilterCapabilityNotImplemented"},
 			{"nth unavailable", strings.Replace(experience, `"kind":"last"`, `"kind":"nth","position":2`, 1), "FilterCapabilityNotImplemented"},
 			{"verify required", strings.Replace(experience, `,"verify":{"operator":"and","rules":[{"property":"properties.v","operator":"is","values":["yes"]}]}`, ``, 1), "InvalidArguments"},
 			{"invalid verify", strings.Replace(experience, `properties.v`, `unknown`, 1), "PropertyNotExist"},

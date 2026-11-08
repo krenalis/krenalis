@@ -1,0 +1,83 @@
+// Copyright 2026 Open2b. All rights reserved.
+// Use of this source code is governed by an Elastic License 2.0
+// that can be found in the LICENSE file.
+
+package unified
+
+import (
+	"testing"
+	"time"
+
+	"github.com/krenalis/krenalis/core/internal/state"
+	"github.com/krenalis/krenalis/tools/errors"
+)
+
+// TestExperienceVerificationValidation protects the internal typed entry point.
+func TestExperienceVerificationValidation(t *testing.T) {
+	at := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
+	base := Scope{Event: "Order Completed", Grain: "registered-message", Start: at.Add(-24 * time.Hour), End: at}
+	period := Scope{Elapsed: &ElapsedPeriod{Older: time.Hour}}
+	history, err := ResolveHistory("registered-queryable-events", "1")
+	if err != nil {
+		t.Fatalf("expected recorded history resolved, got %v", err)
+	}
+	unsupported := ExperienceVerification{OccurredIn: &Scope{History: history}}
+	invalid := ExperienceVerification{Record: &state.WhereCondition{}}
+	for _, test := range []struct {
+		name        string
+		body        *ExperienceVerification
+		unsupported bool
+	}{
+		{"nil", nil, false},
+		{"empty", &ExperienceVerification{}, false},
+		{"mixed", &ExperienceVerification{OccurredIn: &period, Record: &state.WhereCondition{}}, false},
+		{"invalid group", &ExperienceVerification{Operator: -1, Children: []ExperienceVerification{{OccurredIn: &period}}}, false},
+		{"invalid period", &ExperienceVerification{OccurredIn: &Scope{Start: at, End: at.Add(-time.Hour)}}, false},
+		{"full history", &unsupported, true},
+		{"unsupported before invalid", &ExperienceVerification{Children: []ExperienceVerification{unsupported, invalid}}, false},
+		{"invalid before unsupported", &ExperienceVerification{Children: []ExperienceVerification{invalid, unsupported}}, false},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			root := &Rule{Experience: &Experience{Scope: base, Verify: test.body}}
+			err := Validate(root, at, Page{Limit: 1})
+			if err != nil {
+				_, unsupported := errors.AsType[*UnsupportedError](err)
+				if unsupported != test.unsupported {
+					t.Fatalf("expected unsupported=%v, got %v", test.unsupported, err)
+				}
+				return
+			}
+			t.Fatal("expected invalid or unsupported verification, got success")
+		})
+	}
+	for _, test := range []struct{ depth, size int }{{1, 100}, {1, 101}, {2, 1}, {3, 1}} {
+		body := &ExperienceVerification{Children: make([]ExperienceVerification, test.size)}
+		for i := range body.Children {
+			body.Children[i] = ExperienceVerification{OccurredIn: &period}
+		}
+		for depth := 1; depth < test.depth; depth++ {
+			body = &ExperienceVerification{Children: []ExperienceVerification{*body}}
+		}
+		err := Validate(&Rule{Experience: &Experience{Scope: base, Verify: body}}, at, Page{Limit: 1})
+		invalid := test.depth == 3 || test.size == 101
+		if err != nil {
+			if !invalid {
+				t.Fatalf("expected depth=%d size=%d accepted, got %v", test.depth, test.size, err)
+			}
+			continue
+		}
+		if invalid {
+			t.Fatalf("expected depth=%d size=%d rejected, got success", test.depth, test.size)
+		}
+	}
+	invalidBase := base
+	invalidBase.Start, invalidBase.End = base.End, base.Start
+	err = Validate(&Rule{Experience: &Experience{Scope: invalidBase, Verify: &unsupported}}, at, Page{Limit: 1})
+	if err != nil {
+		if _, unavailable := errors.AsType[*UnsupportedError](err); unavailable {
+			t.Fatalf("expected invalid base before unsupported verify, got %v", err)
+		}
+		return
+	}
+	t.Fatal("expected invalid base, got success")
+}

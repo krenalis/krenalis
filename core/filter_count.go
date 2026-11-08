@@ -78,7 +78,7 @@ func (count *FilterCount) UnmarshalJSON(data []byte) error {
 				err = dec.SkipValue()
 			} else {
 				var rule FilterRule
-				rule, _, err = unmarshalFilterRule(dec, 1, expectFilterGroup, true)
+				rule, _, err = unmarshalFilterRule(dec, 1, expectFilterGroup, occurrenceFilterRule)
 				if err != nil {
 					return errors.New(err.Error())
 				}
@@ -130,7 +130,7 @@ func (condition *FilterCountCondition) UnmarshalJSON(data []byte) error {
 		return errors.New("core: cannot unmarshal a Count condition into nil")
 	}
 	dec := json.NewDecoder(bytes.NewReader(data))
-	rule, _, err := unmarshalFilterRule(dec, 1, expectAnyFilterRule, false)
+	rule, _, err := unmarshalFilterRule(dec, 1, expectAnyFilterRule, profileFilterRule)
 	if err != nil {
 		return errors.New(err.Error())
 	}

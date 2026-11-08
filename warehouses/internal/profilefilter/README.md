@@ -155,3 +155,7 @@ certainly excluded, not just equal period membership. The node reuses page/total
 and the six-column explanation transport, whose two integer slots carry candidate
 count and a 0/1 absence flag under a distinct ExperienceNodes tag.
 Count/Sum/Average decoding is unchanged.
+
+Selected timestamp membership is already resolved by core into existing Record
+datetime >= and < predicates inside the verification qualification. This adds
+no temporal resolver, SQL node or explanation transport fields in the drivers.

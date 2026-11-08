@@ -15,7 +15,7 @@ import (
 )
 
 // FilterExperience selects an occurrence before verifying its properties.
-// Verify is mandatory in this public subset and accepts only Record rules.
+// Verify is mandatory and accepts Record rules and occurredIn predicates.
 type FilterExperience struct {
 	Base   FilterExperienceBase     `json:"base"`
 	Select FilterExperienceSelector `json:"select"`
@@ -43,7 +43,7 @@ func (experience *FilterExperience) UnmarshalJSON(data []byte) error {
 			err = json.Unmarshal(value, &decoded.Select)
 		case "verify":
 			var rule FilterRule
-			rule, _, err = unmarshalFilterRule(json.NewDecoder(bytes.NewReader(value)), 1, expectFilterGroup, true)
+			rule, _, err = unmarshalFilterRule(json.NewDecoder(bytes.NewReader(value)), 1, expectFilterGroup, selectedFilterRule)
 			if err == nil {
 				decoded.Verify = rule.(*Filter)
 			}
@@ -91,7 +91,8 @@ func (base *FilterExperienceBase) UnmarshalJSON(data []byte) error {
 		case "where":
 			if !value.IsNull() {
 				var rule FilterRule
-				rule, _, err = unmarshalFilterRule(json.NewDecoder(bytes.NewReader(value)), 1, expectFilterGroup, true)
+				rule, _, err = unmarshalFilterRule(json.NewDecoder(bytes.NewReader(value)),
+					1, expectFilterGroup, occurrenceFilterRule)
 				if err == nil {
 					decoded.Where = rule.(*Filter)
 				}
@@ -134,7 +135,7 @@ func (condition *FilterExperienceCondition) UnmarshalJSON(data []byte) error {
 	if condition == nil {
 		return errors.New("core: cannot unmarshal an experience condition into nil")
 	}
-	rule, _, err := unmarshalFilterRule(json.NewDecoder(bytes.NewReader(data)), 1, expectAnyFilterRule, false)
+	rule, _, err := unmarshalFilterRule(json.NewDecoder(bytes.NewReader(data)), 1, expectAnyFilterRule, profileFilterRule)
 	if err != nil {
 		return errors.New(err.Error())
 	}
@@ -219,9 +220,12 @@ func prepareFilterExperience(condition *FilterExperienceCondition, calendar *uni
 		}
 	}
 	validation := filterValidation{maxDepth: 2, properties: schemas.Event.Properties()}
-	verify, err := prepareFilterGroup(experience.Verify, &validation, 1)
+	verify, err := prepareExperienceVerification(experience.Verify, &validation, 1, experience.Base.Source, calendar)
 	if err != nil {
-		return unified.Rule{}, err
+		if _, unsupported := errors.AsType[*unified.UnsupportedError](err); !unsupported {
+			return unified.Rule{}, err
+		}
+		unavailable = err
 	}
 	if selector.Kind == "nth" {
 		return unified.Rule{}, &unified.UnsupportedError{Capability: "nth experience selector"}

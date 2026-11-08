@@ -42,7 +42,7 @@ func TestExplainExperienceSelection(t *testing.T) {
 		}
 		index := 0
 		rule := &warehouses.SelectedOccurrence{First: test.first}
-		result, err := explainProfileRule(rule, unified.Rule{Experience: &unified.Experience{}}, nodes, &index)
+		result, err := explainProfileRule(rule, unified.Rule{Experience: &unified.Experience{}}, nodes, &index, time.Time{})
 		if err != nil {
 			t.Fatalf("expected experience explanation, got %v", err)
 		}

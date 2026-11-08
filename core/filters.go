@@ -37,8 +37,8 @@ type Filter struct {
 
 // FilterRule represents a condition or a nested filter group.
 // It is implemented by *FilterCondition, *FilterCountCondition,
-// *FilterSumCondition, *FilterAverageCondition, *FilterExperienceCondition
-// and *Filter.
+// *FilterSumCondition, *FilterAverageCondition, *FilterExperienceCondition,
+// *FilterOccurredInCondition and *Filter.
 type FilterRule interface {
 	filterRule()
 }
@@ -71,7 +71,7 @@ func (filter *Filter) RequiresUnified() bool {
 // UnmarshalJSON sets filter to the filter group represented by data.
 func (filter *Filter) UnmarshalJSON(data []byte) error {
 	dec := json.NewDecoder(bytes.NewBuffer(data))
-	group, _, err := unmarshalFilterRule(dec, 1, expectFilterGroup, false)
+	group, _, err := unmarshalFilterRule(dec, 1, expectFilterGroup, profileFilterRule)
 	if err != nil {
 		return err
 	}
@@ -103,7 +103,7 @@ func (filter *Filter) hasBehavior(includeExtended bool) bool {
 			switch rule := rule.(type) {
 			case *FilterCountCondition:
 				return true
-			case *FilterSumCondition, *FilterAverageCondition, *FilterExperienceCondition:
+			case *FilterSumCondition, *FilterAverageCondition, *FilterExperienceCondition, *FilterOccurredInCondition:
 				if includeExtended {
 					return true
 				}
@@ -228,6 +228,15 @@ var operators = [...]FilterOperator{
 	OpIsOnOrBefore, OpIsAfter, OpIsOnOrAfter, OpIsTrue, OpIsFalse, OpIsEmpty, OpIsNotEmpty, OpIsNull, OpIsNotNull,
 	OpExists, OpDoesNotExist,
 }
+
+// filterRuleContext distinguishes profile, occurrence and selected predicates.
+type filterRuleContext uint8
+
+const (
+	profileFilterRule filterRuleContext = iota
+	occurrenceFilterRule
+	selectedFilterRule
+)
 
 // filterValidation contains the state shared while validating a filter tree.
 type filterValidation struct {
@@ -405,6 +414,14 @@ func marshalFilterJSON(b *json.Buffer, filter *Filter) error {
 			if err != nil {
 				return err
 			}
+		case *FilterOccurredInCondition:
+			if rule == nil {
+				return errors.New("filter occurredIn condition cannot be nil")
+			}
+			err = b.Encode(rule)
+			if err != nil {
+				return err
+			}
 		case *FilterExperienceCondition:
 			if rule == nil {
 				return errors.New("filter experience condition cannot be nil")
@@ -460,7 +477,7 @@ const (
 
 // unmarshalFilterRule unmarshals a filter rule and returns it and its number of
 // descendant rules. If expectGroup is true, it accepts only a filter group.
-func unmarshalFilterRule(dec *json.Decoder, depth int, expectGroup, occurrence bool) (FilterRule, int, error) {
+func unmarshalFilterRule(dec *json.Decoder, depth int, expectGroup bool, context filterRuleContext) (FilterRule, int, error) {
 
 	tok, err := dec.ReadToken()
 	if err != nil {
@@ -482,6 +499,8 @@ func unmarshalFilterRule(dec *json.Decoder, depth int, expectGroup, occurrence b
 	var hasAverage bool
 	var experience FilterExperience
 	var hasExperience bool
+	var occurredIn FilterPeriod
+	var hasOccurredIn bool
 	var calendar *FilterCalendar
 	var hasCalendar bool
 	var descendantRuleCount int
@@ -498,7 +517,7 @@ func unmarshalFilterRule(dec *json.Decoder, depth int, expectGroup, occurrence b
 			if hasCalendar {
 				return nil, 0, errors.New("duplicate filter property defaultCalendar")
 			}
-			if depth != 1 || occurrence || dec.PeekKind() == json.Null {
+			if depth != 1 || context != profileFilterRule || dec.PeekKind() == json.Null {
 				return nil, 0, errors.New("defaultCalendar requires a non-null root calendar")
 			}
 			hasCalendar = true
@@ -526,16 +545,16 @@ func unmarshalFilterRule(dec *json.Decoder, depth int, expectGroup, occurrence b
 				return nil, 0, fmt.Errorf("duplicate filter property %q", name)
 			}
 			maxDepth := maxFilterDepth
-			if occurrence {
+			if context != profileFilterRule {
 				maxDepth = 2
 			}
 			if depth > maxDepth {
 				return nil, 0, fmt.Errorf("filter exceeds maximum depth of %d", maxDepth)
 			}
 			hasRules = true
-			rules, descendantRuleCount, err = unmarshalFilterRules(dec, depth, occurrence)
+			rules, descendantRuleCount, err = unmarshalFilterRules(dec, depth, context)
 		case "count":
-			if occurrence {
+			if context != profileFilterRule {
 				return nil, 0, errors.New("Count is not allowed in an occurrence Record filter")
 			}
 			if hasCount {
@@ -548,7 +567,7 @@ func unmarshalFilterRule(dec *json.Decoder, depth int, expectGroup, occurrence b
 				err = dec.Decode(&count)
 			}
 		case "sum":
-			if occurrence {
+			if context != profileFilterRule {
 				return nil, 0, errors.New("Sum is not allowed in an occurrence Record filter")
 			}
 			if hasSum {
@@ -561,7 +580,7 @@ func unmarshalFilterRule(dec *json.Decoder, depth int, expectGroup, occurrence b
 				err = dec.Decode(&sum)
 			}
 		case "average":
-			if occurrence {
+			if context != profileFilterRule {
 				return nil, 0, errors.New("Average is not allowed in an occurrence Record filter")
 			}
 			if hasAverage {
@@ -583,7 +602,7 @@ func unmarshalFilterRule(dec *json.Decoder, depth int, expectGroup, occurrence b
 				}
 			}
 		case "experience":
-			if occurrence {
+			if context != profileFilterRule {
 				return nil, 0, errors.New("experience is not allowed in an occurrence Record filter")
 			}
 			if hasExperience {
@@ -595,6 +614,15 @@ func unmarshalFilterRule(dec *json.Decoder, depth int, expectGroup, occurrence b
 			} else {
 				err = dec.Decode(&experience)
 			}
+		case "occurredIn":
+			if context != selectedFilterRule {
+				return nil, 0, errors.New("occurredIn requires experience verify")
+			}
+			if hasOccurredIn {
+				return nil, 0, errors.New("duplicate filter property occurredIn")
+			}
+			hasOccurredIn = true
+			err = dec.Decode(&occurredIn)
 		case "values":
 			if hasValues {
 				return nil, 0, fmt.Errorf("duplicate filter property %q", name)
@@ -615,8 +643,17 @@ func unmarshalFilterRule(dec *json.Decoder, depth int, expectGroup, occurrence b
 
 	_ = dec.SkipToken() // skip '}'
 
-	if hasCalendar && (!hasRules || hasCount || hasSum || hasAverage || hasExperience || hasProperty) {
+	if hasCalendar && (!hasRules || hasCount || hasSum || hasAverage || hasExperience || hasOccurredIn || hasProperty) {
 		return nil, 0, errors.New("defaultCalendar is only allowed on the root group")
+	}
+	if hasOccurredIn {
+		if expectGroup {
+			return nil, 0, errors.New("filter must be a group")
+		}
+		if hasRules || hasProperty || hasCount || hasSum || hasAverage || hasExperience || hasOperator || hasValues {
+			return nil, 0, errors.New("occurredIn condition cannot contain another subject, operator or values")
+		}
+		return &FilterOccurredInCondition{OccurredIn: occurredIn}, 0, nil
 	}
 	if hasExperience {
 		if expectGroup {
@@ -693,7 +730,7 @@ func unmarshalFilterRule(dec *json.Decoder, depth int, expectGroup, occurrence b
 
 // unmarshalFilterRules unmarshals the rules of a filter group and returns them
 // and their total rule count.
-func unmarshalFilterRules(dec *json.Decoder, depth int, occurrence bool) ([]FilterRule, int, error) {
+func unmarshalFilterRules(dec *json.Decoder, depth int, context filterRuleContext) ([]FilterRule, int, error) {
 
 	tok, err := dec.ReadToken()
 	if err != nil {
@@ -706,7 +743,7 @@ func unmarshalFilterRules(dec *json.Decoder, depth int, occurrence bool) ([]Filt
 	rules := []FilterRule{}
 	ruleCount := 0
 	for dec.PeekKind() != ']' {
-		rule, descendantRuleCount, err := unmarshalFilterRule(dec, depth+1, expectAnyFilterRule, occurrence)
+		rule, descendantRuleCount, err := unmarshalFilterRule(dec, depth+1, expectAnyFilterRule, context)
 		if err != nil {
 			return nil, 0, err
 		}
@@ -1000,6 +1037,8 @@ func prepareFilterGroup(filter *Filter, validation *filterValidation, depth int)
 			return nil, errors.New("Sum requires Unified profile filtering")
 		case *FilterAverageCondition:
 			return nil, errors.New("Average requires Unified profile filtering")
+		case *FilterOccurredInCondition:
+			return nil, errors.New("occurredIn requires experience verify")
 		case *FilterExperienceCondition:
 			return nil, errors.New("experience requires Unified profile filtering")
 		default:

@@ -735,13 +735,14 @@ model-facing `profile-filter-doc` tool for transport, limits and examples.
 
 `FilterExperienceCondition` extends the same public `core.Filter` rule union.
 Its `experience` has `base:{source,period,where?}`, `select:{kind:"first"|"last"}` and a
-mandatory nonempty Record `verify`. There is no outer operator/values, and no
-implicit selector or empty-body constructor. Where and verify use independent
+mandatory nonempty `verify` of Record and selected timestamp predicates. There
+is no outer operator/values, and no implicit selector or empty-body constructor. Where and verify use independent
 local budgets (two groups, 100 descendants), not the main four-level/100-node
 budget. Source and period binding reuse the existing recorded-event Count path;
 no dialect or SQL enters core. The canonical owner retains base and verification
-separately. Nth is explicitly unimplemented, not UNKNOWN. Record-only
-pipeline validation still rejects the new rule and state.Where is unchanged.
+separately. `ExperienceVerification` is a closed selected-owner body, not a
+relational plan or another public filter format. Nth is explicitly unimplemented,
+not UNKNOWN. Record-only pipeline validation still rejects the new rule and state.Where is unchanged.
 
 `warehouses.SelectedOccurrence` declares a determined message identity, attribution
 and timestamp, row-local qualification and verification. The shared SQL keeps
@@ -787,3 +788,27 @@ empty and uncertain bases, ties, no fallback, scoping, full history, independent
 completion enumeration and HTTP/MCP. Snowflake has the same shared composer and
 local adapter tests; its existing verification gate remains closed. No remote
 Snowflake execution or infrastructure coherence guarantee is claimed.
+
+### Selected timestamp membership
+
+Only E verify admits a complete `{"occurredIn":{...period...}}` leaf, without
+operator or values. It accepts elapsedLookback, elapsedAgoBand,
+lastCompleteCalendarPeriods and absoluteHalfOpen, inheriting the root calendar.
+The same period resolver and evaluation T are used for the base and each leaf.
+Core binds the resolved [start,end) window to existing Record datetime >= and <
+predicates on the selected occurrence; drivers retain their existing renderers.
+A selected timestamp is determined, so the leaf is two-valued, while alternative
+winners or possible absence can still leave the experience UNKNOWN.
+FullRelevantHistory in this slot is valid but unimplemented; history in another
+period is invalid. Invalid siblings win over missing capabilities in either
+order. Every local group still observes the two-level/100-descendant budget.
+No temporal leaf is admitted in base.where, reduction where, Profiles root or
+Record pipelines. state.Where and saved Record filters are unchanged.
+
+Experience explanations add occurredIn:[{path,start,end}], with zero-based rule
+indexes relative to verify. Each leaf retains its own resolved window, even in
+OR groups; candidate identities and payloads are not exposed. Empty metadata is
+omitted, preserving the response for experiences with only Record verification.
+First full history + recent occurredIn asks for a recent first recorded event;
+First recent base instead asks for the first within that period. Retention,
+deletions and older late imports can change a historical First.

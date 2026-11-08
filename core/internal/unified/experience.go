@@ -9,17 +9,18 @@ import (
 	"time"
 
 	"github.com/krenalis/krenalis/core/internal/state"
+	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/warehouses"
 )
 
 // Experience selects the first or last recorded occurrence before verifying it.
-// Where and Verify are closed, row-local Record predicates, not shared facts.
+// Where contains local Record predicates; Verify also admits timestamp tests.
 // Unknown local qualifications are independent across determined identities.
 type Experience struct {
 	First  bool
 	Scope  Scope
 	Where  *state.Where
-	Verify *state.Where
+	Verify *ExperienceVerification
 }
 
 func (experience *Experience) prepare(at time.Time, source SourceBinding) (warehouses.FilterCondition, error) {
@@ -33,14 +34,14 @@ func (experience *Experience) prepare(at time.Time, source SourceBinding) (wareh
 	if !ok {
 		return nil, fmt.Errorf("core/internal/unified: invalid experience population binding")
 	}
-	verify, err := source.Record(experience.Verify)
+	verify, err := experience.Verify.prepare(at, source)
 	if err != nil {
 		return nil, err
 	}
 	return &warehouses.SelectedOccurrence{First: experience.First, Source: count.Source,
 		Start: count.Start, End: count.End,
 		UnboundedStart: count.UnboundedStart, Qualification: count.Qualification,
-		Verify: &warehouses.RecordQualification{Expr: verify}}, nil
+		Verify: verify}, nil
 }
 
 func (experience *Experience) validate(at time.Time) error {
@@ -59,10 +60,20 @@ func (experience *Experience) validate(at time.Time) error {
 		}
 	}
 	nodes := 0
-	err = validateWhere(experience.Verify, 1, &nodes)
+	err = experience.Verify.validate(at, 1, &nodes)
+	var unavailable error
 	if err != nil {
-		return err
+		if _, unsupported := errors.AsType[*UnsupportedError](err); !unsupported {
+			return err
+		}
+		unavailable = err
 	}
 	_, _, err = experience.Scope.bounds(at)
-	return err
+	if err != nil {
+		if _, unsupported := errors.AsType[*UnsupportedError](err); !unsupported {
+			return err
+		}
+		unavailable = err
+	}
+	return unavailable
 }
