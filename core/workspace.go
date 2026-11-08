@@ -1477,14 +1477,10 @@ func (this *Workspace) Profiles(ctx context.Context, schema types.Type, properti
 	}
 
 	// Read the profiles.
-	orderBy := []string{order}
-	if order != "_kpid" {
-		orderBy = append(orderBy, "_kpid")
-	}
 	rows, total, err := this.store.Profiles(ctx, datastore.Query{
 		Properties: append([]string{"_kpid", "_updated_at"}, properties...),
 		Where:      where,
-		OrderBy:    orderBy,
+		OrderBy:    []string{order, "_kpid"},
 		OrderDesc:  orderDesc,
 		First:      first,
 		Limit:      limit + 1,

@@ -977,11 +977,10 @@ func (store *Store) query(ctx context.Context, query Query, columnByProperty map
 		return nil, 0, unavailableError(err)
 	}
 
-	// Profile counts and rows are independent observations. Preserve the
-	// existing estimate adjustment for other queries.
-	if query.table != "profiles" {
-		total = max(len(records), total)
-	}
+	// Since total is an estimate, being counted separately from the actual
+	// total number of record returned, ensure to not return a value lower than
+	// the actually returned number of users.
+	total = max(len(records), total)
 
 	return records, total, nil
 }

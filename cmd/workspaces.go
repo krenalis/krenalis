@@ -977,8 +977,8 @@ func (workspace workspace) ProfileCount(_ http.ResponseWriter, r *http.Request) 
 		}
 	}
 	var schema types.Type
-	if value, ok := q["schema"]; ok {
-		err = json.Unmarshal([]byte(value[0]), &schema)
+	if s := q.Get("schema"); s != "" {
+		err = json.Unmarshal([]byte(s), &schema)
 		if err != nil {
 			return nil, errors.BadRequest("invalid schema: %s", err)
 		}

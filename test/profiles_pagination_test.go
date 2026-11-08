@@ -99,7 +99,7 @@ func TestProfilesPagination(t *testing.T) {
 		t.Fatalf("expected %d profiles in the first page, got %d", pageSize, len(firstPage))
 	}
 	if !hasNext {
-		t.Fatal("expected the first profile page to have a continuation")
+		t.Fatal("expected the first profile page to have a continuation, got false")
 	}
 	maximumPage, maximumTotal, maximumHasNext := k.ProfilesWithSchema(
 		requestSchema, []string{"email"}, "", true, 0, 1000)
@@ -121,14 +121,16 @@ func TestProfilesPagination(t *testing.T) {
 		"schema":     []string{string(schemaJSON)},
 	}.Encode(), nil, nil, &summaryResponse)
 	if _, ok := summaryResponse["schema"]; ok {
-		t.Fatal("unexpected schema in profiles response")
+		t.Fatalf("expected no schema in profiles response, got %v", summaryResponse["schema"])
 	}
 	var countResponse struct {
 		Total int `json:"total"`
 	}
-	k.Call("GET", "/v1/profiles/count", nil, nil, &countResponse)
-	if countResponse.Total != expectedTotal {
-		t.Fatalf("unexpected count response: total=%d", countResponse.Total)
+	for _, suffix := range []string{"", "?schema="} {
+		k.Call("GET", "/v1/profiles/count"+suffix, nil, nil, &countResponse)
+		if countResponse.Total != expectedTotal {
+			t.Fatalf("expected total %d, got %d", expectedTotal, countResponse.Total)
+		}
 	}
 	email, ok := firstPage[0].Attributes["email"].(string)
 	if !ok {
@@ -150,7 +152,7 @@ func TestProfilesPagination(t *testing.T) {
 		"schema": []string{string(schemaJSON)},
 	}.Encode(), nil, nil, &countResponse)
 	if countResponse.Total != 1 {
-		t.Fatalf("unexpected filtered count response: total=%d", countResponse.Total)
+		t.Fatalf("expected filtered total 1, got %d", countResponse.Total)
 	}
 	profiles := firstPage
 	for first := pageSize; first < expectedTotal; first += pageSize {
@@ -164,7 +166,7 @@ func TestProfilesPagination(t *testing.T) {
 			t.Fatalf("expected %d profiles at offset %d, got %d", expectedPageSize, first, len(page))
 		}
 		if pageHasNext != (first+len(page) < expectedTotal) {
-			t.Fatalf("unexpected hasNext value %t at offset %d", pageHasNext, first)
+			t.Fatalf("expected hasNext %t at offset %d, got %t", first+len(page) < expectedTotal, first, pageHasNext)
 		}
 		profiles = append(profiles, page...)
 	}
@@ -175,7 +177,7 @@ func TestProfilesPagination(t *testing.T) {
 
 		kpid := profile.KPID.String()
 		if _, ok := seen[kpid]; ok {
-			t.Fatalf("profile %s occurs in more than one page", kpid)
+			t.Fatalf("expected profile %s in one page, got a duplicate at index %d", kpid, i)
 		}
 		seen[kpid] = struct{}{}
 		if i == 0 {
@@ -184,19 +186,20 @@ func TestProfilesPagination(t *testing.T) {
 
 		previous := profiles[i-1]
 		if previous.UpdatedAt.Before(profile.UpdatedAt) {
-			t.Fatalf("profile %s is newer than the preceding profile %s", profile.KPID, previous.KPID)
+			t.Fatalf("expected update times in descending order, got %s before %s",
+				previous.UpdatedAt, profile.UpdatedAt)
 		}
 		if previous.UpdatedAt.Equal(profile.UpdatedAt) {
 			hasEqualUpdateTimes = true
 			if bytes.Compare(previous.KPID[:], profile.KPID[:]) <= 0 {
-				t.Fatalf("profiles %s and %s with the same update time are not ordered by descending KPID",
+				t.Fatalf("expected descending KPIDs for equal update times, got %s before %s",
 					previous.KPID, profile.KPID)
 			}
 		}
 
 	}
 	if !hasEqualUpdateTimes {
-		t.Fatal("expected profiles with the same update time")
+		t.Fatal("expected profiles with the same update time, got none")
 	}
 
 	// Profiles with the same first name are ordered by KPID across pages.
@@ -238,13 +241,14 @@ func TestProfilesPagination(t *testing.T) {
 	}
 	k.Call("GET", attributesPath, nil, nil, &attributesResponse)
 	if attributesResponse.Attributes["email"] != email {
-		t.Fatal("attributes do not match the requested profile")
+		t.Fatalf("expected email %q, got %v", email, attributesResponse.Attributes["email"])
 	}
 
 	empty, _, emptyHasNext := k.ProfilesWithSchema(
 		requestSchema, []string{"email"}, "", true, expectedTotal, pageSize)
 	if len(empty) != 0 || emptyHasNext {
-		t.Fatalf("unexpected empty range: profiles=%d hasNext=%t", len(empty), emptyHasNext)
+		t.Fatalf("expected 0 profiles and no continuation, got %d profiles and continuation %t",
+			len(empty), emptyHasNext)
 	}
 
 	emailProperty, _ := requestSchema.Properties().ByName("email")
@@ -337,12 +341,12 @@ func TestProfilesPagination(t *testing.T) {
 			message: "schema is required",
 		},
 		{
-			name:    "count empty schema",
+			name:    "count needs nonempty filter schema",
 			path:    "/v1/profiles/count",
-			query:   url.Values{"schema": []string{""}},
+			query:   url.Values{"filter": []string{string(filter)}, "schema": []string{""}},
 			status:  http.StatusBadRequest,
 			code:    "BadRequest",
-			message: "invalid schema: unexpected EOF",
+			message: "schema is required",
 		},
 		{
 			name:    "count malformed schema",
@@ -417,7 +421,7 @@ func TestProfilesPagination(t *testing.T) {
 				}
 				return
 			}
-			t.Fatal("expected an error")
+			t.Fatal("expected an error, got nil")
 		})
 	}
 
@@ -455,7 +459,7 @@ func TestProfilesPagination(t *testing.T) {
 			}
 			continue
 		}
-		t.Fatal("expected incompatible schema error")
+		t.Fatal("expected incompatible schema error, got nil")
 	}
 
 	// Compatible alterations and subsequent IR publications keep old arguments usable.
@@ -500,7 +504,7 @@ func TestProfilesPagination(t *testing.T) {
 	}
 	k.Call("GET", attributesPath, nil, nil, &attributesResponse)
 	if attributesResponse.Attributes["email"] != "changed@example.com" {
-		t.Fatal("attributes did not reflect a live update")
+		t.Fatalf("expected email changed@example.com after update, got %v", attributesResponse.Attributes["email"])
 	}
 	// A partial nested object describes both the selected columns and serialization.
 	android, _ := requestSchema.Properties().ByName("android")
@@ -531,7 +535,7 @@ func TestProfilesPagination(t *testing.T) {
 	}
 	nested, ok := nestedResponse.Profiles[0].Attributes["android"].(map[string]any)
 	if !ok || len(nested) != 1 || nested["id"] != "nested-id" {
-		t.Fatalf("unexpected nested attributes: %v", nested)
+		t.Fatalf("expected only android.id nested-id, got %v", nestedResponse.Profiles[0].Attributes["android"])
 	}
 	k.Call("GET", "/v1/profiles/count?"+url.Values{
 		"schema": []string{string(nestedJSON)}, "filter": []string{nestedFilter},
@@ -552,7 +556,7 @@ func TestProfilesPagination(t *testing.T) {
 		}
 	}
 	if err == nil {
-		t.Fatal("expected a missing profile error")
+		t.Fatal("expected a missing profile error, got nil")
 	}
 	k.Call("GET", "/v1/profiles/count", nil, nil, &countResponse)
 	if countResponse.Total != expectedTotal-1 {
