@@ -619,6 +619,7 @@ FROM (VALUES
 			`"verify":{"operator":"and","rules":[{"property":"properties.v","operator":"is","values":["yes"]}]}}}]}`
 		for _, test := range []struct{ name, filter, totals string }{
 			{"last", experience, `"match":1,"noMatch":1,"unknown":2`},
+			{"first", strings.Replace(experience, `"kind":"last"`, `"kind":"first"`, 1), `"match":0,"noMatch":2,"unknown":2`},
 			{"outer OR", strings.Replace(strings.Replace(experience, `"operator":"and"`, `"operator":"or"`, 1), `"rules":[{"experience"`, `"rules":[{"property":"country","operator":"is","values":["FR"]},{"experience"`, 1), `"match":3,"noMatch":0,"unknown":1`},
 			{"outer AND", strings.Replace(experience, `"rules":[{"experience"`, `"rules":[{"property":"country","operator":"is","values":["IT"]},{"experience"`, 1), `"match":1,"noMatch":2,"unknown":1`},
 		} {
@@ -658,7 +659,7 @@ FROM (VALUES
 		}
 
 		for _, test := range []struct{ name, filter, code string }{
-			{"first unavailable", strings.Replace(experience, `"kind":"last"`, `"kind":"first"`, 1), "FilterCapabilityNotImplemented"},
+			{"nth unavailable", strings.Replace(experience, `"kind":"last"`, `"kind":"nth","position":2`, 1), "FilterCapabilityNotImplemented"},
 			{"verify required", strings.Replace(experience, `,"verify":{"operator":"and","rules":[{"property":"properties.v","operator":"is","values":["yes"]}]}`, ``, 1), "InvalidArguments"},
 			{"invalid verify", strings.Replace(experience, `properties.v`, `unknown`, 1), "PropertyNotExist"},
 		} {

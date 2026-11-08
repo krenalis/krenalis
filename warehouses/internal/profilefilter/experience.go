@@ -11,10 +11,10 @@ import (
 	"github.com/krenalis/krenalis/warehouses"
 )
 
-// experience preserves all possible last occurrences and the empty alternative.
-// The maximum certain timestamp excludes strictly older optional occurrences;
+// experience preserves possible first/last occurrences and the empty alternative.
+// The first/last certain timestamp excludes later/older optional occurrences;
 // ties remain candidates. No ranking ID or greedy choice closes the selection.
-func (c *compiler) experience(node *warehouses.LastOccurrence) (string, error) {
+func (c *compiler) experience(node *warehouses.SelectedOccurrence) (string, error) {
 
 	n := strconv.Itoa(c.counts)
 	c.counts++
@@ -65,6 +65,10 @@ func (c *compiler) experience(node *warehouses.LastOccurrence) (string, error) {
 		"CASE WHEN "+within+" THEN ("+qual+") ELSE CAST(NULL AS BOOLEAN) END AS qualification,"+
 		"CASE WHEN "+within+" THEN ("+verify+") ELSE CAST(NULL AS BOOLEAN) END AS verification FROM "+table+
 		" WHERE "+id+" IN (SELECT occurrence_id FROM ids"+n+"))")
+	extreme, direction := "MAX", ">="
+	if node.First {
+		extreme, direction = "MIN", "<="
+	}
 	state := "CASE WHEN qualification=TRUE THEN 1 WHEN qualification=FALSE THEN 0 ELSE 2 END"
 	body := "CASE WHEN verification=TRUE THEN 1 WHEN verification=FALSE THEN 0 ELSE 2 END"
 	c.ctes = append(c.ctes, "facts"+n+` AS (SELECT occurrence_id,
@@ -78,7 +82,7 @@ func (c *compiler) experience(node *warehouses.LastOccurrence) (string, error) {
  MAX(CASE WHEN in_period=1 AND (qualification IS DISTINCT FROM FALSE) THEN `+body+` END) AS verify_max
  FROM copies`+n+` GROUP BY occurrence_id)`)
 	c.ctes = append(c.ctes, "base"+n+` AS (SELECT profile_id,time_min,state_min,verify_min,
- MAX(CASE WHEN state_min=1 THEN time_min END) OVER (PARTITION BY profile_id) AS certain_time
+ `+extreme+`(CASE WHEN state_min=1 THEN time_min END) OVER (PARTITION BY profile_id) AS certain_time
  FROM facts`+n+` WHERE profile_id IS NOT NULL AND profiles=1 AND period_min=1 AND period_max=1
  AND missing_times=0 AND time_min=time_max AND state_min=state_max AND state_min<>0
  AND verify_min=verify_max)`)
@@ -86,7 +90,7 @@ func (c *compiler) experience(node *warehouses.LastOccurrence) (string, error) {
  MAX(CASE WHEN certain_time IS NULL THEN 1 ELSE 0 END) AS absent,
  SUM(CASE WHEN verify_min=1 THEN 1 ELSE 0 END) AS passed,
  SUM(CASE WHEN verify_min=0 THEN 1 ELSE 0 END) AS failed
- FROM base`+n+` WHERE certain_time IS NULL OR time_min>=certain_time GROUP BY profile_id)`)
+ FROM base`+n+` WHERE certain_time IS NULL OR time_min`+direction+`certain_time GROUP BY profile_id)`)
 	c.ctes = append(c.ctes, "fault"+n+` AS (SELECT
  (SELECT COALESCE(SUM(CASE WHEN profile_id IS NOT NULL AND
  (profiles>1 OR period_min<>period_max OR missing_times<>0 OR (time_min<>time_max AND state_max<>0)

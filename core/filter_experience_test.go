@@ -144,11 +144,35 @@ func TestFilterExperienceCodec(t *testing.T) {
 
 }
 
+// TestFilterExperienceFirst preserves the selector through public preparation.
+func TestFilterExperienceFirst(t *testing.T) {
+	var condition FilterExperienceCondition
+	input := strings.Replace(experienceConditionJSON, `"kind":"last"`, `"kind":"first"`, 1)
+	err := json.Unmarshal([]byte(input), &condition)
+	if err != nil {
+		t.Fatalf("expected First decoded, got %v", err)
+	}
+	rule, err := prepareFilterExperience(&condition, nil)
+	if err != nil {
+		t.Fatalf("expected First prepared, got %v", err)
+	}
+	if rule.Experience == nil || !rule.Experience.First {
+		t.Fatalf("expected canonical First selection, got %+v", rule)
+	}
+	encoded, err := json.Marshal(&condition)
+	if err != nil {
+		t.Fatalf("expected First encoded, got %v", err)
+	}
+	if !strings.Contains(string(encoded), `"select":{"kind":"first"}`) {
+		t.Fatalf("expected First round-trip, got %s", encoded)
+	}
+}
+
 // TestFilterExperienceInvalidBeforeUnsupported checks both sibling orders.
 func TestFilterExperienceInvalidBeforeUnsupported(t *testing.T) {
 
 	schema := types.Object([]types.Property{{Name: "country", Type: types.String()}})
-	first := strings.Replace(experienceConditionJSON, `"kind":"last"`, `"kind":"first"`, 1)
+	nth := strings.Replace(experienceConditionJSON, `"kind":"last"`, `"kind":"nth","position":2`, 1)
 	for _, test := range []struct{ name, input string }{
 		{"empty verify", strings.Replace(experienceConditionJSON, `"rules":[{"property":"properties.order_id","operator":"starts with","values":["WEB-"]}]`, `"rules":[]`, 1)},
 		{"invalid selector", strings.Replace(experienceConditionJSON, `"kind":"last"`, `"kind":"random"`, 1)},
@@ -158,7 +182,7 @@ func TestFilterExperienceInvalidBeforeUnsupported(t *testing.T) {
 		{"bad property", strings.Replace(experienceConditionJSON, `properties.order_id`, `missing`, 1)},
 		{"bad Record operator", strings.Replace(experienceConditionJSON, `starts with`, `not an operator`, 1)},
 	} {
-		for _, rules := range []string{first + "," + test.input, test.input + "," + first} {
+		for _, rules := range []string{nth + "," + test.input, test.input + "," + nth} {
 			t.Run(test.name, func(t *testing.T) {
 				var filter Filter
 				err := json.Unmarshal([]byte(`{"operator":"and","rules":[`+rules+`]}`), &filter)
@@ -178,7 +202,7 @@ func TestFilterExperienceInvalidBeforeUnsupported(t *testing.T) {
 		}
 	}
 
-	for _, selector := range []string{`{"kind":"first"}`, `{"kind":"nth","position":10}`} {
+	for _, selector := range []string{`{"kind":"nth","position":1}`, `{"kind":"nth","position":10}`} {
 		var condition FilterExperienceCondition
 		err := json.Unmarshal([]byte(strings.Replace(experienceConditionJSON, `{"kind":"last"}`, selector, 1)), &condition)
 		if err != nil {

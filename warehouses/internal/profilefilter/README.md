@@ -144,8 +144,9 @@ number/type/NULL, timestamp and resource probes pass. No current Snowflake
 credentials or runtime measurements are claimed.
 
 
-LastOccurrence adds no ranking or relational IR. Its independent local base
-keeps all winners at/after the latest certainly included timestamp, or every
+SelectedOccurrence adds no ranking or relational IR. Its independent local base
+keeps all winners at/after the latest certainly included timestamp for Last,
+or at/before the earliest for First, or every
 possible winner plus absence when no certain row exists. Shared governed facts
 are outside this prepared contract. Verification closes only after preserving
 selection alternatives; no ID breaks ties and no older passing row is substituted.

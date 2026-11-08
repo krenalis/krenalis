@@ -51,7 +51,7 @@ type ProfileExperienceExplanation struct {
 
 // ProfileExperienceSelection retains ambiguity without inventing a witness.
 // Kind is absent, unique or ambiguous. Absence is certain, possible or
-// impossible. Candidates counts distinct possible last-message identities.
+// impossible. Candidates counts distinct possible selected-message identities.
 type ProfileExperienceSelection struct {
 	Kind       string `json:"kind"`
 	Absence    string `json:"absence"`
@@ -231,7 +231,7 @@ func explainProfileRule(rule warehouses.FilterCondition, semantic unified.Rule, 
 		}
 	case *warehouses.RecordFilter:
 		result.Kind = "record"
-	case *warehouses.LastOccurrence:
+	case *warehouses.SelectedOccurrence:
 		if node.Experience == nil || semantic.Experience == nil {
 			return ProfileRuleExplanation{}, errors.New("core: missing profile explanation experience")
 		}
@@ -248,6 +248,9 @@ func explainProfileRule(rule warehouses.FilterCondition, semantic unified.Rule, 
 		result.Kind = "experience"
 		result.Experience = &ProfileExperienceExplanation{Start: rule.Start, End: rule.End,
 			UnboundedStart: rule.UnboundedStart, Select: FilterExperienceSelector{Kind: "last"}, Selection: selection}
+		if rule.First {
+			result.Experience.Select.Kind = "first"
+		}
 		if history := semantic.Experience.Scope.History; history != nil {
 			definition, revision := history.Reference()
 			result.Experience.History = &FilterHistory{Definition: definition, MeaningRevision: revision}

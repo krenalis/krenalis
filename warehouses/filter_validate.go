@@ -70,7 +70,7 @@ func validateFilterCondition(node FilterCondition, depth int, nodes, physical *i
 			return fmt.Errorf("warehouses: nil profile Record condition")
 		}
 		return validateRecordQualification(n.Expr, 1, physical)
-	case *LastOccurrence:
+	case *SelectedOccurrence:
 		if n == nil || n.Verify == nil {
 			return fmt.Errorf("warehouses: experience requires verification")
 		}

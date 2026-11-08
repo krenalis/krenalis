@@ -14,7 +14,7 @@ import (
 	"github.com/krenalis/krenalis/warehouses/internal/profilefilter"
 )
 
-// TestProfileFilterExperienceSQL checks Last without a technical tie-break.
+// TestProfileFilterExperienceSQL checks First/Last without a technical tie-break.
 func TestProfileFilterExperienceSQL(t *testing.T) {
 	end := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
 	source := warehouses.OccurrenceSource{Table: "events",
@@ -26,17 +26,26 @@ func TestProfileFilterExperienceSQL(t *testing.T) {
 		Operator: warehouses.OpStartsWith, Values: []any{"WEB-"}}}
 	request := warehouses.ProfileOutcomeRequest{Population: warehouses.ProfileSource{Table: "profiles",
 		Key: warehouses.Column{Name: "_kpid", Type: types.UUID()}}, Limit: 10}
-	for _, unbounded := range []bool{false, true} {
-		node := &warehouses.LastOccurrence{Source: source, End: end, UnboundedStart: unbounded, Verify: verify}
+	for _, test := range []struct{ first, unbounded bool }{
+		{false, false}, {false, true}, {true, false}, {true, true},
+	} {
+		first, unbounded := test.first, test.unbounded
+		node := &warehouses.SelectedOccurrence{First: first, Source: source, End: end,
+			UnboundedStart: unbounded, Verify: verify}
 		if !unbounded {
 			node.Start = end.AddDate(0, -1, 0)
 		}
 		statement, err := profilefilter.Build(warehouses.Filter{Root: node}, request, profileFilterDialect())
 		if err != nil {
-			t.Fatalf("expected generated Last SQL, got %v", err)
+			t.Fatalf("expected generated selection SQL, got %v", err)
+		}
+		extreme, direction := "MAX", ">="
+		if first {
+			extreme, direction = "MIN", "<="
 		}
 		for _, fragment := range []string{
-			"OVER (PARTITION BY profile_id)", "certain_time IS NULL OR time_min>=certain_time",
+			"OVER (PARTITION BY profile_id)", "certain_time IS NULL OR time_min" + direction + "certain_time",
+			extreme + "(CASE WHEN state_min=1 THEN time_min END)",
 			"time_min<>time_max", "COALESCE(v0.absent,1)=0", "COALESCE(v0.failed,0)=COALESCE(v0.candidates,0)",
 		} {
 			if !strings.Contains(statement.SQL, fragment) {

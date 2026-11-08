@@ -734,19 +734,19 @@ model-facing `profile-filter-doc` tool for transport, limits and examples.
 ## Selected Experience subset
 
 `FilterExperienceCondition` extends the same public `core.Filter` rule union.
-Its `experience` has `base:{source,period,where?}`, `select:{kind:"last"}` and a
+Its `experience` has `base:{source,period,where?}`, `select:{kind:"first"|"last"}` and a
 mandatory nonempty Record `verify`. There is no outer operator/values, and no
 implicit selector or empty-body constructor. Where and verify use independent
 local budgets (two groups, 100 descendants), not the main four-level/100-node
 budget. Source and period binding reuse the existing recorded-event Count path;
 no dialect or SQL enters core. The canonical owner retains base and verification
-separately. First/Nth are explicitly unimplemented, not UNKNOWN. Record-only
+separately. Nth is explicitly unimplemented, not UNKNOWN. Record-only
 pipeline validation still rejects the new rule and state.Where is unchanged.
 
-`warehouses.LastOccurrence` declares a determined message identity, attribution
+`warehouses.SelectedOccurrence` declares a determined message identity, attribution
 and timestamp, row-local qualification and verification. The shared SQL keeps
-all compatible winners: MAX(certain timestamp) per profile excludes older
-optional rows; if no certain row exists, every possible row and the empty
+all compatible winners: MAX(certain timestamp) for Last excludes older optional
+rows; MIN(certain timestamp) for First excludes later optional rows; if no certain row exists, every possible row and the empty
 alternative remain. Equal timestamps retain all identities. It returns TRUE
 only with certain nonemptiness and all candidate verifications TRUE, FALSE when
 all alternatives are FALSE (including certain emptiness), NULL otherwise.
@@ -770,6 +770,11 @@ Public explanations add period metadata, select and selection:{kind,absence,
 candidates}. Absence is certain, possible or impossible; one candidate with
 possible absence is ambiguous. No witness identity is invented or event payload
 list transported. The result alone does not identify the missing Record operand.
+
+First is the first recorded occurrence in the queryable history, not a claim
+about the start of a real customer relationship. Retention, deletions and late
+imports of older events can change it. First over a recent period means first
+in that period, not first in the entire history.
 
 The period always restricts the base. A window ending at T can express recency
 of Last; a window ending earlier selects Last inside that window, ignoring later

@@ -12,10 +12,11 @@ import (
 	"github.com/krenalis/krenalis/warehouses"
 )
 
-// Experience selects the last recorded occurrence before verifying it.
+// Experience selects the first or last recorded occurrence before verifying it.
 // Where and Verify are closed, row-local Record predicates, not shared facts.
 // Unknown local qualifications are independent across determined identities.
 type Experience struct {
+	First  bool
 	Scope  Scope
 	Where  *state.Where
 	Verify *state.Where
@@ -36,7 +37,8 @@ func (experience *Experience) prepare(at time.Time, source SourceBinding) (wareh
 	if err != nil {
 		return nil, err
 	}
-	return &warehouses.LastOccurrence{Source: count.Source, Start: count.Start, End: count.End,
+	return &warehouses.SelectedOccurrence{First: experience.First, Source: count.Source,
+		Start: count.Start, End: count.End,
 		UnboundedStart: count.UnboundedStart, Qualification: count.Qualification,
 		Verify: &warehouses.RecordQualification{Expr: verify}}, nil
 }

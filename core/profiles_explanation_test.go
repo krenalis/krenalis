@@ -20,15 +20,20 @@ import (
 // TestExplainExperienceSelection distinguishes candidate and absence states.
 func TestExplainExperienceSelection(t *testing.T) {
 	for _, test := range []struct {
+		first      bool
 		candidates int64
 		absent     bool
 		kind       string
 		absence    string
 	}{
-		{0, true, "absent", "certain"},
-		{1, true, "ambiguous", "possible"},
-		{1, false, "unique", "impossible"},
-		{2, false, "ambiguous", "impossible"},
+		{false, 0, true, "absent", "certain"},
+		{false, 1, true, "ambiguous", "possible"},
+		{false, 1, false, "unique", "impossible"},
+		{false, 2, false, "ambiguous", "impossible"},
+		{true, 0, true, "absent", "certain"},
+		{true, 1, true, "ambiguous", "possible"},
+		{true, 1, false, "unique", "impossible"},
+		{true, 2, false, "ambiguous", "impossible"},
 	} {
 		nodes := []warehouses.FilterNodeOutcome{{Truth: warehouses.FilterUnknown,
 			Experience: &warehouses.OccurrenceSelection{Candidates: test.candidates, AbsencePossible: test.absent}}}
@@ -36,12 +41,17 @@ func TestExplainExperienceSelection(t *testing.T) {
 			nodes[0].Truth = warehouses.FilterNoMatch
 		}
 		index := 0
-		result, err := explainProfileRule(&warehouses.LastOccurrence{}, unified.Rule{Experience: &unified.Experience{}},
-			nodes, &index)
+		rule := &warehouses.SelectedOccurrence{First: test.first}
+		result, err := explainProfileRule(rule, unified.Rule{Experience: &unified.Experience{}}, nodes, &index)
 		if err != nil {
 			t.Fatalf("expected experience explanation, got %v", err)
 		}
-		if result.Experience == nil || result.Experience.Selection.Kind != test.kind ||
+		selector := "last"
+		if test.first {
+			selector = "first"
+		}
+		if result.Experience == nil || result.Experience.Select.Kind != selector ||
+			result.Experience.Selection.Kind != test.kind ||
 			result.Experience.Selection.Absence != test.absence || result.Experience.Selection.Candidates != test.candidates {
 			t.Fatalf("expected %s/%s with %d candidates, got %+v", test.kind, test.absence, test.candidates, result)
 		}

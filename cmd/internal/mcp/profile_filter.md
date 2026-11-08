@@ -403,9 +403,9 @@ neither is a rounded average. Count is null when membership is uncertain. Sum is
 null unless membership and all amounts are known. Null never means zero. An
 empty population reports sum=0 and count=0, while its required guard fails.
 
-## Selected Experience: Last then verify
+## Selected Experience: First/Last then verify
 
-An `experience` rule selects the last recorded message from a declared base,
+An `experience` rule selects the first or last recorded message from a declared base,
 then verifies that message. It is a complete predicate, without an outer
 `operator` or `values`. For profiles whose last Order Completed reports an
 order ID starting with WEB-:
@@ -422,8 +422,8 @@ Event schema, the 26 Record operators, at most two group levels and 100 descenda
 nodes. Neither admits behavioral rules or a local defaultCalendar. Omitted/null
 base.where means no additional qualification. Null/omitted verify is invalid in
 this public subset; the canonical NoAdditionalVerification form is not exposed.
-An explicit select.kind is required. Only last executes; first and nth (positions
-1 through 10) are valid but return FilterCapabilityNotImplemented.
+An explicit select.kind is required. First and last execute; nth (positions 1 through 10) is valid but returns
+FilterCapabilityNotImplemented.
 
 Moving a predicate from verify into base.where changes the request. In the
 example, verify tests the latest Order Completed. In base.where, the same test
@@ -444,6 +444,13 @@ newer=60 days), with identical sources and qualifications. The band is
 [T-90 days,T-60 days); exactly T-60 belongs to the recent window. Do not use
 Experience on that band alone: it would ignore more recent orders.
 
+**First means first recorded, not first in real life.** Retention, deletions and
+late imports of older events can change the first identified occurrence. First
+on elapsedLookback(30 days) means first within those 30 days; it does not identify
+customers whose first historical order is recent. To check that today, select
+First on fullRelevantHistory and compare timestamp in verify to absolute bounds
+computed for a fixed at. Do not present First in a recent base as new customers.
+
 The admitted evidence is local Record qualification with independent uncertainty
 across determined message identities and known timestamps. With at least one
 certainly qualified message, the candidate winners are all certain/possible
@@ -453,7 +460,10 @@ The empty alternative is NO_MATCH. The rule is MATCH only when every candidate
 passes verify and emptiness is impossible; NO_MATCH when every alternative fails;
 otherwise UNKNOWN. A tie never uses message ID or reception time as a semantic
 tie-break. All tied candidates passing can give MATCH; mixed results give UNKNOWN.
-Older optional messages cannot affect Last after a later certain message.
+For First, candidates are all certain/possible messages at or before the earliest
+certain timestamp. Without certain messages the same empty alternative applies.
+Older optional messages cannot affect Last after a later certain message; later
+optional messages cannot affect First before an earlier certain message.
 
 Copies of an identity must agree on attribution and period membership. For an
 identity not certainly excluded from the base, they must also agree on the exact
@@ -467,7 +477,7 @@ period fields, select and selection:{kind,absence,candidates}. Selection kind is
 absent, unique or ambiguous. Absence is certain (zero candidates), possible
 (candidates exist but all can be excluded) or impossible. A single candidate
 with possible absence is still ambiguous. Candidate counts refer to distinct
-possible last-message identities, not all events or completed business orders.
+possible first/last-message identities, not all events or completed business orders.
 No arbitrary witness is selected or unbounded event list returned. Ambiguous
 selection can still have a determined result when every alternative agrees.
 

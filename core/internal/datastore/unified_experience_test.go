@@ -266,8 +266,17 @@ func TestUnifiedExperienceOraclePostgreSQL(t *testing.T) {
 	execUnifiedFixture(t, dw, `CREATE TABLE profiles (_kpid uuid PRIMARY KEY);
 CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,timestamp timestamp,properties jsonb)`)
 	at := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
-	for _, times := range [][3]int{{1, 2, 3}, {1, 2, 2}, {1, 1, 1}, {3, 2, 1}} {
-		t.Run(fmt.Sprint(times), func(t *testing.T) {
+	for _, test := range []struct {
+		first bool
+		times [3]int
+	}{
+		{false, [3]int{1, 2, 3}}, {false, [3]int{1, 2, 2}},
+		{false, [3]int{1, 1, 1}}, {false, [3]int{3, 2, 1}},
+		{true, [3]int{1, 2, 3}}, {true, [3]int{1, 2, 2}},
+		{true, [3]int{1, 1, 1}}, {true, [3]int{3, 2, 1}},
+	} {
+		first, times := test.first, test.times
+		t.Run(fmt.Sprintf("first=%v/times=%v", first, times), func(t *testing.T) {
 			execUnifiedFixture(t, dw, "TRUNCATE profiles,krenalis_events")
 			var profiles, events []string
 			want := make([]unified.Truth, 729)
@@ -293,26 +302,26 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,tim
 						id, code, i, times[i], strings.Join(payload, ",")))
 				}
 				seen := [2]bool{}
-				// Every membership subset and every admissible last witness.
+				// Every membership subset and every admissible first/last witness.
 				for mask := range 8 {
-					valid, last := true, 0
+					valid, selected := true, 0
 					for i, q := range qualifications {
 						present := mask&(1<<i) != 0
 						if q < 2 && present != (q == 1) {
 							valid = false
 						}
-						if present && times[i] > last {
-							last = times[i]
+						if present && (selected == 0 || first && times[i] < selected || !first && times[i] > selected) {
+							selected = times[i]
 						}
 					}
 					if !valid {
 						continue
 					}
-					if last == 0 {
+					if selected == 0 {
 						seen[0] = true
 					}
 					for i, body := range bodies {
-						if mask&(1<<i) == 0 || times[i] != last {
+						if mask&(1<<i) == 0 || times[i] != selected {
 							continue
 						}
 						seen[0] = seen[0] || body != 1
@@ -334,7 +343,7 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,tim
 						Operator: state.OpIs, Values: []any{json.Value(`"yes"`)}},
 				}}
 			}
-			root := &unified.Rule{Experience: &unified.Experience{Scope: unified.Scope{Event: "Order Completed",
+			root := &unified.Rule{Experience: &unified.Experience{First: first, Scope: unified.Scope{Event: "Order Completed",
 				Grain: "registered-message", Start: at.AddDate(0, -1, 0), End: at}, Where: predicate("q"), Verify: predicate("v")}}
 			result, err := store.UnifiedProfiles(t.Context(), root, unified.Bindings{}, at, unified.Page{Limit: 1000})
 			if err != nil {

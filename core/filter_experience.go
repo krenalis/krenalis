@@ -148,7 +148,7 @@ func (condition *FilterExperienceCondition) UnmarshalJSON(data []byte) error {
 
 func (*FilterExperienceCondition) filterRule() {}
 
-// FilterExperienceSelector names a chronological selector; only last executes.
+// FilterExperienceSelector names a chronological selector; first and last execute.
 type FilterExperienceSelector struct {
 	Kind     string     `json:"kind"`
 	Position json.Value `json:"position,omitzero"`
@@ -223,12 +223,13 @@ func prepareFilterExperience(condition *FilterExperienceCondition, calendar *uni
 	if err != nil {
 		return unified.Rule{}, err
 	}
-	if selector.Kind != "last" {
-		return unified.Rule{}, &unified.UnsupportedError{Capability: "experience selectors other than last"}
+	if selector.Kind == "nth" {
+		return unified.Rule{}, &unified.UnsupportedError{Capability: "nth experience selector"}
 	}
 	if unavailable != nil {
 		return unified.Rule{}, unavailable
 	}
 
-	return unified.Rule{Experience: &unified.Experience{Scope: scope, Where: where, Verify: verify}}, nil
+	return unified.Rule{Experience: &unified.Experience{First: selector.Kind == "first",
+		Scope: scope, Where: where, Verify: verify}}, nil
 }

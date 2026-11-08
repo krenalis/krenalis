@@ -14,7 +14,7 @@ import (
 // TestValidateExperience keeps local source validation outside the root budget.
 func TestValidateExperience(t *testing.T) {
 	end := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
-	node := &LastOccurrence{Source: OccurrenceSource{Table: "events",
+	node := &SelectedOccurrence{Source: OccurrenceSource{Table: "events",
 		Profile: Column{Name: "kpid", Type: types.UUID()}, Identity: Column{Name: "id", Type: types.String()},
 		Timestamp: Column{Name: "timestamp", Type: types.DateTime()}}, Start: end.AddDate(0, -1, 0), End: end,
 		Verify: &RecordQualification{Expr: &BaseExpr{Column: Column{Name: "v", Type: types.String()},
@@ -37,7 +37,7 @@ func TestValidateExperience(t *testing.T) {
 			t.Fatal("expected descendant budget rejection, got success")
 		}
 	}
-	for _, test := range []LastOccurrence{
+	for _, test := range []SelectedOccurrence{
 		{Source: node.Source, Start: node.Start, End: node.End},
 		{Source: node.Source, Start: node.End, End: node.Start, Verify: node.Verify},
 		{Source: node.Source, Start: node.Start, End: node.End, Verify: &RecordQualification{Expr: nil}},
