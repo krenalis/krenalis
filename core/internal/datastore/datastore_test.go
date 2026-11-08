@@ -19,9 +19,9 @@ type negativeProfileCountWarehouse struct {
 	warehouses.Warehouse
 }
 
-// Count returns a negative row count.
-func (negativeProfileCountWarehouse) Count(context.Context, string, []warehouses.Join, warehouses.Expr) (int, error) {
-	return -1, nil
+// Counts returns a negative row count.
+func (negativeProfileCountWarehouse) Counts(context.Context, string, []warehouses.Join, []warehouses.Expr) ([]int, error) {
+	return []int{-1}, nil
 }
 
 // TestCountIdentitiesEmptyPipelines verifies that an empty pipeline list

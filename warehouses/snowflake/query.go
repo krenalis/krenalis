@@ -13,27 +13,6 @@ import (
 	"github.com/krenalis/krenalis/warehouses"
 )
 
-// Count returns the number of rows in table after applying joins and where.
-// A nil where expression does not filter the rows.
-func (warehouse *Snowflake) Count(ctx context.Context, table string, joins []warehouses.Join, where warehouses.Expr) (int, error) {
-
-	db, err := warehouse.openDB(ctx)
-	if err != nil {
-		return 0, snowflake(err)
-	}
-	statement, err := renderCountQuery(table, joins, where)
-	if err != nil {
-		return 0, err
-	}
-	var total int
-	err = db.QueryRowContext(ctx, statement).Scan(&total)
-	if err != nil {
-		return 0, snowflake(err)
-	}
-
-	return total, nil
-}
-
 // Query executes a query and returns the results as Rows.
 func (warehouse *Snowflake) Query(ctx context.Context, query warehouses.RowQuery, withTotal bool) (warehouses.Rows, int, error) {
 

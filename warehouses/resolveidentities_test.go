@@ -230,7 +230,7 @@ func TestResolveIdentitiesCounts(t *testing.T) {
 			t.Run("failed operation has no result and remains failed", func(t *testing.T) {
 
 				opFailed := uuid.New().String()
-				profilesBefore, countErr := dw.Counts(ctx, "profiles", nil)
+				profilesBefore, countErr := dw.Counts(ctx, "profiles", nil, nil)
 				if countErr != nil {
 					t.Fatalf("expected no error, got %v", countErr)
 				}
@@ -253,7 +253,7 @@ func TestResolveIdentitiesCounts(t *testing.T) {
 				if counts != nil {
 					t.Fatalf("expected nil counts for a failed operation, got %v", counts)
 				}
-				profilesAfter, countErr := dw.Counts(ctx, "profiles", nil)
+				profilesAfter, countErr := dw.Counts(ctx, "profiles", nil, nil)
 				if countErr != nil {
 					t.Fatalf("expected no error, got %v", countErr)
 				}

@@ -299,8 +299,9 @@ LIMIT `)
 	return counts, nil
 }
 
-// Counts returns one row count for each condition on the table.
-func (warehouse *Snowflake) Counts(ctx context.Context, table string, conditions []warehouses.Expr) ([]int, error) {
+// Counts returns the number of rows matching each condition after applying
+// joins to the table.
+func (warehouse *Snowflake) Counts(ctx context.Context, table string, joins []warehouses.Join, conditions []warehouses.Expr) ([]int, error) {
 
 	if conditions == nil {
 		conditions = []warehouses.Expr{nil}
@@ -332,6 +333,10 @@ func (warehouse *Snowflake) Counts(ctx context.Context, table string, conditions
 	}
 	b.WriteString(" FROM ")
 	b.WriteString(quoteIdent(table))
+	err = appendJoins(&b, joins)
+	if err != nil {
+		return nil, err
+	}
 
 	counts := make([]int, len(conditions))
 	values := make([]any, len(counts))

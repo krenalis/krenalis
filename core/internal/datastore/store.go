@@ -540,10 +540,11 @@ func (store *Store) ProfileCount(ctx context.Context, where *state.Where, schema
 			return 0, unavailableError(err)
 		}
 	}
-	total, err := store.warehouse().Count(ctx, "profiles", nil, expression)
+	counts, err := store.warehouse().Counts(ctx, "profiles", nil, []warehouses.Expr{expression})
 	if err != nil {
 		return 0, unavailableError(err)
 	}
+	total := counts[0]
 	if total < 0 {
 		return 0, unavailableError(errors.New("profile count is negative"))
 	}

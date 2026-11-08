@@ -780,7 +780,7 @@ func TestWarehousesIdentityResolution(t *testing.T) {
 							t.Fatal(err)
 						}
 					}
-					profileCounts, err := dw.Counts(ctx, "profiles", nil)
+					profileCounts, err := dw.Counts(ctx, "profiles", nil, nil)
 					if err != nil {
 						t.Fatal(err)
 					}

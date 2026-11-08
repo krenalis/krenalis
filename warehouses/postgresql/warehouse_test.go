@@ -44,7 +44,7 @@ func (loader *testSettingsLoader) Load(ctx context.Context, dst any) error {
 	return json.Unmarshal(loader.settings, dst)
 }
 
-// TestCounts checks unconditional and conditional row counts.
+// TestCounts checks unconditional and conditional row counts with joins.
 func TestCounts(t *testing.T) {
 
 	warehouse, pool := newTestPostgreSQLWarehouse(t)
@@ -63,26 +63,57 @@ func TestCounts(t *testing.T) {
 		warehouses.NewMultiExpr(warehouses.OpAnd, []warehouses.Expr{flag, otherFlag}),
 	}
 
-	totalCounts, err := warehouse.Counts(t.Context(), "count_conditions", nil)
-	if err != nil {
-		t.Fatalf("expected counts, got %v", err)
-	}
-	if !slices.Equal(totalCounts, []int{4}) {
-		t.Fatalf("expected counts [4], got %v", totalCounts)
-	}
-
-	_, err = warehouse.Counts(t.Context(), "count_conditions", []warehouses.Expr{})
-	if err == nil {
-		t.Fatalf("expected an error, got %v", err)
+	assertCounts := func(t *testing.T, joins []warehouses.Join, conditions []warehouses.Expr, want []int) {
+		t.Helper()
+		got, err := warehouse.Counts(t.Context(), "count_conditions", joins, conditions)
+		if err != nil {
+			t.Fatalf("expected Counts to succeed, got %v", err)
+		}
+		if !slices.Equal(got, want) {
+			t.Fatalf("expected counts %v, got %v", want, got)
+		}
 	}
 
-	counts, err := warehouse.Counts(t.Context(), "count_conditions", conditions)
-	if err != nil {
-		t.Fatalf("expected counts, got %v", err)
-	}
-	want := []int{4, 2, 1, 3, 1}
-	if !slices.Equal(counts, want) {
-		t.Fatalf("expected counts %v, got %v", want, counts)
+	t.Run("without joins", func(t *testing.T) {
+
+		assertCounts(t, nil, nil, []int{4})
+		assertCounts(t, nil, conditions, []int{4, 2, 1, 3, 1})
+
+		_, err := warehouse.Counts(t.Context(), "count_conditions", nil, []warehouses.Expr{})
+		if err == nil {
+			t.Fatal("expected an error for empty conditions, got nil")
+		}
+
+	})
+
+	mustExecSQL(t, pool, `CREATE TABLE "count_matches" ("match_flag" BOOLEAN, "enabled" BOOLEAN)`)
+	mustExecSQL(t, pool, `INSERT INTO "count_matches" VALUES
+		(TRUE, TRUE), (TRUE, FALSE), (FALSE, TRUE), (NULL, TRUE)`)
+	flagColumn := warehouses.Column{Name: "flag", Type: types.Boolean()}
+	matchColumn := warehouses.Column{Name: "match_flag", Type: types.Boolean()}
+	enabled := warehouses.NewBaseExpr(warehouses.Column{Name: "enabled", Type: types.Boolean()}, warehouses.OpIsTrue)
+	joinConditions := append(slices.Clone(conditions), enabled)
+
+	// NULL join keys do not match, so outer joins retain unmatched rows.
+	for _, tc := range []struct {
+		name string
+		join warehouses.JoinType
+		want []int
+	}{
+		{name: "inner", join: warehouses.InnerJoin, want: []int{5, 4, 1, 3, 2, 3}},
+		{name: "left", join: warehouses.LeftJoin, want: []int{6, 4, 1, 4, 2, 3}},
+		{name: "right", join: warehouses.RightJoin, want: []int{6, 4, 1, 3, 2, 4}},
+		{name: "full", join: warehouses.FullJoin, want: []int{7, 4, 1, 4, 2, 4}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			joins := []warehouses.Join{{
+				Type:      tc.join,
+				Table:     "count_matches",
+				Condition: warehouses.NewBaseExpr(flagColumn, warehouses.OpIs, matchColumn),
+			}}
+			assertCounts(t, joins, nil, tc.want[:1])
+			assertCounts(t, joins, joinConditions, tc.want)
+		})
 	}
 
 }
@@ -249,11 +280,11 @@ func Test_Merge(t *testing.T) {
 		Table:   table.Name,
 		Columns: table.Columns,
 	}
-	count, err := dw.Count(t.Context(), table.Name, nil, nil)
+	counts, err := dw.Counts(t.Context(), table.Name, nil, nil)
 	if err != nil {
 		t.Fatalf("cannot count: %s", err)
 	}
-	if count != 2 {
+	if count := counts[0]; count != 2 {
 		t.Fatalf("expected count 2, got %d", count)
 	}
 	rows, count, err := dw.Query(context.Background(), query, true)

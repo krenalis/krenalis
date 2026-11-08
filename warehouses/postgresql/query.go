@@ -13,27 +13,6 @@ import (
 	"github.com/krenalis/krenalis/warehouses"
 )
 
-// Count returns the number of rows in table after applying joins and where.
-// A nil where expression does not filter the rows.
-func (warehouse *PostgreSQL) Count(ctx context.Context, table string, joins []warehouses.Join, where warehouses.Expr) (int, error) {
-
-	pool, _, err := warehouse.connectionPool(ctx, false)
-	if err != nil {
-		return 0, err
-	}
-	statement, err := renderCountQuery(table, joins, where)
-	if err != nil {
-		return 0, err
-	}
-	var total int
-	err = pool.QueryRow(ctx, statement).Scan(&total)
-	if err != nil {
-		return 0, err
-	}
-
-	return total, nil
-}
-
 // Query executes a query and returns the results as Rows.
 func (warehouse *PostgreSQL) Query(ctx context.Context, query warehouses.RowQuery, withTotal bool) (warehouses.Rows, int, error) {
 
