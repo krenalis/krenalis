@@ -628,7 +628,8 @@ const useProfiles = () => {
 				updateProperties();
 			}
 
-			const propertyRoles = workspaces.find((candidate) => candidate.id === selectedWorkspace)?.profileSchema.propertyRoles;
+			const propertyRoles = workspaces.find((candidate) => candidate.id === selectedWorkspace)?.profileSchema
+				.propertyRoles;
 			const requestedProjection = profileProjection(properties, propertyRoles);
 			if (requestedProjection.every((root) => loadedRoots.has(root))) {
 				if (!isRefreshPendingRef.current) {

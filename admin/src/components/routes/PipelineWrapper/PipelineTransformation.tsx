@@ -10,7 +10,6 @@ import React, {
 	useLayoutEffect,
 } from 'react';
 import {
-	checkIfPropertyExists,
 	updateMappingProperty,
 	getSampleIdentifiers,
 	updateMappingPropertyError,
@@ -18,6 +17,7 @@ import {
 	propertyAnnotation,
 	propertyAnnotationSeparator,
 } from './Pipeline.helpers';
+import { checkIfPropertyExists } from '../../helpers/checkIfPropertyExists';
 import {
 	getSchemaComboboxItems,
 	getUserIDColumnComboboxItems,

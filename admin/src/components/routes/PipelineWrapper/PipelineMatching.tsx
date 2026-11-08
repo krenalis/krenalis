@@ -9,7 +9,7 @@ import {
 	FlatSchema,
 	validateMatching,
 } from '../../../lib/core/pipeline';
-import { checkIfPropertyExists } from './Pipeline.helpers';
+import { checkIfPropertyExists } from '../../helpers/checkIfPropertyExists';
 import { Combobox } from '../../base/Combobox/Combobox';
 
 const PipelineMatching = forwardRef<any>((_, ref) => {

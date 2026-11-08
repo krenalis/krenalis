@@ -91,6 +91,7 @@ const Combobox = ({
 	const listRef = useRef<any>();
 	const tabGroupRef = useRef<any>();
 	const programmaticFocus = useRef(false);
+	const isEditing = useRef(false);
 
 	const { api, handleError } = useContext(appContext);
 	const { connection } = useContext(ConnectionContext);
@@ -191,15 +192,16 @@ const Combobox = ({
 
 	useEffect(() => {
 		if (controlled) {
+			const inputValue = isEditing.current ? value : (displayValue ?? value);
 			if (isFirstControl.current) {
 				// Defer update to next event loop tick to ensure the input is
 				// mounted before updating its value.
 				setTimeout(() => {
-					updateComboboxValue(displayValue ?? value);
+					updateComboboxValue(inputValue);
 					isFirstControl.current = false;
 				});
 			} else {
-				updateComboboxValue(displayValue ?? value);
+				updateComboboxValue(inputValue);
 			}
 		}
 		if (autoResize && !isFirstControl.current) {
@@ -382,6 +384,7 @@ const Combobox = ({
 
 	const onInput = (e) => {
 		e.preventDefault();
+		isEditing.current = true;
 		if (!isOpen) {
 			// if the user has closed the list via escape button.
 			setIsOpen(true);
@@ -455,6 +458,16 @@ const Combobox = ({
 		wrapper.style.width = `${textWidth + prefixWidth + suffixWidth + 30}px`;
 	};
 
+	const onInputBlur = () => {
+		isEditing.current = false;
+		if (displayValue != null) {
+			updateComboboxValue(displayValue);
+			if (autoResize) {
+				resizeCombobox();
+			}
+		}
+	};
+
 	const onInputFocus = () => {
 		if (programmaticFocus.current) {
 			// Prevent opening the list when the focus is set
@@ -516,6 +529,7 @@ const Combobox = ({
 	const onSelect = (e, term: string, type: 'property' | 'function' | 'enum', selectedDisplayValue?: string) => {
 		e.preventDefault();
 		e.stopPropagation();
+		isEditing.current = false;
 
 		if (type === 'enum') {
 			let v = term;
@@ -624,6 +638,7 @@ const Combobox = ({
 				<WaInput
 					data-is-combobox-input
 					onInput={disabled ? undefined : onInput}
+					onBlur={onInputBlur}
 					onFocus={onInputFocus}
 					disabled={disabled}
 					autocomplete='off'

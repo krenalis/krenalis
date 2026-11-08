@@ -10,6 +10,7 @@ import React, {
 	useState,
 } from 'react';
 import './FilterEditor.css';
+import { checkIfPropertyExists } from '../../helpers/checkIfPropertyExists';
 import { getFilterPropertyComboboxItems } from '../../helpers/getSchemaComboboxItems';
 import WaOption from '@awesome.me/webawesome/dist/react/option/index.js';
 import WaSelect from '@awesome.me/webawesome/dist/react/select/index.js';
@@ -83,22 +84,6 @@ const pathID = (path: number[]): string => path.join('-');
 const NO_HIDDEN_PROPERTIES: string[] = [];
 const EMPTY_FILTER: Filter = { operator: 'and', rules: [] };
 const EMPTY_FILTER_WITH_CONDITION: Filter = { operator: 'and', rules: [newFilterCondition()] };
-
-// checkIfPropertyExists returns an error when property is not available to the
-// filter editor.
-const checkIfPropertyExists = (
-	property: string,
-	schema: ReturnType<typeof flattenSchema>,
-	toHide: string[],
-): string => {
-	if (schema == null || property === '') {
-		return '';
-	}
-	if (schema[property] == null || toHide.includes(property)) {
-		return `Property "${property}" does not exist`;
-	}
-	return '';
-};
 
 interface FilterEditorProps {
 	disabled?: boolean;

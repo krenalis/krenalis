@@ -256,7 +256,9 @@ const Grid = forwardRef<GridRef, GridProps>(
 						: undefined
 				}
 				tabIndex={keyboardNavigation != null || hasControlledActiveItem ? 0 : undefined}
-				onClick={keyboardNavigation != null || hasControlledActiveItem ? focusGridForKeyboardNavigation : undefined}
+				onClick={
+					keyboardNavigation != null || hasControlledActiveItem ? focusGridForKeyboardNavigation : undefined
+				}
 				onScroll={(event) => setIsScrolledVertically(event.currentTarget.scrollTop > 0)}
 				onKeyDown={keyboardNavigation != null || hasControlledActiveItem ? onGridKeyDown : undefined}
 			>
