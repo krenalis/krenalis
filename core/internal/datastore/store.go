@@ -511,8 +511,6 @@ func (store *Store) ProfileRecords(ctx context.Context, query Query, consentCond
 // not be included in schema.
 //
 // query.First must be in [0, math.MaxInt32] and query.Limit in [1, 1000].
-// When query.OrderBy is provided, profiles with the same value for that
-// property are also sorted by KPID.
 //
 // If the workspace no longer exists, it returns the ErrWorkspaceNotExist error.
 // If the data warehouse is in maintenance mode, it returns the
@@ -954,17 +952,12 @@ func (store *Store) query(ctx context.Context, query Query, columnByProperty map
 	}
 
 	var orderBy []warehouses.Column
-	var orderDesc bool
-	if query.OrderBy != "" {
-		c, ok := columnByProperty[query.OrderBy]
+	for _, path := range query.OrderBy {
+		c, ok := columnByProperty[path]
 		if !ok {
-			return nil, 0, fmt.Errorf("property path %s does not exist", query.OrderBy)
+			return nil, 0, fmt.Errorf("property path %s does not exist", path)
 		}
-		orderBy = []warehouses.Column{c}
-		if query.table == "profiles" && c.Name != "_kpid" {
-			orderBy = append(orderBy, columnByProperty["_kpid"])
-		}
-		orderDesc = query.OrderDesc
+		orderBy = append(orderBy, c)
 	}
 
 	rows, total, err := store.warehouse().Query(ctx, warehouses.RowQuery{
@@ -972,7 +965,7 @@ func (store *Store) query(ctx context.Context, query Query, columnByProperty map
 		Table:     query.table,
 		Where:     where,
 		OrderBy:   orderBy,
-		OrderDesc: orderDesc,
+		OrderDesc: query.OrderDesc && len(orderBy) > 0,
 		First:     query.First,
 		Limit:     query.Limit,
 	}, true)

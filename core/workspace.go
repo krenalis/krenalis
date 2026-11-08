@@ -1010,7 +1010,7 @@ func (this *Workspace) Events(ctx context.Context, properties []string, filter *
 	evts, err := this.store.Events(ctx, datastore.Query{
 		Properties: properties,
 		Where:      where,
-		OrderBy:    order,
+		OrderBy:    []string{order},
 		OrderDesc:  orderDesc,
 		First:      first,
 		Limit:      limit,
@@ -1474,10 +1474,14 @@ func (this *Workspace) Profiles(ctx context.Context, schema types.Type, properti
 	}
 
 	// Read the profiles.
+	orderBy := []string{order}
+	if order != "_kpid" {
+		orderBy = append(orderBy, "_kpid")
+	}
 	rows, total, hasNext, err := this.store.Profiles(ctx, datastore.Query{
 		Properties: append([]string{"_kpid", "_updated_at"}, properties...),
 		Where:      where,
-		OrderBy:    order,
+		OrderBy:    orderBy,
 		OrderDesc:  orderDesc,
 		First:      first,
 		Limit:      limit,
@@ -2109,7 +2113,7 @@ func (this *Workspace) identities(ctx context.Context, where *state.Where, first
 			"_updated_at",
 		},
 		Where:     where,
-		OrderBy:   "_updated_at",
+		OrderBy:   []string{"_updated_at"},
 		OrderDesc: true,
 		First:     first,
 		Limit:     limit,

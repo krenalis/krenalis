@@ -91,12 +91,12 @@ func records(ctx context.Context, warehouse warehouses.Warehouse, query Query, c
 
 	if matching == nil {
 
-		if query.OrderBy != "" {
-			c, ok := columnByProperty[query.OrderBy]
+		for _, path := range query.OrderBy {
+			c, ok := columnByProperty[path]
 			if !ok {
-				return nil, fmt.Errorf("property path %s does not exist", query.OrderBy)
+				return nil, fmt.Errorf("property path %s does not exist", path)
 			}
-			orderBy = []warehouses.Column{c}
+			orderBy = append(orderBy, c)
 			orderDesc = query.OrderDesc
 		}
 

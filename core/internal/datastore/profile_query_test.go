@@ -131,15 +131,18 @@ func TestProfileQueryOrdering(t *testing.T) {
 	for _, tc := range []struct {
 		name      string
 		table     string
-		orderBy   string
+		orderBy   []string
 		orderDesc bool
 		want      []string
+		wantError bool
 	}{
-		{name: "profiles ascending", table: "profiles", orderBy: "email", want: []string{"email", "_kpid"}},
-		{name: "profiles descending", table: "profiles", orderBy: "email", orderDesc: true, want: []string{"email", "_kpid"}},
-		{name: "profiles ordered by kpid", table: "profiles", orderBy: "_kpid", want: []string{"_kpid"}},
+		{name: "profiles ascending", table: "profiles", orderBy: []string{"email", "_kpid"}, want: []string{"email", "_kpid"}},
+		{name: "profiles descending", table: "profiles", orderBy: []string{"email", "_kpid"}, orderDesc: true, want: []string{"email", "_kpid"}},
+		{name: "profiles ordered by email", table: "profiles", orderBy: []string{"email"}, want: []string{"email"}},
+		{name: "profiles ordered by kpid", table: "profiles", orderBy: []string{"_kpid"}, want: []string{"_kpid"}},
 		{name: "profiles unordered", table: "profiles"},
-		{name: "other table", table: "events", orderBy: "email", want: []string{"email"}},
+		{name: "other table", table: "events", orderBy: []string{"email"}, want: []string{"email"}},
+		{name: "unknown secondary property", table: "profiles", orderBy: []string{"email", "unknown"}, wantError: true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			var query warehouses.RowQuery
@@ -152,7 +155,13 @@ func TestProfileQueryOrdering(t *testing.T) {
 				"_kpid": {Name: "_kpid", Type: types.UUID()},
 			}, true)
 			if err != nil {
-				t.Fatalf("expected no error, got %v", err)
+				if !tc.wantError {
+					t.Fatalf("expected no error, got %v", err)
+				}
+				return
+			}
+			if tc.wantError {
+				t.Fatal("expected an error, got nil")
 			}
 			var got []string
 			for _, column := range query.OrderBy {

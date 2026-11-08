@@ -34,9 +34,9 @@ type Query struct {
 	// must satisfy.
 	Where *state.Where
 
-	// OrderBy, when non-empty, is the path of property for which the returned
-	// rows are ordered.
-	OrderBy string
+	// OrderBy contains the paths of the properties by which the returned rows
+	// are ordered, in order of precedence.
+	OrderBy []string
 
 	// OrderDesc, when true and OrderBy is provided, orders the returned records
 	// in descending order instead of ascending order.
