@@ -523,15 +523,16 @@ func (store *Store) Profiles(ctx context.Context, query Query, schema types.Type
 
 	store.mustBeOpen()
 
-	if !schema.IsObject() {
-		return nil, 0, false, errors.New("schema is not an object type")
-	}
 	if query.First < 0 || query.First > 2147483647 {
 		return nil, 0, false, errors.New("offset is out of range")
 	}
 	if query.Limit < 1 || query.Limit > 1000 {
 		return nil, 0, false, errors.New("limit is out of range")
 	}
+	if !schema.IsObject() {
+		return nil, 0, false, errors.New("schema is not an object type")
+	}
+
 	ctx, done, err := store.mc.StartOperation(ctx, normalMode|inspectionMode)
 	if err != nil {
 		return nil, 0, false, err
@@ -552,15 +553,16 @@ func (store *Store) Profiles(ctx context.Context, query Query, schema types.Type
 	columns["_updated_at"] = warehouses.Column{Name: "_updated_at", Type: types.DateTime()}
 	query.table = "profiles"
 	query.total = true
-	requestedLimit := query.Limit
+	limit := query.Limit
 	query.Limit++
 	profiles, total, err := store.query(ctx, query, columns, true)
 	if err != nil {
 		return nil, 0, false, unavailableError(err)
 	}
-	hasNext := len(profiles) > requestedLimit
+	hasNext := len(profiles) > limit
 	if hasNext {
-		profiles = profiles[:requestedLimit]
+		profiles[limit] = nil
+		profiles = profiles[:limit]
 	}
 
 	return profiles, total, hasNext, nil
