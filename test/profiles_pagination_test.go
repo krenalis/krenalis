@@ -236,18 +236,22 @@ func TestProfilesPagination(t *testing.T) {
 
 	// Check schema alignment and invalid arguments.
 	for _, tc := range []struct {
-		name   string
-		path   string
-		query  url.Values
-		status int
-		code   string
+		name    string
+		path    string
+		query   url.Values
+		status  int
+		code    string
+		message string
 	}{
-		{name: "missing schema", path: "/v1/profiles", status: http.StatusBadRequest},
+		{name: "missing schema", path: "/v1/profiles", status: http.StatusBadRequest, code: "BadRequest", message: "schema is required"},
+		{name: "empty schema", path: "/v1/profiles", query: url.Values{"schema": []string{""}}, status: http.StatusBadRequest, code: "BadRequest", message: "schema is required"},
 		{
-			name:   "malformed schema",
-			path:   "/v1/profiles",
-			query:  url.Values{"schema": []string{"{"}},
-			status: http.StatusBadRequest,
+			name:    "malformed schema",
+			path:    "/v1/profiles",
+			query:   url.Values{"schema": []string{"{"}},
+			status:  http.StatusBadRequest,
+			code:    "BadRequest",
+			message: "invalid schema: unexpected EOF",
 		},
 		{
 			name: "empty properties",
@@ -316,9 +320,27 @@ func TestProfilesPagination(t *testing.T) {
 			code:   "SchemaNotAligned",
 		},
 		{
-			name:   "attributes need schema",
-			path:   "/v1/profiles/" + firstPage[0].KPID.String() + "/attributes",
-			status: http.StatusBadRequest,
+			name:    "attributes need schema",
+			path:    "/v1/profiles/" + firstPage[0].KPID.String() + "/attributes",
+			status:  http.StatusBadRequest,
+			code:    "BadRequest",
+			message: "schema is required",
+		},
+		{
+			name:    "attributes empty schema",
+			path:    "/v1/profiles/" + firstPage[0].KPID.String() + "/attributes",
+			query:   url.Values{"schema": []string{""}},
+			status:  http.StatusBadRequest,
+			code:    "BadRequest",
+			message: "schema is required",
+		},
+		{
+			name:    "attributes malformed schema",
+			path:    "/v1/profiles/" + firstPage[0].KPID.String() + "/attributes",
+			query:   url.Values{"schema": []string{"{"}},
+			status:  http.StatusBadRequest,
+			code:    "BadRequest",
+			message: "invalid schema: unexpected EOF",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -331,7 +353,8 @@ func TestProfilesPagination(t *testing.T) {
 				if tc.code != "" {
 					var response struct {
 						Error struct {
-							Code string `json:"code"`
+							Code    string `json:"code"`
+							Message string `json:"message"`
 						} `json:"error"`
 					}
 					err = json.Unmarshal([]byte(statusErr.Response.Text), &response)
@@ -340,6 +363,9 @@ func TestProfilesPagination(t *testing.T) {
 					}
 					if response.Error.Code != tc.code {
 						t.Fatalf("expected code %s, got %s", tc.code, response.Error.Code)
+					}
+					if tc.message != "" && response.Error.Message != tc.message {
+						t.Fatalf("expected message %q, got %q", tc.message, response.Error.Message)
 					}
 				}
 				return

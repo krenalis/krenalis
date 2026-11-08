@@ -776,8 +776,12 @@ func (workspace workspace) Attributes(_ http.ResponseWriter, r *http.Request) (a
 		return nil, err
 	}
 	kpid := r.PathValue("kpid")
+	schemaParam := r.URL.Query().Get("schema")
+	if schemaParam == "" {
+		return nil, errors.BadRequest("schema is required")
+	}
 	var schema types.Type
-	err = json.Unmarshal([]byte(r.URL.Query().Get("schema")), &schema)
+	err = json.Unmarshal([]byte(schemaParam), &schema)
 	if err != nil {
 		return nil, errors.BadRequest("invalid schema: %s", err)
 	}
@@ -999,8 +1003,12 @@ func (workspace workspace) Profiles(w http.ResponseWriter, r *http.Request) (any
 	// Read and parse the parameters from the query string.
 	q := r.URL.Query()
 
+	schemaParam := q.Get("schema")
+	if schemaParam == "" {
+		return nil, errors.BadRequest("schema is required")
+	}
 	var schema types.Type
-	err = json.Unmarshal([]byte(q.Get("schema")), &schema)
+	err = json.Unmarshal([]byte(schemaParam), &schema)
 	if err != nil {
 		return nil, errors.BadRequest("invalid schema: %s", err)
 	}
