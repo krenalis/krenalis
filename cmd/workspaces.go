@@ -957,7 +957,7 @@ func (workspace workspace) ProfileSchema(_ http.ResponseWriter, r *http.Request)
 	return ws.ProfileSchema, nil
 }
 
-// ProfileCount returns the number of profiles matched by the optional filter.
+// ProfileCount returns the number of profiles of a workspace.
 func (workspace workspace) ProfileCount(_ http.ResponseWriter, r *http.Request) (any, error) {
 
 	ws, err := workspace.admitWorkspaceRequest(r, x1)
@@ -992,7 +992,7 @@ func (workspace workspace) ProfileCount(_ http.ResponseWriter, r *http.Request) 
 }
 
 // Profiles returns profiles, an estimate of their total number without applying
-// first and limit, and the continuation state.
+// first and limit, and the continuation state of a workspace.
 func (workspace workspace) Profiles(w http.ResponseWriter, r *http.Request) (any, error) {
 
 	ws, err := workspace.admitWorkspaceRequest(r, x1)
