@@ -18,9 +18,9 @@ import (
 
 var jsonArrayType = types.Array(types.JSON())
 
-// Expression represents a mapping expression used to transform data from a
-// source to a destination. An Expression can contain strings, numbers, true,
-// false, null, property paths and function calls.
+// Expression represents a mapping used to transform data conforming to an input
+// schema into data of a specific output type. An Expression can contain
+// strings, numbers, true, false, null, property paths, and function calls.
 type Expression struct {
 	parts  []part // parts.
 	source string // source code used for error messages.
@@ -513,7 +513,7 @@ func asType(expr []part, dt types.Type, nullable bool) error {
 		if s, ok := p.value.(string); ok && s == "" {
 			nullable = false
 		}
-		v, err := convert(p.value, p.typ, dt, nullable, false, None)
+		v, err := convert(p.value, p.typ, dt, nullable, None)
 		if err != nil {
 			if p.value == nil {
 				return fmt.Errorf("null is not convertible to the %s type", dt)

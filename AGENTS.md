@@ -225,6 +225,10 @@ For the TypeScript and React code under `admin/`:
 - Put component styles in a `.css` file next to the component and import it there, with BEM-style names such as `schema-grid`, `schema-grid__search`, and `schema-grid--loading`.
 - For an icon, list its file name in `admin/src/icons.txt` alphabetically and run `npm run makevendor` from `admin/`; unlisted icons are not embedded and fail to load.
 
+# Code comments
+
+A comment on a statement or a group of statements describes at a high level what it does, without explaining what the code already makes clear; it may also state a non-obvious reason or constraint the code relies on.
+
 # Reuse
 
 Before writing something new, look for it elsewhere in the repo and reuse or follow it. Prefer the standard library or a `tools/` helper to a hand-rolled version. When deleting something, look for what it leaves behind: callers, columns, fixtures, documentation, dead constants.

@@ -6,6 +6,8 @@ const MAX_UNSIGNED = BigInt('18446744073709551615');
 const MAX_FLOAT32 = 3.4028234663852885981170418348451692544e38;
 const MIN_YEAR = 1;
 const MAX_YEAR = 9999;
+const MAX_DECIMAL_PRECISION = 76;
+const MAX_DECIMAL_SCALE = 37;
 
 // isFilterNumber reports whether value uses the numeric syntax accepted by the
 // filter parser.
@@ -42,7 +44,7 @@ const isDate = (s: string): boolean => {
 		return false;
 	}
 	const [year, month, day] = [Number(m[1]), Number(m[2]), Number(m[3])];
-	if (year !== date.getFullYear() || month !== date.getMonth() + 1 || day !== date.getDate()) {
+	if (year !== date.getUTCFullYear() || month !== date.getUTCMonth() + 1 || day !== date.getUTCDate()) {
 		return false;
 	}
 	return MIN_YEAR <= year && year <= MAX_YEAR;
@@ -51,25 +53,49 @@ const isDate = (s: string): boolean => {
 // isDateTime checks whether the string s represents a valid datetime value that
 // can be used as a filter value.
 const isDateTime = (s: string): boolean => {
-	const m = s.match(/^(\d{4})-(\d{2})-(\d{2})T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?(?:[+-]\d{2}:\d{2}|Z)?$/);
-	if (m == null) {
+	const m = s.match(/^\d{4}-\d{2}-\d{2}T(\d{2}):\d{2}:\d{2}(?:\.\d{1,9})?([+-]\d{2}:\d{2}|Z)?$/);
+	if (m == null || Number(m[1]) > 23 || m[2] === '-00:00' || !isDate(s.slice(0, 10))) {
 		return false;
 	}
-	const date = new Date(s);
+	// Read a datetime without an offset as UTC, as the server does, by
+	// appending "Z". Otherwise Date would read it in the browser's time
+	// zone, and the year check below, done in UTC, could reject it: for
+	// example, 9999-12-31T23:30:00 in New York is
+	// 10000-01-01T04:30:00Z.
+	const date = new Date(m[2] == null ? s + 'Z' : s);
 	if (Number.isNaN(date.valueOf())) {
 		return false;
 	}
-	let [year, month, day] = [Number(m[1]), Number(m[2]), Number(m[3])];
-	if (year !== date.getFullYear() || month !== date.getMonth() + 1 || day !== date.getDate()) {
-		return false;
-	}
-	year = date.getUTCFullYear();
+	// Check the year again taking the time and offset into account, as
+	// they can move the date into a year outside the supported range.
+	const year = date.getUTCFullYear();
 	return MIN_YEAR <= year && year <= MAX_YEAR;
 };
 
 // isDecimal checks whether the string s represents a valid decimal value that
 // can be used as a filter value.
 const isDecimal = (s: string): boolean => {
+	const m = s.match(/^[+-]?(0|[1-9]\d*)?(?:\.(\d*))?(?:[eE]([+-]?\d+))?$/);
+	if (m == null) {
+		return false;
+	}
+	const [, integer = '', fraction = '', exponent = '0'] = m;
+	if (integer === '' && fraction === '') {
+		return false;
+	}
+	const digits = (integer + fraction).replace(/^0+/, '');
+	if (digits === '') {
+		return true;
+	}
+	const significant = digits.replace(/0+$/, '');
+	const scale = fraction.length - (digits.length - significant.length) - Number(exponent);
+	const precision = Math.max(significant.length - scale, 0) + Math.max(scale, 0);
+	return precision <= MAX_DECIMAL_PRECISION && scale <= MAX_DECIMAL_SCALE;
+};
+
+// isFloatingPoint checks whether the string s represents a valid floating-point
+// value.
+const isFloatingPoint = (s: string): boolean => {
 	if (s === '') {
 		return false;
 	}
@@ -150,7 +176,7 @@ const isYear = (s: string): boolean => {
 // specified bit size, which can be either 32 or 64, and can be used as a filter
 // value.
 const isFloat = (s: string, bitSize: number): boolean => {
-	if (!isDecimal(s)) {
+	if (!isFloatingPoint(s)) {
 		return false;
 	}
 	const n = parseFloat(s);
@@ -163,8 +189,8 @@ const isFloat = (s: string, bitSize: number): boolean => {
 // isTime checks whether the string s represents a valid time value that can be
 // used as a filter value.
 const isTime = (s: string): boolean => {
-	const m = s.match(/^(\d{2}):(\d{2}):(\d{2})(?:\.\d{1,9})?$/);
-	if (m == null) {
+	const m = s.match(/^(\d{2}):(\d{2}):(\d{2})/);
+	if (m == null || (s[8] === '.' && !/^\.\d{1,9}/.test(s.slice(8)))) {
 		return false;
 	}
 	const [hour, minute, second] = [Number(m[1]), Number(m[2]), Number(m[3])];

@@ -67,8 +67,7 @@ type Transformer struct {
 func New(organization string, pipeline *state.Pipeline, provider FunctionProvider) (*Transformer, error) {
 
 	if m := pipeline.Transformation.Mapping; m != nil {
-		inPlace := pipeline.Target != state.TargetEvent
-		mapping, err := mappings.New(m, pipeline.InSchema, pipeline.OutSchema, inPlace)
+		mapping, err := mappings.New(m, pipeline.InSchema, pipeline.OutSchema)
 		if err != nil {
 			return nil, err
 		}

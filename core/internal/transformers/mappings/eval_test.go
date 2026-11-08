@@ -157,7 +157,7 @@ func TestSubstringArguments(t *testing.T) {
 				{Name: "length", Type: types.String(), Nullable: true},
 			})
 			outSchema := types.Object([]types.Property{{Name: "out", Type: types.String(), Nullable: true}})
-			mapping, err := New(map[string]string{"out": test.expression}, inSchema, outSchema, false)
+			mapping, err := New(map[string]string{"out": test.expression}, inSchema, outSchema)
 			if err != nil {
 				t.Fatalf("expected mapping construction to succeed, got %v", err)
 			}

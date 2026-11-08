@@ -95,12 +95,9 @@ func marshalType(b *bytes.Buffer, t Type) {
 				b.WriteString(`,"currency":`)
 				_ = marshalString(b, currency)
 			}
-		case MeasurementSemantics:
+		case MeasurementSemantics, DurationSemantics:
 			b.WriteString(`,"unit":`)
-			_ = marshalString(b, t.UnitOfMeasure().String())
-		case DurationSemantics:
-			b.WriteString(`,"unit":`)
-			_ = marshalString(b, t.DurationUnit().String())
+			_ = marshalString(b, t.Unit().String())
 		}
 	}
 	switch t.kind {
@@ -134,11 +131,11 @@ func marshalType(b *bytes.Buffer, t Type) {
 			b.WriteString(`,"unsigned":true`)
 			if t.size < 4 {
 				// 8, 16, 24, and 32 bits.
-				if min := uint64(t.p); min > 0 {
+				if min := uint64(uint32(t.p)); min > 0 {
 					b.WriteString(`,"minimum":`)
 					b.WriteString(strconv.FormatUint(min, 10))
 				}
-				if max := uint64(t.s); max < maxUnsigned[t.size] {
+				if max := uint64(uint32(t.s)); max < maxUnsigned[t.size] {
 					b.WriteString(`,"maximum":`)
 					b.WriteString(strconv.FormatUint(max, 10))
 				}
@@ -765,11 +762,11 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		min, max := decimal.Range(precision, scale)
 		t.vl = decimalRange{min, max}
 	}
-	if minimum == "" {
-		if t.kind == IntKind && !t.unsigned && t.size < 4 { // 8, 16, 24, and 32 bits
-			t.p = int32(minInt[t.size])
-		}
-	} else {
+	minFloat, maxFloat := math.Inf(-1), math.Inf(1)
+	if t.kind == IntKind && !t.unsigned && t.size < 4 { // 8, 16, 24, and 32 bits
+		t.p = int32(minInt[t.size])
+	}
+	if minimum != "" {
 		switch t.kind {
 		case IntKind:
 			if t.unsigned {
@@ -806,28 +803,15 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 				}
 			}
 		case FloatKind:
-			if t.size == 4 {
-				// 64 bits.
-				min, err := minimum.Float64()
-				if err != nil || math.IsNaN(min) {
+			minFloat, err = strconv.ParseFloat(string(minimum), bitSize)
+			if err != nil {
+				if bitSize == 64 || !errors.Is(err, strconv.ErrRange) {
 					return Type{}, errors.New("invalid value for minimum")
 				}
-				if !math.IsInf(min, -1) {
-					minS := strconv.FormatFloat(min, 'f', -1, 64)
-					t.vl = floatRange{min: min, max: math.Inf(1), minS: minS}
-				}
-			} else {
-				// 32 bits.
-				min, err := strconv.ParseFloat(string(minimum), 32)
-				if err != nil || math.IsNaN(min) {
+				// Let withFloatRange clamp finite bounds that overflow float32.
+				minFloat, err = minimum.Float64()
+				if err != nil {
 					return Type{}, errors.New("invalid value for minimum")
-				}
-				if min < -math.MaxFloat32 && !math.IsInf(min, -1) || min > math.MaxFloat32 && !math.IsInf(min, 1) {
-					return Type{}, errors.New("invalid value for minimum")
-				}
-				if !math.IsInf(min, -1) {
-					minS := strconv.FormatFloat(min, 'f', -1, 32)
-					t.vl = floatRange{min: min, max: math.Inf(1), minS: minS}
 				}
 			}
 		case DecimalKind:
@@ -846,16 +830,15 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 			return Type{}, errors.New("unexpected minimum for non-number type")
 		}
 	}
-	if maximum == "" {
-		if t.kind == IntKind && t.size < 4 {
-			// 8, 16, 24, and 32 bits.
-			if t.unsigned {
-				t.s = int32(maxUnsigned[t.size])
-			} else {
-				t.s = int32(maxInt[t.size])
-			}
+	if t.kind == IntKind && t.size < 4 {
+		// 8, 16, 24, and 32 bits.
+		if t.unsigned {
+			t.s = int32(maxUnsigned[t.size])
+		} else {
+			t.s = int32(maxInt[t.size])
 		}
-	} else {
+	}
+	if maximum != "" {
 		switch t.kind {
 		case IntKind:
 			if t.unsigned {
@@ -880,7 +863,7 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 							t.vl = intRange{0, int64(max)}
 						}
 					} else {
-						if min := uint64(t.p); max < min {
+						if min := uint64(uint32(t.p)); max < min {
 							return Type{}, errors.New("maximum cannot be less than minimum")
 						}
 						t.s = int32(max)
@@ -916,45 +899,31 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 				}
 			}
 		case FloatKind:
-			if t.size == 4 {
-				// 64 bits.
-				max, err := maximum.Float64()
-				if err != nil || math.IsNaN(max) {
+			maxFloat, err = strconv.ParseFloat(string(maximum), bitSize)
+			if err != nil {
+				if bitSize == 64 || !errors.Is(err, strconv.ErrRange) {
 					return Type{}, errors.New("invalid value for maximum")
 				}
-				if !math.IsInf(max, 1) {
-					maxS := strconv.FormatFloat(max, 'f', -1, 64)
-					if f, ok := t.vl.(floatRange); ok {
-						if max < f.min {
-							return Type{}, errors.New("maximum cannot be less than minimum")
-						}
-						f.max = max
-						f.maxS = maxS
-						t.vl = f
-					} else {
-						t.vl = floatRange{min: math.Inf(-1), max: max, maxS: maxS}
-					}
-				}
-			} else {
-				// 32 bits.
-				max, err := strconv.ParseFloat(string(maximum), 32)
-				if err != nil || math.IsNaN(max) {
+				// Let withFloatRange clamp finite bounds that overflow float32.
+				maxFloat, err = maximum.Float64()
+				if err != nil {
 					return Type{}, errors.New("invalid value for maximum")
 				}
-				max = float64(float32(max))
-				if !math.IsInf(max, 1) {
-					maxS := strconv.FormatFloat(max, 'f', -1, 32)
-					if f, ok := t.vl.(floatRange); ok {
-						if max < f.min {
-							return Type{}, errors.New("maximum cannot be less than minimum")
-						}
-						f.max = max
-						f.maxS = maxS
-						t.vl = f
-					} else {
-						t.vl = floatRange{min: math.Inf(-1), max: max, maxS: maxS}
-					}
+			}
+			min, max := minFloat, maxFloat
+			if bitSize == 32 && minimum != "" {
+				// Compare bounds before rounding to float32.
+				min, err = minimum.Float64()
+				if err != nil {
+					return Type{}, errors.New("invalid value for minimum")
 				}
+				max, err = maximum.Float64()
+				if err != nil {
+					return Type{}, errors.New("invalid value for maximum")
+				}
+			}
+			if max < min {
+				return Type{}, errors.New("maximum cannot be less than minimum")
 			}
 		case DecimalKind:
 			max, err := decimal.Parse(maximum, precision, scale)
@@ -980,6 +949,12 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 			return Type{}, errors.New("unexpected real for non-float type")
 		}
 		t.real = real
+	}
+	if t.kind == FloatKind {
+		t, err = t.withFloatRange(minFloat, maxFloat)
+		if err != nil {
+			return Type{}, err
+		}
 	}
 	if elementType.Valid() {
 		if t.kind != ArrayKind && t.kind != MapKind {
@@ -1098,8 +1073,8 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		if !hasUnit {
 			return Type{}, errors.New("missing measurement unit")
 		}
-		measurementUnit, ok := UnitOfMeasureByName(unit)
-		if !ok {
+		measurementUnit, ok := UnitByName(unit)
+		if !ok || !measurementUnit.IsMeasurementUnit() {
 			return Type{}, fmt.Errorf("invalid unit of measure %q", unit)
 		}
 		semanticsOption = measurementUnit
@@ -1113,8 +1088,8 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		if !hasUnit {
 			return Type{}, errors.New("missing duration unit")
 		}
-		durationUnit, ok := DurationUnitByName(unit)
-		if !ok {
+		durationUnit, ok := UnitByName(unit)
+		if !ok || !durationUnit.IsDurationUnit() {
 			return Type{}, fmt.Errorf("invalid duration unit %q", unit)
 		}
 		semanticsOption = durationUnit

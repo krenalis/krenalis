@@ -1801,6 +1801,7 @@ wa-icon::part(svg) {
 :where(wa-dropdown-item)::after {
 	content: '';
 	flex: 0 0 1.5em;
+	width: 1.5em;
 }
 
 :where(wa-dropdown-item:focus-visible) {

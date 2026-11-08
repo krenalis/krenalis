@@ -130,21 +130,19 @@
 }
 
 .pipeline__header-close-transformation {
-	background-color: transparent;
-	border: 0;
-	padding: 0;
-	font-size: 60px;
-	font-weight: 300;
-	color: rgb(202 202 202);
-	transition: color 0.3s;
-	cursor: pointer;
 	position: relative;
-	top: -6px;
 	right: -10px;
 }
 
-.pipeline__header-close-transformation:hover {
-	color: var(--wa-color-neutral-40);
+.pipeline__header-close-transformation::part(label) {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	font-size: 14px;
+}
+
+.pipeline__header-close-transformation wa-icon {
+	font-size: 15px;
 }
 
 .pipeline__header-save::part(button) {
@@ -746,7 +744,7 @@ inherit the disabled style */
 	display: flex;
 	align-items: center;
 	gap: 10px;
-	font-size: 13px;
+	font-size: 14px;
 }
 
 .transformation-box__header-buttons wa-button[appearance='outlined']::part(button) {

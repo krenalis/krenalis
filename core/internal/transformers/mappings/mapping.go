@@ -44,7 +44,6 @@ func (err ValidationError) Error() string {
 
 // Mapping represents a mapping transformer.
 type Mapping struct {
-	inPlace     bool
 	expressions []mappingExpr
 }
 
@@ -56,20 +55,18 @@ type mappingExpr struct {
 	nullable       bool
 	createRequired bool
 	updateRequired bool
+	convert        bool // if true, non-null results must pass through convert
 }
 
 // New returns a new mapping that transforms values according to the provided
 // expressions. inSchema and outSchema represent the input and output schemas,
 // respectively.
 //
-// If inPlace is true, a transformation is permitted to modify array, object,
-// and map values directly within the value being transformed.
+// inSchema can be the invalid type if expressions do not contain properties.
 //
-// The source type can be the invalid type if expressions do not contain paths.
-//
-// It returns a types.PathNotExistError error if a path in expressions does not
-// exist in the source schema.
-func New(expressions map[string]string, inSchema, outSchema types.Type, inPlace bool) (*Mapping, error) {
+// It returns a types.PathNotExistError error if a property path in expressions
+// does not exist in the input schema.
+func New(expressions map[string]string, inSchema, outSchema types.Type) (*Mapping, error) {
 	if len(expressions) == 0 {
 		return nil, errors.New("there are no expressions")
 	}
@@ -100,13 +97,14 @@ func New(expressions map[string]string, inSchema, outSchema types.Type, inPlace 
 		me[i].nullable = p.Nullable
 		me[i].createRequired = p.CreateRequired
 		me[i].updateRequired = p.UpdateRequired
+		me[i].convert = needsConversion(me[i].expr.parts, p.Type)
 		i++
 	}
 	err := sortMappingExpressions(me)
 	if err != nil {
 		return nil, err
 	}
-	return &Mapping{expressions: me, inPlace: inPlace}, nil
+	return &Mapping{expressions: me}, nil
 }
 
 // InPaths returns the input property paths, i.e., the property paths found in
@@ -147,9 +145,13 @@ func (mapping *Mapping) OutPaths() []string {
 	return paths
 }
 
-// Transform transforms attributes, that must conform to the expression's source
-// schema, and returns the result that conforms to the expression's output
-// schema.
+// Transform transforms attributes, that must conform to the mapping's input
+// schema, and returns the result that conforms to the mapping's output schema.
+//
+// Transform does not modify attributes. The result may share arrays, objects,
+// and maps with attributes. Changes to shared slices and maps affect both
+// values. To modify either value independently, callers must first make a deep
+// copy of that value.
 //
 // purpose specifies the reason for the transformation. If Create or Update,
 // then all the properties required for creation or the update must be present
@@ -174,8 +176,8 @@ func (mapping *Mapping) Transform(attributes map[string]any, purpose Purpose) (m
 			}
 			return nil, TransformationError{fmt.Sprintf("%s while mapping to «%s»", err, code(e.path))}
 		}
-		if v != nil {
-			v, err = convert(v, vt, e.dt, true, mapping.inPlace, purpose)
+		if v != nil && e.convert {
+			v, err = convert(v, vt, e.dt, true, purpose)
 			if err != nil {
 				var msg string
 				switch err {
