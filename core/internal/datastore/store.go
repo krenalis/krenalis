@@ -555,6 +555,7 @@ func (store *Store) ProfileCount(ctx context.Context, where *state.Where, schema
 // Profiles returns profiles matching query, their total count, and whether
 // another row follows the requested range. schema describes all properties
 // used by query, excluding the built-in KPID and update time.
+// When query.OrderBy is provided, KPID breaks ties in the same direction.
 // It returns *schemas.Error if schema is not aligned, ErrWorkspaceNotExist
 // if the workspace no longer exists, ErrMaintenanceMode in maintenance mode,
 // or *UnavailableError for a warehouse failure.
@@ -946,16 +947,17 @@ func (store *Store) query(ctx context.Context, query Query, columnByProperty map
 	}
 
 	var orderBy []warehouses.Column
-	orderDesc := query.OrderDesc
-	if len(query.OrderBy) > 0 {
-		orderBy = make([]warehouses.Column, len(query.OrderBy))
-		for i, property := range query.OrderBy {
-			c, ok := columnByProperty[property]
-			if !ok {
-				return nil, 0, fmt.Errorf("property path %s does not exist", property)
-			}
-			orderBy[i] = c
+	var orderDesc bool
+	if query.OrderBy != "" {
+		c, ok := columnByProperty[query.OrderBy]
+		if !ok {
+			return nil, 0, fmt.Errorf("property path %s does not exist", query.OrderBy)
 		}
+		orderBy = []warehouses.Column{c}
+		if query.table == "profiles" && c.Name != "_kpid" {
+			orderBy = append(orderBy, columnByProperty["_kpid"])
+		}
+		orderDesc = query.OrderDesc
 	}
 
 	rows, total, err := store.warehouse().Query(ctx, warehouses.RowQuery{

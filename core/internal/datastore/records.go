@@ -86,20 +86,18 @@ func records(ctx context.Context, warehouse warehouses.Warehouse, query Query, c
 
 	var joins []warehouses.Join
 	var orderBy []warehouses.Column
-	orderDesc := query.OrderDesc
+	var orderDesc bool
 	var matchingIndex int // index of matching column in columns slice; 0 if matching is nil
 
 	if matching == nil {
 
-		if len(query.OrderBy) > 0 {
-			orderBy = make([]warehouses.Column, len(query.OrderBy))
-			for i, property := range query.OrderBy {
-				c, ok := columnByProperty[property]
-				if !ok {
-					return nil, fmt.Errorf("property path %s does not exist", property)
-				}
-				orderBy[i] = c
+		if query.OrderBy != "" {
+			c, ok := columnByProperty[query.OrderBy]
+			if !ok {
+				return nil, fmt.Errorf("property path %s does not exist", query.OrderBy)
 			}
+			orderBy = []warehouses.Column{c}
+			orderDesc = query.OrderDesc
 		}
 
 	} else {

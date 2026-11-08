@@ -34,10 +34,12 @@ type Query struct {
 	// must satisfy.
 	Where *state.Where
 
-	// OrderBy contains the property paths by which the returned rows are ordered.
-	OrderBy []string
+	// OrderBy, when non-empty, is the path of property for which the returned
+	// rows are ordered.
+	OrderBy string
 
-	// OrderDesc applies descending order to every OrderBy property.
+	// OrderDesc, when true and OrderBy is provided, orders the returned records
+	// in descending order instead of ascending order.
 	OrderDesc bool
 
 	// First is the index of the first returned record and must be >= 0.

@@ -6,6 +6,7 @@ package datastore
 
 import (
 	"context"
+	"slices"
 	"testing"
 
 	"github.com/krenalis/krenalis/tools/types"
@@ -41,15 +42,19 @@ func (r *profileQueryRows) Scan(dest ...any) error {
 	return nil
 }
 
-// profileQueryWarehouse returns independently configured rows and count.
+// profileQueryWarehouse returns configured rows and count and records the query.
 type profileQueryWarehouse struct {
 	warehouses.Warehouse
 	rows  *profileQueryRows
 	total int
+	query *warehouses.RowQuery
 }
 
 // Query returns the configured observation.
-func (w profileQueryWarehouse) Query(context.Context, warehouses.RowQuery, bool) (warehouses.Rows, int, error) {
+func (w profileQueryWarehouse) Query(_ context.Context, query warehouses.RowQuery, _ bool) (warehouses.Rows, int, error) {
+	if w.query != nil {
+		*w.query = query
+	}
 	return w.rows, w.total, nil
 }
 
@@ -116,6 +121,46 @@ func TestProfileQueryBounds(t *testing.T) {
 			if total != tc.total || len(records) != tc.rows {
 				t.Fatalf("expected total %d and rows %d, got total %d and rows %d",
 					tc.total, tc.rows, total, len(records))
+			}
+		})
+	}
+}
+
+// TestProfileQueryOrdering checks the ordering sent to the data warehouse.
+func TestProfileQueryOrdering(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		table     string
+		orderBy   string
+		orderDesc bool
+		want      []string
+	}{
+		{name: "profiles ascending", table: "profiles", orderBy: "email", want: []string{"email", "_kpid"}},
+		{name: "profiles descending", table: "profiles", orderBy: "email", orderDesc: true, want: []string{"email", "_kpid"}},
+		{name: "profiles ordered by kpid", table: "profiles", orderBy: "_kpid", want: []string{"_kpid"}},
+		{name: "profiles unordered", table: "profiles"},
+		{name: "other table", table: "events", orderBy: "email", want: []string{"email"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var query warehouses.RowQuery
+			store := &Store{}
+			store.wh.Store(warehouses.Warehouse(profileQueryWarehouse{rows: &profileQueryRows{}, query: &query}))
+			_, _, err := store.query(t.Context(), Query{
+				table: tc.table, Properties: []string{"email"}, OrderBy: tc.orderBy, OrderDesc: tc.orderDesc, Limit: 1,
+			}, map[string]warehouses.Column{
+				"email": {Name: "email", Type: types.String()},
+				"_kpid": {Name: "_kpid", Type: types.UUID()},
+			}, true)
+			if err != nil {
+				t.Fatalf("expected no error, got %v", err)
+			}
+			var got []string
+			for _, column := range query.OrderBy {
+				got = append(got, column.Name)
+			}
+			if !slices.Equal(got, tc.want) || query.OrderDesc != tc.orderDesc {
+				t.Fatalf("expected order %v descending %t, got %v descending %t",
+					tc.want, tc.orderDesc, got, query.OrderDesc)
 			}
 		})
 	}
