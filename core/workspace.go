@@ -1308,13 +1308,22 @@ func (this *Workspace) PipelineRuns(ctx context.Context) ([]*PipelineRun, error)
 	return runs, nil
 }
 
-// ProfileCount returns the number of profiles matching filter.
-// schema is required when filter is present. Only filter dependencies must
-// align with the current profile schema.
-// It returns errors.UnprocessableError with code MaintenanceMode,
-// PropertyNotExist, or SchemaNotAligned, and errors.NotFoundError if the
-// workspace no longer exists. Invalid arguments return errors.BadRequestError;
-// warehouse failures return errors.UnavailableError.
+// ProfileCount returns the number of profiles matching filter. If filter is
+// nil, it returns the total number of profiles.
+//
+// If filter is not nil, schema must be an object type describing the properties
+// used by filter. Only those properties must align with the current profile
+// schema. If filter is nil, schema may be invalid; if valid, it must be an
+// object type.
+//
+// It returns errors.NotFoundError error if filter is not nil and the workspace
+// no longer exists. It returns an errors.UnavailableError error if the data
+// warehouse is unavailable.
+// It returns an errors.UnprocessableError error with code
+//   - MaintenanceMode, if the data warehouse is in maintenance mode.
+//   - PropertyNotExist, if a property in filter does not exist in schema.
+//   - SchemaNotAligned, if a property used by filter is not aligned with
+//     the profile schema.
 func (this *Workspace) ProfileCount(ctx context.Context, filter *Filter, schema types.Type) (int, error) {
 
 	this.core.mustBeOpen()
@@ -1382,19 +1391,32 @@ type Profile struct {
 	Attributes map[string]any `json:"attributes"`
 }
 
-// Profiles returns profiles matching filter, their total count, and whether
-// another row follows the requested range.
-// schema describes the request's properties, filter, and ordering; only
-// dependencies used by the request must align with the current schema.
+// Profiles returns profiles matching filter, an estimate of their total number,
+// and whether more results are available for a subsequent call with the next
+// range.
+//
+// schema must be an object type describing the properties used by properties,
+// filter, and order. Only the properties used by the request must align with
+// the current profile schema.
+//
 // If properties is nil, all properties in schema are returned. Otherwise,
 // properties must contain at least one top-level property name.
-// first must be in [0, 2147483647] and limit in [1, 1000].
-// order defaults to update time; KPID breaks ties in the same direction.
-// It returns errors.NotFoundError if the workspace no longer exists, or
-// errors.UnprocessableError with code MaintenanceMode, PropertyNotExist,
-// OrderNotExist, OrderTypeNotSortable, or SchemaNotAligned. Invalid arguments
-// return errors.BadRequestError; warehouse failures return
-// errors.UnavailableError.
+//
+// first must be in [0, math.MaxInt32] and limit in [1, 1000]. order defaults to
+// update time. Profiles with the same value for the ordering property are also
+// sorted by KPID, in ascending order if orderDesc is false and descending order
+// if it is true.
+//
+// It returns errors.NotFoundError error, if the workspace no longer exists.
+// It returns an errors.UnavailableError error if the data warehouse is
+// unavailable.It returns an errors.UnprocessableError error with code
+//   - MaintenanceMode, if the data warehouse is in maintenance mode.
+//   - OrderNotExist, if order does not exist in schema.
+//   - OrderTypeNotSortable, if the type of the order property is not sortable.
+//   - PropertyNotExist, if a property in properties or filter does not exist
+//     in schema.
+//   - SchemaNotAligned, if a property used by the request is not aligned with
+//     the profile schema.
 func (this *Workspace) Profiles(ctx context.Context, schema types.Type, properties []string, filter *Filter, order string, orderDesc bool, first, limit int) ([]Profile, int, bool, error) {
 
 	this.core.mustBeOpen()

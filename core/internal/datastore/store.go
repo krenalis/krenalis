@@ -503,12 +503,23 @@ func (store *Store) ProfileRecords(ctx context.Context, query Query, consentCond
 }
 
 // Profiles returns profiles matching query, their total count, and whether
-// another row follows the requested range. schema describes all properties
-// used by query, excluding the built-in KPID and update time.
-// When query.OrderBy is provided, KPID breaks ties in the same direction.
-// It returns *schemas.Error if schema is not aligned, ErrWorkspaceNotExist
-// if the workspace no longer exists, ErrMaintenanceMode in maintenance mode,
-// or *UnavailableError for a warehouse failure.
+// more results are available for a subsequent call with the next range.
+//
+// schema must be an object type describing the profile properties used by
+// query.Properties, query.Where, and query.OrderBy. It may describe other
+// profile properties, but every property in schema must align with the
+// workspace's profile schema. The meta properties "_kpid" and "_updated_at"
+// can be used in query but must not be included in schema.
+//
+// query.First must be in [0, math.MaxInt32] and query.Limit in [1, 1000].
+// When query.OrderBy is provided, profiles with the same value for that
+// property are also sorted by KPID.
+//
+// If the workspace no longer exists, it returns the ErrWorkspaceNotExist error.
+// If the data warehouse is in maintenance mode, it returns the
+// ErrMaintenanceMode error. If schema is not aligned with the workspace's
+// profile schema, it returns a *schemas.Error error. If an error occurs with
+// the data warehouse, it returns an *UnavailableError error.
 func (store *Store) Profiles(ctx context.Context, query Query, schema types.Type) ([]map[string]any, int, bool, error) {
 
 	store.mustBeOpen()
