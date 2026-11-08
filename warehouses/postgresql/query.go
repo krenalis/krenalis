@@ -34,16 +34,24 @@ func (warehouse *PostgreSQL) Query(ctx context.Context, query warehouses.RowQuer
 
 	var b strings.Builder
 
+	// Count the total number of records.
 	var total int
 	if withTotal {
-		statement, countErr := renderCountQuery(query.Table, query.Joins, query.Where)
-		if countErr != nil {
-			return nil, 0, countErr
-		}
-		err = pool.QueryRow(ctx, statement).Scan(&total)
+		b.WriteString(`SELECT COUNT(*) FROM `)
+		b.WriteString(quoteIdent(query.Table))
+		err = appendJoins(&b, query.Joins)
 		if err != nil {
 			return nil, 0, err
 		}
+		if query.Where != nil {
+			b.WriteString(` WHERE `)
+			b.WriteString(whereExpr)
+		}
+		err = pool.QueryRow(ctx, b.String()).Scan(&total)
+		if err != nil {
+			return nil, 0, err
+		}
+		b.Reset()
 	}
 
 	// Build the query.
@@ -119,26 +127,4 @@ func appendJoins(b *strings.Builder, joins []warehouses.Join) error {
 		}
 	}
 	return nil
-}
-
-// renderCountQuery renders a query that counts rows in table after applying
-// joins and where.
-func renderCountQuery(table string, joins []warehouses.Join, where warehouses.Expr) (string, error) {
-
-	var b strings.Builder
-	b.WriteString(`SELECT COUNT(*) FROM `)
-	b.WriteString(quoteIdent(table))
-	err := appendJoins(&b, joins)
-	if err != nil {
-		return "", err
-	}
-	if where != nil {
-		b.WriteString(` WHERE `)
-		err = renderExpr(&b, where)
-		if err != nil {
-			return "", fmt.Errorf("cannot build WHERE expression: %s", err)
-		}
-	}
-
-	return b.String(), nil
 }

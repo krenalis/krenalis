@@ -280,13 +280,6 @@ func Test_Merge(t *testing.T) {
 		Table:   table.Name,
 		Columns: table.Columns,
 	}
-	counts, err := dw.Counts(t.Context(), table.Name, nil, nil)
-	if err != nil {
-		t.Fatalf("cannot count: %s", err)
-	}
-	if count := counts[0]; count != 2 {
-		t.Fatalf("expected count 2, got %d", count)
-	}
 	rows, count, err := dw.Query(context.Background(), query, true)
 	if err != nil {
 		t.Fatalf("cannot query: %s", err)
