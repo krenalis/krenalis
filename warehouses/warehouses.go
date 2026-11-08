@@ -237,13 +237,11 @@ type Warehouse interface {
 	// information, maximum character count, enum values, etc...).
 	ColumnTypeDescription(t types.Type) (string, error)
 
-	// Counts returns the number of rows matching each condition after applying
-	// joins to the table.
-	//
+	// Counts returns one row count for each condition on the table.
 	// A nil slice of conditions, or a nil condition, counts all rows.
 	// A non-nil empty slice of conditions is invalid. Each result is between
 	// zero and math.MaxInt32. All counts use the same snapshot of the table.
-	Counts(ctx context.Context, table string, joins []Join, conditions []Expr) ([]int, error)
+	Counts(ctx context.Context, table string, conditions []Expr) ([]int, error)
 
 	// CountIdentities counts anonymous and recognized identities, including those
 	// without a profile, from the provided pipelines, grouped by connection.

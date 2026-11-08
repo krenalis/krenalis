@@ -27,7 +27,7 @@ type profileQueryWarehouse struct {
 }
 
 // Counts returns zero or the configured error.
-func (w *profileQueryWarehouse) Counts(_ context.Context, _ string, _ []warehouses.Join, _ []warehouses.Expr) ([]int, error) {
+func (w *profileQueryWarehouse) Counts(_ context.Context, _ string, _ []warehouses.Expr) ([]int, error) {
 	if w.err != nil {
 		return nil, w.err
 	}

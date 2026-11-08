@@ -534,7 +534,7 @@ func TestResolveIdentitiesPreservesProfilesViewAfterPendingFailure(t *testing.T)
 		t.Fatal(err)
 	}
 
-	profilesBefore, err := warehouse.Counts(t.Context(), "profiles", nil, nil)
+	profilesBefore, err := warehouse.Counts(t.Context(), "profiles", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -553,7 +553,7 @@ func TestResolveIdentitiesPreservesProfilesViewAfterPendingFailure(t *testing.T)
 	if !isOperationError {
 		t.Fatalf("expected replacement operation to return *warehouses.OperationError, got %v", err)
 	}
-	profilesAfter, err := warehouse.Counts(t.Context(), "profiles", nil, nil)
+	profilesAfter, err := warehouse.Counts(t.Context(), "profiles", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
