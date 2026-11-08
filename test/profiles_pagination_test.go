@@ -28,7 +28,7 @@ func TestProfilesPagination(t *testing.T) {
 	}
 
 	const (
-		pageSize     = 200
+		pageSize     = 500
 		profileCount = 2*pageSize + 1
 	)
 	storage := krenalistester.NewTempStorage(t)
@@ -36,7 +36,9 @@ func TestProfilesPagination(t *testing.T) {
 	users := make([]map[string]string, profileCount)
 	for i := range users {
 		id := strconv.Itoa(i)
-		users[i] = map[string]string{"id": id, "email": "profile-" + id + "@example.com"}
+		users[i] = map[string]string{
+			"id": id, "email": "profile-" + id + "@example.com", "first_name": strconv.Itoa(i % 2),
+		}
 	}
 	content, err := json.Marshal(users)
 	if err != nil {
@@ -60,18 +62,20 @@ func TestProfilesPagination(t *testing.T) {
 		InSchema: types.Object([]types.Property{
 			{Name: "id", Type: types.JSON()},
 			{Name: "email", Type: types.JSON()},
+			{Name: "first_name", Type: types.JSON()},
 		}),
 		OutSchema: types.Object([]types.Property{
 			{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
+			{Name: "first_name", Type: types.String().WithMaxLength(300), ReadOptional: true},
 		}),
 		Transformation: &krenalistester.Transformation{
-			Mapping: map[string]string{"email": "email"},
+			Mapping: map[string]string{"email": "email", "first_name": "first_name"},
 		},
 		UserIDColumn: "id",
 		Path:         "users.json",
 		Format:       "json",
 		FormatSettings: krenalistester.SettingsProperties(map[string]bool{
-			"id": true, "email": true,
+			"id": true, "email": true, "first_name": true,
 		}),
 	})
 	run := k.StartPipelineRun(pipeline)
@@ -99,9 +103,15 @@ func TestProfilesPagination(t *testing.T) {
 	}
 	maximumPage, maximumTotal, maximumHasNext := k.ProfilesWithSchema(
 		requestSchema, []string{"email"}, "", true, 0, 1000)
-	if len(maximumPage) != profileCount || maximumTotal != profileCount || maximumHasNext {
-		t.Fatalf("expected %d profiles, total %d and no continuation, got %d profiles, total %d and continuation %t",
-			profileCount, profileCount, len(maximumPage), maximumTotal, maximumHasNext)
+	if len(maximumPage) != 1000 || maximumTotal != profileCount || !maximumHasNext {
+		t.Fatalf("expected 1000 profiles, total %d and continuation, got %d profiles, total %d and continuation %t",
+			profileCount, len(maximumPage), maximumTotal, maximumHasNext)
+	}
+	exactPage, exactTotal, exactHasNext := k.ProfilesWithSchema(
+		requestSchema, []string{"email"}, "", true, 1, 1000)
+	if len(exactPage) != 1000 || exactTotal != profileCount || exactHasNext {
+		t.Fatalf("expected 1000 profiles, total %d and no continuation, got %d profiles, total %d and continuation %t",
+			profileCount, len(exactPage), exactTotal, exactHasNext)
 	}
 	var summaryResponse map[string]any
 	k.Call("GET", "/v1/profiles?"+url.Values{
@@ -189,6 +199,37 @@ func TestProfilesPagination(t *testing.T) {
 		t.Fatal("expected profiles with the same update time")
 	}
 
+	// Profiles with the same first name are ordered by KPID across pages.
+	const orderPageSize = 20
+	for _, descending := range []bool{false, true} {
+		var ordered []krenalistester.Profile
+		for first := 0; first < 2*orderPageSize; first += orderPageSize {
+			page, _, _ := k.ProfilesWithSchema(
+				requestSchema, []string{"first_name"}, "first_name", descending, first, orderPageSize)
+			if len(page) != orderPageSize {
+				t.Fatalf("expected %d profiles, got %d", orderPageSize, len(page))
+			}
+			ordered = append(ordered, page...)
+		}
+		want := "0"
+		if descending {
+			want = "1"
+		}
+		for i, profile := range ordered {
+			if profile.Attributes["first_name"] != want {
+				t.Fatalf("expected first name %q, got %v", want, profile.Attributes["first_name"])
+			}
+			if i > 0 {
+				previous := ordered[i-1].KPID
+				comparison := bytes.Compare(previous[:], profile.KPID[:])
+				if (!descending && comparison >= 0) || (descending && comparison <= 0) {
+					t.Fatalf("expected KPIDs ordered with descending %t, got %s before %s",
+						descending, previous, profile.KPID)
+				}
+			}
+		}
+	}
+
 	attributesPath := "/v1/profiles/" + firstPage[0].KPID.String() + "/attributes?" + url.Values{
 		"schema": []string{string(schemaJSON)},
 	}.Encode()
@@ -216,16 +257,6 @@ func TestProfilesPagination(t *testing.T) {
 	unrelatedJSON, err := unrelatedSchema.MarshalJSON()
 	if err != nil {
 		t.Fatal(err)
-	}
-	query := url.Values{
-		"schema": []string{string(schemaJSON)}, "properties": []string{"email"}, "limit": []string{"1"},
-	}
-	k.Call("GET", "/v1/profiles?"+query.Encode(), nil, nil, &summaryResponse)
-	k.Call("GET", "/v1/profiles/count?"+url.Values{
-		"schema": []string{string(schemaJSON)}, "filter": []string{string(filter)},
-	}.Encode(), nil, nil, &countResponse)
-	if countResponse.Total != 1 {
-		t.Fatalf("unexpected filtered count %d", countResponse.Total)
 	}
 	k.Call("GET", "/v1/profiles/count?"+url.Values{
 		"schema": []string{string(schemaJSON)},
@@ -394,6 +425,18 @@ func TestProfilesPagination(t *testing.T) {
 			if !ok || statusErr.Response.Code != http.StatusUnprocessableEntity {
 				t.Fatalf("expected incompatible schema error, got %v", err)
 			}
+			var response struct {
+				Error struct {
+					Code string `json:"code"`
+				} `json:"error"`
+			}
+			err = json.Unmarshal([]byte(statusErr.Response.Text), &response)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if response.Error.Code != "SchemaNotAligned" {
+				t.Fatalf("expected code SchemaNotAligned, got %q", response.Error.Code)
+			}
 			continue
 		}
 		t.Fatal("expected incompatible schema error")
@@ -409,12 +452,18 @@ func TestProfilesPagination(t *testing.T) {
 	if len(page) != 1 {
 		t.Fatalf("expected one profile, got %d", len(page))
 	}
-	_, hasEmail := page[0].Attributes["email"]
-	if len(page[0].Attributes) != 1 || !hasEmail {
-		t.Fatal("omitting properties must return only attributes from the supplied schema")
+	expectedEmail, ok := page[0].Attributes["email"].(string)
+	if len(page[0].Attributes) != 1 || !ok {
+		t.Fatalf("expected only an email attribute, got %v", page[0].Attributes)
 	}
 	k.RunIdentityResolutionAndWait()
-	k.ProfilesWithSchema(partialSchema, nil, "", true, 0, 1)
+	page, _, _ = k.ProfilesWithSchema(partialSchema, nil, "", true, 0, 1)
+	if len(page) != 1 {
+		t.Fatalf("expected one profile after identity resolution, got %d", len(page))
+	}
+	if len(page[0].Attributes) != 1 || page[0].Attributes["email"] != expectedEmail {
+		t.Fatalf("expected only email %q after identity resolution, got %v", expectedEmail, page[0].Attributes)
+	}
 
 	// Update and remove profiles without running Identity Resolution.
 	var settings krenalistester.DBSettings

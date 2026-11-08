@@ -743,10 +743,13 @@ func (k *Krenalis) ProfilesWithSchema(schema types.Type, properties []string, or
 	var response struct {
 		Profiles []Profile `json:"profiles"`
 		Total    int       `json:"total"`
-		HasNext  bool      `json:"hasNext"`
+		HasNext  *bool     `json:"hasNext"`
 	}
 	k.Call("GET", "/v1/profiles?"+queryString.Encode(), nil, nil, &response)
-	return response.Profiles, response.Total, response.HasNext
+	if response.HasNext == nil {
+		k.t.Fatal("expected hasNext to be a boolean, got missing or null")
+	}
+	return response.Profiles, response.Total, *response.HasNext
 }
 
 // RepairWarehouse repairs the warehouse.
