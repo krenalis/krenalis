@@ -200,7 +200,7 @@ func TestProfilesPagination(t *testing.T) {
 		t.Fatalf("unexpected empty range: profiles=%d hasNext=%t", len(empty), emptyHasNext)
 	}
 
-	// An unrelated schema difference is irrelevant to a profiles request.
+	// Even properties unused by the query must be aligned.
 	emailProperty, _ := requestSchema.Properties().ByName("email")
 	partialSchema := types.Object([]types.Property{emailProperty})
 	unrelatedSchema := types.Object([]types.Property{
@@ -212,7 +212,7 @@ func TestProfilesPagination(t *testing.T) {
 		t.Fatal(err)
 	}
 	query := url.Values{
-		"schema": []string{string(unrelatedJSON)}, "properties": []string{"email"}, "limit": []string{"1"},
+		"schema": []string{string(schemaJSON)}, "properties": []string{"email"}, "limit": []string{"1"},
 	}
 	k.Call("GET", "/v1/profiles?"+query.Encode(), nil, nil, &summaryResponse)
 	k.Call("GET", "/v1/profiles/count?"+url.Values{
@@ -273,7 +273,15 @@ func TestProfilesPagination(t *testing.T) {
 			code:   "SchemaNotAligned",
 		},
 		{
-			name: "order dependency",
+			name: "profiles check unused schema",
+			path: "/v1/profiles",
+			query: url.Values{"schema": []string{string(unrelatedJSON)},
+				"properties": []string{"email"}, "filter": []string{string(filter)}, "order": []string{"email"}},
+			status: http.StatusUnprocessableEntity,
+			code:   "SchemaNotAligned",
+		},
+		{
+			name: "order property not aligned",
 			path: "/v1/profiles",
 			query: url.Values{"schema": []string{string(unrelatedJSON)},
 				"properties": []string{"email"},
