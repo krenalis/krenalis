@@ -6,7 +6,7 @@ package warehouses
 
 import "time"
 
-// SelectedOccurrence selects First or Last before verifying all possible winners.
+// SelectedOccurrence selects First or Last before verifying possible winners.
 // First chooses the earliest occurrence; its zero value chooses Last.
 // Qualifications are independent local Record outcomes. An unknown qualifier
 // makes that identity optional; it does not declare a latent governed fact.

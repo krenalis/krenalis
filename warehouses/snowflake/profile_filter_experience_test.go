@@ -14,7 +14,7 @@ import (
 	"github.com/krenalis/krenalis/warehouses/internal/profilefilter"
 )
 
-// TestProfileFilterExperienceSQL checks First/Last without a technical tie-break.
+// TestProfileFilterExperienceSQL checks First/Last without ID tie-breaks.
 func TestProfileFilterExperienceSQL(t *testing.T) {
 	end := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
 	source := warehouses.OccurrenceSource{Table: "events",

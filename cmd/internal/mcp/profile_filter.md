@@ -433,8 +433,9 @@ has another ID. Never fall back to an older message that passes verify or to the
 latest non-null value. These are messages, not deduplicated business orders.
 
 **The period restricts the base.** With Last and a period ending exactly at T,
-this is equivalent to a recency check on the last occurrence of the same source
-and qualification. If the end is before T, it means **last within that period**,
+this gives the same semantic outcome as a recency check on the last occurrence
+of the same source and qualification, when both evaluations succeed. If the end
+is before T, it means **last within that period**,
 not that the overall latest occurrence lies there. Elapsed ago bands and complete
 calendar periods normally have an earlier end; use the actual resolved bounds
 (a calendar boundary can coincide with T).
@@ -480,11 +481,15 @@ would match instead.
 For "the last recorded order was 60–90 elapsed days ago", use the same full
 history base, select Last, and verify
 `{"occurredIn":{"kind":"elapsedAgoBand","older":{"value":90,"unit":"day"},"newer":{"value":60,"unit":"day"}}}`.
-This replaces the equivalent two-Count recipe above with the same source and
-qualification. Profiles without any recorded order do not match either form.
-Last on a base ending at T expresses the same recency requirement as Last on
-full history with occurredIn for that base window, provided any additional
-qualification and verification are the same. A base ending before T does not.
+This gives the same semantic outcome as the two-Count recipe above when both
+evaluations succeed with the same source and qualification. Profiles without any
+recorded order do not match either form.
+Last on a base ending at T gives the same semantic outcome as Last on full history
+with occurredIn for that base window when both evaluations succeed and their
+additional qualification and verification are the same. The full-history form
+checks more identities: faults in older messages can fail that form alone.
+This does not imply identical execution failures or selection metadata.
+A base ending before T does not express that recency test.
 
 OccurredIn is TRUE or FALSE for each candidate's determined timestamp. It can
 still leave the experience UNKNOWN: a possible winner inside the window and a

@@ -165,6 +165,44 @@ func TestFilterOccurredInInvalidBeforeUnsupported(t *testing.T) {
 			}
 		}
 	}
+	calendar := `{"occurredIn":{"kind":"lastCompleteCalendarPeriods",` +
+		`"unit":"day","count":18446744073709551616}}`
+	invalid := `{"property":"unknown","operator":"is","values":[1]}`
+	for _, test := range []struct {
+		name, rules string
+		unsupported bool
+	}{
+		{"calendar unavailable", calendar, true},
+		{"calendar unavailable before invalid", calendar + "," + invalid, false},
+		{"invalid before calendar unavailable", invalid + "," + calendar, false},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			input := strings.Replace(experienceConditionJSON, experienceRecordConditionJSON, test.rules, 1)
+			var filter Filter
+			err := json.Unmarshal([]byte(`{"operator":"and","rules":[`+input+`],"defaultCalendar":`+
+				calendarReferenceJSON+`}`), &filter)
+			if err != nil {
+				t.Fatalf("expected valid calendar syntax, got %v", err)
+			}
+			nodes := 0
+			_, err = prepareUnifiedRule(&filter,
+				types.Object([]types.Property{{Name: "country", Type: types.String()}}), 0, &nodes)
+			if err != nil {
+				if test.unsupported {
+					if _, unsupported := errors.AsType[*unified.UnsupportedError](err); !unsupported {
+						t.Fatalf("expected missing calendar capability, got %v", err)
+					}
+					return
+				}
+				missing, ok := errors.AsType[types.PathNotExistError](err)
+				if !ok || missing.Path != "unknown" {
+					t.Fatalf("expected unknown property before missing calendar capability, got %v", err)
+				}
+				return
+			}
+			t.Fatal("expected invalid property or missing capability, got success")
+		})
+	}
 	var condition FilterExperienceCondition
 	err := json.Unmarshal([]byte(strings.Replace(experienceConditionJSON, experienceRecordConditionJSON, full, 1)),
 		&condition)

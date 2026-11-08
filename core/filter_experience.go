@@ -149,7 +149,7 @@ func (condition *FilterExperienceCondition) UnmarshalJSON(data []byte) error {
 
 func (*FilterExperienceCondition) filterRule() {}
 
-// FilterExperienceSelector names a chronological selector; first and last execute.
+// FilterExperienceSelector names a selector; First and Last execute.
 type FilterExperienceSelector struct {
 	Kind     string     `json:"kind"`
 	Position json.Value `json:"position,omitzero"`

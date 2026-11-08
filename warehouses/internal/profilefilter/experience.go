@@ -11,7 +11,7 @@ import (
 	"github.com/krenalis/krenalis/warehouses"
 )
 
-// experience preserves possible first/last occurrences and the empty alternative.
+// experience preserves possible First/Last winners and the empty alternative.
 // The first/last certain timestamp excludes later/older optional occurrences;
 // ties remain candidates. No ranking ID or greedy choice closes the selection.
 func (c *compiler) experience(node *warehouses.SelectedOccurrence) (string, error) {
