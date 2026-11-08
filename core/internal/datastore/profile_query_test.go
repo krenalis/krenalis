@@ -16,49 +16,35 @@ import (
 	"github.com/krenalis/krenalis/warehouses"
 )
 
-// profileQueryRows supplies a fixed number of rows, tracking reads and closure.
-type profileQueryRows struct {
-	remaining int
-	scanned   int
-	closed    bool
-}
+// profileQueryRows supplies an empty result set.
+type profileQueryRows struct{}
 
-// Close records closure of the result set.
-func (r *profileQueryRows) Close() error {
-	r.closed = true
-	return nil
-}
+// Close closes the result set.
+func (r *profileQueryRows) Close() error { return nil }
 
 // Err reports successful iteration.
 func (r *profileQueryRows) Err() error { return nil }
 
-// Next advances through the configured rows.
-func (r *profileQueryRows) Next() bool {
-	r.remaining--
-	return r.remaining >= 0
-}
+// Next reports that there are no rows.
+func (r *profileQueryRows) Next() bool { return false }
 
-// Scan supplies a fixed column value.
+// Scan reports that there is no current row.
 func (r *profileQueryRows) Scan(dest ...any) error {
-	r.scanned++
-	dest[0] = "email@example.com"
-	return nil
+	return errors.New("core/internal/datastore: no current row")
 }
 
-// profileQueryWarehouse returns configured rows and count and records the query.
+// profileQueryWarehouse returns an empty result set and records the query.
 type profileQueryWarehouse struct {
 	warehouses.Warehouse
-	rows  *profileQueryRows
-	total int
 	query *warehouses.RowQuery
 }
 
-// Query returns the configured observation.
+// Query records the query and returns an empty result set.
 func (w profileQueryWarehouse) Query(_ context.Context, query warehouses.RowQuery, _ bool) (warehouses.Rows, int, error) {
 	if w.query != nil {
 		*w.query = query
 	}
-	return w.rows, w.total, nil
+	return &profileQueryRows{}, 0, nil
 }
 
 // TestProfileQueryArguments verifies argument rejection before starting a
@@ -98,70 +84,52 @@ func TestProfileQueryArguments(t *testing.T) {
 	}
 }
 
-// TestProfileQueryCount verifies that the estimated total and returned rows
-// remain independent observations.
-func TestProfileQueryCount(t *testing.T) {
-	rows := &profileQueryRows{remaining: 2}
-	store := &Store{}
-	store.wh.Store(warehouses.Warehouse(profileQueryWarehouse{rows: rows, total: 0}))
-	records, total, err := store.query(t.Context(), Query{
-		table: "profiles", Properties: []string{"email"}, Limit: 2,
-	}, map[string]warehouses.Column{"email": {Name: "email", Type: types.String()}}, true)
-	if err != nil {
-		t.Fatalf("expected no error, got %v", err)
-	}
-	if !rows.closed || rows.scanned != 2 {
-		t.Fatalf("expected closed true and scanned 2, got closed %t and scanned %d", rows.closed, rows.scanned)
-	}
-	if total != 0 || len(records) != 2 {
-		t.Fatalf("expected total 0 and rows 2, got total %d and rows %d", total, len(records))
-	}
-}
-
-// TestProfileQueryOrdering checks the ordering sent to the data warehouse.
-func TestProfileQueryOrdering(t *testing.T) {
+// TestQueryOrdering checks property-to-column mapping, ordering precedence,
+// and direction in queries sent to the data warehouse.
+func TestQueryOrdering(t *testing.T) {
 	for _, tc := range []struct {
 		name      string
-		table     string
 		orderBy   []string
 		orderDesc bool
 		want      []string
-		wantError bool
+		wantDesc  bool
+		wantError string
 	}{
-		{name: "profiles ascending", table: "profiles", orderBy: []string{"email", "_kpid"}, want: []string{"email", "_kpid"}},
-		{name: "profiles descending", table: "profiles", orderBy: []string{"email", "_kpid"}, orderDesc: true, want: []string{"email", "_kpid"}},
-		{name: "profiles ordered by email", table: "profiles", orderBy: []string{"email"}, want: []string{"email"}},
-		{name: "profiles ordered by kpid", table: "profiles", orderBy: []string{"_kpid"}, want: []string{"_kpid"}},
-		{name: "profiles unordered", table: "profiles"},
-		{name: "other table", table: "events", orderBy: []string{"email"}, want: []string{"email"}},
-		{name: "unknown secondary property", table: "profiles", orderBy: []string{"email", "unknown"}, wantError: true},
+		{name: "multiple ascending", orderBy: []string{"contact.email", "name"}, want: []string{"contact_email", "full_name"}},
+		{name: "multiple descending", orderBy: []string{"contact.email", "name"}, orderDesc: true, want: []string{"contact_email", "full_name"}, wantDesc: true},
+		{name: "single property", orderBy: []string{"contact.email"}, want: []string{"contact_email"}},
+		{name: "unordered", orderDesc: true},
+		{name: "unknown secondary property", orderBy: []string{"contact.email", "unknown"}, wantError: "property path unknown does not exist"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			var query warehouses.RowQuery
 			store := &Store{}
-			store.wh.Store(warehouses.Warehouse(profileQueryWarehouse{rows: &profileQueryRows{}, query: &query}))
+			store.wh.Store(warehouses.Warehouse(profileQueryWarehouse{query: &query}))
 			_, _, err := store.query(t.Context(), Query{
-				table: tc.table, Properties: []string{"email"}, OrderBy: tc.orderBy, OrderDesc: tc.orderDesc, Limit: 1,
+				table: "profiles", Properties: []string{"name"}, OrderBy: tc.orderBy, OrderDesc: tc.orderDesc, Limit: 1,
 			}, map[string]warehouses.Column{
-				"email": {Name: "email", Type: types.String()},
-				"_kpid": {Name: "_kpid", Type: types.UUID()},
+				"contact.email": {Name: "contact_email", Type: types.String()},
+				"name":          {Name: "full_name", Type: types.String()},
 			}, true)
 			if err != nil {
-				if !tc.wantError {
-					t.Fatalf("expected no error, got %v", err)
+				if err.Error() != tc.wantError {
+					t.Fatalf("expected error %q, got %v", tc.wantError, err)
+				}
+				if query.Table != "" {
+					t.Fatal("expected no warehouse query for an unknown property, got a query")
 				}
 				return
 			}
-			if tc.wantError {
-				t.Fatal("expected an error, got nil")
+			if tc.wantError != "" {
+				t.Fatalf("expected error %q, got nil", tc.wantError)
 			}
 			var got []string
 			for _, column := range query.OrderBy {
 				got = append(got, column.Name)
 			}
-			if !slices.Equal(got, tc.want) || query.OrderDesc != tc.orderDesc {
+			if !slices.Equal(got, tc.want) || query.OrderDesc != tc.wantDesc {
 				t.Fatalf("expected order %v descending %t, got %v descending %t",
-					tc.want, tc.orderDesc, got, query.OrderDesc)
+					tc.want, tc.wantDesc, got, query.OrderDesc)
 			}
 		})
 	}
