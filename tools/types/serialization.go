@@ -131,11 +131,11 @@ func marshalType(b *bytes.Buffer, t Type) {
 			b.WriteString(`,"unsigned":true`)
 			if t.size < 4 {
 				// 8, 16, 24, and 32 bits.
-				if min := uint64(t.p); min > 0 {
+				if min := uint64(uint32(t.p)); min > 0 {
 					b.WriteString(`,"minimum":`)
 					b.WriteString(strconv.FormatUint(min, 10))
 				}
-				if max := uint64(t.s); max < maxUnsigned[t.size] {
+				if max := uint64(uint32(t.s)); max < maxUnsigned[t.size] {
 					b.WriteString(`,"maximum":`)
 					b.WriteString(strconv.FormatUint(max, 10))
 				}
@@ -763,11 +763,10 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		t.vl = decimalRange{min, max}
 	}
 	minFloat, maxFloat := math.Inf(-1), math.Inf(1)
-	if minimum == "" {
-		if t.kind == IntKind && !t.unsigned && t.size < 4 { // 8, 16, 24, and 32 bits
-			t.p = int32(minInt[t.size])
-		}
-	} else {
+	if t.kind == IntKind && !t.unsigned && t.size < 4 { // 8, 16, 24, and 32 bits
+		t.p = int32(minInt[t.size])
+	}
+	if minimum != "" {
 		switch t.kind {
 		case IntKind:
 			if t.unsigned {
@@ -831,16 +830,15 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 			return Type{}, errors.New("unexpected minimum for non-number type")
 		}
 	}
-	if maximum == "" {
-		if t.kind == IntKind && t.size < 4 {
-			// 8, 16, 24, and 32 bits.
-			if t.unsigned {
-				t.s = int32(maxUnsigned[t.size])
-			} else {
-				t.s = int32(maxInt[t.size])
-			}
+	if t.kind == IntKind && t.size < 4 {
+		// 8, 16, 24, and 32 bits.
+		if t.unsigned {
+			t.s = int32(maxUnsigned[t.size])
+		} else {
+			t.s = int32(maxInt[t.size])
 		}
-	} else {
+	}
+	if maximum != "" {
 		switch t.kind {
 		case IntKind:
 			if t.unsigned {
@@ -865,7 +863,7 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 							t.vl = intRange{0, int64(max)}
 						}
 					} else {
-						if min := uint64(t.p); max < min {
+						if min := uint64(uint32(t.p)); max < min {
 							return Type{}, errors.New("maximum cannot be less than minimum")
 						}
 						t.s = int32(max)
