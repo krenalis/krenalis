@@ -804,7 +804,6 @@ const createProfilesExecution = (
 	).sort();
 	const identity: ProfilesQueryIdentity = {
 		workspace,
-		search: '',
 		filter,
 		order: [
 			{ property: '_updated_at', desc: true },

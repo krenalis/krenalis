@@ -8,7 +8,6 @@ interface ProfilesPage {
 
 interface ProfilesQueryIdentity {
 	workspace: string;
-	search?: string;
 	filter?: unknown;
 	order: Array<{ property: string; desc: boolean }>;
 	pageSize: number;
