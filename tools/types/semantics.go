@@ -321,8 +321,8 @@ func (t Type) WithCurrency(currency string) Type {
 	return t
 }
 
-// withSemantics checks whether t supports the given semantics and option, and
-// whether the option is valid and applicable to the specified semantics.
+// withSemantics checks whether t's kind supports the given semantics and option
+// and whether the option is valid and applicable to the specified semantics.
 // If both checks pass, it returns t with the semantics and option applied.
 // Otherwise, it returns an invalid type and a descriptive error.
 //
