@@ -2,6 +2,15 @@
 // Use of this source code is governed by an Elastic License 2.0
 // that can be found in the LICENSE file.
 
+// Package core provides the application core of Krenalis.
+//
+// Methods return an errors.BadRequestError for invalid arguments. Method
+// comments state only non-obvious argument requirements.
+//
+// Methods that access user-controlled resources, such as the data warehouse or
+// a connection's application, database, or file storage, return an
+// errors.UnavailableError if the resource is unreachable or fails.
+// Method comments mention this error only to clarify its cause.
 package core
 
 import (

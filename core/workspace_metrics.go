@@ -251,10 +251,9 @@ func (this *Workspace) LatestIdentityResolutionMetric(ctx context.Context) (*Ide
 // RefreshIdentityMetrics observes and stores identity metrics for the
 // workspace.
 //
-// It returns an [errors.NotFoundError] if the workspace does not exist, an
+// It returns an [errors.NotFoundError] if the workspace does not exist, or an
 // [errors.UnprocessableError] with code [MaintenanceMode] if the data warehouse
-// is in maintenance mode, or an [errors.UnavailableError] if the data warehouse
-// cannot be accessed.
+// is in maintenance mode.
 func (this *Workspace) RefreshIdentityMetrics(ctx context.Context) error {
 
 	this.core.mustBeOpen()
