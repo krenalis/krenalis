@@ -830,7 +830,7 @@ const ProfilesFilters = ({
 							role='region'
 							aria-label='Profile filters'
 						>
-							<div className='pipeline__filters profiles-list__filter-editor-body'>
+							<div className='profiles-list__filter-editor-body'>
 								<FilterEditor
 									filter={session.draft}
 									hoistMenus={true}

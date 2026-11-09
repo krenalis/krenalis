@@ -1586,6 +1586,38 @@ inherit the disabled style */
 	top: 14px;
 }
 
+.pipeline__filters--disabled {
+	opacity: 0.7;
+}
+
+.pipeline__filters--disabled * {
+	opacity: 1;
+}
+
+.pipeline__filters .combobox {
+	max-height: max-content;
+}
+
+.pipeline__filters-add-condition::part(button) {
+	padding-left: 0;
+}
+
+.pipeline__filters-add-condition wa-icon {
+	font-size: 15px;
+	height: 18px;
+	width: 18px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+	.pipeline__filters:has(> .section__content:hover) {
+		--filter-editor-focus-action-color: var(--wa-color-neutral-50);
+	}
+
+	.pipeline__filters > .section__content:hover > .filter-editor__group--root:not(:has(.filter-editor__group:hover)) {
+		--filter-editor-action-color: var(--wa-color-brand-40);
+	}
+}
+
 .pipeline__matching-section .section__content {
 	padding: 36px 36px 50px 36px;
 }

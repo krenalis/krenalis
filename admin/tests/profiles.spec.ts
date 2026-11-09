@@ -183,8 +183,8 @@ const openFirstNameFilter = async (page: Page) => {
 	const filters = page.locator('.profiles-list__filters');
 	await filters.getByRole('button', { name: 'Edit', exact: true }).click();
 	const editor = filters.getByRole('region', { name: 'Profile filters' });
-	const condition = editor.locator('.pipeline__filters-filter');
-	const property = condition.locator('.pipeline__filters-property');
+	const condition = editor.locator('.filter-editor__filter');
+	const property = condition.locator('.filter-editor__property');
 	await property.locator('wa-input').click();
 	await property.locator('input').fill('First');
 	await property.locator('.combobox-list__item .schema-combobox-item__name', { hasText: /^First name$/ }).click();
@@ -194,18 +194,18 @@ const openFirstNameFilter = async (page: Page) => {
 		editor,
 		condition,
 		property,
-		valueInput: condition.locator('.pipeline__filters-value-input input'),
+		valueInput: condition.locator('.filter-editor__value-input input'),
 	};
 };
 
 const fillStringFilterCondition = async (condition: Locator, propertyName: RegExp, value: string) => {
-	const property = condition.locator('.pipeline__filters-property');
+	const property = condition.locator('.filter-editor__property');
 	await property.locator('wa-input').click();
 	await property.locator('.combobox-list__item .schema-combobox-item__name', { hasText: propertyName }).click();
-	const operator = condition.locator('.pipeline__filters-operator').getByRole('combobox');
+	const operator = condition.locator('.filter-editor__operator').getByRole('combobox');
 	await operator.press('Home');
 	await operator.press('Enter');
-	const valueInput = condition.locator('.pipeline__filters-value-input input');
+	const valueInput = condition.locator('.filter-editor__value-input input');
 	await valueInput.fill(value);
 	await valueInput.press('Enter');
 };
@@ -527,7 +527,7 @@ test(`Keep a reopened operator menu open and respect focus moved to another cont
 	await mockProfiles(page);
 	await page.goto(`${adminURL}/profile-unification/profiles`);
 	const { condition, property, valueInput } = await openFirstNameFilter(page);
-	const operatorSelect = condition.locator('.pipeline__filters-operator');
+	const operatorSelect = condition.locator('.filter-editor__operator');
 	await expect(operatorSelect.locator('wa-option[value="0"]')).toBeVisible();
 	await page.clock.install();
 	await operatorSelect.evaluate(async (select: any) => {
@@ -592,7 +592,7 @@ test(`Preview a completed filter and show its profiles explicitly`, async ({ pag
 	const gridCountLayout = await page.locator('.profiles-list__grid-summary').boundingBox();
 	const editorLayout = await editor.boundingBox();
 	const overviewLayout = await filters.locator('.profiles-list__filter-overview').boundingBox();
-	const filterActionsLayout = await editor.locator('.pipeline__filters-group-actions').boundingBox();
+	const filterActionsLayout = await editor.locator('.filter-editor__group-actions').boundingBox();
 	const closeFiltersLayout = await closeFilters.boundingBox();
 	const expandedFilterTitleLayout = await filterTitle.boundingBox();
 	expect(gridCountLayout).not.toBeNull();
@@ -621,7 +621,7 @@ test(`Preview a completed filter and show its profiles explicitly`, async ({ pag
 		'href',
 		'https://www.krenalis.com/docs/ref/admin/filters',
 	);
-	await expect(editor.locator('.pipeline__filters-filter')).toHaveCount(1);
+	await expect(editor.locator('.filter-editor__filter')).toHaveCount(1);
 	await expect(filters.getByRole('button', { name: 'Undo', exact: true })).toBeDisabled();
 	await expect.poll(() => gridRequests.length).toBe(1);
 	await expect.poll(() => countRequests.length).toBe(0);
@@ -631,15 +631,15 @@ test(`Preview a completed filter and show its profiles explicitly`, async ({ pag
 	expect(expandedLayout?.height).toBeGreaterThanOrEqual((await page.evaluate(() => window.innerHeight)) / 2 - 1);
 	await expect(editor.getByRole('button', { name: 'Apply filters' })).toHaveCount(0);
 	await expect(editor.getByRole('button', { name: 'Cancel' })).toHaveCount(0);
-	await expect(filters.locator('.pipeline__filters-group-subject')).toHaveText('Profiles matching');
+	await expect(filters.locator('.filter-editor__group-subject')).toHaveText('Profiles matching');
 
-	const condition = filters.locator('.pipeline__filters-filter');
+	const condition = filters.locator('.filter-editor__filter');
 	const emptyConditionRemoveButton = filters.getByRole('button', {
 		name: 'Remove condition 1',
 		exact: true,
 	});
 	await expect(emptyConditionRemoveButton).toHaveCount(0);
-	const property = condition.locator('.pipeline__filters-property');
+	const property = condition.locator('.filter-editor__property');
 	await property.locator('wa-input').click();
 	await expect(
 		property.locator('.combobox-list__item .schema-combobox-item__name', { hasText: /^email$/ }),
@@ -679,7 +679,7 @@ test(`Preview a completed filter and show its profiles explicitly`, async ({ pag
 	await property.locator('.combobox-list__item .schema-combobox-item__name', { hasText: /^First name$/ }).click();
 	await expect(property.locator('input')).toHaveValue('First name');
 	await expect(emptyConditionRemoveButton).toBeVisible();
-	const operatorSelect = condition.locator('.pipeline__filters-operator');
+	const operatorSelect = condition.locator('.filter-editor__operator');
 	await expect(operatorSelect).toHaveJSProperty('open', true);
 	await expect(operatorSelect.locator('wa-option[value="4"]')).toBeVisible();
 	const operatorMenuLayout = await operatorSelect.evaluate((select) => {
@@ -707,7 +707,7 @@ test(`Preview a completed filter and show its profiles explicitly`, async ({ pag
 	expect(operatorMenuLayout.optionBottom).toBeLessThanOrEqual(operatorMenuLayout.viewportBottom);
 	expect(operatorMenuLayout.optionIsVisible).toBe(true);
 	await operatorSelect.locator('wa-option[value="0"]').click();
-	const valueInput = condition.locator('.pipeline__filters-value-input input');
+	const valueInput = condition.locator('.filter-editor__value-input input');
 	await valueInput.fill('Grace');
 	await expect.poll(() => countRequests.length).toBe(0);
 	await valueInput.press('Enter');
@@ -853,30 +853,30 @@ test(`Recalculate previews when changing logical operators even in single-rule g
 	await expect(showMatches).toBeVisible();
 	expect(countRequests).toHaveLength(1);
 
-	const rootGroup = editor.locator('.pipeline__filters-group--root');
-	const rootLogical = rootGroup.locator(':scope > .pipeline__filters-group-header > .pipeline__filters-logical');
+	const rootGroup = editor.locator('.filter-editor__group--root');
+	const rootLogical = rootGroup.locator(':scope > .filter-editor__group-header > .filter-editor__logical');
 	await rootLogical.click();
 	await rootLogical.locator('wa-option[value="or"]').click();
 	await expect(rootLogical).toHaveJSProperty('value', 'or');
 	await expect(showMatches).toBeVisible();
 	expect(countRequests).toHaveLength(2);
 
-	await rootGroup.locator(':scope > .pipeline__filters-group-actions > .pipeline__filters-add-group').click();
-	const nestedGroup = editor.locator('.pipeline__filters-group').nth(1);
-	const nestedCondition = nestedGroup.locator('.pipeline__filters-filter');
-	const nestedProperty = nestedCondition.locator('.pipeline__filters-property');
+	await rootGroup.locator(':scope > .filter-editor__group-actions > .filter-editor__add-group').click();
+	const nestedGroup = editor.locator('.filter-editor__group').nth(1);
+	const nestedCondition = nestedGroup.locator('.filter-editor__filter');
+	const nestedProperty = nestedCondition.locator('.filter-editor__property');
 	await nestedProperty.locator('wa-input').click();
 	await nestedProperty
 		.locator('.combobox-list__item .schema-combobox-item__name', { hasText: /^First name$/ })
 		.click();
-	await nestedCondition.locator('.pipeline__filters-operator wa-option[value="0"]').click();
-	const nestedValue = nestedCondition.locator('.pipeline__filters-value-input input');
+	await nestedCondition.locator('.filter-editor__operator wa-option[value="0"]').click();
+	const nestedValue = nestedCondition.locator('.filter-editor__value-input input');
 	await nestedValue.fill('Ada');
 	await nestedValue.press('Enter');
 	await expect.poll(() => countRequests.length).toBe(3);
 	await expect(showMatches).toBeVisible();
 
-	const nestedLogical = nestedGroup.locator(':scope > .pipeline__filters-group-header > .pipeline__filters-logical');
+	const nestedLogical = nestedGroup.locator(':scope > .filter-editor__group-header > .filter-editor__logical');
 	await expect(nestedLogical).toHaveJSProperty('value', 'and');
 	await nestedLogical.click();
 	await nestedLogical.locator('wa-option[value="or"]').click();
@@ -894,23 +894,23 @@ test(`Summarize collapsed filters within their available width`, async ({ page }
 	await valueInput.fill(longValue);
 	await valueInput.press('Enter');
 
-	const rootGroup = editor.locator('.pipeline__filters-group--root');
-	const addRootGroup = rootGroup.locator(':scope > .pipeline__filters-group-actions > .pipeline__filters-add-group');
+	const rootGroup = editor.locator('.filter-editor__group--root');
+	const addRootGroup = rootGroup.locator(':scope > .filter-editor__group-actions > .filter-editor__add-group');
 	await addRootGroup.click();
-	const simpleGroup = editor.locator('.pipeline__filters-group').nth(1);
-	await simpleGroup.locator(':scope > .pipeline__filters-group-actions > .pipeline__filters-add-condition').click();
-	const simpleConditions = simpleGroup.locator('.pipeline__filters-filter');
+	const simpleGroup = editor.locator('.filter-editor__group').nth(1);
+	await simpleGroup.locator(':scope > .filter-editor__group-actions > .filter-editor__add-condition').click();
+	const simpleConditions = simpleGroup.locator('.filter-editor__filter');
 	await fillStringFilterCondition(simpleConditions.nth(0), /^Last name$/, 'Hopper');
 	await fillStringFilterCondition(simpleConditions.nth(1), /^Country$/, 'US');
 
 	await addRootGroup.click();
-	const complexGroup = editor.locator('.pipeline__filters-group').nth(2);
+	const complexGroup = editor.locator('.filter-editor__group').nth(2);
 	const addComplexCondition = complexGroup.locator(
-		':scope > .pipeline__filters-group-actions > .pipeline__filters-add-condition',
+		':scope > .filter-editor__group-actions > .filter-editor__add-condition',
 	);
 	await addComplexCondition.click();
 	await addComplexCondition.click();
-	const complexConditions = complexGroup.locator('.pipeline__filters-filter');
+	const complexConditions = complexGroup.locator('.filter-editor__filter');
 	await fillStringFilterCondition(complexConditions.nth(0), /^email$/, 'one@example.com');
 	await fillStringFilterCondition(complexConditions.nth(1), /^Customer ID$/, 'customer-1');
 	await fillStringFilterCondition(complexConditions.nth(2), /^Billing address › City$/, 'Milan');
@@ -1144,19 +1144,19 @@ test(`Reopen the property menu after collapsing a nested property filter`, async
 
 	const filters = page.locator('.profiles-list__filters');
 	await filters.getByRole('button', { name: 'Edit', exact: true }).click();
-	const condition = filters.locator('.pipeline__filters-filter');
-	const property = condition.locator('.pipeline__filters-property');
+	const condition = filters.locator('.filter-editor__filter');
+	const property = condition.locator('.filter-editor__property');
 	await property.locator('wa-input').click();
 	await property
 		.locator('.combobox-list__item .schema-combobox-item__name', { hasText: /^Billing address › City$/ })
 		.click();
-	await condition.locator('.pipeline__filters-operator wa-option[value="0"]').click();
-	await condition.locator('.pipeline__filters-value-input input').fill('Milan');
-	await condition.locator('.pipeline__filters-value-input input').press('Enter');
+	await condition.locator('.filter-editor__operator wa-option[value="0"]').click();
+	await condition.locator('.filter-editor__value-input input').fill('Milan');
+	await condition.locator('.filter-editor__value-input input').press('Enter');
 	await filters.getByRole('button', { name: 'Done', exact: true }).click();
 
 	await filters.getByRole('button', { name: 'Edit', exact: true }).click();
-	const reopenedProperty = filters.locator('.pipeline__filters-property');
+	const reopenedProperty = filters.locator('.filter-editor__property');
 	await expect(reopenedProperty.locator('input')).toHaveValue('Billing address › City');
 	await reopenedProperty.locator('wa-input').click();
 	await expect(
@@ -1215,12 +1215,12 @@ test(`Remove an applied filter from its collapsed chip, update the grid, and pre
 	const redo = filters.getByRole('button', { name: 'Redo', exact: true });
 	await expect(undo).toBeEnabled();
 	await undo.click();
-	await expect(editor.locator('.pipeline__filters-property input')).toHaveValue('First name');
-	await expect(editor.locator('.pipeline__filters-value-input input')).toHaveValue('Grace');
+	await expect(editor.locator('.filter-editor__property input')).toHaveValue('First name');
+	await expect(editor.locator('.filter-editor__value-input input')).toHaveValue('Grace');
 	await expect(page.getByRole('button', { name: 'Show 1 match', exact: true })).toBeVisible();
 	await expect(redo).toBeEnabled();
 	await redo.click();
-	await expect(editor.locator('.pipeline__filters-property input')).toHaveValue('');
+	await expect(editor.locator('.filter-editor__property input')).toHaveValue('');
 	await expect(page.getByRole('button', { name: 'Show 1 match', exact: true })).toHaveCount(0);
 	await expect(undo).toBeEnabled();
 	expect(countRequests).toHaveLength(countRequestsBeforeRemoval + 2);
@@ -1273,7 +1273,7 @@ test(`Grow nested filters in the document flow without an internal scrollbar`, a
 	await filters.getByRole('button', { name: 'Edit', exact: true }).click();
 	const editor = filters.getByRole('region', { name: 'Profile filters' });
 	await editor.getByRole('button', { name: 'Add a group', exact: true }).click();
-	const nestedGroup = editor.locator('.pipeline__filters-group:not(.pipeline__filters-group--root)');
+	const nestedGroup = editor.locator('.filter-editor__group:not(.filter-editor__group--root)');
 	await expect(nestedGroup).toBeVisible();
 	await nestedGroup.getByRole('button', { name: 'Add a condition', exact: true }).click();
 
@@ -1458,12 +1458,12 @@ test(`Restore the current successful preview when collapsing an incomplete draft
 	const trigger = filters.getByRole('button', { name: 'Edit', exact: true });
 	await trigger.click();
 	const editor = filters.getByRole('region', { name: 'Profile filters' });
-	const property = editor.locator('.pipeline__filters-property');
+	const property = editor.locator('.filter-editor__property');
 	await property.locator('wa-input').click();
 	await property.locator('input').fill('First');
 	await property.locator('.combobox-list__item .schema-combobox-item__name', { hasText: /^First name$/ }).click();
 	await expect(page.locator('.profiles-list__layout')).not.toHaveAttribute('inert');
-	await expect(editor.locator('.pipeline__filters-operator')).toHaveJSProperty('open', true);
+	await expect(editor.locator('.filter-editor__operator')).toHaveJSProperty('open', true);
 	await page.keyboard.press('Escape');
 	await expect(editor).toBeVisible();
 	await page.keyboard.press('Escape');
@@ -1474,8 +1474,8 @@ test(`Restore the current successful preview when collapsing an incomplete draft
 	expect(countRequests).toHaveLength(0);
 
 	await filters.getByRole('button', { name: 'Edit', exact: true }).click();
-	await expect(editor.locator('.pipeline__filters-filter')).toHaveCount(1);
-	await expect(editor.locator('.pipeline__filters-property input')).toHaveValue('');
+	await expect(editor.locator('.filter-editor__filter')).toHaveCount(1);
+	await expect(editor.locator('.filter-editor__property input')).toHaveValue('');
 	await expect(filters.getByRole('button', { name: 'Undo', exact: true })).toBeDisabled();
 	expect(countRequests).toHaveLength(0);
 });
@@ -1512,13 +1512,13 @@ test(`Undo and redo successful filter previews without changing the grid`, async
 	await filters.getByRole('button', { name: 'Undo', exact: true }).click();
 	await expect(page.locator('.profiles-list__filter-preview-count')).toHaveCount(0);
 	await expect(page.locator('.profiles-list__filter-update-results')).toHaveCount(0);
-	await expect(editor.locator('.pipeline__filters-filter')).toHaveCount(1);
-	await expect(editor.locator('.pipeline__filters-property input')).toHaveValue('');
+	await expect(editor.locator('.filter-editor__filter')).toHaveCount(1);
+	await expect(editor.locator('.filter-editor__property input')).toHaveValue('');
 	await expect(editor.getByRole('button', { name: 'Add filter', exact: true })).toHaveCount(0);
 	await expect(filters.getByRole('button', { name: 'Redo', exact: true })).toBeEnabled();
 	await filters.getByRole('button', { name: 'Redo', exact: true }).click();
 	await expect(page.getByRole('button', { name: 'Show 1 match', exact: true })).toBeVisible();
-	await expect(condition.locator('.pipeline__filters-value-input input')).toHaveValue('Grace');
+	await expect(condition.locator('.filter-editor__value-input input')).toHaveValue('Grace');
 	expect(countRequests).toHaveLength(requestCountBeforeDraftUndo + 2);
 });
 

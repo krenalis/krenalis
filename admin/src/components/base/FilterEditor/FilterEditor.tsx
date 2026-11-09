@@ -147,13 +147,11 @@ const FilterEditor = ({
 		}
 		pendingConditionFocusRef.current = undefined;
 
-		const propertyInputs = rootRef.current?.querySelectorAll<WaInputElement>(
-			'.pipeline__filters-property wa-input',
-		);
+		const propertyInputs = rootRef.current?.querySelectorAll<WaInputElement>('.filter-editor__property wa-input');
 		const target =
 			typeof pendingFocus === 'number'
 				? propertyInputs?.[pendingFocus]
-				: rootRef.current?.querySelector<WaButtonElement>('.pipeline__filters-add-condition');
+				: rootRef.current?.querySelector<WaButtonElement>('.filter-editor__add-condition');
 		if (target != null) {
 			// Removing a rule can remount the next input before its internal control is ready.
 			let canceled = false;
@@ -240,7 +238,7 @@ const FilterEditor = ({
 
 	const onRemoveCondition = (path: number[]) => {
 		const propertyInputs = Array.from(
-			rootRef.current?.querySelectorAll<HTMLElement>('.pipeline__filters-property wa-input') ?? [],
+			rootRef.current?.querySelectorAll<HTMLElement>('.filter-editor__property wa-input') ?? [],
 		);
 		const currentProperty = rootRef.current?.querySelector<HTMLElement>(
 			`[data-id="property-${pathID(path)}"] wa-input`,
@@ -303,10 +301,7 @@ const FilterEditor = ({
 			if (!isJSON) {
 				setTimeout(() => {
 					const property: any = document.querySelector(`[data-id="property-${pathID(path)}"]`);
-					property
-						?.closest('.pipeline__filters-condition')
-						?.querySelector('.pipeline__filters-operator')
-						?.show();
+					property?.closest('.filter-editor__condition')?.querySelector('.filter-editor__operator')?.show();
 				}, 10);
 			}
 		}
@@ -315,7 +310,7 @@ const FilterEditor = ({
 		if (isJSON) {
 			setTimeout(() => {
 				const property: any = document.querySelector(`[data-id="property-${pathID(path)}"]`);
-				property?.closest('.pipeline__filters-condition')?.querySelector('.pipeline__filters-path')?.select();
+				property?.closest('.filter-editor__condition')?.querySelector('.filter-editor__path')?.select();
 			}, 10);
 		}
 	};
@@ -369,9 +364,7 @@ const FilterEditor = ({
 		if (operator == null || isUnaryOperator(operator)) {
 			return;
 		}
-		const valueInput = select
-			.closest('.pipeline__filters-condition')
-			?.querySelector('.pipeline__filters-value-input');
+		const valueInput = select.closest('.filter-editor__condition')?.querySelector('.filter-editor__value-input');
 		if (valueInput == null) {
 			return;
 		}
@@ -398,8 +391,8 @@ const FilterEditor = ({
 		setTimeout(() => {
 			const property: any = document.querySelector(`[data-id="property-${pathID(path)}"]`);
 			const inputs = property
-				?.closest('.pipeline__filters-condition')
-				?.querySelectorAll('.pipeline__filters-value-input');
+				?.closest('.filter-editor__condition')
+				?.querySelectorAll('.filter-editor__value-input');
 			const input = inputs?.[position];
 			if (input == null) {
 				return;
@@ -450,7 +443,7 @@ const FilterEditor = ({
 				onSelect={(_, value) => onSelectProperty(path, value)}
 				value={propertyName}
 				displayValue={propertyDisplayValue}
-				className='pipeline__filters-property'
+				className='filter-editor__property'
 				size='small'
 				name={`property-${id}`}
 				items={propertyItems}
@@ -470,7 +463,7 @@ const FilterEditor = ({
 		const pathInput = isJSON ? (
 			<WaInput
 				size='s'
-				className='pipeline__filters-path'
+				className='filter-editor__path'
 				value={propertyPath}
 				onInput={(event: any) => changeFilter(updatePath(path, event.target.value))}
 				onChange={(event: any) => changeFilter(updatePath(path, event.target.value), true)}
@@ -483,7 +476,7 @@ const FilterEditor = ({
 			<WaSelect
 				size='s'
 				name={`operator-${id}`}
-				className='pipeline__filters-operator'
+				className='filter-editor__operator'
 				value={String(FILTER_OPERATORS.findIndex((operator) => operator === condition.operator))}
 				onChange={(event: any) => changeOperator(path, FILTER_OPERATORS[event.target.value])}
 				onWaAfterHide={onOperatorSelectClose}
@@ -520,7 +513,7 @@ const FilterEditor = ({
 			);
 			if (isBetween) {
 				valueElements.push(
-					<span className='pipeline__filters-value-and' key='and'>
+					<span className='filter-editor__value-and' key='and'>
 						and
 					</span>,
 					<FilterValueControl
@@ -538,7 +531,7 @@ const FilterEditor = ({
 				for (const [position, value] of values.slice(1).entries()) {
 					const valuePosition = position + 1;
 					valueElements.push(
-						<div className='pipeline__filters-value' key={`value-${id}-${valuePosition}`}>
+						<div className='filter-editor__value' key={`value-${id}-${valuePosition}`}>
 							<FilterValueControl
 								name={`value-${id}-${valuePosition}`}
 								value={value}
@@ -555,7 +548,7 @@ const FilterEditor = ({
 				}
 				valueElements.push(
 					<WaButton
-						className='pipeline__filters-add-value'
+						className='filter-editor__add-value'
 						key='add-button'
 						appearance='outlined'
 						size='s'
@@ -572,7 +565,7 @@ const FilterEditor = ({
 		const removeButton = (
 			<button
 				type='button'
-				className='pipeline__filters-remove-condition pipeline__filters-remove-rule'
+				className='filter-editor__remove-condition filter-editor__remove-rule'
 				aria-label={`Remove condition ${conditionNumber}`}
 				onClick={() => onRemoveCondition(path)}
 				disabled={isRemoveDisabled}
@@ -582,22 +575,16 @@ const FilterEditor = ({
 		);
 
 		return (
-			<div className='pipeline__filters-filter' key={id}>
-				<div
-					className={`pipeline__filters-condition${isOneOf ? ' pipeline__filters-condition--is-one-of' : ''}`}
-				>
-					<div className='pipeline__filters-property-and-operator'>
+			<div className='filter-editor__filter' key={id}>
+				<div className={`filter-editor__condition${isOneOf ? ' filter-editor__condition--is-one-of' : ''}`}>
+					<div className='filter-editor__property-and-operator'>
 						{propertyInput}
 						{pathInput}
 						{operatorSelect}
 					</div>
-					{isOneOf ? (
-						<div className='pipeline__filters-is-one-of-values'>{valueElements}</div>
-					) : (
-						valueElements
-					)}
+					{isOneOf ? <div className='filter-editor__is-one-of-values'>{valueElements}</div> : valueElements}
 					{!hideRemoveButton && (
-						<div id={removeButtonID} className='pipeline__filters-remove-condition-wrapper'>
+						<div id={removeButtonID} className='filter-editor__remove-condition-wrapper'>
 							{isRemoveDisabled ? (
 								removeButton
 							) : (
@@ -622,15 +609,13 @@ const FilterEditor = ({
 		return (
 			<div
 				ref={isRoot ? rootRef : undefined}
-				className={`pipeline__filters-group${isRoot ? ' pipeline__filters-group--root' : ''}`}
+				className={`filter-editor__group${isRoot ? ' filter-editor__group--root' : ''}`}
 				key={pathID(groupPath) || 'root'}
 			>
-				<div className='pipeline__filters-group-header'>
-					<span className='pipeline__filters-group-subject'>
-						{isRoot ? `${subject} matching` : 'matching'}
-					</span>
+				<div className='filter-editor__group-header'>
+					<span className='filter-editor__group-subject'>{isRoot ? `${subject} matching` : 'matching'}</span>
 					<WaSelect
-						className='pipeline__filters-logical'
+						className='filter-editor__logical'
 						size='s'
 						value={group.operator}
 						onChange={(event: any) => onLogicalChange(groupPath, event.target.value as FilterLogical)}
@@ -643,13 +628,13 @@ const FilterEditor = ({
 					<span>of the following:</span>
 					{isRoot && rootActions != null && <div className='filter-editor__root-actions'>{rootActions}</div>}
 					{!isRoot && (
-						<div className='pipeline__filters-remove-group-wrapper'>
+						<div className='filter-editor__remove-group-wrapper'>
 							<WaTooltip className='app-tooltip' for={`${editorID}-${pathID(groupPath)}-remove-group`}>
 								{removeGroupTooltip}
 							</WaTooltip>
 							<WaButton
 								id={`${editorID}-${pathID(groupPath)}-remove-group`}
-								className='pipeline__filters-remove-group pipeline__filters-remove-rule'
+								className='filter-editor__remove-group filter-editor__remove-rule'
 								size='s'
 								variant='brand'
 								appearance='plain'
@@ -657,27 +642,27 @@ const FilterEditor = ({
 								disabled={disabled}
 							>
 								<WaIcon name='x' aria-hidden='true' />
-								<span className='pipeline__filters-remove-rule-label'>Remove group</span>
+								<span className='filter-editor__remove-rule-label'>Remove group</span>
 							</WaButton>
 						</div>
 					)}
 				</div>
-				<div className='pipeline__filters-group-rules'>
+				<div className='filter-editor__group-rules'>
 					{group.rules.map((rule, index) => {
 						const path = [...groupPath, index];
 						const isGroup = isFilterGroup(rule);
 
 						return (
 							<div
-								className={`pipeline__filters-rule${isGroup ? ' pipeline__filters-rule--group' : ''}`}
+								className={`filter-editor__rule${isGroup ? ' filter-editor__rule--group' : ''}`}
 								key={pathID(path)}
 							>
 								{index > 0 && (
-									<div className='pipeline__filters-connector' aria-hidden='true'>
+									<div className='filter-editor__connector' aria-hidden='true'>
 										{group.operator}
 									</div>
 								)}
-								<div className='pipeline__filters-rule-content'>
+								<div className='filter-editor__rule-content'>
 									{isGroup
 										? renderGroup(rule, path, depth + 1)
 										: renderCondition(rule, path, ++conditionNumber)}
@@ -686,9 +671,9 @@ const FilterEditor = ({
 						);
 					})}
 				</div>
-				<div className='pipeline__filters-group-actions'>
+				<div className='filter-editor__group-actions'>
 					<WaButton
-						className='pipeline__filters-add-condition'
+						className='filter-editor__add-condition'
 						size='m'
 						variant='brand'
 						appearance='plain'
@@ -699,7 +684,7 @@ const FilterEditor = ({
 						Add a condition
 					</WaButton>
 					<WaButton
-						className='pipeline__filters-add-group'
+						className='filter-editor__add-group'
 						size='m'
 						variant='brand'
 						appearance='plain'
@@ -837,7 +822,7 @@ const FilterValueControl = ({
 			appearance='outlined'
 			size='s'
 			pill
-			className='pipeline__filters-value-remove'
+			className='filter-editor__value-remove'
 			onClick={onRemove}
 			disabled={disabled}
 		>
@@ -847,10 +832,10 @@ const FilterValueControl = ({
 
 	if (options.length > 0) {
 		return (
-			<div className={removable ? 'pipeline__filters-value-control--removable' : undefined}>
+			<div className={removable ? 'filter-editor__value-control--removable' : undefined}>
 				<WaSelect
 					size='s'
-					className='pipeline__filters-value-input'
+					className='filter-editor__value-input'
 					name={name}
 					value={value ?? ''}
 					onChange={handleSelect}
@@ -870,7 +855,7 @@ const FilterValueControl = ({
 	return (
 		<WaInput
 			size='s'
-			className='pipeline__filters-value-input'
+			className='filter-editor__value-input'
 			value={value ?? ''}
 			onInput={handleInput}
 			onChange={handleCommit}

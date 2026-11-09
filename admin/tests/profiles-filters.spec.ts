@@ -101,13 +101,13 @@ for (const [index, value] of values.entries()) {
 		const filters = page.locator('.profiles-list__filters');
 		await filters.getByRole('button', { name: 'Edit', exact: true }).click();
 		const editor = filters.getByRole('region', { name: 'Profile filters' });
-		const property = editor.locator('.pipeline__filters-property');
+		const property = editor.locator('.filter-editor__property');
 		const propertyInput = property.locator('input');
 		await propertyInput.pressSequentially('name');
 		await expect(propertyInput).toHaveValue('name');
 		await property.locator('.combobox-list__item .schema-combobox-item__name', { hasText: /^Name$/ }).click();
 		await expect(propertyInput).toHaveValue('name');
-		const operator = editor.locator('.pipeline__filters-operator').getByRole('combobox');
+		const operator = editor.locator('.filter-editor__operator').getByRole('combobox');
 		await operator.press('Home');
 		await expect(propertyInput).toHaveValue('Name');
 		await propertyInput.focus();
@@ -118,7 +118,7 @@ for (const [index, value] of values.entries()) {
 		await operator.press('Home');
 		await expect(propertyInput).toHaveValue('Name');
 		await operator.press('Enter');
-		const valueInput = editor.locator('.pipeline__filters-value-input input');
+		const valueInput = editor.locator('.filter-editor__value-input input');
 		await valueInput.fill(draftValue);
 		await valueInput.press('Enter');
 		const showMatches = page.getByRole('button', { name: 'Show 1 match', exact: true });

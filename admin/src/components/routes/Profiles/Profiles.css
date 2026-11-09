@@ -170,8 +170,8 @@ html.profiles-columns-transition .profiles-list__toggle-columns::part(menu) {
 
 html.profiles-columns-transition
 	.profiles-list__filter-editor
-	.pipeline__filters-group--root
-	> .pipeline__filters-group-rules {
+	.filter-editor__group--root
+	> .filter-editor__group-rules {
 	view-transition-name: none;
 }
 
@@ -511,7 +511,7 @@ html.profiles-columns-transition::view-transition-new(*):only-child {
 	padding: 0;
 }
 
-.profiles-list__filter-editor .pipeline__filters-group--root > .pipeline__filters-group-rules {
+.profiles-list__filter-editor .filter-editor__group--root > .filter-editor__group-rules {
 	position: relative;
 	view-transition-name: profiles-filter-rules;
 	z-index: var(--profiles-z-filter-rules);

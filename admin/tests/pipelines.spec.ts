@@ -43,7 +43,7 @@ test(`Remove the only Pipeline condition without an Admin error and restore focu
 	await addFilter.click();
 
 	const removeCondition = filters.getByRole('button', { name: 'Remove condition 1', exact: true });
-	const tooltip = filters.locator('.pipeline__filters-remove-condition-wrapper wa-tooltip');
+	const tooltip = filters.locator('.filter-editor__remove-condition-wrapper wa-tooltip');
 	await expect(removeCondition).toHaveJSProperty('tagName', 'BUTTON');
 	await expect(removeCondition).toBeEnabled();
 	await removeCondition.focus();
@@ -71,24 +71,24 @@ test(`Preserve nested Pipeline groups when removing a preceding condition and re
 	const filters = page.locator('.pipeline__filters');
 	await filters.getByRole('button', { name: 'Add filter', exact: true }).click();
 
-	const root = filters.locator('.pipeline__filters-group--root');
-	await root.locator(':scope > .pipeline__filters-group-actions .pipeline__filters-add-group').click();
+	const root = filters.locator('.filter-editor__group--root');
+	await root.locator(':scope > .filter-editor__group-actions .filter-editor__add-group').click();
 	const nested = root.locator(
-		':scope > .pipeline__filters-group-rules > .pipeline__filters-rule--group > .pipeline__filters-rule-content > .pipeline__filters-group',
+		':scope > .filter-editor__group-rules > .filter-editor__rule--group > .filter-editor__rule-content > .filter-editor__group',
 	);
-	await nested.locator(':scope > .pipeline__filters-group-actions .pipeline__filters-add-group').click();
+	await nested.locator(':scope > .filter-editor__group-actions .filter-editor__add-group').click();
 	const child = nested.locator(
-		':scope > .pipeline__filters-group-rules > .pipeline__filters-rule--group > .pipeline__filters-rule-content > .pipeline__filters-group',
+		':scope > .filter-editor__group-rules > .filter-editor__rule--group > .filter-editor__rule-content > .filter-editor__group',
 	);
 	await expect(child).toHaveCount(1);
 	await nested.getByRole('button', { name: 'Remove condition 2', exact: true }).click();
-	await expect(child.locator('.pipeline__filters-property wa-input')).toBeFocused();
-	await expect(filters.locator('.pipeline__filters-filter')).toHaveCount(2);
+	await expect(child.locator('.filter-editor__property wa-input')).toBeFocused();
+	await expect(filters.locator('.filter-editor__filter')).toHaveCount(2);
 	await expect(filters.locator('.filter-editor__announcement')).toHaveText('Condition removed');
 
-	await child.locator(':scope > .pipeline__filters-group-header .pipeline__filters-remove-group').click();
+	await child.locator(':scope > .filter-editor__group-header .filter-editor__remove-group').click();
 	await expect(child).toHaveCount(0);
-	await expect(nested.locator('.pipeline__filters-property wa-input')).toHaveJSProperty('value', '');
+	await expect(nested.locator('.filter-editor__property wa-input')).toHaveJSProperty('value', '');
 	await expect(nested.getByRole('button', { name: 'Remove condition 2', exact: true })).toBeDisabled();
 	expect(pageErrors).toEqual([]);
 });
@@ -1457,29 +1457,29 @@ test(`Add "Import events" pipeline on JavaScript`, async ({ page }) => {
 
 	// Filters.
 	await page.locator('.pipeline__filters-add-condition').click();
-	await page.locator('.pipeline__filters-add-condition').click();
-	await page.locator('.pipeline__filters-add-condition').click();
+	await page.locator('.filter-editor__add-condition').click();
+	await page.locator('.filter-editor__add-condition').click();
 
-	const filters = page.locator('.pipeline__filters-filter');
+	const filters = page.locator('.filter-editor__filter');
 
-	await filters.nth(0).locator('.pipeline__filters-property wa-input').click();
+	await filters.nth(0).locator('.filter-editor__property wa-input').click();
 	await filters
 		.nth(0)
 		.locator('.combobox-list__item .schema-combobox-item__name', { hasText: /^Type$/ })
 		.click();
-	await filters.nth(0).locator('.pipeline__filters-operator wa-option[value="0"]').click(); // option is "is".
+	await filters.nth(0).locator('.filter-editor__operator wa-option[value="0"]').click(); // option is "is".
 
-	await filters.nth(0).locator('.pipeline__filters-value-input wa-option[value="track"]').click(); // value select should open automatically after selecting the operator
+	await filters.nth(0).locator('.filter-editor__value-input wa-option[value="track"]').click(); // value select should open automatically after selecting the operator
 
 	const jsonCondition = filters.nth(1);
-	const jsonPropertyInput = jsonCondition.locator('.pipeline__filters-property wa-input');
+	const jsonPropertyInput = jsonCondition.locator('.filter-editor__property wa-input');
 	await jsonPropertyInput.click();
 	await jsonCondition.locator('.combobox-list__item .schema-combobox-item__name', { hasText: /^Traits$/ }).click();
-	const jsonPathInput = jsonCondition.locator('.pipeline__filters-path >> input');
+	const jsonPathInput = jsonCondition.locator('.filter-editor__path >> input');
 	await jsonPathInput.fill('email');
-	const jsonOperatorSelect = jsonCondition.locator('.pipeline__filters-operator');
+	const jsonOperatorSelect = jsonCondition.locator('.filter-editor__operator');
 	await expect(jsonOperatorSelect).toHaveJSProperty('value', '0');
-	const jsonValueInput = jsonCondition.locator('.pipeline__filters-value-input');
+	const jsonValueInput = jsonCondition.locator('.filter-editor__value-input');
 	await jsonValueInput.locator('input').fill('a@example.com');
 
 	await jsonPropertyInput.click();
@@ -1499,11 +1499,11 @@ test(`Add "Import events" pipeline on JavaScript`, async ({ page }) => {
 		{ name: 'does not exist', index: 25 },
 	]) {
 		const condition = filters.nth(1);
-		await condition.locator('.pipeline__filters-property wa-input').click();
+		await condition.locator('.filter-editor__property wa-input').click();
 		await condition.locator('.combobox-list__item .schema-combobox-item__name', { hasText: /^Traits$/ }).click();
-		const pathInput = condition.locator('.pipeline__filters-path >> input');
+		const pathInput = condition.locator('.filter-editor__path >> input');
 		await pathInput.fill('email');
-		const operatorSelect = condition.locator('.pipeline__filters-operator');
+		const operatorSelect = condition.locator('.filter-editor__operator');
 		const operatorOption = operatorSelect.locator(`wa-option[value="${operator.index}"]`);
 		await expect(operatorOption).toHaveText(operator.name);
 		await operatorSelect.click();
@@ -1511,7 +1511,7 @@ test(`Add "Import events" pipeline on JavaScript`, async ({ page }) => {
 		await expect(operatorSelect).toHaveJSProperty('value', String(operator.index));
 		await pathInput.fill('');
 		await expect(operatorSelect).toHaveJSProperty('value', null);
-		await condition.locator('.pipeline__filters-remove-condition').click();
+		await condition.locator('.filter-editor__remove-condition').click();
 	}
 
 	const expectedBody = `
