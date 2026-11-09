@@ -63,10 +63,14 @@ func (experience *FilterExperience) UnmarshalJSON(data []byte) error {
 
 // FilterExperienceBase defines the population before chronological selection.
 // Where has the same Record semantics and limits as Count qualification.
+// CurrencyField and NativeCurrency must be supplied together when restricting
+// the population by governed currency; they never convert currencies.
 type FilterExperienceBase struct {
-	Source FilterCountSource `json:"source"`
-	Period FilterPeriod      `json:"period"`
-	Where  *Filter           `json:"where,omitzero"`
+	Source         FilterCountSource    `json:"source"`
+	Period         FilterPeriod         `json:"period"`
+	Where          *Filter              `json:"where,omitzero"`
+	CurrencyField  *FilterCurrencyField `json:"currencyField,omitzero"`
+	NativeCurrency *string              `json:"nativeCurrency,omitzero"`
 }
 
 // UnmarshalJSON decodes a selection base without accepting Count-only fields.
@@ -88,6 +92,16 @@ func (base *FilterExperienceBase) UnmarshalJSON(data []byte) error {
 		case "period":
 			hasPeriod = true
 			err = json.Unmarshal(value, &decoded.Period)
+		case "currencyField":
+			if value.IsNull() {
+				return errors.New("currencyField cannot be null")
+			}
+			err = json.Unmarshal(value, &decoded.CurrencyField)
+		case "nativeCurrency":
+			if value.IsNull() {
+				return errors.New("nativeCurrency cannot be null")
+			}
+			err = json.Unmarshal(value, &decoded.NativeCurrency)
 		case "where":
 			if !value.IsNull() {
 				var rule FilterRule
@@ -232,6 +246,28 @@ func prepareFilterExperience(condition *FilterExperienceCondition, calendar *uni
 		}
 		unavailable = err
 	}
+	var currency *unified.NativeCurrency
+	base := experience.Base
+	if (base.CurrencyField == nil) != (base.NativeCurrency == nil) {
+		return unified.Rule{}, errors.New("experience base requires currencyField and nativeCurrency together")
+	}
+	if base.CurrencyField != nil {
+		if base.Source.Type != "" && base.Source.Type != "track" {
+			return unified.Rule{}, errors.New("currency field is incompatible with the occurrence source")
+		}
+		currency, err = unified.ResolveNativeCurrency(base.CurrencyField.Definition,
+			base.CurrencyField.MeaningRevision, *base.NativeCurrency, base.Source.Name)
+		if err != nil {
+			return unified.Rule{}, err
+		}
+		err = currency.ValidateWhere(where)
+		if err != nil {
+			if _, unsupported := errors.AsType[*unified.UnsupportedError](err); !unsupported {
+				return unified.Rule{}, err
+			}
+			unavailable = err
+		}
+	}
 	if selector.Kind == "nth" {
 		return unified.Rule{}, &unified.UnsupportedError{Capability: "nth experience selector"}
 	}
@@ -240,5 +276,5 @@ func prepareFilterExperience(condition *FilterExperienceCondition, calendar *uni
 	}
 
 	return unified.Rule{Experience: &unified.Experience{First: selector.Kind == "first",
-		Scope: scope, Where: where, Verify: verify}}, nil
+		Scope: scope, Where: where, Currency: currency, Verify: verify}}, nil
 }

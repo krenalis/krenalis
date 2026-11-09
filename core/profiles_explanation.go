@@ -41,6 +41,7 @@ type ProfileRuleExplanation struct {
 
 // ProfileExperienceExplanation describes selection before verification.
 // Period metadata has the same meaning and omission rules as Count.
+// CurrencyField and NativeCurrency describe the base, not the Money leaves.
 type ProfileExperienceExplanation struct {
 	Start          time.Time                      `json:"start,omitzero"`
 	End            time.Time                      `json:"end"`
@@ -50,6 +51,8 @@ type ProfileExperienceExplanation struct {
 	Selection      ProfileExperienceSelection     `json:"selection"`
 	OccurredIn     []ProfileOccurredInExplanation `json:"occurredIn,omitzero"`
 	Money          []ProfileMoneyExplanation      `json:"money,omitzero"`
+	CurrencyField  *FilterCurrencyField           `json:"currencyField,omitzero"`
+	NativeCurrency string                         `json:"nativeCurrency,omitzero"`
 }
 
 // ProfileExperienceSelection retains ambiguity without inventing a witness.
@@ -337,6 +340,11 @@ func explainProfileRule(rule warehouses.FilterCondition, semantic unified.Rule, 
 			UnboundedStart: rule.UnboundedStart, Select: FilterExperienceSelector{Kind: "last"}, Selection: selection}
 		if rule.First {
 			result.Experience.Select.Kind = "first"
+		}
+		if currency := semantic.Experience.Currency; currency != nil {
+			result.Experience.CurrencyField = &FilterCurrencyField{
+				Definition: currency.Definition, MeaningRevision: currency.Revision}
+			result.Experience.NativeCurrency = currency.Value
 		}
 		periods, err := explainOccurrencePeriods(semantic.Experience.Verify, at, nil)
 		if err != nil {

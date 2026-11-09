@@ -152,11 +152,16 @@ func (c *compiler) parameter(typ types.Type, value any) (string, error) {
 }
 
 func (c *compiler) qualification(node warehouses.RowQualification) (string, error) {
+	return c.qualificationGiven(node, nil)
+}
+
+// qualificationGiven closes selected verification under its required base.
+func (c *compiler) qualificationGiven(node warehouses.RowQualification, base warehouses.RowQualification) (string, error) {
 	switch n := node.(type) {
 	case *warehouses.RecordQualification:
 		return c.dialect.Record(n.Expr)
 	case *warehouses.MoneyQualification:
-		return c.money(n)
+		return c.money(n, base)
 	case *warehouses.KnownTextEqual:
 		value, err := c.dialect.KnownText(n.Column, n.Keys)
 		if err != nil {
@@ -170,7 +175,7 @@ func (c *compiler) qualification(node warehouses.RowQualification) (string, erro
 	case *warehouses.QualificationGroup:
 		parts := make([]string, len(n.Children))
 		for i, child := range n.Children {
-			text, err := c.qualification(child)
+			text, err := c.qualificationGiven(child, base)
 			if err != nil {
 				return "", err
 			}

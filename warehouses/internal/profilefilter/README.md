@@ -168,3 +168,15 @@ parameter transport. The direct comparison also handles the clipped extreme
 thresholds: readable amounts have a determined outcome and unreadable amounts
 remain NULL. Currency is always evaluated by its existing reader.
 No candidate values or extra explanation columns are transported.
+
+Selected verification alone renders under its actual base qualification. A
+direct KnownTextEqual child of an AND base can fix MoneyQualification.Currency
+when column name/type, key segments and reader coincide. Equal literals remove
+only the redundant currency test; different literals yield FALSE even if the
+amount is unreadable. Other readings and other base shapes retain Kleene AND.
+The full monetary descriptor remains on the node; there is no flag, generic
+constant node or amount-only input that could claim a missing proof. The context
+recurses through verification groups and is never applied to ordinary Count,
+Sum or Average qualifications. Parameter order follows the remaining SQL reads.
+The base qualification is rendered again for the missing-timestamp fault check,
+allocating its repeated arguments for positional binds as well as indexed binds.

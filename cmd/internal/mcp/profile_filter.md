@@ -607,9 +607,9 @@ properties.currency is EUR prefilter is therefore unavailable together with
 money in verify: it differs from governed currency on JSON null and must not
 replace the future governed qualification in the base. Never split the tests
 into independent profile conditions to approximate the selected-message request.
-Selecting the last native-EUR order is not executable yet. Do not
-approximate it with raw currency in base.where and a raw amount test in verify;
-raw predicates do not provide the governed currency and amount reading.
+To select among native-EUR orders, restrict the base using the governed fields
+described below. Raw predicates do not provide the governed currency and amount
+reading and must not substitute for these fields.
 
 Explanations add experience.money:[{path,field,nativeCurrency,requested,normalized}].
 Path is zero-based within verify. Requested and normalized each contain operator
@@ -618,6 +618,58 @@ explanation retains requested >100 and normalized >=100.0001. Extreme normalized
 bounds are clipped to +/-1e14 outside every readable amount; unreadable amounts
 still yield UNKNOWN for the amount test. No candidate amount or witness identity
 is exposed. An empty money metadata list is omitted.
+
+### Restrict First/Last to a native currency
+
+`experience.base` accepts the optional `currencyField` and `nativeCurrency` pair
+from Count. Supply both or neither; explicit null is invalid. The resolved field
+`commerce.order_completed.currency` revision 1 is compatible only with track
+Order Completed. The currency requires three uppercase ASCII letters. This is a
+population restriction, without conversion or business-order deduplication.
+
+For the last recorded **native-EUR** Order Completed, within the last 30 elapsed
+days and reporting a total greater than 100:
+
+```json
+{"operator":"and","rules":[{"experience":{"base":{"source":{"kind":"recordedEvents","name":"Order Completed","grain":"registered-message"},"period":{"kind":"fullRelevantHistory","history":{"definition":"registered-queryable-events","meaningRevision":"1"}},"currencyField":{"definition":"commerce.order_completed.currency","meaningRevision":"1"},"nativeCurrency":"EUR"},"select":{"kind":"last"},"verify":{"operator":"and","rules":[{"occurredIn":{"kind":"elapsedLookback","duration":{"value":30,"unit":"day"}}},{"money":{"field":{"definition":"commerce.order_completed.total","meaningRevision":"1"},"nativeCurrency":"EUR"},"operator":"is greater than","values":[100]}]}}}]}
+```
+
+The money currency remains mandatory and explicit. The base fields select the
+population first; money then verifies the selected message. First uses the same
+rules with chronological order reversed. With EUR 150 followed by USD:
+
+| Requested meaning | Currency placement | Outcome |
+|---|---|---|
+| The last order is in EUR and exceeds 100 | Verify only | NO_MATCH |
+| Among EUR orders, the last exceeds 100 | Base and verify | MATCH |
+
+For ambiguous wording such as "last order in EUR above 100", ask which meaning
+is intended or explicitly state the interpretation before presenting the result.
+
+Unknown currency means possible membership, not exclusion. A selected candidate
+must satisfy the base currency. When money uses the same resolved reading, its
+currency requirement is already TRUE for the same currency, or FALSE for a
+different currency, regardless of amount readability. This applies inside AND/OR
+at every allowed verify depth. Other readings keep the complete monetary test.
+It does not assert a currency for an event that is not selected or normalize raw
+JSON. With EUR 150 followed by a possible EUR 150, both possible winners pass:
+MATCH. With only a possible EUR 150, absence remains possible: UNKNOWN.
+A USD money leaf under a EUR base is FALSE, not an invalid filter or capability
+error; another OR branch can still pass. All field/operator/operand checks,
+unsupported comparisons and the one-money limit remain in effect.
+
+When the base fixes currency, raw paths overlapping that currency reading are
+temporarily unavailable in both base.where and verify, even without money:
+properties, properties.currency and descendants. Matching uses exact key
+segments; properties.Currency and properties.currency_code are distinct. Raw
+properties.total in verify remains allowed without money. With money, its
+additional raw amount overlaps remain unavailable as before. Invalid parameters
+still take precedence over capability errors.
+
+Experience explanations add currencyField/nativeCurrency for the base only when
+supplied. The money array retains each verify currency and requested/normalized
+comparison. Neither metadata set replaces the other. Experiences without base
+currency retain their prior JSON shape and meaning.
 
 ## Examples
 

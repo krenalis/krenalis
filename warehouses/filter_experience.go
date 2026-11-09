@@ -8,11 +8,15 @@ import "time"
 
 // SelectedOccurrence selects First or Last before verifying possible winners.
 // First chooses the earliest occurrence; its zero value chooses Last.
-// Qualifications are independent local Record outcomes. An unknown qualifier
-// makes that identity optional; it does not declare a latent governed fact.
+// Qualifications are occurrence-local outcomes, independent across identities.
+// An unknown qualifier makes that identity optional. NULL Record outcomes alone
+// do not declare a shared governed fact.
 // Copies must agree on attribution and period membership. Identities not
 // certainly excluded also require equal timestamps, qualification and relevant
 // verification. Identity and timestamps are determined, with no ID tie-break.
+// Verification is conditional on selection: a direct KnownTextEqual conjunct
+// of an AND Qualification fixes the same typed reading in a MoneyQualification,
+// even when its stored value is unknown. Other qualification forms do not.
 type SelectedOccurrence struct {
 	First          bool
 	Source         OccurrenceSource

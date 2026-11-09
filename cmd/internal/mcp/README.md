@@ -112,6 +112,16 @@ reading, including UNKNOWN for missing/null/non-String values. Independent Recor
 forms return `FilterCapabilityNotImplemented`. Explanations include the reference
 and currency only when supplied; existing raw Count documents/results are unchanged.
 
+First/Last accept the same optional pair in `experience.base`, restricting the
+population before selection. A selected candidate satisfies that base currency
+even when its stored currency is unknown. Money verification on the same resolved
+reading tests only the amount for the same currency and is FALSE for a different
+currency. Other readings keep their full tests. Explanations distinguish base
+`currencyField`/`nativeCurrency` from `money[].nativeCurrency` in the verify.
+Raw overlaps with the base currency are unavailable in both base.where and verify;
+the amount remains independent unless money reads it. Old experiences omit the
+new fields. Snowflake retains its unverified-backend gate.
+
 Count supports track (the default), page and screen. Page/screen may omit the
 name to count all messages of that type. A named source certainly excludes
 unnamed messages; a raw `where` on the optional name retains Record NULL.

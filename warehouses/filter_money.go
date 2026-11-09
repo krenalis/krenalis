@@ -14,6 +14,7 @@ import (
 // MoneyQualification combines currency equality and an exact amount test using
 // Kleene AND. Amount and currency are read separately from the same row.
 // Unreadable amounts yield NULL for the amount test.
+// SelectedOccurrence can condition Currency on a required base reading.
 type MoneyQualification struct {
 	Currency  KnownTextEqual
 	Amount    DecimalReading

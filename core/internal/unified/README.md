@@ -845,3 +845,37 @@ Profile explanations append money metadata with the verify path, field and
 currency, plus requested and normalized operator/values. They do not return a
 candidate amount or identity. First/Last preserve compatible winners and possible
 absence; moving a monetary verify into the base would change the request.
+
+### Governed currency before First/Last selection
+
+Experience base accepts Count's currencyField/nativeCurrency pair: both present
+or both omitted, neither explicitly null. NativeCurrency resolves the same field
+and revision for track Order Completed. The prepared Count population receives
+that currency predicate before E selection. No new public rule or persisted
+state.Where form is introduced; Record-only pipelines still reject experiences.
+
+Verification is conditional on membership in that population. The shared
+composer receives the actual prepared base while rendering selected verification.
+For a MoneyQualification, it compares the column name, type, key segments and
+KnownTextEqual reader against a direct conjunct of an AND base. An identical
+reading fixes the currency: same literal renders only the amount comparison;
+a different literal renders FALSE even for an unreadable amount. No match renders
+the complete currency AND amount test. OR or nested base clauses do not provide
+this direct proof. The context propagates through verify groups only; Count,
+Sum, Average and the base itself keep ordinary qualification rendering.
+
+MoneyQualification retains its full currency descriptor, with no standalone
+amount-only node or flag. The conditional rendering cannot be requested outside
+SelectedOccurrence or without the matching required base predicate. Core owns
+source/reference validation and admission: raw overlaps with the base currency
+are unavailable in where and verify, including bodies without money. Money still
+excludes its own raw overlaps and multiple monetary leaves even when a leaf
+becomes FALSE. Invalid configuration precedes unsupported dependencies.
+
+Explanations distinguish base CurrencyField/NativeCurrency from the currency of
+each verify Money leaf. Omitted base currency leaves existing JSON unchanged.
+The new metadata is computed from the semantic request, not from candidate data.
+PostgreSQL tests complete shared currency, independent where membership and amount
+values before chronological selection; absence remains an alternative. Source
+faults still concern relevant qualification/verification outcomes, so two different
+non-EUR currencies are not a fault when both copies are certainly excluded.

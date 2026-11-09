@@ -16,17 +16,19 @@ import (
 // Experience selects the first or last recorded occurrence before verifying it.
 // Where contains local Record predicates; Verify also admits time and money.
 // Unknown local qualifications are independent across determined identities.
+// Currency also fixes that reading when verifying a selected candidate.
 type Experience struct {
-	First  bool
-	Scope  Scope
-	Where  *state.Where
-	Verify *ExperienceVerification
+	First    bool
+	Scope    Scope
+	Where    *state.Where
+	Currency *NativeCurrency
+	Verify   *ExperienceVerification
 }
 
 func (experience *Experience) prepare(at time.Time, source SourceBinding) (warehouses.FilterCondition, error) {
 	// Reuse the recorded-source binding, period and local qualification of Count.
 	population, err := prepareRule(Rule{Count: &Count{Scope: experience.Scope, Where: experience.Where,
-		Test: CountTest{Operator: GreaterOrEqual, Value: 1}}}, Bindings{}, at, source)
+		Currency: experience.Currency, Test: CountTest{Operator: GreaterOrEqual, Value: 1}}}, Bindings{}, at, source)
 	if err != nil {
 		return nil, err
 	}
@@ -59,6 +61,15 @@ func (experience *Experience) validate(at time.Time) error {
 			return err
 		}
 	}
+	if currency := experience.Currency; currency != nil {
+		if experience.Scope.eventType() != "track" || currency.field == nil {
+			return fmt.Errorf("unresolved or incompatible experience currency field")
+		}
+		err := currency.validate(experience.Scope.Event)
+		if err != nil {
+			return err
+		}
+	}
 	nodes := 0
 	err = experience.Verify.validate(at, experience.Scope, 1, &nodes)
 	var unavailable error
@@ -75,7 +86,13 @@ func (experience *Experience) validate(at time.Time) error {
 		}
 		unavailable = err
 	}
-	err = experience.Verify.validateDependencies(experience.Where)
+	if experience.Currency != nil {
+		err = experience.Currency.ValidateWhere(experience.Where)
+		if err != nil {
+			return err
+		}
+	}
+	err = experience.Verify.validateDependencies(experience.Where, experience.Currency)
 	if err != nil {
 		return err
 	}

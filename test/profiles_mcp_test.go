@@ -778,6 +778,100 @@ FROM (VALUES
 			})
 		}
 
+		t.Run("GovernedBase", func(t *testing.T) {
+
+			_, err := pool.Exec(t.Context(), `UPDATE krenalis_events SET timestamp='2026-01-05'
+WHERE message_id IN ('money/1/old','money/2/old');
+INSERT INTO krenalis_events
+(kpid,message_id,event,timestamp,received_at,sent_at,type,connection_id,anonymous_id,traits,properties)
+VALUES ('00000000-0000-0000-0000-000000000001','money/1/optional','Order Completed','2026-01-25',
+'2026-02-01','2026-02-01','track','fixture','a','{}','{"money_fixture":true,"total":150}')`)
+			if err != nil {
+				t.Fatalf("expected possibly EUR latest order, got %v", err)
+			}
+			const fields = `"currencyField":{"definition":"commerce.order_completed.currency",` +
+				`"meaningRevision":"1"},"nativeCurrency":"EUR",`
+			governed := strings.Replace(filter, `"base":{`, `"base":{`+fields, 1)
+			usdMoney := strings.Replace(money, `"nativeCurrency":"EUR"`, `"nativeCurrency":"USD"`, 1)
+			different := strings.Replace(governed, money, usdMoney, 1)
+			withoutMoney := strings.Replace(governed, `,`+money, "", 1)
+
+			for _, test := range []struct{ name, input, totals string }{
+				{"Last EUR", governed, `"match":2,"noMatch":1,"unknown":1`},
+				{"First EUR", strings.Replace(governed, `"kind":"last"`, `"kind":"first"`, 1), `"match":2,"noMatch":1,"unknown":1`},
+				{"USD verify", different, `"match":0,"noMatch":4,"unknown":0`},
+				{"time verify", withoutMoney, `"match":2,"noMatch":1,"unknown":1`},
+				{"USD OR time", strings.Replace(different, `"verify":{"operator":"and"`, `"verify":{"operator":"or"`, 1), `"match":2,"noMatch":1,"unknown":1`},
+			} {
+				t.Run(test.name, func(t *testing.T) {
+					for _, first := range []int{0, 99} {
+						var expected json.RawMessage
+						k.Call("GET", "/v1/profiles?filter="+url.QueryEscape(test.input)+"&at="+url.QueryEscape(at)+
+							"&first="+strconv.Itoa(first), nil, nil, &expected)
+						actual := assertResult(t, tool(t, "query-profiles", map[string]any{
+							"filter": test.input, "at": at, "first": first}))
+						if actual != string(expected) || !strings.Contains(actual, test.totals) ||
+							first == 99 && !strings.HasPrefix(actual, `{"profiles":[]`) {
+							t.Fatalf("expected complete HTTP/MCP base-currency totals %s, got %s", test.totals, actual)
+						}
+					}
+				})
+			}
+
+			for _, test := range []struct{ id, input, result, moneyCurrency string }{
+				{"00000000-0000-0000-0000-000000000001", governed, "MATCH", "EUR"},
+				{"00000000-0000-0000-0000-000000000003", governed, "UNKNOWN", "EUR"},
+				{"00000000-0000-0000-0000-000000000003", different, "NO_MATCH", "USD"},
+				{"00000000-0000-0000-0000-000000000001", withoutMoney, "MATCH", ""},
+			} {
+				var expected json.RawMessage
+				k.Call("GET", "/v1/profiles/"+test.id+"/filter-explanation?filter="+url.QueryEscape(test.input)+
+					"&at="+url.QueryEscape(at), nil, nil, &expected)
+				actual := assertResult(t, tool(t, "explain-profile-filter", map[string]any{
+					"kpid": test.id, "filter": test.input, "at": at}))
+				var explanation struct {
+					Rule struct {
+						Rules []struct {
+							Result     string
+							Experience struct {
+								CurrencyField  struct{ Definition, MeaningRevision string }
+								NativeCurrency string
+								Money          []struct{ NativeCurrency string }
+							}
+						}
+					}
+				}
+				err := json.Unmarshal([]byte(actual), &explanation)
+				if err != nil {
+					t.Fatalf("expected explained base and verify currencies, got %v", err)
+				}
+				if actual != string(expected) || len(explanation.Rule.Rules) != 1 {
+					t.Fatalf("expected identical complete explanation, got %s", actual)
+				}
+				leaf := explanation.Rule.Rules[0]
+				moneyCount := 0
+				if test.moneyCurrency != "" {
+					moneyCount = 1
+				}
+				if leaf.Result != test.result || leaf.Experience.CurrencyField.Definition != "commerce.order_completed.currency" ||
+					leaf.Experience.CurrencyField.MeaningRevision != "1" || leaf.Experience.NativeCurrency != "EUR" ||
+					len(leaf.Experience.Money) != moneyCount ||
+					moneyCount > 0 && leaf.Experience.Money[0].NativeCurrency != test.moneyCurrency {
+					t.Fatalf("expected base EUR, verify %s, outcome %s, got %s", test.moneyCurrency, test.result, actual)
+				}
+			}
+
+			for _, test := range []struct{ input, code string }{
+				{strings.Replace(governed, `"nativeCurrency":"EUR",`, `"nativeCurrency":null,`, 1), "InvalidArguments"},
+				{strings.Replace(governed, `"definition":"commerce.order_completed.currency"`, `"definition":"missing"`, 1), "InvalidArguments"},
+				{strings.Replace(governed, `"nativeCurrency":"EUR",`, "", 1), "InvalidArguments"},
+				{strings.Replace(governed, money, `{"property":"properties.currency","operator":"is null"}`, 1), "FilterCapabilityNotImplemented"},
+			} {
+				assertToolError(t, tool(t, "query-profiles", map[string]any{"filter": test.input, "at": at}), test.code)
+			}
+
+		})
+
 	})
 
 	t.Run("Average", func(t *testing.T) {

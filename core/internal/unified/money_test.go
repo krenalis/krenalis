@@ -111,7 +111,7 @@ func TestMoneyValidation(t *testing.T) {
 		Test: SumTest{Operator: GreaterOrEqual, Value: decimal.MustParse("100")}}
 	body := &ExperienceVerification{Operator: state.OpOr,
 		Children: []ExperienceVerification{{Money: money}, {Money: money}}}
-	err = body.validateDependencies(nil)
+	err = body.validateDependencies(nil, nil)
 	if err != nil {
 		if _, unsupported := errors.AsType[*UnsupportedError](err); !unsupported {
 			t.Fatalf("expected unavailable repeated monetary reading, got %v", err)

@@ -15,7 +15,7 @@ import (
 
 // ExperienceVerification is a closed body owned by the selected occurrence.
 // A node is a Record, timestamp, money predicate or an AND/OR group.
-// It cannot introduce a behavioral scope or shared governed facts.
+// It cannot introduce another scope or facts shared across occurrences.
 type ExperienceVerification struct {
 	Record     *state.WhereCondition
 	OccurredIn *Scope
@@ -113,7 +113,7 @@ func (v *ExperienceVerification) validate(at time.Time, scope Scope, depth int, 
 }
 
 // validateDependencies runs only after body validation, including its budgets.
-func (v *ExperienceVerification) validateDependencies(where *state.Where) error {
+func (v *ExperienceVerification) validateDependencies(where *state.Where, currency *NativeCurrency) error {
 	stack := []*ExperienceVerification{v}
 	var field *MonetaryField
 	count := 0
@@ -134,6 +134,12 @@ func (v *ExperienceVerification) validateDependencies(where *state.Where) error 
 	}
 	if count > 1 {
 		return &UnsupportedError{Capability: "multiple monetary predicates in experience verify"}
+	}
+	if currency != nil && len(records) > 0 {
+		err := currency.ValidateWhere(&state.Where{Operator: state.OpAnd, Rules: records})
+		if err != nil {
+			return err
+		}
 	}
 	if field == nil {
 		return nil
