@@ -75,7 +75,7 @@ func TestAlterProfileSchemaMarksInterruptedOperationAsFailed(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	cancel(errors.New("Krenalis was shut down"))
+	cancel(errors.New("node is shutting down"))
 	err = <-done
 	if err != nil {
 		_, ok := errors.AsType[*warehouses.OperationError](err)
@@ -98,7 +98,7 @@ func TestAlterProfileSchemaMarksInterruptedOperationAsFailed(t *testing.T) {
 	if completedAt == nil {
 		t.Fatal("expected operation to be completed, got uncompleted operation")
 	}
-	const expectedError = "operation interrupted: Krenalis was shut down"
+	const expectedError = "operation interrupted: node is shutting down"
 	if operationError != expectedError {
 		t.Fatalf("expected operation error %q, got %q", expectedError, operationError)
 	}

@@ -545,14 +545,15 @@ func (core *Core) ChangeMemberPasswordByToken(ctx context.Context, token string,
 
 // Close closes the Core. When Close is called, no other calls to Core's methods
 // should be in progress and no other shall be made.
+// cause is the reason for closing.
 // It panics if it has already been called.
-func (core *Core) Close(ctx context.Context) {
+func (core *Core) Close(ctx context.Context, cause error) {
 	if core.closed.Swap(true) {
 		panic("core already closed")
 	}
 	// Cancel pipeline runs initiated via the API, Identity Resolutions, and
 	// profile schema alterations.
-	core.close.cancelCtx(errors.New("Krenalis was shut down"))
+	core.close.cancelCtx(cause)
 	// Close the pipeline scheduler.
 	core.pipelineScheduler.Close()
 	// Wait for the completion of pipelines initiated via API, Identity
