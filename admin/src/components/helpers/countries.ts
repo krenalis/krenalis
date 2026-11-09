@@ -298,8 +298,6 @@ const WITHDRAWN_COUNTRY_RECORDS: readonly CountryRecord[] = [
 	{ alpha2Code: 'ZR', alpha3Code: 'ZAR', name: 'Zaire' },
 ];
 
-const COUNTRY_RECORDS: readonly CountryRecord[] = [...CURRENT_COUNTRY_RECORDS, ...WITHDRAWN_COUNTRY_RECORDS];
-
 const createCountryNameIndex = (format: CountryFormat): ReadonlyMap<string, string | undefined> => {
 	const countryNames = new Map<string, string | undefined>();
 	for (const country of CURRENT_COUNTRY_RECORDS) {
@@ -343,5 +341,4 @@ const getCountryName = (value: unknown, format: CountryFormat | undefined): stri
 	}
 };
 
-export { COUNTRY_RECORDS, getCountryName };
-export type { CountryRecord };
+export { getCountryName };

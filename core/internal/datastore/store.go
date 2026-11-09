@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"math"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -521,7 +522,7 @@ func (store *Store) Profiles(ctx context.Context, query Query, schema types.Type
 
 	store.mustBeOpen()
 
-	if query.First < 0 || query.First > 2147483647 {
+	if query.First < 0 || query.First > math.MaxInt32 {
 		return nil, 0, errors.New("core/internal/datastore: offset is out of range")
 	}
 	if query.Limit < 1 {

@@ -28,17 +28,6 @@ import {
 } from './profilesFilterSession';
 import { createProfilesPreviewTiming, recordProfilesPreviewLatency } from './profilesPreviewTiming';
 
-interface ProfilesFiltersProps {
-	appliedFilter: Filter | null;
-	gridActionContainer: HTMLDivElement | null;
-	onInspectProfiles: () => void;
-	onPreview: (filter: Filter | null, signal?: AbortSignal) => Promise<CountProfilesResponse>;
-	onShow: (filter: Filter | null) => Promise<boolean>;
-	profilesTotal?: number;
-	schema: ObjectType;
-	schemaProperties: ProfileSchemaProperties;
-}
-
 interface ValidatedDraft {
 	filter?: Filter | null;
 	error?: string;
@@ -58,23 +47,10 @@ interface ExpectedDisplayedContext {
 	session: FilterSession;
 }
 
-interface CollapsedFilterChipsProps {
-	disabled: boolean;
-	filter: Filter;
-	onRemove: (ruleIndex: number) => void;
-	propertyLabel: (property: string) => string;
-	summary: string;
-}
-
 interface CollapsedFilterItem {
 	fullLabel: string;
 	label: string;
 	type: 'condition' | 'group';
-}
-
-interface CollapsedFilterChipLabelProps {
-	fullLabel: string;
-	label: string;
 }
 
 const countLeafFilterConditions = (rule: FilterRule): number =>
@@ -121,6 +97,11 @@ const createCollapsedFilterItem = (
 	};
 };
 
+interface CollapsedFilterChipLabelProps {
+	fullLabel: string;
+	label: string;
+}
+
 const CollapsedFilterChipLabel = ({ fullLabel, label }: CollapsedFilterChipLabelProps) => {
 	const labelID = useId();
 	const labelRef = useRef<HTMLSpanElement>(null);
@@ -155,6 +136,14 @@ const CollapsedFilterChipLabel = ({ fullLabel, label }: CollapsedFilterChipLabel
 		</span>
 	);
 };
+
+interface CollapsedFilterChipsProps {
+	disabled: boolean;
+	filter: Filter;
+	onRemove: (ruleIndex: number) => void;
+	propertyLabel: (property: string) => string;
+	summary: string;
+}
 
 const CollapsedFilterChips = ({ disabled, filter, onRemove, propertyLabel, summary }: CollapsedFilterChipsProps) => {
 	const items = useMemo(
@@ -304,6 +293,17 @@ const CollapsedFilterChips = ({ disabled, filter, onRemove, propertyLabel, summa
 		</div>
 	);
 };
+
+interface ProfilesFiltersProps {
+	appliedFilter: Filter | null;
+	gridActionContainer: HTMLDivElement | null;
+	onInspectProfiles: () => void;
+	onPreview: (filter: Filter | null, signal?: AbortSignal) => Promise<CountProfilesResponse>;
+	onShow: (filter: Filter | null) => Promise<boolean>;
+	profilesTotal?: number;
+	schema: ObjectType;
+	schemaProperties: ProfileSchemaProperties;
+}
 
 const ProfilesFilters = ({
 	appliedFilter,
