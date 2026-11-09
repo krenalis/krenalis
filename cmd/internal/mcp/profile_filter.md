@@ -607,7 +607,7 @@ properties.currency is EUR prefilter is therefore unavailable together with
 money in verify: it differs from governed currency on JSON null and must not
 replace the future governed qualification in the base. Never split the tests
 into independent profile conditions to approximate the selected-message request.
-Selecting the last native-EUR order (I029) is not executable yet. Do not
+Selecting the last native-EUR order is not executable yet. Do not
 approximate it with raw currency in base.where and a raw amount test in verify;
 raw predicates do not provide the governed currency and amount reading.
 
