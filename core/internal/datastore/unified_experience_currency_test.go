@@ -265,7 +265,7 @@ INSERT INTO profiles VALUES ('`+unifiedTestID(1)+`'),('`+unifiedTestID(2)+`')`)
 			}
 			result, err := store.UnifiedProfiles(t.Context(), root, unified.Bindings{}, at, unified.Page{Limit: 10})
 			if err != nil {
-				if !test.fault || result != nil {
+				if !test.fault || result != nil || !strings.Contains(err.Error(), "occurrence source violates") {
 					t.Fatalf("expected source fault=%v without partial results, got %+v, %v", test.fault, result, err)
 				}
 			}

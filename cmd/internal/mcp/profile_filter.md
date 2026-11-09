@@ -605,7 +605,7 @@ in base.where or Count/Sum/Average.where is likewise valid but not implemented.
 Money is invalid on the Profiles root and in Record-only pipelines. A raw
 properties.currency is EUR prefilter is therefore unavailable together with
 money in verify: it differs from governed currency on JSON null and must not
-replace the future governed qualification in the base. Never split the tests
+replace the governed base currency described below. Never split the tests
 into independent profile conditions to approximate the selected-message request.
 To select among native-EUR orders, restrict the base using the governed fields
 described below. Raw predicates do not provide the governed currency and amount
@@ -648,8 +648,8 @@ is intended or explicitly state the interpretation before presenting the result.
 
 Unknown currency means possible membership, not exclusion. A selected candidate
 must satisfy the base currency. When money uses the same resolved reading, its
-currency requirement is already TRUE for the same currency, or FALSE for a
-different currency, regardless of amount readability. This applies inside AND/OR
+currency requirement is already TRUE for the same currency. A different currency
+makes the whole leaf FALSE, even with an unreadable amount. This applies inside AND/OR
 at every allowed verify depth. Other readings keep the complete monetary test.
 It does not assert a currency for an event that is not selected or normalize raw
 JSON. With EUR 150 followed by a possible EUR 150, both possible winners pass:

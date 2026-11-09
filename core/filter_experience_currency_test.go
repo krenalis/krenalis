@@ -22,6 +22,8 @@ const experienceCurrencyJSON = `"currencyField":{"definition":"commerce.order_co
 // TestFilterExperienceCurrencyAdmission checks references and compatibility.
 func TestFilterExperienceCurrencyAdmission(t *testing.T) {
 	base := strings.Replace(experienceConditionJSON, `"base":{`, `"base":{`+experienceCurrencyJSON, 1)
+	unavailableWhere := strings.Replace(base, `"base":{`,
+		`"base":{"where":{"operator":"and","rules":[`+moneyConditionJSON+`]},`, 1)
 	for _, test := range []struct {
 		name, input string
 		invalid     bool
@@ -35,10 +37,12 @@ func TestFilterExperienceCurrencyAdmission(t *testing.T) {
 		{"currency only", strings.Replace(base, `"currencyField":{"definition":"commerce.order_completed.currency","meaningRevision":"1"},`, ``, 1), true, false},
 		{"field only", strings.Replace(base, `"nativeCurrency":"EUR",`, ``, 1), true, false},
 		{"currency case", strings.Replace(base, `"nativeCurrency":"EUR"`, `"nativeCurrency":"eur"`, 1), true, false},
+		{"unavailable where invalid currency", strings.Replace(unavailableWhere, experienceCurrencyJSON, strings.Replace(experienceCurrencyJSON, `"EUR"`, `"eur"`, 1), 1), true, false},
+		{"unavailable where incomplete pair", strings.Replace(unavailableWhere, experienceCurrencyJSON, strings.Replace(experienceCurrencyJSON, `"nativeCurrency":"EUR",`, ``, 1), 1), true, false},
 		{"revision", strings.Replace(base, `"definition":"commerce.order_completed.currency","meaningRevision":"1"`, `"definition":"commerce.order_completed.currency","meaningRevision":"2"`, 1), true, false},
 		{"source", strings.Replace(base, `"name":"Order Completed"`, `"name":"Other"`, 1), true, false},
 		{"page", strings.Replace(base, `"kind":"recordedEvents"`, `"kind":"recordedEvents","type":"page"`, 1), true, false},
-		{"different currency equality", strings.Replace(strings.Replace(base, experienceRecordConditionJSON, moneyConditionJSON, 1), `"operator":"is greater than"`, `"operator":"is"`, 1), false, true},
+		{"different currency equality", strings.Replace(strings.Replace(base, experienceRecordConditionJSON, strings.Replace(moneyConditionJSON, `"nativeCurrency":"EUR"`, `"nativeCurrency":"USD"`, 1), 1), `"operator":"is greater than"`, `"operator":"is"`, 1), false, true},
 		{"invalid before equality", strings.Replace(strings.Replace(strings.Replace(base, experienceRecordConditionJSON, moneyConditionJSON, 1), `"operator":"is greater than"`, `"operator":"is"`, 1), experienceCurrencyJSON, strings.Replace(experienceCurrencyJSON, `"EUR"`, `"eur"`, 1), 1), true, false},
 		{"raw total without money", strings.Replace(base, `properties.order_id`, `properties.total`, 1), false, false},
 	} {

@@ -156,7 +156,7 @@ func (c *compiler) qualification(node warehouses.RowQualification) (string, erro
 }
 
 // qualificationGiven closes selected verification under its required base.
-func (c *compiler) qualificationGiven(node warehouses.RowQualification, base warehouses.RowQualification) (string, error) {
+func (c *compiler) qualificationGiven(node, base warehouses.RowQualification) (string, error) {
 	switch n := node.(type) {
 	case *warehouses.RecordQualification:
 		return c.dialect.Record(n.Expr)

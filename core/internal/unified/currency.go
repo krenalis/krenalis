@@ -54,7 +54,7 @@ func (currency *NativeCurrency) ValidateWhere(where *state.Where) error {
 		return &UnsupportedError{Capability: "mixed governed and raw occurrence predicates"}
 	}
 	return validateIndependentWhere(where, [][]string{currency.field.path},
-		"Count qualification dependent on currency")
+		"occurrence predicate dependent on currency")
 }
 
 func (currency *NativeCurrency) validate(event string) error {

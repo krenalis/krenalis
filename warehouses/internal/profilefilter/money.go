@@ -16,7 +16,7 @@ func (c *compiler) money(node *warehouses.MoneyQualification, base warehouses.Ro
 	if c.dialect.ExactDecimal == nil {
 		return "", fmt.Errorf("warehouses/internal/profilefilter: missing exact decimal reading")
 	}
-	currency := ""
+	currencyFixed := false
 	if group, ok := base.(*warehouses.QualificationGroup); ok && group.Operator == warehouses.OpAnd {
 		for _, child := range group.Children {
 			known, ok := child.(*warehouses.KnownTextEqual)
@@ -27,11 +27,12 @@ func (c *compiler) money(node *warehouses.MoneyQualification, base warehouses.Ro
 			if known.Value != node.Currency.Value {
 				return "FALSE", nil
 			}
-			currency = "TRUE"
+			currencyFixed = true
 			break
 		}
 	}
-	if currency == "" {
+	var currency string
+	if !currencyFixed {
 		var err error
 		currency, err = c.qualification(&node.Currency)
 		if err != nil {
@@ -48,7 +49,7 @@ func (c *compiler) money(node *warehouses.MoneyQualification, base warehouses.Ro
 		operator = ">="
 	}
 	comparison := "(" + amount + ")" + operator + threshold
-	if currency == "TRUE" {
+	if currencyFixed {
 		return comparison, nil
 	}
 	return "(" + currency + ") AND (" + comparison + ")", nil
