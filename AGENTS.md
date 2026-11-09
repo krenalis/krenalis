@@ -97,7 +97,7 @@ An unexpected situation is one that callers or invariants rule out, such as an i
 
 ## Tests
 
-If a new test fits into an existing one without changing its logic, for example by adding only a case, add it there; otherwise write a new test.
+Prefer adding a case to an existing test with the same purpose when it fits without changing the test's logic; otherwise write a new test.
 
 Failure messages take the form `expected ..., got ...`.
 
