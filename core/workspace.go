@@ -269,6 +269,9 @@ func (this *Workspace) Attributes(ctx context.Context, kpid string, schema types
 	}
 	kpid = id.String()
 
+	if !schema.Valid() {
+		return nil, errors.BadRequest("schema is required")
+	}
 	if !schema.IsObject() {
 		return nil, errors.BadRequest("schema is not an object type")
 	}
@@ -1406,6 +1409,9 @@ func (this *Workspace) Profiles(ctx context.Context, schema types.Type, properti
 
 	this.core.mustBeOpen()
 
+	if !schema.Valid() {
+		return nil, 0, false, errors.BadRequest("schema is required")
+	}
 	if !schema.IsObject() {
 		return nil, 0, false, errors.BadRequest("schema is not an object type")
 	}

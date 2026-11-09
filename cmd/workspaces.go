@@ -787,9 +787,6 @@ func (workspace workspace) Attributes(_ http.ResponseWriter, r *http.Request) (a
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	if !params.Schema.Valid() {
-		return nil, errors.BadRequest("schema is required")
-	}
 	attributes, err := ws.Attributes(r.Context(), kpid, params.Schema)
 	if err != nil {
 		return nil, err
@@ -1016,9 +1013,6 @@ func (workspace workspace) Profiles(w http.ResponseWriter, r *http.Request) (any
 	err = json.Decode(r.Body, &params)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
-	}
-	if !params.Schema.Valid() {
-		return nil, errors.BadRequest("schema is required")
 	}
 
 	profiles, total, hasNext, err := ws.Profiles(r.Context(),
