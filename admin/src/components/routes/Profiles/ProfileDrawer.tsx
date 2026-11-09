@@ -187,7 +187,7 @@ const ProfileDrawer = () => {
 					<div className='profile-drawer__attributes'>
 						{isAttributesLoading && attributes == null ? (
 							spinner
-						) : displayedAttributes && Object.keys(displayedAttributes).length > 0 ? (
+						) : displayedAttributes != null && Object.keys(displayedAttributes).length > 0 ? (
 							Object.entries(displayedAttributes).map(([name, value]) => {
 								const path = name;
 								if (typeof value === 'object') {

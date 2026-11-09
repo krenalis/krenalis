@@ -450,7 +450,7 @@ const SchemaEdit = ({ initialPropertyKey }: SchemaEditProps) => {
 						<Grid
 							rows={rows}
 							columns={columns}
-							keyboardNavigation={isGridKeyboardNavigationEnabled ? 'tree' : undefined}
+							keyboardNavigation={isGridKeyboardNavigationEnabled}
 							gridColumnsWidths={schemaEditGridColumns}
 							nestedRowsIndentation={schemaPropertyGridNestedRowsIndentation}
 							noRowsIcon='search'

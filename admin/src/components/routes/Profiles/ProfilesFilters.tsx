@@ -12,7 +12,7 @@ import { ObjectType } from '../../../lib/api/types/types';
 import { isFilterGroup, validateAndNormalizeFilter } from '../../../lib/core/pipeline';
 import { formatNumber } from '../../../utils/formatNumber';
 import { serializeFilter } from '../../../utils/filters';
-import { getProfilePropertyPathLabel } from './Profiles.helpers';
+import { getPropertyPathDisplayValue } from '../../helpers/getPropertyPathDisplayValue';
 import { ProfileSchemaProperties } from './Profiles.types';
 import {
 	cloneProfileFilter,
@@ -388,7 +388,7 @@ const ProfilesFilters = ({
 	const previewFilterDiffersFromGrid =
 		profileFilterResultsFingerprint(historyEntry.filter) !== profileFilterResultsFingerprint(appliedFilter);
 	const propertyLabel = useCallback(
-		(property: string) => getProfilePropertyPathLabel(property, schemaProperties),
+		(property: string) => getPropertyPathDisplayValue(property, (path) => schemaProperties[path]),
 		[schemaProperties],
 	);
 	const summary = useMemo(

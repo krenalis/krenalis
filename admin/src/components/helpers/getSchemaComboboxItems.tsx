@@ -5,6 +5,7 @@ import { ConnectionRole } from '../../lib/api/types/connection';
 import { ComboboxItem } from '../base/Combobox/Combobox.types';
 import { TypeIcon } from '../base/TypeIcon/TypeIcon';
 import { PipelineTarget } from '../../lib/api/types/pipeline';
+import { getPropertyPathDisplayValue } from './getPropertyPathDisplayValue';
 
 const getSchemaComboboxItems = (schema: ObjectType | FlatSchema, toHide?: string[]): ComboboxItem[] => {
 	if (schema == null) {
@@ -64,7 +65,7 @@ const getFilterPropertyComboboxItems = (
 		}
 		filteredSchema[name] = property;
 	}
-	return computeItems(filteredSchema, (name) => getPropertyPathDisplayValue(name, flatSchema));
+	return computeItems(filteredSchema, (name) => getPropertyPathDisplayValue(name, (path) => flatSchema[path]?.full));
 };
 
 const getUserIDColumnComboboxItems = (schema: ObjectType): ComboboxItem[] => {
@@ -143,19 +144,6 @@ const getTableKeyComboboxItems = (schema: ObjectType): ComboboxItem[] => {
 		}
 	}
 	return computeItems(filteredSchema);
-};
-
-const getPropertyPathDisplayValue = (name: string, schema: FlatSchema): string => {
-	let path = '';
-	const labels: string[] = [];
-	for (const fragment of name.split('.')) {
-		path = path === '' ? fragment : `${path}.${fragment}`;
-		const property = schema[path]?.full;
-		const displayName = property?.displayName?.trim() ?? '';
-		const propertyName = property?.name ?? '';
-		labels.push(displayName !== '' ? displayName : propertyName !== '' ? propertyName : fragment);
-	}
-	return labels.join(' › ');
 };
 
 const computeItems = (schema: FlatSchema, getDisplayValue?: (name: string) => string) => {

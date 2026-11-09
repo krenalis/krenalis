@@ -41,8 +41,6 @@ interface GridNestedRowsIndentation {
 	step: number;
 }
 
-type GridKeyboardNavigationMode = 'rows' | 'tree';
-
 interface GridRef {
 	collapse: () => void;
 	expand: () => void;
@@ -62,7 +60,6 @@ export type {
 	GridRow,
 	GridCell,
 	GridNestedRowsIndentation,
-	GridKeyboardNavigationMode,
 	GridRef,
 	StandardGridRow,
 	NestedGridRows,

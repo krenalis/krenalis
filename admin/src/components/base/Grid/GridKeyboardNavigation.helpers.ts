@@ -1,5 +1,4 @@
 import type React from 'react';
-import { GridKeyboardNavigationMode } from './Grid.types';
 
 const gridNavigationKeys = ['ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowUp'] as const;
 const gridKeyboardControlSelector = [
@@ -58,10 +57,9 @@ const navigateGrid = (
 	grid: HTMLElement,
 	key: string,
 	shiftKey: boolean,
-	mode: GridKeyboardNavigationMode,
 	onMoveRow?: (overRowID: string, movedRowID: string) => void,
 ): boolean => {
-	if (!isGridNavigationKey(key) || (mode === 'rows' && (key === 'ArrowLeft' || key === 'ArrowRight'))) {
+	if (!isGridNavigationKey(key)) {
 		return false;
 	}
 	const isMove = shiftKey && onMoveRow != null && (key === 'ArrowDown' || key === 'ArrowUp');
@@ -134,13 +132,12 @@ const navigateGrid = (
 
 const navigateGridWithKeyboard = (
 	event: React.KeyboardEvent<HTMLDivElement>,
-	mode: GridKeyboardNavigationMode,
 	onMoveRow?: (overRowID: string, movedRowID: string) => void,
 ) => {
 	if (event.target !== event.currentTarget || event.altKey || event.ctrlKey || event.metaKey) {
 		return;
 	}
-	if (navigateGrid(event.currentTarget, event.key, event.shiftKey, mode, onMoveRow)) {
+	if (navigateGrid(event.currentTarget, event.key, event.shiftKey, onMoveRow)) {
 		event.preventDefault();
 	}
 };

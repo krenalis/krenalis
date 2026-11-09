@@ -10,7 +10,7 @@ import { CountProfilesResponse, FindProfilesResponse } from '../../../lib/api/ty
 import { ProfilePropertyRoles } from '../../../lib/api/types/workspace';
 import { flattenSchema } from '../../../lib/core/pipeline';
 import { PROFILES_PROPERTIES_KEY } from '../../../constants/storage';
-import { getProfilePropertyPathLabel } from './Profiles.helpers';
+import { getPropertyPathDisplayValue } from '../../helpers/getPropertyPathDisplayValue';
 import {
 	createProfilesQueryKey,
 	createProfilesSequenceState,
@@ -750,7 +750,7 @@ const profileMetadata = (schema: ObjectType) => {
 		const preference = preferences.find((property) => property.name === path);
 		const isTypeChanged = preference != null && preference.type !== flatSchema[path].type;
 		properties.push({
-			label: getProfilePropertyPathLabel(path, schemaProperties),
+			label: getPropertyPathDisplayValue(path, (path) => schemaProperties[path]),
 			name: path,
 			isUsed: preference != null && !isTypeChanged ? preference.isUsed : true,
 			type: flatSchema[path].type,

@@ -24,12 +24,6 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 
-interface GridHeaderRowProps {
-	columns: GridColumn[];
-	onSortColumn?: (overColumnKey: string, movedColumnKey: string) => void;
-	semanticRow?: boolean;
-}
-
 interface SortableGridHeaderCellProps {
 	className: string;
 	column: GridColumn;
@@ -70,6 +64,12 @@ const SortableGridHeaderCell = ({ className, column, columnKey, semanticCell }: 
 		/>
 	);
 };
+
+interface GridHeaderRowProps {
+	columns: GridColumn[];
+	onSortColumn?: (overColumnKey: string, movedColumnKey: string) => void;
+	semanticRow?: boolean;
+}
 
 const GridHeaderRow = ({ columns, onSortColumn, semanticRow }: GridHeaderRowProps) => {
 	const [activeColumnKey, setActiveColumnKey] = useState<string>();

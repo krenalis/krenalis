@@ -4,7 +4,6 @@ import GridHeaderRow from './GridHeaderRow/GridHeaderRow';
 import {
 	GridRow as GridRowType,
 	GridColumn,
-	GridKeyboardNavigationMode,
 	GridNestedRowsIndentation,
 	GridRef,
 	NestedGridRows,
@@ -47,7 +46,7 @@ interface GridProps {
 	isShown?: boolean;
 	loadingText?: string;
 	nestedRowsIndentation?: GridNestedRowsIndentation;
-	keyboardNavigation?: GridKeyboardNavigationMode;
+	keyboardNavigation?: boolean;
 	reordering?: GridReordering;
 	activeRowID?: string;
 	ariaLabel?: string;
@@ -138,13 +137,7 @@ const Grid = forwardRef<GridRef, GridProps>(
 				navigate: (key: string, shiftKey = false) => {
 					return gridRef.current == null
 						? false
-						: navigateGrid(
-								gridRef.current,
-								key,
-								shiftKey,
-								keyboardNavigation ?? 'tree',
-								reorderDisabled ? undefined : onSortRow,
-							);
+						: navigateGrid(gridRef.current, key, shiftKey, reorderDisabled ? undefined : onSortRow);
 				},
 				scrollRowIntoView: (id: string) => {
 					const rows = gridRef.current?.querySelectorAll('.grid__row[data-id]') as
@@ -157,7 +150,7 @@ const Grid = forwardRef<GridRef, GridProps>(
 					}
 				},
 			};
-		}, [keyboardNavigation, onSortRow, reorderDisabled]);
+		}, [onSortRow, reorderDisabled]);
 
 		const { rowComponents, sortableRowComponents } = useMemo(() => {
 			const rowComponents = [] as ReactNode[];
@@ -237,8 +230,8 @@ const Grid = forwardRef<GridRef, GridProps>(
 				}
 				return;
 			}
-			if (keyboardNavigation != null) {
-				navigateGridWithKeyboard(event, keyboardNavigation, reorderDisabled ? undefined : onSortRow);
+			if (keyboardNavigation) {
+				navigateGridWithKeyboard(event, reorderDisabled ? undefined : onSortRow);
 			}
 		};
 
@@ -255,12 +248,10 @@ const Grid = forwardRef<GridRef, GridProps>(
 						? `${gridID}-row-${encodeURIComponent(activeRowID)}`
 						: undefined
 				}
-				tabIndex={keyboardNavigation != null || hasControlledActiveItem ? 0 : undefined}
-				onClick={
-					keyboardNavigation != null || hasControlledActiveItem ? focusGridForKeyboardNavigation : undefined
-				}
+				tabIndex={keyboardNavigation || hasControlledActiveItem ? 0 : undefined}
+				onClick={keyboardNavigation || hasControlledActiveItem ? focusGridForKeyboardNavigation : undefined}
 				onScroll={(event) => setIsScrolledVertically(event.currentTarget.scrollTop > 0)}
-				onKeyDown={keyboardNavigation != null || hasControlledActiveItem ? onGridKeyDown : undefined}
+				onKeyDown={keyboardNavigation || hasControlledActiveItem ? onGridKeyDown : undefined}
 			>
 				{isLoading ? (
 					<div className='grid__loading'>

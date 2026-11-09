@@ -60,21 +60,4 @@ const getProfilePropertyLabel = (path: string, properties: ProfileSchemaProperti
 	return displayName !== '' ? displayName : property.name;
 };
 
-const getProfilePropertyPathLabel = (path: string, properties: ProfileSchemaProperties): string => {
-	let propertyPath = '';
-	const labels: string[] = [];
-	for (const fragment of path.split('.')) {
-		propertyPath = propertyPath === '' ? fragment : `${propertyPath}.${fragment}`;
-		labels.push(getProfilePropertyLabel(propertyPath, properties));
-	}
-
-	return labels.join(' › ');
-};
-
-export {
-	getProfileAttributeString,
-	getProfileAvatarColors,
-	getProfileInitials,
-	getProfilePropertyLabel,
-	getProfilePropertyPathLabel,
-};
+export { getProfileAttributeString, getProfileAvatarColors, getProfileInitials, getProfilePropertyLabel };
