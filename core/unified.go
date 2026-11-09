@@ -39,6 +39,9 @@ func (this *Workspace) unifiedProfiles(ctx context.Context, query unifiedQuery) 
 }
 
 // prepareUnifiedRecordCount reuses the existing schema-aware event preparer.
+// With *unified.UnsupportedError it returns Scope and Test in a partial Count
+// without qualification, so callers can validate remaining parameters.
+// That partial rule must not be executed.
 func prepareUnifiedRecordCount(scope unified.Scope, filter *Filter, test unified.CountTest) (unified.Rule, error) {
 	var where *state.Where
 	if filter != nil {

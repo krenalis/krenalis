@@ -88,17 +88,11 @@ func (money *Money) prepare(source SourceBinding) (warehouses.RowQualification, 
 			return nil, fmt.Errorf("core/internal/unified: invalid resolved monetary path")
 		}
 	}
-	node := &warehouses.MoneyQualification{
+	return &warehouses.MoneyQualification{
 		Currency: warehouses.KnownTextEqual{Column: source.Properties,
 			Keys: slices.Clone(money.Field.currencyPath[1:]), Value: money.NativeCurrency},
 		Amount: warehouses.DecimalReading{Column: source.Properties,
 			Keys: slices.Clone(money.Field.amountPath[1:]), Type: money.Field.amountType},
 		Threshold: test.Value, AtLeast: test.Operator == GreaterOrEqual,
-	}
-	limit := decimal.MustParse("1e14")
-	if test.Value.Equal(limit) || test.Value.Equal(limit.Neg()) {
-		known := node.AtLeast == test.Value.Less(decimal.Decimal{})
-		node.KnownResult = &known
-	}
-	return node, nil
+	}, nil
 }

@@ -26,19 +26,17 @@ func TestProfileFilterMoneySQL(t *testing.T) {
 	properties := warehouses.Column{Name: "properties", Type: types.JSON()}
 	request := warehouses.ProfileOutcomeRequest{Population: warehouses.ProfileSource{Table: "profiles",
 		Key: warehouses.Column{Name: "_kpid", Type: types.UUID()}}, Limit: 10}
-	yes, no := true, false
 	for _, test := range []struct {
 		threshold string
 		atLeast   bool
-		known     *bool
 	}{
-		{"100.0001", true, nil}, {"-100.0001", false, nil},
-		{"1e14", true, &no}, {"-1e14", true, &yes},
+		{"100.0001", true}, {"-100.0001", false},
+		{"1e14", true}, {"-1e14", true}, {"1e14", false}, {"-1e14", false},
 	} {
 		money := &warehouses.MoneyQualification{
 			Currency:  warehouses.KnownTextEqual{Column: properties, Keys: []string{"currency"}, Value: "EUR"},
 			Amount:    warehouses.DecimalReading{Column: properties, Keys: []string{"total"}, Type: types.Decimal(18, 4)},
-			Threshold: decimal.MustParse(test.threshold), AtLeast: test.atLeast, KnownResult: test.known,
+			Threshold: decimal.MustParse(test.threshold), AtLeast: test.atLeast,
 		}
 		// Two user groups must still leave room for the closed monetary leaf.
 		verify := &warehouses.QualificationGroup{Operator: warehouses.OpAnd,
@@ -54,23 +52,12 @@ func TestProfileFilterMoneySQL(t *testing.T) {
 			t.Fatalf("expected exact typed monetary arguments, got %v", err)
 		}
 		expected := 3
-		if test.known != nil {
-			truth := "FALSE"
-			if *test.known {
-				truth = "TRUE"
-			}
-			if !strings.Contains(statement.SQL, "IS NULL THEN CAST(NULL AS BOOLEAN) ELSE "+truth+" END") {
-				t.Fatalf("expected readable-only precomputed result, got %s", statement.SQL)
-			}
-		}
 		if len(values) != expected || values[2] != "EUR" {
 			t.Fatalf("expected %d arguments with native currency, got %v", expected, values)
 		}
-		if test.known == nil {
-			literal := fmt.Sprintf("CAST('%.4f' AS DECIMAL(38,4))", money.Threshold)
-			if !strings.Contains(statement.SQL, literal) {
-				t.Fatalf("expected exact normalized decimal %s, got %s", literal, statement.SQL)
-			}
+		literal := fmt.Sprintf("CAST('%.4f' AS DECIMAL(38,4))", money.Threshold)
+		if !strings.Contains(statement.SQL, literal) {
+			t.Fatalf("expected exact normalized decimal %s, got %s", literal, statement.SQL)
 		}
 		explained, err := profilefilter.BuildExplanation(warehouses.Filter{Root: node}, request.Population,
 			"00000000-0000-0000-0000-000000000001", profileFilterDialect())

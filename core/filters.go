@@ -1094,9 +1094,9 @@ func prepareFilterGroup(filter *Filter, validation *filterValidation, depth int)
 			return nil, errors.New("unsupported filter rule")
 		}
 	}
-
 	if unavailable != nil {
 		return nil, unavailable
 	}
+
 	return where, nil
 }

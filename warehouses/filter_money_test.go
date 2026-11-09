@@ -15,7 +15,6 @@ import (
 // TestValidateMoneyQualification checks the prepared reading and threshold.
 func TestValidateMoneyQualification(t *testing.T) {
 	end := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
-	yes := true
 	for _, test := range []struct {
 		name   string
 		change func(*MoneyQualification)
@@ -27,8 +26,6 @@ func TestValidateMoneyQualification(t *testing.T) {
 		{"currency key", func(m *MoneyQualification) { m.Currency.Keys = []string{"\x00"} }},
 		{"threshold scale", func(m *MoneyQualification) { m.Threshold = decimal.MustParse("0.00001") }},
 		{"threshold bound", func(m *MoneyQualification) { m.Threshold = decimal.MustParse("1e15") }},
-		{"constant away from bound", func(m *MoneyQualification) { m.KnownResult = &yes }},
-		{"wrong constant", func(m *MoneyQualification) { m.Threshold = decimal.MustParse("1e14"); m.KnownResult = &yes }},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			properties := Column{Name: "properties", Type: types.JSON()}

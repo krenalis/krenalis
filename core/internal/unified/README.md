@@ -823,13 +823,14 @@ reporting unsupported comparisons. Its four ordered operators normalize to
 inclusive Decimal(18,4) grid bounds, with thresholds clipped to +/-1e14 only for
 readable values. Original tests remain on the semantic node for explanations.
 
-The prepared warehouses.MoneyQualification contains the two resolved readings,
-an inclusive threshold and an optional result for readable amounts. The shared
-composer reuses ExactDecimal, KnownText and the exact normalized literal form
-used by Sum. It combines both tests using SQL Kleene AND; unknown currency with
-a false readable amount test is false. No SQL or dialect enters core and no
-warehouse transport or explanation row schema is added. The two backend local
-suites are mirrored; Snowflake remains gated pending real verification.
+The prepared warehouses.MoneyQualification contains the two resolved readings
+and an inclusive threshold. The shared composer reuses ExactDecimal, KnownText
+and the exact normalized literal form used by Sum. It combines both tests using
+SQL Kleene AND; unknown currency with a false readable amount test is false.
+Direct comparisons with the bounded threshold also preserve NULL for unreadable
+amounts at the extremes. No SQL or dialect enters core and no warehouse transport
+or explanation row schema is added. The two backend local suites are mirrored;
+Snowflake remains gated pending real verification.
 
 Experience body validation permits one money predicate, including under OR,
 and rejects raw overlaps with its bound amount/currency paths in both the base

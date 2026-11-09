@@ -24,6 +24,9 @@ const moneyConditionJSON = `{"money":{"field":{"definition":"commerce.order_comp
 // TestFilterMoneyAdmission distinguishes validity from availability.
 func TestFilterMoneyAdmission(t *testing.T) {
 	base := strings.Replace(experienceConditionJSON, experienceRecordConditionJSON, moneyConditionJSON, 1)
+	otherCurrency := strings.Replace(moneyConditionJSON, `"nativeCurrency":"EUR"`, `"nativeCurrency":"USD"`, 1)
+	nestedMoney := `{"operator":"or","rules":[{"property":"event","operator":"is","values":["Other"]},` +
+		otherCurrency + `]}`
 	for _, test := range []struct {
 		name, input string
 		invalid     bool
@@ -46,6 +49,7 @@ func TestFilterMoneyAdmission(t *testing.T) {
 		{"state operator", strings.Replace(base, `is greater than`, `exists`, 1), true, false},
 		{"equality", strings.Replace(base, `is greater than`, `is`, 1), false, true},
 		{"different", strings.Replace(base, `is greater than`, `is not`, 1), false, true},
+		{"second money under OR", strings.Replace(base, moneyConditionJSON, moneyConditionJSON+`,`+nestedMoney, 1), false, true},
 		{"interval", strings.Replace(strings.Replace(base, `is greater than`, `is between`, 1), `[100]`, `[100,200]`, 1), false, true},
 		{"inverted interval", strings.Replace(strings.Replace(base, `is greater than`, `is between`, 1), `[100]`, `[200,100]`, 1), true, false},
 		{"field", strings.Replace(base, `commerce.order_completed.total`, `unknown`, 1), true, false},
@@ -258,12 +262,12 @@ func TestFilterMoneyWhere(t *testing.T) {
 		strings.Replace(averageConditionJSON, `"average":{`,
 			`"average":{"where":{"operator":"and","rules":[`+moneyConditionJSON+`]},`, 1),
 	} {
-		for _, inverse := range []bool{false, true} {
-			bad := `{"property":"unknown","operator":"is","values":[1]}`
-			pair := moneyConditionJSON + `,` + bad
-			if inverse {
-				pair = bad + `,` + moneyConditionJSON
-			}
+		bad := `{"property":"unknown","operator":"is","values":[1]}`
+		nestedMoney := `{"operator":"or","rules":[` + moneyConditionJSON + `]}`
+		for _, pair := range []string{
+			moneyConditionJSON + `,` + bad, bad + `,` + moneyConditionJSON,
+			nestedMoney + `,` + bad, bad + `,` + nestedMoney,
+		} {
 			invalid := strings.Replace(input, moneyConditionJSON, pair, 1)
 			var filter Filter
 			err := json.Unmarshal([]byte(`{"operator":"and","rules":[`+invalid+`]}`), &filter)
@@ -323,6 +327,7 @@ func TestFilterMoneyWhereParameters(t *testing.T) {
 		unsupported bool
 	}{
 		{strings.Replace(base, `"count":{`, `"count":{"nativeCurrency":"EUR",`, 1), false},
+		{strings.Replace(base, `"count":{`, `"count":{"currencyField":{"definition":"commerce.order_completed.currency","meaningRevision":"1"},"nativeCurrency":"EUR",`, 1), true},
 		{largePeriod, true},
 		{strings.Replace(largePeriod, `commerce.order_completed.total`, `unresolved`, 1), false},
 	} {

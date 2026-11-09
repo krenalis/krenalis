@@ -22,20 +22,11 @@ func (c *compiler) money(node *warehouses.MoneyQualification) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	var comparison string
-	if node.KnownResult != nil {
-		known := "FALSE"
-		if *node.KnownResult {
-			known = "TRUE"
-		}
-		comparison = "CASE WHEN (" + amount + ") IS NULL THEN CAST(NULL AS BOOLEAN) ELSE " + known + " END"
-	} else {
-		threshold := fmt.Sprintf("CAST('%.4f' AS DECIMAL(38,4))", node.Threshold)
-		operator := "<="
-		if node.AtLeast {
-			operator = ">="
-		}
-		comparison = "(" + amount + ")" + operator + threshold
+	threshold := fmt.Sprintf("CAST('%.4f' AS DECIMAL(38,4))", node.Threshold)
+	operator := "<="
+	if node.AtLeast {
+		operator = ">="
 	}
+	comparison := "(" + amount + ")" + operator + threshold
 	return "(" + currency + ") AND (" + comparison + ")", nil
 }
