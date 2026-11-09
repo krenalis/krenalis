@@ -97,7 +97,7 @@ An unexpected situation is one that callers or invariants rule out, such as an i
 
 ## Tests
 
-Add a case to an existing test only when it belongs to that test's battery: it checks the same behavior and fits the existing setup, inputs, and assertions without new fields, branches, or setup. Otherwise add a new test function.
+If a new test fits into an existing one without changing its logic, for example by adding only a case, add it there; otherwise write a new test.
 
 Failure messages take the form `expected ..., got ...`.
 
