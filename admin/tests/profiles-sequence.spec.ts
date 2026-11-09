@@ -1,8 +1,14 @@
 import { expect, test } from '@playwright/test';
 import { ResponseProfile } from '../src/lib/api/types/responses';
-import { Filter, FilterCondition } from '../src/lib/api/types/pipeline';
+import { Filter, FilterCondition, FilterOperator } from '../src/lib/api/types/pipeline';
 import { ObjectType } from '../src/lib/api/types/types';
-import { validateAndNormalizeFilter } from '../src/lib/core/pipeline';
+import {
+	FILTER_OPERATORS,
+	flattenSchema,
+	getCompatibleFilterOperators,
+	isUnaryOperator,
+	validateAndNormalizeFilter,
+} from '../src/lib/core/pipeline';
 import {
 	createProfilesQueryKey,
 	createProfilesSequenceState,
@@ -268,6 +274,51 @@ test(`Normalize filter drafts without silently accepting partial conditions`, ()
 			filterSchema,
 		),
 	).toEqual({ operator: 'and', rules: [{ property: 'email', operator: 'does not exist' }] });
+
+	for (const { values, nullable, readOptional, unaryOperators } of [
+		{ values: ['', 'active'], nullable: false, readOptional: false, unaryOperators: ['is empty', 'is not empty'] },
+		{ values: ['active'], nullable: true, readOptional: false, unaryOperators: ['is null', 'is not null'] },
+		{ values: ['active'], nullable: false, readOptional: true, unaryOperators: ['exists', 'does not exist'] },
+		{ values: ['active'], nullable: false, readOptional: false, unaryOperators: [] },
+	] satisfies { values: string[]; nullable: boolean; readOptional: boolean; unaryOperators: FilterOperator[] }[]) {
+		const schema: ObjectType = {
+			kind: 'object',
+			properties: [{ ...filterSchema.properties[0], type: { kind: 'string', values }, nullable, readOptional }],
+		};
+		const expectedOperators: FilterOperator[] = [
+			'is',
+			'is not',
+			'contains',
+			'does not contain',
+			'is one of',
+			'is not one of',
+			...unaryOperators,
+		];
+		expect(
+			getCompatibleFilterOperators(flattenSchema(schema).email, false).map((index) => FILTER_OPERATORS[index]),
+		).toEqual(expectedOperators);
+		for (const operator of [
+			'contains',
+			'does not contain',
+			'is empty',
+			'is not empty',
+			'is null',
+			'is not null',
+			'exists',
+			'does not exist',
+		] satisfies FilterOperator[]) {
+			const condition: FilterCondition = { property: 'email', operator };
+			if (!isUnaryOperator(operator)) {
+				condition.values = ['active'];
+			}
+			const filter: Filter = { operator: 'and', rules: [condition] };
+			if (expectedOperators.includes(operator)) {
+				expect(validateAndNormalizeFilter(filter, schema)).toEqual(filter);
+			} else {
+				expect(() => validateAndNormalizeFilter(filter, schema)).toThrow('cannot be used with property');
+			}
+		}
+	}
 });
 
 test(`Initialize filter history from the displayed filter and last observed total`, () => {

@@ -341,17 +341,29 @@ const getCompatibleFilterOperators = (property: TransformedProperty, hasPath: bo
 			}
 		}
 
-		// text property with values can only be used with the operators
-		// 'is', 'is not', 'is one of', and 'is not one of'.
+		// Strings with allowed values do not support ordering, ranges,
+		// or prefix/suffix comparisons.
 		if (property.type === 'string' && (property.full.type as StringType).values != null) {
 			switch (op) {
-				case 'is':
-				case 'is not':
-				case 'is one of':
-				case 'is not one of':
-					break;
-				default:
+				case 'is less than':
+				case 'is less than or equal to':
+				case 'is greater than':
+				case 'is greater than or equal to':
+				case 'is between':
+				case 'is not between':
+				case 'starts with':
+				case 'ends with':
 					continue;
+				case 'is empty':
+				case 'is not empty': {
+					const values = (property.full.type as StringType).values!;
+					if (values.length > 0 && !values.includes('')) {
+						continue;
+					}
+					break;
+				}
+				default:
+					break;
 			}
 		}
 
