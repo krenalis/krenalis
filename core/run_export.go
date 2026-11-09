@@ -102,7 +102,7 @@ func (this *Pipeline) exportProfiles(ctx context.Context) error {
 			return newPipelineError(metrics.ReceiveStep, err)
 		}
 		switch err := err.(type) {
-		case *datastore.UnavailableError:
+		case *datastore.WarehouseError:
 			return err
 		case *datastore.ConsentConditionError:
 			return newPipelineError(metrics.ExportProfileConsentStep, err)

@@ -164,7 +164,7 @@ func records(ctx context.Context, warehouse warehouses.Warehouse, query Query, c
 		Limit:     query.Limit,
 	}, false)
 	if err != nil {
-		return nil, unavailableError(err)
+		return nil, warehouseError(err)
 	}
 
 	records := &Records{

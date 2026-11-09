@@ -146,7 +146,7 @@ func (this *Workspace) PreviewAlterProfileSchema(ctx context.Context, schema typ
 	}
 	queries, err := this.store.PreviewAlterProfileSchema(ctx, schema, operations)
 	if err != nil {
-		if err, ok := err.(*datastore.UnavailableError); ok {
+		if err, ok := err.(*datastore.WarehouseError); ok {
 			return nil, errors.Unavailable("%s", err)
 		}
 		return nil, err
