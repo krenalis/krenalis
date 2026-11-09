@@ -960,7 +960,7 @@ func (store *Store) query(ctx context.Context, query Query, columnByProperty map
 		Limit:     query.Limit,
 	}, true)
 	if err != nil {
-		return nil, 0, unavailableError(err)
+		return nil, 0, err
 	}
 
 	records := make([]map[string]any, 0)
@@ -968,14 +968,13 @@ func (store *Store) query(ctx context.Context, query Query, columnByProperty map
 	defer rows.Close()
 	row := make([]any, len(columns))
 	for rows.Next() {
-		err = rows.Scan(row...)
-		if err != nil {
-			return nil, 0, unavailableError(err)
+		if err := rows.Scan(row...); err != nil {
+			return nil, 0, err
 		}
 		records = append(records, unflat(row))
 	}
 	if err = rows.Err(); err != nil {
-		return nil, 0, unavailableError(err)
+		return nil, 0, err
 	}
 
 	// Since total is an estimate, being counted separately from the actual
