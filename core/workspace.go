@@ -272,18 +272,21 @@ func (this *Workspace) Attributes(ctx context.Context, kpid string, schema types
 	if !schema.IsObject() {
 		return nil, errors.BadRequest("schema is not an object type")
 	}
-
-	// Retrieve the profile attributes.
+	properties := schema.Properties().Names()
 	where := &state.Where{
 		Operator: state.OpAnd,
-		Rules: []state.WhereRule{&state.WhereCondition{
-			Property: []string{"_kpid"},
-			Operator: state.OpIs,
-			Values:   []any{kpid},
-		}},
+		Rules: []state.WhereRule{
+			&state.WhereCondition{
+				Property: []string{"_kpid"},
+				Operator: state.OpIs,
+				Values:   []any{kpid},
+			},
+		},
 	}
+
+	// Retrieve the profile attributes.
 	profiles, _, err := this.store.Profiles(ctx, datastore.Query{
-		Properties: schema.Properties().Names(),
+		Properties: properties,
 		Where:      where,
 		Limit:      1,
 	}, schema)
