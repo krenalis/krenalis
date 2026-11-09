@@ -13,12 +13,14 @@ import (
 	"github.com/krenalis/krenalis/warehouses"
 )
 
-// Experience selects the first or last recorded occurrence before verifying it.
+// Experience selects First, Last or Nth before verifying the occurrence.
+// Nth is a position from 1 to 10; zero leaves First or Last in effect.
 // Where contains local Record predicates; Verify also admits time and money.
 // Unknown local qualifications are independent across determined identities.
 // Currency also fixes that reading when verifying a selected candidate.
 type Experience struct {
 	First    bool
+	Nth      int
 	Scope    Scope
 	Where    *state.Where
 	Currency *NativeCurrency
@@ -40,7 +42,7 @@ func (experience *Experience) prepare(at time.Time, source SourceBinding) (wareh
 	if err != nil {
 		return nil, err
 	}
-	return &warehouses.SelectedOccurrence{First: experience.First, Source: count.Source,
+	return &warehouses.SelectedOccurrence{First: experience.First, Nth: experience.Nth, Source: count.Source,
 		Start: count.Start, End: count.End,
 		UnboundedStart: count.UnboundedStart, Qualification: count.Qualification,
 		Verify: verify}, nil
@@ -49,6 +51,9 @@ func (experience *Experience) prepare(at time.Time, source SourceBinding) (wareh
 func (experience *Experience) validate(at time.Time) error {
 	if experience == nil || experience.Verify == nil {
 		return fmt.Errorf("experience requires verify")
+	}
+	if experience.Nth < 0 || experience.Nth > 10 || experience.First && experience.Nth != 0 {
+		return fmt.Errorf("invalid experience selector position")
 	}
 	err := experience.Scope.validateSource()
 	if err != nil {

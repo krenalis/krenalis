@@ -403,9 +403,9 @@ neither is a rounded average. Count is null when membership is uncertain. Sum is
 null unless membership and all amounts are known. Null never means zero. An
 empty population reports sum=0 and count=0, while its required guard fails.
 
-## Selected Experience: First/Last then verify
+## Selected Experience: First/Last/Nth then verify
 
-An `experience` rule selects the first or last recorded message from a declared base,
+An `experience` rule selects the first, last or Nth recorded message from a declared base,
 then verifies that message. It is a complete predicate, without an outer
 `operator` or `values`. For profiles whose last Order Completed reports an
 order ID starting with WEB-:
@@ -423,8 +423,10 @@ descendant nodes. Verify additionally admits occurredIn and money leaves describ
 Neither admits behavioral rules or a local defaultCalendar. Omitted/null
 base.where means no additional qualification. Null/omitted verify is invalid in
 this public subset; the canonical NoAdditionalVerification form is not exposed.
-An explicit select.kind is required. First and last execute; nth (positions 1 through 10) is valid but returns
-FilterCapabilityNotImplemented.
+An explicit select.kind is required: `{"kind":"first"}`, `{"kind":"last"}`
+or `{"kind":"nth","position":3}`. Nth requires a JSON integer from 1 through
+10 and selects one message, counting chronologically from the start of the base.
+Position is invalid with First or Last. Latest N remains unimplemented.
 
 Moving a predicate from verify into base.where changes the request. In the
 example, verify tests the latest Order Completed. In base.where, the same test
@@ -452,6 +454,31 @@ on elapsedLookback(30 days) means first within those 30 days; it does not identi
 customers whose first historical order is recent. Use First on fullRelevantHistory
 with occurredIn in verify for the recent window. Do not present First in a recent
 base as new customers.
+
+### Select an ordinal occurrence
+
+For "the third registered EUR order is recent and reports a total above 100",
+select Nth on the full history of EUR orders, then verify time and amount:
+
+```json
+{"operator":"and","rules":[{"experience":{"base":{"source":{"kind":"recordedEvents","name":"Order Completed","grain":"registered-message"},"period":{"kind":"fullRelevantHistory","history":{"definition":"registered-queryable-events","meaningRevision":"1"}},"currencyField":{"definition":"commerce.order_completed.currency","meaningRevision":"1"},"nativeCurrency":"EUR"},"select":{"kind":"nth","position":3},"verify":{"operator":"and","rules":[{"occurredIn":{"kind":"elapsedLookback","duration":{"value":30,"unit":"day"}}},{"money":{"field":{"definition":"commerce.order_completed.total","meaningRevision":"1"},"nativeCurrency":"EUR"},"operator":"is greater than","values":[100]}]}}}]}
+```
+
+Do not silently choose between these readings:
+
+| Request | Base | Select | Verify |
+|---|---|---|---|
+| Third historical EUR order is recent and above 100 | Full registered history, governed EUR | Nth 3 | occurredIn 30 days AND money EUR > 100 |
+| Third EUR order within the last 30 days is above 100 | Last 30 days, governed EUR | Nth 3 | money EUR > 100 |
+| Third historical order is in EUR, recent and above 100 | Full registered history, all currencies | Nth 3 | occurredIn 30 days AND money EUR > 100 |
+
+Ask for clarification or state the chosen interpretation when "third EUR order
+in the last 30 days" is ambiguous. The base period limits which messages occupy
+positions; occurredIn tests the time only after selection. Positions refer to
+the queryable registered history, so retention, deletions and late imports of
+older messages can move them. "Third order" is not "at least three orders"
+(Count >= 3) or "exactly three orders" (Count = 3). A fourth order does not cancel
+the third. Verify never falls back to another position that passes its test.
 
 ### Verify when the selected event occurred
 
@@ -513,6 +540,15 @@ certain timestamp. Without certain messages the same empty alternative applies.
 Older optional messages cannot affect Last after a later certain message; later
 optional messages cannot affect First before an earlier certain message.
 
+For Nth, an identity is a candidate when N-1 lies between the number of certain
+identities strictly earlier and the number of all non-excluded identities
+earlier or tied, excluding itself. This uses determined identity/timestamps,
+independent possible memberships and all orders within ties. Absence is certain
+when fewer than N messages can qualify, impossible when at least N certainly
+qualify, and possible otherwise. Absent Nth is NO_MATCH; possible absence leaves
+UNKNOWN if any candidate can pass. Nth(1) has the same outcomes and candidates as
+First, but its explanation retains `{"kind":"nth","position":1}`.
+
 Copies of an identity must agree on attribution and period membership. For an
 identity not certainly excluded from the base, they must also agree on the exact
 stored timestamp, qualification and relevant verification. A mismatch is a
@@ -523,9 +559,9 @@ are outside this determined-time source contract, not silently excluded candidat
 Explanations have kind experience and an experience object with the standard
 period fields, select and selection:{kind,absence,candidates}. Selection kind is
 absent, unique or ambiguous. Absence is certain (zero candidates), possible
-(candidates exist but all can be excluded) or impossible. A single candidate
+(candidates exist but the requested position may not exist) or impossible. A single candidate
 with possible absence is still ambiguous. Candidate counts refer to distinct
-possible first/last-message identities, not all events or completed business orders.
+possible first/last/Nth-message identities, not all events or completed business orders.
 No arbitrary witness is selected or unbounded event list returned. Ambiguous
 selection can still have a determined result when every alternative agrees.
 
@@ -619,7 +655,7 @@ bounds are clipped to +/-1e14 outside every readable amount; unreadable amounts
 still yield UNKNOWN for the amount test. No candidate amount or witness identity
 is exposed. An empty money metadata list is omitted.
 
-### Restrict First/Last to a native currency
+### Restrict First/Last/Nth to a native currency
 
 `experience.base` accepts the optional `currencyField` and `nativeCurrency` pair
 from Count. Supply both or neither; explicit null is invalid. The resolved field

@@ -74,6 +74,9 @@ func validateFilterCondition(node FilterCondition, depth int, nodes, physical *i
 		if n == nil || n.Verify == nil {
 			return fmt.Errorf("warehouses: experience requires verification")
 		}
+		if n.Nth < 0 || n.Nth > 10 || n.First && n.Nth != 0 {
+			return fmt.Errorf("warehouses: invalid experience selector position")
+		}
 		population := &IndependentOccurrenceCount{Source: n.Source, Start: n.Start, End: n.End,
 			UnboundedStart: n.UnboundedStart, Qualification: n.Qualification}
 		populationNodes := 0

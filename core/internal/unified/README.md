@@ -734,15 +734,16 @@ model-facing `profile-filter-doc` tool for transport, limits and examples.
 ## Selected Experience subset
 
 `FilterExperienceCondition` extends the same public `core.Filter` rule union.
-Its `experience` has `base:{source,period,where?}`, `select:{kind:"first"|"last"}` and a
+Its `experience` has `base:{source,period,where?}`, `select:{kind:"first"|"last"|"nth",position?}` and a
 mandatory nonempty `verify` of Record, selected timestamp and money predicates. There
 is no outer operator/values, and no implicit selector or empty-body constructor. Where and verify use independent
 local budgets (two groups, 100 descendants), not the main four-level/100-node
 budget. Source and period binding reuse the existing recorded-event Count path;
 no dialect or SQL enters core. The canonical owner retains base and verification
 separately. `ExperienceVerification` is a closed selected-owner body, not a
-relational plan or another public filter format. Nth is explicitly unimplemented,
-not UNKNOWN. Record-only pipeline validation still rejects the new rule and state.Where is unchanged.
+relational plan or another public filter format. Nth requires a position from
+1 through 10 and selects one occurrence, not the latest N. Record-only pipeline
+validation still rejects the new rule and state.Where is unchanged.
 
 `warehouses.SelectedOccurrence` declares a determined message identity, attribution
 and timestamp, row-local qualification and verification. The shared SQL keeps
@@ -753,6 +754,26 @@ only with certain nonemptiness and all candidate verifications TRUE, FALSE when
 all alternatives are FALSE (including certain emptiness), NULL otherwise.
 NULL Record outcomes do not create governed shared facts or value completions.
 No shared-fact or cross-profile predicate is admitted by this subset.
+
+Nth counts from the start of the declared base. After copy validation, only
+non-excluded identities enter timestamp groups per profile. For each group,
+`c_t` counts certain identities and `n_t` counts certain plus possible identities.
+Inclusive cumulative sums, ordered by timestamp with an explicit
+`ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW` frame, give
+`minBefore = cumulativeCertain - c_t` and `maxBefore = cumulativeNonExcluded - 1`.
+An identity is a candidate iff `minBefore <= N-1 <= maxBefore`. This interval is
+exact under three required hypotheses: determined identities and timestamps,
+independent optional membership across identities, and no semantic tie-break
+within equal timestamps. Shared facts or uncertain timestamps require another
+algorithm and are not admitted by this contract.
+
+Nth absence is impossible with at least N certain identities, certain with
+fewer than N non-excluded identities, and possible otherwise. The same closure
+applies: TRUE only if absence is impossible and all candidates pass; FALSE if
+all candidates fail (including an absent Nth); NULL otherwise. Nth(1) and First
+have identical outcomes and selection metadata, but explanations retain the
+requested selector and position. First and Last keep their existing SQL paths.
+Positions are checked in public preparation, canonical validation and warehouses.
 
 Copies are inspected before selection, including outside-period copies of a
 seeded identity. Attribution and period membership must agree. Timestamp
@@ -776,6 +797,9 @@ First is the first recorded occurrence in the queryable history, not a claim
 about the start of a real customer relationship. Retention, deletions and late
 imports of older events can change it. First over a recent period means first
 in that period, not first in the entire history.
+Nth positions likewise refer only to the queryable registered history and can
+shift with retention, deletion or late imports of older events. A third event
+is different from Count >= 3 or Count = 3; a fourth event does not cancel it.
 
 The period always restricts the base. A window ending at T can express recency
 of Last; a window ending earlier selects Last inside that window, ignoring later
@@ -843,10 +867,10 @@ root still reject this subject. state.Where is unchanged.
 
 Profile explanations append money metadata with the verify path, field and
 currency, plus requested and normalized operator/values. They do not return a
-candidate amount or identity. First/Last preserve compatible winners and possible
+candidate amount or identity. First/Last/Nth preserve compatible winners and possible
 absence; moving a monetary verify into the base would change the request.
 
-### Governed currency before First/Last selection
+### Governed currency before First/Last/Nth selection
 
 Experience base accepts Count's currencyField/nativeCurrency pair: both present
 or both omitted, neither explicitly null. NativeCurrency resolves the same field

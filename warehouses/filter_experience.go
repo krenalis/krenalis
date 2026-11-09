@@ -6,8 +6,9 @@ package warehouses
 
 import "time"
 
-// SelectedOccurrence selects First or Last before verifying possible winners.
-// First chooses the earliest occurrence; its zero value chooses Last.
+// SelectedOccurrence selects First, Last or Nth before verification.
+// Nth selects position 1 to 10 from the start of the base, without First.
+// Otherwise First chooses the earliest occurrence; the zero value chooses Last.
 // Qualifications are occurrence-local outcomes, independent across identities.
 // An unknown qualifier makes that identity optional. NULL Record outcomes alone
 // do not declare a shared governed fact.
@@ -19,6 +20,7 @@ import "time"
 // even when its stored value is unknown. Other qualification forms do not.
 type SelectedOccurrence struct {
 	First          bool
+	Nth            int
 	Source         OccurrenceSource
 	Start, End     time.Time
 	UnboundedStart bool
@@ -29,7 +31,8 @@ type SelectedOccurrence struct {
 func (*SelectedOccurrence) filterCondition() {}
 
 // OccurrenceSelection describes the possible winners of a selection.
-// AbsencePossible includes certain absence, represented by zero Candidates.
+// AbsencePossible includes shortages for Nth and certain absence, represented
+// by zero Candidates.
 // One candidate is unambiguous only when absence is impossible.
 type OccurrenceSelection struct {
 	Candidates      int64

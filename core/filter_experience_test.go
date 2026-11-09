@@ -6,6 +6,7 @@ package core
 
 import (
 	"bytes"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -172,17 +173,38 @@ func TestFilterExperienceFirst(t *testing.T) {
 func TestFilterExperienceInvalidBeforeUnsupported(t *testing.T) {
 
 	schema := types.Object([]types.Property{{Name: "country", Type: types.String()}})
-	nth := strings.Replace(experienceConditionJSON, `"kind":"last"`, `"kind":"nth","position":2`, 1)
+	unavailable := strings.Replace(experienceConditionJSON, `"base":{`, `"base":{`+
+		`"currencyField":{"definition":"commerce.order_completed.currency","meaningRevision":"1"},`+
+		`"nativeCurrency":"EUR","where":{"operator":"and","rules":[`+
+		`{"property":"properties.currency","operator":"is null"}]},`, 1)
+	var sibling FilterExperienceCondition
+	err := json.Unmarshal([]byte(unavailable), &sibling)
+	if err != nil {
+		t.Fatalf("expected valid unavailable sibling decoded, got %v", err)
+	}
+	_, err = prepareFilterExperience(&sibling, nil)
+	if err != nil {
+		if _, unsupported := errors.AsType[*unified.UnsupportedError](err); !unsupported {
+			t.Fatalf("expected unavailable sibling, got %v", err)
+		}
+	}
+	if err == nil {
+		t.Fatal("expected unavailable sibling, got success")
+	}
+
 	for _, test := range []struct{ name, input string }{
 		{"empty verify", strings.Replace(experienceConditionJSON, `"rules":[{"property":"properties.order_id","operator":"starts with","values":["WEB-"]}]`, `"rules":[]`, 1)},
 		{"invalid selector", strings.Replace(experienceConditionJSON, `"kind":"last"`, `"kind":"random"`, 1)},
 		{"last position", strings.Replace(experienceConditionJSON, `"kind":"last"`, `"kind":"last","position":1`, 1)},
 		{"zero position", strings.Replace(experienceConditionJSON, `"kind":"last"`, `"kind":"nth","position":0`, 1)},
 		{"eleventh position", strings.Replace(experienceConditionJSON, `"kind":"last"`, `"kind":"nth","position":11`, 1)},
+		{"missing position", strings.Replace(experienceConditionJSON, `"kind":"last"`, `"kind":"nth"`, 1)},
+		{"negative position", strings.Replace(experienceConditionJSON, `"kind":"last"`, `"kind":"nth","position":-1`, 1)},
+		{"fractional position", strings.Replace(experienceConditionJSON, `"kind":"last"`, `"kind":"nth","position":1.5`, 1)},
 		{"bad property", strings.Replace(experienceConditionJSON, `properties.order_id`, `missing`, 1)},
 		{"bad Record operator", strings.Replace(experienceConditionJSON, `starts with`, `not an operator`, 1)},
 	} {
-		for _, rules := range []string{nth + "," + test.input, test.input + "," + nth} {
+		for _, rules := range []string{unavailable + "," + test.input, test.input + "," + unavailable} {
 			t.Run(test.name, func(t *testing.T) {
 				var filter Filter
 				err := json.Unmarshal([]byte(`{"operator":"and","rules":[`+rules+`]}`), &filter)
@@ -193,7 +215,7 @@ func TestFilterExperienceInvalidBeforeUnsupported(t *testing.T) {
 				_, err = prepareUnifiedRule(&filter, schema, 0, &nodes)
 				if err != nil {
 					if _, unsupported := errors.AsType[*unified.UnsupportedError](err); unsupported {
-						t.Fatalf("expected invalidity before unimplemented selector, got %v", err)
+						t.Fatalf("expected invalidity before unimplemented capability, got %v", err)
 					}
 					return
 				}
@@ -202,22 +224,39 @@ func TestFilterExperienceInvalidBeforeUnsupported(t *testing.T) {
 		}
 	}
 
-	for _, selector := range []string{`{"kind":"nth","position":1}`, `{"kind":"nth","position":10}`} {
+}
+
+// TestFilterExperienceNth preserves each admitted ordinal through preparation.
+func TestFilterExperienceNth(t *testing.T) {
+	schema := types.Object([]types.Property{{Name: "country", Type: types.String()}})
+	for position := 1; position <= 10; position++ {
+		selector := fmt.Sprintf(`{"kind":"nth","position":%d}`, position)
+		input := strings.Replace(experienceConditionJSON, `{"kind":"last"}`, selector, 1)
 		var condition FilterExperienceCondition
-		err := json.Unmarshal([]byte(strings.Replace(experienceConditionJSON, `{"kind":"last"}`, selector, 1)), &condition)
+		err := json.Unmarshal([]byte(input), &condition)
 		if err != nil {
 			t.Fatalf("expected valid selector decoded, got %v", err)
 		}
-		_, err = prepareFilterExperience(&condition, nil)
+		rule, err := prepareFilterExperience(&condition, nil)
 		if err != nil {
-			if _, unsupported := errors.AsType[*unified.UnsupportedError](err); !unsupported {
-				t.Fatalf("expected unimplemented selector, got %v", err)
-			}
-			continue
+			t.Fatalf("expected Nth prepared, got %v", err)
 		}
-		t.Fatal("expected capability error, got success")
+		if rule.Experience == nil || rule.Experience.First || rule.Experience.Nth != position {
+			t.Fatalf("expected Nth(%d), got %+v", position, rule.Experience)
+		}
+		encoded, err := json.Marshal(&condition)
+		if err != nil {
+			t.Fatalf("expected Nth encoded, got %v", err)
+		}
+		if string(encoded) != input {
+			t.Fatalf("expected Nth round-trip %s, got %s", input, encoded)
+		}
+		filter := &Filter{Operator: OpAnd, Rules: []FilterRule{&condition}}
+		_, _, err = prepareFilter(filter, schema)
+		if err == nil {
+			t.Fatal("expected Nth rejected in Record pipelines, got success")
+		}
 	}
-
 }
 
 // TestFilterExperienceStrict rejects mixed subjects and malformed local bodies.

@@ -7,12 +7,14 @@ package core
 import (
 	"context"
 	"slices"
+	"strconv"
 	"time"
 
 	"github.com/krenalis/krenalis/core/internal/datastore"
 	"github.com/krenalis/krenalis/core/internal/unified"
 	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/errors"
+	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
 )
@@ -338,8 +340,12 @@ func explainProfileRule(rule warehouses.FilterCondition, semantic unified.Rule, 
 		result.Kind = "experience"
 		result.Experience = &ProfileExperienceExplanation{Start: rule.Start, End: rule.End,
 			UnboundedStart: rule.UnboundedStart, Select: FilterExperienceSelector{Kind: "last"}, Selection: selection}
-		if rule.First {
+		if semantic.Experience.First {
 			result.Experience.Select.Kind = "first"
+		}
+		if semantic.Experience.Nth != 0 {
+			result.Experience.Select = FilterExperienceSelector{Kind: "nth",
+				Position: json.Value(strconv.Itoa(semantic.Experience.Nth))}
 		}
 		if currency := semantic.Experience.Currency; currency != nil {
 			result.Experience.CurrencyField = &FilterCurrencyField{

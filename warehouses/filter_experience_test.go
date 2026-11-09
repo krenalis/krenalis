@@ -41,10 +41,21 @@ func TestValidateExperience(t *testing.T) {
 		{Source: node.Source, Start: node.Start, End: node.End},
 		{Source: node.Source, Start: node.End, End: node.Start, Verify: node.Verify},
 		{Source: node.Source, Start: node.Start, End: node.End, Verify: &RecordQualification{Expr: nil}},
+		{Nth: -1, Source: node.Source, Start: node.Start, End: node.End, Verify: node.Verify},
+		{Nth: 11, Source: node.Source, Start: node.Start, End: node.End, Verify: node.Verify},
+		{First: true, Nth: 1, Source: node.Source, Start: node.Start, End: node.End, Verify: node.Verify},
 	} {
 		err := ValidateProfileFilter(Filter{Root: &test}, request)
 		if err == nil {
 			t.Fatal("expected invalid prepared selection rejected, got success")
+		}
+	}
+	for _, position := range []int{0, 1, 10} {
+		selected := *node
+		selected.Nth = position
+		err := ValidateProfileFilter(Filter{Root: &selected}, request)
+		if err != nil {
+			t.Fatalf("expected admitted position %d, got %v", position, err)
 		}
 	}
 }

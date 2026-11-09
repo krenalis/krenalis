@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Elastic License 2.0
 // that can be found in the LICENSE file.
 
-// Package unified implements the Record/Count/Sum/Average/First/Last subset.
+// Package unified implements Record/Count/Sum/Average and First/Last/Nth.
 // It has no public JSON or persistence representation.
 package unified
 

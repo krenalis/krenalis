@@ -11,7 +11,7 @@ import (
 	"github.com/krenalis/krenalis/warehouses"
 )
 
-// experience preserves possible First/Last winners and the empty alternative.
+// experience preserves First/Last/Nth candidates and absent alternatives.
 // The first/last certain timestamp excludes later/older optional occurrences;
 // ties remain candidates. No ranking ID or greedy choice closes the selection.
 func (c *compiler) experience(node *warehouses.SelectedOccurrence) (string, error) {
@@ -89,16 +89,38 @@ func (c *compiler) experience(node *warehouses.SelectedOccurrence) (string, erro
  MIN(CASE WHEN in_period=1 AND (qualification IS DISTINCT FROM FALSE) THEN `+body+` END) AS verify_min,
  MAX(CASE WHEN in_period=1 AND (qualification IS DISTINCT FROM FALSE) THEN `+body+` END) AS verify_max
  FROM copies`+n+` GROUP BY occurrence_id)`)
-	c.ctes = append(c.ctes, "base"+n+` AS (SELECT profile_id,time_min,state_min,verify_min,
+	if node.Nth != 0 {
+		position, before := strconv.Itoa(node.Nth), strconv.Itoa(node.Nth-1)
+		c.ctes = append(c.ctes, "base"+n+` AS (SELECT profile_id,time_min,state_min,verify_min
+ FROM facts`+n+` WHERE profile_id IS NOT NULL AND profiles=1 AND period_min=1 AND period_max=1
+ AND missing_times=0 AND time_min=time_max AND state_min=state_max AND state_min<>0
+ AND verify_min=verify_max)`)
+		// Group ties before cumulative counts; each group has one timestamp.
+		c.ctes = append(c.ctes, "timegroups"+n+` AS (SELECT profile_id,time_min,
+ SUM(CASE WHEN state_min=1 THEN 1 ELSE 0 END) AS c_t,COUNT(*) AS n_t
+ FROM base`+n+` GROUP BY profile_id,time_min)`)
+		frame := "PARTITION BY profile_id ORDER BY time_min ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW"
+		c.ctes = append(c.ctes, "ranks"+n+` AS (SELECT profile_id,time_min,c_t,
+ SUM(c_t) OVER (`+frame+`) AS cum_c,SUM(n_t) OVER (`+frame+`) AS cum_n,
+ SUM(c_t) OVER (PARTITION BY profile_id) AS total_c FROM timegroups`+n+`)`)
+		c.ctes = append(c.ctes, "selected"+n+` AS (SELECT b.profile_id,COUNT(*) AS candidates,
+ MAX(CASE WHEN r.total_c<`+position+` THEN 1 ELSE 0 END) AS absent,
+ SUM(CASE WHEN b.verify_min=1 THEN 1 ELSE 0 END) AS passed,
+ SUM(CASE WHEN b.verify_min=0 THEN 1 ELSE 0 END) AS failed
+ FROM base`+n+` b JOIN ranks`+n+` r ON r.profile_id=b.profile_id AND r.time_min=b.time_min
+ WHERE r.cum_c-r.c_t<=`+before+` AND r.cum_n-1>=`+before+` GROUP BY b.profile_id)`)
+	} else {
+		c.ctes = append(c.ctes, "base"+n+` AS (SELECT profile_id,time_min,state_min,verify_min,
  `+extreme+`(CASE WHEN state_min=1 THEN time_min END) OVER (PARTITION BY profile_id) AS certain_time
  FROM facts`+n+` WHERE profile_id IS NOT NULL AND profiles=1 AND period_min=1 AND period_max=1
  AND missing_times=0 AND time_min=time_max AND state_min=state_max AND state_min<>0
  AND verify_min=verify_max)`)
-	c.ctes = append(c.ctes, "selected"+n+` AS (SELECT profile_id,COUNT(*) AS candidates,
+		c.ctes = append(c.ctes, "selected"+n+` AS (SELECT profile_id,COUNT(*) AS candidates,
  MAX(CASE WHEN certain_time IS NULL THEN 1 ELSE 0 END) AS absent,
  SUM(CASE WHEN verify_min=1 THEN 1 ELSE 0 END) AS passed,
  SUM(CASE WHEN verify_min=0 THEN 1 ELSE 0 END) AS failed
  FROM base`+n+` WHERE certain_time IS NULL OR time_min`+direction+`certain_time GROUP BY profile_id)`)
+	}
 	c.ctes = append(c.ctes, "fault"+n+` AS (SELECT
  (SELECT COALESCE(SUM(CASE WHEN profile_id IS NOT NULL AND
  (profiles>1 OR period_min<>period_max OR missing_times<>0 OR (time_min<>time_max AND state_max<>0)

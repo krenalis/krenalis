@@ -631,6 +631,10 @@ FROM (VALUES
 			{"first within recent base", firstInPeriod, `"match":2,"noMatch":1,"unknown":1`},
 			{"last", experience, `"match":1,"noMatch":1,"unknown":2`},
 			{"first", strings.Replace(experience, `"kind":"last"`, `"kind":"first"`, 1), `"match":0,"noMatch":2,"unknown":2`},
+			{"nth one", strings.Replace(experience, `"kind":"last"`, `"kind":"nth","position":1`, 1), `"match":0,"noMatch":2,"unknown":2`},
+			{"nth two", strings.Replace(experience, `"kind":"last"`, `"kind":"nth","position":2`, 1), `"match":1,"noMatch":2,"unknown":1`},
+			{"nth three", strings.Replace(experience, `"kind":"last"`, `"kind":"nth","position":3`, 1), `"match":0,"noMatch":4,"unknown":0`},
+			{"nth ten", strings.Replace(experience, `"kind":"last"`, `"kind":"nth","position":10`, 1), `"match":0,"noMatch":4,"unknown":0`},
 			{"outer OR", strings.Replace(strings.Replace(experience, `"operator":"and"`, `"operator":"or"`, 1), `"rules":[{"experience"`, `"rules":[{"property":"country","operator":"is","values":["FR"]},{"experience"`, 1), `"match":3,"noMatch":0,"unknown":1`},
 			{"outer AND", strings.Replace(experience, `"rules":[{"experience"`, `"rules":[{"property":"country","operator":"is","values":["IT"]},{"experience"`, 1), `"match":1,"noMatch":2,"unknown":1`},
 		} {
@@ -690,7 +694,8 @@ FROM (VALUES
 			{"time history unavailable", strings.Replace(firstInHistory,
 				`{"occurredIn":{"kind":"elapsedLookback","duration":{"value":31,"unit":"day"}}}`,
 				`{"occurredIn":{"kind":"fullRelevantHistory","history":{"definition":"registered-queryable-events","meaningRevision":"1"}}}`, 1), "FilterCapabilityNotImplemented"},
-			{"nth unavailable", strings.Replace(experience, `"kind":"last"`, `"kind":"nth","position":2`, 1), "FilterCapabilityNotImplemented"},
+			{"nth zero", strings.Replace(experience, `"kind":"last"`, `"kind":"nth","position":0`, 1), "InvalidArguments"},
+			{"nth eleven", strings.Replace(experience, `"kind":"last"`, `"kind":"nth","position":11`, 1), "InvalidArguments"},
 			{"verify required", strings.Replace(experience, `,"verify":{"operator":"and","rules":[{"property":"properties.v","operator":"is","values":["yes"]}]}`, ``, 1), "InvalidArguments"},
 			{"invalid verify", strings.Replace(experience, `properties.v`, `unknown`, 1), "PropertyNotExist"},
 		} {
@@ -698,6 +703,83 @@ FROM (VALUES
 				assertToolError(t, tool(t, "query-profiles", map[string]any{"filter": test.filter, "at": at}), test.code)
 				assertToolError(t, tool(t, "explain-profile-filter", map[string]any{
 					"kpid": "00000000-0000-0000-0000-000000000001", "filter": test.filter, "at": at}), test.code)
+			})
+		}
+
+	})
+
+	t.Run("ExperienceNth", func(t *testing.T) {
+
+		_, err := pool.Exec(t.Context(), `INSERT INTO krenalis_events
+(kpid,message_id,event,timestamp,received_at,sent_at,type,connection_id,anonymous_id,traits,properties)
+SELECT ('00000000-0000-0000-0000-'||lpad(n::text,12,'0'))::uuid,'nth/'||n||'/'||id,
+'Order Completed',stamp::timestamp,'2026-02-01','2026-02-01','track','fixture','a','{}',
+jsonb_build_object('nth_fixture',true,'total',150)||payload::jsonb
+FROM (VALUES
+(1,'a','2025-12-15','{"currency":"EUR"}'),
+(1,'b','2026-01-01','{"currency":"EUR"}'),
+(1,'c','2026-01-10','{"currency":"EUR"}'),
+(1,'d','2026-01-20','{"currency":"USD"}'),
+(1,'e','2026-01-25','{"currency":"EUR"}'),
+(2,'a','2025-12-10','{"currency":"USD"}'),
+(2,'b','2025-12-20','{"currency":"EUR"}'),
+(2,'c','2026-01-10','{"currency":"USD"}'),
+(2,'d','2026-01-20','{"currency":"EUR"}'),
+(2,'e','2026-01-25','{"currency":"EUR"}'),
+(3,'a','2026-01-11','{}'),(3,'b','2026-01-12','{}'),(3,'c','2026-01-13','{}')
+) v(n,id,stamp,payload)`)
+		if err != nil {
+			t.Fatalf("expected coherent ordinal fixtures, got %v", err)
+		}
+		defer func() {
+			_, err := pool.Exec(t.Context(), "DELETE FROM krenalis_events WHERE message_id LIKE 'nth/%'")
+			if err != nil {
+				t.Errorf("expected ordinal fixture cleanup, got %v", err)
+			}
+		}()
+
+		const currency = `"currencyField":{"definition":"commerce.order_completed.currency",` +
+			`"meaningRevision":"1"},"nativeCurrency":"EUR",`
+		const history = `"period":{"kind":"fullRelevantHistory",` +
+			`"history":{"definition":"registered-queryable-events","meaningRevision":"1"}}`
+		const recent = `{"kind":"elapsedLookback","duration":{"value":30,"unit":"day"}}`
+		const filter = `{"operator":"and","rules":[{"experience":{"base":{` + currency +
+			`"source":{"kind":"recordedEvents","name":"Order Completed","grain":"registered-message"},` + history +
+			`,"where":{"operator":"and","rules":[{"property":"properties.nth_fixture","operator":"exists"}]}},` +
+			`"select":{"kind":"nth","position":3},"verify":{"operator":"and","rules":[{"occurredIn":` + recent + `},` +
+			`{"money":{"field":{"definition":"commerce.order_completed.total","meaningRevision":"1"},` +
+			`"nativeCurrency":"EUR"},"operator":"is greater than","values":[100]}]}}}]}`
+		for _, test := range []struct{ name, input, totals, result, selection string }{
+			{"third historical EUR is recent", filter, `"match":2,"noMatch":1,"unknown":1`, "MATCH", `"kind":"unique","absence":"impossible","candidates":1`},
+			{"third EUR within period", strings.Replace(filter, history, `"period":`+recent, 1), `"match":0,"noMatch":3,"unknown":1`, "NO_MATCH", `"kind":"absent","absence":"certain","candidates":0`},
+			{"third historical is EUR and recent", strings.Replace(filter, currency, "", 1), `"match":1,"noMatch":2,"unknown":1`, "MATCH", `"kind":"unique","absence":"impossible","candidates":1`},
+		} {
+			t.Run(test.name, func(t *testing.T) {
+
+				for _, first := range []int{0, 99} {
+					var expected json.RawMessage
+					k.Call("GET", "/v1/profiles?filter="+url.QueryEscape(test.input)+"&at="+url.QueryEscape(at)+
+						"&first="+strconv.Itoa(first), nil, nil, &expected)
+					actual := assertResult(t, tool(t, "query-profiles", map[string]any{
+						"filter": test.input, "at": at, "first": first}))
+					if actual != string(expected) || !strings.Contains(actual, test.totals) ||
+						first == 99 && !strings.HasPrefix(actual, `{"profiles":[]`) {
+						t.Fatalf("expected complete ordinal HTTP/MCP totals %s, got %s", test.totals, actual)
+					}
+				}
+
+				const id = "00000000-0000-0000-0000-000000000001"
+				var expected json.RawMessage
+				k.Call("GET", "/v1/profiles/"+id+"/filter-explanation?filter="+url.QueryEscape(test.input)+
+					"&at="+url.QueryEscape(at), nil, nil, &expected)
+				actual := assertResult(t, tool(t, "explain-profile-filter", map[string]any{
+					"kpid": id, "filter": test.input, "at": at}))
+				if actual != string(expected) || !strings.Contains(actual, `"select":{"kind":"nth","position":3}`) ||
+					!strings.Contains(actual, `"selection":{`+test.selection+`}`) ||
+					!strings.Contains(actual, `"result":"`+test.result+`"`) {
+					t.Fatalf("expected original ordinal and %s/%s, got %s", test.result, test.selection, actual)
+				}
+
 			})
 		}
 

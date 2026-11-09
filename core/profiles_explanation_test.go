@@ -5,6 +5,7 @@
 package core
 
 import (
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -16,6 +17,26 @@ import (
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
 )
+
+// TestExplainExperienceNth retains the request even when Nth(1) equals First.
+func TestExplainExperienceNth(t *testing.T) {
+	for _, position := range []int{1, 3, 10} {
+		physical := &warehouses.SelectedOccurrence{Nth: position}
+		semantic := unified.Rule{Experience: &unified.Experience{Nth: position}}
+		nodes := []warehouses.FilterNodeOutcome{{Truth: warehouses.FilterMatch,
+			Experience: &warehouses.OccurrenceSelection{Candidates: 2}}}
+		index := 0
+		result, err := explainProfileRule(physical, semantic, nodes, &index, time.Time{})
+		if err != nil {
+			t.Fatalf("expected ordinal explanation, got %v", err)
+		}
+		selector := result.Experience.Select
+		if selector.Kind != "nth" || string(selector.Position) != strconv.Itoa(position) ||
+			result.Experience.Selection.Kind != "ambiguous" || result.Experience.Selection.Candidates != 2 {
+			t.Fatalf("expected Nth(%d) with two candidates, got %+v", position, result.Experience)
+		}
+	}
+}
 
 // TestExplainExperienceSelection distinguishes candidate and absence states.
 func TestExplainExperienceSelection(t *testing.T) {
@@ -42,7 +63,8 @@ func TestExplainExperienceSelection(t *testing.T) {
 		}
 		index := 0
 		rule := &warehouses.SelectedOccurrence{First: test.first}
-		result, err := explainProfileRule(rule, unified.Rule{Experience: &unified.Experience{}}, nodes, &index, time.Time{})
+		semantic := unified.Rule{Experience: &unified.Experience{First: test.first}}
+		result, err := explainProfileRule(rule, semantic, nodes, &index, time.Time{})
 		if err != nil {
 			t.Fatalf("expected experience explanation, got %v", err)
 		}

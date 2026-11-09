@@ -5,6 +5,7 @@
 package postgresql
 
 import (
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -14,7 +15,7 @@ import (
 	"github.com/krenalis/krenalis/warehouses/internal/profilefilter"
 )
 
-// TestProfileFilterExperienceSQL checks First/Last without ID tie-breaks.
+// TestProfileFilterExperienceSQL checks First/Last/Nth without ID tie-breaks.
 func TestProfileFilterExperienceSQL(t *testing.T) {
 	end := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
 	source := warehouses.OccurrenceSource{Table: "events",
@@ -26,12 +27,16 @@ func TestProfileFilterExperienceSQL(t *testing.T) {
 		Operator: warehouses.OpStartsWith, Values: []any{"WEB-"}}}
 	request := warehouses.ProfileOutcomeRequest{Population: warehouses.ProfileSource{Table: "profiles",
 		Key: warehouses.Column{Name: "_kpid", Type: types.UUID()}}, Limit: 10}
-	for _, test := range []struct{ first, unbounded, temporal bool }{
-		{false, false, false}, {false, true, false}, {true, false, false}, {true, true, false},
-		{false, false, true}, {true, true, true},
+	for _, test := range []struct {
+		first, unbounded, temporal bool
+		nth                        int
+	}{
+		{false, false, false, 0}, {false, true, false, 0}, {true, false, false, 0}, {true, true, false, 0},
+		{false, false, true, 0}, {true, true, true, 0},
+		{false, false, false, 1}, {false, true, false, 3}, {false, true, true, 10},
 	} {
 		first, unbounded := test.first, test.unbounded
-		node := &warehouses.SelectedOccurrence{First: first, Source: source, End: end,
+		node := &warehouses.SelectedOccurrence{First: first, Nth: test.nth, Source: source, End: end,
 			UnboundedStart: unbounded, Verify: verify}
 		if !unbounded {
 			node.Start = end.AddDate(0, -1, 0)
@@ -52,11 +57,21 @@ func TestProfileFilterExperienceSQL(t *testing.T) {
 		if first {
 			extreme, direction = "MIN", "<="
 		}
-		for _, fragment := range []string{
-			"OVER (PARTITION BY profile_id)", "certain_time IS NULL OR time_min" + direction + "certain_time",
-			extreme + "(CASE WHEN state_min=1 THEN time_min END)",
-			"time_min<>time_max", "COALESCE(v0.absent,1)=0", "COALESCE(v0.failed,0)=COALESCE(v0.candidates,0)",
-		} {
+		fragments := []string{
+			"OVER (PARTITION BY profile_id)", "time_min<>time_max", "COALESCE(v0.absent,1)=0",
+			"COALESCE(v0.failed,0)=COALESCE(v0.candidates,0)",
+		}
+		if test.nth == 0 {
+			fragments = append(fragments, "certain_time IS NULL OR time_min"+direction+"certain_time",
+				extreme+"(CASE WHEN state_min=1 THEN time_min END)")
+		} else {
+			fragments = append(fragments, "GROUP BY profile_id,time_min",
+				"ORDER BY time_min ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW",
+				"r.profile_id=b.profile_id AND r.time_min=b.time_min",
+				"r.total_c<"+strconv.Itoa(test.nth),
+				"r.cum_c-r.c_t<="+strconv.Itoa(test.nth-1)+" AND r.cum_n-1>="+strconv.Itoa(test.nth-1))
+		}
+		for _, fragment := range fragments {
 			if !strings.Contains(statement.SQL, fragment) {
 				t.Fatalf("expected selection invariant %q, got %s", fragment, statement.SQL)
 			}

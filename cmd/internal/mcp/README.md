@@ -112,12 +112,15 @@ reading, including UNKNOWN for missing/null/non-String values. Independent Recor
 forms return `FilterCapabilityNotImplemented`. Explanations include the reference
 and currency only when supplied; existing raw Count documents/results are unchanged.
 
-First/Last accept the same optional pair in `experience.base`, restricting the
+First/Last/Nth accept the same optional pair in `experience.base`, restricting the
 population before selection. A selected candidate satisfies that base currency
 even when its stored currency is unknown. Money verification on the same resolved
 reading tests only the amount for the same currency and is FALSE for a different
 currency. Other readings keep their full tests. Explanations distinguish base
 `currencyField`/`nativeCurrency` from `money[].nativeCurrency` in the verify.
+Nth selects one message at position 1–10 from the start of the base. Its period
+does not test recency of the historical Nth; use full history plus occurredIn
+for that request. Explanations retain kind nth and position, including Nth(1).
 Raw overlaps with the base currency are unavailable in both base.where and verify;
 the amount remains independent unless money reads it. Old experiences omit the
 new fields. Snowflake retains its unverified-backend gate.

@@ -156,6 +156,16 @@ and the six-column explanation transport, whose two integer slots carry candidat
 count and a 0/1 absence flag under a distinct ExperienceNodes tag.
 Count/Sum/Average decoding is unchanged.
 
+Nth (1–10) preserves the First/Last code paths and adds timestamp-group counts
+after the same copy checks. Each profile/time group counts certain and all
+non-excluded identities. Explicit inclusive ROWS windows give cumulative counts.
+An identity can occupy N iff `cumCertain - groupCertain <= N-1 <= cumAll - 1`.
+The group's certain total over the profile determines whether N can be absent.
+This is exact only with determined identity/time, independent optional membership
+across identities, and all tie orders admitted. No technical ID orders ties.
+Shortage is NO_MATCH, with zero candidates and an absence flag of one; possible
+shortage can remain UNKNOWN. The explanation protocol and decoder are unchanged.
+
 Selected timestamp membership is already resolved by core into existing Record
 datetime >= and < predicates inside the verification qualification. This adds
 no temporal resolver, SQL node or explanation transport fields in the drivers.

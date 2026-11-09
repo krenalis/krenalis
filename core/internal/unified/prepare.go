@@ -26,7 +26,7 @@ type SourceBinding struct {
 	Record        func(*state.Where) (warehouses.Expr, error)
 }
 
-// Prepare specializes the Record, Count, Sum, Average and First/Last subset.
+// Prepare specializes Record, Count, Sum, Average and First/Last/Nth.
 // It preserves every main-tree node and child order one to one.
 // It returns *UnsupportedError for valid-language forms outside this subset.
 // The supplied bindings already determine source meaning and evidence model;

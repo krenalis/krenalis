@@ -163,7 +163,7 @@ func (condition *FilterExperienceCondition) UnmarshalJSON(data []byte) error {
 
 func (*FilterExperienceCondition) filterRule() {}
 
-// FilterExperienceSelector names a selector; First and Last execute.
+// FilterExperienceSelector names First, Last or Nth (positions 1 to 10).
 type FilterExperienceSelector struct {
 	Kind     string     `json:"kind"`
 	Position json.Value `json:"position,omitzero"`
@@ -207,6 +207,7 @@ func prepareFilterExperience(condition *FilterExperienceCondition, calendar *uni
 		unavailable = err
 	}
 	selector := experience.Select
+	var nth int
 	switch selector.Kind {
 	case "last", "first":
 		if selector.Position != nil {
@@ -220,6 +221,8 @@ func prepareFilterExperience(condition *FilterExperienceCondition, calendar *uni
 		if position == "0" || position.compare("10") > 0 {
 			return unified.Rule{}, errors.New("nth position must be an integer from 1 to 10")
 		}
+		value, _ := position.uint64() // The validated position is at most 10.
+		nth = int(value)
 	default:
 		return unified.Rule{}, errors.New("invalid experience selector")
 	}
@@ -268,13 +271,10 @@ func prepareFilterExperience(condition *FilterExperienceCondition, calendar *uni
 			unavailable = err
 		}
 	}
-	if selector.Kind == "nth" {
-		return unified.Rule{}, &unified.UnsupportedError{Capability: "nth experience selector"}
-	}
 	if unavailable != nil {
 		return unified.Rule{}, unavailable
 	}
 
-	return unified.Rule{Experience: &unified.Experience{First: selector.Kind == "first",
+	return unified.Rule{Experience: &unified.Experience{First: selector.Kind == "first", Nth: nth,
 		Scope: scope, Where: where, Currency: currency, Verify: verify}}, nil
 }
