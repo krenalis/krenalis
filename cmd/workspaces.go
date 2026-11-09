@@ -775,31 +775,20 @@ func (workspace workspace) Attributes(_ http.ResponseWriter, r *http.Request) (a
 	if err != nil {
 		return nil, err
 	}
+	err = validateRequiredBody(r, false)
+	if err != nil {
+		return nil, err
+	}
 	kpid := r.PathValue("kpid")
 	var params struct {
 		Schema types.Type `json:"schema"`
 	}
-	if r.Method == http.MethodPost {
-		err = validateRequiredBody(r, false)
-		if err != nil {
-			return nil, err
-		}
-		err = json.Decode(r.Body, &params)
-		if err != nil {
-			return nil, errors.BadRequest("%s", err)
-		}
-		if !params.Schema.Valid() {
-			return nil, errors.BadRequest("schema is required")
-		}
-	} else {
-		schemaParam := r.URL.Query().Get("schema")
-		if schemaParam == "" {
-			return nil, errors.BadRequest("schema is required")
-		}
-		err = json.Unmarshal([]byte(schemaParam), &params.Schema)
-		if err != nil {
-			return nil, errors.BadRequest("invalid schema: %s", err)
-		}
+	err = json.Decode(r.Body, &params)
+	if err != nil {
+		return nil, errors.BadRequest("%s", err)
+	}
+	if !params.Schema.Valid() {
+		return nil, errors.BadRequest("schema is required")
 	}
 	attributes, err := ws.Attributes(r.Context(), kpid, params.Schema)
 	if err != nil {
@@ -980,37 +969,18 @@ func (workspace workspace) ProfileCount(_ http.ResponseWriter, r *http.Request) 
 	if err != nil {
 		return nil, err
 	}
+	err = validateRequiredBody(r, false)
+	if err != nil {
+		return nil, err
+	}
 
 	var params struct {
 		Filter *core.Filter `json:"filter"`
 		Schema types.Type   `json:"schema"`
 	}
-	if r.Method == http.MethodPost {
-		err = validateRequiredBody(r, false)
-		if err != nil {
-			return nil, err
-		}
-		err = json.Decode(r.Body, &params)
-		if err != nil {
-			return nil, errors.BadRequest("%s", err)
-		}
-	} else {
-		q := r.URL.Query()
-		if f := q.Get("filter"); f != "" {
-			err = json.Unmarshal([]byte(f), &params.Filter)
-			if err != nil {
-				return nil, errors.BadRequest("invalid filter")
-			}
-			if params.Filter == nil {
-				return nil, errors.BadRequest("filter cannot be null")
-			}
-		}
-		if s := q.Get("schema"); s != "" {
-			err = json.Unmarshal([]byte(s), &params.Schema)
-			if err != nil {
-				return nil, errors.BadRequest("invalid schema: %s", err)
-			}
-		}
+	err = json.Decode(r.Body, &params)
+	if err != nil {
+		return nil, errors.BadRequest("%s", err)
 	}
 	total, err := ws.ProfileCount(r.Context(), params.Filter, params.Schema)
 	if err != nil {
@@ -1028,6 +998,10 @@ func (workspace workspace) Profiles(w http.ResponseWriter, r *http.Request) (any
 	if err != nil {
 		return nil, err
 	}
+	err = validateRequiredBody(r, false)
+	if err != nil {
+		return nil, err
+	}
 
 	var params struct {
 		Schema     types.Type   `json:"schema"`
@@ -1039,60 +1013,12 @@ func (workspace workspace) Profiles(w http.ResponseWriter, r *http.Request) (any
 		Limit      int          `json:"limit"`
 	}
 	params.Limit = 100
-	if r.Method == http.MethodPost {
-		err = validateRequiredBody(r, false)
-		if err != nil {
-			return nil, err
-		}
-		err = json.Decode(r.Body, &params)
-		if err != nil {
-			return nil, errors.BadRequest("%s", err)
-		}
-		if !params.Schema.Valid() {
-			return nil, errors.BadRequest("schema is required")
-		}
-	} else {
-
-		// Read and parse the parameters from the query string.
-		q := r.URL.Query()
-		schemaParam := q.Get("schema")
-		if schemaParam == "" {
-			return nil, errors.BadRequest("schema is required")
-		}
-		err = json.Unmarshal([]byte(schemaParam), &params.Schema)
-		if err != nil {
-			return nil, errors.BadRequest("invalid schema: %s", err)
-		}
-
-		params.Properties = splitQueryParameters(q["properties"])
-		if _, present := q["properties"]; present && params.Properties == nil {
-			params.Properties = []string{}
-		}
-
-		if f := q.Get("filter"); f != "" {
-			err = json.Unmarshal([]byte(f), &params.Filter)
-			if err != nil {
-				return nil, errors.BadRequest("invalid filter")
-			}
-			if params.Filter == nil {
-				return nil, errors.BadRequest("filter cannot be null")
-			}
-		}
-		params.Order = q.Get("order")
-		params.OrderDesc = q.Get("orderDesc") == "true"
-		if f := q.Get("first"); f != "" {
-			params.First, err = strconv.Atoi(f)
-			if err != nil {
-				return nil, errors.BadRequest("invalid first")
-			}
-		}
-		if l := q.Get("limit"); l != "" {
-			params.Limit, err = strconv.Atoi(l)
-			if err != nil {
-				return nil, errors.BadRequest("invalid limit")
-			}
-		}
-
+	err = json.Decode(r.Body, &params)
+	if err != nil {
+		return nil, errors.BadRequest("%s", err)
+	}
+	if !params.Schema.Valid() {
+		return nil, errors.BadRequest("schema is required")
 	}
 
 	profiles, total, hasNext, err := ws.Profiles(r.Context(),

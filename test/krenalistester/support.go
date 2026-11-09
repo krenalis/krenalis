@@ -730,22 +730,20 @@ func (k *Krenalis) Profiles(properties []string, order string, orderDesc bool, f
 // ProfilesWithSchema returns profiles queried using schema, their total
 // count, and continuation state.
 func (k *Krenalis) ProfilesWithSchema(schema types.Type, properties []string, order string, orderDesc bool, first, limit int) ([]Profile, int, bool) {
-	schemaJSON, err := schema.MarshalJSON()
-	must(k.t, err)
-	queryString := url.Values{
-		"schema":     []string{string(schemaJSON)},
+	body := map[string]any{
+		"schema":     schema,
 		"properties": properties,
-		"order":      []string{order},
-		"orderDesc":  []string{fmt.Sprintf("%t", orderDesc)},
-		"first":      []string{strconv.Itoa(first)},
-		"limit":      []string{strconv.Itoa(limit)},
+		"order":      order,
+		"orderDesc":  orderDesc,
+		"first":      first,
+		"limit":      limit,
 	}
 	var response struct {
 		Profiles []Profile `json:"profiles"`
 		Total    int       `json:"total"`
 		HasNext  *bool     `json:"hasNext"`
 	}
-	k.Call("GET", "/v1/profiles?"+queryString.Encode(), nil, nil, &response)
+	k.Call("POST", "/v1/profiles/query", nil, body, &response)
 	if response.HasNext == nil {
 		k.t.Fatal("expected hasNext to be a boolean, got missing or null")
 	}
