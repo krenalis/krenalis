@@ -901,6 +901,12 @@ byte-identical. No SQL or dialect enters core and no warehouse transport
 or explanation row schema is added. The two backend local suites are mirrored;
 Snowflake remains gated pending real verification.
 
+Before opening its gate, probe 100, 100.0 and 1E2 end-to-end and inspect their
+stored VARIANT kinds. The current exact reader requires IS_DECIMAL: an exponent
+spelling stored as DOUBLE could become unreadable despite exact representability.
+This possibility has not been tested on Snowflake and is an activation check,
+not an observed regression. Local rendering tests do not settle it.
+
 Experience body validation permits one money predicate, including under OR,
 and rejects raw overlaps with its bound amount/currency paths in both the base
 and verify. Paths come from the reading definition, not a second hard-coded

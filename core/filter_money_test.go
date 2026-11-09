@@ -225,7 +225,7 @@ func TestFilterMoneyInvalidBeforeUnsupported(t *testing.T) {
 	}
 }
 
-// TestFilterMoneyReductionOperators preserves unavailable Sum/Average terminals.
+// TestFilterMoneyReductionOperators preserves unsupported Sum/Average tests.
 func TestFilterMoneyReductionOperators(t *testing.T) {
 	for _, input := range []string{sumConditionJSON, averageConditionJSON} {
 		for _, comparison := range []struct{ operator, values string }{

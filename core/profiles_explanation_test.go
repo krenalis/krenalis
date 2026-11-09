@@ -160,6 +160,99 @@ func TestExplainExperienceSelection(t *testing.T) {
 	}
 }
 
+// TestExplainMoneyLiterals maps each new test into Count and E explanations.
+func TestExplainMoneyLiterals(t *testing.T) {
+
+	field, err := unified.ResolveMonetaryField("commerce.order_completed.total", "1")
+	if err != nil {
+		t.Fatalf("expected resolved monetary field, got %v", err)
+	}
+	for _, test := range []struct {
+		name                    string
+		operator                FilterOperator
+		comparison              unified.Comparison
+		value, upper, low, high string
+		domain                  string
+	}{
+		{"equality", OpIs, unified.Equal, "100.00000", "", "100", "", ""},
+		{"different", OpIsNot, unified.Different, "100", "", "100", "", ""},
+		{"interval", OpIsBetween, unified.Between, "50.00001", "100.00009", "50.0001", "100", ""},
+		{"collapsed interval", OpIsBetween, unified.Between, "99.99995", "100.00004", "100", "100", ""},
+		{"no readable equality", OpIs, unified.Equal, "100.00001", "", "", "", "none"},
+		{"all readable different", OpIsNot, unified.Different, "100.00001", "", "", "", "all"},
+		{"no readable interval", OpIsBetween, unified.Between, "100.00001", "100.00009", "", "", "none"},
+		{"all readable interval", OpIsBetween, unified.Between, "-1e20", "1e20", "", "", "all"},
+	} {
+		for _, kind := range []string{"count", "experience"} {
+			t.Run(test.name+"/"+kind, func(t *testing.T) {
+				requested := []decimal.Decimal{decimal.MustParse(test.value)}
+				money := &unified.Money{Field: field, NativeCurrency: "EUR",
+					Test: unified.SumTest{Operator: test.comparison, Value: requested[0]}}
+				if test.upper != "" {
+					money.Test.Upper = decimal.MustParse(test.upper)
+					requested = append(requested, money.Test.Upper)
+				}
+				body := &unified.OccurrencePredicate{Children: []unified.OccurrencePredicate{
+					{Operator: state.OpOr, Children: []unified.OccurrencePredicate{{Money: money}}},
+				}}
+				var physical warehouses.FilterCondition = &warehouses.IndependentOccurrenceCount{}
+				semantic := unified.Rule{Count: &unified.Count{Where: body}}
+				nodes := []warehouses.FilterNodeOutcome{{Truth: warehouses.FilterUnknown,
+					Count: &warehouses.OccurrenceCountBounds{Possible: 1}}}
+				if kind == "experience" {
+					physical = &warehouses.SelectedOccurrence{}
+					semantic = unified.Rule{Experience: &unified.Experience{Verify: body}}
+					nodes[0].Experience = &warehouses.OccurrenceSelection{Candidates: 1, AbsencePossible: true}
+				}
+				index := 0
+				result, err := explainProfileRule(physical, semantic, nodes, &index, time.Time{})
+				if err != nil {
+					t.Fatalf("expected complete monetary explanation, got %v", err)
+				}
+				if result.Kind != kind || result.Result != "UNKNOWN" || index != 1 ||
+					kind == "count" && result.Count == nil || kind == "experience" && result.Experience == nil {
+					t.Fatalf("expected one UNKNOWN %s explanation, got %+v", kind, result)
+				}
+				var leaves []ProfileMoneyExplanation
+				if kind == "count" {
+					leaves = result.Count.Money
+				} else {
+					leaves = result.Experience.Money
+				}
+				if len(leaves) != 1 {
+					t.Fatalf("expected one explained monetary leaf, got %+v", leaves)
+				}
+				leaf := leaves[0]
+				if !reflect.DeepEqual(leaf.Path, []int{0, 0}) || leaf.NativeCurrency != "EUR" ||
+					leaf.Field.Definition != "commerce.order_completed.total" || leaf.Field.MeaningRevision != "1" ||
+					leaf.Requested.Operator != test.operator || len(leaf.Requested.Values) != len(requested) {
+					t.Fatalf("expected resolved reference, owner path and requested test, got %+v", leaf)
+				}
+				for i, value := range requested {
+					if !leaf.Requested.Values[i].Equal(value) {
+						t.Fatalf("expected requested operand %s, got %s", value, leaf.Requested.Values[i])
+					}
+				}
+				if leaf.Normalized.ReadableAmounts != test.domain {
+					t.Fatalf("expected readable-amount domain %q, got %+v", test.domain, leaf.Normalized)
+				}
+				if test.domain != "" {
+					if leaf.Normalized.Operator != "" || leaf.Normalized.Values != nil {
+						t.Fatalf("expected only the readable-amount domain, got %+v", leaf.Normalized)
+					}
+					return
+				}
+				if leaf.Normalized.Operator != test.operator || len(leaf.Normalized.Values) != len(requested) ||
+					!leaf.Normalized.Values[0].Equal(decimal.MustParse(test.low)) ||
+					test.high != "" && !leaf.Normalized.Values[1].Equal(decimal.MustParse(test.high)) {
+					t.Fatalf("expected normalized %s [%s,%s], got %+v", test.operator, test.low, test.high, leaf.Normalized)
+				}
+			})
+		}
+	}
+
+}
+
 func TestExplainProfileFilterValidation(t *testing.T) {
 	workspace := &Workspace{core: &Core{}, workspace: &state.Workspace{ProfileSchema: types.Object([]types.Property{
 		{Name: "email", Type: types.String(), ReadOptional: true},
