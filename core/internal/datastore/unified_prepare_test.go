@@ -15,6 +15,7 @@ import (
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/core/internal/unified"
 	"github.com/krenalis/krenalis/tools/errors"
+	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
 )
@@ -334,4 +335,54 @@ func TestUnifiedPreparedBudget(t *testing.T) {
 	}
 	t.Fatal("expected physical budget rejection, got success")
 
+}
+
+// TestUnifiedRecordBodyBinding keeps each Count or E base Record body atomic.
+func TestUnifiedRecordBodyBinding(t *testing.T) {
+	where := &state.Where{Operator: state.OpOr, Rules: []state.WhereRule{
+		&state.WhereCondition{Property: []string{"properties", "a.b"}, Operator: state.OpIsNot,
+			Values: []any{json.Value(`100`)}},
+		&state.Where{Operator: state.OpAnd, Rules: []state.WhereRule{
+			&state.WhereCondition{Property: []string{"context", "page", "path"}, Operator: state.OpDoesNotContain,
+				Values: []any{"/private"}},
+		}},
+	}}
+	at := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
+	for _, selected := range []bool{false, true} {
+		source := unifiedSourceBinding(nil)
+		bind := source.Record
+		calls := 0
+		source.Record = func(actual *state.Where) (warehouses.Expr, error) {
+			if calls == 1 && !reflect.DeepEqual(actual, where) {
+				t.Fatalf("expected original whole Record group, got %+v", actual)
+			}
+			calls++
+			return bind(actual)
+		}
+		scope := unified.Scope{Event: "Order Completed", Grain: "registered-message", Start: at.Add(-time.Hour), End: at}
+		root := &unified.Rule{Count: &unified.Count{Scope: scope, Where: recordCountWhere(t, where)}}
+		expectedCalls := 2 // Source selector, then the whole where.
+		if selected {
+			root = &unified.Rule{Experience: &unified.Experience{Scope: scope, Where: where,
+				Verify: &unified.OccurrencePredicate{Record: &state.WhereCondition{Property: []string{"messageId"},
+					Operator: state.OpStartsWith, Values: []any{"WEB-"}}}}}
+			expectedCalls++
+		}
+		_, err := unified.Prepare(root, unified.Bindings{}, at, source)
+		if err != nil {
+			t.Fatalf("expected prepared selection=%v, got %v", selected, err)
+		}
+		if calls != expectedCalls {
+			t.Fatalf("expected %d atomic Record binds, got %d", expectedCalls, calls)
+		}
+	}
+}
+
+func recordCountWhere(t *testing.T, where *state.Where) *unified.OccurrencePredicate {
+	t.Helper()
+	predicate, err := unified.RecordPredicate(where)
+	if err != nil {
+		t.Fatalf("expected prepared Record predicate, got %v", err)
+	}
+	return predicate
 }

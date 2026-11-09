@@ -427,10 +427,11 @@ Italy with no recorded Purchase in the previous 30 elapsed days:
   int64 definition of the language; no conversion through Float is used.
 - Optional `count.minimum` is a positive integer sample guard, independent of
   the comparison values. Omission means no extra sample minimum.
-- Optional `count.where` reuses Record predicates against the Event schema.
+- Optional `count.where` reuses Record predicates against the Event schema and
+  admits one governed money leaf (see Count monetary qualification below).
   Its budget is two group levels and 100 descendants, independent of the main
   filter's four levels and 100 descendants. Count inside this body is rejected
-  during decoding as well as programmatic Record preparation.
+  during decoding as well as programmatic occurrence preparation.
 - `period.kind` is `absoluteHalfOpen` with `start`/`end` RFC 3339 instants,
   `elapsedLookback` with `duration`, or `elapsedAgoBand` with `older`/`newer`.
   Fields of another variant and null temporal fields are rejected. A duration
@@ -730,6 +731,38 @@ The SQL tool stays available for discovery/other analysis, with instructions
 prohibiting fallback to SQL for unsupported Unified features. See
 [`cmd/internal/mcp/README.md`](../../../cmd/internal/mcp/README.md) and the
 model-facing `profile-filter-doc` tool for transport, limits and examples.
+
+## Count monetary qualification
+
+Count.where and Experience.verify share the closed OccurrencePredicate body.
+Count's private validation entry excludes occurredIn, including directly built
+models. Sum/Average.where and Experience.where remain state.Where, so those
+slots stay Record-only; Experience converts its base where when reusing Count.
+RecordPredicate and recordWhere preserve groups, child order, paths and typed
+operands. An entirely Record Count body is bound once through source.Record,
+preserving existing SQL. Only mixed bodies use QualificationGroup rendering.
+
+Count admits one money leaf with the existing monetary reading and four ordered
+comparisons. Bounds remain exact under the same independent-occurrence contract;
+no new numerical algorithm is needed. Dependency analysis visits all branches
+to reject overlapping raw paths and multiple money leaves, after validity checks.
+Budget validation, binding and explanation paths retain the complete tree.
+Count.ValidateWhere centralizes body/source/currency admission for public
+preparation and the internal Validate/Prepare entry points.
+
+In the warehouse composer, Count renders the qualification under its required
+root AND conjuncts. A direct KnownTextEqual reading conditions matching monetary
+currency exactly as in selected verification: the same value removes that
+redundant test; a different value makes the leaf FALSE, even inside OR. The full
+qualification still retains the outer currency. This one rendered predicate is
+used in copies, outcome consistency checks and counts. No raw value comparison
+is added to the source contract. Ordinary Record-only SQL and arguments remain
+unchanged, and Sum/Average keep their existing qualification rendering.
+
+Count explanations add money metadata only when present, using the same fields
+as Experience but paths relative to Count.where. No event amounts are exposed.
+The MCP guide distinguishes individual thresholds, native sum and native average,
+and documents the USD/PROMO OR counterexample to dropping the outer currency.
 
 ## Selected Experience subset
 

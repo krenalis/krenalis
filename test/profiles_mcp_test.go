@@ -16,6 +16,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/krenalis/krenalis/core"
 	"github.com/krenalis/krenalis/test/krenalistester"
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/types"
@@ -584,6 +585,151 @@ UPDATE krenalis_events SET properties='{}' WHERE event='Order Completed'`)
 					"kpid": "00000000-0000-0000-0000-000000000003", "filter": test.filter, "at": at,
 				}), test.code)
 			})
+		}
+
+	})
+
+	t.Run("CountMoney", func(t *testing.T) {
+
+		_, err := pool.Exec(t.Context(), `INSERT INTO krenalis_events
+(kpid,message_id,event,timestamp,received_at,sent_at,type,connection_id,anonymous_id,traits,properties)
+SELECT ('00000000-0000-0000-0000-'||lpad(n::text,12,'0'))::uuid,'count-money/'||n||'/'||id,
+'Order Completed',stamp::timestamp,'2026-02-01','2026-02-01','track','fixture','a','{}',
+jsonb_build_object('count_money_fixture',true)||payload::jsonb
+FROM (VALUES
+(1,'a','2026-01-10','{"currency":"EUR","total":100}'),
+(1,'b','2026-01-20','{"currency":"EUR","total":100}'),
+(1,'c','2026-01-25','{"currency":"EUR","total":100}'),
+(2,'a','2026-01-05','{"currency":"EUR","total":200}'),
+(2,'b','2026-01-12','{"currency":"EUR","total":200}'),
+(2,'promo','2026-01-20','{"currency":"USD","total":50,"coupon":"PROMO"}'),
+(3,'a','2026-01-15','{"currency":"EUR","total":80}'),
+(4,'a','2026-01-25','{"total":150}')
+) v(n,id,stamp,payload)`)
+		if err != nil {
+			t.Fatalf("expected coherent Count money fixtures, got %v", err)
+		}
+		defer func() {
+			_, err := pool.Exec(t.Context(), "DELETE FROM krenalis_events WHERE message_id LIKE 'count-money/%'")
+			if err != nil {
+				t.Errorf("expected Count money fixture cleanup, got %v", err)
+			}
+		}()
+
+		const money = `{"money":{"field":{"definition":"commerce.order_completed.total","meaningRevision":"1"},` +
+			`"nativeCurrency":"EUR"},"operator":"is greater than or equal to","values":[100]}`
+		const fixture = `{"property":"properties.count_money_fixture","operator":"exists"}`
+		const source = `"source":{"kind":"recordedEvents","name":"Order Completed","grain":"registered-message"},` +
+			`"period":{"kind":"elapsedLookback","duration":{"value":30,"unit":"day"}}`
+		const count = `{"operator":"and","rules":[{"count":{` + source +
+			`,"where":{"operator":"and","rules":[` + fixture + `,` + money + `]}},` +
+			`"operator":"is greater than or equal to","values":[3]}]}`
+		const sum = `{"operator":"and","rules":[{"sum":{` + source +
+			`,"field":{"definition":"commerce.order_completed.total","meaningRevision":"1"},"nativeCurrency":"EUR",` +
+			`"where":{"operator":"and","rules":[` + fixture + `]}},` +
+			`"operator":"is greater than or equal to","values":[300]}]}`
+		average := strings.Replace(strings.Replace(sum, `"sum":{`, `"average":{"minimum":1,`, 1), `[300]`, `[100]`, 1)
+		absence := strings.Replace(count, `"operator":"is greater than or equal to","values":[3]`,
+			`"operator":"is","values":[0]`, 1)
+		orPromo := strings.Replace(count, money,
+			`{"operator":"or","rules":[`+money+`,{"property":"properties.coupon","operator":"is","values":["PROMO"]}]}`, 1)
+		const currency = `"currencyField":{"definition":"commerce.order_completed.currency",` +
+			`"meaningRevision":"1"},"nativeCurrency":"EUR",`
+		outerEUR := strings.Replace(orPromo, `"count":{`, `"count":{`+currency, 1)
+		for _, test := range []struct{ name, input, totals string }{
+			{"three individual qualifying orders", count, `"match":1,"noMatch":3,"unknown":0`},
+			{"total of native EUR orders", sum, `"match":2,"noMatch":2,"unknown":0`},
+			{"average of native EUR orders", average, `"match":2,"noMatch":1,"unknown":1`},
+			{"absence can be unknown", absence, `"match":1,"noMatch":2,"unknown":1`},
+			{"OR admits USD PROMO", orPromo, `"match":2,"noMatch":2,"unknown":0`},
+			{"outer EUR excludes USD PROMO", outerEUR, `"match":1,"noMatch":3,"unknown":0`},
+		} {
+			t.Run(test.name, func(t *testing.T) {
+				for _, first := range []int{0, 99} {
+					var expected json.RawMessage
+					k.Call("GET", "/v1/profiles?filter="+url.QueryEscape(test.input)+"&at="+url.QueryEscape(at)+
+						"&first="+strconv.Itoa(first), nil, nil, &expected)
+					actual := assertResult(t, tool(t, "query-profiles", map[string]any{
+						"filter": test.input, "at": at, "first": first}))
+					if actual != string(expected) || !strings.Contains(actual, test.totals) ||
+						first == 99 && !strings.HasPrefix(actual, `{"profiles":[]`) {
+						t.Fatalf("expected identical HTTP/MCP totals %s, got %s", test.totals, actual)
+					}
+				}
+			})
+		}
+		for _, test := range []struct {
+			input, result string
+			path          []int
+			outerCurrency bool
+		}{
+			{absence, "UNKNOWN", []int{1}, false},
+			{outerEUR, "NO_MATCH", []int{1, 0}, true},
+		} {
+			const id = "00000000-0000-0000-0000-000000000004"
+			var expected json.RawMessage
+			k.Call("GET", "/v1/profiles/"+id+"/filter-explanation?filter="+url.QueryEscape(test.input)+
+				"&at="+url.QueryEscape(at), nil, nil, &expected)
+			actual := assertResult(t, tool(t, "explain-profile-filter", map[string]any{
+				"kpid": id, "filter": test.input, "at": at}))
+			var explanation struct {
+				Rule struct {
+					Rules []struct {
+						Result string
+						Count  *struct {
+							Certain, Uncertain int64
+							CurrencyField      *core.FilterCurrencyField
+							NativeCurrency     string
+							Money              []struct {
+								Path           []int
+								Field          core.FilterSumField
+								NativeCurrency string
+								Requested      json.RawMessage
+								Normalized     json.RawMessage
+							}
+						}
+					}
+				}
+			}
+			err := json.Unmarshal([]byte(actual), &explanation)
+			if err != nil {
+				t.Fatalf("expected exact decoded monetary explanation, got %v", err)
+			}
+			if actual != string(expected) || len(explanation.Rule.Rules) != 1 ||
+				explanation.Rule.Rules[0].Count == nil || explanation.Rule.Rules[0].Result != test.result {
+				t.Fatalf("expected identical HTTP/MCP explanation with %s, got %s", test.result, actual)
+			}
+			count := explanation.Rule.Rules[0].Count
+			if count.Certain != 0 || count.Uncertain != 1 || len(count.Money) != 1 ||
+				(count.CurrencyField != nil) != test.outerCurrency {
+				t.Fatalf("expected exact Count bounds and optional outer currency, got %+v", count)
+			}
+			money := count.Money[0]
+			if !reflect.DeepEqual(money.Path, test.path) || money.NativeCurrency != "EUR" ||
+				money.Field.Definition != "commerce.order_completed.total" || money.Field.MeaningRevision != "1" {
+				t.Fatalf("expected resolved where money metadata, got %+v", money)
+			}
+			for _, raw := range []json.RawMessage{money.Requested, money.Normalized} {
+				var comparison struct {
+					Operator core.FilterOperator
+					Values   []json.RawMessage
+				}
+				err := json.Unmarshal(raw, &comparison)
+				if err != nil {
+					t.Fatalf("expected decoded monetary comparison, got %v", err)
+				}
+				if comparison.Operator != core.OpIsGreaterThanOrEqualTo || len(comparison.Values) != 1 {
+					t.Fatalf("expected exact requested/normalized >= 100, got %+v", comparison)
+				}
+				value, ok := new(big.Rat).SetString(string(comparison.Values[0]))
+				if !ok || value.Cmp(big.NewRat(100, 1)) != 0 {
+					t.Fatalf("expected exact numeric operand 100, got %s", comparison.Values[0])
+				}
+			}
+			if test.outerCurrency && (count.CurrencyField.Definition != "commerce.order_completed.currency" ||
+				count.CurrencyField.MeaningRevision != "1" || count.NativeCurrency != "EUR") {
+				t.Fatalf("expected outer EUR reading separate from money, got %+v", count)
+			}
 		}
 
 	})

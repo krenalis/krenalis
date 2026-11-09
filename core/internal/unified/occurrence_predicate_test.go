@@ -81,3 +81,12 @@ func TestOccurrencePredicateValidation(t *testing.T) {
 	}
 	t.Fatal("expected invalid base, got success")
 }
+
+func recordCountWhere(t *testing.T, where *state.Where) *OccurrencePredicate {
+	t.Helper()
+	predicate, err := RecordPredicate(where)
+	if err != nil {
+		t.Fatalf("expected prepared Record predicate, got %v", err)
+	}
+	return predicate
+}

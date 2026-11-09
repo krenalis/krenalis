@@ -31,11 +31,11 @@ const (
 	Between
 )
 
-// Count is Direct(Count(scope), literal test). Where contains prepared Record
-// operands, not an alternative public filter format.
+// Count is Direct(Count(scope), literal test). Where contains local Record
+// and money predicates, not an alternative public filter format.
 type Count struct {
 	Scope    Scope
-	Where    *state.Where
+	Where    *OccurrencePredicate
 	Currency *NativeCurrency
 	Test     CountTest
 	Minimum  uint64
@@ -43,6 +43,43 @@ type Count struct {
 	// Shared records a governed dependency this first implementation cannot
 	// resolve. Such a rule is unsupported, not invalid under specification 1.2.
 	Shared *SharedBoolean
+}
+
+// ValidateWhere checks the local body and its dependencies on Count currency.
+// It returns *UnsupportedError for valid bodies outside the admitted subset.
+func (c *Count) ValidateWhere() error {
+	if c == nil {
+		return fmt.Errorf("Count cannot be nil")
+	}
+	err := c.Scope.validateSource()
+	if err != nil {
+		return err
+	}
+	if c.Currency != nil {
+		if c.Scope.eventType() != "track" {
+			return fmt.Errorf("currency field is incompatible with the occurrence source")
+		}
+		err := c.Currency.validate(c.Scope.Event)
+		if err != nil {
+			return err
+		}
+	}
+	if c.Where == nil {
+		return nil
+	}
+	err = c.Where.validateCount(c.Scope)
+	var unavailable error
+	if err != nil {
+		if _, unsupported := errors.AsType[*UnsupportedError](err); !unsupported {
+			return err
+		}
+		unavailable = err
+	}
+	err = c.Where.validateDependencies(nil, c.Currency, countWherePredicate)
+	if err != nil {
+		return err
+	}
+	return unavailable
 }
 
 // CountTest compares Count to a nonnegative integer or an inclusive interval.
@@ -388,20 +425,10 @@ func validateRule(rule Rule, at time.Time, depth int, nodes *int) error {
 		(c.Test.Operator == Between && c.Test.Upper < c.Minimum)) {
 		return fmt.Errorf("Count sample minimum and terminal are statically incompatible")
 	}
-	if c.Currency != nil {
-		if c.Scope.eventType() != "track" {
-			return fmt.Errorf("currency field is incompatible with the occurrence source")
-		}
-		err := c.Currency.validate(c.Scope.Event)
-		if err != nil {
-			return err
-		}
-	}
-	if c.Where != nil {
-		nodes := 0
-		err := validateWhere(c.Where, 1, &nodes)
-		if err != nil {
-			return err
+	whereErr := c.ValidateWhere()
+	if whereErr != nil {
+		if _, unsupported := errors.AsType[*UnsupportedError](whereErr); !unsupported {
+			return whereErr
 		}
 	}
 	_, _, err = c.Scope.bounds(at)
@@ -417,10 +444,7 @@ func validateRule(rule Rule, at time.Time, depth int, nodes *int) error {
 	if c.Test.Operator == Greater && c.Test.Value == math.MaxInt64 {
 		return &UnsupportedError{Capability: "Count threshold requiring values beyond signed 64-bit range"}
 	}
-	if c.Currency != nil && c.Where != nil {
-		return c.Currency.ValidateWhere(c.Where)
-	}
-	return nil
+	return whereErr
 }
 
 func validateTime(t time.Time) error {

@@ -129,8 +129,9 @@ Count is `{"count":{"source":...,"period":...,"where":...,"minimum":...},
   comparison separately, then combine their results with Kleene AND. For
   example, count in [1,3], minimum 3 and `is not 3` gives UNKNOWN, even though
   no count satisfies both requirements jointly.
-- Optional `where` is a Record filter on Event properties with at most two group
-  levels and 100 descendants. Omission/null means no extra qualification. Count
+- Optional `where` filters Event properties with Record predicates and one money
+  predicate (see below), with at most two group levels and 100 descendants.
+  Omission/null means no extra qualification. Count
   cannot be nested inside it. Main Record conditions refer to profile properties.
 - Period `{"kind":"absoluteHalfOpen","start":"RFC3339","end":"RFC3339"}`
   with start < end <= T; or `{"kind":"elapsedLookback","duration":D}`; or
@@ -237,9 +238,10 @@ the distinct raw JSON absence is MATCH. Never substitute one for the other.
 An independent Record `where` can be combined with governed currency. Temporarily,
 paths overlapping its reading (`properties`, `properties.currency` and descendants
 of that currency path) return `FilterCapabilityNotImplemented`. This applies in
-every nested group, with exact case-sensitive key segments; `properties.Currency`,
-`properties.currency_code`, `properties.total` and `properties.coupon` remain
-admissible. Unlike Sum, Count does not read the amount. A false `where` excludes
+every nested group, with exact case-sensitive key segments. With a Record-only
+where, `properties.Currency`, `properties.currency_code`, `properties.total` and
+`properties.coupon` remain admissible. The governed currency requirement alone
+does not read the amount; money adds that reading as described below. A false `where` excludes
 the occurrence even with unknown currency. A missing coupon still follows raw
 Record UNKNOWN; do not reinterpret it as a governed no-coupon value.
 The sample minimum counts this qualified population and retains Kleene AND.
@@ -247,6 +249,70 @@ These are temporary execution limits, not changes to the full language.
 
 Count explanations include the resolved `currencyField` and `nativeCurrency`
 only when used. Existing raw Count explanations keep their original fields.
+
+### Count messages satisfying a governed monetary condition
+
+Use one money leaf in `count.where` to count individual messages whose native
+currency and reported amount pass the test. For at least three registered orders
+of at least 100 EUR each in the last 30 elapsed days:
+
+```json
+{"operator":"and","rules":[{"count":{"source":{"kind":"recordedEvents","name":"Order Completed","grain":"registered-message"},"period":{"kind":"elapsedLookback","duration":{"value":30,"unit":"day"}},"where":{"operator":"and","rules":[{"money":{"field":{"definition":"commerce.order_completed.total","meaningRevision":"1"},"nativeCurrency":"EUR"},"operator":"is greater than or equal to","values":[100]}]}},"operator":"is greater than or equal to","values":[3]}]}
+```
+
+This is the preferred form for that request: money includes its own currency
+requirement, so no outer currencyField/nativeCurrency pair is needed. Monetary
+readings, exact threshold normalization, source compatibility and UNKNOWN rules
+are the same as for money in experience.verify below. Only the four ordered
+money comparisons execute. Equality, inequality and intervals remain unavailable;
+do not approximate "between 50 and 100 EUR" with raw amount/currency conditions
+or repeated money leaves. The Count terminal itself still supports all its
+existing comparisons, including equality and intervals.
+
+| Requested measure | Construction |
+|---|---|
+| Number of individual native-EUR orders with total >= 100 | Count with money EUR >= 100 in where |
+| Sum of native-EUR order totals >= 300 | Sum, field total, nativeCurrency EUR |
+| Average native-EUR order total >= 100 | Average on that field/currency, with required minimum |
+| Amounts converted from other currencies | Unavailable; no filter performs currency conversion |
+
+Count counts registered messages, with message copies deduplicated, not business
+orders. For "no order of at least 100 EUR", use the same where with Count is 0.
+A potentially qualifying message with unreadable amount or unknown currency can
+leave this absence UNKNOWN. A certainly different currency excludes it even if
+the amount is unreadable.
+
+The where can combine money with independent Record predicates using AND/OR.
+Only one money leaf is admitted, including nested branches. Raw paths overlapping
+the amount or currency reading (properties, properties.total, properties.currency
+and descendants) return FilterCapabilityNotImplemented, with case-sensitive path
+segments. properties.total_discount and properties.Total remain independent.
+OccurredIn is invalid in Count.where. Money in Sum/Average.where or E base.where
+remains unavailable. Invalid fields, operators and payloads remain errors.
+
+The outer Count currency is an additional necessary requirement. If it reads the
+same currency as money, the monetary test is evaluated under that requirement:
+the same currency removes the redundant test; a different currency makes that
+money leaf FALSE, including under OR. The outer requirement is retained.
+
+Do not automatically remove an outer currency because money occurs somewhere in
+the where. These requests differ for a USD message with coupon PROMO:
+
+| Qualification | Is that USD PROMO message counted? |
+|---|---|
+| money EUR >= 100 OR coupon is PROMO, without outer currency | Yes |
+| The same OR, with outer Count currency EUR | No |
+
+Without OR alternatives, a required money EUR predicate alone or as a necessary
+conjunct is equivalent with or without the additional outer EUR restriction.
+Sample minimum still counts qualifying messages and uses the existing Kleene
+guard; it is not a minimum on the money amount.
+
+Explanations add `count.money:[{path,field,nativeCurrency,requested,normalized}]`.
+Paths are zero-based rule indexes relative to count.where. The outer Count
+currencyField/nativeCurrency remains separate from money[].nativeCurrency.
+No event amount or witness is returned. Count explanations without money omit
+this field, preserving their existing JSON.
 
 ## Monetary Sum
 
@@ -637,7 +703,8 @@ and `properties.Total` are different and remain allowed.
 
 Multiple money leaves and these overlaps return FilterCapabilityNotImplemented;
 they do not turn into UNKNOWN or silently drop conditions. Money qualification
-in base.where or Count/Sum/Average.where is likewise valid but not implemented.
+in base.where or Sum/Average.where is likewise valid but not implemented.
+Count.where admits one money as described above.
 Money is invalid on the Profiles root and in Record-only pipelines. A raw
 properties.currency is EUR prefilter is therefore unavailable together with
 money in verify: it differs from governed currency on JSON null and must not

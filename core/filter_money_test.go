@@ -249,14 +249,12 @@ func TestFilterMoneyStrict(t *testing.T) {
 	}
 }
 
-// TestFilterMoneyWhere remains unavailable in occurrence qualification slots.
+// TestFilterMoneyWhere keeps Sum, Average and E base qualification unavailable.
 func TestFilterMoneyWhere(t *testing.T) {
 
 	for _, input := range []string{
 		strings.Replace(experienceConditionJSON, `"base":{`,
 			`"base":{"where":{"operator":"and","rules":[`+moneyConditionJSON+`]},`, 1),
-		strings.Replace(strings.Replace(countConditionJSON, `"name":"Purchase"`, `"name":"Order Completed"`, 1), `"count":{`,
-			`"count":{"where":{"operator":"and","rules":[`+moneyConditionJSON+`]},`, 1),
 		strings.Replace(sumConditionJSON, `"sum":{`,
 			`"sum":{"where":{"operator":"and","rules":[`+moneyConditionJSON+`]},`, 1),
 		strings.Replace(averageConditionJSON, `"average":{`,
@@ -325,11 +323,12 @@ func TestFilterMoneyWhereParameters(t *testing.T) {
 	for _, test := range []struct {
 		input       string
 		unsupported bool
+		valid       bool
 	}{
-		{strings.Replace(base, `"count":{`, `"count":{"nativeCurrency":"EUR",`, 1), false},
-		{strings.Replace(base, `"count":{`, `"count":{"currencyField":{"definition":"commerce.order_completed.currency","meaningRevision":"1"},"nativeCurrency":"EUR",`, 1), true},
-		{largePeriod, true},
-		{strings.Replace(largePeriod, `commerce.order_completed.total`, `unresolved`, 1), false},
+		{strings.Replace(base, `"count":{`, `"count":{"nativeCurrency":"EUR",`, 1), false, false},
+		{strings.Replace(base, `"count":{`, `"count":{"currencyField":{"definition":"commerce.order_completed.currency","meaningRevision":"1"},"nativeCurrency":"EUR",`, 1), false, true},
+		{largePeriod, true, false},
+		{strings.Replace(largePeriod, `commerce.order_completed.total`, `unresolved`, 1), false, false},
 	} {
 		var condition FilterCountCondition
 		err := json.Unmarshal([]byte(test.input), &condition)
@@ -339,11 +338,13 @@ func TestFilterMoneyWhereParameters(t *testing.T) {
 		_, err = prepareFilterCount(&condition, nil)
 		if err != nil {
 			_, unsupported := errors.AsType[*unified.UnsupportedError](err)
-			if unsupported != test.unsupported {
+			if test.valid || unsupported != test.unsupported {
 				t.Fatalf("expected unsupported=%v after parameter validation, got %v", test.unsupported, err)
 			}
 			continue
 		}
-		t.Fatal("expected unavailable or invalid Count, got success")
+		if !test.valid {
+			t.Fatal("expected unavailable or invalid Count, got success")
+		}
 	}
 }

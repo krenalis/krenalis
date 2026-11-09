@@ -83,7 +83,7 @@ func (c *compiler) count(node *warehouses.IndependentOccurrenceCount) (string, e
 	}
 	qual := "TRUE"
 	if node.Qualification != nil {
-		qual, err = c.qualification(node.Qualification)
+		qual, err = c.qualificationGiven(node.Qualification, node.Qualification)
 		if err != nil {
 			return "", err
 		}
@@ -155,7 +155,7 @@ func (c *compiler) qualification(node warehouses.RowQualification) (string, erro
 	return c.qualificationGiven(node, nil)
 }
 
-// qualificationGiven closes selected verification under its required base.
+// qualificationGiven closes a predicate under its required base conjuncts.
 func (c *compiler) qualificationGiven(node, base warehouses.RowQualification) (string, error) {
 	switch n := node.(type) {
 	case *warehouses.RecordQualification:

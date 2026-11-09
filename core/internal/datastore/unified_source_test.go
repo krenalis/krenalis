@@ -129,10 +129,10 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,event text,timestamp tim
 		}
 		count := *rule.Count
 		count.Scope.Event, count.Currency = "Order Completed", currency
-		count.Where = &state.Where{Operator: state.OpAnd, Rules: []state.WhereRule{
+		count.Where = recordCountWhere(t, &state.Where{Operator: state.OpAnd, Rules: []state.WhereRule{
 			&state.WhereCondition{Property: []string{"properties", "coupon"}, Operator: state.OpIs,
 				Values: []any{json.Value(`"PROMO"`)}},
-		}}
+		}})
 		bound := unified.Rule{Count: &count}
 		for _, test := range []struct {
 			name                    string

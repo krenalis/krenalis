@@ -172,11 +172,20 @@ func prepareRule(rule Rule, bindings Bindings, at time.Time, source SourceBindin
 	}
 	qualifiers := []warehouses.RowQualification{&warehouses.RecordQualification{Expr: selector}}
 	if c.Where != nil {
-		expr, err := source.Record(c.Where)
-		if err != nil {
-			return nil, err
+		var qualification warehouses.RowQualification
+		if where, recordOnly := c.Where.recordWhere(); recordOnly {
+			expr, err := source.Record(where)
+			if err != nil {
+				return nil, err
+			}
+			qualification = &warehouses.RecordQualification{Expr: expr}
+		} else {
+			qualification, err = c.Where.prepare(at, source)
+			if err != nil {
+				return nil, err
+			}
 		}
-		qualifiers = append(qualifiers, &warehouses.RecordQualification{Expr: expr})
+		qualifiers = append(qualifiers, qualification)
 	}
 	if c.Currency != nil {
 		var binding *CurrencyBinding

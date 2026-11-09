@@ -144,7 +144,8 @@ func validateFilterCondition(node FilterCondition, depth int, nodes, physical *i
 			}
 		}
 		if n.Qualification != nil {
-			return validateQualification(n.Qualification, 1, physical)
+			// Count adds a source wrapper outside the two user predicate groups.
+			return validateQualification(n.Qualification, 0, physical)
 		}
 	default:
 		return fmt.Errorf("warehouses: unexpected prepared filter node %T", node)

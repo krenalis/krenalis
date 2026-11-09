@@ -140,10 +140,10 @@ CREATE VIEW krenalis_events AS SELECT e.* FROM event_fixture e CROSS JOIN (VALUE
 		sum.Test = unified.SumTest{Operator: unified.LessOrEqual, Value: decimal.MustParse("100")}
 		count := unified.Count{Scope: sum.Scope, Minimum: 3,
 			Test: unified.CountTest{Operator: unified.Different, Value: 3},
-			Where: &state.Where{Operator: state.OpAnd, Rules: []state.WhereRule{
+			Where: recordCountWhere(t, &state.Where{Operator: state.OpAnd, Rules: []state.WhereRule{
 				&state.WhereCondition{Property: []string{"properties", "currency"}, Operator: state.OpIs,
 					Values: []any{json.Value(`"EUR"`)}},
-			}}}
+			}})}
 		rule := unified.Rule{Operator: state.OpAnd, Children: []unified.Rule{{Count: &count}, {Sum: &sum}}}
 		result, err := store.UnifiedProfiles(t.Context(), &rule, unified.Bindings{}, at, unified.Page{Limit: 10})
 		if err != nil {

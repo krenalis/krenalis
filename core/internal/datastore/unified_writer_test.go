@@ -327,9 +327,9 @@ func TestUnifiedWritersPostgreSQL(t *testing.T) {
 			case "raw absence":
 				c := *count.Count
 				c.Currency = nil
-				c.Where = &state.Where{Operator: state.OpAnd, Rules: []state.WhereRule{&state.WhereCondition{
+				c.Where = recordCountWhere(t, &state.Where{Operator: state.OpAnd, Rules: []state.WhereRule{&state.WhereCondition{
 					Property: []string{"properties", "currency"}, Operator: state.OpIs,
-					Values: []any{json.Value(`"EUR"`)}}}}
+					Values: []any{json.Value(`"EUR"`)}}}})
 				rule = unified.Rule{Count: &c}
 			case "mixed":
 				rule = unified.Rule{Operator: state.OpAnd, Children: []unified.Rule{count,
@@ -343,12 +343,12 @@ func TestUnifiedWritersPostgreSQL(t *testing.T) {
 				case "event once":
 					c.Test.Value = 1
 				case "event properties null":
-					c.Where = &state.Where{Operator: state.OpAnd, Rules: []state.WhereRule{&state.WhereCondition{
-						Property: []string{"properties"}, Operator: state.OpIsNull}}}
+					c.Where = recordCountWhere(t, &state.Where{Operator: state.OpAnd, Rules: []state.WhereRule{&state.WhereCondition{
+						Property: []string{"properties"}, Operator: state.OpIsNull}}})
 				case "event exact number":
-					c.Where = &state.Where{Operator: state.OpAnd, Rules: []state.WhereRule{&state.WhereCondition{
+					c.Where = recordCountWhere(t, &state.Where{Operator: state.OpAnd, Rules: []state.WhereRule{&state.WhereCondition{
 						Property: []string{"properties", "currency"}, Operator: state.OpIs,
-						Values: []any{json.Value(`9007199254740993`)}}}}
+						Values: []any{json.Value(`9007199254740993`)}}}})
 				default:
 					t.Fatalf("expected known event query kind, got %q", kind)
 				}

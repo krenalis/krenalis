@@ -35,7 +35,7 @@ func TestValidate(t *testing.T) {
 		{"too large", func(c *Count) { c.Test.Value = 1 << 63 }, true},
 		{"invalid period", func(c *Count) { c.Scope.Start = at; c.Scope.End = at }, false},
 		{"history bounds", func(c *Count) { c.Scope.History = history }, false},
-		{"empty local group", func(c *Count) { c.Where = &state.Where{Operator: state.OpAnd} }, false},
+		{"empty local group", func(c *Count) { c.Where = &OccurrencePredicate{Operator: state.OpAnd} }, false},
 		{"incompatible guard", func(c *Count) { c.Minimum = 2; c.Test.Value = 1 }, false},
 	} {
 		t.Run(test.name, func(t *testing.T) {
@@ -164,8 +164,11 @@ func TestValidateInvalidBeforeUnsupported(t *testing.T) {
 		{"minimum", func(c *Count) { c.Minimum = 1 << 63 }},
 		{"period", func(c *Count) { c.Scope.Start = c.Scope.End; c.Shared = &SharedBoolean{Fact: "g"} }},
 		{"period precision", func(c *Count) { c.Scope.Start = c.Scope.End.Add(time.Nanosecond); c.Scope.End = c.Scope.Start }},
-		{"qualification", func(c *Count) { c.Where = &state.Where{Operator: state.OpAnd}; c.Shared = &SharedBoolean{Fact: "g"} }},
-		{"currency", func(c *Count) { c.Currency = &NativeCurrency{}; c.Where = &state.Where{Operator: state.OpAnd} }},
+		{"qualification", func(c *Count) {
+			c.Where = &OccurrencePredicate{Operator: state.OpAnd}
+			c.Shared = &SharedBoolean{Fact: "g"}
+		}},
+		{"currency", func(c *Count) { c.Currency = &NativeCurrency{}; c.Where = &OccurrencePredicate{Operator: state.OpAnd} }},
 	} {
 		for _, reversed := range []bool{false, true} {
 			for _, nanos := range []time.Duration{0, time.Nanosecond} {

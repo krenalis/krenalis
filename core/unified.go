@@ -38,16 +38,17 @@ func (this *Workspace) unifiedProfiles(ctx context.Context, query unifiedQuery) 
 	return this.store.UnifiedProfiles(ctx, root, unified.Bindings{}, query.At, query.Page)
 }
 
-// prepareUnifiedRecordCount reuses the existing schema-aware event preparer.
+// prepareUnifiedCount reuses the schema-aware occurrence preparer.
 // With *unified.UnsupportedError it returns Scope and Test in a partial Count
 // without qualification, so callers can validate remaining parameters.
 // That partial rule must not be executed.
-func prepareUnifiedRecordCount(scope unified.Scope, filter *Filter, test unified.CountTest) (unified.Rule, error) {
-	var where *state.Where
+func prepareUnifiedCount(scope unified.Scope, filter *Filter, test unified.CountTest) (unified.Rule, error) {
+	var where *unified.OccurrencePredicate
 	if filter != nil {
 		validation := filterValidation{maxDepth: 2, properties: schemas.Event.Properties(), source: &scope}
 		var err error
-		where, err = prepareFilterGroup(filter, &validation, 1)
+		where, err = prepareOccurrencePredicate(filter, &validation, 1,
+			FilterCountSource{Type: scope.Type, Name: scope.Event, Grain: scope.Grain}, nil, occurrenceFilterRule)
 		if err != nil {
 			if _, unsupported := errors.AsType[*unified.UnsupportedError](err); !unsupported {
 				return unified.Rule{}, err

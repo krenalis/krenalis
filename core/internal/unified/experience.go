@@ -29,7 +29,11 @@ type Experience struct {
 
 func (experience *Experience) prepare(at time.Time, source SourceBinding) (warehouses.FilterCondition, error) {
 	// Reuse the recorded-source binding, period and local qualification of Count.
-	population, err := prepareRule(Rule{Count: &Count{Scope: experience.Scope, Where: experience.Where,
+	where, err := RecordPredicate(experience.Where)
+	if err != nil {
+		return nil, err
+	}
+	population, err := prepareRule(Rule{Count: &Count{Scope: experience.Scope, Where: where,
 		Currency: experience.Currency, Test: CountTest{Operator: GreaterOrEqual, Value: 1}}}, Bindings{}, at, source)
 	if err != nil {
 		return nil, err
@@ -75,8 +79,7 @@ func (experience *Experience) validate(at time.Time) error {
 			return err
 		}
 	}
-	nodes := 0
-	err = experience.Verify.validate(at, experience.Scope, 1, &nodes)
+	err = experience.Verify.validateVerify(at, experience.Scope)
 	var unavailable error
 	if err != nil {
 		if _, unsupported := errors.AsType[*UnsupportedError](err); !unsupported {
@@ -97,7 +100,7 @@ func (experience *Experience) validate(at time.Time) error {
 			return err
 		}
 	}
-	err = experience.Verify.validateDependencies(experience.Where, experience.Currency)
+	err = experience.Verify.validateDependencies(experience.Where, experience.Currency, selectedOccurrencePredicate)
 	if err != nil {
 		return err
 	}

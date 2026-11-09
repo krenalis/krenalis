@@ -144,9 +144,9 @@ func TestNativeCurrencyValidation(t *testing.T) {
 		at := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
 		count := &Count{Scope: Scope{Event: "Order Completed", Grain: "registered-message",
 			Start: at.Add(-time.Hour), End: at}, Currency: currency,
-			Where: &state.Where{Operator: state.OpAnd, Rules: []state.WhereRule{
+			Where: recordCountWhere(t, &state.Where{Operator: state.OpAnd, Rules: []state.WhereRule{
 				&state.WhereCondition{Property: []string{"properties", "currency"}, Operator: state.OpExists},
-			}}}
+			}})}
 		change(count)
 		err = Validate(&Rule{Count: count}, at, Page{Limit: 1})
 		if err != nil {
@@ -192,9 +192,9 @@ func TestNativeCurrencyWhereAdmission(t *testing.T) {
 				count := &Count{Scope: Scope{Event: "Order Completed", Grain: "registered-message",
 					Start: at.Add(-time.Hour), End: at}, Currency: currency}
 				if test.path != nil {
-					count.Where = &state.Where{Operator: state.OpAnd, Rules: []state.WhereRule{
+					count.Where = recordCountWhere(t, &state.Where{Operator: state.OpAnd, Rules: []state.WhereRule{
 						&state.WhereCondition{Property: test.path, Operator: state.OpExists},
-					}}
+					}})
 				}
 				source := SourceBinding{Occurrences: warehouses.OccurrenceSource{Table: "events",
 					Profile:   warehouses.Column{Name: "kpid", Type: types.UUID()},

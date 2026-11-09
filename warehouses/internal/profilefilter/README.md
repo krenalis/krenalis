@@ -170,7 +170,7 @@ Selected timestamp membership is already resolved by core into existing Record
 datetime >= and < predicates inside the verification qualification. This adds
 no temporal resolver, SQL node or explanation transport fields in the drivers.
 
-MoneyQualification is a closed selected-row predicate. It renders the resolved
+MoneyQualification is a closed occurrence-local predicate. It renders the resolved
 KnownTextEqual currency reading AND an exact decimal comparison; either false
 component can refute the predicate even if the other is NULL. Its normalized
 threshold uses the same validated DECIMAL(38,4) literal form as Sum, without a new
@@ -179,14 +179,16 @@ thresholds: readable amounts have a determined outcome and unreadable amounts
 remain NULL. Currency is always evaluated by its existing reader.
 No candidate values or extra explanation columns are transported.
 
-Selected verification alone renders under its actual base qualification. A
+Selected verification and Count qualifications render under their required
+base conjuncts. A
 direct KnownTextEqual child of an AND base can fix MoneyQualification.Currency
 when column name/type, key segments and reader coincide. Equal literals remove
 only the redundant currency test; different literals yield FALSE even if the
 amount is unreadable. Other readings and other base shapes retain Kleene AND.
 The full monetary descriptor remains on the node; there is no flag, generic
 constant node or amount-only input that could claim a missing proof. The context
-recurses through verification groups and is never applied to ordinary Count,
-Sum or Average qualifications. Parameter order follows the remaining SQL reads.
+recurses through verification or Count groups. Count retains the complete outer
+qualification, including its currency; Sum and Average keep their existing
+rendering. Parameter order follows the remaining SQL reads.
 The base qualification is rendered again for the missing-timestamp fault check,
 allocating its repeated arguments for positional binds as well as indexed binds.

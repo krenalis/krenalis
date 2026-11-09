@@ -18,8 +18,8 @@ import (
 )
 
 // FilterCount describes the occurrence population counted by a condition.
-// Where is a Record filter on events, limited to two group levels and 100
-// descendants. Minimum, when supplied, is a positive JSON integer sample guard.
+// Where filters events with Record and money predicates, with at most two group
+// levels and 100 descendants. Minimum is a positive JSON integer sample guard.
 // CurrencyField and NativeCurrency must be supplied together when restricting
 // the population by governed currency; they never convert currencies.
 type FilterCount struct {
@@ -565,7 +565,7 @@ func prepareFilterCount(condition *FilterCountCondition, calendar *unified.Calen
 		return unified.Rule{}, errors.New("Count sample minimum and terminal are statically incompatible")
 	}
 
-	// Validate the period, source and Record qualification before availability.
+	// Validate the period, source and occurrence qualification before availability.
 	scope, periodErr := condition.Count.Period.scope(condition.Count.Source, calendar)
 	if periodErr != nil {
 		if _, unsupported := errors.AsType[*unified.UnsupportedError](periodErr); !unsupported {
@@ -575,7 +575,7 @@ func prepareFilterCount(condition *FilterCountCondition, calendar *unified.Calen
 		scope.Type, scope.Event, scope.Grain = condition.Count.Source.Type, condition.Count.Source.Name,
 			condition.Count.Source.Grain
 	}
-	rule, err := prepareUnifiedRecordCount(scope, condition.Count.Where, unified.CountTest{})
+	rule, err := prepareUnifiedCount(scope, condition.Count.Where, unified.CountTest{})
 	var unavailable error
 	if err != nil {
 		if _, unsupported := errors.AsType[*unified.UnsupportedError](err); !unsupported {
@@ -596,10 +596,13 @@ func prepareFilterCount(condition *FilterCountCondition, calendar *unified.Calen
 		if err != nil {
 			return unified.Rule{}, err
 		}
-		err = rule.Count.Currency.ValidateWhere(rule.Count.Where)
-		if err != nil {
+	}
+	err = rule.Count.ValidateWhere()
+	if err != nil {
+		if _, unsupported := errors.AsType[*unified.UnsupportedError](err); !unsupported {
 			return unified.Rule{}, err
 		}
+		unavailable = err
 	}
 	if periodErr != nil {
 		return unified.Rule{}, periodErr

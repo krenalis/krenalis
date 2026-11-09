@@ -57,10 +57,10 @@ INSERT INTO event_fixture VALUES
 		Currency: &unified.NativeCurrency{Definition: "NativeCurrency", Revision: "registered-v1", Value: "EUR"}}}
 	raw := governed
 	raw.Count = &unified.Count{Scope: scope, Test: governed.Count.Test,
-		Where: &state.Where{Operator: state.OpAnd, Rules: []state.WhereRule{
+		Where: recordCountWhere(t, &state.Where{Operator: state.OpAnd, Rules: []state.WhereRule{
 			&state.WhereCondition{Property: []string{"properties", "currency"}, Operator: state.OpIs,
 				Values: []any{json.Value(`"EUR"`)}},
-		}}}
+		}})}
 	page := unified.Page{Limit: 1000}
 	query := func(t *testing.T, rule *unified.Rule, p unified.Page) *unified.Result {
 		t.Helper()
@@ -305,9 +305,10 @@ SELECT e.* FROM event_fixture e CROSS JOIN (VALUES (1),(2),(3)) copies(n)`)
 						continue // The same-condition parameters are statically incompatible.
 					}
 					count := unified.Count{Scope: scope, Minimum: minimum, Test: unified.CountTest{Operator: op,
-						Value: threshold, Upper: threshold + 1}, Where: &state.Where{Operator: state.OpAnd, Rules: []state.WhereRule{
-						&state.WhereCondition{Property: []string{"properties", "flag"}, Operator: state.OpIsTrue},
-					}}}
+						Value: threshold, Upper: threshold + 1},
+						Where: recordCountWhere(t, &state.Where{Operator: state.OpAnd, Rules: []state.WhereRule{
+							&state.WhereCondition{Property: []string{"properties", "flag"}, Operator: state.OpIsTrue},
+						}})}
 					count.Scope.Event = "Sample"
 					var want []unified.Truth
 					for range 8 {
@@ -341,9 +342,9 @@ SELECT e.* FROM event_fixture e CROSS JOIN (VALUES (1),(2),(3)) copies(n)`)
 		for _, path := range [][]string{{"properties", "value"}, {"properties", "a.b"}} {
 			for _, test := range cases {
 				count := unified.Count{Scope: scope, Test: unified.CountTest{Operator: unified.Equal, Value: 1},
-					Where: &state.Where{Operator: state.OpAnd, Rules: []state.WhereRule{
+					Where: recordCountWhere(t, &state.Where{Operator: state.OpAnd, Rules: []state.WhereRule{
 						&state.WhereCondition{Property: path, Operator: state.WhereOperator(test.Operator), Values: test.Values},
-					}}}
+					}})}
 				count.Scope.Event = "JSON"
 				result := query(t, &unified.Rule{Count: &count}, page)
 				want := map[string]unified.Truth{}

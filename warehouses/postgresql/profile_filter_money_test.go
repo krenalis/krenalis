@@ -38,7 +38,10 @@ func TestProfileFilterMoneyConditioning(t *testing.T) {
 		{"different column", "traits", "currency", "EUR", false, false, false, 5, true},
 		{"OR is not required", "properties", "currency", "EUR", true, false, false, 5, true},
 		{"nested is not direct", "properties", "currency", "EUR", false, true, false, 5, true},
-		{"Count does not condition", "properties", "currency", "EUR", false, false, true, 4, true},
+		{"Count same", "properties", "currency", "EUR", false, false, true, 3, true},
+		{"Count different currency", "properties", "currency", "USD", false, false, true, 3, false},
+		{"Count different keys", "properties", "billing_currency", "EUR", false, false, true, 4, true},
+		{"Count OR is not required", "properties", "currency", "EUR", true, false, true, 4, true},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			known := &warehouses.KnownTextEqual{Column: warehouses.Column{Name: test.column, Type: types.JSON()},
@@ -81,7 +84,7 @@ func TestProfileFilterMoneyConditioning(t *testing.T) {
 			if strings.Contains(statement.SQL, literal) != test.amount {
 				t.Fatalf("expected amount comparison=%v, got %s", test.amount, statement.SQL)
 			}
-			if !test.amount &&
+			if !test.amount && !test.outside &&
 				!strings.Contains(statement.SQL, "THEN ((FALSE)) ELSE CAST(NULL AS BOOLEAN) END AS verification") {
 				t.Fatalf("expected conditional FALSE verification, got %s", statement.SQL)
 			}
@@ -108,6 +111,41 @@ func TestProfileFilterMoneyConditioning(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+// TestProfileFilterMoneyCountGroups accounts for the source wrapper depth.
+func TestProfileFilterMoneyCountGroups(t *testing.T) {
+	end := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
+	source := warehouses.OccurrenceSource{Table: "events",
+		Profile:   warehouses.Column{Name: "kpid", Type: types.UUID()},
+		Identity:  warehouses.Column{Name: "message_id", Type: types.String()},
+		Timestamp: warehouses.Column{Name: "timestamp", Type: types.DateTime()}}
+	properties := warehouses.Column{Name: "properties", Type: types.JSON()}
+	money := &warehouses.MoneyQualification{Currency: warehouses.KnownTextEqual{Column: properties,
+		Keys: []string{"currency"}, Value: "EUR"}, Amount: warehouses.DecimalReading{Column: properties,
+		Keys: []string{"total"}, Type: types.Decimal(18, 4)}, Threshold: decimal.MustParse("100"), AtLeast: true}
+	request := warehouses.ProfileOutcomeRequest{Population: warehouses.ProfileSource{Table: "profiles",
+		Key: warehouses.Column{Name: "_kpid", Type: types.UUID()}}, Limit: 10}
+	for _, groups := range []int{1, 2, 3} {
+		var body warehouses.RowQualification = money
+		for range groups {
+			body = &warehouses.QualificationGroup{Operator: warehouses.OpOr, Children: []warehouses.RowQualification{body}}
+		}
+		root := &warehouses.IndependentOccurrenceCount{Source: source, Start: end.Add(-time.Hour), End: end,
+			Qualification: &warehouses.QualificationGroup{Operator: warehouses.OpAnd, Children: []warehouses.RowQualification{
+				&warehouses.RecordQualification{Expr: warehouses.NewBaseExpr(warehouses.Column{Name: "type", Type: types.String()},
+					warehouses.OpIs, "track")}, body}}, Accept: []warehouses.CountRange{{Lower: 1}}}
+		_, err := profilefilter.Build(warehouses.Filter{Root: root}, request, profileFilterDialect())
+		if err != nil {
+			if groups != 3 {
+				t.Fatalf("expected %d user groups accepted, got %v", groups, err)
+			}
+			continue
+		}
+		if groups == 3 {
+			t.Fatal("expected third user group rejected, got success")
+		}
 	}
 }
 
