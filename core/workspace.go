@@ -1311,8 +1311,6 @@ func (this *Workspace) PipelineRuns(ctx context.Context) ([]*PipelineRun, error)
 // by filter. If filter is nil, schema can be the invalid type.
 //
 // It returns errors.NotFoundError error if the workspace does not exist.
-// It returns an errors.UnavailableError error if the data warehouse is
-// unavailable.
 // It returns an errors.UnprocessableError error with code
 //   - MaintenanceMode, if the data warehouse is in maintenance mode.
 //   - PropertyNotExist, if a property in filter does not exist in schema.
@@ -1394,8 +1392,7 @@ type Profile struct {
 // if it is true.
 //
 // It returns errors.NotFoundError error, if the workspace no longer exists.
-// It returns an errors.UnavailableError error if the data warehouse is
-// unavailable. It returns an errors.UnprocessableError error with code
+// It returns an errors.UnprocessableError error with code
 //   - MaintenanceMode, if the data warehouse is in maintenance mode.
 //   - OrderNotExist, if order does not exist in schema.
 //   - OrderTypeNotSortable, if the type of the order property is not sortable.
