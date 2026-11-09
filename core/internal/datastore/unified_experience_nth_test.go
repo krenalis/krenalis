@@ -127,7 +127,7 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,tim
 
 }
 
-// TestUnifiedExperienceNthPostgreSQL checks rank ten and currency conditioning.
+// TestUnifiedExperienceNthPostgreSQL checks ranks and currency conditioning.
 func TestUnifiedExperienceNthPostgreSQL(t *testing.T) {
 
 	dw := newJSONFilterTestWarehouse(t, "PostgreSQL")
@@ -147,6 +147,7 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,tim
 	}
 	for _, test := range []struct {
 		name         string
+		position     int
 		certain      int
 		optionalDays []int
 		optionalBody string
@@ -154,15 +155,16 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,tim
 		candidates   int64
 		absent       bool
 	}{
-		{"eleventh does not cancel tenth", 11, nil, "", unified.Match, 1, false},
-		{"certain shortage", 9, nil, "", unified.NoMatch, 0, true},
-		{"possible shortage", 9, []int{20}, "150", unified.Unknown, 1, true},
-		{"two possible after nine", 9, []int{20, 21}, "150", unified.Unknown, 2, true},
-		{"possible false with shortage", 9, []int{20}, "80", unified.NoMatch, 1, true},
-		{"earlier optional", 10, []int{1}, "80", unified.Match, 2, false},
-		{"tied optional", 10, []int{12}, "80", unified.Unknown, 2, false},
-		{"tied optional passes", 10, []int{12}, "150", unified.Match, 2, false},
-		{"tied optional unreadable", 10, []int{12}, "null", unified.Unknown, 2, false},
+		{"eleventh does not cancel tenth", 10, 11, nil, "", unified.Match, 1, false},
+		{"certain shortage", 10, 9, nil, "", unified.NoMatch, 0, true},
+		{"possible shortage", 10, 9, []int{20}, "150", unified.Unknown, 1, true},
+		{"two possible after nine", 10, 9, []int{20, 21}, "150", unified.Unknown, 2, true},
+		{"possible false with shortage", 10, 9, []int{20}, "80", unified.NoMatch, 1, true},
+		{"earlier optional", 10, 10, []int{1}, "80", unified.Match, 2, false},
+		{"tied optional", 10, 10, []int{12}, "80", unified.Unknown, 2, false},
+		{"tied optional passes", 10, 10, []int{12}, "150", unified.Match, 2, false},
+		{"tied optional unreadable", 10, 10, []int{12}, "null", unified.Unknown, 2, false},
+		{"optional before mixed tie", 2, 1, []int{1, 3}, "150", unified.Unknown, 2, true},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 
@@ -187,19 +189,19 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,tim
 			}
 			execUnifiedFixture(t, dw, "INSERT INTO krenalis_events VALUES "+strings.Join(events, ","))
 
-			experience := &unified.Experience{Nth: 10, Currency: currency,
+			experience := &unified.Experience{Nth: test.position, Currency: currency,
 				Scope: unified.Scope{Event: "Order Completed", Grain: "registered-message", Start: at.AddDate(0, -1, 0), End: at},
 				Verify: &unified.ExperienceVerification{Money: &unified.Money{Field: field, NativeCurrency: "EUR",
 					Test: unified.SumTest{Operator: unified.Greater, Value: decimal.MustParse("100")}}}}
 			root := &unified.Rule{Experience: experience}
 			result, err := store.UnifiedProfiles(t.Context(), root, unified.Bindings{}, at, unified.Page{Limit: 10})
 			if err != nil {
-				t.Fatalf("expected exact tenth occurrence, got %v", err)
+				t.Fatalf("expected exact Nth(%d) occurrence, got %v", test.position, err)
 			}
 			assertUnifiedTruths(t, result, []unified.Truth{test.want, unified.NoMatch})
 			explained, err := store.ExplainUnifiedProfile(t.Context(), root, unified.Bindings{}, at, unifiedTestID(1))
 			if err != nil {
-				t.Fatalf("expected tenth selection explanation, got %v", err)
+				t.Fatalf("expected Nth(%d) selection explanation, got %v", test.position, err)
 			}
 			selection := explained.Nodes[0].Experience
 			if selection.Candidates != test.candidates || selection.AbsencePossible != test.absent {
