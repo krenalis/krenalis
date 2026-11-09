@@ -5,6 +5,7 @@
 package core
 
 import (
+	"reflect"
 	"strconv"
 	"strings"
 	"testing"
@@ -12,11 +13,90 @@ import (
 
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/core/internal/unified"
+	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
 )
+
+// TestExplainCountMoney retains monetary metadata in the complete explanation.
+func TestExplainCountMoney(t *testing.T) {
+
+	field, err := unified.ResolveMonetaryField("commerce.order_completed.total", "1")
+	if err != nil {
+		t.Fatalf("expected resolved monetary field, got %v", err)
+	}
+	currency, err := unified.ResolveNativeCurrency("commerce.order_completed.currency", "1", "USD", "Order Completed")
+	if err != nil {
+		t.Fatalf("expected resolved Count currency, got %v", err)
+	}
+	record := unified.OccurrencePredicate{Record: &state.WhereCondition{
+		Property: []string{"properties", "flag"}, Operator: state.OpIsTrue}}
+	money := unified.OccurrencePredicate{Money: &unified.Money{Field: field, NativeCurrency: "EUR",
+		Test: unified.SumTest{Operator: unified.Greater, Value: decimal.MustParse("9007199254740.00001")}}}
+	at := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
+	physical := &warehouses.IndependentOccurrenceCount{Start: at.Add(-time.Hour), End: at}
+	nodes := []warehouses.FilterNodeOutcome{{Truth: warehouses.FilterUnknown,
+		Count: &warehouses.OccurrenceCountBounds{Certain: 2, Possible: 3}}}
+
+	for _, test := range []struct {
+		name  string
+		where *unified.OccurrencePredicate
+		path  []int
+	}{
+		{"Record only", &unified.OccurrencePredicate{Children: []unified.OccurrencePredicate{record}}, nil},
+		{"money", &unified.OccurrencePredicate{Operator: state.OpOr, Children: []unified.OccurrencePredicate{record, money}}, []int{1}},
+		{"nested money", &unified.OccurrencePredicate{Operator: state.OpOr, Children: []unified.OccurrencePredicate{record,
+			{Children: []unified.OccurrencePredicate{money}}}}, []int{1, 0}},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+
+			semantic := unified.Rule{Count: &unified.Count{Currency: currency, Where: test.where,
+				Test: unified.CountTest{Operator: unified.GreaterOrEqual, Value: 3}}}
+			index := 0
+			result, err := explainProfileRule(physical, semantic, nodes, &index, at)
+			if err != nil {
+				t.Fatalf("expected complete Count explanation, got %v", err)
+			}
+			count := result.Count
+			if result.Kind != "count" || result.Result != "UNKNOWN" || count == nil || index != 1 {
+				t.Fatalf("expected one UNKNOWN Count explanation, got %+v at index %d", result, index)
+			}
+			if !count.Start.Equal(physical.Start) || !count.End.Equal(at) || count.Certain != 2 || count.Uncertain != 1 ||
+				count.CurrencyField == nil || count.CurrencyField.Definition != "commerce.order_completed.currency" ||
+				count.CurrencyField.MeaningRevision != "1" || count.NativeCurrency != "USD" {
+				t.Fatalf("expected measured Count bounds and separate USD currency, got %+v", count)
+			}
+			if test.path == nil {
+				encoded, err := json.Marshal(result)
+				if err != nil {
+					t.Fatalf("expected encoded Record-only Count explanation, got %v", err)
+				}
+				if count.Money != nil || strings.Contains(string(encoded), `"money":`) {
+					t.Fatalf("expected money omitted without a monetary predicate, got %s", encoded)
+				}
+				return
+			}
+			if len(count.Money) != 1 {
+				t.Fatalf("expected one monetary explanation, got %+v", count.Money)
+			}
+			leaf := count.Money[0]
+			if !reflect.DeepEqual(leaf.Path, test.path) || leaf.Field.Definition != "commerce.order_completed.total" ||
+				leaf.Field.MeaningRevision != "1" || leaf.NativeCurrency != "EUR" {
+				t.Fatalf("expected monetary reference and where path %v, got %+v", test.path, leaf)
+			}
+			if leaf.Requested.Operator != OpIsGreaterThan || len(leaf.Requested.Values) != 1 ||
+				!leaf.Requested.Values[0].Equal(decimal.MustParse("9007199254740.00001")) ||
+				leaf.Normalized.Operator != OpIsGreaterThanOrEqualTo || len(leaf.Normalized.Values) != 1 ||
+				!leaf.Normalized.Values[0].Equal(decimal.MustParse("9007199254740.0001")) {
+				t.Fatalf("expected exact requested >9007199254740.00001 and normalized >=9007199254740.0001, got %+v", leaf)
+			}
+
+		})
+	}
+
+}
 
 // TestExplainExperienceNth retains the request even when Nth(1) equals First.
 func TestExplainExperienceNth(t *testing.T) {
