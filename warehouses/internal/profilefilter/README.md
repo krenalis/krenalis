@@ -159,3 +159,11 @@ Count/Sum/Average decoding is unchanged.
 Selected timestamp membership is already resolved by core into existing Record
 datetime >= and < predicates inside the verification qualification. This adds
 no temporal resolver, SQL node or explanation transport fields in the drivers.
+
+MoneyQualification is a closed selected-row predicate. It renders the resolved
+KnownTextEqual currency reading AND an exact decimal comparison; either false
+component can refute the predicate even if the other is NULL. Its normalized
+threshold uses the same validated DECIMAL(38,4) literal form as Sum, without a new
+parameter transport. A precomputed result still checks amount readability before
+returning true/false. Currency is always evaluated by its existing reader.
+No candidate values or extra explanation columns are transported.

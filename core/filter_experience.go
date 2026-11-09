@@ -15,7 +15,7 @@ import (
 )
 
 // FilterExperience selects an occurrence before verifying its properties.
-// Verify is mandatory and accepts Record rules and occurredIn predicates.
+// Verify is mandatory and accepts Record, occurredIn and money predicates.
 type FilterExperience struct {
 	Base   FilterExperienceBase     `json:"base"`
 	Select FilterExperienceSelector `json:"select"`
@@ -213,10 +213,15 @@ func prepareFilterExperience(condition *FilterExperienceCondition, calendar *uni
 	// Prepare base qualification and selected-record verification separately.
 	var where *state.Where
 	if experience.Base.Where != nil {
-		validation := filterValidation{maxDepth: 2, properties: schemas.Event.Properties()}
+		source := unified.Scope{Type: experience.Base.Source.Type, Event: experience.Base.Source.Name,
+			Grain: experience.Base.Source.Grain}
+		validation := filterValidation{maxDepth: 2, properties: schemas.Event.Properties(), source: &source}
 		where, err = prepareFilterGroup(experience.Base.Where, &validation, 1)
 		if err != nil {
-			return unified.Rule{}, err
+			if _, unsupported := errors.AsType[*unified.UnsupportedError](err); !unsupported {
+				return unified.Rule{}, err
+			}
+			unavailable = err
 		}
 	}
 	validation := filterValidation{maxDepth: 2, properties: schemas.Event.Properties()}

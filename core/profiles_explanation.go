@@ -49,6 +49,7 @@ type ProfileExperienceExplanation struct {
 	Select         FilterExperienceSelector       `json:"select"`
 	Selection      ProfileExperienceSelection     `json:"selection"`
 	OccurredIn     []ProfileOccurredInExplanation `json:"occurredIn,omitzero"`
+	Money          []ProfileMoneyExplanation      `json:"money,omitzero"`
 }
 
 // ProfileExperienceSelection retains ambiguity without inventing a witness.
@@ -66,6 +67,23 @@ type ProfileOccurredInExplanation struct {
 	Path  []int     `json:"path"`
 	Start time.Time `json:"start"`
 	End   time.Time `json:"end"`
+}
+
+// ProfileMoneyExplanation retains the requested and effective comparisons.
+// Path contains zero-based rule indexes relative to the experience verify root.
+// No candidate amount or identity is exposed.
+type ProfileMoneyExplanation struct {
+	Path           []int                  `json:"path"`
+	Field          FilterSumField         `json:"field"`
+	NativeCurrency string                 `json:"nativeCurrency"`
+	Requested      ProfileMoneyComparison `json:"requested"`
+	Normalized     ProfileMoneyComparison `json:"normalized"`
+}
+
+// ProfileMoneyComparison is an exact monetary operator and its JSON operands.
+type ProfileMoneyComparison struct {
+	Operator FilterOperator    `json:"operator"`
+	Values   []decimal.Decimal `json:"values"`
 }
 
 // ProfileAverageExplanation reports exact inputs without a rounded quotient.
@@ -201,6 +219,42 @@ func (this *Workspace) ExplainProfileFilter(ctx context.Context, kpid string, fi
 	return &ProfileFilterExplanation{KPID: profile, At: result.At, Rule: explanation}, nil
 }
 
+// explainMoneyPredicates retains each monetary leaf and its normalized test.
+func explainMoneyPredicates(verify *unified.ExperienceVerification, path []int) ([]ProfileMoneyExplanation, error) {
+	if verify == nil {
+		return nil, nil
+	}
+	if verify.Money != nil {
+		money := verify.Money
+		normalized, err := money.NormalizedTest()
+		if err != nil {
+			return nil, errors.New("core: unresolved money explanation comparison")
+		}
+		definition, revision := money.Field.Reference()
+		operators := map[unified.Comparison]FilterOperator{
+			unified.Greater: OpIsGreaterThan, unified.GreaterOrEqual: OpIsGreaterThanOrEqualTo,
+			unified.Less: OpIsLessThan, unified.LessOrEqual: OpIsLessThanOrEqualTo,
+		}
+		return []ProfileMoneyExplanation{{Path: slices.Clone(path),
+			Field:          FilterSumField{Definition: definition, MeaningRevision: revision},
+			NativeCurrency: money.NativeCurrency,
+			Requested: ProfileMoneyComparison{Operator: operators[money.Test.Operator],
+				Values: []decimal.Decimal{money.Test.Value}},
+			Normalized: ProfileMoneyComparison{Operator: operators[normalized.Operator],
+				Values: []decimal.Decimal{normalized.Value}},
+		}}, nil
+	}
+	var result []ProfileMoneyExplanation
+	for i := range verify.Children {
+		leaves, err := explainMoneyPredicates(&verify.Children[i], append(slices.Clone(path), i))
+		if err != nil {
+			return nil, err
+		}
+		result = append(result, leaves...)
+	}
+	return result, nil
+}
+
 // explainOccurrencePeriods attaches resolved windows to their input positions.
 func explainOccurrencePeriods(verify *unified.ExperienceVerification, at time.Time, path []int) ([]ProfileOccurredInExplanation, error) {
 	if verify == nil {
@@ -289,6 +343,11 @@ func explainProfileRule(rule warehouses.FilterCondition, semantic unified.Rule, 
 			return ProfileRuleExplanation{}, err
 		}
 		result.Experience.OccurredIn = periods
+		money, err := explainMoneyPredicates(semantic.Experience.Verify, nil)
+		if err != nil {
+			return ProfileRuleExplanation{}, err
+		}
+		result.Experience.Money = money
 		if history := semantic.Experience.Scope.History; history != nil {
 			definition, revision := history.Reference()
 			result.Experience.History = &FilterHistory{Definition: definition, MeaningRevision: revision}

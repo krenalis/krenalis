@@ -571,10 +571,17 @@ func prepareFilterCount(condition *FilterCountCondition, calendar *unified.Calen
 		if _, unsupported := errors.AsType[*unified.UnsupportedError](periodErr); !unsupported {
 			return unified.Rule{}, periodErr
 		}
+		// Preserve the validated source while deferring period availability.
+		scope.Type, scope.Event, scope.Grain = condition.Count.Source.Type, condition.Count.Source.Name,
+			condition.Count.Source.Grain
 	}
 	rule, err := prepareUnifiedRecordCount(scope, condition.Count.Where, unified.CountTest{})
+	var unavailable error
 	if err != nil {
-		return unified.Rule{}, err
+		if _, unsupported := errors.AsType[*unified.UnsupportedError](err); !unsupported {
+			return unified.Rule{}, err
+		}
+		unavailable = err
 	}
 	count := condition.Count
 	if (count.CurrencyField == nil) != (count.NativeCurrency == nil) {
@@ -596,6 +603,9 @@ func prepareFilterCount(condition *FilterCountCondition, calendar *unified.Calen
 	}
 	if periodErr != nil {
 		return unified.Rule{}, periodErr
+	}
+	if unavailable != nil {
+		return unified.Rule{}, unavailable
 	}
 	v, vok := value.uint64()
 	u, uok := upper.uint64()

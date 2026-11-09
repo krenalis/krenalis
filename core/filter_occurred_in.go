@@ -91,6 +91,16 @@ func prepareExperienceVerification(rule FilterRule, validation *filterValidation
 			return nil, err
 		}
 		return &unified.ExperienceVerification{Record: condition}, nil
+	case *FilterMoneyCondition:
+		scope, err := unified.RecordedScope(source.Type, source.Name, source.Grain)
+		if err != nil {
+			return nil, err
+		}
+		money, err := prepareFilterMoney(rule, scope)
+		if err != nil {
+			return nil, err
+		}
+		return &unified.ExperienceVerification{Money: money}, nil
 	case *FilterOccurredInCondition:
 		if rule == nil {
 			return nil, errors.New("filter occurredIn condition cannot be nil")

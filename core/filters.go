@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/krenalis/krenalis/core/internal/state"
+	"github.com/krenalis/krenalis/core/internal/unified"
 	"github.com/krenalis/krenalis/core/internal/util"
 	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/errors"
@@ -38,7 +39,7 @@ type Filter struct {
 // FilterRule represents a condition or a nested filter group.
 // It is implemented by *FilterCondition, *FilterCountCondition,
 // *FilterSumCondition, *FilterAverageCondition, *FilterExperienceCondition,
-// *FilterOccurredInCondition and *Filter.
+// *FilterOccurredInCondition, *FilterMoneyCondition and *Filter.
 type FilterRule interface {
 	filterRule()
 }
@@ -103,7 +104,8 @@ func (filter *Filter) hasBehavior(includeExtended bool) bool {
 			switch rule := rule.(type) {
 			case *FilterCountCondition:
 				return true
-			case *FilterSumCondition, *FilterAverageCondition, *FilterExperienceCondition, *FilterOccurredInCondition:
+			case *FilterSumCondition, *FilterAverageCondition, *FilterExperienceCondition,
+				*FilterOccurredInCondition, *FilterMoneyCondition:
 				if includeExtended {
 					return true
 				}
@@ -241,6 +243,7 @@ const (
 // filterValidation contains the state shared while validating a filter tree.
 type filterValidation struct {
 	maxDepth   int
+	source     *unified.Scope
 	paths      []string
 	properties types.Properties
 	ruleCount  int
@@ -414,6 +417,14 @@ func marshalFilterJSON(b *json.Buffer, filter *Filter) error {
 			if err != nil {
 				return err
 			}
+		case *FilterMoneyCondition:
+			if rule == nil {
+				return errors.New("filter money condition cannot be nil")
+			}
+			err = b.Encode(rule)
+			if err != nil {
+				return err
+			}
 		case *FilterOccurredInCondition:
 			if rule == nil {
 				return errors.New("filter occurredIn condition cannot be nil")
@@ -501,6 +512,8 @@ func unmarshalFilterRule(dec *json.Decoder, depth int, expectGroup bool, context
 	var hasExperience bool
 	var occurredIn FilterPeriod
 	var hasOccurredIn bool
+	var money FilterMoney
+	var hasMoney bool
 	var calendar *FilterCalendar
 	var hasCalendar bool
 	var descendantRuleCount int
@@ -614,6 +627,15 @@ func unmarshalFilterRule(dec *json.Decoder, depth int, expectGroup bool, context
 			} else {
 				err = dec.Decode(&experience)
 			}
+		case "money":
+			if context == profileFilterRule {
+				return nil, 0, errors.New("money requires an occurrence predicate")
+			}
+			if hasMoney {
+				return nil, 0, errors.New("duplicate filter property money")
+			}
+			hasMoney = true
+			err = dec.Decode(&money)
 		case "occurredIn":
 			if context != selectedFilterRule {
 				return nil, 0, errors.New("occurredIn requires experience verify")
@@ -643,8 +665,21 @@ func unmarshalFilterRule(dec *json.Decoder, depth int, expectGroup bool, context
 
 	_ = dec.SkipToken() // skip '}'
 
-	if hasCalendar && (!hasRules || hasCount || hasSum || hasAverage || hasExperience || hasOccurredIn || hasProperty) {
+	if hasCalendar && (!hasRules || hasCount || hasSum || hasAverage || hasExperience ||
+		hasOccurredIn || hasMoney || hasProperty) {
 		return nil, 0, errors.New("defaultCalendar is only allowed on the root group")
+	}
+	if hasMoney {
+		if expectGroup {
+			return nil, 0, errors.New("filter must be a group")
+		}
+		if hasRules || hasProperty || hasCount || hasSum || hasAverage || hasExperience || hasOccurredIn {
+			return nil, 0, errors.New("money condition cannot contain another subject")
+		}
+		if !hasOperator || !hasValues {
+			return nil, 0, errors.New("money condition must contain operator and values")
+		}
+		return &FilterMoneyCondition{Money: money, Operator: FilterOperator(operator), Values: values}, 0, nil
 	}
 	if hasOccurredIn {
 		if expectGroup {
@@ -1004,6 +1039,7 @@ func prepareFilterGroup(filter *Filter, validation *filterValidation, depth int)
 		Operator: convertLogicalToWhere(filter.Operator),
 		Rules:    make([]state.WhereRule, len(filter.Rules)),
 	}
+	var unavailable error
 	for i, rule := range filter.Rules {
 		validation.ruleCount++
 		if validation.ruleCount > maxFilterRuleCount {
@@ -1016,7 +1052,11 @@ func prepareFilterGroup(filter *Filter, validation *filterValidation, depth int)
 			}
 			group, err := prepareFilterGroup(rule, validation, depth+1)
 			if err != nil {
-				return nil, err
+				if _, unsupported := errors.AsType[*unified.UnsupportedError](err); !unsupported {
+					return nil, err
+				}
+				unavailable = err
+				continue
 			}
 			where.Rules[i] = group
 		case *FilterCondition:
@@ -1031,6 +1071,15 @@ func prepareFilterGroup(filter *Filter, validation *filterValidation, depth int)
 			if i, ok := slices.BinarySearch(validation.paths, path); !ok {
 				validation.paths = slices.Insert(validation.paths, i, path)
 			}
+		case *FilterMoneyCondition:
+			if validation.source == nil {
+				return nil, errors.New("money requires an occurrence predicate")
+			}
+			_, err := prepareFilterMoney(rule, *validation.source)
+			if err != nil {
+				return nil, err
+			}
+			unavailable = &unified.UnsupportedError{Capability: "money in occurrence qualification"}
 		case *FilterCountCondition:
 			return nil, errors.New("Count requires Unified profile filtering")
 		case *FilterSumCondition:
@@ -1046,5 +1095,8 @@ func prepareFilterGroup(filter *Filter, validation *filterValidation, depth int)
 		}
 	}
 
+	if unavailable != nil {
+		return nil, unavailable
+	}
 	return where, nil
 }

@@ -419,7 +419,7 @@ including named/unnamed page and screen sources, calendars and recorded history.
 `base.where` optionally qualifies events **before** selection. `verify` is a
 mandatory nonempty filter evaluated **after** selection. Both use the
 Event schema and the 26 Record operators, at most two group levels and 100
-descendant nodes. Verify additionally admits the occurredIn leaf described below.
+descendant nodes. Verify additionally admits occurredIn and money leaves described below.
 Neither admits behavioral rules or a local defaultCalendar. Omitted/null
 base.where means no additional qualification. Null/omitted verify is invalid in
 this public subset; the canonical NoAdditionalVerification form is not exposed.
@@ -531,10 +531,88 @@ selection can still have a determined result when every alternative agrees.
 
 Verify retains raw Record semantics: JSON null, missing paths and incompatible
 kinds behave exactly as documented above. Raw currency is not governed
-NativeCurrency. Governed money predicates in verify, shared governed facts,
-cross-profile references, Latest N, relative scopes and following events are not
-implemented here. Do not approximate those requests with raw predicates, Count
+NativeCurrency. The money leaf below provides the governed monetary test.
+Shared governed facts, cross-profile references, Latest N, relative scopes and
+following events remain unimplemented. Do not approximate those requests with raw predicates, Count
 or SQL unless they express the same explicitly requested meaning.
+
+### Verify native currency and amount
+
+Use one money leaf in experience.verify to test the selected message's native
+currency and reported total together. The same field reference as Sum binds
+properties.total and properties.currency; the caller cannot choose either path.
+Only track Order Completed at registered-message grain is compatible with
+commerce.order_completed.total@1. Another source is invalid configuration.
+
+For the **last recorded Order Completed**, occurred within the last 30 elapsed
+days, whose reported total is greater than 100 in native EUR:
+
+```json
+{"operator":"and","rules":[{"experience":{"base":{"source":{"kind":"recordedEvents","name":"Order Completed","grain":"registered-message"},"period":{"kind":"fullRelevantHistory","history":{"definition":"registered-queryable-events","meaningRevision":"1"}}},"select":{"kind":"last"},"verify":{"operator":"and","rules":[{"occurredIn":{"kind":"elapsedLookback","duration":{"value":30,"unit":"day"}}},{"money":{"field":{"definition":"commerce.order_completed.total","meaningRevision":"1"},"nativeCurrency":"EUR"},"operator":"is greater than","values":[100]}]}}}]}
+```
+
+First uses the same leaf after selecting the first recorded message. Neither
+currency nor amount prefilters the base. A later USD message fails the EUR
+requirement; never fall back to an earlier EUR message. Copies, ties, optional
+candidates and possible absence retain the existing selected-experience rules.
+This uses recorded messages, without conversion or business-order deduplication.
+
+Money is Kleene AND of the native currency requirement and exact amount test:
+
+| Currency | Amount | Money outcome |
+|---|---|---|
+| Equal | Readable | Amount comparison outcome |
+| Equal | Unreadable | UNKNOWN |
+| Certainly different | Any | NO_MATCH |
+| Unknown | Readable, comparison false | NO_MATCH |
+| Unknown | Readable, comparison true | UNKNOWN |
+| Unknown | Unreadable | UNKNOWN |
+
+Currency uses the same verbatim String reader as Count and Sum. Missing, JSON
+null and non-String values mean unknown currency; USD, eur and the empty String
+are certainly different from EUR. There is no implicit USD default or case
+normalization. NativeCurrency in the request requires three uppercase letters.
+Amounts use Sum's exact Decimal(18,4) JSON Number reader. Missing, null, strings,
+other kinds, numbers too fine or outside the reading domain are UNKNOWN, never
+rounded or coerced. Trailing zeroes do not make an exactly representable number
+unreadable. For EUR >=100, total 80 with unknown currency is NO_MATCH: even if
+EUR, it is insufficient. Total 120 with unknown currency is UNKNOWN.
+
+The four ordered comparisons execute: is less than, is less than or equal to,
+is greater than, is greater than or equal to. Values contains one exact signed
+JSON Number within global precision 76/scale 37 and the monetary literal length
+limit, as for Sum. Finer thresholds are normalized exactly to the readable grid:
+>100 becomes >=100.0001; >=100.00001 becomes >=100.0001. This never rounds event
+amounts. Comparisons outside +/-1e14 can be precomputed only for readable
+amounts: 1e20 in an event remains unreadable, even against an extreme threshold.
+Equality, inequality and intervals are valid but return
+FilterCapabilityNotImplemented. Invalid operators, arity and operands remain
+invalid, even next to an unsupported rule.
+
+This first subset admits at most one money leaf per experience verify, including
+nested OR branches. It can be combined with occurredIn and Record leaves on
+independent paths. When money occurs, raw Record paths overlapping its amount
+or currency are temporarily unavailable in both base.where and verify. The check
+covers properties, properties.total, properties.currency and their descendants,
+with exact, case-sensitive path segments. Properties.total_discount and
+properties.Total are different paths and remain allowed.
+
+Multiple money leaves and these overlaps return FilterCapabilityNotImplemented;
+they do not turn into UNKNOWN or silently drop conditions. Money qualification
+in base.where or Count/Sum/Average.where is likewise valid but not implemented.
+Money is invalid on the Profiles root and in Record-only pipelines. A raw
+properties.currency is EUR prefilter is therefore unavailable together with
+money in verify: it differs from governed currency on JSON null and must not
+replace the future governed qualification in the base. Never split the tests
+into independent profile conditions to approximate the selected-message request.
+
+Explanations add experience.money:[{path,field,nativeCurrency,requested,normalized}].
+Path is zero-based within verify. Requested and normalized each contain operator
+and values, both exact JSON numbers (possibly exponent notation). For >100 the
+explanation retains requested >100 and normalized >=100.0001. Extreme normalized
+bounds are clipped to +/-1e14 outside every readable amount; unreadable amounts
+still yield UNKNOWN for the amount test. No candidate amount or witness identity
+is exposed. An empty money metadata list is omitted.
 
 ## Examples
 

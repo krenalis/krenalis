@@ -14,11 +14,12 @@ import (
 )
 
 // ExperienceVerification is a closed body owned by the selected occurrence.
-// A node is one Record predicate, one timestamp membership or an AND/OR group.
+// A node is a Record, timestamp, money predicate or an AND/OR group.
 // It cannot introduce a behavioral scope or shared governed facts.
 type ExperienceVerification struct {
 	Record     *state.WhereCondition
 	OccurredIn *Scope
+	Money      *Money
 	Operator   state.WhereLogical
 	Children   []ExperienceVerification
 }
@@ -30,6 +31,9 @@ func (v *ExperienceVerification) prepare(at time.Time, source SourceBinding) (wa
 			return nil, err
 		}
 		return &warehouses.RecordQualification{Expr: expr}, nil
+	}
+	if v.Money != nil {
+		return v.Money.prepare(source)
 	}
 	if v.OccurredIn != nil {
 		start, end, err := v.OccurredIn.bounds(at)
@@ -58,12 +62,12 @@ func (v *ExperienceVerification) prepare(at time.Time, source SourceBinding) (wa
 	return group, nil
 }
 
-func (v *ExperienceVerification) validate(at time.Time, depth int, nodes *int) error {
+func (v *ExperienceVerification) validate(at time.Time, scope Scope, depth int, nodes *int) error {
 	if v == nil {
 		return fmt.Errorf("experience requires verify")
 	}
 	variants := 0
-	for _, present := range []bool{v.Record != nil, v.OccurredIn != nil, v.Children != nil} {
+	for _, present := range []bool{v.Record != nil, v.OccurredIn != nil, v.Money != nil, v.Children != nil} {
 		if present {
 			variants++
 		}
@@ -74,6 +78,9 @@ func (v *ExperienceVerification) validate(at time.Time, depth int, nodes *int) e
 	if v.Record != nil {
 		local := 0
 		return validateWhere(&state.Where{Operator: state.OpAnd, Rules: []state.WhereRule{v.Record}}, 1, &local)
+	}
+	if v.Money != nil {
+		return v.Money.Validate(scope)
 	}
 	if v.OccurredIn != nil {
 		_, _, err := v.OccurredIn.bounds(at)
@@ -94,7 +101,7 @@ func (v *ExperienceVerification) validate(at time.Time, depth int, nodes *int) e
 		if *nodes > 100 {
 			return fmt.Errorf("experience verification exceeds 100 descendant nodes")
 		}
-		err := v.Children[i].validate(at, depth+1, nodes)
+		err := v.Children[i].validate(at, scope, depth+1, nodes)
 		if err != nil {
 			if _, unsupported := errors.AsType[*UnsupportedError](err); !unsupported {
 				return err
@@ -103,4 +110,40 @@ func (v *ExperienceVerification) validate(at time.Time, depth int, nodes *int) e
 		}
 	}
 	return unavailable
+}
+
+// validateDependencies runs only after body validation, including its budgets.
+func (v *ExperienceVerification) validateDependencies(where *state.Where) error {
+	stack := []*ExperienceVerification{v}
+	var field *MonetaryField
+	count := 0
+	var records []state.WhereRule
+	for len(stack) > 0 {
+		current := stack[len(stack)-1]
+		stack = stack[:len(stack)-1]
+		if current.Money != nil {
+			count++
+			field = current.Money.Field
+		}
+		if current.Record != nil {
+			records = append(records, current.Record)
+		}
+		for i := range current.Children {
+			stack = append(stack, &current.Children[i])
+		}
+	}
+	if count > 1 {
+		return &UnsupportedError{Capability: "multiple monetary predicates in experience verify"}
+	}
+	if field == nil {
+		return nil
+	}
+	err := field.ValidateWhere(where)
+	if err != nil {
+		return err
+	}
+	if len(records) > 0 {
+		return field.ValidateWhere(&state.Where{Operator: state.OpAnd, Rules: records})
+	}
+	return nil
 }

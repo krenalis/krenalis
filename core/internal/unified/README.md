@@ -735,7 +735,7 @@ model-facing `profile-filter-doc` tool for transport, limits and examples.
 
 `FilterExperienceCondition` extends the same public `core.Filter` rule union.
 Its `experience` has `base:{source,period,where?}`, `select:{kind:"first"|"last"}` and a
-mandatory nonempty `verify` of Record and selected timestamp predicates. There
+mandatory nonempty `verify` of Record, selected timestamp and money predicates. There
 is no outer operator/values, and no implicit selector or empty-body constructor. Where and verify use independent
 local budgets (two groups, 100 descendants), not the main four-level/100-node
 budget. Source and period binding reuse the existing recorded-event Count path;
@@ -812,3 +812,35 @@ omitted, preserving the response for experiences with only Record verification.
 First full history + recent occurredIn asks for a recent first recorded event;
 First recent base instead asks for the first within that period. Retention,
 deletions and older late imports can change a historical First.
+
+### Selected monetary verification
+
+An experience body can also own Money, binding the same MonetaryField and native
+currency reader used by Sum. The public money subject contains only field and
+nativeCurrency, with operator/values on the condition. Money validates source
+compatibility (track Order Completed), signed exact operands and currency before
+reporting unsupported comparisons. Its four ordered operators normalize to
+inclusive Decimal(18,4) grid bounds, with thresholds clipped to +/-1e14 only for
+readable values. Original tests remain on the semantic node for explanations.
+
+The prepared warehouses.MoneyQualification contains the two resolved readings,
+an inclusive threshold and an optional result for readable amounts. The shared
+composer reuses ExactDecimal, KnownText and the exact normalized literal form
+used by Sum. It combines both tests using SQL Kleene AND; unknown currency with
+a false readable amount test is false. No SQL or dialect enters core and no
+warehouse transport or explanation row schema is added. The two backend local
+suites are mirrored; Snowflake remains gated pending real verification.
+
+Experience body validation permits one money predicate, including under OR,
+and rejects raw overlaps with its bound amount/currency paths in both the base
+and verify. Paths come from the reading definition, not a second hard-coded
+list. Multiple readings or unsupported qualification slots produce capability
+errors, after invalid references, operands, paths and other parameters. The
+public decoder recognizes money in occurrence where slots so they can be
+validated before being declared unavailable; Record pipelines and the profile
+root still reject this subject. state.Where is unchanged.
+
+Profile explanations append money metadata with the verify path, field and
+currency, plus requested and normalized operator/values. They do not return a
+candidate amount or identity. First/Last preserve compatible winners and possible
+absence; moving a monetary verify into the base would change the request.

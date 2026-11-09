@@ -703,6 +703,83 @@ FROM (VALUES
 
 	})
 
+	t.Run("ExperienceMoney", func(t *testing.T) {
+
+		_, err := pool.Exec(t.Context(), `INSERT INTO krenalis_events
+(kpid,message_id,event,timestamp,received_at,sent_at,type,connection_id,anonymous_id,traits,properties)
+SELECT ('00000000-0000-0000-0000-'||lpad(n::text,12,'0'))::uuid,'money/'||n||'/'||id,
+'Order Completed',stamp::timestamp,'2026-02-01','2026-02-01','track','fixture','a','{}',payload::jsonb
+FROM (VALUES
+(1,'old','2026-01-01','{"money_fixture":true,"total":150,"currency":"EUR"}'),
+(1,'new','2026-01-15','{"money_fixture":true,"total":120,"currency":"EUR"}'),
+(2,'old','2026-01-01','{"money_fixture":true,"total":150,"currency":"EUR"}'),
+(2,'new','2026-01-20','{"money_fixture":true,"total":120,"currency":"USD"}'),
+(3,'unknown','2026-01-15','{"money_fixture":true,"total":120}')
+) v(n,id,stamp,payload)`)
+		if err != nil {
+			t.Fatalf("expected coherent monetary experience fixtures, got %v", err)
+		}
+		defer func() {
+			_, err := pool.Exec(t.Context(), "DELETE FROM krenalis_events WHERE message_id LIKE 'money/%'")
+			if err != nil {
+				t.Errorf("expected monetary experience cleanup, got %v", err)
+			}
+		}()
+
+		const money = `{"money":{"field":{"definition":"commerce.order_completed.total",` +
+			`"meaningRevision":"1"},"nativeCurrency":"EUR"},"operator":"is greater than","values":[100]}`
+		const filter = `{"operator":"and","rules":[{"experience":{"base":{` +
+			`"source":{"kind":"recordedEvents","name":"Order Completed","grain":"registered-message"},` +
+			`"period":{"kind":"fullRelevantHistory","history":{"definition":"registered-queryable-events",` +
+			`"meaningRevision":"1"}},"where":{"operator":"and","rules":[` +
+			`{"property":"properties.money_fixture","operator":"exists"}]}},"select":{"kind":"last"},` +
+			`"verify":{"operator":"and","rules":[{"occurredIn":{"kind":"elapsedLookback",` +
+			`"duration":{"value":30,"unit":"day"}}},` + money + `]}}}]}`
+		for _, first := range []int{0, 99} {
+			var expected json.RawMessage
+			k.Call("GET", "/v1/profiles?filter="+url.QueryEscape(filter)+"&at="+url.QueryEscape(at)+
+				"&first="+strconv.Itoa(first), nil, nil, &expected)
+			actual := assertResult(t, tool(t, "query-profiles", map[string]any{
+				"filter": filter, "at": at, "first": first}))
+			if actual != string(expected) || !strings.Contains(actual, `"match":1,"noMatch":2,"unknown":1`) ||
+				first == 99 && !strings.HasPrefix(actual, `{"profiles":[]`) {
+				t.Fatalf("expected identical complete I028 page/totals, got %s", actual)
+			}
+		}
+		for _, test := range []struct{ id, result string }{
+			{"00000000-0000-0000-0000-000000000001", "MATCH"},
+			{"00000000-0000-0000-0000-000000000002", "NO_MATCH"},
+			{"00000000-0000-0000-0000-000000000003", "UNKNOWN"},
+		} {
+			var expected json.RawMessage
+			k.Call("GET", "/v1/profiles/"+test.id+"/filter-explanation?filter="+url.QueryEscape(filter)+
+				"&at="+url.QueryEscape(at), nil, nil, &expected)
+			actual := assertResult(t, tool(t, "explain-profile-filter", map[string]any{
+				"kpid": test.id, "filter": filter, "at": at}))
+			if actual != string(expected) || !strings.Contains(actual, `"result":"`+test.result+`"`) ||
+				!strings.Contains(actual, `"money":[{"path":[1],"field":{"definition":"commerce.order_completed.total",`+
+					`"meaningRevision":"1"},"nativeCurrency":"EUR","requested":{"operator":"is greater than",`) ||
+				!strings.Contains(actual, `"normalized":{"operator":"is greater than or equal to","values":[100.0001]}`) {
+				t.Fatalf("expected identical I028 explanation with requested and normalized tests, got %s", actual)
+			}
+		}
+		for _, test := range []struct{ name, input, code string }{
+			{"multiple money", strings.Replace(filter, money, money+`,`+money, 1), "FilterCapabilityNotImplemented"},
+			{"overlap verify", strings.Replace(filter, money, money+`,{"property":"properties.currency","operator":"exists"}`, 1), "FilterCapabilityNotImplemented"},
+			{"overlap base", strings.Replace(filter, `{"property":"properties.money_fixture","operator":"exists"}`, `{"property":"properties.currency","operator":"is","values":["EUR"]}`, 1), "FilterCapabilityNotImplemented"},
+			{"money in base", strings.Replace(filter, `{"property":"properties.money_fixture","operator":"exists"}`, money, 1), "FilterCapabilityNotImplemented"},
+			{"equality", strings.Replace(filter, `"operator":"is greater than"`, `"operator":"is"`, 1), "FilterCapabilityNotImplemented"},
+			{"wrong source", strings.Replace(filter, `"name":"Order Completed"`, `"name":"Other"`, 1), "InvalidArguments"},
+		} {
+			t.Run(test.name, func(t *testing.T) {
+				assertToolError(t, tool(t, "query-profiles", map[string]any{"filter": test.input, "at": at}), test.code)
+				assertToolError(t, tool(t, "explain-profile-filter", map[string]any{
+					"kpid": "00000000-0000-0000-0000-000000000001", "filter": test.input, "at": at}), test.code)
+			})
+		}
+
+	})
+
 	t.Run("Average", func(t *testing.T) {
 
 		_, err := pool.Exec(t.Context(), `INSERT INTO krenalis_events

@@ -11,10 +11,8 @@ import (
 	"github.com/krenalis/krenalis/core/internal/schemas"
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/core/internal/unified"
-	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
-	"github.com/krenalis/krenalis/tools/types"
 )
 
 // FilterSum describes a monetary sum at registered-message grain.
@@ -180,35 +178,9 @@ func prepareFilterSum(condition *FilterSumCondition, calendar *unified.Calendar)
 	}
 
 	// Prepare the exact comparison operands.
-	operator, ok := map[FilterOperator]unified.Comparison{
-		OpIs: unified.Equal, OpIsNot: unified.Different, OpIsLessThan: unified.Less,
-		OpIsLessThanOrEqualTo: unified.LessOrEqual, OpIsGreaterThan: unified.Greater,
-		OpIsGreaterThanOrEqualTo: unified.GreaterOrEqual, OpIsBetween: unified.Between,
-	}[condition.Operator]
-	if !ok {
-		return unified.Rule{}, errors.New("invalid monetary comparison")
-	}
-	arity := 1
-	if operator == unified.Between {
-		arity = 2
-	}
-	if len(condition.Values) != arity {
-		return unified.Rule{}, errors.New("invalid monetary operand count")
-	}
-	values := make([]decimal.Decimal, arity)
-	for i, value := range condition.Values {
-		// Bound lexical work before parsing arbitrary precision decimal literals.
-		if len(value) > 4096 {
-			return unified.Rule{}, errors.New("monetary literal exceeds the input length limit")
-		}
-		decoded, err := state.DecodeFilterOperand(value, types.Decimal(18, 4), state.OpIs)
-		if err != nil {
-			return unified.Rule{}, err
-		}
-		values[i] = decoded.(decimal.Decimal)
-	}
-	if arity == 2 && values[1].Less(values[0]) {
-		return unified.Rule{}, errors.New("invalid monetary interval")
+	test, err := prepareMonetaryTest(condition.Operator, condition.Values)
+	if err != nil {
+		return unified.Rule{}, err
 	}
 
 	// Validate optional forms before reporting unavailable capabilities.
@@ -224,11 +196,15 @@ func prepareFilterSum(condition *FilterSumCondition, calendar *unified.Calendar)
 	}
 	var where *state.Where
 	if sum.Where != nil {
-		validation := filterValidation{maxDepth: 2, properties: schemas.Event.Properties()}
+		source := unified.Scope{Type: sum.Source.Type, Event: sum.Source.Name, Grain: sum.Source.Grain}
+		validation := filterValidation{maxDepth: 2, properties: schemas.Event.Properties(), source: &source}
 		var err error
 		where, err = prepareFilterGroup(sum.Where, &validation, 1)
 		if err != nil {
-			return unified.Rule{}, err
+			if _, unsupported := errors.AsType[*unified.UnsupportedError](err); !unsupported {
+				return unified.Rule{}, err
+			}
+			unavailable = err
 		}
 	}
 	err = field.ValidateWhere(where)
@@ -243,10 +219,10 @@ func prepareFilterSum(condition *FilterSumCondition, calendar *unified.Calendar)
 		return unified.Rule{}, &unified.UnsupportedError{
 			Capability: "monetary sample minimum exceeds the execution integer range"}
 	}
-	if operator == unified.Equal || operator == unified.Different || operator == unified.Between {
+	if test.Operator == unified.Equal || test.Operator == unified.Different || test.Operator == unified.Between {
 		return unified.Rule{}, &unified.UnsupportedError{Capability: "monetary equality or interval comparisons"}
 	}
 
 	return unified.Rule{Sum: &unified.Sum{Scope: scope, Field: field, NativeCurrency: sum.NativeCurrency,
-		Where: where, Minimum: m, Test: unified.SumTest{Operator: operator, Value: values[0]}}}, nil
+		Where: where, Minimum: m, Test: test}}, nil
 }

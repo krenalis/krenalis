@@ -170,6 +170,12 @@ func validateQualification(node RowQualification, depth int, nodes *int) error {
 			return fmt.Errorf("warehouses: nil Record qualification")
 		}
 		return validateRecordQualification(n.Expr, 1, nodes)
+	case *MoneyQualification:
+		err := n.validate()
+		if err != nil {
+			return err
+		}
+		return validateQualification(&n.Currency, depth, nodes)
 	case *KnownTextEqual:
 		if n == nil || !IsValidIdentifier(n.Column.Name) || !n.Column.Type.IsJSON() || len(n.Keys) > 32 ||
 			len(n.Value) > 4096 || !utf8.ValidString(n.Value) || strings.ContainsRune(n.Value, 0) {

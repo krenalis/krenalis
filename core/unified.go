@@ -42,11 +42,14 @@ func (this *Workspace) unifiedProfiles(ctx context.Context, query unifiedQuery) 
 func prepareUnifiedRecordCount(scope unified.Scope, filter *Filter, test unified.CountTest) (unified.Rule, error) {
 	var where *state.Where
 	if filter != nil {
-		validation := filterValidation{maxDepth: 2, properties: schemas.Event.Properties()}
+		validation := filterValidation{maxDepth: 2, properties: schemas.Event.Properties(), source: &scope}
 		var err error
 		where, err = prepareFilterGroup(filter, &validation, 1)
 		if err != nil {
-			return unified.Rule{}, err
+			if _, unsupported := errors.AsType[*unified.UnsupportedError](err); !unsupported {
+				return unified.Rule{}, err
+			}
+			return unified.Rule{Count: &unified.Count{Scope: scope, Test: test}}, err
 		}
 	}
 	return unified.Rule{Count: &unified.Count{Scope: scope, Where: where, Test: test}}, nil
@@ -108,6 +111,8 @@ func prepareUnifiedRuleInCalendar(rule FilterRule, schema types.Type, depth int,
 		return prepareFilterSum(rule, calendar)
 	case *FilterAverageCondition:
 		return prepareFilterAverage(rule, calendar)
+	case *FilterMoneyCondition:
+		return unified.Rule{}, errors.New("money requires an occurrence predicate")
 	case *FilterOccurredInCondition:
 		return unified.Rule{}, errors.New("occurredIn requires experience verify")
 	case *FilterExperienceCondition:

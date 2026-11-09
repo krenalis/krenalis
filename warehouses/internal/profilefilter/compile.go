@@ -155,6 +155,8 @@ func (c *compiler) qualification(node warehouses.RowQualification) (string, erro
 	switch n := node.(type) {
 	case *warehouses.RecordQualification:
 		return c.dialect.Record(n.Expr)
+	case *warehouses.MoneyQualification:
+		return c.money(n)
 	case *warehouses.KnownTextEqual:
 		value, err := c.dialect.KnownText(n.Column, n.Keys)
 		if err != nil {

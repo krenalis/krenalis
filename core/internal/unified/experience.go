@@ -14,7 +14,7 @@ import (
 )
 
 // Experience selects the first or last recorded occurrence before verifying it.
-// Where contains local Record predicates; Verify also admits timestamp tests.
+// Where contains local Record predicates; Verify also admits time and money.
 // Unknown local qualifications are independent across determined identities.
 type Experience struct {
 	First  bool
@@ -60,7 +60,7 @@ func (experience *Experience) validate(at time.Time) error {
 		}
 	}
 	nodes := 0
-	err = experience.Verify.validate(at, 1, &nodes)
+	err = experience.Verify.validate(at, experience.Scope, 1, &nodes)
 	var unavailable error
 	if err != nil {
 		if _, unsupported := errors.AsType[*UnsupportedError](err); !unsupported {
@@ -74,6 +74,10 @@ func (experience *Experience) validate(at time.Time) error {
 			return err
 		}
 		unavailable = err
+	}
+	err = experience.Verify.validateDependencies(experience.Where)
+	if err != nil {
+		return err
 	}
 	return unavailable
 }
