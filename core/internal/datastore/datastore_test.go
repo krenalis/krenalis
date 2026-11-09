@@ -54,10 +54,13 @@ type profileQueryRows struct {
 	scanErr   error
 }
 
+// Close does nothing.
 func (r *profileQueryRows) Close() error { return nil }
 
+// Err returns the configured iteration error.
 func (r *profileQueryRows) Err() error { return r.err }
 
+// Next advances to the next row.
 func (r *profileQueryRows) Next() bool {
 	if r.remaining == 0 {
 		return false
@@ -66,6 +69,7 @@ func (r *profileQueryRows) Next() bool {
 	return true
 }
 
+// Scan returns the configured error or a "no current row" error.
 func (r *profileQueryRows) Scan(dest ...any) error {
 	if r.scanErr != nil {
 		return r.scanErr
