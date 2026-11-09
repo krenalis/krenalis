@@ -2058,8 +2058,8 @@ test(`Create profile schema properties with default semantics and options`, asyn
 		'url',
 		'string',
 		'boolean',
-		'duration',
 		'int',
+		'duration',
 		'float',
 		'money',
 		'percentage',
@@ -2083,7 +2083,7 @@ test(`Create profile schema properties with default semantics and options`, asyn
 		),
 	).toHaveText([
 		'country · string',
-		'duration · int',
+		'duration · float',
 		'money · decimal(18,4)',
 		'percentage · decimal(18,4)',
 		'measurement · decimal(18,4)',
@@ -2163,6 +2163,7 @@ test(`Create profile schema properties with default semantics and options`, asyn
 	const emptyMeasurementUnit = measurementUnit.locator('wa-option[value=""]');
 	await expect(emptyMeasurementUnit).toBeHidden();
 	await expect(measurementUnit.locator('wa-option[value="g"]')).toHaveJSProperty('current', false);
+	await expect(measurementUnit.locator('wa-option[value="second"]')).toHaveText('Second · s');
 	await measurementUnit.locator('wa-option[value="kg"]').click();
 	await expect(measurementUnit).toHaveJSProperty('value', 'kg');
 	await expect(measurementUnit.locator('[part="display-input"]')).toHaveValue('Kilogram · kg');
@@ -2188,15 +2189,17 @@ test(`Create profile schema properties with default semantics and options`, asyn
 	const emptyDurationUnit = durationUnit.locator('wa-option[value=""]');
 	await expect(emptyDurationUnit).toBeHidden();
 	await expect(durationUnit.locator('wa-option[value="millisecond"]')).toHaveJSProperty('current', false);
+	await expect(durationUnit.locator('wa-option[value="year"]')).toHaveText('Year · yr');
+	await expect(durationUnit.locator('wa-option[value="kg"]')).toHaveCount(0);
 	await durationUnit.locator('wa-option[value="second"]').click();
-	await expect(durationUnit.locator('[part="display-input"]')).toHaveValue('Seconds · s');
+	await expect(durationUnit.locator('[part="display-input"]')).toHaveValue('Second · s');
 	await expect(emptyDurationUnit).toHaveCount(0);
 	await expect(propertyPanel.locator('[data-error-on="duration-unit"]')).toHaveCount(0);
 	await expect(propertyPanel.locator('.property-panel__save')).not.toHaveAttribute('disabled');
 	await propertyPanel.locator('.property-panel__save').click();
 	await expect(
 		page.locator('.schema-edit .grid__row[data-id="semantics_duration"] .schema-property-grid__type'),
-	).toHaveText('duration — s · int(64)');
+	).toHaveText('duration — s · float(64) · real');
 
 	const previewRequestPromise = page.waitForRequest(
 		(request) => request.url().endsWith('/profiles/schema/preview') && request.method() === 'PUT',
@@ -2239,11 +2242,11 @@ test(`Create profile schema properties with default semantics and options`, asyn
 	});
 	const duration = schema.properties.find((property) => property.name === 'semantics_duration');
 	expect(duration?.type).toEqual({
-		kind: 'int',
+		kind: 'float',
 		semantics: 'duration',
 		unit: 'second',
 		bitSize: 64,
-		unsigned: false,
+		real: true,
 	});
 	const previewResponse = await previewResponsePromise;
 	expect(previewResponse.status()).toBe(200);
@@ -2255,7 +2258,7 @@ for (const [semantics, kind, structure] of [
 	['phone', 'string', 'array'],
 	['url', 'string', 'map'],
 	['country', 'string', 'one'],
-	['duration', 'int', 'array'],
+	['duration', 'float', 'array'],
 	['money', 'decimal', 'one'],
 	['percentage', 'decimal', 'array'],
 	['measurement', 'decimal', 'map'],
@@ -2311,9 +2314,12 @@ for (const [semantics, kind, structure] of [
 			await expect(propertyPanel.locator('.property-form__scale input')).toHaveValue('4');
 			await expect(propertyPanel.locator('.property-form__minimum input')).toHaveValue('-10.5');
 			await expect(propertyPanel.locator('.property-form__maximum input')).toHaveValue('10.5');
-		} else if (kind === 'int') {
+		} else if (kind === 'float') {
 			await expect(propertyPanel.locator('.property-form__bit-size')).toHaveJSProperty('value', '64');
-			await expect(propertyPanel.locator('.property-form__integer-sign')).toHaveJSProperty('value', 'signed');
+			await expect(propertyPanel.locator('.property-form__float-special-values wa-checkbox')).toHaveJSProperty(
+				'checked',
+				false,
+			);
 		} else {
 			await expect(propertyPanel.locator('.property-form__constraints--length')).toBeVisible();
 		}
@@ -2333,8 +2339,8 @@ for (const [semantics, kind, structure] of [
 		const valueType: Type =
 			kind === 'decimal'
 				? { kind, precision: 18, scale: 4, minimum: -10.5, maximum: 10.5 }
-				: kind === 'int'
-					? { kind, bitSize: 64, unsigned: false }
+				: kind === 'float'
+					? { kind, bitSize: 64, real: true }
 					: { kind };
 		for (const request of [previewRequest, alterRequest]) {
 			const schema = request.postDataJSON().schema as ObjectType;
@@ -2713,7 +2719,7 @@ test(`Keep applied property types read-only and preserve their configuration`, a
 		},
 		materialized_money_without_currency: { kind: 'decimal', semantics: 'money', precision: 18, scale: 4 },
 		materialized_measurement: { kind: 'decimal', semantics: 'measurement', unit: 'kg', precision: 18, scale: 4 },
-		materialized_duration: { kind: 'int', semantics: 'duration', unit: 'second', bitSize: 64, unsigned: false },
+		materialized_duration: { kind: 'float', semantics: 'duration', unit: 'second', bitSize: 64, real: true },
 		materialized_country: { kind: 'string', semantics: 'country', format: 'alpha-3' },
 		materialized_percentage: { kind: 'decimal', semantics: 'percentage', precision: 18, scale: 4 },
 		materialized_integer: { kind: 'int', bitSize: 32, unsigned: true, minimum: 0, maximum: 100 },
@@ -2759,7 +2765,7 @@ test(`Keep applied property types read-only and preserve their configuration`, a
 		materialized_money: 'EUR · Euro',
 		materialized_money_without_currency: 'No currency specified',
 		materialized_measurement: 'Kilogram · kg',
-		materialized_duration: 'Seconds · s',
+		materialized_duration: 'Second · s',
 		materialized_country: '3-letter ISO code',
 	};
 	for (const name of Object.keys(appliedTypes)) {

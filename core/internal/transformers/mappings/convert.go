@@ -10,6 +10,7 @@ import (
 	"math"
 	"slices"
 	"strconv"
+	"strings"
 	"time"
 	"unicode/utf8"
 
@@ -531,6 +532,8 @@ func convert(v any, st, dt types.Type, nullable bool, purpose Purpose) (any, err
 			if !ok {
 				return v, errParseConversion
 			}
+		default:
+			return v, errInvalidConversion
 		}
 		return t, nil
 	case types.YearKind:
@@ -859,26 +862,24 @@ func convert(v any, st, dt types.Type, nullable bool, purpose Purpose) (any, err
 	return v, errInvalidConversion
 }
 
+// convertStringToDate parses dates in YYYY-MM-DD format and Excel serial dates.
+// Fractional parts of serial dates are discarded, and Excel's fictitious day 60
+// is rejected.
+//
+// It returns errParseConversion for invalid dates and errYearRangeConversion
+// for years outside [1, 9999].
 func convertStringToDate(s string) (time.Time, error) {
-	month, day, year := -1, -1, -1
-	if len(s) == 10 {
-		if s[4] == '-' && s[7] == '-' {
-			year, month, day = parseUint(s[0:4]), parseUint(s[5:7]), parseUint(s[8:10]) // yyyy-mm-dd
-		} else if s[2] == '/' && s[5] == '/' || s[2] == '.' && s[5] == '.' {
-			month, day, year = parseUint(s[0:2]), parseUint(s[3:5]), parseUint(s[6:10]) // mm/dd/yyyy, mm.dd.yyyy
-		}
-	} else if len(s) == 8 {
-		if s[2] == '-' && s[5] == '-' {
-			year, month, day = parseUint(s[0:2]), parseUint(s[3:5]), parseUint(s[5:8]) // yy-mm-dd
-		} else if s[2] == '/' && s[5] == '/' || s[2] == '.' && s[5] == '.' {
-			month, day, year = parseUint(s[0:2]), parseUint(s[3:5]), parseUint(s[6:10]) // mm/dd/yy, mm.dd.yy
-		}
-	} else if isSimpleFloat(s) {
+	if isSimpleFloat(s) {
 		// Parse as Excel serial date-time.
 		// https://support.microsoft.com/en-us/office/datevalue-function-df8b07d4-7761-4a93-bc33-b7471bbff252
-		days, err := strconv.ParseFloat(s, 64)
+		// Parse whole days directly to prevent fractions from rounding into another day.
+		whole, _, _ := strings.Cut(s, ".")
+		days, err := strconv.Atoi(whole)
 		if err != nil {
-			return time.Time{}, errParseConversion
+			return time.Time{}, errYearRangeConversion
+		}
+		if days > 2958465 { // 9999-12-31, the last supported date
+			return time.Time{}, errYearRangeConversion
 		}
 		if days == 60 {
 			// 1900-02-29 does not exist. Excel returns it for compatibility with Lotus 1-2-3.
@@ -887,10 +888,13 @@ func convertStringToDate(s string) (time.Time, error) {
 		if days > 60 {
 			days--
 		}
-		t := excelEpoch.Add(time.Duration(days) * 24 * time.Hour)
-		return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC), nil
+		return excelEpoch.AddDate(0, 0, days), nil
 	}
-	if month < 1 || month > 12 || day < 1 || day > 31 {
+	if len(s) != 10 || s[4] != '-' || s[7] != '-' {
+		return time.Time{}, errParseConversion
+	}
+	year, month, day := parseUint(s[0:4]), parseUint(s[5:7]), parseUint(s[8:10])
+	if year < 0 || month < 1 || month > 12 || day < 1 || day > 31 {
 		return time.Time{}, errParseConversion
 	}
 	if year < 1 || year > 9999 {
@@ -959,6 +963,36 @@ func isSimpleFloat(s string) bool {
 	return true
 }
 
+// needsConversion reports whether non-null results of expr must pass through
+// convert to apply conversions or validation checks.
+func needsConversion(expr []part, dt types.Type) bool {
+	if len(expr) == 1 && expr[0].value == nil {
+		p := expr[0]
+		if p.path.elements == nil {
+			return false
+		}
+		if p.args != nil {
+			args := p.args
+			switch p.path.elements[0] {
+			case "if":
+				args = args[1:]
+			case "coalesce":
+				// Each argument can supply the result.
+			default:
+				// Constructed values can still need validation.
+				return true
+			}
+			for _, arg := range args {
+				if needsConversion(arg, dt) {
+					return true
+				}
+			}
+			return false
+		}
+	}
+	return typeNeedsConversion(typeOf(expr), dt)
+}
+
 func parseUint(s string) int {
 	var n int
 	for _, c := range []byte(s) {
@@ -971,4 +1005,43 @@ func parseUint(s string) int {
 		}
 	}
 	return n
+}
+
+// typeNeedsConversion reports whether a value of type st needs conversion to dt
+// for any purpose, including conversion-specific checks.
+// st and dt cannot be the invalid type.
+func typeNeedsConversion(st, dt types.Type) bool {
+	if st.Kind() != dt.Kind() {
+		return true
+	}
+	if types.Equal(st, dt) {
+		return false
+	}
+	switch st.Kind() {
+	case types.ObjectKind:
+		sp, dp := st.Properties(), dt.Properties()
+		if sp.Len() != dp.Len() {
+			return true
+		}
+		for _, p := range sp.All() {
+			d, ok := dp.ByName(p.Name)
+			if !ok || p.Nullable && !d.Nullable {
+				return true
+			}
+			if p.ReadOptional && (d.CreateRequired || d.UpdateRequired) {
+				return true
+			}
+			if typeNeedsConversion(p.Type, d.Type) {
+				return true
+			}
+		}
+		return false
+	case types.ArrayKind:
+		return st.MinElements() != dt.MinElements() || st.MaxElements() != dt.MaxElements() ||
+			st.Unique() != dt.Unique() || typeNeedsConversion(st.Elem(), dt.Elem())
+	case types.MapKind:
+		return typeNeedsConversion(st.Elem(), dt.Elem())
+	default:
+		return true
+	}
 }

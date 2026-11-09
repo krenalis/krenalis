@@ -24,8 +24,8 @@ import (
 var encodeSorted = false
 
 // Eval evaluates the expression using the provided attributes, which must
-// conform to the expression's source schema, and returns the result in the
-// destination type.
+// conform to the types of the properties in the expression, and returns the
+// result and its type.
 //
 // During evaluation, JSON properties in the map may be replaced with their
 // unmarshaled values.
