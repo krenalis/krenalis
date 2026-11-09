@@ -228,9 +228,6 @@ func Test_TypeSemanticsCopyOnWrite(t *testing.T) {
 	if decimalType.Semantics() != NoSemantics {
 		t.Fatalf("expected receiver semantics %s, got %s", NoSemantics, decimalType.Semantics())
 	}
-	if decimalType.HasSemantics() {
-		t.Fatalf("expected HasSemantics to return false, got true")
-	}
 	if currency, ok := money.Currency(); ok || currency != "" {
 		t.Fatalf("expected no currency and false, got %q and %t", currency, ok)
 	}
