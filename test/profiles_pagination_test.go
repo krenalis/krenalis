@@ -301,12 +301,12 @@ func TestProfilesPagination(t *testing.T) {
 		{name: "POST missing schema", method: "POST", path: "/v1/profiles/query", body: map[string]any{}, status: http.StatusBadRequest, code: "BadRequest", message: "schema is required"},
 		{name: "POST invalid limit", method: "POST", path: "/v1/profiles/query", body: map[string]any{"schema": postSchema, "limit": 0}, status: http.StatusBadRequest},
 		{
-			name:    "malformed schema",
-			method:  "POST",
-			path:    "/v1/profiles/query",
-			body:    map[string]any{"schema": "{"},
-			status:  http.StatusBadRequest,
-			code:    "BadRequest",
+			name:   "malformed schema",
+			method: "POST",
+			path:   "/v1/profiles/query",
+			body:   map[string]any{"schema": "{"},
+			status: http.StatusBadRequest,
+			code:   "BadRequest",
 		},
 		{
 			name:   "empty properties",
@@ -391,12 +391,12 @@ func TestProfilesPagination(t *testing.T) {
 			message: "schema is required",
 		},
 		{
-			name:    "attributes malformed schema",
-			method:  "POST",
-			path:    attributesPath,
-			body:    map[string]any{"schema": "{"},
-			status:  http.StatusBadRequest,
-			code:    "BadRequest",
+			name:   "attributes malformed schema",
+			method: "POST",
+			path:   attributesPath,
+			body:   map[string]any{"schema": "{"},
+			status: http.StatusBadRequest,
+			code:   "BadRequest",
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

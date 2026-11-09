@@ -253,7 +253,7 @@ func (this *Workspace) PipelineErrors(ctx context.Context, start, end time.Time,
 // Attributes returns the attributes defined by the specified schema for the
 // given profile.
 //
-// It returns errors.NotFoundError error, if the workspace or profile does not
+// It returns an errors.NotFoundError error if the workspace or profile does not
 // exist.
 // It returns an errors.UnprocessableError error with code
 //   - MaintenanceMode, if the data warehouse is in maintenance mode.
@@ -1316,7 +1316,7 @@ func (this *Workspace) PipelineRuns(ctx context.Context) ([]*PipelineRun, error)
 // If filter is not nil, schema must be an object type with the properties used
 // by filter. If filter is nil, schema can be the invalid type.
 //
-// It returns errors.NotFoundError error if the workspace does not exist.
+// It returns an errors.NotFoundError error if the workspace does not exist.
 // It returns an errors.UnprocessableError error with code
 //   - MaintenanceMode, if the data warehouse is in maintenance mode.
 //   - PropertyNotExist, if a property in filter does not exist in schema.
@@ -1397,7 +1397,7 @@ type Profile struct {
 // sorted by KPID, in ascending order if orderDesc is false and descending order
 // if it is true.
 //
-// It returns errors.NotFoundError error, if the workspace no longer exists.
+// It returns an errors.NotFoundError error if the workspace does not exist.
 // It returns an errors.UnprocessableError error with code
 //   - MaintenanceMode, if the data warehouse is in maintenance mode.
 //   - OrderNotExist, if order does not exist in schema.
@@ -1447,9 +1447,8 @@ func (this *Workspace) Profiles(ctx context.Context, schema types.Type, properti
 	if filter != nil {
 		_, err := validateFilter(filter, schema, state.Destination, state.TargetUser)
 		if err != nil {
-			if pathErr, ok := errors.AsType[types.PathNotExistError](err); ok {
-				return nil, 0, false, errors.Unprocessable(
-					PropertyNotExist, "filter's property %s does not exist", pathErr.Path)
+			if err, ok := errors.AsType[types.PathNotExistError](err); ok {
+				return nil, 0, false, errors.Unprocessable(PropertyNotExist, "filter's property %s does not exist", err.Path)
 			}
 			return nil, 0, false, errors.BadRequest("filter is not valid: %s", err)
 		}
