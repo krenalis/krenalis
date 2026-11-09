@@ -742,7 +742,7 @@ RecordPredicate and recordWhere preserve groups, child order, paths and typed
 operands. An entirely Record Count body is bound once through source.Record,
 preserving existing SQL. Only mixed bodies use QualificationGroup rendering.
 
-Count admits one money leaf with the existing monetary reading and four ordered
+Count admits one money leaf with the existing monetary reading and seven exact
 comparisons. Bounds remain exact under the same independent-occurrence contract;
 no new numerical algorithm is needed. Dependency analysis visits all branches
 to reject overlapping raw paths and multiple money leaves, after validity checks.
@@ -875,17 +875,29 @@ deletions and older late imports can change a historical First.
 An experience body can also own Money, binding the same MonetaryField and native
 currency reader used by Sum. The public money subject contains only field and
 nativeCurrency, with operator/values on the condition. Money validates source
-compatibility (track Order Completed), signed exact operands and currency before
-reporting unsupported comparisons. Its four ordered operators normalize to
+compatibility (track Order Completed), signed exact operands and currency.
+Its four ordered operators normalize to
 inclusive Decimal(18,4) grid bounds, with thresholds clipped to +/-1e14 only for
-readable values. Original tests remain on the semantic node for explanations.
+readable values. Equality, difference and inclusive intervals have their own
+normalization: a point must be exactly readable, and interval bounds are rounded
+inward and intersected with the readable domain. No rounding is used to equate
+a fine literal to a nearby readable amount. Difference negates only the amount.
+NormalizedMoneyTest contains a comparison or readableAmounts none/all; unreadable
+amounts remain unknown in every case. Nondegenerate new tests retain their
+requested operator, even when an interval collapses to a point. SumTest.threshold
+and the available Sum/Average terminals are unchanged.
+Original tests remain on the semantic node for explanations.
 
 The prepared warehouses.MoneyQualification contains the two resolved readings
-and an inclusive threshold. The shared composer reuses ExactDecimal, KnownText
+and inclusive optional bounds, or an explicit readable-amount domain. Negation
+is admitted only for a point; missing/mixed/inverted/overprecision forms are
+rejected at the warehouse boundary. The shared composer reuses ExactDecimal, KnownText
 and the exact normalized literal form used by Sum. It combines both tests using
 SQL Kleene AND; unknown currency with a false readable amount test is false.
 Direct comparisons with the bounded threshold also preserve NULL for unreadable
-amounts at the extremes. No SQL or dialect enters core and no warehouse transport
+amounts at the extremes. Domains use CASE on amount readability instead of bare
+TRUE/FALSE, and currency still applies. Existing ordered SQL and arguments remain
+byte-identical. No SQL or dialect enters core and no warehouse transport
 or explanation row schema is added. The two backend local suites are mirrored;
 Snowflake remains gated pending real verification.
 
@@ -899,7 +911,10 @@ validated before being declared unavailable; Record pipelines and the profile
 root still reject this subject. state.Where is unchanged.
 
 Profile explanations append money metadata with the verify path, field and
-currency, plus requested and normalized operator/values. They do not return a
+currency, plus requested and normalized tests. Normalized operator/values and
+readableAmounts none/all are mutually exclusive, validated on JSON encoding.
+The existing ordered explanation JSON is unchanged, including clipped sentinels.
+They do not return a
 candidate amount or identity. First/Last/Nth preserve compatible winners and possible
 absence; moving a monetary verify into the base would change the request.
 
@@ -918,12 +933,12 @@ KnownTextEqual reader against a direct conjunct of an AND base. An identical
 reading fixes the currency: same literal renders only the amount comparison;
 a different literal renders FALSE even for an unreadable amount. No match renders
 the complete currency AND amount test. OR or nested base clauses do not provide
-this direct proof. The context propagates through verify groups only; Count,
-Sum, Average and the base itself keep ordinary qualification rendering.
+this direct proof. The context propagates through verify and Count qualification
+groups; Sum and Average keep ordinary qualification rendering.
 
 MoneyQualification retains its full currency descriptor, with no standalone
-amount-only node or flag. The conditional rendering cannot be requested outside
-SelectedOccurrence or without the matching required base predicate. Core owns
+amount-only node or flag. The conditional rendering requires the matching base
+predicate in SelectedOccurrence or Count. Core owns
 source/reference validation and admission: raw overlaps with the base currency
 are unavailable in where and verify, including bodies without money. Money still
 excludes its own raw overlaps and multiple monetary leaves even when a leaf

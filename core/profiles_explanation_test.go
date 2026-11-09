@@ -215,3 +215,44 @@ func TestExplainProfileFilterValidation(t *testing.T) {
 		t.Fatal("expected invalid evaluation instant, got success")
 	}
 }
+
+// TestProfileNormalizedMoneyComparison checks the two closed JSON forms.
+func TestProfileNormalizedMoneyComparison(t *testing.T) {
+	point := []decimal.Decimal{decimal.MustParse("100")}
+	for _, test := range []struct {
+		name  string
+		value ProfileNormalizedMoneyComparison
+		valid bool
+	}{
+		{"comparison", ProfileNormalizedMoneyComparison{Operator: OpIs, Values: point}, true},
+		{"none", ProfileNormalizedMoneyComparison{ReadableAmounts: "none"}, true},
+		{"all", ProfileNormalizedMoneyComparison{ReadableAmounts: "all"}, true},
+		{"neither", ProfileNormalizedMoneyComparison{}, false},
+		{"both", ProfileNormalizedMoneyComparison{ReadableAmounts: "all", Operator: OpIs, Values: point}, false},
+		{"empty values with domain", ProfileNormalizedMoneyComparison{ReadableAmounts: "none", Values: []decimal.Decimal{}}, false},
+		{"unknown domain", ProfileNormalizedMoneyComparison{ReadableAmounts: "some"}, false},
+		{"operator only", ProfileNormalizedMoneyComparison{Operator: OpIs}, false},
+		{"values only", ProfileNormalizedMoneyComparison{Values: point}, false},
+		{"wrong arity", ProfileNormalizedMoneyComparison{Operator: OpIsBetween, Values: point}, false},
+		{"inverted", ProfileNormalizedMoneyComparison{Operator: OpIsBetween, Values: []decimal.Decimal{point[0], decimal.MustParse("50")}}, false},
+		{"fine", ProfileNormalizedMoneyComparison{Operator: OpIs, Values: []decimal.Decimal{decimal.MustParse("100.00001")}}, false},
+		{"large", ProfileNormalizedMoneyComparison{Operator: OpIs, Values: []decimal.Decimal{decimal.MustParse("1e15")}}, false},
+		{"unknown operator", ProfileNormalizedMoneyComparison{Operator: OpExists, Values: point}, false},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			encoded, err := json.Marshal(test.value)
+			if err != nil {
+				if test.valid {
+					t.Fatalf("expected normalized comparison encoded, got %v", err)
+				}
+				return
+			}
+			if !test.valid {
+				t.Fatalf("expected invalid normalized comparison rejected, got %s", encoded)
+			}
+			if test.value.ReadableAmounts != "" && string(encoded) != `{"readableAmounts":"`+test.value.ReadableAmounts+`"}` {
+				t.Fatalf("expected only the readable-amount domain, got %s", encoded)
+			}
+		})
+	}
+}

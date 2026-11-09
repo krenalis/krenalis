@@ -31,9 +31,9 @@ func TestFilterCountMoneyAdmission(t *testing.T) {
 		{"less", strings.Replace(countMoneyConditionJSON, "is greater than", "is less than", 1), false, false},
 		{"at most", strings.Replace(countMoneyConditionJSON, "is greater than", "is less than or equal to", 1), false, false},
 		{"at least", strings.Replace(countMoneyConditionJSON, "is greater than", "is greater than or equal to", 1), false, false},
-		{"equality", strings.Replace(countMoneyConditionJSON, "is greater than", "is", 1), false, true},
-		{"difference", strings.Replace(countMoneyConditionJSON, "is greater than", "is not", 1), false, true},
-		{"interval", strings.Replace(strings.Replace(countMoneyConditionJSON, "is greater than", "is between", 1), "[100]", "[50,100]", 1), false, true},
+		{"equality", strings.Replace(countMoneyConditionJSON, "is greater than", "is", 1), false, false},
+		{"difference", strings.Replace(countMoneyConditionJSON, "is greater than", "is not", 1), false, false},
+		{"interval", strings.Replace(strings.Replace(countMoneyConditionJSON, "is greater than", "is between", 1), "[100]", "[50,100]", 1), false, false},
 		{"wrong source", strings.Replace(countMoneyConditionJSON, "Order Completed", "Other", 1), true, false},
 		{"page", strings.Replace(countMoneyConditionJSON, `"name":"Order Completed"`, `"type":"page","name":"Order Completed"`, 1), true, false},
 		{"currency", strings.Replace(countMoneyConditionJSON, `"nativeCurrency":"EUR"`, `"nativeCurrency":"eur"`, 1), true, false},
@@ -91,7 +91,23 @@ func TestFilterCountMoneyAdmission(t *testing.T) {
 
 // TestFilterCountMoneyInvalidFirst checks invalid siblings in the same where.
 func TestFilterCountMoneyInvalidFirst(t *testing.T) {
-	unavailable := strings.Replace(moneyConditionJSON, `is greater than`, `is`, 1)
+
+	unavailable := moneyConditionJSON + `,` + moneyConditionJSON
+	var candidate FilterCountCondition
+	err := json.Unmarshal([]byte(strings.Replace(countMoneyConditionJSON, moneyConditionJSON, unavailable, 1)), &candidate)
+	if err != nil {
+		t.Fatalf("expected decoded repeated money, got %v", err)
+	}
+	_, err = prepareFilterCount(&candidate, nil)
+	if err != nil {
+		if _, unsupported := errors.AsType[*unified.UnsupportedError](err); !unsupported {
+			t.Fatalf("expected unavailable repeated money, got %v", err)
+		}
+	}
+	if err == nil {
+		t.Fatal("expected unavailable repeated money, got success")
+	}
+
 	invalid := `{"property":"unknown","operator":"exists"}`
 	for _, body := range []string{unavailable + `,` + invalid, invalid + `,` + unavailable} {
 		var condition FilterCountCondition
@@ -103,12 +119,13 @@ func TestFilterCountMoneyInvalidFirst(t *testing.T) {
 		if err != nil {
 			missing, ok := errors.AsType[types.PathNotExistError](err)
 			if !ok || missing.Path != "unknown" {
-				t.Fatalf("expected invalid property before unavailable comparison, got %v", err)
+				t.Fatalf("expected invalid property before unavailable repeated money, got %v", err)
 			}
 			continue
 		}
 		t.Fatal("expected invalid property rejected, got success")
 	}
+
 }
 
 // TestFilterCountMoneyWhereBudget counts groups, Record and money leaves.

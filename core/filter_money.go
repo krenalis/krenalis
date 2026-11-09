@@ -15,7 +15,7 @@ import (
 	"github.com/krenalis/krenalis/tools/types"
 )
 
-// FilterMoney identifies the selected message's native monetary reading.
+// FilterMoney identifies one message's native monetary reading.
 // Field determines both amount and currency paths; no conversion is performed.
 type FilterMoney struct {
 	Field          FilterSumField `json:"field"`
@@ -52,8 +52,8 @@ func (money *FilterMoney) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// FilterMoneyCondition verifies native currency and a selected amount.
-// It executes only in an experience verify, using four ordered comparisons.
+// FilterMoneyCondition verifies native currency and one amount.
+// It executes in Count.where and experience.verify, using exact comparisons.
 type FilterMoneyCondition struct {
 	Money    FilterMoney    `json:"money"`
 	Operator FilterOperator `json:"operator"`
@@ -73,7 +73,7 @@ func (condition *FilterMoneyCondition) MarshalJSON() ([]byte, error) {
 	return data, nil
 }
 
-// UnmarshalJSON decodes a standalone selected monetary condition.
+// UnmarshalJSON decodes a standalone monetary condition.
 func (condition *FilterMoneyCondition) UnmarshalJSON(data []byte) error {
 	if condition == nil {
 		return errors.New("core: cannot unmarshal a money condition into nil")

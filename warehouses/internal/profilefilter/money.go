@@ -43,12 +43,30 @@ func (c *compiler) money(node *warehouses.MoneyQualification, base warehouses.Ro
 	if err != nil {
 		return "", err
 	}
-	threshold := fmt.Sprintf("CAST('%.4f' AS DECIMAL(38,4))", node.Threshold)
-	operator := "<="
-	if node.AtLeast {
-		operator = ">="
+	var comparison string
+	if node.ReadableAmounts != "" {
+		value := "FALSE"
+		if node.ReadableAmounts == "all" {
+			value = "TRUE"
+		}
+		comparison = "CASE WHEN (" + amount + ") IS NULL THEN CAST(NULL AS BOOLEAN) ELSE " + value + " END"
+	} else if node.Lower != nil && node.Upper != nil {
+		lower := fmt.Sprintf("CAST('%.4f' AS DECIMAL(38,4))", *node.Lower)
+		if node.Lower.Equal(*node.Upper) {
+			operator := "="
+			if node.Negate {
+				operator = "<>"
+			}
+			comparison = "(" + amount + ")" + operator + lower
+		} else {
+			upper := fmt.Sprintf("CAST('%.4f' AS DECIMAL(38,4))", *node.Upper)
+			comparison = "(" + amount + ")>=" + lower + " AND (" + amount + ")<=" + upper
+		}
+	} else if node.Lower != nil {
+		comparison = "(" + amount + ")>=" + fmt.Sprintf("CAST('%.4f' AS DECIMAL(38,4))", *node.Lower)
+	} else {
+		comparison = "(" + amount + ")<=" + fmt.Sprintf("CAST('%.4f' AS DECIMAL(38,4))", *node.Upper)
 	}
-	comparison := "(" + amount + ")" + operator + threshold
 	if currencyFixed {
 		return comparison, nil
 	}

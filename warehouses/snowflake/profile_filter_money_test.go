@@ -24,6 +24,7 @@ func TestProfileFilterMoneyConditioning(t *testing.T) {
 		Identity:  warehouses.Column{Name: "message_id", Type: types.String()},
 		Timestamp: warehouses.Column{Name: "timestamp", Type: types.DateTime()}}
 	properties := warehouses.Column{Name: "properties", Type: types.JSON()}
+	threshold := decimal.MustParse("100")
 	request := warehouses.ProfileOutcomeRequest{Population: warehouses.ProfileSource{Table: "profiles",
 		Key: warehouses.Column{Name: "_kpid", Type: types.UUID()}}, Limit: 10}
 	for _, test := range []struct {
@@ -60,7 +61,7 @@ func TestProfileFilterMoneyConditioning(t *testing.T) {
 			}
 			money := &warehouses.MoneyQualification{Currency: warehouses.KnownTextEqual{Column: properties,
 				Keys: []string{"currency"}, Value: "EUR"}, Amount: warehouses.DecimalReading{Column: properties,
-				Keys: []string{"total"}, Type: types.Decimal(18, 4)}, Threshold: decimal.MustParse("100"), AtLeast: true}
+				Keys: []string{"total"}, Type: types.Decimal(18, 4)}, Lower: &threshold}
 			verify := &warehouses.QualificationGroup{Operator: warehouses.OpOr, Children: []warehouses.RowQualification{money}}
 			var root warehouses.FilterCondition = &warehouses.SelectedOccurrence{Source: source, Start: end.Add(-time.Hour),
 				End: end, Qualification: base, Verify: verify}
@@ -122,9 +123,10 @@ func TestProfileFilterMoneyCountGroups(t *testing.T) {
 		Identity:  warehouses.Column{Name: "message_id", Type: types.String()},
 		Timestamp: warehouses.Column{Name: "timestamp", Type: types.DateTime()}}
 	properties := warehouses.Column{Name: "properties", Type: types.JSON()}
+	threshold := decimal.MustParse("100")
 	money := &warehouses.MoneyQualification{Currency: warehouses.KnownTextEqual{Column: properties,
 		Keys: []string{"currency"}, Value: "EUR"}, Amount: warehouses.DecimalReading{Column: properties,
-		Keys: []string{"total"}, Type: types.Decimal(18, 4)}, Threshold: decimal.MustParse("100"), AtLeast: true}
+		Keys: []string{"total"}, Type: types.Decimal(18, 4)}, Lower: &threshold}
 	request := warehouses.ProfileOutcomeRequest{Population: warehouses.ProfileSource{Table: "profiles",
 		Key: warehouses.Column{Name: "_kpid", Type: types.UUID()}}, Limit: 10}
 	for _, groups := range []int{1, 2, 3} {
@@ -149,6 +151,61 @@ func TestProfileFilterMoneyCountGroups(t *testing.T) {
 	}
 }
 
+// TestProfileFilterMoneyDomains renders points and NULL-aware amount domains.
+func TestProfileFilterMoneyDomains(t *testing.T) {
+	end := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
+	for _, test := range []struct {
+		name, lower, upper, readable string
+		negate                       bool
+		fragment                     string
+	}{
+		{"point", "100", "100", "", false, ")=CAST('100.0000' AS DECIMAL(38,4))"},
+		{"different", "100", "100", "", true, ")<>CAST('100.0000' AS DECIMAL(38,4))"},
+		{"interval", "50", "100", "", false, ")<=CAST('100.0000' AS DECIMAL(38,4))"},
+		{"none", "", "", "none", false, "IS NULL THEN CAST(NULL AS BOOLEAN) ELSE FALSE END"},
+		{"all", "", "", "all", false, "IS NULL THEN CAST(NULL AS BOOLEAN) ELSE TRUE END"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			properties := warehouses.Column{Name: "properties", Type: types.JSON()}
+			money := &warehouses.MoneyQualification{
+				Currency: warehouses.KnownTextEqual{Column: properties, Keys: []string{"currency"}, Value: "EUR"},
+				Amount:   warehouses.DecimalReading{Column: properties, Keys: []string{"total"}, Type: types.Decimal(18, 4)},
+				Negate:   test.negate, ReadableAmounts: test.readable,
+			}
+			if test.lower != "" {
+				value := decimal.MustParse(test.lower)
+				money.Lower = &value
+			}
+			if test.upper != "" {
+				value := decimal.MustParse(test.upper)
+				money.Upper = &value
+			}
+			root := &warehouses.IndependentOccurrenceCount{Source: warehouses.OccurrenceSource{Table: "events",
+				Profile:   warehouses.Column{Name: "kpid", Type: types.UUID()},
+				Identity:  warehouses.Column{Name: "id", Type: types.String()},
+				Timestamp: warehouses.Column{Name: "timestamp", Type: types.DateTime()}},
+				Start: end.Add(-time.Hour), End: end, Qualification: money, Accept: []warehouses.CountRange{{Lower: 1}}}
+			request := warehouses.ProfileOutcomeRequest{Population: warehouses.ProfileSource{Table: "profiles",
+				Key: warehouses.Column{Name: "id", Type: types.UUID()}}, Limit: 1}
+			statement, err := profilefilter.Build(warehouses.Filter{Root: root}, request, profileFilterDialect())
+			if err != nil {
+				t.Fatalf("expected closed monetary domain SQL, got %v", err)
+			}
+			if !strings.Contains(statement.SQL, test.fragment) || test.name == "interval" &&
+				!strings.Contains(statement.SQL, ")>=CAST('50.0000' AS DECIMAL(38,4))") {
+				t.Fatalf("expected monetary fragment %s, got %s", test.fragment, statement.SQL)
+			}
+			values, err := statement.Values()
+			if err != nil {
+				t.Fatalf("expected exact monetary arguments, got %v", err)
+			}
+			if len(values) != 3 || values[2] != "EUR" {
+				t.Fatalf("expected currency requirement for every monetary form, got %v", values)
+			}
+		})
+	}
+}
+
 // TestProfileFilterMoneySQL checks transport and the unchanged E protocol.
 func TestProfileFilterMoneySQL(t *testing.T) {
 	end := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
@@ -166,10 +223,15 @@ func TestProfileFilterMoneySQL(t *testing.T) {
 		{"100.0001", true}, {"-100.0001", false},
 		{"1e14", true}, {"-1e14", true}, {"1e14", false}, {"-1e14", false},
 	} {
+		threshold := decimal.MustParse(test.threshold)
 		money := &warehouses.MoneyQualification{
-			Currency:  warehouses.KnownTextEqual{Column: properties, Keys: []string{"currency"}, Value: "EUR"},
-			Amount:    warehouses.DecimalReading{Column: properties, Keys: []string{"total"}, Type: types.Decimal(18, 4)},
-			Threshold: decimal.MustParse(test.threshold), AtLeast: test.atLeast,
+			Currency: warehouses.KnownTextEqual{Column: properties, Keys: []string{"currency"}, Value: "EUR"},
+			Amount:   warehouses.DecimalReading{Column: properties, Keys: []string{"total"}, Type: types.Decimal(18, 4)},
+		}
+		if test.atLeast {
+			money.Lower = &threshold
+		} else {
+			money.Upper = &threshold
 		}
 		// Two user groups must still leave room for the closed monetary leaf.
 		verify := &warehouses.QualificationGroup{Operator: warehouses.OpAnd,
@@ -188,7 +250,7 @@ func TestProfileFilterMoneySQL(t *testing.T) {
 		if len(values) != expected || values[2] != "EUR" {
 			t.Fatalf("expected %d arguments with native currency, got %v", expected, values)
 		}
-		literal := fmt.Sprintf("CAST('%.4f' AS DECIMAL(38,4))", money.Threshold)
+		literal := fmt.Sprintf("CAST('%.4f' AS DECIMAL(38,4))", threshold)
 		if !strings.Contains(statement.SQL, literal) {
 			t.Fatalf("expected exact normalized decimal %s, got %s", literal, statement.SQL)
 		}

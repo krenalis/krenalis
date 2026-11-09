@@ -13,6 +13,63 @@ import (
 	"github.com/krenalis/krenalis/tools/errors"
 )
 
+// TestMoneyLiteralNormalization preserves exact points and inclusive intervals.
+func TestMoneyLiteralNormalization(t *testing.T) {
+	for _, test := range []struct {
+		operator                  Comparison
+		value, upper, lower, high string
+		readable                  string
+	}{
+		{Equal, "100.00000", "", "100", "", ""},
+		{Different, "1E2", "", "100", "", ""},
+		{Equal, "-0", "", "0", "", ""},
+		{Equal, "99999999999999.9999", "", "99999999999999.9999", "", ""},
+		{Different, "-99999999999999.9999", "", "-99999999999999.9999", "", ""},
+		{Equal, "100.00001", "", "", "", "none"},
+		{Different, "100.00001", "", "", "", "all"},
+		{Equal, "-100.00001", "", "", "", "none"},
+		{Different, "-100.00001", "", "", "", "all"},
+		{Equal, "1e14", "", "", "", "none"},
+		{Different, "-1e14", "", "", "", "all"},
+		{Equal, "1e20", "", "", "", "none"},
+		{Different, "-1e20", "", "", "", "all"},
+		{Between, "50.00001", "100.00009", "50.0001", "100", ""},
+		{Between, "99.99995", "100.00004", "100", "100", ""},
+		{Between, "100", "100", "100", "100", ""},
+		{Between, "-100.00009", "-50.00001", "-100", "-50.0001", ""},
+		{Between, "100.00001", "100.00009", "", "", "none"},
+		{Between, "-100.00009", "-100.00001", "", "", "none"},
+		{Between, "1e14", "1e20", "", "", "none"},
+		{Between, "-1e20", "-1e14", "", "", "none"},
+		{Between, "-1e20", "1e20", "", "", "all"},
+		{Between, "-99999999999999.9999", "99999999999999.9999", "", "", "all"},
+		{Between, "-1e20", "0", "-99999999999999.9999", "0", ""},
+		{Between, "0", "1e20", "0", "99999999999999.9999", ""},
+		{Between, "-1e14", "-99999999999999.9999", "-99999999999999.9999", "-99999999999999.9999", ""},
+		{Between, "99999999999999.9999", "1e14", "99999999999999.9999", "99999999999999.9999", ""},
+	} {
+		t.Run(fmt.Sprintf("%d/%s/%s", test.operator, test.value, test.upper), func(t *testing.T) {
+			money := &Money{Test: SumTest{Operator: test.operator, Value: decimal.MustParse(test.value)}}
+			if test.upper != "" {
+				money.Test.Upper = decimal.MustParse(test.upper)
+			}
+			normalized, err := money.NormalizedTest()
+			if err != nil {
+				t.Fatalf("expected exact literal normalization, got %v", err)
+			}
+			if normalized.ReadableAmounts != test.readable || (normalized.Comparison == nil) != (test.readable != "") {
+				t.Fatalf("expected readable domain %q, got %+v", test.readable, normalized)
+			}
+			if comparison := normalized.Comparison; comparison != nil {
+				if comparison.Operator != test.operator || !comparison.Value.Equal(decimal.MustParse(test.lower)) ||
+					test.high != "" && !comparison.Upper.Equal(decimal.MustParse(test.high)) {
+					t.Fatalf("expected operator %d with [%s,%s], got %+v", test.operator, test.lower, test.high, comparison)
+				}
+			}
+		})
+	}
+}
+
 // TestMoneyNormalization compares exact tests, including signed grid borders.
 func TestMoneyNormalization(t *testing.T) {
 
@@ -39,9 +96,9 @@ func TestMoneyNormalization(t *testing.T) {
 				default:
 					t.Fatalf("expected an ordered comparison, got %d", operator)
 				}
-				got := !amount.Greater(normalized.Value)
-				if normalized.Operator == GreaterOrEqual {
-					got = !amount.Less(normalized.Value)
+				got := !amount.Greater(normalized.Comparison.Value)
+				if normalized.Comparison.Operator == GreaterOrEqual {
+					got = !amount.Less(normalized.Comparison.Value)
 				}
 				if got != want {
 					t.Fatalf("expected %s operator=%d %s to give %v, got %+v", amount, operator, value, want, normalized)
@@ -58,8 +115,8 @@ func TestMoneyNormalization(t *testing.T) {
 		if err != nil {
 			t.Fatalf("expected bounded normalization, got %v", err)
 		}
-		if !normalized.Value.Equal(decimal.MustParse(test.expected)) {
-			t.Fatalf("expected threshold %s, got %s", test.expected, normalized.Value)
+		if !normalized.Comparison.Value.Equal(decimal.MustParse(test.expected)) {
+			t.Fatalf("expected threshold %s, got %s", test.expected, normalized.Comparison.Value)
 		}
 	}
 
@@ -74,9 +131,9 @@ func TestMoneyValidation(t *testing.T) {
 	}
 	scope := Scope{Event: "Order Completed", Grain: "registered-message"}
 	for _, test := range []struct {
-		name        string
-		change      func(*Money, *Scope)
-		unsupported bool
+		name   string
+		change func(*Money, *Scope)
+		valid  bool
 	}{
 		{"nil field", func(m *Money, _ *Scope) { m.Field = nil }, false},
 		{"source", func(_ *Money, s *Scope) { s.Event = "Other" }, false},
@@ -97,12 +154,14 @@ func TestMoneyValidation(t *testing.T) {
 			err := money.Validate(source)
 			if err != nil {
 				_, unsupported := errors.AsType[*UnsupportedError](err)
-				if unsupported != test.unsupported {
-					t.Fatalf("expected unsupported=%v, got %v", test.unsupported, err)
+				if test.valid || unsupported {
+					t.Fatalf("expected valid=%v, got %v", test.valid, err)
 				}
 				return
 			}
-			t.Fatal("expected validation failure, got success")
+			if !test.valid {
+				t.Fatal("expected validation failure, got success")
+			}
 		})
 	}
 

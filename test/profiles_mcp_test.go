@@ -7,6 +7,7 @@ package test
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"math/big"
 	"net/http"
@@ -931,6 +932,160 @@ FROM (VALUES
 
 	})
 
+	t.Run("MoneyLiteralComparisons", func(t *testing.T) {
+
+		_, err := pool.Exec(t.Context(), `INSERT INTO krenalis_events
+(kpid,message_id,event,timestamp,received_at,sent_at,type,connection_id,anonymous_id,traits,properties)
+SELECT ('00000000-0000-0000-0000-'||lpad(n::text,12,'0'))::uuid,'money-literals/'||n||'/'||id,
+'Order Completed',stamp::timestamp,'2026-02-01','2026-02-01','track','fixture','a','{}',
+jsonb_build_object('money_literals_fixture',true)||payload::jsonb
+FROM (VALUES
+(1,'first','2026-01-05','{"currency":"EUR","total":100}'),
+(1,'last','2026-01-15','{"currency":"EUR","total":200}'),
+(2,'first','2026-01-05','{"currency":"EUR","total":50}'),
+(2,'last','2026-01-15','{"currency":"USD","total":100}'),
+(3,'unknown-currency','2026-01-15','{"total":100}'),
+(4,'unreadable','2026-01-15','{"currency":"EUR","total":100.00001}')
+) v(n,id,stamp,payload)`)
+		if err != nil {
+			t.Fatalf("expected exact literal fixtures, got %v", err)
+		}
+		defer func() {
+			_, err := pool.Exec(t.Context(), "DELETE FROM krenalis_events WHERE message_id LIKE 'money-literals/%'")
+			if err != nil {
+				t.Errorf("expected literal fixture cleanup, got %v", err)
+			}
+		}()
+
+		const base = `"source":{"kind":"recordedEvents","name":"Order Completed","grain":"registered-message"},` +
+			`"period":{"kind":"elapsedLookback","duration":{"value":30,"unit":"day"}}`
+		const fixture = `{"property":"properties.money_literals_fixture","operator":"exists"}`
+		for _, test := range []struct {
+			name, operator, values, domain string
+			countTotals, lastTotals        string
+		}{
+			{"equality", "is", "[100]", "", `"match":1,"noMatch":1,"unknown":2`, `"match":0,"noMatch":2,"unknown":2`},
+			{"different", "is not", "[100]", "", `"match":2,"noMatch":1,"unknown":1`, `"match":1,"noMatch":2,"unknown":1`},
+			{"interval", "is between", "[50,100]", "", `"match":2,"noMatch":0,"unknown":2`, `"match":0,"noMatch":2,"unknown":2`},
+			{"rounded interval", "is between", "[50.00001,100.00009]", "", `"match":1,"noMatch":1,"unknown":2`, `"match":0,"noMatch":2,"unknown":2`},
+			{"thin equality", "is", "[100.00001]", "none", `"match":0,"noMatch":3,"unknown":1`, `"match":0,"noMatch":3,"unknown":1`},
+			{"thin different", "is not", "[100.00001]", "all", `"match":2,"noMatch":0,"unknown":2`, `"match":1,"noMatch":1,"unknown":2`},
+			{"thin interval", "is between", "[100.00001,100.00009]", "none", `"match":0,"noMatch":3,"unknown":1`, `"match":0,"noMatch":3,"unknown":1`},
+			{"full interval", "is between", "[-1e20,1e20]", "all", `"match":2,"noMatch":0,"unknown":2`, `"match":1,"noMatch":1,"unknown":2`},
+			{"collapsed interval", "is between", "[99.99995,100.00004]", "", `"match":1,"noMatch":1,"unknown":2`, `"match":0,"noMatch":2,"unknown":2`},
+		} {
+			for _, selected := range []bool{false, true} {
+				t.Run(fmt.Sprintf("%s/selected=%v", test.name, selected), func(t *testing.T) {
+
+					money := `{"money":{"field":{"definition":"commerce.order_completed.total","meaningRevision":"1"},` +
+						`"nativeCurrency":"EUR"},"operator":"` + test.operator + `","values":` + test.values + `}`
+					condition := `{"count":{` + base + `,"where":{"operator":"and","rules":[` + fixture + `,` + money +
+						`]}},"operator":"is greater than or equal to","values":[1]}`
+					totals, result, slot := test.countTotals, "UNKNOWN", "count"
+					if selected {
+						condition = `{"experience":{"base":{` + base + `,"where":{"operator":"and","rules":[` + fixture +
+							`]}},"select":{"kind":"last"},"verify":{"operator":"and","rules":[` + money + `]}}}`
+						totals, slot = test.lastTotals, "experience"
+					}
+					filter := `{"operator":"and","rules":[` + condition + `]}`
+					for _, first := range []int{0, 99} {
+						var expected json.RawMessage
+						k.Call("GET", "/v1/profiles?filter="+url.QueryEscape(filter)+"&at="+url.QueryEscape(at)+
+							"&first="+strconv.Itoa(first), nil, nil, &expected)
+						actual := assertResult(t, tool(t, "query-profiles", map[string]any{
+							"filter": filter, "at": at, "first": first}))
+						if actual != string(expected) || !strings.Contains(actual, totals) ||
+							first == 99 && !strings.HasPrefix(actual, `{"profiles":[]`) {
+							t.Fatalf("expected matching exact HTTP/MCP totals %s, got %s", totals, actual)
+						}
+					}
+
+					const id = "00000000-0000-0000-0000-000000000004"
+					var expected json.RawMessage
+					k.Call("GET", "/v1/profiles/"+id+"/filter-explanation?filter="+url.QueryEscape(filter)+
+						"&at="+url.QueryEscape(at), nil, nil, &expected)
+					actual := assertResult(t, tool(t, "explain-profile-filter", map[string]any{
+						"kpid": id, "filter": filter, "at": at}))
+					if actual != string(expected) || !strings.Contains(actual, `"result":"`+result+`"`) ||
+						!strings.Contains(actual, `"`+slot+`":`) || !strings.Contains(actual, `"money":[`) {
+						t.Fatalf("expected matching monetary explanation with unreadable amount, got %s", actual)
+					}
+					var explanation struct {
+						Rule struct {
+							Rules []struct {
+								Count, Experience *struct {
+									Money []struct {
+										Requested struct {
+											Operator string
+											Values   []json.RawMessage
+										}
+										Normalized struct {
+											Operator, ReadableAmounts string
+											Values                    []json.RawMessage
+										}
+									}
+								}
+							}
+						}
+					}
+					err := json.Unmarshal([]byte(actual), &explanation)
+					if err != nil {
+						t.Fatalf("expected decoded monetary explanation, got %v", err)
+					}
+					if len(explanation.Rule.Rules) != 1 {
+						t.Fatalf("expected one explained rule, got %s", actual)
+					}
+					body := explanation.Rule.Rules[0].Count
+					if selected {
+						body = explanation.Rule.Rules[0].Experience
+					}
+					if body == nil || len(body.Money) != 1 {
+						t.Fatalf("expected one monetary explanation, got %s", actual)
+					}
+					leaf := body.Money[0]
+					arity := 1
+					if test.operator == "is between" {
+						arity = 2
+					}
+					if leaf.Requested.Operator != test.operator || len(leaf.Requested.Values) != arity ||
+						leaf.Normalized.ReadableAmounts != test.domain || test.domain == "" &&
+						(leaf.Normalized.Operator != test.operator || len(leaf.Normalized.Values) != arity) ||
+						test.domain != "" && (leaf.Normalized.Operator != "" || leaf.Normalized.Values != nil) {
+						t.Fatalf("expected exclusive normalized form %q with requested comparison, got %s", test.domain, actual)
+					}
+					for _, normalized := range []bool{false, true} {
+						if normalized && test.domain != "" {
+							continue
+						}
+						values, expectedValues := leaf.Requested.Values, test.values
+						if normalized {
+							values = leaf.Normalized.Values
+							if test.name == "rounded interval" {
+								expectedValues = "[50.0001,100]"
+							} else if test.name == "collapsed interval" {
+								expectedValues = "[100,100]"
+							}
+						}
+						var operands []json.RawMessage
+						err := json.Unmarshal([]byte(expectedValues), &operands)
+						if err != nil {
+							t.Fatalf("expected exact fixture operands, got %v", err)
+						}
+						for i, operand := range operands {
+							want, ok := new(big.Rat).SetString(string(operand))
+							got, readable := new(big.Rat).SetString(string(values[i]))
+							if !ok || !readable || want.Cmp(got) != 0 {
+								t.Fatalf("expected exact normalized=%v operand %s, got %s", normalized, operand, values[i])
+							}
+						}
+					}
+
+				})
+			}
+		}
+
+	})
+
 	t.Run("ExperienceMoney", func(t *testing.T) {
 
 		_, err := pool.Exec(t.Context(), `INSERT INTO krenalis_events
@@ -996,7 +1151,6 @@ FROM (VALUES
 			{"overlap verify", strings.Replace(filter, money, money+`,{"property":"properties.currency","operator":"exists"}`, 1), "FilterCapabilityNotImplemented"},
 			{"overlap base", strings.Replace(filter, `{"property":"properties.money_fixture","operator":"exists"}`, `{"property":"properties.currency","operator":"is","values":["EUR"]}`, 1), "FilterCapabilityNotImplemented"},
 			{"money in base", strings.Replace(filter, `{"property":"properties.money_fixture","operator":"exists"}`, money, 1), "FilterCapabilityNotImplemented"},
-			{"equality", strings.Replace(filter, `"operator":"is greater than"`, `"operator":"is"`, 1), "FilterCapabilityNotImplemented"},
 			{"wrong source", strings.Replace(filter, `"name":"Order Completed"`, `"name":"Other"`, 1), "InvalidArguments"},
 		} {
 			t.Run(test.name, func(t *testing.T) {

@@ -42,7 +42,7 @@ func TestFilterExperienceCurrencyAdmission(t *testing.T) {
 		{"revision", strings.Replace(base, `"definition":"commerce.order_completed.currency","meaningRevision":"1"`, `"definition":"commerce.order_completed.currency","meaningRevision":"2"`, 1), true, false},
 		{"source", strings.Replace(base, `"name":"Order Completed"`, `"name":"Other"`, 1), true, false},
 		{"page", strings.Replace(base, `"kind":"recordedEvents"`, `"kind":"recordedEvents","type":"page"`, 1), true, false},
-		{"different currency equality", strings.Replace(strings.Replace(base, experienceRecordConditionJSON, strings.Replace(moneyConditionJSON, `"nativeCurrency":"EUR"`, `"nativeCurrency":"USD"`, 1), 1), `"operator":"is greater than"`, `"operator":"is"`, 1), false, true},
+		{"different currency equality", strings.Replace(strings.Replace(base, experienceRecordConditionJSON, strings.Replace(moneyConditionJSON, `"nativeCurrency":"EUR"`, `"nativeCurrency":"USD"`, 1), 1), `"operator":"is greater than"`, `"operator":"is"`, 1), false, false},
 		{"invalid before equality", strings.Replace(strings.Replace(strings.Replace(base, experienceRecordConditionJSON, moneyConditionJSON, 1), `"operator":"is greater than"`, `"operator":"is"`, 1), experienceCurrencyJSON, strings.Replace(experienceCurrencyJSON, `"EUR"`, `"eur"`, 1), 1), true, false},
 		{"raw total without money", strings.Replace(base, `properties.order_id`, `properties.total`, 1), false, false},
 	} {

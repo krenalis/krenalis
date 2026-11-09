@@ -47,10 +47,10 @@ func TestFilterMoneyAdmission(t *testing.T) {
 		{"null", strings.Replace(base, `[100]`, `[null]`, 1), true, false},
 		{"arity", strings.Replace(base, `[100]`, `[]`, 1), true, false},
 		{"state operator", strings.Replace(base, `is greater than`, `exists`, 1), true, false},
-		{"equality", strings.Replace(base, `is greater than`, `is`, 1), false, true},
-		{"different", strings.Replace(base, `is greater than`, `is not`, 1), false, true},
+		{"equality", strings.Replace(base, `is greater than`, `is`, 1), false, false},
+		{"different", strings.Replace(base, `is greater than`, `is not`, 1), false, false},
 		{"second money under OR", strings.Replace(base, moneyConditionJSON, moneyConditionJSON+`,`+nestedMoney, 1), false, true},
-		{"interval", strings.Replace(strings.Replace(base, `is greater than`, `is between`, 1), `[100]`, `[100,200]`, 1), false, true},
+		{"interval", strings.Replace(strings.Replace(base, `is greater than`, `is between`, 1), `[100]`, `[100,200]`, 1), false, false},
 		{"inverted interval", strings.Replace(strings.Replace(base, `is greater than`, `is between`, 1), `[100]`, `[200,100]`, 1), true, false},
 		{"field", strings.Replace(base, `commerce.order_completed.total`, `unknown`, 1), true, false},
 		{"revision", strings.Replace(base, `"definition":"commerce.order_completed.total","meaningRevision":"1"`, `"definition":"commerce.order_completed.total","meaningRevision":"2"`, 1), true, false},
@@ -185,7 +185,6 @@ func TestFilterMoneyInvalidBeforeUnsupported(t *testing.T) {
 			`"base":{"where":{"operator":"and","rules":[{"property":"properties.currency","operator":"is","values":["EUR"]}]},`, 1),
 		strings.Replace(base, `"base":{`,
 			`"base":{"where":{"operator":"and","rules":[`+moneyConditionJSON+`]},`, 1),
-		strings.Replace(base, `"operator":"is greater than"`, `"operator":"is"`, 1),
 	} {
 		for _, inverse := range []bool{false, true} {
 			for _, local := range []bool{false, true} {
@@ -222,6 +221,36 @@ func TestFilterMoneyInvalidBeforeUnsupported(t *testing.T) {
 				}
 				t.Fatal("expected invalid property, got success")
 			}
+		}
+	}
+}
+
+// TestFilterMoneyReductionOperators preserves unavailable Sum/Average terminals.
+func TestFilterMoneyReductionOperators(t *testing.T) {
+	for _, input := range []string{sumConditionJSON, averageConditionJSON} {
+		for _, comparison := range []struct{ operator, values string }{
+			{"is", "[100]"}, {"is not", "[100]"}, {"is between", "[100,200]"},
+		} {
+			var filter Filter
+			data := strings.Replace(input, `"operator":"is greater than or equal to"`,
+				`"operator":"`+comparison.operator+`"`, 1)
+			data = strings.Replace(data, `"values":[30]`, `"values":`+comparison.values, 1)
+			data = strings.Replace(data, `"values":[100]`, `"values":`+comparison.values, 1)
+			err := json.Unmarshal([]byte(`{"operator":"and","rules":[`+data+`]}`), &filter)
+			if err != nil {
+				t.Fatalf("expected valid reduction comparison, got %v", err)
+			}
+			nodes := 0
+			_, err = prepareUnifiedRule(&filter,
+				types.Object([]types.Property{{Name: "country", Type: types.String()}}), 0, &nodes)
+			if err != nil {
+				unavailable, unsupported := errors.AsType[*unified.UnsupportedError](err)
+				if !unsupported || unavailable.Capability != "monetary equality or interval comparisons" {
+					t.Fatalf("expected unsupported reduction comparison, got %v", err)
+				}
+				continue
+			}
+			t.Fatal("expected unsupported reduction comparison, got success")
 		}
 	}
 }

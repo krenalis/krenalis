@@ -78,17 +78,61 @@ type ProfileOccurredInExplanation struct {
 // Path contains zero-based rule indexes relative to the owning predicate root.
 // No candidate amount or identity is exposed.
 type ProfileMoneyExplanation struct {
-	Path           []int                  `json:"path"`
-	Field          FilterSumField         `json:"field"`
-	NativeCurrency string                 `json:"nativeCurrency"`
-	Requested      ProfileMoneyComparison `json:"requested"`
-	Normalized     ProfileMoneyComparison `json:"normalized"`
+	Path           []int                            `json:"path"`
+	Field          FilterSumField                   `json:"field"`
+	NativeCurrency string                           `json:"nativeCurrency"`
+	Requested      ProfileMoneyComparison           `json:"requested"`
+	Normalized     ProfileNormalizedMoneyComparison `json:"normalized"`
 }
 
 // ProfileMoneyComparison is an exact monetary operator and its JSON operands.
 type ProfileMoneyComparison struct {
 	Operator FilterOperator    `json:"operator"`
 	Values   []decimal.Decimal `json:"values"`
+}
+
+// ProfileNormalizedMoneyComparison contains a test or ReadableAmounts none/all.
+// All accepts only readable amounts; unreadable amounts remain UNKNOWN and the
+// separate currency requirement still applies. None also preserves UNKNOWN.
+type ProfileNormalizedMoneyComparison struct {
+	Operator        FilterOperator    `json:"operator,omitzero"`
+	Values          []decimal.Decimal `json:"values,omitzero"`
+	ReadableAmounts string            `json:"readableAmounts,omitzero"`
+}
+
+// MarshalJSON encodes exactly one of the normalized monetary forms.
+func (comparison ProfileNormalizedMoneyComparison) MarshalJSON() ([]byte, error) {
+	if comparison.ReadableAmounts != "" {
+		if comparison.ReadableAmounts != "none" && comparison.ReadableAmounts != "all" ||
+			comparison.Operator != "" || comparison.Values != nil {
+			return nil, errors.New("core: invalid normalized monetary domain")
+		}
+	} else {
+		arity := 1
+		switch comparison.Operator {
+		case OpIs, OpIsNot, OpIsGreaterThanOrEqualTo, OpIsLessThanOrEqualTo:
+			// These tests have a single normalized operand.
+		case OpIsBetween:
+			arity = 2
+		default:
+			return nil, errors.New("core: invalid normalized monetary operator")
+		}
+		if len(comparison.Values) != arity {
+			return nil, errors.New("core: invalid normalized monetary operands")
+		}
+		limit := decimal.MustParse("1e14")
+		for _, value := range comparison.Values {
+			_, scale := value.PrecisionScale()
+			if !types.IsDecimal(value) || scale > 4 || value.Greater(limit) || value.Less(limit.Neg()) {
+				return nil, errors.New("core: invalid normalized monetary value")
+			}
+		}
+		if arity == 2 && comparison.Values[0].Greater(comparison.Values[1]) {
+			return nil, errors.New("core: inverted normalized monetary interval")
+		}
+	}
+	type encoded ProfileNormalizedMoneyComparison
+	return json.Marshal(encoded(comparison))
 }
 
 // ProfileAverageExplanation reports exact inputs without a rounded quotient.
@@ -238,16 +282,27 @@ func explainMoneyPredicates(verify *unified.OccurrencePredicate, path []int) ([]
 		}
 		definition, revision := money.Field.Reference()
 		operators := map[unified.Comparison]FilterOperator{
+			unified.Equal: OpIs, unified.Different: OpIsNot, unified.Between: OpIsBetween,
 			unified.Greater: OpIsGreaterThan, unified.GreaterOrEqual: OpIsGreaterThanOrEqualTo,
 			unified.Less: OpIsLessThan, unified.LessOrEqual: OpIsLessThanOrEqualTo,
+		}
+		requested := ProfileMoneyComparison{Operator: operators[money.Test.Operator],
+			Values: []decimal.Decimal{money.Test.Value}}
+		if money.Test.Operator == unified.Between {
+			requested.Values = append(requested.Values, money.Test.Upper)
+		}
+		effective := ProfileNormalizedMoneyComparison{ReadableAmounts: normalized.ReadableAmounts}
+		if comparison := normalized.Comparison; comparison != nil {
+			effective.Operator = operators[comparison.Operator]
+			effective.Values = []decimal.Decimal{comparison.Value}
+			if comparison.Operator == unified.Between {
+				effective.Values = append(effective.Values, comparison.Upper)
+			}
 		}
 		return []ProfileMoneyExplanation{{Path: slices.Clone(path),
 			Field:          FilterSumField{Definition: definition, MeaningRevision: revision},
 			NativeCurrency: money.NativeCurrency,
-			Requested: ProfileMoneyComparison{Operator: operators[money.Test.Operator],
-				Values: []decimal.Decimal{money.Test.Value}},
-			Normalized: ProfileMoneyComparison{Operator: operators[normalized.Operator],
-				Values: []decimal.Decimal{normalized.Value}},
+			Requested:      requested, Normalized: effective,
 		}}, nil
 	}
 	var result []ProfileMoneyExplanation

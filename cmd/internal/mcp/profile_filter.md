@@ -263,15 +263,16 @@ of at least 100 EUR each in the last 30 elapsed days:
 This is the preferred form for that request: money includes its own currency
 requirement, so no outer currencyField/nativeCurrency pair is needed. Monetary
 readings, exact threshold normalization, source compatibility and UNKNOWN rules
-are the same as for money in experience.verify below. Only the four ordered
-money comparisons execute. Equality, inequality and intervals remain unavailable;
-do not approximate "between 50 and 100 EUR" with raw amount/currency conditions
-or repeated money leaves. The Count terminal itself still supports all its
-existing comparisons, including equality and intervals.
+are the same as for money in experience.verify below. Money supports the four
+ordered comparisons, is, is not and inclusive is between. Use one money is between
+leaf for "between 50 and 100 EUR", with values [50,100]; do not split it into
+two money leaves or raw amount/currency conditions. The Count terminal retains
+all its existing comparisons independently of the monetary test.
 
 | Requested measure | Construction |
 |---|---|
 | Number of individual native-EUR orders with total >= 100 | Count with money EUR >= 100 in where |
+| Number of individual native-EUR orders with total between 50 and 100 | Count with money EUR is between [50,100] in where |
 | Sum of native-EUR order totals >= 300 | Sum, field total, nativeCurrency EUR |
 | Average native-EUR order total >= 100 | Average on that field/currency, with required minimum |
 | Amounts converted from other currencies | Unavailable; no filter performs currency conversion |
@@ -682,16 +683,30 @@ rounded or coerced. Trailing zeroes do not make an exactly representable number
 unreadable. For EUR >=100, total 80 with unknown currency is FALSE: even if
 EUR, it is insufficient. Total 120 with unknown currency is UNKNOWN.
 
-The four ordered comparisons execute: is less than, is less than or equal to,
-is greater than, is greater than or equal to. Values contains one exact signed
-JSON Number within global precision 76/scale 37 and the monetary literal length
-limit, as for Sum. Finer thresholds are normalized exactly to the readable grid:
+Money supports is, is not, is less than, is less than or equal to,
+is greater than, is greater than or equal to, and is between. Values contains
+one exact signed JSON Number, or two for the inclusive interval, within global
+precision 76/scale 37 and the monetary literal length limit, as for Sum.
+Is not negates only the amount comparison: money EUR is not 100 means native
+EUR with an amount different from 100. It never includes USD or another currency.
+Finer ordered thresholds are normalized exactly to the readable grid:
 >100 becomes >=100.0001; >=100.00001 becomes >=100.0001. This never rounds event
 amounts. Comparisons outside +/-1e14 have a determined amount test only for
 readable amounts: 1e20 in an event remains unreadable, even against an extreme threshold.
-Equality, inequality and intervals are valid but return
-FilterCapabilityNotImplemented. Invalid operators, arity and operands remain
-invalid, even next to an unsupported rule.
+Equality never rounds the literal: is 100.00001 is FALSE for every readable
+amount; is not 100.00001 is TRUE for every readable amount. Both retain UNKNOWN
+for an unreadable amount. Numeric spellings 100, 100.0 and 1E2 are equal.
+An interval is rounded inward to the readable grid, with inclusive endpoints:
+[50.00001,100.00009] becomes [50.0001,100]. [99.99995,100.00004] remains an is
+between test with [100,100]. A valid interval may contain no readable number,
+such as [100.00001,100.00009]; this does not make the request invalid.
+An inverted requested interval is invalid. Operators, arity and operand limits
+are still validated even next to an unsupported rule. Sum and Average still
+reject equality, difference and intervals as FilterCapabilityNotImplemented.
+
+For "the last order in EUR between 100 and 200", disambiguate selection:
+money in verify tests the last order overall; governed currency in the base
+selects the last native-EUR order first. Never silently move the currency test.
 
 This first subset admits at most one money leaf per experience verify, including
 nested OR branches. It can be combined with occurredIn and Record leaves on
@@ -715,12 +730,22 @@ described below. Raw predicates do not provide the governed currency and amount
 reading and must not substitute for these fields.
 
 Explanations add experience.money:[{path,field,nativeCurrency,requested,normalized}].
-Path is zero-based within verify. Requested and normalized each contain operator
-and values, both exact JSON numbers (possibly exponent notation). For >100 the
-explanation retains requested >100 and normalized >=100.0001. Extreme normalized
-bounds are clipped to +/-1e14 outside every readable amount; unreadable amounts
-still yield UNKNOWN for the amount test. No candidate amount or witness identity
-is exposed. An empty money metadata list is omitted.
+Path is zero-based within verify. Requested always contains operator and values,
+with exact JSON numbers (possibly exponent notation). Normalized contains either
+operator/values or readableAmounts:"none"|"all", never both. For is, is not and
+is between, nondegenerate normalized tests retain the requested operator.
+None means no readable amount satisfies the amount test; all means every
+readable amount does. Both preserve UNKNOWN for unreadable amounts and retain
+the separate currency requirement. For example, is 100.00001 normalizes to none,
+is not 100.00001 to all, the narrow interval above to none, and [-1e20,1e20] to all.
+These domains are not constant outcomes for the money leaf.
+
+Existing ordered explanations retain their comparison format: >100 is still
+normalized as >=100.0001. Clipped +/-1e14 bounds are sentinels outside every
+readable amount: >=1e14 and <=-1e14 accept none; <=1e14 and >=-1e14 accept all.
+They do not assert that an unreadable amount is known or bounded. This historical
+format is intentionally retained instead of replacing it with readableAmounts.
+No candidate amount or witness identity is exposed. An empty money list is omitted.
 
 ### Restrict First/Last/Nth to a native currency
 
@@ -759,7 +784,7 @@ JSON. With EUR 150 followed by a possible EUR 150, both possible winners pass:
 MATCH. With only a possible EUR 150, absence remains possible: UNKNOWN.
 A USD money leaf under a EUR base is FALSE, not an invalid filter or capability
 error; another OR branch can still pass. All field/operator/operand checks,
-unsupported comparisons and the one-money limit remain in effect.
+operand checks and the one-money limit remain in effect.
 
 When the base fixes currency, raw paths overlapping that currency reading are
 temporarily unavailable in both base.where and verify, even without money:

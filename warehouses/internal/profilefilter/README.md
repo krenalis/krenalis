@@ -173,10 +173,14 @@ no temporal resolver, SQL node or explanation transport fields in the drivers.
 MoneyQualification is a closed occurrence-local predicate. It renders the resolved
 KnownTextEqual currency reading AND an exact decimal comparison; either false
 component can refute the predicate even if the other is NULL. Its normalized
-threshold uses the same validated DECIMAL(38,4) literal form as Sum, without a new
+inclusive bounds use the validated DECIMAL(38,4) literal form of Sum, without a new
 parameter transport. The direct comparison also handles the clipped extreme
 thresholds: readable amounts have a determined outcome and unreadable amounts
 remain NULL. Currency is always evaluated by its existing reader.
+Points use equality, or amount-only inequality; intervals include both bounds.
+Explicit readableAmounts none/all render CASE on amount readability, so an
+unreadable amount remains NULL. Negation of an interval and mixed/absent test
+forms are rejected. The existing ordered SQL and arguments remain unchanged.
 No candidate values or extra explanation columns are transported.
 
 Selected verification and Count qualifications render under their required

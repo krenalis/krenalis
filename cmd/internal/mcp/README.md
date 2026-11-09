@@ -112,14 +112,19 @@ reading, including UNKNOWN for missing/null/non-String values. Independent Recor
 forms return `FilterCapabilityNotImplemented`. Explanations include the reference
 and currency only when supplied; existing raw Count documents/results are unchanged.
 
-Count.where also accepts one governed money leaf, with the same reading and four
-ordered comparisons as experience.verify. Independent Record predicates may be
+Count.where also accepts one governed money leaf, with the same reading and seven
+comparisons as experience.verify. Independent Record predicates may be
 combined with AND/OR; overlapping raw paths and repeated money leaves remain
 unavailable. Explanations add count.money with paths relative to where and the
 requested/normalized tests. An outer Count currency remains an additional
 requirement: under OR it cannot be dropped merely because money also reads a
 currency. The guide uses money alone for the simple individual-order threshold.
 Sum/Average.where and experience.base.where remain Record-only.
+Money equality and difference are exact; is not negates only the amount test.
+Intervals are inclusive and normalized inward. Explanations preserve existing
+ordered comparisons, while new degenerate tests use readableAmounts none/all;
+both retain UNKNOWN for unreadable amounts and the separate currency requirement.
+Sum and Average retain their four ordered terminals.
 
 First/Last/Nth accept the same optional pair in `experience.base`, restricting the
 population before selection. A selected candidate satisfies that base currency
