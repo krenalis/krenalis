@@ -93,54 +93,27 @@ func Test_finalizeIdentityResolutionPreservesPersistedSuccess(t *testing.T) {
 
 }
 
-// TestResolveIdentitiesMarksInterruptedOperationAsFailed verifies that an
-// Identity Resolution interrupted by the cancellation of its context, as
-// happens on shutdown, is still marked as failed, with an error that reports
-// the cancellation cause.
-func TestResolveIdentitiesMarksInterruptedOperationAsFailed(t *testing.T) {
+// Test_finalizeIdentityResolutionMarksCanceledOperationAsFailed verifies that
+// an operation whose context has been canceled, as happens on shutdown, is
+// still marked as failed, with an error that reports the cancellation cause.
+func Test_finalizeIdentityResolutionMarksCanceledOperationAsFailed(t *testing.T) {
 
 	warehouse, pool := newTestPostgreSQLWarehouse(t)
-	profileColumns := []warehouses.Column{{Name: "email", Type: types.String(), Nullable: true}}
-	err := warehouse.Initialize(t.Context(), profileColumns)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Lock the profiles table, so that the Identity Resolution waits for the
-	// lock until its context is canceled.
-	lockTx, err := pool.Begin(t.Context())
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer lockTx.Rollback(t.Context())
-	_, err = lockTx.Exec(t.Context(), `LOCK TABLE "krenalis_profiles_0" IN ACCESS EXCLUSIVE MODE`)
+	_, err := pool.Exec(t.Context(), createSystemOperationsTable)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	const opID = "a44731d8-d89d-44b9-ac87-a8ce1a8770d1"
-	ctx, cancel := context.WithCancelCause(t.Context())
-	defer cancel(nil)
-	done := make(chan error, 1)
-	go func() {
-		_, err := warehouse.ResolveIdentities(ctx, opID, profileColumns, profileColumns, nil)
-		done <- err
-	}()
-
-	// Cancel the context once the Identity Resolution waits for the lock.
-	for isWaiting := false; !isWaiting; {
-		select {
-		case err := <-done:
-			t.Fatalf("expected Identity Resolution to wait for the lock, got return with error %v", err)
-		case <-time.After(10 * time.Millisecond):
-		}
-		err = pool.QueryRow(t.Context(), `SELECT EXISTS (SELECT FROM pg_locks WHERE NOT granted)`).Scan(&isWaiting)
-		if err != nil {
-			t.Fatal(err)
-		}
+	_, err = pool.Exec(t.Context(), `INSERT INTO "krenalis_system_operations"
+		("id", "operation_type") VALUES ($1, $2)`, opID, identityResolution)
+	if err != nil {
+		t.Fatal(err)
 	}
+
+	ctx, cancel := context.WithCancelCause(t.Context())
 	cancel(errors.New("node is shutting down"))
-	err = <-done
+	_, err = warehouse.finalizeIdentityResolution(ctx, pool, opID, nil, ctx.Err())
 	if err != nil {
 		_, ok := errors.AsType[*warehouses.OperationError](err)
 		if !ok {
@@ -150,7 +123,6 @@ func TestResolveIdentitiesMarksInterruptedOperationAsFailed(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected *warehouses.OperationError, got nil")
 	}
-
 	var completedAt *time.Time
 	var operationError string
 	err = pool.QueryRow(t.Context(),
