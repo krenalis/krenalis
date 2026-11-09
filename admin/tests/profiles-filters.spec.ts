@@ -105,10 +105,16 @@ for (const [index, value] of values.entries()) {
 		const propertyInput = property.locator('input');
 		await propertyInput.pressSequentially('name');
 		await expect(propertyInput).toHaveValue('name');
+		await property.locator('.combobox-list__item .schema-combobox-item__name', { hasText: /^Name$/ }).click();
+		await expect(propertyInput).toHaveValue('name');
+		const operator = editor.locator('.pipeline__filters-operator').getByRole('combobox');
+		await operator.press('Home');
+		await expect(propertyInput).toHaveValue('Name');
+		await propertyInput.focus();
+		await expect(propertyInput).toHaveValue('name');
 		await propertyInput.press('Backspace');
 		await expect(propertyInput).toHaveValue('nam');
 		await propertyInput.pressSequentially('e');
-		const operator = editor.locator('.pipeline__filters-operator').getByRole('combobox');
 		await operator.press('Home');
 		await expect(propertyInput).toHaveValue('Name');
 		await operator.press('Enter');

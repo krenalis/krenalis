@@ -460,6 +460,7 @@ const Combobox = ({
 
 	const onInputBlur = () => {
 		isEditing.current = false;
+		programmaticFocus.current = false;
 		if (displayValue != null) {
 			updateComboboxValue(displayValue);
 			if (autoResize) {
@@ -477,6 +478,13 @@ const Combobox = ({
 			// continue typing, not to immediately open the list again.
 			programmaticFocus.current = false;
 			return;
+		}
+		isEditing.current = true;
+		if (displayValue != null) {
+			updateComboboxValue(value);
+			if (autoResize) {
+				resizeCombobox();
+			}
 		}
 		setIsOpen(true);
 		updateCursorPosition();
@@ -529,7 +537,7 @@ const Combobox = ({
 	const onSelect = (e, term: string, type: 'property' | 'function' | 'enum', selectedDisplayValue?: string) => {
 		e.preventDefault();
 		e.stopPropagation();
-		isEditing.current = false;
+		isEditing.current = true;
 
 		if (type === 'enum') {
 			let v = term;
@@ -542,7 +550,7 @@ const Combobox = ({
 			return;
 		}
 		if (type === 'property' && !isExpression && selectedDisplayValue != null) {
-			updateComboboxValue(selectedDisplayValue);
+			updateComboboxValue(term);
 			programmaticFocus.current = true;
 			inputRef.current.focus();
 			onSelectFunc(name, term);
