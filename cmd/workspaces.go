@@ -776,16 +776,32 @@ func (workspace workspace) Attributes(_ http.ResponseWriter, r *http.Request) (a
 		return nil, err
 	}
 	kpid := r.PathValue("kpid")
-	schemaParam := r.URL.Query().Get("schema")
-	if schemaParam == "" {
-		return nil, errors.BadRequest("schema is required")
+	var params struct {
+		Schema types.Type `json:"schema"`
 	}
-	var schema types.Type
-	err = json.Unmarshal([]byte(schemaParam), &schema)
-	if err != nil {
-		return nil, errors.BadRequest("invalid schema: %s", err)
+	if r.Method == http.MethodPost {
+		err = validateRequiredBody(r, false)
+		if err != nil {
+			return nil, err
+		}
+		err = json.Decode(r.Body, &params)
+		if err != nil {
+			return nil, errors.BadRequest("%s", err)
+		}
+		if !params.Schema.Valid() {
+			return nil, errors.BadRequest("schema is required")
+		}
+	} else {
+		schemaParam := r.URL.Query().Get("schema")
+		if schemaParam == "" {
+			return nil, errors.BadRequest("schema is required")
+		}
+		err = json.Unmarshal([]byte(schemaParam), &params.Schema)
+		if err != nil {
+			return nil, errors.BadRequest("invalid schema: %s", err)
+		}
 	}
-	attributes, err := ws.Attributes(r.Context(), kpid, schema)
+	attributes, err := ws.Attributes(r.Context(), kpid, params.Schema)
 	if err != nil {
 		return nil, err
 	}
@@ -965,25 +981,38 @@ func (workspace workspace) ProfileCount(_ http.ResponseWriter, r *http.Request) 
 		return nil, err
 	}
 
-	q := r.URL.Query()
-	var filter *core.Filter
-	if f := q.Get("filter"); f != "" {
-		err = json.Unmarshal([]byte(f), &filter)
+	var params struct {
+		Filter *core.Filter `json:"filter"`
+		Schema types.Type   `json:"schema"`
+	}
+	if r.Method == http.MethodPost {
+		err = validateRequiredBody(r, false)
 		if err != nil {
-			return nil, errors.BadRequest("invalid filter")
+			return nil, err
 		}
-		if filter == nil {
-			return nil, errors.BadRequest("filter cannot be null")
+		err = json.Decode(r.Body, &params)
+		if err != nil {
+			return nil, errors.BadRequest("%s", err)
+		}
+	} else {
+		q := r.URL.Query()
+		if f := q.Get("filter"); f != "" {
+			err = json.Unmarshal([]byte(f), &params.Filter)
+			if err != nil {
+				return nil, errors.BadRequest("invalid filter")
+			}
+			if params.Filter == nil {
+				return nil, errors.BadRequest("filter cannot be null")
+			}
+		}
+		if s := q.Get("schema"); s != "" {
+			err = json.Unmarshal([]byte(s), &params.Schema)
+			if err != nil {
+				return nil, errors.BadRequest("invalid schema: %s", err)
+			}
 		}
 	}
-	var schema types.Type
-	if s := q.Get("schema"); s != "" {
-		err = json.Unmarshal([]byte(s), &schema)
-		if err != nil {
-			return nil, errors.BadRequest("invalid schema: %s", err)
-		}
-	}
-	total, err := ws.ProfileCount(r.Context(), filter, schema)
+	total, err := ws.ProfileCount(r.Context(), params.Filter, params.Schema)
 	if err != nil {
 		return nil, err
 	}
@@ -1000,55 +1029,74 @@ func (workspace workspace) Profiles(w http.ResponseWriter, r *http.Request) (any
 		return nil, err
 	}
 
-	// Read and parse the parameters from the query string.
-	q := r.URL.Query()
-
-	schemaParam := q.Get("schema")
-	if schemaParam == "" {
-		return nil, errors.BadRequest("schema is required")
+	var params struct {
+		Schema     types.Type   `json:"schema"`
+		Properties []string     `json:"properties"`
+		Filter     *core.Filter `json:"filter"`
+		Order      string       `json:"order"`
+		OrderDesc  bool         `json:"orderDesc"`
+		First      int          `json:"first"`
+		Limit      int          `json:"limit"`
 	}
-	var schema types.Type
-	err = json.Unmarshal([]byte(schemaParam), &schema)
-	if err != nil {
-		return nil, errors.BadRequest("invalid schema: %s", err)
-	}
-
-	properties := splitQueryParameters(q["properties"])
-	if _, present := q["properties"]; present && properties == nil {
-		properties = []string{}
-	}
-
-	var filter *core.Filter
-	if f := q.Get("filter"); f != "" {
-		err := json.Unmarshal([]byte(f), &filter)
+	params.Limit = 100
+	if r.Method == http.MethodPost {
+		err = validateRequiredBody(r, false)
 		if err != nil {
-			return nil, errors.BadRequest("invalid filter")
+			return nil, err
 		}
-		if filter == nil {
-			return nil, errors.BadRequest("filter cannot be null")
-		}
-	}
-	order := q.Get("order")
-	orderDesc := q.Get("orderDesc") == "true"
-	var first int
-	if f := q.Get("first"); f != "" {
-		first, err = strconv.Atoi(f)
+		err = json.Decode(r.Body, &params)
 		if err != nil {
-			return nil, errors.BadRequest("invalid first")
+			return nil, errors.BadRequest("%s", err)
 		}
-	}
-	var limit int
-	if l := q.Get("limit"); l != "" {
-		limit, err = strconv.Atoi(l)
-		if err != nil {
-			return nil, errors.BadRequest("invalid limit")
+		if !params.Schema.Valid() {
+			return nil, errors.BadRequest("schema is required")
 		}
 	} else {
-		limit = 100
+
+		// Read and parse the parameters from the query string.
+		q := r.URL.Query()
+		schemaParam := q.Get("schema")
+		if schemaParam == "" {
+			return nil, errors.BadRequest("schema is required")
+		}
+		err = json.Unmarshal([]byte(schemaParam), &params.Schema)
+		if err != nil {
+			return nil, errors.BadRequest("invalid schema: %s", err)
+		}
+
+		params.Properties = splitQueryParameters(q["properties"])
+		if _, present := q["properties"]; present && params.Properties == nil {
+			params.Properties = []string{}
+		}
+
+		if f := q.Get("filter"); f != "" {
+			err = json.Unmarshal([]byte(f), &params.Filter)
+			if err != nil {
+				return nil, errors.BadRequest("invalid filter")
+			}
+			if params.Filter == nil {
+				return nil, errors.BadRequest("filter cannot be null")
+			}
+		}
+		params.Order = q.Get("order")
+		params.OrderDesc = q.Get("orderDesc") == "true"
+		if f := q.Get("first"); f != "" {
+			params.First, err = strconv.Atoi(f)
+			if err != nil {
+				return nil, errors.BadRequest("invalid first")
+			}
+		}
+		if l := q.Get("limit"); l != "" {
+			params.Limit, err = strconv.Atoi(l)
+			if err != nil {
+				return nil, errors.BadRequest("invalid limit")
+			}
+		}
+
 	}
 
 	profiles, total, hasNext, err := ws.Profiles(r.Context(),
-		schema, properties, filter, order, orderDesc, first, limit)
+		params.Schema, params.Properties, params.Filter, params.Order, params.OrderDesc, params.First, params.Limit)
 	if err != nil {
 		return nil, err
 	}
@@ -1065,7 +1113,7 @@ func (workspace workspace) Profiles(w http.ResponseWriter, r *http.Request) (any
 		buf := b.availableBuffer()
 		b.write(profile.UpdatedAt.AppendFormat(buf, time.RFC3339Nano))
 		b.writeString(`","attributes":`)
-		s, _ := types.Marshal(profile.Attributes, schema)
+		s, _ := types.Marshal(profile.Attributes, params.Schema)
 		b.write(s)
 		b.writeByte('}')
 	}

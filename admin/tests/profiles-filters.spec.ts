@@ -15,7 +15,7 @@ const schema: ObjectType = {
 			name: 'name',
 			type: { kind: 'string' },
 			displayName: 'Name',
-			description: '',
+			description: 'x'.repeat(32 * 1024),
 			prefilled: '',
 			createRequired: false,
 			updateRequired: false,
@@ -74,9 +74,12 @@ for (const [index, value] of values.entries()) {
 		await page.route('**/v1/identity-resolution/latest', (route) =>
 			route.fulfill({ json: { startTime: null, endTime: null } }),
 		);
-		await page.route(/\/v1\/profiles(?:\/count)?\?/, async (route) => {
+		await page.route(/\/v1\/profiles\/(?:query|count)$/, async (route) => {
 			const url = new URL(route.request().url());
-			const requestedFilter: Filter | null = JSON.parse(url.searchParams.get('filter') ?? 'null');
+			expect(route.request().method()).toBe('POST');
+			expect(url.search).toBe('');
+			expect(route.request().postDataJSON().schema).toEqual(schema);
+			const requestedFilter: Filter | null = route.request().postDataJSON().filter ?? null;
 			const requestedValue = (requestedFilter?.rules[0] as FilterCondition | undefined)?.values?.[0];
 			const result = profiles.filter(
 				(profile) => requestedFilter == null || profile.attributes.name === requestedValue,

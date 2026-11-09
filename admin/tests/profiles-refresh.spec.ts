@@ -77,7 +77,7 @@ test.beforeEach(async ({ page }) => {
 	await page.route('**/v1/identity-resolution/latest', (route) =>
 		route.fulfill({ json: { startTime: null, endTime: null } }),
 	);
-	await page.route('**/v1/profiles/*/attributes*', (route) =>
+	await page.route('**/v1/profiles/*/attributes/query', (route) =>
 		route.fulfill({ json: { attributes: profiles[50].attributes } }),
 	);
 	await page.goto('https://example.test/');
@@ -99,10 +99,9 @@ for (const failure of [
 			releaseRefresh = resolve;
 		});
 
-		await page.route('**/v1/profiles?*', async (route) => {
-			const url = new URL(route.request().url());
-			const first = Number(url.searchParams.get('first'));
-			const limit = Number(url.searchParams.get('limit'));
+		await page.route('**/v1/profiles/query', async (route) => {
+			const first = Number(route.request().postDataJSON().first);
+			const limit = Number(route.request().postDataJSON().limit);
 			if (first === 0) {
 				refreshReads++;
 				if (refreshReads === 2) {
@@ -180,10 +179,9 @@ for (const shouldShowColumn of [false, true]) {
 		const refreshCanFinish = new Promise<void>((resolve) => {
 			releaseRefresh = resolve;
 		});
-		await page.route('**/v1/profiles?*', async (route) => {
-			const url = new URL(route.request().url());
-			const first = Number(url.searchParams.get('first'));
-			const limit = Number(url.searchParams.get('limit'));
+		await page.route('**/v1/profiles/query', async (route) => {
+			const first = Number(route.request().postDataJSON().first);
+			const limit = Number(route.request().postDataJSON().limit);
 			if (first === 0) {
 				refreshReads++;
 				if (refreshReads === 2) {
@@ -191,7 +189,7 @@ for (const shouldShowColumn of [false, true]) {
 					await refreshCanFinish;
 				}
 			}
-			const projection = url.searchParams.get('properties')?.split(',') ?? [];
+			const projection = route.request().postDataJSON().properties ?? [];
 			const result = profiles.slice(first, first + limit).map((profile) => ({
 				...profile,
 				attributes: Object.fromEntries(
@@ -244,11 +242,11 @@ for (const hasSurvivingVisibleColumn of [false, true]) {
 			key: PROFILES_PROPERTIES_KEY,
 			preferences,
 		});
-		const projections: string[] = [];
-		await page.route('**/v1/profiles?*', async (route) => {
-			const projection = new URL(route.request().url()).searchParams.get('properties') ?? '';
+		const projections: string[][] = [];
+		await page.route('**/v1/profiles/query', async (route) => {
+			const projection = route.request().postDataJSON().properties ?? [];
 			projections.push(projection);
-			if (projection === '') {
+			if (projection.length === 0) {
 				await route.fulfill({
 					status: 400,
 					json: { error: { code: 'BadRequest', message: 'Empty projection' } },
@@ -261,9 +259,7 @@ for (const hasSurvivingVisibleColumn of [false, true]) {
 						{
 							...profiles[0],
 							attributes: Object.fromEntries(
-								Object.entries(profiles[0].attributes).filter(([name]) =>
-									projection.split(',').includes(name),
-								),
+								Object.entries(profiles[0].attributes).filter(([name]) => projection.includes(name)),
 							),
 						},
 					],
@@ -278,7 +274,7 @@ for (const hasSurvivingVisibleColumn of [false, true]) {
 		const rows = page.locator('.profiles-list .grid__row--clickable');
 		await expect(rows).toHaveCount(1);
 		await expect(rows.first()).toContainText(hasSurvivingVisibleColumn ? 'profile-1@example.test' : 'Person 1');
-		expect(projections).toEqual([visibleName]);
+		expect(projections).toEqual([[visibleName]]);
 		await expect(page.locator('.profiles-list .grid__header-cell', { hasText: visibleLabel })).toHaveCount(1);
 		await expect(
 			page.locator('.profiles-list .grid__header-cell', {

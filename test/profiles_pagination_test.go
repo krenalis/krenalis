@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/krenalis/krenalis/test/krenalistester"
@@ -154,6 +155,49 @@ func TestProfilesPagination(t *testing.T) {
 	if countResponse.Total != 1 {
 		t.Fatalf("expected filtered total 1, got %d", countResponse.Total)
 	}
+
+	// POST requests carry large schemas in the body instead of the URL.
+	postProperties := requestSchema.Properties().Slice()
+	postProperties[0].Description = strings.Repeat("x", 32<<10)
+	postSchema := types.Object(postProperties)
+	var postPage struct {
+		Profiles []krenalistester.Profile `json:"profiles"`
+		Total    int                      `json:"total"`
+		HasNext  bool                     `json:"hasNext"`
+	}
+	k.Call("POST", "/v1/profiles/query", nil, map[string]any{
+		"schema": postSchema, "properties": []string{"email"}, "orderDesc": true, "first": 1, "limit": 1,
+	}, &postPage)
+	if len(postPage.Profiles) != 1 || postPage.Total != expectedTotal || !postPage.HasNext {
+		t.Fatalf("expected one profile, total %d and continuation, got %d profiles, total %d and continuation %t",
+			expectedTotal, len(postPage.Profiles), postPage.Total, postPage.HasNext)
+	}
+	if postPage.Profiles[0].KPID != firstPage[1].KPID || len(postPage.Profiles[0].Attributes) != 1 {
+		t.Fatalf("expected profile %s with only email, got %v", firstPage[1].KPID, postPage.Profiles[0])
+	}
+	k.Call("POST", "/v1/profiles/query", nil, map[string]any{"schema": postSchema}, &postPage)
+	if len(postPage.Profiles) != 100 {
+		t.Fatalf("expected the default limit of 100 profiles, got %d", len(postPage.Profiles))
+	}
+	for _, body := range []map[string]any{{}, {"schema": postSchema, "filter": json.Value(filter)}} {
+		k.Call("POST", "/v1/profiles/count", nil, body, &countResponse)
+		want := expectedTotal
+		if body["filter"] != nil {
+			want = 1
+		}
+		if countResponse.Total != want {
+			t.Fatalf("expected POST count %d, got %d", want, countResponse.Total)
+		}
+	}
+	var postAttributes struct {
+		Attributes map[string]any `json:"attributes"`
+	}
+	k.Call("POST", "/v1/profiles/"+firstPage[0].KPID.String()+"/attributes/query", nil,
+		map[string]any{"schema": postSchema}, &postAttributes)
+	if postAttributes.Attributes["email"] != email {
+		t.Fatalf("expected POST email %q, got %v", email, postAttributes.Attributes["email"])
+	}
+
 	profiles := firstPage
 	for first := pageSize; first < expectedTotal; first += pageSize {
 		page, total, pageHasNext := k.ProfilesWithSchema(
@@ -270,12 +314,20 @@ func TestProfilesPagination(t *testing.T) {
 	// Check schema alignment, including unused properties, and invalid arguments.
 	for _, tc := range []struct {
 		name    string
+		method  string
 		path    string
 		query   url.Values
+		body    any
 		status  int
 		code    string
 		message string
 	}{
+		{name: "POST missing body", method: "POST", path: "/v1/profiles/query", status: http.StatusBadRequest},
+		{name: "POST invalid body", method: "POST", path: "/v1/profiles/count", body: "invalid", status: http.StatusBadRequest},
+		{name: "POST missing schema", method: "POST", path: "/v1/profiles/query", body: map[string]any{}, status: http.StatusBadRequest, code: "BadRequest", message: "schema is required"},
+		{name: "POST missing attributes schema", method: "POST", path: "/v1/profiles/" + firstPage[0].KPID.String() + "/attributes/query", body: map[string]any{}, status: http.StatusBadRequest},
+		{name: "POST missing filter schema", method: "POST", path: "/v1/profiles/count", body: map[string]any{"filter": json.Value(filter)}, status: http.StatusBadRequest},
+		{name: "POST invalid limit", method: "POST", path: "/v1/profiles/query", body: map[string]any{"schema": postSchema, "limit": 0}, status: http.StatusBadRequest},
 		{name: "missing schema", path: "/v1/profiles", status: http.StatusBadRequest, code: "BadRequest", message: "schema is required"},
 		{name: "empty schema", path: "/v1/profiles", query: url.Values{"schema": []string{""}}, status: http.StatusBadRequest, code: "BadRequest", message: "schema is required"},
 		{
@@ -395,7 +447,11 @@ func TestProfilesPagination(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			err := k.TryCall("GET", tc.path+"?"+tc.query.Encode(), nil, nil, nil)
+			method := tc.method
+			if method == "" {
+				method = "GET"
+			}
+			err := k.TryCall(method, tc.path+"?"+tc.query.Encode(), nil, tc.body, nil)
 			if err != nil {
 				statusErr, ok := errors.AsType[*krenalistester.StatusCodeError](err)
 				if !ok || statusErr.Response.Code != tc.status {

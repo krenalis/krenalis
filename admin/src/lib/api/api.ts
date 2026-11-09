@@ -586,18 +586,11 @@ class Profiles {
 		schema?: ObjectType,
 		signal?: AbortSignal,
 	): Promise<CountProfilesResponse> => {
-		const params: Array<[string, any]> = [];
-		if (schema != null) {
-			params.push(['schema', JSON.stringify(schema)]);
-		}
-		if (filter != null) {
-			params.push(['filter', JSON.stringify(filter)]);
-		}
 		return await call(
-			`${this.apiURL}/profiles/count` + queryString(params),
-			http.GET,
+			`${this.apiURL}/profiles/count`,
+			http.POST,
 			this.workspaceID,
-			undefined,
+			{ schema, filter: filter ?? undefined },
 			{ signal },
 		);
 	};
@@ -612,19 +605,13 @@ class Profiles {
 		schema: ObjectType,
 		signal?: AbortSignal,
 	): Promise<FindProfilesResponse> => {
-		let params = [];
-		params.push(['properties', properties.join(',')]);
-		if (filter != null) {
-			params.push(['filter', JSON.stringify(filter)]);
-		}
-		params.push(['order', order]);
-		params.push(['orderDesc', orderDesc]);
-		params.push(['first', first]);
-		params.push(['limit', limit]);
-		params.push(['schema', JSON.stringify(schema)]);
-		return await call(`${this.apiURL}/profiles` + queryString(params), http.GET, this.workspaceID, undefined, {
-			signal,
-		});
+		return await call(
+			`${this.apiURL}/profiles/query`,
+			http.POST,
+			this.workspaceID,
+			{ properties, filter: filter ?? undefined, order, orderDesc, first, limit, schema },
+			{ signal },
+		);
 	};
 
 	events = async (kpid: string, signal?: AbortSignal): Promise<ProfileEventsResponse> => {
@@ -659,12 +646,11 @@ class Profiles {
 	};
 
 	attributes = async (kpid: string, schema: ObjectType, signal?: AbortSignal): Promise<profileAttributesResponse> => {
-		const params: Array<[string, any]> = [['schema', JSON.stringify(schema)]];
 		return await call(
-			`${this.apiURL}/profiles/${encodeURIComponent(kpid)}/attributes` + queryString(params),
-			http.GET,
+			`${this.apiURL}/profiles/${encodeURIComponent(kpid)}/attributes/query`,
+			http.POST,
 			this.workspaceID,
-			undefined,
+			{ schema },
 			{ signal },
 		);
 	};

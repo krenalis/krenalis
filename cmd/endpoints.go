@@ -117,7 +117,10 @@ func endpoints(s *apisServer) map[string]endpointHandler {
 		"POST   /organizations":                                   api.CreateOrganization, /* Needs Platform Management API key */
 		"POST   /pipelines":                                       connection.CreatePipeline,
 		"POST   /pipelines/{id}/runs":                             pipeline.Run,
-		"POST   /pipelines/{id}/ui-event":                         pipeline.ServeUI,     /* Admin console only */
+		"POST   /pipelines/{id}/ui-event":                         pipeline.ServeUI, /* Admin console only */
+		"POST   /profiles/query":                                  workspace.Profiles,
+		"POST   /profiles/count":                                  workspace.ProfileCount,
+		"POST   /profiles/{kpid}/attributes/query":                workspace.Attributes,
 		"POST   /sentry/errors":                                   s.forwardSentryError, /* Admin console only */
 		"POST   /signup":                                          api.Signup,
 		"POST   /transformations":                                 api.TransformData,      /* Admin console only */

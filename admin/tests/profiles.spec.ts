@@ -1,4 +1,4 @@
-import { expect, Locator, Page, test } from '@playwright/test';
+import { expect, Locator, Page, Request, test } from '@playwright/test';
 import { CountryFormat, ObjectType, Property } from '../src/lib/api/types/types';
 import { ResponseProfile } from '../src/lib/api/types/responses';
 import { ProfilePropertyRoles } from '../src/lib/api/types/workspace';
@@ -122,7 +122,7 @@ const profiles: ResponseProfile[] = [
 
 interface MockProfilesOptions {
 	propertyRoles?: ProfilePropertyRoles;
-	profilesForRequest?: (url: URL) => ResponseProfile[];
+	profilesForRequest?: (request: Request) => ResponseProfile[];
 	responseProfiles?: ResponseProfile[];
 	schema?: ObjectType;
 }
@@ -148,17 +148,17 @@ const mockProfiles = async (
 		await route.fulfill({ json: { schema, propertyRoles: roleAssignments, primarySources: {} } });
 	});
 	await page.route('**/v1/profiles/count*', async (route) => {
-		const url = new URL(route.request().url());
-		const matchingProfiles = profilesForRequest?.(url) ?? responseProfiles;
+		const request = route.request();
+		const matchingProfiles = profilesForRequest?.(request) ?? responseProfiles;
 		await route.fulfill({
 			json: { total: matchingProfiles.length },
 		});
 	});
-	await page.route('**/v1/profiles?*', async (route) => {
-		const url = new URL(route.request().url());
-		const first = Number(url.searchParams.get('first'));
-		const limit = Number(url.searchParams.get('limit'));
-		const matchingProfiles = profilesForRequest?.(url) ?? responseProfiles;
+	await page.route('**/v1/profiles/query', async (route) => {
+		const request = route.request();
+		const first = Number(request.postDataJSON().first);
+		const limit = Number(request.postDataJSON().limit);
+		const matchingProfiles = profilesForRequest?.(request) ?? responseProfiles;
 		const resultProfiles = matchingProfiles.slice(first, first + limit);
 		await route.fulfill({
 			json: {
@@ -168,9 +168,9 @@ const mockProfiles = async (
 			},
 		});
 	});
-	await page.route('**/v1/profiles/*/attributes*', async (route) => {
+	await page.route('**/v1/profiles/*/attributes/query', async (route) => {
 		const fragments = new URL(route.request().url()).pathname.split('/');
-		const kpid = decodeURIComponent(fragments[fragments.length - 2]);
+		const kpid = decodeURIComponent(fragments[fragments.length - 3]);
 		const profile = responseProfiles.find((candidate) => candidate.kpid === kpid);
 		await route.fulfill({ json: { attributes: profile?.attributes ?? {} } });
 	});
@@ -340,11 +340,11 @@ test(`Toggle a column locally when its profile property is already loaded`, asyn
 	let loadedProjection: string[] = [];
 	page.on('request', (request) => {
 		const url = new URL(request.url());
-		if (!url.pathname.endsWith('/v1/profiles')) {
+		if (!url.pathname.endsWith('/v1/profiles/query')) {
 			return;
 		}
 		profileRequests++;
-		loadedProjection = url.searchParams.get('properties')?.split(',') ?? [];
+		loadedProjection = request.postDataJSON().properties ?? [];
 	});
 	await mockProfiles(page);
 	await page.goto(`${adminURL}/profile-unification/profiles`);
@@ -389,18 +389,18 @@ test(`Keep the profile grid stable while loading a newly selected property`, asy
 	const projectionCanFinish = new Promise<void>((resolve) => {
 		releaseProjection = resolve;
 	});
-	let projectionRequest: URL | undefined;
+	let projectionRequest: Request | undefined;
 	let initialProjection: string[] = [];
 	await mockProfiles(page);
-	await page.route('**/v1/profiles?*', async (route) => {
-		const url = new URL(route.request().url());
-		const properties = url.searchParams.get('properties')?.split(',') ?? [];
+	await page.route('**/v1/profiles/query', async (route) => {
+		const request = route.request();
+		const properties = request.postDataJSON().properties ?? [];
 		if (!properties.includes('shipping_address')) {
 			initialProjection = properties;
 			await route.fallback();
 			return;
 		}
-		projectionRequest = url;
+		projectionRequest = request;
 		markProjectionStarted();
 		await projectionCanFinish;
 		await route.fallback().catch(() => undefined);
@@ -424,15 +424,15 @@ test(`Keep the profile grid stable while loading a newly selected property`, asy
 	releaseProjection();
 	await expect(grid.locator('.grid__header-cell', { hasText: 'shipping_address › City' })).toHaveCount(1);
 	await expect(grid.locator('.grid__row--clickable').first()).toContainText('Rome');
-	expect(projectionRequest?.searchParams.get('first')).toBe('0');
-	expect(projectionRequest?.searchParams.get('limit')).toBe('100');
-	expect(JSON.parse(projectionRequest!.searchParams.get('schema')!)).toEqual(profileSchema);
+	expect(projectionRequest?.postDataJSON().first).toBe(0);
+	expect(projectionRequest?.postDataJSON().limit).toBe(100);
+	expect(projectionRequest!.postDataJSON().schema).toEqual(profileSchema);
 });
 
 test(`Reorder profile columns without reloading their data and preserve the order`, async ({ page }) => {
 	let gridRequests = 0;
 	page.on('request', (request) => {
-		if (new URL(request.url()).pathname.endsWith('/v1/profiles')) {
+		if (new URL(request.url()).pathname.endsWith('/v1/profiles/query')) {
 			gridRequests++;
 		}
 	});
@@ -549,19 +549,19 @@ test(`Keep a reopened operator menu open and respect focus moved to another cont
 });
 
 test(`Preview a completed filter and show its profiles explicitly`, async ({ page }) => {
-	const countRequests: URL[] = [];
-	const gridRequests: URL[] = [];
+	const countRequests: Request[] = [];
+	const gridRequests: Request[] = [];
 	page.on('request', (request) => {
 		const url = new URL(request.url());
 		if (url.pathname.endsWith('/v1/profiles/count')) {
-			countRequests.push(url);
-		} else if (url.pathname.endsWith('/v1/profiles')) {
-			gridRequests.push(url);
+			countRequests.push(request);
+		} else if (url.pathname.endsWith('/v1/profiles/query')) {
+			gridRequests.push(request);
 		}
 	});
 	await mockProfiles(page, {
-		profilesForRequest: (url) => {
-			const filter = JSON.parse(url.searchParams.get('filter') ?? 'null');
+		profilesForRequest: (request) => {
+			const filter = request.postDataJSON().filter ?? null;
 			const value = filter?.rules?.[0]?.values?.[0];
 			return value == null ? profiles : profiles.filter((profile) => profile.attributes.first_name === value);
 		},
@@ -717,12 +717,12 @@ test(`Preview a completed filter and show its profiles explicitly`, async ({ pag
 	await rows.first().click();
 	await expect(rows.first()).toHaveClass(/grid__row--active/);
 	await expect(page.locator('.profile-drawer')).toBeVisible();
-	const previewFilter = JSON.parse(countRequests.at(-1)?.searchParams.get('filter') ?? 'null');
+	const previewFilter = countRequests.at(-1)?.postDataJSON().filter ?? null;
 	expect(previewFilter).toEqual({
 		operator: 'and',
 		rules: [{ property: 'first_name', operator: 'is', values: ['Grace'] }],
 	});
-	expect(countRequests.at(-1)?.searchParams.has('properties')).toBe(false);
+	expect(countRequests.at(-1)?.postDataJSON().properties).toBeUndefined();
 
 	const updateResults = page.locator('wa-button.profiles-list__filter-update-results');
 	await expect(updateResults.getByRole('button')).toHaveAccessibleName('Show 1 match');
@@ -766,7 +766,7 @@ test(`Preview a completed filter and show its profiles explicitly`, async ({ pag
 	await expect(rows.first()).not.toHaveClass(/grid__row--active/);
 	await expect(page.locator('.profile-drawer')).toHaveCount(0);
 	await expect(page.locator('.profiles-list .grid')).toBeFocused();
-	expect(gridRequests.at(-1)?.searchParams.get('first')).toBe('0');
+	expect(gridRequests.at(-1)?.postDataJSON().first).toBe(0);
 
 	const removeCondition = filters.getByRole('button', { name: 'Remove condition 1', exact: true });
 	await expect(removeCondition).toHaveCount(1);
@@ -794,7 +794,7 @@ test(`Preview a completed filter and show its profiles explicitly`, async ({ pag
 	await expect(rows).toHaveCount(1);
 	await page.getByRole('button', { name: 'Show 4 matches', exact: true }).click();
 	await expect(rows).toHaveCount(4);
-	expect(gridRequests.at(-1)?.searchParams.has('filter')).toBe(false);
+	expect(gridRequests.at(-1)?.postDataJSON().filter).toBeUndefined();
 
 	const requestsBeforeCollapse = gridRequests.length;
 	await closeFilters.click();
@@ -889,7 +889,7 @@ test(`Summarize collapsed filters within their available width`, async ({ page }
 	await mockProfiles(page);
 	await page.goto(`${adminURL}/profile-unification/profiles`);
 
-	const longValue = 'A customer name that is deliberately long enough to require truncation in the summary';
+	const longValue = 'A customer name deliberately long enough to require truncation in the summary';
 	const { filters, editor, valueInput } = await openFirstNameFilter(page);
 	await valueInput.fill(longValue);
 	await valueInput.press('Enter');
@@ -994,11 +994,11 @@ test(`Summarize collapsed filters within their available width`, async ({ page }
 });
 
 test(`Preview a text filter after one second of typing inactivity`, async ({ page }) => {
-	const countRequests: URL[] = [];
+	const countRequests: Request[] = [];
 	page.on('request', (request) => {
 		const url = new URL(request.url());
 		if (url.pathname.endsWith('/v1/profiles/count')) {
-			countRequests.push(url);
+			countRequests.push(request);
 		}
 	});
 	await mockProfiles(page);
@@ -1012,7 +1012,7 @@ test(`Preview a text filter after one second of typing inactivity`, async ({ pag
 	expect(countRequests).toHaveLength(0);
 
 	await expect.poll(() => countRequests.length, { timeout: 1000 }).toBe(1);
-	const previewFilter = JSON.parse(countRequests[0].searchParams.get('filter') ?? 'null');
+	const previewFilter = countRequests[0].postDataJSON().filter ?? null;
 	expect(previewFilter).toEqual({
 		operator: 'and',
 		rules: [{ property: 'first_name', operator: 'is', values: ['Grace'] }],
@@ -1021,8 +1021,8 @@ test(`Preview a text filter after one second of typing inactivity`, async ({ pag
 
 test(`Treat zero matches as a preview that can be shown`, async ({ page }) => {
 	await mockProfiles(page, {
-		profilesForRequest: (url) => {
-			const filter = JSON.parse(url.searchParams.get('filter') ?? 'null');
+		profilesForRequest: (request) => {
+			const filter = request.postDataJSON().filter ?? null;
 			const value = filter?.rules?.[0]?.values?.[0];
 			return value == null ? profiles : profiles.filter((profile) => profile.attributes.first_name === value);
 		},
@@ -1045,14 +1045,14 @@ test(`Treat zero matches as a preview that can be shown`, async ({ page }) => {
 
 test(`Keep the displayed grid intact when showing the preview fails`, async ({ page }) => {
 	await mockProfiles(page, {
-		profilesForRequest: (url) =>
-			url.searchParams.has('filter')
+		profilesForRequest: (request) =>
+			request.postDataJSON().filter != null
 				? profiles.filter((profile) => profile.attributes.first_name === 'Grace')
 				: profiles,
 	});
-	await page.route('**/v1/profiles?*', async (route) => {
-		const url = new URL(route.request().url());
-		if (!url.searchParams.has('filter')) {
+	await page.route('**/v1/profiles/query', async (route) => {
+		const request = route.request();
+		if (request.postDataJSON().filter == null) {
 			await route.fallback();
 			return;
 		}
@@ -1085,16 +1085,16 @@ test(`Keep the displayed grid intact when showing the preview fails`, async ({ p
 });
 
 test(`Materialize the current Undo entry on Done and preserve its history`, async ({ page }) => {
-	const gridRequests: URL[] = [];
+	const gridRequests: Request[] = [];
 	page.on('request', (request) => {
 		const url = new URL(request.url());
-		if (url.pathname.endsWith('/v1/profiles')) {
-			gridRequests.push(url);
+		if (url.pathname.endsWith('/v1/profiles/query')) {
+			gridRequests.push(request);
 		}
 	});
 	await mockProfiles(page, {
-		profilesForRequest: (url) => {
-			const filter = JSON.parse(url.searchParams.get('filter') ?? 'null');
+		profilesForRequest: (request) => {
+			const filter = request.postDataJSON().filter ?? null;
 			const value = filter?.rules?.[0]?.values?.[0];
 			return value == null ? profiles : profiles.filter((profile) => profile.attributes.first_name === value);
 		},
@@ -1130,7 +1130,7 @@ test(`Materialize the current Undo entry on Done and preserve its history`, asyn
 	await expect(page.locator('.profiles-list__grid-summary')).toContainText('1 profile');
 	await expect(page.locator('.profiles-list .grid__row--clickable')).toContainText(['Grace Hopper']);
 	await expect(filters.getByRole('button', { name: 'Edit', exact: true })).toBeFocused();
-	const materializedFilter = JSON.parse(gridRequests.at(-1)?.searchParams.get('filter') ?? 'null');
+	const materializedFilter = gridRequests.at(-1)?.postDataJSON().filter ?? null;
 	expect(materializedFilter.rules[0].values).toEqual(['Grace']);
 
 	await filters.getByRole('button', { name: 'Edit', exact: true }).click();
@@ -1166,18 +1166,18 @@ test(`Reopen the property menu after collapsing a nested property filter`, async
 
 test(`Remove an applied filter from its collapsed chip, update the grid, and preserve history`, async ({ page }) => {
 	const countRequests: URL[] = [];
-	const gridRequests: URL[] = [];
+	const gridRequests: Request[] = [];
 	page.on('request', (request) => {
 		const url = new URL(request.url());
 		if (url.pathname.endsWith('/v1/profiles/count')) {
 			countRequests.push(url);
-		} else if (url.pathname.endsWith('/v1/profiles')) {
-			gridRequests.push(url);
+		} else if (url.pathname.endsWith('/v1/profiles/query')) {
+			gridRequests.push(request);
 		}
 	});
 	await mockProfiles(page, {
-		profilesForRequest: (url) => {
-			const filter = JSON.parse(url.searchParams.get('filter') ?? 'null');
+		profilesForRequest: (request) => {
+			const filter = request.postDataJSON().filter ?? null;
 			const value = filter?.rules?.[0]?.values?.[0];
 			return value == null ? profiles : profiles.filter((profile) => profile.attributes.first_name === value);
 		},
@@ -1207,7 +1207,7 @@ test(`Remove an applied filter from its collapsed chip, update the grid, and pre
 	await expect(page.locator('.profiles-list .grid__row--clickable')).toHaveCount(4);
 	expect(countRequests).toHaveLength(countRequestsBeforeRemoval);
 	expect(gridRequests).toHaveLength(gridRequestsBeforeRemoval + 1);
-	expect(JSON.parse(gridRequests.at(-1)?.searchParams.get('filter') ?? 'null')).toBeNull();
+	expect(gridRequests.at(-1)?.postDataJSON().filter ?? null).toBeNull();
 
 	await filters.getByRole('button', { name: 'Edit', exact: true }).click();
 	const editor = filters.getByRole('region', { name: 'Profile filters' });
@@ -1228,14 +1228,14 @@ test(`Remove an applied filter from its collapsed chip, update the grid, and pre
 
 test(`Keep filters expanded when Done cannot update the grid and discard the error after Undo`, async ({ page }) => {
 	await mockProfiles(page, {
-		profilesForRequest: (url) =>
-			url.searchParams.has('filter')
+		profilesForRequest: (request) =>
+			request.postDataJSON().filter != null
 				? profiles.filter((profile) => profile.attributes.first_name === 'Grace')
 				: profiles,
 	});
-	await page.route('**/v1/profiles?*', async (route) => {
-		const url = new URL(route.request().url());
-		if (!url.searchParams.has('filter')) {
+	await page.route('**/v1/profiles/query', async (route) => {
+		const request = route.request();
+		if (request.postDataJSON().filter == null) {
 			await route.fallback();
 			return;
 		}
@@ -1303,14 +1303,14 @@ test(`Grow nested filters in the document flow without an internal scrollbar`, a
 test(`Keep the grid unchanged when a preview fails and allow a retry`, async ({ page }) => {
 	let filteredCountRequests = 0;
 	await mockProfiles(page, {
-		profilesForRequest: (url) =>
-			url.searchParams.has('filter')
+		profilesForRequest: (request) =>
+			request.postDataJSON().filter != null
 				? profiles.filter((profile) => profile.attributes.first_name === 'Grace')
 				: profiles,
 	});
 	await page.route('**/v1/profiles/count*', async (route) => {
-		const url = new URL(route.request().url());
-		if (!url.searchParams.has('filter')) {
+		const request = route.request();
+		if (request.postDataJSON().filter == null) {
 			await route.fallback();
 			return;
 		}
@@ -1361,14 +1361,14 @@ test(`Discard an in-flight preview when collapsing the editor`, async ({ page })
 		releaseCandidate = resolve;
 	});
 	await mockProfiles(page, {
-		profilesForRequest: (url) =>
-			url.searchParams.has('filter')
+		profilesForRequest: (request) =>
+			request.postDataJSON().filter != null
 				? profiles.filter((profile) => profile.attributes.first_name === 'Grace')
 				: profiles,
 	});
 	await page.route('**/v1/profiles/count*', async (route) => {
-		const url = new URL(route.request().url());
-		if (!url.searchParams.has('filter')) {
+		const request = route.request();
+		if (request.postDataJSON().filter == null) {
 			await route.fallback();
 			return;
 		}
@@ -1408,14 +1408,14 @@ test(`Ignore an obsolete preview after the draft changes`, async ({ page }) => {
 		releaseFirstCandidate = resolve;
 	});
 	await mockProfiles(page, {
-		profilesForRequest: (url) => {
-			const filter = JSON.parse(url.searchParams.get('filter') ?? 'null');
+		profilesForRequest: (request) => {
+			const filter = request.postDataJSON().filter ?? null;
 			const value = filter?.rules?.[0]?.values?.[0];
 			return value == null ? profiles : profiles.filter((profile) => profile.attributes.first_name === value);
 		},
 	});
 	await page.route('**/v1/profiles/count*', async (route) => {
-		const filter = JSON.parse(new URL(route.request().url()).searchParams.get('filter') ?? 'null');
+		const filter = route.request().postDataJSON().filter ?? null;
 		if (filter?.rules?.[0]?.values?.[0] !== 'Grace') {
 			await route.fallback();
 			return;
@@ -1489,8 +1489,8 @@ test(`Undo and redo successful filter previews without changing the grid`, async
 		}
 	});
 	await mockProfiles(page, {
-		profilesForRequest: (url) => {
-			const filter = JSON.parse(url.searchParams.get('filter') ?? 'null');
+		profilesForRequest: (request) => {
+			const filter = request.postDataJSON().filter ?? null;
 			const value = filter?.rules?.[0]?.values?.[0];
 			return value == null ? profiles : profiles.filter((profile) => profile.attributes.first_name === value);
 		},
@@ -1532,14 +1532,14 @@ test(`Keep an explicit grid request independent from a newer filter preview`, as
 		releaseGraceGrid = resolve;
 	});
 	await mockProfiles(page, {
-		profilesForRequest: (url) => {
-			const filter = JSON.parse(url.searchParams.get('filter') ?? 'null');
+		profilesForRequest: (request) => {
+			const filter = request.postDataJSON().filter ?? null;
 			const value = filter?.rules?.[0]?.values?.[0];
 			return value == null ? profiles : profiles.filter((profile) => profile.attributes.first_name === value);
 		},
 	});
-	await page.route('**/v1/profiles?*', async (route) => {
-		const filter = JSON.parse(new URL(route.request().url()).searchParams.get('filter') ?? 'null');
+	await page.route('**/v1/profiles/query', async (route) => {
+		const filter = route.request().postDataJSON().filter ?? null;
 		if (filter?.rules?.[0]?.values?.[0] !== 'Grace') {
 			await route.fallback();
 			return;
@@ -1588,14 +1588,14 @@ test(`Ignore Escape while the current filter is being materialized`, async ({ pa
 		releaseGrid = resolve;
 	});
 	await mockProfiles(page, {
-		profilesForRequest: (url) => {
-			const filter = JSON.parse(url.searchParams.get('filter') ?? 'null');
+		profilesForRequest: (request) => {
+			const filter = request.postDataJSON().filter ?? null;
 			const value = filter?.rules?.[0]?.values?.[0];
 			return value == null ? profiles : profiles.filter((profile) => profile.attributes.first_name === value);
 		},
 	});
-	await page.route('**/v1/profiles?*', async (route) => {
-		const filter = JSON.parse(new URL(route.request().url()).searchParams.get('filter') ?? 'null');
+	await page.route('**/v1/profiles/query', async (route) => {
+		const filter = route.request().postDataJSON().filter ?? null;
 		if (filter?.rules?.[0]?.values?.[0] !== 'Grace') {
 			await route.fallback();
 			return;
@@ -1632,14 +1632,14 @@ test(`Let a newer explicit Show request supersede an older one`, async ({ page }
 		releaseGraceGrid = resolve;
 	});
 	await mockProfiles(page, {
-		profilesForRequest: (url) => {
-			const filter = JSON.parse(url.searchParams.get('filter') ?? 'null');
+		profilesForRequest: (request) => {
+			const filter = request.postDataJSON().filter ?? null;
 			const value = filter?.rules?.[0]?.values?.[0];
 			return value == null ? profiles : profiles.filter((profile) => profile.attributes.first_name === value);
 		},
 	});
-	await page.route('**/v1/profiles?*', async (route) => {
-		const filter = JSON.parse(new URL(route.request().url()).searchParams.get('filter') ?? 'null');
+	await page.route('**/v1/profiles/query', async (route) => {
+		const filter = route.request().postDataJSON().filter ?? null;
 		if (filter?.rules?.[0]?.values?.[0] !== 'Grace') {
 			await route.fallback();
 			return;
@@ -1679,11 +1679,11 @@ test(`Paginate profiles on the server`, async ({ page }) => {
 			},
 		};
 	});
-	const requests: URL[] = [];
+	const requests: Request[] = [];
 	page.on('request', (request) => {
 		const url = new URL(request.url());
-		if (url.pathname.endsWith('/v1/profiles')) {
-			requests.push(url);
+		if (url.pathname.endsWith('/v1/profiles/query')) {
+			requests.push(request);
 		}
 	});
 	await mockProfiles(page, { responseProfiles });
@@ -1732,11 +1732,11 @@ test(`Paginate profiles on the server`, async ({ page }) => {
 	expect(desktopLayout.controlsRightInset).toBeGreaterThan(0);
 	expect(desktopLayout.groupGap).toBeGreaterThan(0);
 	expect(desktopLayout.resultsLeftInset).toBeGreaterThan(0);
-	expect(requests.at(-1)?.searchParams.get('first')).toBe('0');
-	expect(requests.at(-1)?.searchParams.get('limit')).toBe('100');
-	expect(requests.at(-1)?.searchParams.has('includeSchema')).toBe(false);
-	expect(JSON.parse(requests.at(-1)!.searchParams.get('schema')!)).toEqual(profileSchema);
-	expect(requests.at(-1)?.searchParams.get('properties')?.split(',').sort()).toEqual([
+	expect(requests.at(-1)?.postDataJSON().first).toBe(0);
+	expect(requests.at(-1)?.postDataJSON().limit).toBe(100);
+	expect(requests.at(-1)?.postDataJSON().includeSchema).toBeUndefined();
+	expect(requests.at(-1)!.postDataJSON().schema).toEqual(profileSchema);
+	expect(requests.at(-1)?.postDataJSON().properties?.sort()).toEqual([
 		'billing_address',
 		'country',
 		'customer_id',
@@ -1781,16 +1781,16 @@ test(`Paginate profiles on the server`, async ({ page }) => {
 	});
 	expect(pageSizeMetrics.inputFontSize).toBe(pageSizeMetrics.labelFontSize);
 	expect(pageSizeMetrics.textWidth).toBeLessThanOrEqual(pageSizeMetrics.inputWidth);
-	expect(requests.at(-1)?.searchParams.get('first')).toBe('0');
-	expect(requests.at(-1)?.searchParams.get('limit')).toBe('200');
+	expect(requests.at(-1)?.postDataJSON().first).toBe(0);
+	expect(requests.at(-1)?.postDataJSON().limit).toBe(200);
 
 	await pageSizeCombobox.click();
 	await pageSize.locator('wa-option[value="25"]').click();
 	await expect(rows).toHaveCount(25);
 	await expect(pagination.locator('.profiles-list__pagination-range')).toHaveText('1–25 of 55');
 	await expect(pageSize).toHaveJSProperty('value', '25');
-	expect(requests.at(-1)?.searchParams.get('first')).toBe('0');
-	expect(requests.at(-1)?.searchParams.get('limit')).toBe('50');
+	expect(requests.at(-1)?.postDataJSON().first).toBe(0);
+	expect(requests.at(-1)?.postDataJSON().limit).toBe(50);
 
 	const responsiveLayout = await pagination.evaluate((element) => {
 		const results = element.querySelector('.profiles-list__pagination-results');
@@ -1828,11 +1828,11 @@ test(`Navigate continuously across cached profile page boundaries`, async ({ pag
 		...profiles[index % profiles.length],
 		kpid: `sequence-profile-${index + 1}`,
 	}));
-	const requests: URL[] = [];
+	const requests: Request[] = [];
 	page.on('request', (request) => {
 		const url = new URL(request.url());
-		if (url.pathname.endsWith('/v1/profiles')) {
-			requests.push(url);
+		if (url.pathname.endsWith('/v1/profiles/query')) {
+			requests.push(request);
 		}
 	});
 	await mockProfiles(page, { responseProfiles });
@@ -1852,9 +1852,9 @@ test(`Navigate continuously across cached profile page boundaries`, async ({ pag
 	await expect(rows.first()).toHaveAttribute('data-id', 'sequence-profile-51');
 	await expect(grid).toBeFocused();
 	await expect.poll(() => requests.length).toBeGreaterThan(requestCountBeforeBoundary);
-	expect(requests.at(-1)?.searchParams.get('first')).toBe('100');
-	expect(requests.at(-1)?.searchParams.get('limit')).toBe('50');
-	expect(JSON.parse(requests.at(-1)!.searchParams.get('schema')!)).toEqual(profileSchema);
+	expect(requests.at(-1)?.postDataJSON().first).toBe(100);
+	expect(requests.at(-1)?.postDataJSON().limit).toBe(50);
+	expect(requests.at(-1)!.postDataJSON().schema).toEqual(profileSchema);
 
 	const requestCountBeforeReverse = requests.length;
 	await page.keyboard.press('ArrowUp');
@@ -1878,9 +1878,9 @@ test(`Deduplicate a pending continuation and lock boundary navigation`, async ({
 	});
 
 	await mockProfiles(page, { responseProfiles });
-	await page.route('**/v1/profiles?*', async (route) => {
-		const url = new URL(route.request().url());
-		if (Number(url.searchParams.get('first')) !== 100) {
+	await page.route('**/v1/profiles/query', async (route) => {
+		const request = route.request();
+		if (Number(request.postDataJSON().first) !== 100) {
 			await route.fallback();
 			return;
 		}
@@ -1928,9 +1928,9 @@ test(`Retry a failed speculative continuation only when its boundary is requeste
 	let continuationRequests = 0;
 
 	await mockProfiles(page, { responseProfiles });
-	await page.route('**/v1/profiles?*', async (route) => {
-		const url = new URL(route.request().url());
-		if (Number(url.searchParams.get('first')) !== 100) {
+	await page.route('**/v1/profiles/query', async (route) => {
+		const request = route.request();
+		if (Number(request.postDataJSON().first) !== 100) {
 			await route.fallback();
 			return;
 		}
@@ -1959,7 +1959,10 @@ test(`Retry a failed speculative continuation only when its boundary is requeste
 	rows = grid.locator('.grid__row--clickable');
 	await rows.last().click();
 	const failedResponse = page.waitForResponse(
-		(response) => new URL(response.url()).searchParams.get('first') === '100' && response.status() === 503,
+		(response) =>
+			new URL(response.url()).pathname.endsWith('/v1/profiles/query') &&
+			response.request().postDataJSON().first === 100 &&
+			response.status() === 503,
 	);
 	await page.keyboard.press('ArrowDown');
 	await failedResponse;
@@ -1983,9 +1986,9 @@ test(`Keep the current page when continuation arguments no longer align with the
 	}));
 
 	await mockProfiles(page, { responseProfiles });
-	await page.route('**/v1/profiles?*', async (route) => {
-		const url = new URL(route.request().url());
-		if (Number(url.searchParams.get('first')) !== 100) {
+	await page.route('**/v1/profiles/query', async (route) => {
+		const request = route.request();
+		if (Number(request.postDataJSON().first) !== 100) {
 			await route.fallback();
 			return;
 		}
@@ -2212,10 +2215,10 @@ test(`Ignore late profile attributes and keep the non-modal panel from taking fo
 	});
 
 	await mockProfiles(page);
-	await page.route('**/v1/profiles/*/attributes*', async (route) => {
+	await page.route('**/v1/profiles/*/attributes/query', async (route) => {
 		const url = new URL(route.request().url());
 		const fragments = url.pathname.split('/');
-		const kpid = decodeURIComponent(fragments[fragments.length - 2]);
+		const kpid = decodeURIComponent(fragments[fragments.length - 3]);
 		if (kpid === 'profile-1') {
 			await firstAttributes;
 		}
@@ -2258,9 +2261,11 @@ test(`Report incompatible attribute schema without replacing displayed results`,
 	let requestedSchema: ObjectType | null = null;
 
 	await mockProfiles(page, { responseProfiles: [summary] });
-	await page.route('**/v1/profiles/*/attributes*', async (route) => {
-		const url = new URL(route.request().url());
-		requestedSchema = JSON.parse(url.searchParams.get('schema')!);
+	await page.route('**/v1/profiles/*/attributes/query', async (route) => {
+		const request = route.request();
+		requestedSchema = request.postDataJSON().schema;
+		expect(request.method()).toBe('POST');
+		expect(new URL(request.url()).search).toBe('');
 		await route.fulfill({
 			status: 422,
 			json: { error: { code: 'SchemaNotAligned', message: 'Profile schema has changed' } },
@@ -2400,10 +2405,10 @@ test(`Show the empty state without keyboard hints`, async ({ page }) => {
 test('Reload attributes when reopening a profile and handle its disappearance locally', async ({ page }) => {
 	await mockProfiles(page);
 	let attributeReads = 0;
-	await page.route('**/v1/profiles/*/attributes*', async (route) => {
-		const url = new URL(route.request().url());
-		expect(JSON.parse(url.searchParams.get('schema')!)).toEqual(profileSchema);
-		expect(url.searchParams.has('expectedDatasetVersion')).toBe(false);
+	await page.route('**/v1/profiles/*/attributes/query', async (route) => {
+		const request = route.request();
+		expect(request.postDataJSON().schema).toEqual(profileSchema);
+		expect(request.postDataJSON().expectedDatasetVersion).toBeUndefined();
 		attributeReads++;
 		if (attributeReads === 3) {
 			await route.fulfill({
@@ -2437,8 +2442,8 @@ test('Allow an empty continuation and keep Previous and Refresh usable', async (
 		kpid: 'live-page-' + index,
 	}));
 	await mockProfiles(page, { responseProfiles });
-	await page.route('**/v1/profiles?*', async (route) => {
-		if (Number(new URL(route.request().url()).searchParams.get('first')) < 100) {
+	await page.route('**/v1/profiles/query', async (route) => {
+		if (Number(route.request().postDataJSON().first) < 100) {
 			await route.fallback();
 			return;
 		}
@@ -2465,11 +2470,11 @@ test('Reuse adjacent cached pages but refetch an evicted page against live data'
 	}));
 	let firstPageReads = 0;
 	await mockProfiles(page, { responseProfiles });
-	await page.route('**/v1/profiles?*', async (route) => {
-		const url = new URL(route.request().url());
-		if (url.searchParams.get('first') === '0') {
+	await page.route('**/v1/profiles/query', async (route) => {
+		const request = route.request();
+		if (request.postDataJSON().first === 0) {
 			firstPageReads++;
-			const limit = Number(url.searchParams.get('limit'));
+			const limit = Number(request.postDataJSON().limit);
 			await route.fulfill({
 				json: {
 					profiles: responseProfiles.slice(0, limit).map((profile) => ({
@@ -2510,19 +2515,19 @@ test('Reuse adjacent cached pages but refetch an evicted page against live data'
 
 test('Refresh keeps filter arguments and reloads the schema only after reset confirmation', async ({ page }) => {
 	await mockProfiles(page, {
-		profilesForRequest: (url) => (url.searchParams.has('filter') ? [profiles[1]] : profiles),
+		profilesForRequest: (request) => (request.postDataJSON().filter != null ? [profiles[1]] : profiles),
 	});
 	let schemaReads = 0;
 	let incompatible = false;
-	const requests: URL[] = [];
+	const requests: Request[] = [];
 	await page.route('**/v1/profiles/schema', async (route) => {
 		schemaReads++;
 		await route.fulfill({ json: { schema: profileSchema, propertyRoles, primarySources: {} } });
 	});
-	await page.route('**/v1/profiles?*', async (route) => {
-		const url = new URL(route.request().url());
-		requests.push(url);
-		if (incompatible && url.searchParams.has('filter')) {
+	await page.route('**/v1/profiles/query', async (route) => {
+		const request = route.request();
+		requests.push(request);
+		if (incompatible && request.postDataJSON().filter != null) {
 			await route.fulfill({
 				status: 422,
 				json: { error: { code: 'SchemaNotAligned', message: 'Profile schema has changed' } },
@@ -2537,7 +2542,7 @@ test('Refresh keeps filter arguments and reloads the schema only after reset con
 	await valueInput.press('Enter');
 	await page.getByRole('button', { name: 'Show 1 match', exact: true }).click();
 	await expect(page.locator('.profiles-list .grid__row--clickable')).toHaveCount(1);
-	const applied = requests.at(-1)!.searchParams.get('filter');
+	const applied = requests.at(-1)!.postDataJSON().filter;
 	await page.locator('.profiles-list .grid__row--clickable').click();
 	await valueInput.fill('Uncommitted draft');
 	incompatible = true;
@@ -2547,8 +2552,8 @@ test('Refresh keeps filter arguments and reloads the schema only after reset con
 	await expect(page.locator('.profiles-list__grid-summary')).toContainText('1 profile');
 	await expect(page.locator('.profiles-list .grid__row--active')).toHaveAttribute('data-id', 'profile-2');
 	await expect(page.locator('.profile-drawer')).toBeVisible();
-	expect(requests.at(-1)!.searchParams.get('filter')).toBe(applied);
-	expect(JSON.parse(requests.at(-1)!.searchParams.get('schema')!)).toEqual(profileSchema);
+	expect(requests.at(-1)!.postDataJSON().filter).toEqual(applied);
+	expect(requests.at(-1)!.postDataJSON().schema).toEqual(profileSchema);
 	expect(schemaReads).toBe(1);
 	await expect(valueInput).toHaveValue('Uncommitted draft');
 	await page.locator('.profiles-list__stale-notice').getByRole('button', { name: 'Reset view' }).click();
@@ -2562,7 +2567,7 @@ test('Refresh keeps filter arguments and reloads the schema only after reset con
 	await expect.poll(() => schemaReads).toBe(2);
 	await expect(filters).toContainText('No filters');
 	await expect(page.locator('.profiles-list .grid__row--clickable')).toHaveCount(4);
-	expect(requests.at(-1)!.searchParams.has('filter')).toBe(false);
+	expect(requests.at(-1)!.postDataJSON().filter).toBeUndefined();
 	await filters.getByRole('button', { name: 'Edit', exact: true }).click();
 	await expect(filters.getByRole('button', { name: 'Undo', exact: true })).toBeDisabled();
 });
