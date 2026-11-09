@@ -111,6 +111,9 @@ func prepareRule(rule Rule, bindings Bindings, at time.Time, source SourceBindin
 	if rule.Sum != nil {
 		return rule.Sum.prepare(at, source)
 	}
+	if rule.LatestN != nil {
+		return rule.LatestN.prepare(at, source)
+	}
 	if rule.Experience != nil {
 		return rule.Experience.prepare(at, source)
 	}

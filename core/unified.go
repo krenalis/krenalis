@@ -121,6 +121,8 @@ func prepareUnifiedRuleInCalendar(rule FilterRule, schema types.Type, depth int,
 		return unified.Rule{}, errors.New("occurredIn requires experience verify")
 	case *FilterExperienceCondition:
 		return prepareFilterExperience(rule, calendar)
+	case *FilterLatestNCondition:
+		return prepareFilterLatestN(rule, calendar)
 	default:
 		return unified.Rule{}, fmt.Errorf("unsupported Unified filter rule %T", rule)
 	}

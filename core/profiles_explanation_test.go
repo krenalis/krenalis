@@ -162,7 +162,6 @@ func TestExplainExperienceSelection(t *testing.T) {
 
 // TestExplainMoneyLiterals maps each new test into Count and E explanations.
 func TestExplainMoneyLiterals(t *testing.T) {
-
 	field, err := unified.ResolveMonetaryField("commerce.order_completed.total", "1")
 	if err != nil {
 		t.Fatalf("expected resolved monetary field, got %v", err)
@@ -183,7 +182,7 @@ func TestExplainMoneyLiterals(t *testing.T) {
 		{"no readable interval", OpIsBetween, unified.Between, "100.00001", "100.00009", "", "", "none"},
 		{"all readable interval", OpIsBetween, unified.Between, "-1e20", "1e20", "", "", "all"},
 	} {
-		for _, kind := range []string{"count", "experience"} {
+		for _, kind := range []string{"count", "experience", "latestN"} {
 			t.Run(test.name+"/"+kind, func(t *testing.T) {
 				requested := []decimal.Decimal{decimal.MustParse(test.value)}
 				money := &unified.Money{Field: field, NativeCurrency: "EUR",
@@ -204,20 +203,28 @@ func TestExplainMoneyLiterals(t *testing.T) {
 					semantic = unified.Rule{Experience: &unified.Experience{Verify: body}}
 					nodes[0].Experience = &warehouses.OccurrenceSelection{Candidates: 1, AbsencePossible: true}
 				}
+				if kind == "latestN" {
+					physical = &warehouses.LatestOccurrences{Size: 1}
+					semantic = unified.Rule{LatestN: &unified.LatestN{Size: 1, Predicate: body}}
+					nodes[0].Experience = &warehouses.OccurrenceSelection{Candidates: 1, AbsencePossible: true}
+				}
 				index := 0
 				result, err := explainProfileRule(physical, semantic, nodes, &index, time.Time{})
 				if err != nil {
 					t.Fatalf("expected complete monetary explanation, got %v", err)
 				}
 				if result.Kind != kind || result.Result != "UNKNOWN" || index != 1 ||
-					kind == "count" && result.Count == nil || kind == "experience" && result.Experience == nil {
+					kind == "count" && result.Count == nil || kind == "experience" && result.Experience == nil ||
+					kind == "latestN" && result.LatestN == nil {
 					t.Fatalf("expected one UNKNOWN %s explanation, got %+v", kind, result)
 				}
 				var leaves []ProfileMoneyExplanation
 				if kind == "count" {
 					leaves = result.Count.Money
-				} else {
+				} else if kind == "experience" {
 					leaves = result.Experience.Money
+				} else {
+					leaves = result.LatestN.Money
 				}
 				if len(leaves) != 1 {
 					t.Fatalf("expected one explained monetary leaf, got %+v", leaves)
@@ -250,7 +257,6 @@ func TestExplainMoneyLiterals(t *testing.T) {
 			})
 		}
 	}
-
 }
 
 func TestExplainProfileFilterValidation(t *testing.T) {

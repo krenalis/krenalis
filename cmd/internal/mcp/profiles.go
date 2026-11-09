@@ -29,7 +29,8 @@ var profileFilterDocumentation string
 
 var profileFilterDocumentationTool = server.ServerTool{
 	Tool: mcp.NewTool("profile-filter-doc",
-		mcp.WithDescription("Read the supported Record/Count/Sum/Average/Experience syntax before using query-profiles."),
+		mcp.WithDescription("Read the supported Record/Count/Sum/Average/Experience/LatestN syntax"+
+			" before using query-profiles."),
 		mcp.WithTitleAnnotation("Profile filtering documentation"),
 		mcp.WithReadOnlyHintAnnotation(true),
 		mcp.WithDestructiveHintAnnotation(false),

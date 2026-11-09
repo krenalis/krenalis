@@ -28,7 +28,7 @@ type ProfileFilterExplanation struct {
 }
 
 // ProfileRuleExplanation follows the input filter's group and rule order.
-// Kind is and, or, record, count, sum, average or experience.
+// Kind is and, or, record, count, sum, average, experience or latestN.
 // Result is MATCH, NO_MATCH or UNKNOWN.
 // Record results do not identify which operand caused a SQL NULL.
 type ProfileRuleExplanation struct {
@@ -39,6 +39,7 @@ type ProfileRuleExplanation struct {
 	Sum        *ProfileSumExplanation        `json:"sum,omitzero"`
 	Average    *ProfileAverageExplanation    `json:"average,omitzero"`
 	Experience *ProfileExperienceExplanation `json:"experience,omitzero"`
+	LatestN    *ProfileLatestNExplanation    `json:"latestN,omitzero"`
 }
 
 // ProfileExperienceExplanation describes selection before verification.
@@ -72,6 +73,23 @@ type ProfileOccurredInExplanation struct {
 	Path  []int     `json:"path"`
 	Start time.Time `json:"start"`
 	End   time.Time `json:"end"`
+}
+
+// ProfileLatestNExplanation describes All on a complete selected block.
+// Selection describes the set, not its unobserved internal order: it is unique
+// exactly when absence is impossible and Candidates equals Size.
+// Quantifier is the requested form. Money paths are relative to Predicate.
+type ProfileLatestNExplanation struct {
+	Start          time.Time                  `json:"start,omitzero"`
+	End            time.Time                  `json:"end"`
+	UnboundedStart bool                       `json:"unboundedStart,omitzero"`
+	History        *FilterHistory             `json:"history,omitzero"`
+	Size           int                        `json:"size"`
+	Quantifier     FilterLatestNQuantifier    `json:"quantifier"`
+	Selection      ProfileExperienceSelection `json:"selection"`
+	Money          []ProfileMoneyExplanation  `json:"money,omitzero"`
+	CurrencyField  *FilterCurrencyField       `json:"currencyField,omitzero"`
+	NativeCurrency string                     `json:"nativeCurrency,omitzero"`
 }
 
 // ProfileMoneyExplanation retains the requested and effective comparisons.
@@ -379,6 +397,38 @@ func explainProfileRule(rule warehouses.FilterCondition, semantic unified.Rule, 
 		}
 	case *warehouses.RecordFilter:
 		result.Kind = "record"
+	case *warehouses.LatestOccurrences:
+		if node.Experience == nil || semantic.LatestN == nil {
+			return ProfileRuleExplanation{}, errors.New("core: missing profile explanation latestN")
+		}
+		selection := ProfileExperienceSelection{Kind: "ambiguous", Absence: "impossible",
+			Candidates: node.Experience.Candidates}
+		if node.Experience.AbsencePossible {
+			selection.Absence = "possible"
+		}
+		if selection.Candidates == 0 {
+			selection.Kind, selection.Absence = "absent", "certain"
+		} else if selection.Candidates == int64(rule.Size) && !node.Experience.AbsencePossible {
+			selection.Kind = "unique"
+		}
+		result.Kind = "latestN"
+		result.LatestN = &ProfileLatestNExplanation{Start: rule.Start, End: rule.End,
+			UnboundedStart: rule.UnboundedStart, Size: semantic.LatestN.Size,
+			Quantifier: FilterLatestNQuantifier{Kind: "all"}, Selection: selection}
+		if currency := semantic.LatestN.Currency; currency != nil {
+			result.LatestN.CurrencyField = &FilterCurrencyField{
+				Definition: currency.Definition, MeaningRevision: currency.Revision}
+			result.LatestN.NativeCurrency = currency.Value
+		}
+		money, err := explainMoneyPredicates(semantic.LatestN.Predicate, nil)
+		if err != nil {
+			return ProfileRuleExplanation{}, err
+		}
+		result.LatestN.Money = money
+		if history := semantic.LatestN.Scope.History; history != nil {
+			definition, revision := history.Reference()
+			result.LatestN.History = &FilterHistory{Definition: definition, MeaningRevision: revision}
+		}
 	case *warehouses.SelectedOccurrence:
 		if node.Experience == nil || semantic.Experience == nil {
 			return ProfileRuleExplanation{}, errors.New("core: missing profile explanation experience")

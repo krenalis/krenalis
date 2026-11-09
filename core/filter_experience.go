@@ -198,14 +198,6 @@ func prepareFilterExperience(condition *FilterExperienceCondition, calendar *uni
 		return unified.Rule{}, errors.New("experience requires verify")
 	}
 	experience := condition.Experience
-	scope, err := experience.Base.Period.scope(experience.Base.Source, calendar)
-	var unavailable error
-	if err != nil {
-		if _, ok := errors.AsType[*unified.UnsupportedError](err); !ok {
-			return unified.Rule{}, err
-		}
-		unavailable = err
-	}
 	selector := experience.Select
 	var nth int
 	switch selector.Kind {
@@ -227,55 +219,74 @@ func prepareFilterExperience(condition *FilterExperienceCondition, calendar *uni
 		return unified.Rule{}, errors.New("invalid experience selector")
 	}
 
+	prepared, err := prepareFilterSelection(experience.Base, experience.Verify, calendar, selectedFilterRule)
+	if err != nil {
+		return unified.Rule{}, err
+	}
+	prepared.First, prepared.Nth = selector.Kind == "first", nth
+
+	return unified.Rule{Experience: prepared}, nil
+}
+
+// prepareFilterSelection shares the base and local-body rules of E selections.
+func prepareFilterSelection(base FilterExperienceBase, predicate *Filter, calendar *unified.Calendar, context filterRuleContext) (*unified.Experience, error) {
+
+	scope, err := base.Period.scope(base.Source, calendar)
+	var unavailable error
+	if err != nil {
+		if _, ok := errors.AsType[*unified.UnsupportedError](err); !ok {
+			return nil, err
+		}
+		unavailable = err
+	}
+
 	// Prepare base qualification and selected-record verification separately.
 	var where *state.Where
-	if experience.Base.Where != nil {
-		source := unified.Scope{Type: experience.Base.Source.Type, Event: experience.Base.Source.Name,
-			Grain: experience.Base.Source.Grain}
+	if base.Where != nil {
+		source := unified.Scope{Type: base.Source.Type, Event: base.Source.Name,
+			Grain: base.Source.Grain}
 		validation := filterValidation{maxDepth: 2, properties: schemas.Event.Properties(), source: &source}
-		where, err = prepareFilterGroup(experience.Base.Where, &validation, 1)
+		where, err = prepareFilterGroup(base.Where, &validation, 1)
 		if err != nil {
 			if _, unsupported := errors.AsType[*unified.UnsupportedError](err); !unsupported {
-				return unified.Rule{}, err
+				return nil, err
 			}
 			unavailable = err
 		}
 	}
 	validation := filterValidation{maxDepth: 2, properties: schemas.Event.Properties()}
-	verify, err := prepareOccurrencePredicate(experience.Verify, &validation, 1,
-		experience.Base.Source, calendar, selectedFilterRule)
+	verify, err := prepareOccurrencePredicate(predicate, &validation, 1,
+		base.Source, calendar, context)
 	if err != nil {
 		if _, unsupported := errors.AsType[*unified.UnsupportedError](err); !unsupported {
-			return unified.Rule{}, err
+			return nil, err
 		}
 		unavailable = err
 	}
 	var currency *unified.NativeCurrency
-	base := experience.Base
 	if (base.CurrencyField == nil) != (base.NativeCurrency == nil) {
-		return unified.Rule{}, errors.New("experience base requires currencyField and nativeCurrency together")
+		return nil, errors.New("experience base requires currencyField and nativeCurrency together")
 	}
 	if base.CurrencyField != nil {
 		if base.Source.Type != "" && base.Source.Type != "track" {
-			return unified.Rule{}, errors.New("currency field is incompatible with the occurrence source")
+			return nil, errors.New("currency field is incompatible with the occurrence source")
 		}
 		currency, err = unified.ResolveNativeCurrency(base.CurrencyField.Definition,
 			base.CurrencyField.MeaningRevision, *base.NativeCurrency, base.Source.Name)
 		if err != nil {
-			return unified.Rule{}, err
+			return nil, err
 		}
 		err = currency.ValidateWhere(where)
 		if err != nil {
 			if _, unsupported := errors.AsType[*unified.UnsupportedError](err); !unsupported {
-				return unified.Rule{}, err
+				return nil, err
 			}
 			unavailable = err
 		}
 	}
 	if unavailable != nil {
-		return unified.Rule{}, unavailable
+		return nil, unavailable
 	}
 
-	return unified.Rule{Experience: &unified.Experience{First: selector.Kind == "first", Nth: nth,
-		Scope: scope, Where: where, Currency: currency, Verify: verify}}, nil
+	return &unified.Experience{Scope: scope, Where: where, Currency: currency, Verify: verify}, nil
 }

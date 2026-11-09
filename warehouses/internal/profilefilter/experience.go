@@ -11,10 +11,19 @@ import (
 	"github.com/krenalis/krenalis/warehouses"
 )
 
-// experience preserves First/Last/Nth candidates and absent alternatives.
-// The first/last certain timestamp excludes later/older optional occurrences;
-// ties remain candidates. No ranking ID or greedy choice closes the selection.
 func (c *compiler) experience(node *warehouses.SelectedOccurrence) (string, error) {
+	return c.selection(node, 0)
+}
+
+func (c *compiler) latestN(node *warehouses.LatestOccurrences) (string, error) {
+	base := &warehouses.SelectedOccurrence{Source: node.Source, Start: node.Start, End: node.End,
+		UnboundedStart: node.UnboundedStart, Qualification: node.Qualification, Verify: node.Predicate}
+	return c.selection(base, node.Size)
+}
+
+// selection shares copy checks and conditional predicates without changing the
+// First/Last/Nth SQL. A positive size closes complete LatestN blocks.
+func (c *compiler) selection(node *warehouses.SelectedOccurrence, size int) (string, error) {
 
 	n := strconv.Itoa(c.counts)
 	c.counts++
@@ -89,7 +98,9 @@ func (c *compiler) experience(node *warehouses.SelectedOccurrence) (string, erro
  MIN(CASE WHEN in_period=1 AND (qualification IS DISTINCT FROM FALSE) THEN `+body+` END) AS verify_min,
  MAX(CASE WHEN in_period=1 AND (qualification IS DISTINCT FROM FALSE) THEN `+body+` END) AS verify_max
  FROM copies`+n+` GROUP BY occurrence_id)`)
-	if node.Nth != 0 {
+	if size != 0 {
+		c.latestBlocks(n, size)
+	} else if node.Nth != 0 {
 		position, before := strconv.Itoa(node.Nth), strconv.Itoa(node.Nth-1)
 		c.ctes = append(c.ctes, "base"+n+` AS (SELECT profile_id,time_min,state_min,verify_min
  FROM facts`+n+` WHERE profile_id IS NOT NULL AND profiles=1 AND period_min=1 AND period_max=1
@@ -133,6 +144,11 @@ func (c *compiler) experience(node *warehouses.SelectedOccurrence) (string, erro
 	alias := "v" + n
 	c.joins = append(c.joins, "LEFT JOIN selected"+n+" "+alias+" ON "+alias+".profile_id=p."+q("$profile_id"))
 	candidates, absent := "COALESCE("+alias+".candidates,0)", "COALESCE("+alias+".absent,1)"
+
+	if size != 0 {
+		return "CASE WHEN " + absent + "=0 AND COALESCE(" + alias + ".passed,0)=" + candidates +
+			" THEN TRUE WHEN COALESCE(" + alias + ".reachable,0)=0 THEN FALSE ELSE CAST(NULL AS BOOLEAN) END", nil
+	}
 
 	return "CASE WHEN " + absent + "=0 AND COALESCE(" + alias + ".passed,0)=" + candidates +
 		" THEN TRUE WHEN COALESCE(" + alias + ".failed,0)=" + candidates +

@@ -45,7 +45,7 @@ restrictions apply to `query-data-warehouse` only. They do not restrict which
 profile or event properties `query-profiles` can read or use in conditions.
 
 On Snowflake, `query-profiles` uses the main virtual warehouse, even if a different
-virtual warehouse is configured for MCP. Record queries remain available; Count, Sum, Average and Experience
+virtual warehouse is configured for MCP. Record queries remain available; Count, Sum, Average, Experience and Latest N
 are currently unavailable on Snowflake. Do not work around that gate using SQL.
 
 ## Arguments and results
@@ -65,7 +65,7 @@ An oversized result is an error: reduce `limit` or request fewer `properties`.
 Rows are never silently dropped to fit that budget.
 
 The returned text is JSON with `profiles`, `schema` and exact matching `total`.
-With Count, Sum, Average or Experience, it also contains `evaluation: {at, match, noMatch, unknown}`. Totals
+With Count, Sum, Average, Experience or Latest N, it also contains `evaluation: {at, match, noMatch, unknown}`. Totals
 refer to the entire profile population before pagination, from the same
 evaluation as the page. The page contains only MATCH profiles. UNKNOWN is not
 NO_MATCH and is not an execution error. An empty page still returns totals.
@@ -91,7 +91,7 @@ are MCP diagnostic prefixes, not additional core error codes.
 
 The root is `{"operator":"and"|"or","rules":[...]}`, with optional
 `defaultCalendar` as described below. Rules are Record
-conditions, Count/Sum/Average/Experience conditions or nested AND/OR groups. At most four main group
+conditions, Count/Sum/Average/Experience/LatestN conditions or nested AND/OR groups. At most four main group
 levels including the root, and 100 descendants excluding the root, are allowed.
 
 A Record condition is `{"property":"path","operator":"...","values":[...]}`.
@@ -799,12 +799,86 @@ supplied. The money array retains each verify currency and requested/normalized
 comparison. Neither metadata set replaces the other. Experiences without base
 currency retain their prior JSON shape and meaning.
 
+
+## Latest N: All on a complete selected block
+
+A separate `latestN` rule selects the latest N recorded messages from its base
+and tests one uniform `predicate` on the entire compatible block. `size` is a
+JSON integer from 1 to 10. It requires N messages, not up to N, and has no
+outer operator or values. It does not pick N passing messages: selection is
+before the predicate. Do not replace it with Count of passing messages.
+
+The base is exactly experience.base: same source, period, Record-only where,
+and optional governed currencyField/nativeCurrency pair. Source identity,
+deduplication, timestamp and currency conditioning rules are unchanged.
+The predicate is an AND/OR group with the same two-group/100-descendant budget
+as experience.verify, but accepts only Record and one money leaf, not occurredIn.
+Money supports all seven current comparisons, including inclusive between.
+The existing raw-overlap and shared-dependency restrictions still apply.
+
+For "the latest three orders are all in EUR and between 50 and 100":
+
+```json
+{"operator":"and","rules":[{"latestN":{"base":{"source":{"kind":"recordedEvents","name":"Order Completed","grain":"registered-message"},"period":{"kind":"fullRelevantHistory","history":{"definition":"registered-queryable-events","meaningRevision":"1"}}},"size":3,"predicate":{"operator":"and","rules":[{"money":{"field":{"definition":"commerce.order_completed.total","meaningRevision":"1"},"nativeCurrency":"EUR"},"operator":"is between","values":[50,100]}]},"quantifier":{"kind":"all"}}}]}
+```
+
+Adding EUR currencyField/nativeCurrency to the base asks instead for the latest
+three EUR orders. More recent USD orders remain outside that population.
+Messages count at registered-message grain, not deduplicated business orders;
+there is no currency conversion. Ask or state the interpretation when ambiguous.
+
+Possible memberships and timestamp ties are resolved as compatible whole blocks,
+never by combining independent winners for each position. With N=2, a possible
+recent passing message, a certain middle failing message and a certain older
+passing message give NO_MATCH: every complete block contains the failing one.
+Three certain tied messages, two passing and one failing, give UNKNOWN for N=2.
+No technical ID tie-break is used. A short base gives NO_MATCH; a possibly short
+base prevents MATCH, but still gives NO_MATCH if no complete block can pass.
+
+A base period ending before T means "latest N within that period", not "the
+latest N of the history are within that period". For "the latest N are all in
+the last 30 days", use Count >= N in that trailing window, with the same base
+qualification. This equivalence requires a window ending at T; do not extend
+it to ago bands or completed calendar periods. Retention, deletion and late
+imports can change which registered messages make up a historical block.
+
+Only `{"kind":"all"}` is executable. Some and Cardinality are recognized and
+validated but return FilterCapabilityNotImplemented. Never emulate them with
+SQL or other filters. Their closed forms are `{"kind":"some"}` and:
+
+```json
+{"kind":"cardinality","operator":"is greater than or equal to","values":[2]}
+```
+
+Cardinality has exactly four operators: `is` means exactly, `is greater than or
+equal to` means at least, `is less than or equal to` means at most, and `is between`
+is inclusive. `is not`, strict greater/less and other operators are invalid,
+not silently rewritten. Values are JSON naturals (zero allowed, -0 reads as 0),
+without fractions or exponents: one operand, two for between. Inverted intervals
+and tests incompatible with [0,N] are invalid. Redundant upper bounds are valid.
+All and Some have no operator/values; unknown fields, kinds and null are invalid.
+Even Cardinality >= 0 requires a complete block. "At least two of the latest three
+orders" is this unavailable Cardinality; "at least two orders in the last 30 days"
+is an executable Count. Do not substitute one for the other.
+
+Explanations have kind latestN and a latestN object with the same period/history
+and base currency metadata as experience, plus size, the requested quantifier,
+selection and any money metadata (paths relative to predicate). No witness or
+number of compatible blocks is returned. selection.candidates counts the union
+of identities in complete compatible blocks. With certain shortage it is zero;
+absence is certain. Otherwise absence is possible or impossible. selection.kind
+is unique exactly when absence is impossible and candidates equals size: it
+describes the set, not its internal order. Three certain tied messages selected
+with size=3 form a unique set. An unknown predicate can still make its result
+UNKNOWN. Latest(1)/All has Last's outcome and selection metadata, while retaining
+the requested latestN form. Snowflake remains unavailable pending real tests.
+
 ## Examples
 
 To understand a known profile's result, call `explain-profile-filter` with its
 `kpid`, the same JSON-text `filter`, and optionally the listing's `evaluation.at`
 as `at`. It returns `{kpid,at,rule}`. Each rule has `kind` (`and`, `or`, `record`,
-`count`, `sum`, `average`, `experience`), `result` (`MATCH`, `NO_MATCH`, `UNKNOWN`), and ordered child `rules`
+`count`, `sum`, `average`, `experience`, `latestN`), `result` (`MATCH`, `NO_MATCH`, `UNKNOWN`), and ordered child `rules`
 for groups. Count adds `{start,end,certain,uncertain}`: the reachable count is
 every integer in `[certain,certain+uncertain]` for this supported subset.
 For fullRelevantHistory, `start` is omitted and `unboundedStart:true` is present;

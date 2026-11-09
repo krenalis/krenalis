@@ -156,3 +156,15 @@ exact sum to threshold times count and returns exact input numbers in its
 explanations; it never divides or reports a rounded average. Unknown population
 or amounts retain UNKNOWN, subject to the independent Kleene sample guard.
 It excludes other native currencies without conversion or business deduplication.
+
+Latest N uses its own `latestN` rule with the same experience base, size 1–10,
+a uniform Record/money predicate and an explicit quantifier. Only All executes;
+Some and canonical Cardinality tests are fully validated, then unavailable.
+Compatible whole blocks, including uncertain membership and timestamp ties,
+are closed together. A short block never satisfies the rule. Explanations
+retain the requested size/quantifier, candidate union and possible shortage;
+uniqueness concerns the selected set, not the internal order of tied messages.
+There is no occurredIn in this block predicate; trailing-window existence can
+use Count with the same population. See profile-filter-doc for the distinction
+from Count of passing messages and the two meanings of currency in the base
+versus in the predicate. The Snowflake gate remains closed.

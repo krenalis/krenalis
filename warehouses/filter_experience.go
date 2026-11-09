@@ -30,9 +30,25 @@ type SelectedOccurrence struct {
 
 func (*SelectedOccurrence) filterCondition() {}
 
+// LatestOccurrences applies All to every compatible complete block of Size.
+// It shares SelectedOccurrence's source, copy and independence contracts.
+// Size is 1 to 10. Predicate is conditional on membership in Qualification.
+// Every ordering of ties is allowed; the block's internal order is unobserved.
+type LatestOccurrences struct {
+	Size           int
+	Source         OccurrenceSource
+	Start, End     time.Time
+	UnboundedStart bool
+	Qualification  RowQualification
+	Predicate      RowQualification
+}
+
+func (*LatestOccurrences) filterCondition() {}
+
 // OccurrenceSelection describes the possible winners of a selection.
 // AbsencePossible includes shortages for Nth and certain absence, represented
-// by zero Candidates.
+// by zero Candidates. For LatestOccurrences, Candidates counts the union of
+// identities in compatible complete blocks, and absence means a short base.
 // One candidate is unambiguous only when absence is impossible.
 type OccurrenceSelection struct {
 	Candidates      int64

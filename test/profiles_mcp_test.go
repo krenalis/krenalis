@@ -855,6 +855,106 @@ FROM (VALUES
 
 	})
 
+	t.Run("LatestN", func(t *testing.T) {
+
+		_, err := pool.Exec(t.Context(), `INSERT INTO krenalis_events
+(kpid,message_id,event,timestamp,received_at,sent_at,type,connection_id,anonymous_id,traits,properties)
+SELECT ('00000000-0000-0000-0000-'||lpad(n::text,12,'0'))::uuid,'latest/'||id,
+'Order Completed',stamp::timestamp,'2026-02-01','2026-02-01','track','fixture','a','{}',
+jsonb_build_object('latest_fixture',true)||payload::jsonb
+FROM (VALUES
+(1,'certain','2026-01-01','{"q":"yes","v":"yes"}'),
+(1,'optional','2026-01-02','{"v":"yes"}'),
+(2,'old','2026-01-01','{"q":"yes","v":"yes"}'),
+(2,'forced-failure','2026-01-02','{"q":"yes","v":"no"}'),
+(2,'optional-pass','2026-01-03','{"v":"yes"}'),
+(3,'tie-a','2026-01-10','{"q":"yes","v":"yes"}'),
+(3,'tie-b','2026-01-10','{"q":"yes","v":"yes"}'),
+(3,'tie-c','2026-01-10','{"q":"yes","v":"yes"}')
+) v(n,id,stamp,payload)`)
+		if err != nil {
+			t.Fatalf("expected coherent latestN fixtures, got %v", err)
+		}
+		defer func() {
+			_, err := pool.Exec(t.Context(), "DELETE FROM krenalis_events WHERE message_id LIKE 'latest/%'")
+			if err != nil {
+				t.Errorf("expected latestN fixture cleanup, got %v", err)
+			}
+		}()
+
+		const filter = `{"operator":"and","rules":[{"latestN":{"base":{` +
+			`"source":{"kind":"recordedEvents","name":"Order Completed","grain":"registered-message"},` +
+			`"period":{"kind":"fullRelevantHistory","history":{"definition":"registered-queryable-events","meaningRevision":"1"}},` +
+			`"where":{"operator":"and","rules":[{"property":"properties.latest_fixture","operator":"exists"},` +
+			`{"property":"properties.q","operator":"is","values":["yes"]}]}},"size":2,` +
+			`"predicate":{"operator":"and","rules":[{"property":"properties.v","operator":"is","values":["yes"]}]},` +
+			`"quantifier":{"kind":"all"}}}]}`
+		for _, test := range []struct{ name, filter, totals string }{
+			{"two", filter, `"match":1,"noMatch":2,"unknown":1`},
+			{"one", strings.Replace(filter, `"size":2`, `"size":1`, 1), `"match":2,"noMatch":1,"unknown":1`},
+			{"three", strings.Replace(filter, `"size":2`, `"size":3`, 1), `"match":1,"noMatch":3,"unknown":0`},
+			{"ten", strings.Replace(filter, `"size":2`, `"size":10`, 1), `"match":0,"noMatch":4,"unknown":0`},
+			{"outer OR", strings.Replace(strings.Replace(filter, `"operator":"and"`, `"operator":"or"`, 1), `"rules":[{"latestN"`, `"rules":[{"property":"country","operator":"is","values":["FR"]},{"latestN"`, 1), `"match":3,"noMatch":0,"unknown":1`},
+			{"outer AND", strings.Replace(filter, `"rules":[{"latestN"`, `"rules":[{"property":"country","operator":"is","values":["IT"]},{"latestN"`, 1), `"match":1,"noMatch":2,"unknown":1`},
+		} {
+			t.Run(test.name, func(t *testing.T) {
+				for _, first := range []int{0, 99} {
+					var expected json.RawMessage
+					k.Call("GET", "/v1/profiles?filter="+url.QueryEscape(test.filter)+"&at="+
+						url.QueryEscape(at)+"&first="+strconv.Itoa(first), nil, nil, &expected)
+					actual := assertResult(t, tool(t, "query-profiles", map[string]any{
+						"filter": test.filter, "at": at, "first": first}))
+					if actual != string(expected) || !strings.Contains(actual, test.totals) ||
+						first == 99 && !strings.HasPrefix(actual, `{"profiles":[]`) {
+						t.Fatalf("expected identical HTTP/MCP latestN with %s, got %s", test.totals, actual)
+					}
+				}
+			})
+		}
+		for _, test := range []struct {
+			id, filter, kind, absence, result string
+			candidates                        int
+		}{
+			{"00000000-0000-0000-0000-000000000001", filter, "ambiguous", "possible", "UNKNOWN", 2},
+			{"00000000-0000-0000-0000-000000000002", filter, "ambiguous", "impossible", "NO_MATCH", 3},
+			{"00000000-0000-0000-0000-000000000003", filter, "ambiguous", "impossible", "MATCH", 3},
+			{"00000000-0000-0000-0000-000000000004", filter, "absent", "certain", "NO_MATCH", 0},
+			{"00000000-0000-0000-0000-000000000003", strings.Replace(filter, `"size":2`, `"size":3`, 1), "unique", "impossible", "MATCH", 3},
+		} {
+			t.Run("explain "+test.id+"/"+test.kind, func(t *testing.T) {
+				var expected json.RawMessage
+				k.Call("GET", "/v1/profiles/"+test.id+"/filter-explanation?filter="+url.QueryEscape(test.filter)+
+					"&at="+url.QueryEscape(at), nil, nil, &expected)
+				actual := assertResult(t, tool(t, "explain-profile-filter", map[string]any{
+					"kpid": test.id, "filter": test.filter, "at": at}))
+				selection := fmt.Sprintf(`"selection":{"kind":%q,"absence":%q,"candidates":%d}`,
+					test.kind, test.absence, test.candidates)
+				if actual != string(expected) || !strings.Contains(actual, `"kind":"latestN"`) ||
+					!strings.Contains(actual, selection) || !strings.Contains(actual, `"result":"`+test.result+`"`) ||
+					!strings.Contains(actual, `"quantifier":{"kind":"all"}`) {
+					t.Fatalf("expected identical explanation with %s and %s, got %s", selection, test.result, actual)
+				}
+			})
+		}
+		for _, test := range []struct{ name, quantifier, code string }{
+			{"some", `{"kind":"some"}`, "FilterCapabilityNotImplemented"},
+			{"cardinality zero", `{"kind":"cardinality","operator":"is greater than or equal to","values":[0]}`, "FilterCapabilityNotImplemented"},
+			{"redundant upper", `{"kind":"cardinality","operator":"is less than or equal to","values":[1000000000000000000000000000000]}`, "FilterCapabilityNotImplemented"},
+			{"impossible", `{"kind":"cardinality","operator":"is","values":[3]}`, "InvalidArguments"},
+			{"invalid operator", `{"kind":"cardinality","operator":"is greater than","values":[1]}`, "InvalidArguments"},
+			{"unknown kind", `{"kind":"none"}`, "InvalidArguments"},
+			{"all operands", `{"kind":"all","values":[1]}`, "InvalidArguments"},
+		} {
+			t.Run(test.name, func(t *testing.T) {
+				modified := strings.Replace(filter, `{"kind":"all"}`, test.quantifier, 1)
+				assertToolError(t, tool(t, "query-profiles", map[string]any{"filter": modified, "at": at}), test.code)
+				assertToolError(t, tool(t, "explain-profile-filter", map[string]any{
+					"kpid": "00000000-0000-0000-0000-000000000001", "filter": modified, "at": at}), test.code)
+			})
+		}
+
+	})
+
 	t.Run("ExperienceNth", func(t *testing.T) {
 
 		_, err := pool.Exec(t.Context(), `INSERT INTO krenalis_events
@@ -974,8 +1074,13 @@ FROM (VALUES
 			{"full interval", "is between", "[-1e20,1e20]", "all", `"match":2,"noMatch":0,"unknown":2`, `"match":1,"noMatch":1,"unknown":2`},
 			{"collapsed interval", "is between", "[99.99995,100.00004]", "", `"match":1,"noMatch":1,"unknown":2`, `"match":0,"noMatch":2,"unknown":2`},
 		} {
-			for _, selected := range []bool{false, true} {
-				t.Run(fmt.Sprintf("%s/selected=%v", test.name, selected), func(t *testing.T) {
+			for _, kind := range []string{"count", "experience", "latestN"} {
+				selected := kind != "count"
+				name := fmt.Sprintf("%s/selected=%v", test.name, selected)
+				if kind == "latestN" {
+					name = test.name + "/latestN"
+				}
+				t.Run(name, func(t *testing.T) {
 
 					money := `{"money":{"field":{"definition":"commerce.order_completed.total","meaningRevision":"1"},` +
 						`"nativeCurrency":"EUR"},"operator":"` + test.operator + `","values":` + test.values + `}`
@@ -986,6 +1091,12 @@ FROM (VALUES
 						condition = `{"experience":{"base":{` + base + `,"where":{"operator":"and","rules":[` + fixture +
 							`]}},"select":{"kind":"last"},"verify":{"operator":"and","rules":[` + money + `]}}}`
 						totals, slot = test.lastTotals, "experience"
+					}
+					if kind == "latestN" {
+						condition = strings.Replace(condition, `"experience":`, `"latestN":`, 1)
+						condition = strings.Replace(condition, `"select":{"kind":"last"},"verify":`,
+							`"size":1,"quantifier":{"kind":"all"},"predicate":`, 1)
+						slot = "latestN"
 					}
 					filter := `{"operator":"and","rules":[` + condition + `]}`
 					for _, first := range []int{0, 99} {
@@ -1013,7 +1124,7 @@ FROM (VALUES
 					var explanation struct {
 						Rule struct {
 							Rules []struct {
-								Count, Experience *struct {
+								Count, Experience, LatestN *struct {
 									Money []struct {
 										Requested struct {
 											Operator string
@@ -1038,6 +1149,9 @@ FROM (VALUES
 					body := explanation.Rule.Rules[0].Count
 					if selected {
 						body = explanation.Rule.Rules[0].Experience
+					}
+					if kind == "latestN" {
+						body = explanation.Rule.Rules[0].LatestN
 					}
 					if body == nil || len(body.Money) != 1 {
 						t.Fatalf("expected one monetary explanation, got %s", actual)

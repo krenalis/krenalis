@@ -957,3 +957,53 @@ PostgreSQL tests complete shared currency, independent where membership and amou
 values before chronological selection; absence remains an alternative. Source
 faults still concern relevant qualification/verification outcomes, so two different
 non-EUR currencies are not a fault when both copies are certainly excluded.
+
+### Latest N with All
+
+LatestN is a separate semantic node and public rule; it shares experience.base's
+decoder and preparation. It binds the same Count population and conditional
+local predicate, producing warehouses.LatestOccurrences. Only All is executable.
+Some and Cardinality are recognized with complete public validation first.
+Cardinality uses four canonical comparisons over JSON naturals, lexical Count
+parsing and intersection with [0,N] for static compatibility. Redundant tests
+remain valid; no Cardinality equivalence is activated in this increment.
+
+The exact algorithm requires determined identities and timestamps, independent
+optional membership and local predicate values across identities, and every
+ordering of ties. It does not cover shared governed facts between occurrences.
+The predicate admits Record and one money leaf, not occurredIn; overlap and
+currency-conditioning rules are the same as single-selection verification.
+A future extension that weakens these hypotheses must revisit this algorithm.
+
+After copy checks, group non-excluded identities by (profile,timestamp). For a
+boundary timestamp tau, let R be the number of certain identities strictly
+later; let O be later optional identities whose predicate is TRUE or UNKNOWN;
+let G be passable identities at tau; and B be later certain FALSE identities.
+A passing block is reachable exactly when some tau has G>0, B=0, R<N and
+R+O+G>=N. This preserves all forced later members of the same complete block.
+The candidate union, when at least N identities are possible, contains exactly
+the identities with fewer than N strictly later certain identities.
+
+MATCH requires at least N certain identities and TRUE on the entire candidate
+union. NO_MATCH requires no passing compatible complete block, including
+certain shortage. Otherwise the result is UNKNOWN. No position-by-position
+closure, witness enumeration, relational plan or residual evaluator is added.
+SQL uses explicit descending cumulative ROWS frames after timestamp grouping.
+Existing First/Last/Nth SQL and transport remain unchanged. Both drivers use
+this shared composer; Snowflake remains gated without remote certification.
+
+The existing candidate/absence explanation protocol is reused. LatestN explains
+uniqueness of the selected set: absence impossible and candidate union size N.
+Internal tie permutations do not change a uniform All predicate. It retains
+size, the requested All quantifier, period/history and separate base/predicate
+currency metadata; no ordered witnesses or combinatorial block count is exposed.
+
+The PostgreSQL oracle enumerates subsets, chronological tie permutations and
+local body completions independently of the cumulative formula. Tests compare
+outcomes and measured candidate unions, including every profile in one mixed
+fixture, Latest(1)/Last and all-TRUE/Count>=N differentials, N=10 with eleven
+identities, duplicated copies and source faults before shortage. HTTP/MCP tests
+exercise listing, empty pages/totals, explanations and error classification.
+The sources are coherent fixtures; the three deferred infrastructure guarantees
+are not implemented by this increment. Operations remain complete and exact or
+return a technical error, never a partial or invented semantic result.

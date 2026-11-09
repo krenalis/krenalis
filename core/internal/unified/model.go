@@ -2,7 +2,7 @@
 // Use of this source code is governed by an Elastic License 2.0
 // that can be found in the LICENSE file.
 
-// Package unified implements Record/Count/Sum/Average and First/Last/Nth.
+// Package unified implements Record/Count/Sum/Average and selected experiences.
 // It has no public JSON or persistence representation.
 package unified
 
@@ -150,7 +150,7 @@ type Result struct {
 	At       time.Time
 }
 
-// Rule is a Record condition, Count, Sum, Average, Experience or AND/OR group.
+// Rule is a Record, Count, Sum, Average, Experience, LatestN or AND/OR group.
 // Root nil means AllProfiles. Record contains schema-prepared operands.
 // Validation is separate from canonicalization and never mutates state.Where.
 type Rule struct {
@@ -159,6 +159,7 @@ type Rule struct {
 	Sum        *Sum
 	Average    *Average
 	Experience *Experience
+	LatestN    *LatestN
 	Operator   state.WhereLogical
 	Children   []Rule
 }
@@ -364,7 +365,7 @@ func validateRule(rule Rule, at time.Time, depth int, nodes *int) error {
 		return fmt.Errorf("Unified root exceeds 100 descendant nodes")
 	}
 	if rule.Record != nil {
-		if rule.Count != nil || rule.Sum != nil || rule.Average != nil || rule.Experience != nil ||
+		if rule.Count != nil || rule.Sum != nil || rule.Average != nil || rule.Experience != nil || rule.LatestN != nil ||
 			rule.Operator != 0 || len(rule.Children) != 0 {
 			return fmt.Errorf("profile Record condition cannot contain other rules")
 		}
@@ -373,6 +374,13 @@ func validateRule(rule Rule, at time.Time, depth int, nodes *int) error {
 			return fmt.Errorf("invalid prepared profile Record condition")
 		}
 		return nil
+	}
+	if rule.LatestN != nil {
+		if rule.Count != nil || rule.Sum != nil || rule.Average != nil || rule.Experience != nil ||
+			rule.Operator != 0 || len(rule.Children) != 0 {
+			return fmt.Errorf("latestN cannot contain other rules")
+		}
+		return rule.LatestN.validate(at)
 	}
 	if rule.Experience != nil {
 		if rule.Count != nil || rule.Sum != nil || rule.Average != nil || rule.Operator != 0 || len(rule.Children) != 0 {

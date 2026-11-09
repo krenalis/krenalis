@@ -45,6 +45,8 @@ func (c *compiler) condition(node warehouses.FilterCondition) (string, error) {
 		return c.average(n)
 	case *warehouses.SelectedOccurrence:
 		return c.experience(n)
+	case *warehouses.LatestOccurrences:
+		return c.latestN(n)
 	case *warehouses.FilterGroup:
 		parts := make([]string, len(n.Children))
 		for i, child := range n.Children {
@@ -217,10 +219,13 @@ func (c *compiler) rule(node warehouses.FilterCondition) (string, error) {
 		term.sumLower, term.sumUpper = sumBounds(alias)
 		term.average = true
 	}
-	if _, ok := node.(*warehouses.SelectedOccurrence); ok {
+	switch node.(type) {
+	case *warehouses.SelectedOccurrence, *warehouses.LatestOccurrences:
 		alias := "v" + strconv.Itoa(count)
 		term.lower, term.upper = "COALESCE("+alias+".candidates,0)", "COALESCE("+alias+".absent,1)"
 		term.experience = true
+	default:
+		// Other nodes carry their own measured metadata.
 	}
 	c.nodes[index] = term
 	return text, nil
