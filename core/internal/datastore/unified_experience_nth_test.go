@@ -78,7 +78,7 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,tim
 						Scope: unified.Scope{Event: "Order Completed", Grain: "registered-message",
 							Start: at.AddDate(0, -1, 0), End: at},
 						Where:  &state.Where{Operator: state.OpAnd, Rules: []state.WhereRule{predicate("q")}},
-						Verify: &unified.ExperienceVerification{Record: predicate("v")}}
+						Verify: &unified.OccurrencePredicate{Record: predicate("v")}}
 					root := &unified.Rule{Experience: experience}
 					result, err := store.UnifiedProfiles(t.Context(), root, unified.Bindings{}, at, unified.Page{Limit: 1000})
 					if err != nil {
@@ -191,7 +191,7 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,tim
 
 			experience := &unified.Experience{Nth: test.position, Currency: currency,
 				Scope: unified.Scope{Event: "Order Completed", Grain: "registered-message", Start: at.AddDate(0, -1, 0), End: at},
-				Verify: &unified.ExperienceVerification{Money: &unified.Money{Field: field, NativeCurrency: "EUR",
+				Verify: &unified.OccurrencePredicate{Money: &unified.Money{Field: field, NativeCurrency: "EUR",
 					Test: unified.SumTest{Operator: unified.Greater, Value: decimal.MustParse("100")}}}}
 			root := &unified.Rule{Experience: experience}
 			result, err := store.UnifiedProfiles(t.Context(), root, unified.Bindings{}, at, unified.Page{Limit: 10})
@@ -237,7 +237,7 @@ SELECT '`+unifiedTestID(1)+`',id,'track','Order Completed',stamp::timestamp,payl
 FROM (VALUES `+test.rows+`) v(id,stamp,payload)`)
 				experience := &unified.Experience{Nth: 10, Currency: currency,
 					Scope: unified.Scope{Event: "Order Completed", Grain: "registered-message", Start: at.AddDate(0, -1, 0), End: at},
-					Verify: &unified.ExperienceVerification{Money: &unified.Money{Field: field, NativeCurrency: "EUR",
+					Verify: &unified.OccurrencePredicate{Money: &unified.Money{Field: field, NativeCurrency: "EUR",
 						Test: unified.SumTest{Operator: unified.Greater, Value: decimal.MustParse("100")}}}}
 				root := &unified.Rule{Experience: experience}
 				result, err := store.UnifiedProfiles(t.Context(), root, unified.Bindings{}, at, unified.Page{Limit: 10})

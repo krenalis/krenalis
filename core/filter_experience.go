@@ -242,7 +242,7 @@ func prepareFilterExperience(condition *FilterExperienceCondition, calendar *uni
 		}
 	}
 	validation := filterValidation{maxDepth: 2, properties: schemas.Event.Properties()}
-	verify, err := prepareExperienceVerification(experience.Verify, &validation, 1, experience.Base.Source, calendar)
+	verify, err := prepareOccurrencePredicate(experience.Verify, &validation, 1, experience.Base.Source, calendar)
 	if err != nil {
 		if _, unsupported := errors.AsType[*unified.UnsupportedError](err); !unsupported {
 			return unified.Rule{}, err

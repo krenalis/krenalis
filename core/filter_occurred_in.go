@@ -51,9 +51,9 @@ func (condition *FilterOccurredInCondition) UnmarshalJSON(data []byte) error {
 
 func (*FilterOccurredInCondition) filterRule() {}
 
-// prepareExperienceVerification preserves the closed selected-owner body.
+// prepareOccurrencePredicate preserves the closed selected-owner body.
 // Unsupported leaves do not hide invalid siblings or invalid nested groups.
-func prepareExperienceVerification(rule FilterRule, validation *filterValidation, depth int, source FilterCountSource, calendar *unified.Calendar) (*unified.ExperienceVerification, error) {
+func prepareOccurrencePredicate(rule FilterRule, validation *filterValidation, depth int, source FilterCountSource, calendar *unified.Calendar) (*unified.OccurrencePredicate, error) {
 	switch rule := rule.(type) {
 	case *Filter:
 		if rule == nil || rule.DefaultCalendar != nil || depth > validation.maxDepth || len(rule.Rules) == 0 ||
@@ -63,12 +63,12 @@ func prepareExperienceVerification(rule FilterRule, validation *filterValidation
 		if len(rule.Rules) > maxFilterRuleCount-validation.ruleCount {
 			return nil, errors.New("experience verification exceeds 100 descendant nodes")
 		}
-		result := &unified.ExperienceVerification{Operator: convertLogicalToWhere(rule.Operator),
-			Children: make([]unified.ExperienceVerification, len(rule.Rules))}
+		result := &unified.OccurrencePredicate{Operator: convertLogicalToWhere(rule.Operator),
+			Children: make([]unified.OccurrencePredicate, len(rule.Rules))}
 		var unavailable error
 		for i, child := range rule.Rules {
 			validation.ruleCount++
-			prepared, err := prepareExperienceVerification(child, validation, depth+1, source, calendar)
+			prepared, err := prepareOccurrencePredicate(child, validation, depth+1, source, calendar)
 			if err != nil {
 				if _, unsupported := errors.AsType[*unified.UnsupportedError](err); !unsupported {
 					return nil, err
@@ -90,7 +90,7 @@ func prepareExperienceVerification(rule FilterRule, validation *filterValidation
 		if err != nil {
 			return nil, err
 		}
-		return &unified.ExperienceVerification{Record: condition}, nil
+		return &unified.OccurrencePredicate{Record: condition}, nil
 	case *FilterMoneyCondition:
 		scope, err := unified.RecordedScope(source.Type, source.Name, source.Grain)
 		if err != nil {
@@ -100,7 +100,7 @@ func prepareExperienceVerification(rule FilterRule, validation *filterValidation
 		if err != nil {
 			return nil, err
 		}
-		return &unified.ExperienceVerification{Money: money}, nil
+		return &unified.OccurrencePredicate{Money: money}, nil
 	case *FilterOccurredInCondition:
 		if rule == nil {
 			return nil, errors.New("filter occurredIn condition cannot be nil")
@@ -109,7 +109,7 @@ func prepareExperienceVerification(rule FilterRule, validation *filterValidation
 		if err != nil {
 			return nil, err
 		}
-		return &unified.ExperienceVerification{OccurredIn: &period}, nil
+		return &unified.OccurrencePredicate{OccurredIn: &period}, nil
 	default:
 		return nil, fmt.Errorf("rule %T is not allowed in experience verify", rule)
 	}

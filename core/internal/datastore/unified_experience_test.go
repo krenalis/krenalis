@@ -31,7 +31,7 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,nam
 		&state.WhereCondition{Property: []string{"properties", "q"},
 			Operator: state.OpIs, Values: []any{json.Value(`"yes"`)}},
 	}}
-	verify := &unified.ExperienceVerification{Record: &state.WhereCondition{Property: []string{"properties", "v"},
+	verify := &unified.OccurrencePredicate{Record: &state.WhereCondition{Property: []string{"properties", "v"},
 		Operator: state.OpIs, Values: []any{json.Value(`"yes"`)}},
 	}
 	experience := unified.Experience{Scope: unified.Scope{Event: "Order Completed", Grain: "registered-message",
@@ -344,7 +344,7 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,tim
 			}
 			root := &unified.Rule{Experience: &unified.Experience{First: first, Scope: unified.Scope{Event: "Order Completed",
 				Grain: "registered-message", Start: at.AddDate(0, -1, 0), End: at}, Where: predicate("q"),
-				Verify: &unified.ExperienceVerification{Record: predicate("v").Rules[0].(*state.WhereCondition)}}}
+				Verify: &unified.OccurrencePredicate{Record: predicate("v").Rules[0].(*state.WhereCondition)}}}
 			result, err := store.UnifiedProfiles(t.Context(), root, unified.Bindings{}, at, unified.Page{Limit: 1000})
 			if err != nil {
 				t.Fatalf("expected exact enumeration result, got %v", err)
@@ -395,7 +395,7 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,tim
 			for _, first := range []bool{false, true} {
 				experience := &unified.Experience{First: first,
 					Scope:  unified.Scope{Event: "Order Completed", Grain: "registered-message", History: history},
-					Verify: &unified.ExperienceVerification{OccurredIn: &test.period}}
+					Verify: &unified.OccurrencePredicate{OccurredIn: &test.period}}
 				result, err := store.UnifiedProfiles(t.Context(), &unified.Rule{Experience: experience},
 					unified.Bindings{}, at, unified.Page{Limit: 10})
 				if err != nil {
@@ -439,12 +439,12 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,tim
 				Where: &state.Where{Operator: state.OpAnd, Rules: []state.WhereRule{
 					&state.WhereCondition{Property: []string{"properties", "q"}, Operator: state.OpIs,
 						Values: []any{json.Value(`"yes"`)}},
-				}}, Verify: &unified.ExperienceVerification{OccurredIn: &period}}
+				}}, Verify: &unified.OccurrencePredicate{OccurredIn: &period}}
 			root := &unified.Rule{Experience: experience}
 			for _, or := range []bool{false, true} {
 				if or {
-					experience.Verify = &unified.ExperienceVerification{Operator: state.OpOr,
-						Children: []unified.ExperienceVerification{
+					experience.Verify = &unified.OccurrencePredicate{Operator: state.OpOr,
+						Children: []unified.OccurrencePredicate{
 							{OccurredIn: &period}, {Record: &state.WhereCondition{Property: []string{"properties", "v"},
 								Operator: state.OpIs, Values: []any{json.Value(`"yes"`)}}},
 						}}
@@ -468,7 +468,7 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,tim
 					t.Fatalf("expected two candidates with certain nonemptiness and %v, got %+v", want, explained)
 				}
 			}
-			experience.Verify = &unified.ExperienceVerification{OccurredIn: &period}
+			experience.Verify = &unified.OccurrencePredicate{OccurredIn: &period}
 			experience.Scope.History = nil
 			experience.Scope.Elapsed = &unified.ElapsedPeriod{Older: 24 * time.Hour}
 			result, err := store.UnifiedProfiles(t.Context(), root, unified.Bindings{}, at, unified.Page{Limit: 10})

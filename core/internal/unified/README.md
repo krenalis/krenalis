@@ -740,7 +740,7 @@ is no outer operator/values, and no implicit selector or empty-body constructor.
 local budgets (two groups, 100 descendants), not the main four-level/100-node
 budget. Source and period binding reuse the existing recorded-event Count path;
 no dialect or SQL enters core. The canonical owner retains base and verification
-separately. `ExperienceVerification` is a closed selected-owner body, not a
+separately. `OccurrencePredicate` is a closed selected-owner body, not a
 relational plan or another public filter format. Nth requires a position from
 1 through 10 and selects one occurrence, not the latest N. Record-only pipeline
 validation still rejects the new rule and state.Where is unchanged.

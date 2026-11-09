@@ -126,12 +126,12 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,tim
 			if test.usd {
 				native = "USD"
 			}
-			verify := &unified.ExperienceVerification{Money: &unified.Money{Field: field, NativeCurrency: native,
+			verify := &unified.OccurrencePredicate{Money: &unified.Money{Field: field, NativeCurrency: native,
 				Test: unified.SumTest{Operator: unified.Greater, Value: decimal.MustParse("100")}}}
 			if test.orTime {
 				period := unified.Scope{Event: "Order Completed", Grain: "registered-message",
 					Start: at.AddDate(0, 0, -17), End: at}
-				verify = &unified.ExperienceVerification{Operator: state.OpOr, Children: []unified.ExperienceVerification{
+				verify = &unified.OccurrencePredicate{Operator: state.OpOr, Children: []unified.OccurrencePredicate{
 					*verify, {OccurredIn: &period}}}
 			}
 			experience := &unified.Experience{First: test.first, Currency: currency,
@@ -172,7 +172,7 @@ INSERT INTO profiles VALUES ('`+unifiedTestID(1)+`'),('`+unifiedTestID(2)+`')`)
 		Test: unified.SumTest{Operator: unified.Greater, Value: decimal.MustParse("100")}}
 	experience := &unified.Experience{Currency: currency,
 		Scope:  unified.Scope{Event: "Order Completed", Grain: "registered-message", Start: at.AddDate(0, -1, 0), End: at},
-		Verify: &unified.ExperienceVerification{Money: money}}
+		Verify: &unified.OccurrencePredicate{Money: money}}
 	root := &unified.Rule{Experience: experience}
 	for _, first := range []bool{false, true} {
 		experience.First = first
@@ -214,7 +214,7 @@ INSERT INTO profiles VALUES ('`+unifiedTestID(1)+`'),('`+unifiedTestID(2)+`')`)
 		money.NativeCurrency = "USD"
 		defer func() {
 			money.NativeCurrency = "EUR"
-			experience.Verify = &unified.ExperienceVerification{Money: money}
+			experience.Verify = &unified.OccurrencePredicate{Money: money}
 		}()
 		for _, test := range []struct {
 			payload string
@@ -231,12 +231,12 @@ INSERT INTO profiles VALUES ('`+unifiedTestID(1)+`'),('`+unifiedTestID(2)+`')`)
 			execUnifiedFixture(t, dw, "TRUNCATE krenalis_events")
 			execUnifiedFixture(t, dw, fmt.Sprintf(`INSERT INTO krenalis_events VALUES
 ('%s','different','track','Order Completed','2026-01-%d','%s')`, unifiedTestID(1), test.day, test.payload))
-			experience.Verify = &unified.ExperienceVerification{Money: money}
+			experience.Verify = &unified.OccurrencePredicate{Money: money}
 			if test.orTime {
 				period := unified.Scope{Event: "Order Completed", Grain: "registered-message",
 					Start: at.AddDate(0, 0, -17), End: at}
-				experience.Verify = &unified.ExperienceVerification{Operator: state.OpOr,
-					Children: []unified.ExperienceVerification{*experience.Verify, {OccurredIn: &period}}}
+				experience.Verify = &unified.OccurrencePredicate{Operator: state.OpOr,
+					Children: []unified.OccurrencePredicate{*experience.Verify, {OccurredIn: &period}}}
 			}
 			result, err := store.UnifiedProfiles(t.Context(), root, unified.Bindings{}, at, unified.Page{Limit: 10})
 			if err != nil {

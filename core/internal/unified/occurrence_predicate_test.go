@@ -12,8 +12,8 @@ import (
 	"github.com/krenalis/krenalis/tools/errors"
 )
 
-// TestExperienceVerificationValidation protects the internal typed entry point.
-func TestExperienceVerificationValidation(t *testing.T) {
+// TestOccurrencePredicateValidation protects the internal typed entry point.
+func TestOccurrencePredicateValidation(t *testing.T) {
 	at := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
 	base := Scope{Event: "Order Completed", Grain: "registered-message", Start: at.Add(-24 * time.Hour), End: at}
 	period := Scope{Elapsed: &ElapsedPeriod{Older: time.Hour}}
@@ -21,21 +21,21 @@ func TestExperienceVerificationValidation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected recorded history resolved, got %v", err)
 	}
-	unsupported := ExperienceVerification{OccurredIn: &Scope{History: history}}
-	invalid := ExperienceVerification{Record: &state.WhereCondition{}}
+	unsupported := OccurrencePredicate{OccurredIn: &Scope{History: history}}
+	invalid := OccurrencePredicate{Record: &state.WhereCondition{}}
 	for _, test := range []struct {
 		name        string
-		body        *ExperienceVerification
+		body        *OccurrencePredicate
 		unsupported bool
 	}{
 		{"nil", nil, false},
-		{"empty", &ExperienceVerification{}, false},
-		{"mixed", &ExperienceVerification{OccurredIn: &period, Record: &state.WhereCondition{}}, false},
-		{"invalid group", &ExperienceVerification{Operator: -1, Children: []ExperienceVerification{{OccurredIn: &period}}}, false},
-		{"invalid period", &ExperienceVerification{OccurredIn: &Scope{Start: at, End: at.Add(-time.Hour)}}, false},
+		{"empty", &OccurrencePredicate{}, false},
+		{"mixed", &OccurrencePredicate{OccurredIn: &period, Record: &state.WhereCondition{}}, false},
+		{"invalid group", &OccurrencePredicate{Operator: -1, Children: []OccurrencePredicate{{OccurredIn: &period}}}, false},
+		{"invalid period", &OccurrencePredicate{OccurredIn: &Scope{Start: at, End: at.Add(-time.Hour)}}, false},
 		{"full history", &unsupported, true},
-		{"unsupported before invalid", &ExperienceVerification{Children: []ExperienceVerification{unsupported, invalid}}, false},
-		{"invalid before unsupported", &ExperienceVerification{Children: []ExperienceVerification{invalid, unsupported}}, false},
+		{"unsupported before invalid", &OccurrencePredicate{Children: []OccurrencePredicate{unsupported, invalid}}, false},
+		{"invalid before unsupported", &OccurrencePredicate{Children: []OccurrencePredicate{invalid, unsupported}}, false},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			root := &Rule{Experience: &Experience{Scope: base, Verify: test.body}}
@@ -51,12 +51,12 @@ func TestExperienceVerificationValidation(t *testing.T) {
 		})
 	}
 	for _, test := range []struct{ depth, size int }{{1, 100}, {1, 101}, {2, 1}, {3, 1}} {
-		body := &ExperienceVerification{Children: make([]ExperienceVerification, test.size)}
+		body := &OccurrencePredicate{Children: make([]OccurrencePredicate, test.size)}
 		for i := range body.Children {
-			body.Children[i] = ExperienceVerification{OccurredIn: &period}
+			body.Children[i] = OccurrencePredicate{OccurredIn: &period}
 		}
 		for depth := 1; depth < test.depth; depth++ {
-			body = &ExperienceVerification{Children: []ExperienceVerification{*body}}
+			body = &OccurrencePredicate{Children: []OccurrencePredicate{*body}}
 		}
 		err := Validate(&Rule{Experience: &Experience{Scope: base, Verify: body}}, at, Page{Limit: 1})
 		invalid := test.depth == 3 || test.size == 101

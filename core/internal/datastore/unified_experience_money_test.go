@@ -105,7 +105,7 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,tim
 				Where: &state.Where{Operator: state.OpAnd, Rules: []state.WhereRule{
 					&state.WhereCondition{Property: []string{"properties", "q"}, Operator: state.OpIs,
 						Values: []any{json.Value(`"yes"`)}},
-				}}, Verify: &unified.ExperienceVerification{Money: &unified.Money{
+				}}, Verify: &unified.OccurrencePredicate{Money: &unified.Money{
 					Field: field, NativeCurrency: "EUR", Test: unified.SumTest{Operator: unified.GreaterOrEqual,
 						Value: decimal.MustParse("100")}}}}
 			result, err := store.UnifiedProfiles(t.Context(), &unified.Rule{Experience: experience},
@@ -134,7 +134,7 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,tim
 	money := &unified.Money{Field: field, NativeCurrency: "EUR",
 		Test: unified.SumTest{Operator: unified.GreaterOrEqual, Value: decimal.MustParse("100")}}
 	experience := &unified.Experience{Scope: unified.Scope{Event: "Order Completed", Grain: "registered-message",
-		Start: at.AddDate(0, -1, 0), End: at}, Verify: &unified.ExperienceVerification{Money: money}}
+		Start: at.AddDate(0, -1, 0), End: at}, Verify: &unified.OccurrencePredicate{Money: money}}
 	root := &unified.Rule{Experience: experience}
 	var profiles, events []string
 	var want []unified.Truth
@@ -196,8 +196,8 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,tim
 			{state.OpOr, "Order Completed", unified.Match},
 			{state.OpAnd, "Other", unified.NoMatch},
 		} {
-			experience.Verify = &unified.ExperienceVerification{Operator: test.operator,
-				Children: []unified.ExperienceVerification{
+			experience.Verify = &unified.OccurrencePredicate{Operator: test.operator,
+				Children: []unified.OccurrencePredicate{
 					{Money: money},
 					{Record: &state.WhereCondition{Property: []string{"event"}, Operator: state.OpIs,
 						Values: []any{test.event}}},
@@ -213,7 +213,7 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,tim
 			truths[len(truths)-1] = unified.NoMatch
 			assertUnifiedTruths(t, result, truths)
 		}
-		experience.Verify = &unified.ExperienceVerification{Money: money}
+		experience.Verify = &unified.OccurrencePredicate{Money: money}
 	})
 
 	t.Run("selection before currency", func(t *testing.T) {

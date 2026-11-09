@@ -109,8 +109,8 @@ func TestMoneyValidation(t *testing.T) {
 	// A repeated leaf remains unavailable even under OR and must not be split.
 	money := &Money{Field: field, NativeCurrency: "EUR",
 		Test: SumTest{Operator: GreaterOrEqual, Value: decimal.MustParse("100")}}
-	body := &ExperienceVerification{Operator: state.OpOr,
-		Children: []ExperienceVerification{{Money: money}, {Money: money}}}
+	body := &OccurrencePredicate{Operator: state.OpOr,
+		Children: []OccurrencePredicate{{Money: money}, {Money: money}}}
 	err = body.validateDependencies(nil, nil)
 	if err != nil {
 		if _, unsupported := errors.AsType[*UnsupportedError](err); !unsupported {

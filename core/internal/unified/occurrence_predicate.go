@@ -13,18 +13,18 @@ import (
 	"github.com/krenalis/krenalis/warehouses"
 )
 
-// ExperienceVerification is a closed body owned by the selected occurrence.
+// OccurrencePredicate is a closed body owned by the selected occurrence.
 // A node is a Record, timestamp, money predicate or an AND/OR group.
 // It cannot introduce another scope or facts shared across occurrences.
-type ExperienceVerification struct {
+type OccurrencePredicate struct {
 	Record     *state.WhereCondition
 	OccurredIn *Scope
 	Money      *Money
 	Operator   state.WhereLogical
-	Children   []ExperienceVerification
+	Children   []OccurrencePredicate
 }
 
-func (v *ExperienceVerification) prepare(at time.Time, source SourceBinding) (warehouses.RowQualification, error) {
+func (v *OccurrencePredicate) prepare(at time.Time, source SourceBinding) (warehouses.RowQualification, error) {
 	if v.Record != nil {
 		expr, err := source.Record(&state.Where{Operator: state.OpAnd, Rules: []state.WhereRule{v.Record}})
 		if err != nil {
@@ -62,7 +62,7 @@ func (v *ExperienceVerification) prepare(at time.Time, source SourceBinding) (wa
 	return group, nil
 }
 
-func (v *ExperienceVerification) validate(at time.Time, scope Scope, depth int, nodes *int) error {
+func (v *OccurrencePredicate) validate(at time.Time, scope Scope, depth int, nodes *int) error {
 	if v == nil {
 		return fmt.Errorf("experience requires verify")
 	}
@@ -113,8 +113,8 @@ func (v *ExperienceVerification) validate(at time.Time, scope Scope, depth int, 
 }
 
 // validateDependencies runs only after body validation, including its budgets.
-func (v *ExperienceVerification) validateDependencies(where *state.Where, currency *NativeCurrency) error {
-	stack := []*ExperienceVerification{v}
+func (v *OccurrencePredicate) validateDependencies(where *state.Where, currency *NativeCurrency) error {
+	stack := []*OccurrencePredicate{v}
 	var field *MonetaryField
 	count := 0
 	var records []state.WhereRule

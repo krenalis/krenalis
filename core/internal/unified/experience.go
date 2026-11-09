@@ -24,7 +24,7 @@ type Experience struct {
 	Scope    Scope
 	Where    *state.Where
 	Currency *NativeCurrency
-	Verify   *ExperienceVerification
+	Verify   *OccurrencePredicate
 }
 
 func (experience *Experience) prepare(at time.Time, source SourceBinding) (warehouses.FilterCondition, error) {

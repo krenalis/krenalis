@@ -24,7 +24,7 @@ func TestExperienceNth(t *testing.T) {
 	} {
 		experience := &Experience{First: test.first, Nth: test.position,
 			Scope: Scope{Event: "Order Completed", Grain: "registered-message", Start: at.Add(-time.Hour), End: at},
-			Verify: &ExperienceVerification{Record: &state.WhereCondition{Property: []string{"event"},
+			Verify: &OccurrencePredicate{Record: &state.WhereCondition{Property: []string{"event"},
 				Operator: state.OpExists}}}
 		root := &Rule{Experience: experience}
 		err := Validate(root, at, Page{Limit: 1})

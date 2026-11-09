@@ -225,7 +225,7 @@ func (this *Workspace) ExplainProfileFilter(ctx context.Context, kpid string, fi
 }
 
 // explainMoneyPredicates retains each monetary leaf and its normalized test.
-func explainMoneyPredicates(verify *unified.ExperienceVerification, path []int) ([]ProfileMoneyExplanation, error) {
+func explainMoneyPredicates(verify *unified.OccurrencePredicate, path []int) ([]ProfileMoneyExplanation, error) {
 	if verify == nil {
 		return nil, nil
 	}
@@ -261,7 +261,7 @@ func explainMoneyPredicates(verify *unified.ExperienceVerification, path []int) 
 }
 
 // explainOccurrencePeriods attaches resolved windows to their input positions.
-func explainOccurrencePeriods(verify *unified.ExperienceVerification, at time.Time, path []int) ([]ProfileOccurredInExplanation, error) {
+func explainOccurrencePeriods(verify *unified.OccurrencePredicate, at time.Time, path []int) ([]ProfileOccurredInExplanation, error) {
 	if verify == nil {
 		return nil, nil
 	}
