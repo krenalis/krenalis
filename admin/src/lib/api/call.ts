@@ -3,6 +3,58 @@ import JSONbig from 'json-bigint';
 import * as Sentry from '@sentry/react';
 import { scrubURL } from '../telemetry/scrubURL';
 
+interface QueuedRequest {
+	url: string;
+	request: RequestInit;
+	resolve: (response: Response) => void;
+	reject: (error: unknown) => void;
+}
+
+const requestQueue: QueuedRequest[] = [];
+let isProcessingQueue = false;
+let syncToken: string | null = null;
+
+// processQueue sends queued requests in order. Each request uses the
+// latest Sync-Token, which is updated from 200 response headers before
+// starting the next request. Fetch errors reject the affected request
+// without stopping the queue.
+const processQueue = async () => {
+	if (isProcessingQueue) {
+		return;
+	}
+	isProcessingQueue = true;
+
+	while (requestQueue.length > 0) {
+		const pending = requestQueue.shift()!;
+		try {
+			const headers = new Headers(pending.request.headers);
+			if (syncToken != null) {
+				headers.set('Sync-Token', syncToken);
+			}
+			pending.request.headers = headers;
+			const response = await fetch(pending.url, pending.request);
+			if (response.status === 200) {
+				const token = response.headers.get('Sync-Token');
+				if (token != null) {
+					syncToken = token;
+				}
+			}
+			pending.resolve(response);
+		} catch (error) {
+			pending.reject(error);
+		}
+	}
+
+	isProcessingQueue = false;
+};
+
+const enqueueRequest = (url: string, request: RequestInit): Promise<Response> => {
+	return new Promise((resolve, reject) => {
+		requestQueue.push({ url, request, resolve, reject });
+		processQueue();
+	});
+};
+
 const call = async (url: string, method: string, workspaceID?: string | null, body?: any, opt?: any) => {
 	let headers = {
 		'Content-Type': 'application/json',
@@ -26,7 +78,7 @@ const call = async (url: string, method: string, workspaceID?: string | null, bo
 
 	let res: Response;
 	try {
-		res = await fetch(url, request);
+		res = await enqueueRequest(url, request);
 	} catch (err) {
 		if (err.name === 'AbortError') {
 			throw err;
