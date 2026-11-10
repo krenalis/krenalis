@@ -6,6 +6,7 @@ package core
 
 import (
 	"bytes"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -205,7 +206,7 @@ func TestFilterLatestNValidation(t *testing.T) {
 			if err != nil {
 				t.Fatalf("expected structurally decoded size %s, got %v", test.size, err)
 			}
-			_, err = prepareFilterLatestN(&modified, nil)
+			rule, err := prepareFilterLatestN(&modified, nil)
 			if err != nil {
 				if _, unsupported := errors.AsType[*unified.UnsupportedError](err); unsupported || !test.invalid {
 					t.Fatalf("expected invalid=%v for size %s, got %v", test.invalid, test.size, err)
@@ -214,6 +215,9 @@ func TestFilterLatestNValidation(t *testing.T) {
 			}
 			if test.invalid {
 				t.Fatalf("expected invalid size %s, got success", test.size)
+			}
+			if rule.LatestN == nil || strconv.Itoa(rule.LatestN.Size) != test.size {
+				t.Fatalf("expected prepared size %s, got %+v", test.size, rule.LatestN)
 			}
 		})
 	}
