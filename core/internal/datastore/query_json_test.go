@@ -5,9 +5,13 @@
 package datastore
 
 import (
+	"context"
 	"fmt"
+	"math"
+	"math/big"
 	"os"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -17,6 +21,7 @@ import (
 	"github.com/krenalis/krenalis/test/snowflaketester"
 	"github.com/krenalis/krenalis/test/testimages"
 	"github.com/krenalis/krenalis/test/warehouseexpr"
+	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
@@ -288,6 +293,58 @@ func TestJSONFilters(t *testing.T) {
 					t.Fatalf("expected stored fixture ID %s, got %s", data[i][0], record.id)
 				}
 			}
+			if name == "Snowflake" {
+
+				// DOUBLE comparisons use canonical text, not the scanner's display.
+				// Every numeric fixture repeats one scalar in these known containers.
+				raw := warehouse.(interface {
+					RawQuery(context.Context, string) (warehouses.Rows, int, error)
+				})
+				rows, _, err := raw.RawQuery(t.Context(), `SELECT "_KPID",AS_DOUBLE("VALUE") FROM `+
+					`"KRENALIS_PROFILES_0" WHERE TYPEOF("VALUE")='DOUBLE'`)
+				if err != nil {
+					t.Fatalf("expected native numeric fixture query, got %v", err)
+				}
+				defer rows.Close()
+
+				for rows.Next() {
+					var id string
+					var number float64
+					err = rows.Scan(&id, &number)
+					if err != nil {
+						t.Fatalf("expected native numeric fixture scan, got %v", err)
+					}
+					index := slices.IndexFunc(storedRecords, func(r record) bool { return r.id == id })
+					if index < 0 || index >= len(rawValues) {
+						t.Fatalf("expected scalar numeric fixture ID, got %s", id)
+					}
+					value := json.Value(strconv.FormatFloat(number, 'g', -1, 64))
+					document, err := json.Marshal(map[string]any{
+						"a": map[string]any{"b": value}, "a.b": value,
+						"quoted'key": map[string]any{"back\\slash": value}, "0": value,
+					})
+					if err != nil {
+						t.Fatalf("expected canonical numeric document, got %v", err)
+					}
+					attributes := storedRecords[index].attributes
+					attributes["value"], attributes["document"] = value, document
+					attributes["array"], attributes["map"] = []any{value}, map[string]any{"key": value}
+					attributes["object"] = map[string]any{"value": value}
+					attributes["containers"] = map[string]any{
+						"json": value, "array": attributes["array"], "map": attributes["map"],
+					}
+				}
+
+				err = rows.Err()
+				closeErr := rows.Close()
+				if err != nil {
+					t.Fatalf("expected complete native numeric fixtures, got %v", err)
+				}
+				if closeErr != nil {
+					t.Fatalf("expected native numeric fixture close, got %v", closeErr)
+				}
+
+			}
 
 			type queryCase struct {
 				name  string
@@ -401,6 +458,123 @@ func TestJSONFilters(t *testing.T) {
 		})
 	}
 
+}
+
+// TestJSONFloatFilters compares canonical Float JSON and exact operands on both
+// warehouses without relying on the warehouse's potentially rounded JSON text.
+func TestJSONFloatFilters(t *testing.T) {
+	for _, name := range []string{"PostgreSQL", "Snowflake"} {
+		t.Run(name, func(t *testing.T) {
+
+			warehouse := newJSONFilterTestWarehouse(t, name)
+			idColumn := warehouses.Column{Name: "id", Type: types.Int(32)}
+			valueColumn := warehouses.Column{Name: "value", Type: types.JSON()}
+			documentColumn := warehouses.Column{Name: "document", Type: types.JSON()}
+			table := warehouses.Table{Name: "json_floats", Keys: []string{"id"},
+				Columns: []warehouses.Column{idColumn, valueColumn, documentColumn}}
+			switch name {
+			case "PostgreSQL":
+				execUnifiedFixture(t, warehouse, `CREATE TABLE json_floats (id integer PRIMARY KEY,value jsonb,document jsonb)`)
+			case "Snowflake":
+				execUnifiedFixture(t, warehouse, `CREATE TABLE "JSON_FLOATS" ("ID" INTEGER,"VALUE" VARIANT,"DOCUMENT" VARIANT)`)
+			default:
+				t.Fatalf("expected supported warehouse, got %s", name)
+			}
+			var data [][]any
+			for i, fixture := range []struct {
+				value any
+				typ   types.Type
+			}{
+				{float64(0), types.Float(64)}, {math.Copysign(0, -1), types.Float(64)},
+				{float64(100), types.Float(64)}, {decimal.MustParse("100"), types.Decimal(18, 4)},
+				{float64(1234567.1), types.Float(64)}, {float64(-1234567.1), types.Float(64)},
+				{float64(12345678.9), types.Float(64)}, {float64(0.00001), types.Float(64)},
+				{float64(0.000015), types.Float(64)}, {float64(float32(1234567.1)), types.Float(32)},
+				{math.Nextafter(1234567.1, math.Inf(1)), types.Float(64)},
+				{float64(0.30000000000000004), types.Float(64)},
+			} {
+				value, err := types.Marshal(fixture.value, fixture.typ)
+				if err != nil {
+					t.Fatalf("expected numeric fixture serialization, got %v", err)
+				}
+				data = append(data, []any{i, value, json.Value(`{"score":` + string(value) + `}`)})
+			}
+			err := warehouse.Merge(t.Context(), table, data, nil)
+			if err != nil {
+				t.Fatalf("expected numeric fixture merge, got %v", err)
+			}
+
+			var expressions []warehouses.Expr
+			var expected []int
+			var descriptions []string
+			for _, record := range data {
+				id := record[0].(int)
+				value := record[1].(json.Value)
+				number, ok := new(big.Rat).SetString(string(value))
+				if !ok {
+					t.Fatalf("expected decimal fixture, got %s", value)
+				}
+				// A finer operand must not be rounded back to this stored Float.
+				step, _ := new(big.Rat).SetString("1e-20")
+				after := json.Value(new(big.Rat).Add(number, step).FloatString(20))
+				attributes := map[string]any{"value": value, "document": record[2]}
+				for _, literal := range []json.Value{value, after} {
+					operand, err := state.DecodeFilterOperand(literal, types.JSON(), state.OpIs)
+					if err != nil {
+						t.Fatalf("expected exact numeric operand, got %v", err)
+					}
+					for _, op := range []state.WhereOperator{state.OpIs, state.OpIsNot, state.OpIsLessThan,
+						state.OpIsLessThanOrEqualTo, state.OpIsGreaterThan, state.OpIsGreaterThanOrEqualTo,
+						state.OpIsBetween, state.OpIsNotBetween, state.OpIsOneOf, state.OpIsNotOneOf} {
+						for _, path := range [][]string{{"value"}, {"document", "score"}} {
+							values := []any{operand}
+							if op == state.OpIsBetween || op == state.OpIsNotBetween {
+								values = append(values, operand)
+							}
+							where := &state.Where{Operator: state.OpAnd, Rules: []state.WhereRule{
+								&state.WhereCondition{Property: path, Operator: op, Values: values},
+							}}
+							expr, err := convertWhere(where, map[string]warehouses.Column{
+								"value": valueColumn, "document": documentColumn,
+							})
+							if err != nil {
+								t.Fatalf("expected numeric binding, got %v", err)
+							}
+							expressions = append(expressions, warehouses.NewMultiExpr(warehouses.OpAnd, []warehouses.Expr{
+								warehouses.NewBaseExpr(idColumn, warehouses.OpIs, id), expr,
+							}))
+							want := 0
+							if filters.Applies(where, attributes) {
+								want = 1
+							}
+							expected = append(expected, want)
+							descriptions = append(descriptions, fmt.Sprintf("%d/%s/%s/%s", id, strings.Join(path, "/"), op, literal))
+						}
+					}
+				}
+			}
+			const batchSize = 32
+			for start := 0; start < len(expressions); start += batchSize {
+				end := min(start+batchSize, len(expressions))
+				counts, err := warehouse.Counts(t.Context(), table.Name, expressions[start:end])
+				if err != nil {
+					t.Fatalf("expected numeric filter batch, got %v", err)
+				}
+				if len(counts) != end-start {
+					t.Fatalf("expected %d numeric counts, got %d", end-start, len(counts))
+				}
+				for i, count := range counts {
+					index := start + i
+					t.Run(descriptions[index], func(t *testing.T) {
+						if count != expected[index] {
+							t.Fatalf("expected %d matching records, got %d", expected[index], count)
+						}
+					})
+				}
+			}
+
+		})
+	}
 }
 
 // newJSONFilterTestWarehouse creates one environment for all JSON filter tests.

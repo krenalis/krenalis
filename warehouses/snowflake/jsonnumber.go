@@ -6,6 +6,7 @@ package snowflake
 
 import (
 	"fmt"
+	"math"
 	"math/big"
 	"strconv"
 	"strings"
@@ -13,16 +14,31 @@ import (
 	"github.com/krenalis/krenalis/tools/decimal"
 )
 
-// jsonDoubleBounds encloses an exact decimal between adjacent binary64 values.
+// jsonDoubleBounds encloses an exact decimal between the shortest round-trip
+// decimals of adjacent binary64 values; equal bounds denote an exact match.
 // Prepared operands are finite and within the global decimal operand limits.
 func jsonDoubleBounds(number decimal.Decimal) (float64, float64) {
 	value, ok := new(big.Rat).SetString(number.String())
 	if !ok {
 		panic("warehouses/snowflake: invalid prepared decimal operand")
 	}
-	lower, _ := new(big.Float).SetPrec(53).SetMode(big.ToNegativeInf).SetRat(value).Float64()
-	upper, _ := new(big.Float).SetPrec(53).SetMode(big.ToPositiveInf).SetRat(value).Float64()
-	return lower, upper
+	// Canonical decimals round back to their own DOUBLE, so the nearest value
+	// and at most one neighbor bracket the exact operand in the decimal reading.
+	bound, _ := value.Float64()
+	canonical, ok := new(big.Rat).SetString(strconv.FormatFloat(bound, 'g', -1, 64))
+	if !ok {
+		panic("warehouses/snowflake: invalid canonical DOUBLE operand")
+	}
+	switch canonical.Cmp(value) {
+	case -1:
+		return bound, math.Nextafter(bound, math.Inf(1))
+	case 0:
+		return bound, bound
+	case 1:
+		return math.Nextafter(bound, math.Inf(-1)), bound
+	default:
+		panic("warehouses/snowflake: unexpected canonical DOUBLE comparison")
+	}
 }
 
 // jsonNumberApplicability admits fixed-point and finite binary values only.
@@ -114,8 +130,8 @@ func renderJSONFixedComparison(b *strings.Builder, value, operator string, numbe
 
 }
 
-// renderJSONNumberComparison compares the stored numeric value, preserving
-// fixed-point digits and the exact binary value of DOUBLEs separately.
+// renderJSONNumberComparison preserves fixed-point digits and interprets
+// DOUBLEs as their shortest round-trip decimal, without rounding the operand.
 func renderJSONNumberComparison(b *strings.Builder, value, operator string, number decimal.Decimal) {
 	fmt.Fprintf(b, "CASE WHEN TYPEOF(%s)='DOUBLE' THEN ", value)
 	renderJSONDoubleComparison(b, value, operator, number)

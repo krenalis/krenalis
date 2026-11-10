@@ -10,6 +10,7 @@ import (
 	"math"
 	"math/big"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -19,11 +20,13 @@ import (
 	"github.com/krenalis/krenalis/warehouses"
 )
 
-// TestJSONDoubleBounds checks exact enclosure and adjacency without using
-// floating-point decimal comparisons as its oracle.
+// TestJSONDoubleBounds checks canonical decimal enclosure and adjacency
+// without using floating-point decimal comparisons as its oracle.
 func TestJSONDoubleBounds(t *testing.T) {
 	for _, text := range []string{"0", "-0", "100", "1.25", "0.1", "-0.1", "1e-37", "-1e-37", "1e75",
-		"100.00000000000001", "99999999999999.9999", "-99999999999999.9999",
+		"100.00000000000001", "100.00000000000000001", "-100.00000000000000001",
+		"1234567.1", "12345678.9", "0.00001", "0.000015", "0.30000000000000004",
+		"99999999999999.9999", "-99999999999999.9999",
 		"123456789012345678901234567890123456789", strings.Repeat("9", 76),
 		"-" + strings.Repeat("9", 39) + "." + strings.Repeat("8", 37)} {
 		t.Run(text, func(t *testing.T) {
@@ -32,7 +35,8 @@ func TestJSONDoubleBounds(t *testing.T) {
 				t.Fatalf("expected exact fixture, got %s", text)
 			}
 			lower, upper := jsonDoubleBounds(decimal.MustParse(text))
-			lo, hi := new(big.Rat).SetFloat64(lower), new(big.Rat).SetFloat64(upper)
+			lo, _ := new(big.Rat).SetString(strconv.FormatFloat(lower, 'g', -1, 64))
+			hi, _ := new(big.Rat).SetString(strconv.FormatFloat(upper, 'g', -1, 64))
 			if lo == nil || hi == nil || lo.Cmp(value) > 0 || hi.Cmp(value) < 0 {
 				t.Fatalf("expected enclosing finite bounds for %s, got %.17g and %.17g", text, lower, upper)
 			}
@@ -48,8 +52,8 @@ func TestJSONDoubleBounds(t *testing.T) {
 }
 
 // TestJSONNumbers compares the real renderer with exact rational arithmetic on
-// the stored value. DOUBLEs are read through the driver's binary transport;
-// their rounded JSON display text is deliberately not the oracle.
+// the stored value. DOUBLEs use their shortest round-trip decimal, derived
+// from binary transport rather than the rounded JSON display text.
 func TestJSONNumbers(t *testing.T) {
 
 	warehouse, db := newTestSnowflakeWarehouse(t)
@@ -63,6 +67,8 @@ func TestJSONNumbers(t *testing.T) {
 	}}
 	inputs := []string{"", "null", `"100"`, "false", "{}", "[]", "0", "-0.0000", "100", "100.0", "1E2",
 		"1.1", "1.1E0", "1.25E0", "1.0000000000000001E2", "1.00000000000000001E2", "-1.1E0",
+		"1.2345671e+06", "1.23456789e+07", "1e-05", "1.5e-05",
+		"0.30000000000000004", "3.0000000000000004E-1",
 		"1E-310", "1E75", "9.99999999999999375E13", "-9.99999999999999375E13", "100.00001",
 		"1.7976931348623157E308", "-1.7976931348623157E308",
 		"99999999999999.9999", "-99999999999999.9999", "0.0000000000000000000000000000000000001",
@@ -99,6 +105,8 @@ TO_VARIANT(TO_DOUBLE('%s')),ARRAY_CONSTRUCT(TO_VARIANT(TO_DOUBLE('%s')))`, id, s
 	var query strings.Builder
 	query.WriteString(`SELECT "ID",TYPEOF("VALUE"),TO_JSON("VALUE"),AS_DOUBLE("VALUE")`)
 	for _, literal := range []string{"0", "-1", "0.1", "-0.1", "1.25", "100", "100.00000000000001",
+		"100.00000000000000001", "100.00000000000000002", "1234567.1", "12345678.9",
+		"0.00001", "0.000015", "0.30000000000000004",
 		"99999999999999.9999", "-99999999999999.9999", "1e-37", "1e75", strings.Repeat("9", 76),
 		"123456789012345678901234567890123456789", "123456789012345678901234567890123456788",
 		"-123456789012345678901234567890123456789", "12345678901234567890123456789012345678.9",
@@ -175,7 +183,9 @@ TO_VARIANT(TO_DOUBLE('%s')),ARRAY_CONSTRUCT(TO_VARIANT(TO_DOUBLE('%s')))`, id, s
 			if !double.Valid {
 				t.Fatal("expected binary floating-point transport, got NULL")
 			}
-			value = new(big.Rat).SetFloat64(double.Float64)
+			if !math.IsNaN(double.Float64) && !math.IsInf(double.Float64, 0) {
+				value, _ = new(big.Rat).SetString(strconv.FormatFloat(double.Float64, 'g', -1, 64))
+			}
 			if value == nil && id < jsonFixtureCount {
 				t.Fatalf("expected finite numeric fixture, got %g", double.Float64)
 			}

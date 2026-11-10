@@ -694,9 +694,10 @@ establishes the three deferred infrastructure guarantees.
 
 The numeric bootstrap now has repeatable real-database regressions:
 
-- `snowflake.TestJSONNumbers` batches 7,956 comparisons against a rational
-  oracle over stored fixed-point values and binary DOUBLE transport. It covers
-  scalar tests, membership, intervals and array containment with 76/37 operands.
+- `snowflake.TestJSONNumbers` batches comparisons against a rational oracle
+  over stored fixed-point values and canonical shortest round-trip decimals
+  derived from native DOUBLE transport. It covers scalar tests, membership,
+  intervals and array containment with 76/37 operands.
   Native VARIANT NaN and infinities are not JSON numbers: typed numeric equality
   and membership return false, their negatives true, and ordered/interval tests
   return SQL NULL. Array containment does not match those elements. Ordinary
@@ -713,7 +714,10 @@ The numeric bootstrap now has repeatable real-database regressions:
   closed; remote bootstrap uses an isolated Go overlay of that constant only.
 - The existing Snowflake `TestJSONExpressions` scalar, nested-path and numeric
   representation cases pass with the corrected renderer. Numeric display text
-  is tested as display text, not presumed equal to the stored binary value.
+  is tested as display text, not presumed equal to the canonical DOUBLE decimal.
+- `datastore.TestJSONFloatFilters` compares canonical Float32/64 JSON and exact
+  finer operands on both warehouses, through real writes, Record binding and
+  batched counts. It uses the original JSON as the Go applicability oracle.
 
 These checks passed remotely on 2026-11-10. Isolated mutations restoring the old
 money reader, using DOUBLE display text, or restoring the 38-digit comparison
@@ -721,6 +725,17 @@ were each detected by the new remote tests. This verifies the numeric correction
 not the complete checklist: full service/API/MCP, remaining source/time/selection
 fixtures and failure/resource coverage still need remote verification before
 activation. The shared test fixtures assume coherent publication and attribution.
+
+Record DOUBLE reading now follows the user-approved canonical decimal contract:
+`strconv.FormatFloat(d, 'g', -1, 64)`, with exact 76/37 operands. The governed
+money reading remains binary-exact on the Decimal(18,4) grid. For example, a
+DOUBLE from `1.1E0` is 1.1 in Record and unknown as a governed amount. Krenalis
+Decimal values that lost digits in scientific-notation writes are not recovered
+in general. The writer is unchanged. Snowflake's returned JSON can also lose
+DOUBLE digits; fixing that exposure remains separate work before claiming
+agreement between filter decisions and displayed values. Local mutations
+restoring binary bounds or rounding operands are rejected by
+`TestJSONDoubleBounds`. These changes do not open the verification gate.
 
 Membership cost remains a scale-check item. The 100-rule limit is not a bound
 on the number of operands in one Record membership condition. An isolated Go

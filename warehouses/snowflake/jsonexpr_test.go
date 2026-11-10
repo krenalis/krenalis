@@ -403,7 +403,7 @@ func TestJSONExpressions(t *testing.T) {
 			}
 			original := json.Value(fixture.raw)
 			storedOperand := json.Value(string(stored))
-			// The scanner's JSON is display text, not the exact DOUBLE value.
+			// The scanner's JSON can lose digits from the canonical DOUBLE text.
 			var binary float64
 			row := db.QueryRowContext(t.Context(), `SELECT AS_DOUBLE("VALUE") FROM `+
 				quoteIdent(table.Name)+` WHERE "ID"=`+strconv.Itoa(id))
@@ -411,7 +411,7 @@ func TestJSONExpressions(t *testing.T) {
 			if err != nil {
 				t.Fatalf("expected exact binary fixture transport, got %v", err)
 			}
-			exact := new(big.Rat).SetFloat64(binary)
+			exact, _ := new(big.Rat).SetString(strconv.FormatFloat(binary, 'g', -1, 64))
 			if exact == nil {
 				t.Fatalf("expected finite stored fixture, got %g", binary)
 			}
