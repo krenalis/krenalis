@@ -97,7 +97,7 @@ An unexpected situation is one that callers or invariants rule out, such as an i
 
 ## Tests
 
-Before adding a test function, look for an existing test with a suitable purpose, setup, and assertions. Prefer adding cases there when they fit without complicating its structure. Use a separate test when adding them there would obscure its purpose or require unrelated setup or branches.
+Prefer adding a case to an existing test with the same purpose when it fits without changing the test's logic; otherwise write a new test.
 
 Failure messages take the form `expected ..., got ...`.
 
