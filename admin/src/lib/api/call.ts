@@ -35,9 +35,10 @@ const processQueue = async () => {
 			const response = await fetch(pending.url, pending.request);
 			if (response.status === 200) {
 				const token = response.headers.get('Sync-Token');
-				if (token != null) {
-					syncToken = token;
+				if (token == null) {
+					throw new Error('response is missing the Sync-Token header');
 				}
+				syncToken = token;
 			}
 			pending.resolve(response);
 		} catch (error) {
