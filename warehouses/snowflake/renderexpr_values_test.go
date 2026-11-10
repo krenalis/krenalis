@@ -31,7 +31,7 @@ func TestArrayValueRendering(t *testing.T) {
 		{"string", types.String(), "foo", `COLLATE(AS_VARCHAR(krenalis_json_element), 'utf8') = 'foo'`},
 		{"int64", types.Int(64), 9223372036854775807, `COLLATE(AS_VARCHAR(krenalis_json_element), 'utf8') = '9223372036854775807'`},
 		{"uint64", types.Int(64).Unsigned(), uint(18446744073709551615), `COLLATE(AS_VARCHAR(krenalis_json_element), 'utf8') = '18446744073709551615'`},
-		{"decimal", types.Decimal(18, 4), decimal.MustParse("1.25"), `TRY_TO_DECFLOAT(TO_JSON(krenalis_json_element)) = TO_DECFLOAT('125e-2')`},
+		{"decimal", types.Decimal(18, 4), decimal.MustParse("1.25"), `CASE WHEN TYPEOF(krenalis_json_element)='DOUBLE' THEN AS_DOUBLE(krenalis_json_element) = TO_DOUBLE('1.25') ELSE CASE WHEN LEFT(TO_JSON(krenalis_json_element),1)='-' THEN FALSE ELSE COLLATE(SPLIT_PART(LTRIM(TO_JSON(krenalis_json_element),'-'),'.',1)||'.'||RTRIM(SPLIT_PART(LTRIM(TO_JSON(krenalis_json_element),'-'),'.',2),'0'),'utf8') = '1.25' END END`},
 		{"float32", types.Float(32), float64(float32(1.2345678)), `TO_DOUBLE(krenalis_element) = 1.2345678`},
 		{"datetime", types.DateTime(), instant, `CONVERT_TIMEZONE('UTC', TO_TIMESTAMP_TZ(AS_VARCHAR(krenalis_element)))::TIMESTAMP_NTZ = '2026-10-20 10:00:00'`},
 		{"date", types.Date(), instant, `TO_DATE(AS_VARCHAR(krenalis_element)) = '2026-10-20'`},

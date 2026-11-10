@@ -16,17 +16,6 @@ import (
 	"github.com/krenalis/krenalis/warehouses"
 )
 
-const maxJSONNumberPrecision = 38 // maximum significant digits in JSON numbers
-
-// jsonNumberParts returns the significant digits and decimal magnitude of a
-// nonzero number within the expression operand limits.
-func jsonNumberParts(number decimal.Decimal) (string, int) {
-	_, scale := number.PrecisionScale()
-	text := strings.TrimPrefix(fmt.Sprintf("%.*f", scale, number), "-")
-	digits := strings.TrimLeft(strings.ReplaceAll(text, ".", ""), "0")
-	return strings.TrimRight(digits, "0"), len(digits) - scale
-}
-
 // renderExpr renders the expression expr returning a fragment of a query
 // representing a boolean expression.
 func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
@@ -528,21 +517,9 @@ func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr) error {
 				texts = append(texts, literal.String())
 			case json.Number:
 				number, _ := operand.Decimal(0, 0) // Validated above.
-				if number.Sign() == 0 {
-					numbers = append(numbers, "TO_DECFLOAT('0')")
-					continue
-				}
-				coefficient, magnitude := jsonNumberParts(number)
-				if len(coefficient) > maxJSONNumberPrecision {
-					// A stored JSON number cannot equal a more precise operand.
-					continue
-				}
-				sign := ""
-				if number.Sign() < 0 {
-					sign = "-"
-				}
-				numbers = append(numbers, "TO_DECFLOAT('"+sign+coefficient+"e"+
-					strconv.Itoa(magnitude-len(coefficient))+"')")
+				var comparison strings.Builder
+				renderJSONNumberComparison(&comparison, target, "=", number)
+				numbers = append(numbers, "("+comparison.String()+")")
 			case json.True, json.False:
 				booleans = append(booleans, strings.ToUpper(string(operand)))
 			case json.Null:
@@ -561,8 +538,8 @@ func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr) error {
 				target, target, strings.Join(texts, ", "))
 		}
 		if len(numbers) > 0 {
-			fmt.Fprintf(b, " WHEN (IS_DECIMAL(%s) OR IS_DOUBLE(%s)) THEN TRY_TO_DECFLOAT(TO_JSON(%s)) IN (%s)",
-				target, target, target, strings.Join(numbers, ", "))
+			fmt.Fprintf(b, " WHEN (IS_DECIMAL(%s) OR IS_DOUBLE(%s)) THEN (%s)",
+				target, target, strings.Join(numbers, " OR "))
 		}
 		if len(booleans) > 0 {
 			fmt.Fprintf(b, " WHEN AS_BOOLEAN(%s) IS NOT NULL THEN AS_BOOLEAN(%s) IN (%s)",
@@ -624,49 +601,6 @@ func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr) error {
 	}
 
 	return nil
-}
-
-// renderJSONNumberComparison compares JSON numbers with decimal operands,
-// preserving exact ordering beyond Snowflake's numeric precision.
-func renderJSONNumberComparison(b *strings.Builder, value, operator string, number decimal.Decimal) {
-	if number.Sign() == 0 {
-		fmt.Fprintf(b, "TRY_TO_DECFLOAT(TO_JSON(%s)) %s TO_DECFLOAT('0')", value, operator)
-		return
-	}
-	coefficient, magnitude := jsonNumberParts(number)
-	// Stored JSON numbers have at most 38 significant digits. If an operand
-	// has a nonzero remainder beyond that precision, no stored number can lie
-	// strictly between the operand and its truncation to 38 significant digits.
-	// Equality with the operand is therefore impossible. Ordering comparisons
-	// use the truncated bound, adjusting whether it is inclusive based on the
-	// sign of the discarded remainder.
-	if len(coefficient) > maxJSONNumberPrecision {
-		if operator == "=" {
-			b.WriteString("FALSE")
-			return
-		}
-		switch operator {
-		case "<", "<=":
-			operator = "<"
-			if number.Sign() > 0 {
-				operator = "<="
-			}
-		case ">", ">=":
-			operator = ">"
-			if number.Sign() < 0 {
-				operator = ">="
-			}
-		default:
-			panic(fmt.Sprintf("warehouses/snowflake: unexpected comparison operator %q", operator))
-		}
-		coefficient = coefficient[:maxJSONNumberPrecision]
-	}
-	sign := ""
-	if number.Sign() < 0 {
-		sign = "-"
-	}
-	fmt.Fprintf(b, "TRY_TO_DECFLOAT(TO_JSON(%s)) %s TO_DECFLOAT('%s%se%d')",
-		value, operator, sign, coefficient, magnitude-len(coefficient))
 }
 
 // serializeValue serializes v with type t into b.

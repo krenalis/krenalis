@@ -180,6 +180,17 @@ rounding, implicit USD, non-negative sign or finite domain for unknown historica
 amounts is inferred. Currency uses the same verbatim known-String contract as
 Count. An unknown amount certainly in another currency contributes zero.
 
+The reading concerns the numeric value stored in the queryable dataset, not
+its display text or the original producer's JSON spelling. On Snowflake,
+INTEGER/DECIMAL values retain their fixed-point digits; a DOUBLE is readable
+only if its exact binary value lies on the scale-four grid within the monetary
+domain. Thus stored DOUBLE 100 and 1.25 are readable, while a binary
+approximation of 1.1 is not. This preserves meaning revision 1 without rounding.
+Precision lost before registration cannot be recovered by the filter. In
+particular, externally written scientific JSON numbers can already have been
+rounded by Snowflake. Collector-normalized Decimal(18,4) amounts require their
+own writer/readback tests; the catalog does not certify historical payloads.
+
 The execution subset has four ordered comparisons and one exact signed literal
 within the existing global precision 76/scale 37 limits, bounded lexically to
 4096 bytes. Sum equality/difference/intervals are explicitly
@@ -633,6 +644,77 @@ common runtime fixtures must pass before changing that gate. PostgreSQL writer
 round-trips are verified by the fixture above; Snowflake writer/CSV round-trips
 remain unverified. Snowflake activation also requires
 resolving the declared ordinary-text collation and Float/NaN questions.
+
+### Consolidated Snowflake verification campaign
+
+The following is the common acceptance checklist for the currently implemented
+subset, not a claim of remote conformance. Run physical probes before deciding
+how fixtures are represented; keep their semantic expectations unchanged. Any
+irreversible representation difference or normative ambiguity must be reported
+before activating the affected capability.
+
+Use the existing snowflaketester environment variables and temporary schemas in
+the supplied test database. Credentials are not test fixtures or commit inputs.
+Keep sessions and object names isolated from application/demo data; explicitly
+set test TIMEZONE and TIMESTAMP_TYPE_MAPPING and bound statement duration.
+Do not change account, warehouse or resource-monitor configuration as part of
+this campaign.
+
+| Block | Required remote checks |
+| --- | --- |
+| Physical numbers | Inspect stored VARIANT kinds and values for 100, 100.0, 1E2, fractional exponents, scale-four borders, opposite +/-M, exact integers above 2^53, numbers beyond 38 digits, missing and JSON null. Verify monetary readings, exact 76/37 operands, Decimal(19,4) subtraction and overflow; never replace an exact expectation with a rounded value. |
+| Record compatibility | Reuse warehouseexpr.ValueCases and JSONCases for all 26 operators: operands, JSON modes, literal key segments, state/negative tests, ordinary and JSON strings/collation, numeric precision, temporal values and supported arrays. Probe Float/NaN explicitly. |
+| Real writes | Run the existing merge/event-writer paths before reading through the driver. Check CSV/staging, JSON Number spellings, null versus missing, nested payloads, arrays, large integers and exact decimals. Distinguish faithfully reading stored data from preserving the ingested JSON value. |
+| Count and population | Track, named/unnamed page/screen, empty population and history, profile preservation, true/false/unknown membership, all Count terminals, Kleene minimum, independent-uncertainty fixtures and explicit shared-fact rejection. |
+| Monetary V | Sum, Average, money predicates and governed currency: known/unknown/foreign currency, independent where, positive/negative/unknown amounts, guards, empty input, requested/normalized thresholds, none/all modes and source conflicts. |
+| Selected experiences | First/Last/Nth, Latest N All/Some/Cardinality and LastVersusPrevious: shortage, optional memberships, ties, jointly compatible selections, shared currency conditioning, no fallback, window ROWS frames and LAG with missing extrema. Include the fixed incompatibility counterexamples and N=10 with eleven messages. |
+| Time | One T and UTC results; absolute, elapsed, ago-band, calendar and registered-history periods; exact half-open borders, timezone/DST changes, timestamp(9)/(6)/(3) storage and parameter precision. Session settings must not silently change the query's meaning. |
+| Identity and source | Deduplicate equivalent message copies without merging distinct identities; check relevant qualification, profile, period, timestamp, readability and amount conflicts. Preserve excluded-identity exemptions and explanation isolation from faults on other profiles. |
+| Protocol and service | Execute the actual Go service/datastore/warehouse/scanner/decoder path, then HTTP/MCP. Compare profile membership, all ternary totals, empty pages, deterministic ordering, projections, mixed explanations with six/seven/eight/nine columns and bounded payloads. Count occurrences and count profiles remain distinct. |
+| Failures and resources | Cancellation, timeout, execution/scan/iteration/close failures, malformed or oversized results and controlled numeric conversions. Require complete exact results or technical errors, with no semantic UNKNOWN or partial-success fallback. Check cleanup and a small scale smoke test without claiming a production benchmark. |
+
+Each block must identify the command, fixture coverage and actual remote result.
+Source examples are TestUnifiedProfiles/Source/ProfileRecord/Pages, the monetary
+and experience test files, TestUnifiedWriters and TestProfilesMCP. Existing
+PostgreSQL-only setup and DML need adaptation; changing the backend name alone
+is not a conformance test. Keep shared inputs and expectations where possible,
+with backend-specific fixture encoding confined to test setup.
+
+The full completion oracles remain on PostgreSQL. Snowflake runs the same
+discriminating fixtures and a reproducible bounded sample, batching profiles and
+checks to avoid thousands of separate explanation queries. Verify every SQL
+branch and metadata shape; do not reduce coverage merely to obtain a green run.
+
+The existing single production gate remains closed during bootstrap. A test-only
+build may exercise the real path without exposing a runtime bypass. Opening the
+gate requires passing this checklist for the admitted subset, resolving observed
+differences and retaining a reduced repeatable remote regression suite. A split
+gate or weaker semantic contract would be a separate decision. None of this
+establishes the three deferred infrastructure guarantees.
+
+The numeric bootstrap now has repeatable real-database regressions:
+
+- `snowflake.TestJSONNumbers` batches 6,528 comparisons against a rational
+  oracle over stored fixed-point values and binary DOUBLE transport. It covers
+  scalar tests, membership, intervals and array containment with 76/37 operands.
+- `snowflake.TestProfileExactDecimal` checks Merge/readback, scale-four borders,
+  exact and inexact DOUBLEs, display-text loss and non-finite values.
+- `datastore.TestUnifiedStoredNumbersPostgreSQL/Snowflake` uses the same event
+  writes, six profiles and expected outcomes for Count, Sum, Average, money,
+  LastVersusPrevious and their composition. It checks each profile's explanation,
+  empty pages with totals, identical message copies and canceled operations.
+  The Snowflake case deliberately skips in a normal build while the gate is
+  closed; remote bootstrap uses an isolated Go overlay of that constant only.
+- The existing Snowflake `TestJSONExpressions` scalar, nested-path and numeric
+  representation cases pass with the corrected renderer. Numeric display text
+  is tested as display text, not presumed equal to the stored binary value.
+
+These checks passed remotely on 2026-11-10. Isolated mutations restoring the old
+money reader, using DOUBLE display text, or restoring the 38-digit comparison
+were each detected by the new remote tests. This verifies the numeric correction,
+not the complete checklist: full service/API/MCP, remaining source/time/selection
+fixtures and failure/resource coverage still need remote verification before
+activation. The shared test fixtures assume coherent publication and attribution.
 
 Example targeted commands, with Docker available and dependencies vendored:
 

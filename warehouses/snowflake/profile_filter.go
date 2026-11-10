@@ -79,7 +79,14 @@ func profileExactDecimal(reading warehouses.DecimalReading) (string, error) {
 		target = "GET(" + target + ", " + literal.String() + ")"
 	}
 	number := "TRY_TO_DECIMAL(TO_VARCHAR(" + target + "),18,4)"
-	return "CASE WHEN IS_DECIMAL(" + target + ") THEN CASE WHEN " +
+	double := "AS_DOUBLE(" + target + ")"
+	inRange := "ABS(" + double + ")<100000000000000"
+	scaled := "(IFF(" + inRange + "," + double + ",0)*16)"
+	// A binary value is on the scale-four grid exactly when it is a multiple
+	// of 1/16. Bound every cast independently of CASE evaluation order.
+	return "CASE WHEN TYPEOF(" + target + ")='DOUBLE' THEN CASE WHEN " + inRange +
+		" AND " + scaled + "=TRUNC(" + scaled + ") THEN CAST(CAST(" + scaled +
+		" AS NUMBER(16,0))*0.0625 AS NUMBER(18,4)) END WHEN IS_DECIMAL(" + target + ") THEN CASE WHEN " +
 		target + "=TO_VARIANT(" + number + ") THEN " + number + " END END", nil
 }
 

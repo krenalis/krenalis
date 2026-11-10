@@ -28,7 +28,7 @@ type MonetaryField struct {
 }
 
 // ResolveMonetaryField resolves the Order Completed reported total, revision 1.
-// Known values are JSON Numbers exactly representable as Decimal(18,4).
+// Known values are stored JSON Numbers exactly representable as Decimal(18,4).
 func ResolveMonetaryField(definition, revision string) (*MonetaryField, error) {
 	if definition != "commerce.order_completed.total" || revision != "1" {
 		return nil, fmt.Errorf("unresolved monetary field meaning revision")

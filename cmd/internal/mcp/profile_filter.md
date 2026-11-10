@@ -390,6 +390,12 @@ can yield UNKNOWN at >=30. With 35 EUR plus a known 20 of unknown currency, the
 reachable extrema are 35 and 55, so >=30 is MATCH. Conflicting copies, execution
 overflow and exhausted resources fail the complete operation, never yield UNKNOWN.
 
+This concerns the stored numeric value. Precision already lost during ingestion
+cannot be recovered by the filter; the reading itself never rounds. In
+particular, externally written scientific JSON numbers may have been changed
+by Snowflake before registration. Do not infer a historical data guarantee
+from the event catalog.
+
 Sum explanations add `sum` with the same `start`, `end`, `unboundedStart`, and
 `history` names and omission rules as Count, plus `field`, `nativeCurrency` and
 `bounds:{lower,upper}`. They always include `certain` and `uncertain`, even

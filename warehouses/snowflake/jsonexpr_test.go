@@ -7,6 +7,7 @@ package snowflake
 import (
 	"database/sql"
 	"fmt"
+	"math/big"
 	"slices"
 	"strconv"
 	"strings"
@@ -19,98 +20,48 @@ import (
 	"github.com/krenalis/krenalis/warehouses"
 )
 
-// TestJSONDecimalRendering checks numeric literals and comparison bounds.
+// TestJSONDecimalRendering checks that every numeric operand remains available
+// to the exact fixed-point comparison, including membership and arrays.
 func TestJSONDecimalRendering(t *testing.T) {
-
 	for _, test := range []struct {
 		number  decimal.Decimal
-		literal string // empty when the operand needs more than 38 significant digits
+		literal string
 	}{
-		{decimal.Decimal{}, "0"},
-		{decimal.New(0, decimal.MaxScale), "0"},
-		{decimal.MustParse("1000"), "1e3"},
-		{decimal.New(12300, 4), "123e-2"},
-		{decimal.MustParse("-0.0012300"), "-123e-5"},
-		{decimal.New(10, 38), "1e-37"},
-		{decimal.MustParse("1" + strings.Repeat("0", 38)), "1e38"},
-		{decimal.MustParse("1." + strings.Repeat("0", 38)), "1e0"},
-		{decimal.MustParse("1e75"), "1e75"},
-		{decimal.MustParse(strings.Repeat("9", 38)), strings.Repeat("9", 38) + "e0"},
-		{decimal.MustParse(strings.Repeat("9", 39)), ""},
-		{decimal.MustParse("-" + strings.Repeat("9", 39)), ""},
-		{decimal.MustParse(strings.Repeat("9", 76)), ""},
-		{decimal.MustParse("-" + strings.Repeat("9", 39) + "." + strings.Repeat("8", 37)), ""},
+		{decimal.Decimal{}, "0."},
+		{decimal.New(0, decimal.MaxScale), "0."},
+		{decimal.MustParse("1000"), "1000."},
+		{decimal.New(12300, 4), "1.23"},
+		{decimal.MustParse("-0.0012300"), "0.00123"},
+		{decimal.New(10, 38), "0." + strings.Repeat("0", 36) + "1"},
+		{decimal.MustParse("1" + strings.Repeat("0", 38)), "1" + strings.Repeat("0", 38) + "."},
+		{decimal.MustParse("1." + strings.Repeat("0", 38)), "1."},
+		{decimal.MustParse("1e75"), "1" + strings.Repeat("0", 75) + "."},
+		{decimal.MustParse(strings.Repeat("9", 38)), strings.Repeat("9", 38) + "."},
+		{decimal.MustParse(strings.Repeat("9", 39)), strings.Repeat("9", 39) + "."},
+		{decimal.MustParse("-" + strings.Repeat("9", 39)), strings.Repeat("9", 39) + "."},
+		{decimal.MustParse(strings.Repeat("9", 76)), strings.Repeat("9", 76) + "."},
+		{decimal.MustParse("-" + strings.Repeat("9", 39) + "." + strings.Repeat("8", 37)), strings.Repeat("9", 39) + "." + strings.Repeat("8", 37)},
 	} {
-		for _, op := range []warehouses.Operator{warehouses.OpIs, warehouses.OpIsOneOf, warehouses.OpContains} {
+		for _, op := range []warehouses.Operator{warehouses.OpIs, warehouses.OpIsOneOf, warehouses.OpContains,
+			warehouses.OpIsLessThan, warehouses.OpIsGreaterThanOrEqualTo} {
 			t.Run(fmt.Sprintf("%d/%s", op, test.number), func(t *testing.T) {
 				column := warehouses.Column{Name: "value", Type: types.JSON()}
-				target := `"VALUE"`
 				if op == warehouses.OpContains {
 					column.Type = types.Array(types.JSON())
-					target = "krenalis_json_element"
 				}
-				operand := warehouseexpr.Number(test.number)
 				var b strings.Builder
-				err := renderExpr(&b, newJSONFilterExpr(column, op, operand))
+				err := renderExpr(&b, newJSONFilterExpr(column, op, warehouseexpr.Number(test.number)))
 				if err != nil {
 					t.Fatalf("expected valid numeric expression, got %v", err)
 				}
 				query := b.String()
-				want := "TRY_TO_DECFLOAT(TO_JSON(" + target + ")) = TO_DECFLOAT('" + test.literal + "')"
-				if op == warehouses.OpIsOneOf {
-					want = "TRY_TO_DECFLOAT(TO_JSON(" + target + ")) IN (TO_DECFLOAT('" + test.literal + "'))"
-				}
-				if test.literal == "" {
-					if strings.Contains(query, "TO_DECFLOAT(") {
-						t.Fatalf("expected no numeric conversion for an inexact equality operand, got %s", query)
-					}
-					want = "WHEN (IS_DECIMAL(" + target + ") OR IS_DOUBLE(" + target + ")) THEN FALSE"
-					if op == warehouses.OpIsOneOf {
-						want = `CASE WHEN "VALUE" IS NOT NULL THEN COALESCE(FALSE, FALSE) ELSE NULL END`
-						if query != want {
-							t.Fatalf("expected SQL %s, got %s", want, query)
-						}
-						return
-					}
-				}
-				if !strings.Contains(query, want) {
-					t.Fatalf("expected numeric SQL containing %s, got %s", want, query)
+				if strings.Contains(query, "DECFLOAT") || !strings.Contains(query, "TYPEOF(") ||
+					!strings.Contains(query, "COLLATE(") || !strings.Contains(query, "'"+test.literal+"'") {
+					t.Fatalf("expected exact numeric SQL retaining %s, got %s", test.literal, query)
 				}
 			})
 		}
 	}
-
-	for _, test := range []struct {
-		number     string
-		operator   warehouses.Operator
-		comparison string
-	}{
-		{"12345678901234567890123456789012345678.9", warehouses.OpIsLessThan, "<= TO_DECFLOAT('12345678901234567890123456789012345678e0')"},
-		{"12345678901234567890123456789012345678.9", warehouses.OpIsLessThanOrEqualTo, "<= TO_DECFLOAT('12345678901234567890123456789012345678e0')"},
-		{"12345678901234567890123456789012345678.9", warehouses.OpIsGreaterThan, "> TO_DECFLOAT('12345678901234567890123456789012345678e0')"},
-		{"12345678901234567890123456789012345678.9", warehouses.OpIsGreaterThanOrEqualTo, "> TO_DECFLOAT('12345678901234567890123456789012345678e0')"},
-		{"-12345678901234567890123456789012345678.9", warehouses.OpIsLessThan, "< TO_DECFLOAT('-12345678901234567890123456789012345678e0')"},
-		{"-12345678901234567890123456789012345678.9", warehouses.OpIsLessThanOrEqualTo, "< TO_DECFLOAT('-12345678901234567890123456789012345678e0')"},
-		{"-12345678901234567890123456789012345678.9", warehouses.OpIsGreaterThan, ">= TO_DECFLOAT('-12345678901234567890123456789012345678e0')"},
-		{"-12345678901234567890123456789012345678.9", warehouses.OpIsGreaterThanOrEqualTo, ">= TO_DECFLOAT('-12345678901234567890123456789012345678e0')"},
-		{"99999999999999999999999999999999999999.9", warehouses.OpIsLessThan, "<= TO_DECFLOAT('99999999999999999999999999999999999999e0')"},
-		{"-99999999999999999999999999999999999999.9", warehouses.OpIsGreaterThan, ">= TO_DECFLOAT('-99999999999999999999999999999999999999e0')"},
-	} {
-		t.Run(fmt.Sprintf("%d/%s", test.operator, test.number), func(t *testing.T) {
-			column := warehouses.Column{Name: "value", Type: types.JSON()}
-			var b strings.Builder
-			err := renderExpr(&b, newJSONFilterExpr(column, test.operator, json.Value(test.number)))
-			if err != nil {
-				t.Fatalf("expected valid numeric expression, got %v", err)
-			}
-			want := `WHEN (IS_DECIMAL("VALUE") OR IS_DOUBLE("VALUE")) THEN TRY_TO_DECFLOAT(TO_JSON("VALUE")) ` +
-				test.comparison
-			if !strings.Contains(b.String(), want) {
-				t.Fatalf("expected numeric SQL containing %s, got %s", want, b.String())
-			}
-		})
-	}
-
 }
 
 // TestJSONExpressionErrors verifies that invalid JSON expressions are rejected.
@@ -452,7 +403,21 @@ func TestJSONExpressions(t *testing.T) {
 			}
 			original := json.Value(fixture.raw)
 			storedOperand := json.Value(string(stored))
-			changed := !number.Equal(originalNumber)
+			// The scanner's JSON is display text, not the exact DOUBLE value.
+			var binary float64
+			row := db.QueryRowContext(t.Context(), `SELECT AS_DOUBLE("VALUE") FROM `+
+				quoteIdent(table.Name)+` WHERE "ID"=`+strconv.Itoa(id))
+			err = row.Scan(&binary)
+			if err != nil {
+				t.Fatalf("expected exact binary fixture transport, got %v", err)
+			}
+			exact := new(big.Rat).SetFloat64(binary)
+			if exact == nil {
+				t.Fatalf("expected finite stored fixture, got %g", binary)
+			}
+			originalValue, _ := new(big.Rat).SetString(originalNumber.String())
+			displayValue, _ := new(big.Rat).SetString(number.String())
+			changed := exact.Cmp(originalValue) != 0
 			if changed != fixture.changed {
 				t.Fatalf("expected numeric storage change %t, got %t: %s became %s", fixture.changed, changed, fixture.raw, stored)
 			}
@@ -467,10 +432,10 @@ func TestJSONExpressions(t *testing.T) {
 				operand json.Value
 				matches bool
 			}{
-				{"stored equality", warehouses.OpIs, storedOperand, types.IsDecimal(number)},
+				{"display equality", warehouses.OpIs, storedOperand, types.IsDecimal(number) && exact.Cmp(displayValue) == 0},
 				{"original equality", warehouses.OpIs, original, types.IsDecimal(originalNumber) && !changed},
-				{"original less than", warehouses.OpIsLessThan, original, types.IsDecimal(originalNumber) && number.Less(originalNumber)},
-				{"original greater than", warehouses.OpIsGreaterThan, original, types.IsDecimal(originalNumber) && number.Greater(originalNumber)},
+				{"original less than", warehouses.OpIsLessThan, original, types.IsDecimal(originalNumber) && exact.Cmp(originalValue) < 0},
+				{"original greater than", warehouses.OpIsGreaterThan, original, types.IsDecimal(originalNumber) && exact.Cmp(originalValue) > 0},
 				{"less than upper bound", warehouses.OpIsLessThan, json.Value(fixture.upper), true},
 				{"greater than lower bound", warehouses.OpIsGreaterThan, json.Value(fixture.lower), true},
 			} {
