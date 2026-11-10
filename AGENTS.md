@@ -196,7 +196,9 @@ In a parenthesized `var` or `const` group whose members lack individual comments
 
 An unexported package-level constant or group in a `_test.go` file may omit its comment when names and context make its fixture role and meaning clear. Never add a comment merely saying tests use it, but keep one that conveys non-obvious semantics, constraints, relationships, or reasons for values.
 
-Document all and only the errors callers can identify and handle without inspecting the message. Exception: a `core` method does not document the `errors.BadRequestError` it returns for invalid arguments, which callers propagate; state non-obvious argument requirements instead, and document it only when callers must distinguish it from other errors.
+State a precondition, whose violation is an unexpected situation, as a requirement, as in "n must not be negative", preferably at the end of the comment.
+
+Document all and only the errors callers can identify and handle without inspecting the message, and those returned for a checked condition other than a precondition. Exception: a `core` method does not document the `errors.BadRequestError` it returns for invalid arguments, which callers propagate; state non-obvious argument requirements instead, and document it only when callers must distinguish it from other errors.
 
 A short same-line comment on a package-level variable or constant starts lowercase or with a number, has no period, and uses semicolons between phrases.
 
