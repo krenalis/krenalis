@@ -539,7 +539,7 @@ func (this *Organization) CreateWorkspace(ctx context.Context, name string, prof
 	// Initialize the data warehouse.
 	err = this.core.datastore.Initialize(ctx, this.organization.ID, warehouse.Platform, settings, profileSchema.Schema)
 	if err != nil {
-		if err, ok := err.(*datastore.UnavailableError); ok {
+		if err, ok := err.(*datastore.WarehouseError); ok {
 			return "", errors.Unavailable("%s", err)
 		}
 		return "", err
@@ -1563,7 +1563,7 @@ func (this *Organization) validateWorkspaceCreation(ctx context.Context, name st
 		if err, ok := err.(*warehouses.SettingsError); ok {
 			return nil, errors.Unprocessable(InvalidWarehouseSettings, "data warehouse settings are not valid: %w", err.Err)
 		}
-		if err, ok := err.(*datastore.UnavailableError); ok {
+		if err, ok := err.(*datastore.WarehouseError); ok {
 			return nil, errors.Unavailable("%s", err)
 		}
 		return nil, err
@@ -1575,7 +1575,7 @@ func (this *Organization) validateWorkspaceCreation(ctx context.Context, name st
 		if err, ok := err.(*warehouses.NonInitializableError); ok {
 			return nil, errors.Unprocessable(WarehouseNotInitializable, "cannot initialize the data warehouse: %w", err.Err)
 		}
-		if err, ok := err.(*datastore.UnavailableError); ok {
+		if err, ok := err.(*datastore.WarehouseError); ok {
 			return nil, errors.Unavailable("%s", err)
 		}
 		return nil, err

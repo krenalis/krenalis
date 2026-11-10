@@ -74,7 +74,7 @@ func New(st *state.State) (*Datastore, error) {
 //
 // It returns a *warehouses.WarehouseSettingsError error if the settings are not
 // valid, a *warehouses.WarehouseNotInitializableError if the data warehouse is
-// not initializable, and *UnavailableError if an error occurred with the data
+// not initializable, and *WarehouseError if an error occurred with the data
 // warehouse.
 func (ds *Datastore) CanInitialize(ctx context.Context, organization, platform string, settings json.Value) error {
 	ds.mustBeOpen()
@@ -82,9 +82,9 @@ func (ds *Datastore) CanInitialize(ctx context.Context, organization, platform s
 	defer dw.Close()
 	err := dw.CanInitialize(ctx)
 	if err != nil {
-		return unavailableError(err)
+		return warehouseError(err)
 	}
-	return unavailableError(dw.Close())
+	return warehouseError(dw.Close())
 }
 
 // CheckMCPSettings checks that the MCP settings are valid, that is it checks
@@ -99,9 +99,9 @@ func (ds *Datastore) CheckMCPSettings(ctx context.Context, organization, platfor
 	defer dw.Close()
 	err := dw.CheckReadOnlyAccess(ctx)
 	if err != nil {
-		return unavailableError(err)
+		return warehouseError(err)
 	}
-	return unavailableError(dw.Close())
+	return warehouseError(dw.Close())
 }
 
 // Close closes the datastore. When Close is called, no other calls to
@@ -130,7 +130,7 @@ func (ds *Datastore) Close() {
 // organization is the ID of the organization performing the operation.
 //
 // It returns a SettingsError error if the settings are not valid, and a
-// *datastore.UnavailableError error if an error occurs with the data warehouse.
+// *datastore.WarehouseError error if an error occurs with the data warehouse.
 func (ds *Datastore) Initialize(ctx context.Context, organization, platform string, settings json.Value, profileSchema types.Type) error {
 	ds.mustBeOpen()
 	dw := warehouses.Registered(platform).New(newSettingsLoader(settings), dialer.DialWith(organization))
@@ -138,9 +138,9 @@ func (ds *Datastore) Initialize(ctx context.Context, organization, platform stri
 	profileColumns := util.PropertiesToColumns(profileSchema.Properties())
 	err := dw.Initialize(ctx, profileColumns)
 	if err != nil {
-		return unavailableError(err)
+		return warehouseError(err)
 	}
-	return unavailableError(dw.Close())
+	return warehouseError(dw.Close())
 }
 
 // Store returns the store for the workspace with the given ID.
@@ -169,11 +169,11 @@ func (ds *Datastore) ValidateWarehouseSettings(ctx context.Context, organization
 	defer dw.Close()
 	s, err := dw.ValidateSettings(ctx)
 	if err != nil {
-		return nil, unavailableError(err)
+		return nil, warehouseError(err)
 	}
 	err = dw.Close()
 	if err != nil {
-		return nil, unavailableError(err)
+		return nil, warehouseError(err)
 	}
 	return s, nil
 }

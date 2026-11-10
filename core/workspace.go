@@ -290,7 +290,7 @@ func (this *Workspace) Attributes(ctx context.Context, kpid string) (json.Value,
 		if err == datastore.ErrMaintenanceMode {
 			return nil, errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
 		}
-		if err, ok := err.(*datastore.UnavailableError); ok {
+		if err, ok := err.(*datastore.WarehouseError); ok {
 			return nil, errors.Unavailable("%s", err)
 		}
 		return nil, err
@@ -1012,7 +1012,7 @@ func (this *Workspace) Events(ctx context.Context, properties []string, filter *
 		if err == datastore.ErrMaintenanceMode {
 			return nil, errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
 		}
-		if err, ok := err.(*datastore.UnavailableError); ok {
+		if err, ok := err.(*datastore.WarehouseError); ok {
 			return nil, errors.Unavailable("%s", err)
 		}
 		return nil, err
@@ -1417,7 +1417,7 @@ func (this *Workspace) Profiles(ctx context.Context, properties []string, filter
 		if err == datastore.ErrMaintenanceMode {
 			return nil, types.Type{}, 0, errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
 		}
-		if err, ok := err.(*datastore.UnavailableError); ok {
+		if err, ok := err.(*datastore.WarehouseError); ok {
 			return nil, types.Type{}, 0, errors.Unavailable("%s", err)
 		}
 		return nil, types.Type{}, 0, err
@@ -1567,7 +1567,7 @@ func (this *Workspace) RepairWarehouse(ctx context.Context) error {
 	this.core.mustBeOpen()
 	err := this.store.Repair(ctx, this.workspace.ProfileSchema)
 	if err != nil {
-		if err, ok := (err).(*datastore.UnavailableError); ok {
+		if err, ok := (err).(*datastore.WarehouseError); ok {
 			return errors.Unavailable("%s", err)
 		}
 		return err
@@ -1707,7 +1707,7 @@ func (this *Workspace) TestWarehouseUpdate(ctx context.Context, settings, mcpSet
 			if err, ok := err.(*warehouses.SettingsNotReadOnly); ok {
 				return errors.Unprocessable(NotReadOnlyMCPSettings, "invalid MCP settings: %s", err)
 			}
-			if err, ok := err.(*datastore.UnavailableError); ok {
+			if err, ok := err.(*datastore.WarehouseError); ok {
 				return errors.Unavailable("%s", err)
 			}
 			return err
@@ -1715,7 +1715,7 @@ func (this *Workspace) TestWarehouseUpdate(ctx context.Context, settings, mcpSet
 	}
 	err = this.store.TestWarehouseUpdate(ctx, settings)
 	if err != nil {
-		if err, ok := err.(*datastore.UnavailableError); ok {
+		if err, ok := err.(*datastore.WarehouseError); ok {
 			return errors.Unavailable("%s", err)
 		}
 		if err == datastore.ErrDifferentWarehouse {
@@ -1896,7 +1896,7 @@ func (this *Workspace) UpdateWarehouse(ctx context.Context, mode WarehouseMode, 
 			if err, ok := err.(*warehouses.SettingsNotReadOnly); ok {
 				return errors.Unprocessable(NotReadOnlyMCPSettings, "invalid MCP settings: %s", err)
 			}
-			if err, ok := err.(*datastore.UnavailableError); ok {
+			if err, ok := err.(*datastore.WarehouseError); ok {
 				return errors.Unavailable("%s", err)
 			}
 			return err
@@ -1905,7 +1905,7 @@ func (this *Workspace) UpdateWarehouse(ctx context.Context, mode WarehouseMode, 
 
 	err = this.store.TestWarehouseUpdate(ctx, settings)
 	if err != nil {
-		if err, ok := err.(*datastore.UnavailableError); ok {
+		if err, ok := err.(*datastore.WarehouseError); ok {
 			return errors.Unavailable("%s", err)
 		}
 		if err == datastore.ErrDifferentWarehouse {
