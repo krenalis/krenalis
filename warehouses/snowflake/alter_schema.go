@@ -251,9 +251,6 @@ func typeToSnowflakeType(t types.Type) string {
 	case types.BooleanKind:
 		return "BOOLEAN"
 	case types.IntKind:
-		if t.Semantics() == types.YearSemantics {
-			return "NUMBER(4,0)"
-		}
 		if t.IsUnsigned() {
 			switch t.BitSize() {
 			case 8:

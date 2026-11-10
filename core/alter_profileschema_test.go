@@ -606,7 +606,7 @@ func Test_checkAllowedTypesProfileSchema(t *testing.T) {
 					ReadOptional: true,
 				},
 				{Name: "duration", Type: types.Float(64).Real().AsDuration(types.Second), ReadOptional: true},
-				{Name: "year", Type: types.Int(16).AsYear(), ReadOptional: true},
+				{Name: "year", Type: types.Int(16).WithIntRange(1, 9999).AsYear(), ReadOptional: true},
 				{Name: "shipping_address", Type: types.Object([]types.Property{
 					{Name: "street1", Type: types.String(), ReadOptional: true},
 					{Name: "street2", Type: types.String(), ReadOptional: true},
@@ -757,6 +757,13 @@ func Test_checkAllowedTypesProfileSchema(t *testing.T) {
 				{Name: "year", Type: types.Map(types.Int(16).Unsigned().AsYear()), ReadOptional: true},
 			}),
 			err: "profile schema properties with year semantics must have signed int(16) values",
+		},
+		{
+			name: "Year semantics without explicit range",
+			schema: types.Object([]types.Property{
+				{Name: "year", Type: types.Int(16).AsYear(), ReadOptional: true},
+			}),
+			err: "profile schema properties with year semantics must have range [1,9999]",
 		},
 		{
 			name: "Year semantics with restricted minimum",

@@ -170,12 +170,12 @@ test('Integer transformation examples respect ranges and language representation
 	}
 });
 
-test('Year integer ranges respect calendar and bit-size bounds', () => {
+test('Year integer ranges respect bit-size bounds', () => {
 	for (const bitSize of [8, 16, 64] as const) {
 		for (const unsigned of [false, true]) {
 			const type: IntType = { kind: 'int', bitSize, unsigned, semantics: 'year' };
-			const maximum = bitSize === 8 ? (unsigned ? 255 : 127) : 9999;
-			expect(getIntegerTypeRange(type)).toEqual([BigInt(1), BigInt(maximum)]);
+			const magnitude = BigInt(1) << BigInt(bitSize - (unsigned ? 0 : 1));
+			expect(getIntegerTypeRange(type)).toEqual([unsigned ? BigInt(0) : -magnitude, magnitude - BigInt(1)]);
 		}
 	}
 });

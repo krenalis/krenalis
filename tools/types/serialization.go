@@ -774,9 +774,6 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 				if err != nil {
 					return Type{}, errors.New("invalid value for minimum")
 				}
-				if semantics == YearSemantics && (min < MinYear || min > MaxYear) {
-					return Type{}, errors.New("minimum must be within the year range [1,9999]")
-				}
 				Max := maxUnsigned[t.size]
 				if min > Max {
 					return Type{}, errors.New("invalid value for minimum")
@@ -792,9 +789,6 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 				min, err := minimum.Int64()
 				if err != nil {
 					return Type{}, errors.New("invalid value for minimum")
-				}
-				if semantics == YearSemantics && (min < MinYear || min > MaxYear) {
-					return Type{}, errors.New("minimum must be within the year range [1,9999]")
 				}
 				Min, Max := minInt[t.size], maxInt[t.size]
 				if min < Min || min > Max {
@@ -852,9 +846,6 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 				if err != nil {
 					return Type{}, errors.New("invalid value for maximum")
 				}
-				if semantics == YearSemantics && (max < MinYear || max > MaxYear) {
-					return Type{}, errors.New("maximum must be within the year range [1,9999]")
-				}
 				Max := maxUnsigned[t.size]
 				if max > Max {
 					return Type{}, errors.New("invalid value for maximum")
@@ -882,9 +873,6 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 				max, err := maximum.Int64()
 				if err != nil {
 					return Type{}, errors.New("invalid value for maximum")
-				}
-				if semantics == YearSemantics && (max < MinYear || max > MaxYear) {
-					return Type{}, errors.New("maximum must be within the year range [1,9999]")
 				}
 				Min, Max := minInt[t.size], maxInt[t.size]
 				if max < Min || max > Max {

@@ -34,10 +34,11 @@ base release. See `.agents/skills/release-upgrade/SKILL.md`.
   `workspaces.profile_schema`, `workspaces.alter_profile_schema_schema`,
   types in `workspaces.alter_profile_schema_operations`, and
   `pipelines.in_schema` and `pipelines.out_schema`. Preserve all property
-  metadata and enclosing array, map, and object types. Omit `minimum` and
-  `maximum`: the semantics imply the `[1,9999]` range. This representation
-  keeps the existing Go and JSON values and the warehouse column types;
-  no warehouse DDL or record conversion is required.
+  metadata and enclosing array, map, and object types. Set `minimum: 1` and
+  `maximum: 9999` explicitly to preserve the existing range. This
+  representation keeps the existing Go and JSON values and remains
+  compatible with the existing warehouse column types; no warehouse DDL
+  or record conversion is required.
 - In `pipelines.filter`, recursively convert conditions on properties whose
   input type was `year`: `IsBefore` to `IsLessThan`, `IsOnOrBefore` to
   `IsLessThanOrEqualTo`, `IsAfter` to `IsGreaterThan`, and `IsOnOrAfter` to

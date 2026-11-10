@@ -175,12 +175,6 @@ func Test_TypeSemanticsConfigurationPanics(t *testing.T) {
 		{"year on string", func() { String().AsYear() }},
 		{"year on float", func() { Float(64).Real().AsYear() }},
 		{"year already has semantics", func() { Int(16).AsYear().AsYear() }},
-		{"year outside signed range", func() { Int(16).WithIntRange(-10, 0).AsYear() }},
-		{"year outside unsigned range", func() { Int(16).Unsigned().WithUnsignedRange(10000, 20000).AsYear() }},
-		{"year signed lower bound", func() { Int(16).AsYear().WithIntRange(0, 9999) }},
-		{"year signed upper bound", func() { Int(16).AsYear().WithIntRange(1, 10000) }},
-		{"year unsigned lower bound", func() { Int(16).Unsigned().AsYear().WithUnsignedRange(0, 9999) }},
-		{"year unsigned upper bound", func() { Int(16).Unsigned().AsYear().WithUnsignedRange(1, 10000) }},
 		{"email on boolean", func() { Boolean().AsEmail() }},
 		{"phone on boolean", func() { Boolean().AsPhone() }},
 		{"URL on boolean", func() { Boolean().AsURL() }},
@@ -348,16 +342,16 @@ func Test_TypeSemanticsEquality(t *testing.T) {
 		{"equal unit", Decimal(10, 2).AsMeasurement(Kilogram), Decimal(10, 2).AsMeasurement(Kilogram), true},
 		{"different unit", Decimal(10, 2).AsMeasurement(Kilogram), Decimal(10, 2).AsMeasurement(Gram), false},
 		{
-			"year lower bound clamped", Int(16).WithIntRange(-100, 2100).AsYear(),
-			Int(16).AsYear().WithIntRange(1, 2100), true,
+			"year lower bound preserved", Int(16).WithIntRange(-100, 2100).AsYear(),
+			Int(16).AsYear().WithIntRange(-100, 2100), true,
 		},
 		{
-			"year upper bound clamped", Int(64).WithIntRange(1900, 20000).AsYear(),
-			Int(64).AsYear().WithIntRange(1900, 9999), true,
+			"year upper bound preserved", Int(64).WithIntRange(1900, 20000).AsYear(),
+			Int(64).AsYear().WithIntRange(1900, 20000), true,
 		},
 		{
-			"unsigned year bounds clamped", Int(64).Unsigned().WithUnsignedRange(0, 20000).AsYear(),
-			Int(64).Unsigned().AsYear(), true,
+			"unsigned year bounds preserved", Int(64).Unsigned().WithUnsignedRange(0, 20000).AsYear(),
+			Int(64).Unsigned().AsYear().WithUnsignedRange(0, 20000), true,
 		},
 		{"nested semantics", Array(Map(String().AsEmail())), Array(Map(String().AsEmail())), true},
 		{"different nested semantics", Array(Map(String().AsEmail())), Array(Map(String().AsPhone())), false},
@@ -384,30 +378,6 @@ func Test_TypeSemanticsJSONErrors(t *testing.T) {
 	}{
 		{"removed year kind", `{"kind":"year"}`, `unknown type kind "year"`},
 		{"year on string", `{"kind":"string","semantics":"year"}`, "year semantics require an int type"},
-		{
-			"year outside range", `{"kind":"int","bitSize":16,"semantics":"year","minimum":10000}`,
-			"minimum must be within the year range [1,9999]",
-		},
-		{
-			"year lower bound", `{"kind":"int","bitSize":16,"semantics":"year","minimum":0}`,
-			"minimum must be within the year range [1,9999]",
-		},
-		{
-			"year upper bound", `{"kind":"int","bitSize":16,"semantics":"year","maximum":20000}`,
-			"maximum must be within the year range [1,9999]",
-		},
-		{
-			"year maximum below range", `{"kind":"int","bitSize":16,"semantics":"year","maximum":0}`,
-			"maximum must be within the year range [1,9999]",
-		},
-		{
-			"unsigned year lower bound", `{"kind":"int","bitSize":16,"semantics":"year","unsigned":true,"minimum":0}`,
-			"minimum must be within the year range [1,9999]",
-		},
-		{
-			"unsigned year upper bound", `{"kind":"int","bitSize":16,"semantics":"year","unsigned":true,"maximum":20000}`,
-			"maximum must be within the year range [1,9999]",
-		},
 		{
 			"year with unit", `{"kind":"int","bitSize":16,"semantics":"year","unit":"year"}`,
 			"unexpected 'unit' key for year semantics",
@@ -604,23 +574,31 @@ func Test_TypeSemanticsJSONRoundTrip(t *testing.T) {
 		},
 		{
 			"year minimum", Int(16).AsYear().WithIntRange(1900, 9999),
-			`{"kind":"int","semantics":"year","bitSize":16,"minimum":1900}`,
+			`{"kind":"int","semantics":"year","bitSize":16,"minimum":1900,"maximum":9999}`,
 		},
 		{
 			"year maximum", Int(64).AsYear().WithIntRange(1, 2100),
-			`{"kind":"int","semantics":"year","bitSize":64,"maximum":2100}`,
+			`{"kind":"int","semantics":"year","bitSize":64,"minimum":1,"maximum":2100}`,
 		},
 		{
 			"unsigned year minimum", Int(64).Unsigned().AsYear().WithUnsignedRange(1900, 9999),
-			`{"kind":"int","semantics":"year","bitSize":64,"unsigned":true,"minimum":1900}`,
+			`{"kind":"int","semantics":"year","bitSize":64,"unsigned":true,"minimum":1900,"maximum":9999}`,
 		},
 		{
 			"unsigned year maximum", Int(32).Unsigned().AsYear().WithUnsignedRange(1, 2100),
-			`{"kind":"int","semantics":"year","bitSize":32,"unsigned":true,"maximum":2100}`,
+			`{"kind":"int","semantics":"year","bitSize":32,"unsigned":true,"minimum":1,"maximum":2100}`,
 		},
 		{
 			"year range", Int(32).WithIntRange(1900, 2100).AsYear(),
 			`{"kind":"int","semantics":"year","bitSize":32,"minimum":1900,"maximum":2100}`,
+		},
+		{
+			"negative year", Int(16).WithIntRange(-100, 0).AsYear(),
+			`{"kind":"int","semantics":"year","bitSize":16,"minimum":-100,"maximum":0}`,
+		},
+		{
+			"large unsigned year", Int(64).Unsigned().WithUnsignedRange(10000, MaxUint64).AsYear(),
+			`{"kind":"int","semantics":"year","bitSize":64,"unsigned":true,"minimum":10000}`,
 		},
 		{"no semantics", String(), `{"kind":"string"}`},
 		{"email", String().AsEmail(), `{"kind":"string","semantics":"email"}`},

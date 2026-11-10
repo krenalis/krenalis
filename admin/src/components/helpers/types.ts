@@ -49,11 +49,6 @@ const DURATION_UNIT_OPTIONS = UNIT_OPTIONS.filter((option) => option.isDurationU
 function getIntegerTypeRange(type: IntType): [bigint, bigint] {
 	const one = BigInt(1);
 	const magnitude = one << BigInt(type.bitSize - (type.unsigned ? 0 : 1));
-	if (type.semantics === 'year') {
-		const maximum = magnitude - one;
-		const yearMaximum = BigInt(9999);
-		return [one, maximum < yearMaximum ? maximum : yearMaximum];
-	}
 	return type.unsigned ? [BigInt(0), magnitude - one] : [-magnitude, magnitude - one];
 }
 

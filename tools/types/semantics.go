@@ -277,9 +277,8 @@ func (t Type) AsURL() Type {
 	return t
 }
 
-// AsYear returns t with year semantics. It narrows t's range to
-// values in [1,9999]. It panics if t is not an int type, already has
-// semantics, or its range lies entirely outside [1,9999].
+// AsYear returns t with year semantics. It panics unless t is an int type
+// without semantics.
 func (t Type) AsYear() Type {
 	t, err := t.withSemantics(YearSemantics, nil)
 	if err != nil {
@@ -426,23 +425,6 @@ func (t Type) withSemantics(semantics Semantics, option any) (Type, error) {
 		}
 		if option != nil {
 			return Type{}, errors.New("year semantics do not accept an option")
-		}
-		if t.unsigned {
-			originalMin, originalMax := t.UnsignedRange()
-			min, max := max(originalMin, MinYear), min(originalMax, MaxYear)
-			if max < min {
-				return Type{}, errors.New("int range is entirely outside [1,9999]")
-			}
-			t.semantics = semantics
-			t = t.WithUnsignedRange(min, max)
-		} else {
-			originalMin, originalMax := t.IntRange()
-			min, max := max(originalMin, MinYear), min(originalMax, MaxYear)
-			if max < min {
-				return Type{}, errors.New("int range is entirely outside [1,9999]")
-			}
-			t.semantics = semantics
-			t = t.WithIntRange(min, max)
 		}
 	}
 	if (semantics == CountrySemantics || semantics == PhoneSemantics) && (t.p != 0 || t.s != 0 || t.vl != nil) {

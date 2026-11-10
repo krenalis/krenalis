@@ -274,11 +274,11 @@ func Test_Decode(t *testing.T) {
 			err:  newErrInvalidValue(`is out of range [-20, 20]: -25`, "Int8"),
 		},
 		{
-			data: `{"Int16_Year":0}`,
-			err:  newErrInvalidValue(`is out of range [1, 9999]: 0`, "Int16_Year"),
+			data: `{"Int16_Year":32768}`,
+			err:  newErrInvalidValue(`is out of range [-32768, 32767]: 32768`, "Int16_Year"),
 		},
 		{
-			typ:  Object([]Property{{Name: "Uint64", Type: Int(64).Unsigned().AsYear()}}),
+			typ:  Object([]Property{{Name: "Uint64", Type: Int(64).Unsigned().WithUnsignedRange(1, 9999).AsYear()}}),
 			data: `{"Uint64":"10000"}`,
 			err:  newErrInvalidValue(`is out of range [1, 9999]: 10000`, "Uint64"),
 		},
