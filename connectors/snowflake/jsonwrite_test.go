@@ -8,6 +8,8 @@ import (
 	"bytes"
 	"fmt"
 	"math/big"
+	"math/rand/v2"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -85,6 +87,72 @@ func TestPlainJSONNumberExact(t *testing.T) {
 			}
 		}
 	}
+}
+
+// TestPlainJSONNumberGenerated checks deterministic generated tokens with an
+// independent oracle that scales rationals until they become integers.
+func TestPlainJSONNumberGenerated(t *testing.T) {
+
+	random := rand.New(rand.NewPCG(4721, 987))
+	for trial := range 2048 {
+
+		text := "0"
+		if trial%4 != 0 {
+			text = strconv.Itoa(1 + random.IntN(9))
+			for range random.IntN(25) {
+				text += strconv.Itoa(random.IntN(10))
+			}
+		}
+		if digits := random.IntN(46); digits > 0 {
+			text += "." + strings.Repeat("0", random.IntN(16))
+			for range digits {
+				text += strconv.Itoa(random.IntN(10))
+			}
+			text += strings.Repeat("0", random.IntN(12))
+		}
+		if random.IntN(2) == 0 {
+			text = "-" + text
+		}
+		exponent := random.IntN(161) - 80
+		sign := "+"
+		if exponent < 0 {
+			sign, exponent = "-", -exponent
+		}
+		text += string("eE"[random.IntN(2)]) + sign + strings.Repeat("0", random.IntN(20)) + strconv.Itoa(exponent)
+		if !json.Valid([]byte(text)) {
+			t.Fatalf("expected valid JSON fixture, got %s", text)
+		}
+		value, ok := new(big.Rat).SetString(text)
+		if !ok {
+			t.Fatalf("expected rational fixture, got %s", text)
+		}
+
+		scaled := new(big.Rat).Set(value)
+		ten := big.NewRat(10, 1)
+		scale := 0
+		for !scaled.IsInt() && scale < 38 {
+			scaled.Mul(scaled, ten)
+			scale++
+		}
+		digits := len(new(big.Int).Abs(scaled.Num()).String())
+		fits := scaled.IsInt() && scale <= 37 && digits <= 38
+		plain := plainJSONNumber(text)
+		if (plain != nil) != fits {
+			t.Fatalf("expected representability %t for %s, got %q", fits, text, plain)
+		}
+		if plain == nil {
+			continue
+		}
+		got, ok := new(big.Rat).SetString(string(plain))
+		if !ok || got.Cmp(value) != 0 || len(plain) > 40 || !json.Valid(plain) || bytes.ContainsAny(plain, "eE+") {
+			t.Fatalf("expected exact bounded plain JSON number for %s, got %q", text, plain)
+		}
+		if again := plainJSONNumber(string(plain)); again != nil {
+			t.Fatalf("expected idempotent number %s, got %q", plain, again)
+		}
+
+	}
+
 }
 
 func TestPlainJSONNumbers(t *testing.T) {

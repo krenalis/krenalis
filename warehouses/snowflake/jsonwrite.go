@@ -125,7 +125,7 @@ func plainJSONNumbers(value json.Value) (json.Value, error) {
 	if !hasExponent {
 		return value, nil
 	}
-	decoder := json.NewDecoder(bytes.NewReader(value))
+	decoder := json.NewDecoder(bytes.NewBuffer(value))
 	var result json.Value
 	copied := 0
 	for {
