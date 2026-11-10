@@ -18,6 +18,7 @@ import (
 
 // LastPreviousCheck is a closed comparison of one field on Last and Previous.
 // Difference is Last minus Previous; Ratio has a positive Previous denominator.
+// Test must be zero for value checks; Upper must be zero outside Between.
 type LastPreviousCheck struct {
 	Kind LastPreviousCheckKind
 	Test SumTest
@@ -82,7 +83,8 @@ func (check LastPreviousCheck) validate() error {
 		}
 	case LastPreviousDifference, LastPreviousRatio:
 		if check.Test.Operator > Between || !types.IsDecimal(check.Test.Value) || !types.IsDecimal(check.Test.Upper) ||
-			check.Test.Operator == Between && check.Test.Upper.Less(check.Test.Value) {
+			check.Test.Operator == Between && check.Test.Upper.Less(check.Test.Value) ||
+			check.Test.Operator != Between && !check.Test.Upper.Equal(decimal.Decimal{}) {
 			return fmt.Errorf("invalid lastVersusPrevious comparison")
 		}
 	default:

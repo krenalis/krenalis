@@ -14,6 +14,51 @@ import (
 	"github.com/krenalis/krenalis/tools/errors"
 )
 
+// TestLastPreviousCheckValidation rejects unused bounds before admission.
+func TestLastPreviousCheckValidation(t *testing.T) {
+	for _, kind := range []LastPreviousCheckKind{LastPreviousDifference, LastPreviousRatio} {
+		for _, operator := range []Comparison{Equal, Different, Less, LessOrEqual, Greater, GreaterOrEqual} {
+			t.Run(fmt.Sprintf("kind=%d/operator=%d", kind, operator), func(t *testing.T) {
+				check := LastPreviousCheck{Kind: kind,
+					Test: SumTest{Operator: operator, Upper: decimal.MustParse("1")}}
+				err := check.Validate()
+				if err != nil {
+					if _, unsupported := errors.AsType[*UnsupportedError](err); unsupported {
+						t.Fatalf("expected invalid unused upper bound, got %v", err)
+					}
+				}
+				if err == nil {
+					t.Fatal("expected invalid unused upper bound, got success")
+				}
+				_, err = check.NormalizedTest()
+				if err != nil {
+					if _, unsupported := errors.AsType[*UnsupportedError](err); unsupported {
+						t.Fatalf("expected invalid bound before missing capability, got %v", err)
+					}
+					return
+				}
+				t.Fatal("expected invalid unused upper bound, got normalization")
+			})
+		}
+	}
+	for _, kind := range []LastPreviousCheckKind{LastPreviousDifference, LastPreviousRatio} {
+		check := LastPreviousCheck{Kind: kind,
+			Test: SumTest{Operator: Between, Upper: decimal.MustParse("1")}}
+		err := check.Validate()
+		if err != nil {
+			t.Fatalf("expected valid inclusive interval, got %v", err)
+		}
+		_, err = check.NormalizedTest()
+		if err != nil {
+			if _, unsupported := errors.AsType[*UnsupportedError](err); !unsupported {
+				t.Fatalf("expected unsupported valid interval, got %v", err)
+			}
+			continue
+		}
+		t.Fatal("expected unsupported interval, got normalization")
+	}
+}
+
 // TestLastPreviousNormalization preserves the exact inclusive delta domain.
 func TestLastPreviousNormalization(t *testing.T) {
 	for _, test := range []struct {

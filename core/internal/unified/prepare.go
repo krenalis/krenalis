@@ -26,7 +26,8 @@ type SourceBinding struct {
 	Record        func(*state.Where) (warehouses.Expr, error)
 }
 
-// Prepare specializes the supported Record, V and selected-experience forms.
+// Prepare specializes Record, Count, Sum, Average, First/Last/Nth, LatestN
+// and LastVersusPrevious into the supported warehouse filter subset.
 // It preserves every main-tree node and child order one to one.
 // It returns *UnsupportedError for valid-language forms outside this subset.
 // The supplied bindings already determine source meaning and evidence model;

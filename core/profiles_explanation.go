@@ -28,7 +28,8 @@ type ProfileFilterExplanation struct {
 }
 
 // ProfileRuleExplanation follows the input filter's group and rule order.
-// Kind identifies a logical group, Record, reduction or selected experience.
+// Kind is and, or, record, count, sum, average, experience, latestN or
+// lastVersusPrevious.
 // Result is MATCH, NO_MATCH or UNKNOWN.
 // Record results do not identify which operand caused a SQL NULL.
 type ProfileRuleExplanation struct {
