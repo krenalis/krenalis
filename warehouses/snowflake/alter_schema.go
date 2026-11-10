@@ -37,8 +37,13 @@ func (warehouse *Snowflake) AlterProfileSchema(ctx context.Context, opID string,
 	var operationErr *warehouses.OperationError
 	err = warehouse.alterProfileSchema(ctx, columns, operations)
 	if err != nil {
+		if ctx.Err() != nil {
+			err = fmt.Errorf("operation interrupted: %w", context.Cause(ctx))
+		}
 		operationErr = warehouses.NewOperationError(err)
 	}
+	ctx, cancel := withDelayedCancellation(ctx, finalizationGracePeriod)
+	defer cancel()
 	bo := backoff.New(200)
 	bo.SetCap(time.Second)
 	for bo.Next(ctx) {
@@ -70,7 +75,7 @@ func (warehouse *Snowflake) alterProfileSchema(ctx context.Context, columns []wa
 	// Execute the alter schema queries within a transaction.
 	err = warehouse.execTransaction(ctx, func(tx *sql.Tx) error {
 		for _, query := range queries {
-			_, err := tx.Exec(query)
+			_, err := tx.ExecContext(ctx, query)
 			if err != nil {
 				return snowflake(err)
 			}

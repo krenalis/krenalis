@@ -307,6 +307,11 @@ func (t Type) Currency() (string, bool) {
 	return currency, currency != ""
 }
 
+// HasSemantics reports whether t has semantics.
+func (t Type) HasSemantics() bool {
+	return t.semantics != NoSemantics
+}
+
 // Semantics returns the semantics of t, or NoSemantics if t has no semantics.
 func (t Type) Semantics() Semantics {
 	return t.semantics
@@ -334,14 +339,24 @@ func (t Type) WithCurrency(currency string) Type {
 	return t
 }
 
-// withSemantics returns t with the given semantics and option, or an error if
-// they are invalid or incompatible with t.
+// withSemantics checks that:
+//   - semantics is not NoSemantics
+//   - option is valid for the specified semantics, or nil if no options are
+//     supported
+//   - t does not already have semantics
+//   - t has no constraints if semantics is country or phone
+//   - t's kind supports the specified semantics and option
+//
+// If all checks pass, it returns t with the semantics and option applied.
+// Otherwise, it returns an invalid type and a descriptive error.
+//
+// t must not be an invalid type.
 func (t Type) withSemantics(semantics Semantics, option any) (Type, error) {
 
 	if semantics == NoSemantics {
 		return Type{}, errors.New("cannot apply NoSemantics to a type")
 	}
-	if t.semantics != NoSemantics {
+	if t.HasSemantics() {
 		return Type{}, errors.New("type already has semantics")
 	}
 

@@ -146,7 +146,7 @@ func (this *Workspace) PreviewAlterProfileSchema(ctx context.Context, schema typ
 	}
 	queries, err := this.store.PreviewAlterProfileSchema(ctx, schema, operations)
 	if err != nil {
-		if err, ok := err.(*datastore.UnavailableError); ok {
+		if err, ok := err.(*datastore.WarehouseError); ok {
 			return nil, errors.Unavailable("%s", err)
 		}
 		return nil, err
@@ -332,7 +332,7 @@ func validatePropertyRoles(schema types.Type, roles PropertyRoles) error {
 		singleValue := property.Type.Kind() != types.ArrayKind && property.Type.Kind() != types.MapKind
 		switch assignment.role {
 		case "firstName", "lastName":
-			compatible = property.Type.Kind() == types.StringKind && property.Type.Semantics() == types.NoSemantics
+			compatible = property.Type.Kind() == types.StringKind && !property.Type.HasSemantics()
 		case "email":
 			compatible = singleValue && property.Type.Semantics() == types.EmailSemantics
 		case "country":

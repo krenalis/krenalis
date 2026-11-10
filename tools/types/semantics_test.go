@@ -248,6 +248,35 @@ func Test_TypeSemanticsCopyOnWrite(t *testing.T) {
 	}
 }
 
+// Test_TypeHasSemantics tests whether a type has semantics.
+func Test_TypeHasSemantics(t *testing.T) {
+	tests := []struct {
+		name  string
+		type_ Type
+		want  bool
+	}{
+		{"zero", Type{}, false},
+		{"string", String(), false},
+		{"constrained string", String().WithMaxLength(10), false},
+		{"nested semantics", Array(String().AsEmail()), false},
+		{"email", String().AsEmail(), true},
+		{"phone", String().AsPhone(), true},
+		{"URL", String().AsURL(), true},
+		{"country", String().AsCountry(ISO3166Alpha2), true},
+		{"money", Decimal(10, 2).AsMoney(), true},
+		{"percentage", Decimal(10, 2).AsPercentage(), true},
+		{"measurement", Int(64).AsMeasurement(Kilogram), true},
+		{"duration", Int(32).AsDuration(Second), true},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := test.type_.HasSemantics(); got != test.want {
+				t.Fatalf("expected HasSemantics to return %t, got %t", test.want, got)
+			}
+		})
+	}
+}
+
 // Test_EqualSemantics tests semantics equality while ignoring kind and
 // unrelated type properties.
 func Test_EqualSemantics(t *testing.T) {
