@@ -18,6 +18,11 @@ import (
 	"github.com/snowflakedb/gosnowflake/v2"
 )
 
+// finalizationGracePeriod is how long an operation still has to record its
+// outcome after its context is done, so that an interrupted operation is
+// marked as failed rather than left uncompleted.
+const finalizationGracePeriod = 10 * time.Second
+
 type warehouseOp string
 
 const (
@@ -180,4 +185,18 @@ func (warehouse *Snowflake) setOperationAsCompleted(ctx context.Context, conn co
 		` "ERROR" = ?`+
 		` WHERE "ID" = ? AND "COMPLETED_AT" IS NULL`, time.Now().UTC(), string(result), opErrorStr, opID)
 	return snowflake(err)
+}
+
+// withDelayedCancellation returns a context that preserves ctx's values and is
+// automatically canceled delay after ctx is done. The caller must call the
+// returned cancel function when the context is no longer needed.
+func withDelayedCancellation(ctx context.Context, delay time.Duration) (context.Context, context.CancelFunc) {
+	delayedCtx, cancel := context.WithCancel(context.WithoutCancel(ctx))
+	stop := context.AfterFunc(ctx, func() {
+		time.AfterFunc(delay, cancel)
+	})
+	return delayedCtx, func() {
+		stop()
+		cancel()
+	}
 }
