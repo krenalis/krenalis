@@ -257,12 +257,12 @@ func Test_renderExpr(t *testing.T) {
 		{
 			name:  "decimal array maximum precision",
 			expr:  warehouses.NewBaseExpr(array, warehouses.OpContains, decimal.MustParse("1e75")),
-			query: `CASE WHEN "VALUE" IS NOT NULL THEN COALESCE((ARRAY_SIZE(FILTER("VALUE", krenalis_json_element -> CASE WHEN (IS_DECIMAL(krenalis_json_element) OR IS_DOUBLE(krenalis_json_element)) THEN CASE WHEN TYPEOF(krenalis_json_element)='DOUBLE' THEN FALSE ELSE CASE WHEN LEFT(TO_JSON(krenalis_json_element),1)='-' THEN FALSE ELSE COLLATE(SPLIT_PART(LTRIM(TO_JSON(krenalis_json_element),'-'),'.',1)||'.'||RTRIM(SPLIT_PART(LTRIM(TO_JSON(krenalis_json_element),'-'),'.',2),'0'),'utf8') = '1000000000000000000000000000000000000000000000000000000000000000000000000000.' END END ELSE FALSE END)) > 0), FALSE) ELSE NULL END`,
+			query: `CASE WHEN "VALUE" IS NOT NULL THEN COALESCE((ARRAY_SIZE(FILTER("VALUE", krenalis_json_element -> CASE WHEN (IS_DECIMAL(krenalis_json_element) OR ABS(AS_DOUBLE(krenalis_json_element))<TO_DOUBLE('inf')) THEN CASE WHEN TYPEOF(krenalis_json_element)='DOUBLE' THEN FALSE ELSE CASE WHEN LEFT(TO_JSON(krenalis_json_element),1)='-' THEN FALSE ELSE COLLATE(SPLIT_PART(LTRIM(TO_JSON(krenalis_json_element),'-'),'.',1)||'.'||RTRIM(SPLIT_PART(LTRIM(TO_JSON(krenalis_json_element),'-'),'.',2),'0'),'utf8') = '1000000000000000000000000000000000000000000000000000000000000000000000000000.' END END ELSE FALSE END)) > 0), FALSE) ELSE NULL END`,
 		},
 		{
 			name:  "decimal array maximum scale",
 			expr:  warehouses.NewBaseExpr(array, warehouses.OpDoesNotContain, decimal.MustParse("1e-37")),
-			query: `CASE WHEN "VALUE" IS NOT NULL THEN NOT COALESCE((ARRAY_SIZE(FILTER("VALUE", krenalis_json_element -> CASE WHEN (IS_DECIMAL(krenalis_json_element) OR IS_DOUBLE(krenalis_json_element)) THEN CASE WHEN TYPEOF(krenalis_json_element)='DOUBLE' THEN FALSE ELSE CASE WHEN LEFT(TO_JSON(krenalis_json_element),1)='-' THEN FALSE ELSE COLLATE(SPLIT_PART(LTRIM(TO_JSON(krenalis_json_element),'-'),'.',1)||'.'||RTRIM(SPLIT_PART(LTRIM(TO_JSON(krenalis_json_element),'-'),'.',2),'0'),'utf8') = '0.0000000000000000000000000000000000001' END END ELSE FALSE END)) > 0), FALSE) ELSE NULL END`,
+			query: `CASE WHEN "VALUE" IS NOT NULL THEN NOT COALESCE((ARRAY_SIZE(FILTER("VALUE", krenalis_json_element -> CASE WHEN (IS_DECIMAL(krenalis_json_element) OR ABS(AS_DOUBLE(krenalis_json_element))<TO_DOUBLE('inf')) THEN CASE WHEN TYPEOF(krenalis_json_element)='DOUBLE' THEN FALSE ELSE CASE WHEN LEFT(TO_JSON(krenalis_json_element),1)='-' THEN FALSE ELSE COLLATE(SPLIT_PART(LTRIM(TO_JSON(krenalis_json_element),'-'),'.',1)||'.'||RTRIM(SPLIT_PART(LTRIM(TO_JSON(krenalis_json_element),'-'),'.',2),'0'),'utf8') = '0.0000000000000000000000000000000000001' END END ELSE FALSE END)) > 0), FALSE) ELSE NULL END`,
 		},
 		{
 			name:    "decimal excessive precision",

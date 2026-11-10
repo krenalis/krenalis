@@ -25,6 +25,12 @@ func jsonDoubleBounds(number decimal.Decimal) (float64, float64) {
 	return lower, upper
 }
 
+// jsonNumberApplicability admits fixed-point and finite binary values only.
+// Non-finite DOUBLEs can exist in VARIANT but are not JSON numbers.
+func jsonNumberApplicability(value string) string {
+	return "(IS_DECIMAL(" + value + ") OR ABS(AS_DOUBLE(" + value + "))<TO_DOUBLE('inf'))"
+}
+
 func renderJSONDoubleComparison(b *strings.Builder, value, operator string, number decimal.Decimal) {
 	lower, upper := jsonDoubleBounds(number)
 	bound := lower

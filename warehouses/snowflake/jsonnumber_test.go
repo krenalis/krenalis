@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -63,7 +64,9 @@ func TestJSONNumbers(t *testing.T) {
 	inputs := []string{"", "null", `"100"`, "false", "{}", "[]", "0", "-0.0000", "100", "100.0", "1E2",
 		"1.1", "1.1E0", "1.25E0", "1.0000000000000001E2", "1.00000000000000001E2", "-1.1E0",
 		"1E-310", "1E75", "9.99999999999999375E13", "-9.99999999999999375E13", "100.00001",
+		"1.7976931348623157E308", "-1.7976931348623157E308",
 		"99999999999999.9999", "-99999999999999.9999", "0.0000000000000000000000000000000000001",
+		"0.1234567890123456789012345678901234567", "-0.1234567890123456789012345678901234567",
 		"1.2345678901234567890123456789012345678", "12345678901234567890123456789012345678.9",
 		"-12345678901234567890123456789012345678.9",
 		"123456789012345678901234567890123456789", "123456789012345678901234567890123456788",
@@ -78,6 +81,14 @@ func TestJSONNumbers(t *testing.T) {
 	err := warehouse.Merge(t.Context(), table, data, nil)
 	if err != nil {
 		t.Fatalf("expected numeric fixture merge, got %v", err)
+	}
+	jsonFixtureCount := len(inputs)
+	// These values cannot arrive from JSON; exercise direct warehouse writes.
+	for _, special := range []string{"NaN", "inf", "-inf"} {
+		id := len(inputs)
+		inputs = append(inputs, special)
+		mustExecSQL(t, db, fmt.Sprintf(`INSERT INTO "JSON_NUMBERS" SELECT %d,
+TO_VARIANT(TO_DOUBLE('%s')),ARRAY_CONSTRUCT(TO_VARIANT(TO_DOUBLE('%s')))`, id, special, special))
 	}
 
 	type test struct {
@@ -120,6 +131,7 @@ func TestJSONNumbers(t *testing.T) {
 		t.Fatalf("expected executable numeric comparisons, got %v", err)
 	}
 	defer rows.Close()
+	fixedSyntax := regexp.MustCompile(`^-?(0|[1-9][0-9]*)(\.[0-9]+)?$`)
 	count := 0
 	for rows.Next() {
 		var id int
@@ -136,9 +148,20 @@ func TestJSONNumbers(t *testing.T) {
 		if id != count || count >= len(inputs) {
 			t.Fatalf("expected numeric fixture %d within %d rows, got %d", count, len(inputs), id)
 		}
+		t.Logf("fixture %q: TYPEOF=%q TO_JSON=%q", inputs[id], kind.String, stored.String)
+		if id >= jsonFixtureCount && kind.String != "DOUBLE" {
+			t.Fatalf("expected non-finite DOUBLE fixture, got %s", kind.String)
+		}
+		if (inputs[id] == "0.1234567890123456789012345678901234567" ||
+			inputs[id] == "-0.1234567890123456789012345678901234567") && kind.String != "DECIMAL" {
+			t.Fatalf("expected fixed-point scale-37 fixture, got %s", kind.String)
+		}
 		var value *big.Rat
 		switch kind.String {
 		case "INTEGER", "DECIMAL":
+			if !stored.Valid || !fixedSyntax.MatchString(stored.String) {
+				t.Fatalf("expected plain fixed-point JSON syntax, got %q", stored.String)
+			}
 			var ok bool
 			value, ok = new(big.Rat).SetString(stored.String)
 			if !ok {
@@ -153,8 +176,11 @@ func TestJSONNumbers(t *testing.T) {
 				t.Fatal("expected binary floating-point transport, got NULL")
 			}
 			value = new(big.Rat).SetFloat64(double.Float64)
-			if value == nil {
+			if value == nil && id < jsonFixtureCount {
 				t.Fatalf("expected finite numeric fixture, got %g", double.Float64)
+			}
+			if value != nil && id >= jsonFixtureCount {
+				t.Fatalf("expected non-finite fixture, got %.17g", double.Float64)
 			}
 			if inputs[id] == "1.0000000000000001E2" && double.Float64 != math.Nextafter(100, math.Inf(1)) {
 				t.Fatalf("expected the DOUBLE after 100, got %.17g", double.Float64)

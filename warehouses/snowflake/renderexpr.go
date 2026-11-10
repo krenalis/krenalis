@@ -274,7 +274,7 @@ func renderJSONComparison(b *strings.Builder, target, operator string, value jso
 		if err != nil {
 			panic(fmt.Sprintf("warehouses/snowflake: invalid prepared JSON operand: %v", err))
 		}
-		fmt.Fprintf(b, "CASE WHEN (IS_DECIMAL(%s) OR IS_DOUBLE(%s)) THEN ", target, target)
+		fmt.Fprintf(b, "CASE WHEN %s THEN ", jsonNumberApplicability(target))
 		renderJSONNumberComparison(b, target, operator, number)
 	}
 	b.WriteString(" ELSE FALSE END")
@@ -454,7 +454,7 @@ func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr) error {
 		if values[0].IsString() {
 			applicability = fmt.Sprintf("IS_VARCHAR(%s)", target)
 		} else {
-			applicability = fmt.Sprintf("(IS_DECIMAL(%s) OR IS_DOUBLE(%s))", target, target)
+			applicability = jsonNumberApplicability(target)
 		}
 	case warehouses.OpContains:
 		if c.Type.IsArray() {
@@ -538,8 +538,7 @@ func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr) error {
 				target, target, strings.Join(texts, ", "))
 		}
 		if len(numbers) > 0 {
-			fmt.Fprintf(b, " WHEN (IS_DECIMAL(%s) OR IS_DOUBLE(%s)) THEN (%s)",
-				target, target, strings.Join(numbers, " OR "))
+			fmt.Fprintf(b, " WHEN %s THEN (%s)", jsonNumberApplicability(target), strings.Join(numbers, " OR "))
 		}
 		if len(booleans) > 0 {
 			fmt.Fprintf(b, " WHEN AS_BOOLEAN(%s) IS NOT NULL THEN AS_BOOLEAN(%s) IN (%s)",

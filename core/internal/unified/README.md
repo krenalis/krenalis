@@ -694,9 +694,15 @@ establishes the three deferred infrastructure guarantees.
 
 The numeric bootstrap now has repeatable real-database regressions:
 
-- `snowflake.TestJSONNumbers` batches 6,528 comparisons against a rational
+- `snowflake.TestJSONNumbers` batches 7,956 comparisons against a rational
   oracle over stored fixed-point values and binary DOUBLE transport. It covers
   scalar tests, membership, intervals and array containment with 76/37 operands.
+  Native VARIANT NaN and infinities are not JSON numbers: typed numeric equality
+  and membership return false, their negatives true, and ordered/interval tests
+  return SQL NULL. Array containment does not match those elements. Ordinary
+  FLOAT columns retain their existing renderer. The test asserts plain
+  fixed-point JSON syntax and logs the stored type and text for each fixture,
+  including positive and negative scale-37 fractions and finite DOUBLE extremes.
 - `snowflake.TestProfileExactDecimal` checks Merge/readback, scale-four borders,
   exact and inexact DOUBLEs, display-text loss and non-finite values.
 - `datastore.TestUnifiedStoredNumbersPostgreSQL/Snowflake` uses the same event
@@ -715,6 +721,13 @@ were each detected by the new remote tests. This verifies the numeric correction
 not the complete checklist: full service/API/MCP, remaining source/time/selection
 fixtures and failure/resource coverage still need remote verification before
 activation. The shared test fixtures assume coherent publication and attribution.
+
+Membership cost remains a scale-check item. The 100-rule limit is not a bound
+on the number of operands in one Record membership condition. An isolated Go
+rendering probe with 10,000 distinct numeric operands produced 2,867,940 SQL
+bytes and about 30 MB of cumulative allocations. This is not peak memory or
+Snowflake execution evidence; measure list length and SQL size explicitly
+before deciding whether to factor the repeated numeric comparisons.
 
 Example targeted commands, with Docker available and dependencies vendored:
 
