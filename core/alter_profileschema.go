@@ -325,7 +325,7 @@ func validatePropertyRoles(schema types.Type, roles PropertyRoles) error {
 		singleValue := property.Type.Kind() != types.ArrayKind && property.Type.Kind() != types.MapKind
 		switch assignment.role {
 		case "firstName", "lastName":
-			compatible = property.Type.Kind() == types.StringKind && property.Type.Semantics() == types.NoSemantics
+			compatible = property.Type.Kind() == types.StringKind && !property.Type.HasSemantics()
 		case "email":
 			compatible = singleValue && property.Type.Semantics() == types.EmailSemantics
 		case "country":
