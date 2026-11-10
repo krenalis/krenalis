@@ -21,8 +21,11 @@ func (c *compiler) latestN(node *warehouses.LatestOccurrences) (string, error) {
 	return c.selection(base, node.Size)
 }
 
-// selection shares copy checks and conditional predicates without changing the
-// First/Last/Nth SQL. A positive size closes complete LatestN blocks.
+// selection preserves compatible occurrences or complete LatestN blocks.
+// First/Last use the earliest/latest certain timestamp to exclude later/older
+// optional occurrences; ties remain candidates. Nth preserves possible ranks.
+// A positive size selects LatestN blocks. No ID tie-break or greedy choice
+// closes any selection.
 func (c *compiler) selection(node *warehouses.SelectedOccurrence, size int) (string, error) {
 
 	n := strconv.Itoa(c.counts)

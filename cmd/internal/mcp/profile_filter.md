@@ -799,7 +799,6 @@ supplied. The money array retains each verify currency and requested/normalized
 comparison. Neither metadata set replaces the other. Experiences without base
 currency retain their prior JSON shape and meaning.
 
-
 ## Latest N: All on a complete selected block
 
 A separate `latestN` rule selects the latest N recorded messages from its base

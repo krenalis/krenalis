@@ -148,6 +148,8 @@ func (quantifier *FilterLatestNQuantifier) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// validate checks canonical cardinalities against [0,size] without narrowing
+// the requested test. Only an empty intersection is statically incompatible.
 func (quantifier FilterLatestNQuantifier) validate(size filterCountInteger) error {
 	if quantifier.Kind == "all" || quantifier.Kind == "some" {
 		if quantifier.Operator != "" || quantifier.Values != nil {

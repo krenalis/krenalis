@@ -21,6 +21,7 @@ var explainProfileFilterTool = server.ServerTool{
 			" for each rule, resolved periods, Count occurrence bounds and exact Sum bounds with field and currency."+
 			" Average reports exact sum and count inputs instead of a rounded quotient."+
 			" Experience reports candidate count, selection ambiguity and certain/possible/impossible absence."+
+			" Latest N reports the candidate union and block shortage; uniqueness concerns the selected set."+
 			" Read profile-filter-doc first. Reuse query-profiles evaluation.at to anchor the periods;"+
 			" this is a new evaluation, not a snapshot. It does not identify which Record operand caused NULL."+
 			" Requires configured MCP settings but uses the main warehouse connection, whose data access is"+

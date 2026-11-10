@@ -133,6 +133,14 @@ func TestFilterLatestNQuantifiers(t *testing.T) {
 		invalid          bool
 	}{
 		{"all", `{"kind":"all"}`, false}, {"some", `{"kind":"some"}`, false},
+		{"exactly size", `{"kind":"cardinality","operator":"is","values":[3]}`, false},
+		{"at least size", `{"kind":"cardinality","operator":"is greater than or equal to","values":[3]}`, false},
+		{"range at size", `{"kind":"cardinality","operator":"is between","values":[3,3]}`, false},
+		{"range beyond size", `{"kind":"cardinality","operator":"is between","values":[3,5]}`, false},
+		{"range point", `{"kind":"cardinality","operator":"is between","values":[2,2]}`, false},
+		{"range zero", `{"kind":"cardinality","operator":"is between","values":[0,0]}`, false},
+		{"exactly above size", `{"kind":"cardinality","operator":"is","values":[4]}`, true},
+		{"range point above size", `{"kind":"cardinality","operator":"is between","values":[4,4]}`, true},
 		{"exactly impossible", `{"kind":"cardinality","operator":"is","values":[5]}`, true},
 		{"at least impossible", `{"kind":"cardinality","operator":"is greater than or equal to","values":[5]}`, true},
 		{"at most redundant", `{"kind":"cardinality","operator":"is less than or equal to","values":[5]}`, false},
@@ -155,7 +163,8 @@ func TestFilterLatestNQuantifiers(t *testing.T) {
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			var condition FilterLatestNCondition
-			err := json.Unmarshal([]byte(strings.Replace(latestNConditionJSON, `{"kind":"all"}`, test.quantifier, 1)), &condition)
+			err := json.Unmarshal([]byte(strings.Replace(latestNConditionJSON,
+				`{"kind":"all"}`, test.quantifier, 1)), &condition)
 			if err != nil {
 				t.Fatalf("expected structurally decoded quantifier, got %v", err)
 			}
@@ -182,13 +191,31 @@ func TestFilterLatestNValidation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected latestN fixture, got %v", err)
 	}
-	for _, size := range []string{"0", "11", "-1", "1.0", "1e0", `"1"`} {
-		modified := condition
-		modified.LatestN.Size = json.Value(size)
-		_, err := prepareFilterLatestN(&modified, nil)
-		if err == nil {
-			t.Fatalf("expected invalid size %s, got success", size)
-		}
+	for _, test := range []struct {
+		size    string
+		invalid bool
+	}{
+		{"1", false}, {"10", false}, {"0", true}, {"11", true},
+		{"-1", true}, {"1.0", true}, {"1e0", true}, {`"1"`, true},
+	} {
+		t.Run("size="+test.size, func(t *testing.T) {
+			var modified FilterLatestNCondition
+			err := json.Unmarshal([]byte(strings.Replace(latestNConditionJSON, `"size":3`,
+				`"size":`+test.size, 1)), &modified)
+			if err != nil {
+				t.Fatalf("expected structurally decoded size %s, got %v", test.size, err)
+			}
+			_, err = prepareFilterLatestN(&modified, nil)
+			if err != nil {
+				if _, unsupported := errors.AsType[*unified.UnsupportedError](err); unsupported || !test.invalid {
+					t.Fatalf("expected invalid=%v for size %s, got %v", test.invalid, test.size, err)
+				}
+				return
+			}
+			if test.invalid {
+				t.Fatalf("expected invalid size %s, got success", test.size)
+			}
+		})
 	}
 	for _, local := range []bool{true, false} {
 		for _, test := range []struct{ size, depth int }{{100, 1}, {101, 1}, {1, 2}, {1, 3}} {
@@ -219,7 +246,8 @@ func TestFilterLatestNValidation(t *testing.T) {
 	invalid.LatestN.Size = json.Value("0")
 	for _, rules := range [][]FilterRule{{&unsupported, &invalid}, {&invalid, &unsupported}} {
 		nodes := 0
-		_, err := prepareUnifiedRule(&Filter{Operator: OpAnd, Rules: rules}, types.Object([]types.Property{{Name: "x", Type: types.String()}}), 0, &nodes)
+		_, err := prepareUnifiedRule(&Filter{Operator: OpAnd, Rules: rules},
+			types.Object([]types.Property{{Name: "x", Type: types.String()}}), 0, &nodes)
 		if err != nil {
 			if _, unsupported := errors.AsType[*unified.UnsupportedError](err); unsupported {
 				t.Fatalf("expected invalid sibling before unavailable, got %v", err)
