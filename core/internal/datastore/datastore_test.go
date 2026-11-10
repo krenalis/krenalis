@@ -87,9 +87,9 @@ func TestProfileCountWarehouseError(t *testing.T) {
 	store.wh.Store(warehouses.Warehouse(&profileQueryWarehouse{err: warehouseErr}))
 	_, err := store.ProfileCount(t.Context(), nil, types.Type{})
 	if err != nil {
-		unavailable, ok := errors.AsType[*UnavailableError](err)
-		if !ok || unavailable.Err != warehouseErr {
-			t.Fatalf("expected UnavailableError with cause %v, got %v", warehouseErr, err)
+		wrapped, ok := errors.AsType[*WarehouseError](err)
+		if !ok || wrapped.Err != warehouseErr {
+			t.Fatalf("expected WarehouseError with cause %v, got %v", warehouseErr, err)
 		}
 		return
 	}
