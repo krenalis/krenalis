@@ -90,6 +90,17 @@ func TestJSONNumbers(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected numeric fixture merge, got %v", err)
 	}
+	mergedFixtureCount := len(inputs)
+	// Keep scientific DOUBLE fixtures as well as the new fixed-point writes.
+	for _, raw := range inputs {
+		if json.Value(raw).Kind() != json.Number || !strings.ContainsAny(raw, "eE") {
+			continue
+		}
+		id := len(inputs)
+		inputs = append(inputs, raw)
+		mustExecSQL(t, db, fmt.Sprintf(`INSERT INTO "JSON_NUMBERS" SELECT %d,
+PARSE_JSON('%s'),ARRAY_CONSTRUCT(PARSE_JSON('%s'))`, id, raw, raw))
+	}
 	jsonFixtureCount := len(inputs)
 	// These values cannot arrive from JSON; exercise direct warehouse writes.
 	for _, special := range []string{"NaN", "inf", "-inf"} {
@@ -143,6 +154,7 @@ TO_VARIANT(TO_DOUBLE('%s')),ARRAY_CONSTRUCT(TO_VARIANT(TO_DOUBLE('%s')))`, id, s
 	}
 	defer rows.Close()
 	fixedSyntax := regexp.MustCompile(`^-?(0|[1-9][0-9]*)(\.[0-9]+)?$`)
+	expectedFixed := map[int]*big.Rat{}
 	count := 0
 	for rows.Next() {
 		var id int
@@ -163,9 +175,14 @@ TO_VARIANT(TO_DOUBLE('%s')),ARRAY_CONSTRUCT(TO_VARIANT(TO_DOUBLE('%s')))`, id, s
 		if id >= jsonFixtureCount && kind.String != "DOUBLE" {
 			t.Fatalf("expected non-finite DOUBLE fixture, got %s", kind.String)
 		}
-		if (inputs[id] == "1.827718801949428E17" || inputs[id] == "-1.827718801949428E17") &&
+		if id >= mergedFixtureCount &&
+			(inputs[id] == "1.827718801949428E17" || inputs[id] == "-1.827718801949428E17") &&
 			kind.String != "DOUBLE" {
 			t.Fatalf("expected midpoint DOUBLE fixture, got %s", kind.String)
+		}
+		if id < mergedFixtureCount && (inputs[id] == "1.1E0" || inputs[id] == "1.00000000000000001E2") &&
+			kind.String != "DECIMAL" {
+			t.Fatalf("expected exact decimal write of %s, got %s", inputs[id], kind.String)
 		}
 		if (inputs[id] == "0.1234567890123456789012345678901234567" ||
 			inputs[id] == "-0.1234567890123456789012345678901234567") && kind.String != "DECIMAL" {
@@ -185,6 +202,9 @@ TO_VARIANT(TO_DOUBLE('%s')),ARRAY_CONSTRUCT(TO_VARIANT(TO_DOUBLE('%s')))`, id, s
 			original, ok := new(big.Rat).SetString(inputs[id])
 			if !ok || value.Cmp(original) != 0 {
 				t.Fatalf("expected fixed-point preservation of %s, got %s", inputs[id], stored.String)
+			}
+			if id < mergedFixtureCount {
+				expectedFixed[id] = original
 			}
 		case "DOUBLE":
 			if !double.Valid {
@@ -268,6 +288,56 @@ TO_VARIANT(TO_DOUBLE('%s')),ARRAY_CONSTRUCT(TO_VARIANT(TO_DOUBLE('%s')))`, id, s
 	}
 	t.Logf("checked %d exact stored-value comparisons", count*len(tests))
 
+	// Read the new fixed-point writes through the warehouse's actual scanner.
+	// Finite DOUBLE JSON output remains the separate reader correction.
+	var ids []any
+	for i := range mergedFixtureCount {
+		if expectedFixed[i] != nil {
+			ids = append(ids, i)
+		}
+	}
+	result, _, err := warehouse.Query(t.Context(), warehouses.RowQuery{
+		Table:   table.Name,
+		Columns: table.Columns,
+		Where:   warehouses.NewBaseExpr(table.Columns[0], warehouses.OpIsOneOf, ids...),
+		OrderBy: []warehouses.Column{table.Columns[0]},
+	}, false)
+	if err != nil {
+		t.Fatalf("expected fixed-point warehouse query, got %v", err)
+	}
+	defer result.Close()
+	count = 0
+	for result.Next() {
+		row := make([]any, len(table.Columns))
+		if err := result.Scan(row...); err != nil {
+			t.Fatalf("expected decoded fixed-point row, got %v", err)
+		}
+		id, ok := row[0].(int)
+		if !ok || count >= len(ids) || id != ids[count] {
+			t.Fatalf("expected ordered fixed-point identity at %d, got %v", count, row[0])
+		}
+		raw, ok := row[1].(json.Value)
+		if !ok {
+			t.Fatalf("expected JSON number, got %T", row[1])
+		}
+		value, ok := new(big.Rat).SetString(string(raw))
+		if !ok || value.Cmp(expectedFixed[id]) != 0 {
+			t.Fatalf("expected exact JSON round-trip of %s, got %s", inputs[id], raw)
+		}
+		count++
+	}
+	err = result.Err()
+	if err != nil {
+		t.Fatalf("expected complete fixed-point result, got %v", err)
+	}
+	if count != len(ids) {
+		t.Fatalf("expected %d fixed-point rows, got %d", len(ids), count)
+	}
+	err = result.Close()
+	if err != nil {
+		t.Fatalf("expected fixed-point result close, got %v", err)
+	}
+
 }
 
 // TestProfileExactDecimal exercises the physical VARIANT reading through the
@@ -285,11 +355,11 @@ func TestProfileExactDecimal(t *testing.T) {
 	fixtures := []struct{ raw, known string }{
 		{"", ""}, {"null", ""}, {`"100"`, ""}, {"true", ""}, {"{}", ""}, {"[]", ""},
 		{"100", "100"}, {"100.0", "100"}, {"1E2", "100"}, {"1.2E3", "1200"}, {"9E13", "90000000000000"},
-		{"-3E1", "-30"}, {"1.1", "1.1"}, {"1.1E0", ""}, {"1.25E0", "1.25"}, {"-0E0", "0"},
+		{"-3E1", "-30"}, {"1.1", "1.1"}, {"1.1E0", "1.1"}, {"1.25E0", "1.25"}, {"-0E0", "0"},
 		{"0.0001", "0.0001"}, {"99999999999999.9999", "99999999999999.9999"},
-		{"-99999999999999.9999", "-99999999999999.9999"}, {"9.99999999999999999E13", ""},
+		{"-99999999999999.9999", "-99999999999999.9999"}, {"9.99999999999999999E13", "99999999999999.9999"},
 		{"9.99999999999999375E13", "99999999999999.9375"}, {"-9.99999999999999375E13", "-99999999999999.9375"},
-		{"1.0000000000000001E2", ""}, {"1.00000000000000001E2", "100"}, {"100.00001", ""},
+		{"1.0000000000000001E2", ""}, {"1.00000000000000001E2", ""}, {"100.00001", ""},
 		{"1E14", ""}, {"1E307", ""}, {"1E-310", ""}, {"123456789012345678901234567890123456789", ""},
 	}
 	data := make([][]any, len(fixtures))
@@ -302,6 +372,14 @@ func TestProfileExactDecimal(t *testing.T) {
 	err := warehouse.Merge(t.Context(), table, data, nil)
 	if err != nil {
 		t.Fatalf("expected decimal fixture merge, got %v", err)
+	}
+	// Historical DOUBLEs keep the approved binary-exact monetary reading.
+	for _, old := range []struct{ raw, known string }{
+		{"1.1E0", ""}, {"9.99999999999999999E13", ""}, {"1.00000000000000001E2", "100"},
+	} {
+		id := len(fixtures)
+		fixtures = append(fixtures, old)
+		mustExecSQL(t, db, fmt.Sprintf(`INSERT INTO "EXACT_DECIMALS" SELECT %d,PARSE_JSON('%s')`, id, old.raw))
 	}
 	reading, err := profileExactDecimal(warehouses.DecimalReading{Column: column, Type: types.Decimal(18, 4)})
 	if err != nil {

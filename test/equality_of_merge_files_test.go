@@ -52,4 +52,19 @@ func TestEqualityOfMergeFiles(t *testing.T) {
 			"'warehouses/snowflake/merge.go', whereas the two files should be identical " +
 			"and kept in sync")
 	}
+
+	for _, name := range []string{"jsonwrite.go", "jsonwrite_test.go"} {
+		file1, err := os.ReadFile("../connectors/snowflake/" + name)
+		if err != nil {
+			t.Fatalf("expected connector file, got %v", err)
+		}
+		file2, err := os.ReadFile("../warehouses/snowflake/" + name)
+		if err != nil {
+			t.Fatalf("expected warehouse file, got %v", err)
+		}
+		file2 = bytes.ReplaceAll(file2, []byte("warehouses/snowflake:"), []byte("connectors/snowflake:"))
+		if !bytes.Equal(file1, file2) {
+			t.Fatalf("expected identical Snowflake %s files, got different contents", name)
+		}
+	}
 }

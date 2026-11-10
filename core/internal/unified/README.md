@@ -731,7 +731,7 @@ Record DOUBLE reading now follows the user-approved canonical decimal contract:
 money reading remains binary-exact on the Decimal(18,4) grid. For example, a
 DOUBLE from `1.1E0` is 1.1 in Record and unknown as a governed amount. Krenalis
 Decimal values that lost digits in scientific-notation writes are not recovered
-in general. The writer is unchanged. Snowflake's returned JSON can also lose
+in general. Snowflake's returned JSON can also lose
 DOUBLE digits; fixing that exposure remains separate work before claiming
 agreement between filter decisions and displayed values. Local mutations
 restoring binary bounds, rounding operands or using nearest-away rounding at
@@ -741,6 +741,27 @@ ordering in the real Snowflake suite. Their remote run is pending: the added
 fixtures passed local checks, but Snowflake's network policy blocked test
 setup and the user deferred that run. These changes do not open the verification
 gate.
+
+New Snowflake JSON writes expand scientific number tokens to plain decimal
+when their exact values fit precision 38 and scale 37. The warehouse and
+destination connector apply the same transformation to JSON, Array and Map,
+including nested values. Other tokens and values outside that domain are
+unchanged; loading those numbers can still produce DOUBLEs. No historical
+values are rewritten and no global `types.Marshal` behavior changes.
+New fixed-point writes can change `TYPEOF`, arithmetic, filter results and
+governed amount readability compared with earlier approximate writes. For
+example, `1.1E0` now becomes the exact decimal 1.1 and a readable amount;
+`1.00000000000000001E2` remains exact but is too fine for Decimal(18,4), rather
+than becoming the readable DOUBLE 100. Conflicting copies remain technical
+errors under the existing qualification and reading contracts.
+Local tests cover exact rational equivalence, precision/scale boundaries,
+large exponents, nested documents, byte preservation, idempotence and CSV
+serialization in both packages. The adjusted real-database tests retain
+historical DOUBLE fixtures separately. Remote execution of these changes is
+pending while Snowflake testing is deferred. Returned JSON still needs a
+separate correction for finite DOUBLEs before claiming faithful INTEGER,
+DECIMAL and FLOAT JSON output from both query paths. DECFLOAT and other native
+types remain outside this increment; the Unified gate stays closed.
 
 Membership cost remains a scale-check item. The 100-rule limit is not a bound
 on the number of operands in one Record membership condition. An isolated Go

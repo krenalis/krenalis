@@ -298,7 +298,11 @@ func serializeValueToCSV(b *bytes.Buffer, t types.Type, v any) error {
 	case decimal.Decimal:
 		_, _ = v.WriteTo(b)
 	case json.Value:
-		quoteCSVBytes(b, v)
+		value, err := plainJSONNumbers(v)
+		if err != nil {
+			return err
+		}
+		quoteCSVBytes(b, value)
 	default:
 		switch k := t.Kind(); k {
 		case types.DateTimeKind:
@@ -312,9 +316,17 @@ func serializeValueToCSV(b *bytes.Buffer, t types.Type, v any) error {
 			if err != nil {
 				return err
 			}
+			value, err = plainJSONNumbers(value)
+			if err != nil {
+				return err
+			}
 			quoteCSVBytes(b, value)
 		case types.MapKind:
 			value, err := types.Marshal(v.(map[string]any), t)
+			if err != nil {
+				return err
+			}
+			value, err = plainJSONNumbers(value)
 			if err != nil {
 				return err
 			}
