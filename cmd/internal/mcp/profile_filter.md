@@ -45,7 +45,7 @@ restrictions apply to `query-data-warehouse` only. They do not restrict which
 profile or event properties `query-profiles` can read or use in conditions.
 
 On Snowflake, `query-profiles` uses the main virtual warehouse, even if a different
-virtual warehouse is configured for MCP. Record queries remain available; Count, Sum, Average, Experience and Latest N
+virtual warehouse is configured for MCP. Record queries remain available; Count, Sum, Average and all selected-experience forms
 are currently unavailable on Snowflake. Do not work around that gate using SQL.
 
 ## Arguments and results
@@ -65,7 +65,7 @@ An oversized result is an error: reduce `limit` or request fewer `properties`.
 Rows are never silently dropped to fit that budget.
 
 The returned text is JSON with `profiles`, `schema` and exact matching `total`.
-With Count, Sum, Average, Experience or Latest N, it also contains `evaluation: {at, match, noMatch, unknown}`. Totals
+With a behavioral filter, it also contains `evaluation: {at, match, noMatch, unknown}`. Totals
 refer to the entire profile population before pagination, from the same
 evaluation as the page. The page contains only MATCH profiles. UNKNOWN is not
 NO_MATCH and is not an execution error. An empty page still returns totals.
@@ -91,7 +91,7 @@ are MCP diagnostic prefixes, not additional core error codes.
 
 The root is `{"operator":"and"|"or","rules":[...]}`, with optional
 `defaultCalendar` as described below. Rules are Record
-conditions, Count/Sum/Average/Experience/LatestN conditions or nested AND/OR groups. At most four main group
+conditions, Count/Sum/Average/Experience/LatestN/LastVersusPrevious conditions or nested AND/OR groups. At most four main group
 levels including the root, and 100 descendants excluding the root, are allowed.
 
 A Record condition is `{"property":"path","operator":"...","values":[...]}`.
@@ -885,12 +885,91 @@ UNKNOWN. Latest(1)/All and Latest(1)/Some have Last's outcome and selection
 metadata, while retaining the requested latestN form. Snowflake remains
 unavailable pending real tests.
 
+## Last versus Previous: a reported monetary difference
+
+Use `lastVersusPrevious` for a comparison of the last two messages, selected
+**together** from the same base. For "the last EUR order decreased by at least
+30 euros compared with the preceding EUR order":
+
+```json
+{"operator":"and","rules":[{"lastVersusPrevious":{"base":{"source":{"kind":"recordedEvents","name":"Order Completed","grain":"registered-message"},"period":{"kind":"fullRelevantHistory","history":{"definition":"registered-queryable-events","meaningRevision":"1"}},"currencyField":{"definition":"commerce.order_completed.currency","meaningRevision":"1"},"nativeCurrency":"EUR"},"field":{"definition":"commerce.order_completed.total","meaningRevision":"1"},"check":{"kind":"difference","operator":"is less than or equal to","values":[-30]}}}]}
+```
+
+Difference is always **Last minus Previous**. From 100 to 70 the difference is
+70 - 100 = -30; "decreased by at least 30" means <= -30, not >= 30. The threshold
+has the native currency of the base. There is no exchange-rate conversion.
+These are registered messages, not deduplicated business orders: different
+message IDs can represent the same business order and still occupy two positions.
+
+The base is the same closed object as experience.base: source, period, optional
+Record-only where and the currencyField/nativeCurrency pair. This execution
+subset requires both currency fields and track Order Completed, with the bound
+total field above. Omission of both currency fields is a valid unimplemented
+capability; supplying only one, null or incompatible references/sources is invalid.
+The currency of every selected message is fixed by membership, including a
+possible member whose stored currency is unknown. A certainly different currency
+is excluded. Missing/null/non-string currency remains possible, with the same
+reading as Count and Sum.
+
+"Last two orders in EUR" selects from EUR messages, ignoring later USD orders.
+"Last two orders, both in EUR" selects from all orders and then verifies the
+currency. The latter difference comparison is not implemented: do not silently
+restrict the base to EUR or replace it with two independent selections. Ask or
+state the interpretation when the user's wording is ambiguous. Raw where paths
+overlapping the bound total or currency, their parents or descendants are
+temporarily unavailable. Other independent Record conditions remain available.
+
+Periods restrict the base before selection. A period ending before T asks for
+the last two **within that period**, not the last two of history followed by a
+recency check. Retention, deletion and late imports may change the registered
+pair. Equal timestamps admit both orders: there is no ID tie-break. Two certain
+messages at the same time give an ambiguous ordered pair even when they form
+a unique set. Different possible pairs can nevertheless agree on the result.
+
+The check is closed. `sameValue` and `differentValue` admit only kind.
+`difference` and `ratio` require operator and values, using the seven monetary
+operators: is, is not, the four ordered comparisons and inclusive is between
+(two values). Inverted intervals, unknown fields, unknown kinds and null are
+invalid. The public interval is inclusive only, a deliberate subset of the
+normative interval forms. Currently only difference with <, <=, > or >= executes;
+other valid checks return FilterCapabilityNotImplemented after complete
+validation. Do not emulate them with raw conditions or SQL.
+
+Requested thresholds are exact JSON numbers within 76 significant digits and
+37 decimal places, including negatives and exponent notation. Both selected
+amounts must be readable as JSON Numbers exactly representable as Decimal(18,4),
+without conversion or rounding. Missing, null, strings, too-fine numbers and
+out-of-domain values are unknown. Readable differences lie in the **inclusive**
+range [-199999999999999.9998,199999999999999.9998].
+
+Explanations have kind lastVersusPrevious and a lastVersusPrevious object with
+start/end/unboundedStart/history under the same rules as Count, field, base
+currencyField/nativeCurrency, check and selection. Check retains kind and the
+requested comparison. Normalized contains either an inclusive operator/values
+bound on the scale-four grid, or `{"readableDifferences":"none"}` /
+`{"readableDifferences":"all"}`.
+The two forms are exclusive. Numeric output may use exponent notation and can
+be reused as exact input. None/all describe **only pairs with two readable
+amounts**. A possible pair with an unreadable amount still yields UNKNOWN even
+with all; all is not unconditional TRUE. Ordered money tests retain their older
+clipped +/-1e14 sentinels for compatibility; difference uses its own wider
+inclusive domain and explicit none/all. Do not interpret those money sentinels
+as the domain of a difference.
+
+Selection reports candidate identities, not the number of pairs. Shortage is
+certain with fewer than two possible messages, possible with fewer than two
+certain messages, otherwise impossible. Certain shortage is NO_MATCH; possible
+shortage prevents MATCH but gives NO_MATCH if no compatible pair can pass.
+Unique means one **ordered** identity pair and impossible absence. No amounts,
+difference extrema or witnesses are returned. Technical faults fail the complete
+operation. Snowflake remains unavailable pending real execution tests.
+
 ## Examples
 
 To understand a known profile's result, call `explain-profile-filter` with its
 `kpid`, the same JSON-text `filter`, and optionally the listing's `evaluation.at`
 as `at`. It returns `{kpid,at,rule}`. Each rule has `kind` (`and`, `or`, `record`,
-`count`, `sum`, `average`, `experience`, `latestN`), `result` (`MATCH`, `NO_MATCH`, `UNKNOWN`), and ordered child `rules`
+`count`, `sum`, `average`, `experience`, `latestN`, `lastVersusPrevious`), `result` (`MATCH`, `NO_MATCH`, `UNKNOWN`), and ordered child `rules`
 for groups. Count adds `{start,end,certain,uncertain}`: the reachable count is
 every integer in `[certain,certain+uncertain]` for this supported subset.
 For fullRelevantHistory, `start` is omitted and `unboundedStart:true` is present;

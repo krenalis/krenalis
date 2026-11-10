@@ -1428,6 +1428,148 @@ VALUES ('00000000-0000-0000-0000-000000000001','money/1/optional','Order Complet
 
 	})
 
+	t.Run("LastVersusPrevious", func(t *testing.T) {
+
+		_, err := pool.Exec(t.Context(), `INSERT INTO krenalis_events
+ (kpid,message_id,event,timestamp,received_at,sent_at,type,connection_id,anonymous_id,traits,properties)
+ SELECT ('00000000-0000-0000-0000-'||lpad(n::text,12,'0'))::uuid,'pair/'||n||'/'||id,'Order Completed',
+ event_time::timestamp,'2026-02-01','2026-02-01','track','fixture','a','{}',payload::jsonb
+ FROM (VALUES
+ (1,'a','2026-01-15','{"pair_fixture":true,"currency":"EUR","total":100}'),
+ (1,'b','2026-01-16','{"pair_fixture":true,"currency":"EUR","total":60}'),
+ (2,'a','2026-01-15','{"pair_fixture":true,"currency":"EUR","total":100}'),
+ (2,'b','2026-01-16','{"pair_fixture":true,"currency":"EUR","total":80}'),
+ (2,'c','2026-01-17','{"pair_fixture":true,"total":60}'),
+ (3,'a','2026-01-15','{"pair_fixture":true,"currency":"EUR","total":100}'),
+ (3,'b','2026-01-15','{"pair_fixture":true,"currency":"EUR","total":50}')
+ ) v(n,id,event_time,payload)`)
+		if err != nil {
+			t.Fatalf("expected coherent pair fixtures, got %v", err)
+		}
+		defer func() {
+			_, err := pool.Exec(t.Context(), "DELETE FROM krenalis_events WHERE message_id LIKE 'pair/%'")
+			if err != nil {
+				t.Errorf("expected pair fixture cleanup, got %v", err)
+			}
+		}()
+
+		const base = `"source":{"kind":"recordedEvents","name":"Order Completed","grain":"registered-message"},` +
+			`"period":{"kind":"fullRelevantHistory","history":{"definition":"registered-queryable-events",` +
+			`"meaningRevision":"1"}},"where":{"operator":"and","rules":[` +
+			`{"property":"properties.pair_fixture","operator":"exists"}]},` +
+			`"currencyField":{"definition":"commerce.order_completed.currency","meaningRevision":"1"},` +
+			`"nativeCurrency":"EUR"`
+		const leaf = `{"lastVersusPrevious":{"base":{` + base + `},` +
+			`"field":{"definition":"commerce.order_completed.total","meaningRevision":"1"},` +
+			`"check":{"kind":"difference","operator":"is less than or equal to","values":[-3e1]}}}`
+		const filter = `{"operator":"and","rules":[` + leaf + `]}`
+		mixed := `{"operator":"and","rules":[` + leaf + `,{"count":{` + base + `},` +
+			`"operator":"is greater than or equal to","values":[2]},` +
+			`{"sum":{` + strings.Replace(base,
+			`"currencyField":{"definition":"commerce.order_completed.currency","meaningRevision":"1"},`, ``, 1) +
+			`,"field":{"definition":"commerce.order_completed.total","meaningRevision":"1"}},` +
+			`"operator":"is greater than or equal to","values":[0]}]}`
+		for _, input := range []string{filter, mixed} {
+			for _, first := range []int{0, 99} {
+				var expected json.RawMessage
+				k.Call("GET", "/v1/profiles?filter="+url.QueryEscape(input)+"&at="+url.QueryEscape(at)+
+					"&first="+strconv.Itoa(first), nil, nil, &expected)
+				actual := assertResult(t, tool(t, "query-profiles", map[string]any{
+					"filter": input, "at": at, "first": first}))
+				if actual != string(expected) || !strings.Contains(actual, `"match":1,"noMatch":2,"unknown":1`) ||
+					first == 99 && !strings.HasPrefix(actual, `{"profiles":[]`) {
+					t.Fatalf("expected identical complete pair page and totals, got %s", actual)
+				}
+			}
+			for _, test := range []struct {
+				number                int
+				result, kind, absence string
+				candidates            int
+			}{
+				{1, "MATCH", "unique", "impossible", 2},
+				{2, "NO_MATCH", "ambiguous", "impossible", 3},
+				{3, "UNKNOWN", "ambiguous", "impossible", 2},
+				{4, "NO_MATCH", "absent", "certain", 0},
+			} {
+				id := fmt.Sprintf("00000000-0000-0000-0000-%012d", test.number)
+				var expected json.RawMessage
+				k.Call("GET", "/v1/profiles/"+id+"/filter-explanation?filter="+url.QueryEscape(input)+
+					"&at="+url.QueryEscape(at), nil, nil, &expected)
+				actual := assertResult(t, tool(t, "explain-profile-filter", map[string]any{
+					"kpid": id, "filter": input, "at": at}))
+				var decoded struct {
+					Rule struct {
+						Rules []struct {
+							Result             string
+							LastVersusPrevious *struct {
+								Field          core.FilterSumField
+								History        *core.FilterHistory
+								NativeCurrency string
+								Selection      core.ProfileExperienceSelection
+								Check          struct {
+									Normalized struct {
+										Operator core.FilterOperator
+										Values   []json.RawMessage
+									}
+								}
+							}
+						}
+					}
+				}
+				err := json.Unmarshal([]byte(actual), &decoded)
+				if err != nil {
+					t.Fatalf("expected pair explanation JSON, got %v", err)
+				}
+				pair := decoded.Rule.Rules[0].LastVersusPrevious
+				if actual != string(expected) || decoded.Rule.Rules[0].Result != test.result || pair == nil ||
+					pair.Selection.Kind != test.kind || pair.Selection.Absence != test.absence ||
+					pair.Selection.Candidates != int64(test.candidates) || pair.Field.MeaningRevision != "1" ||
+					pair.History == nil || pair.NativeCurrency != "EUR" ||
+					pair.Check.Normalized.Operator != core.OpIsLessThanOrEqualTo || len(pair.Check.Normalized.Values) != 1 {
+					t.Fatalf("expected exact ordered-pair explanation for %d, got %s", test.number, actual)
+				}
+				bound, ok := new(big.Rat).SetString(string(pair.Check.Normalized.Values[0]))
+				if !ok || bound.Cmp(big.NewRat(-30, 1)) != 0 {
+					t.Fatalf("expected exact normalized threshold -30, got %s", actual)
+				}
+			}
+		}
+		for _, mode := range []string{"none", "all"} {
+			threshold := "1e75"
+			if mode == "none" {
+				threshold = "-1e75"
+			}
+			input := strings.Replace(filter, "-3e1", threshold, 1)
+			var expected json.RawMessage
+			id := "00000000-0000-0000-0000-000000000001"
+			k.Call("GET", "/v1/profiles/"+id+"/filter-explanation?filter="+url.QueryEscape(input)+
+				"&at="+url.QueryEscape(at), nil, nil, &expected)
+			actual := assertResult(t, tool(t, "explain-profile-filter", map[string]any{
+				"kpid": id, "filter": input, "at": at}))
+			if actual != string(expected) ||
+				!strings.Contains(actual, `"normalized":{"readableDifferences":"`+mode+`"}`) {
+				t.Fatalf("expected identical closed %s domain, got %s", mode, actual)
+			}
+		}
+		for _, test := range []struct{ name, input, code string }{
+			{"same", strings.Replace(leaf, `{"kind":"difference","operator":"is less than or equal to","values":[-3e1]}`, `{"kind":"sameValue"}`, 1), "FilterCapabilityNotImplemented"},
+			{"ratio", strings.Replace(leaf, `"kind":"difference"`, `"kind":"ratio"`, 1), "FilterCapabilityNotImplemented"},
+			{"equality", strings.Replace(leaf, `"is less than or equal to"`, `"is"`, 1), "FilterCapabilityNotImplemented"},
+			{"no currency", strings.Replace(leaf, `,"currencyField":{"definition":"commerce.order_completed.currency","meaningRevision":"1"},"nativeCurrency":"EUR"`, ``, 1), "FilterCapabilityNotImplemented"},
+			{"overlap", strings.Replace(leaf, "properties.pair_fixture", "properties.total", 1), "FilterCapabilityNotImplemented"},
+			{"incompatible source", strings.Replace(leaf, "Order Completed", "Refund", 1), "InvalidArguments"},
+			{"invalid check", strings.Replace(leaf, "is less than or equal to", "contains", 1), "InvalidArguments"},
+		} {
+			t.Run(test.name, func(t *testing.T) {
+				input := `{"operator":"and","rules":[` + test.input + `]}`
+				assertToolError(t, tool(t, "query-profiles", map[string]any{"filter": input, "at": at}), test.code)
+				assertToolError(t, tool(t, "explain-profile-filter", map[string]any{
+					"kpid": "00000000-0000-0000-0000-000000000001", "filter": input, "at": at}), test.code)
+			})
+		}
+
+	})
+
 	t.Run("Average", func(t *testing.T) {
 
 		_, err := pool.Exec(t.Context(), `INSERT INTO krenalis_events

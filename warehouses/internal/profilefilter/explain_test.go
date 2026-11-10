@@ -77,6 +77,104 @@ func TestReadExplanationCanceled(t *testing.T) {
 	t.Fatal("expected cancellation, got success")
 }
 
+// TestReadLastPreviousExplanation checks pair metadata and cursor failures.
+func TestReadLastPreviousExplanation(t *testing.T) {
+
+	const profile = "00000000-0000-0000-0000-000000000001"
+	for _, test := range []struct {
+		name                       string
+		candidates, absent, unique any
+		invalid                    bool
+	}{
+		{"unique", 2, 0, true, false}, {"tie", 2, 0, false, false},
+		{"ambiguous", 4, 0, false, false}, {"possible absence", 2, 1, false, false},
+		{"certain absence", 0, 1, false, false}, {"negative", -1, 1, false, true},
+		{"one identity", 1, 1, false, true}, {"empty present", 0, 0, false, true},
+		{"unique empty", 0, 1, true, true}, {"unique optional", 2, 1, true, true},
+		{"unique too many", 3, 0, true, true}, {"missing unique", 2, 0, nil, true},
+		{"wrong unique", 2, 0, "true", true}, {"wrong count", "2", 0, true, true},
+		{"missing count", nil, 0, true, true}, {"wrong absence", 2, true, false, true},
+		{"bad absence", 2, 2, false, true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			rows := &outcomeRows{rows: [][]any{{profile, 0, nil, test.candidates, test.absent, 0, test.unique}}}
+			statement := Statement{CountNodes: []bool{false}, PairNodes: []bool{true}}
+			result, err := statement.ReadExplanation(t.Context(), rows, profile)
+			if err != nil {
+				if !test.invalid || result != nil || !rows.closed {
+					t.Fatalf("expected failure=%v without partial result, got %+v, %v", test.invalid, result, err)
+				}
+				return
+			}
+			if test.invalid || !rows.closed || len(result) != 1 || result[0].Pair == nil ||
+				result[0].Pair.Candidates != int64(test.candidates.(int)) ||
+				result[0].Pair.AbsencePossible != (test.absent == 1) || result[0].Pair.Unique != test.unique {
+				t.Fatalf("expected complete ordered-pair metadata, got %+v", result)
+			}
+		})
+	}
+
+	for _, rows := range []*outcomeRows{
+		{rows: [][]any{{}}, scanError: errors.New("scan")},
+		{rows: [][]any{{profile, 0, nil, 2, 1, 0, false}}, errorAtEnd: errors.New("iterate")},
+		{rows: [][]any{{profile, 0, nil, 2, 1, 0, false}}, closeError: errors.New("close")},
+		{rows: [][]any{{profile, 0, nil, 2, 1, 1, false}}},
+	} {
+		statement := Statement{CountNodes: []bool{false}, PairNodes: []bool{true}}
+		result, err := statement.ReadExplanation(t.Context(), rows, profile)
+		if err != nil {
+			if result != nil || !rows.closed {
+				t.Fatalf("expected failure without partial result and closed cursor, got %+v", result)
+			}
+			continue
+		}
+		t.Fatal("expected technical failure, got success")
+	}
+
+	// Mixed trees keep their metadata distinct, including the Sum text columns.
+	rows := &outcomeRows{rows: [][]any{
+		{profile, 0, nil, nil, nil, 0, nil, nil, nil},
+		{profile, 1, true, 2, 0, 0, nil, nil, true},
+		{profile, 2, true, 2, 3, 0, "10", "20", nil},
+	}}
+	statement := Statement{CountNodes: []bool{false, false, false}, SumNodes: []bool{false, false, true},
+		PairNodes: []bool{false, true, false}}
+	result, err := statement.ReadExplanation(t.Context(), rows, profile)
+	if err != nil {
+		t.Fatalf("expected mixed protocol, got %v", err)
+	}
+	if !rows.closed || result[0].Pair != nil || result[1].Pair == nil || result[2].Sum == nil ||
+		result[2].Pair != nil {
+		t.Fatalf("expected separate pair and Sum metadata, got %+v", result)
+	}
+	for _, statement := range []Statement{
+		{CountNodes: []bool{true}, PairNodes: []bool{true}},
+		{CountNodes: []bool{false}, SumNodes: []bool{true}, PairNodes: []bool{true}},
+		{CountNodes: []bool{false}, ExperienceNodes: []bool{true}, PairNodes: []bool{true}},
+		{CountNodes: []bool{false}, PairNodes: []bool{true, false}},
+	} {
+		rows := &outcomeRows{}
+		_, err := statement.ReadExplanation(t.Context(), rows, profile)
+		if err == nil || !rows.closed {
+			t.Fatalf("expected conflicting metadata rejected and cursor closed, got %v", err)
+		}
+	}
+
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+	rows = &outcomeRows{rows: [][]any{{profile, 0, true, 2, 0, 0, true}}}
+	statement = Statement{CountNodes: []bool{false}, PairNodes: []bool{true}}
+	result, err = statement.ReadExplanation(ctx, rows, profile)
+	if err != nil {
+		if !errors.Is(err, context.Canceled) || result != nil || !rows.closed {
+			t.Fatalf("expected cancellation without partial result and closed cursor, got %+v, %v", result, err)
+		}
+		return
+	}
+	t.Fatal("expected cancellation, got success")
+
+}
+
 // TestReadSumExplanation validates numeric bounds before exposing any result.
 func TestReadSumExplanation(t *testing.T) {
 	const profile = "00000000-0000-0000-0000-000000000001"

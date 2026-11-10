@@ -218,6 +218,7 @@ type FilterNodeOutcome struct {
 	Sum        *OccurrenceSumBounds
 	Average    *OccurrenceAverageValues
 	Experience *OccurrenceSelection
+	Pair       *OccurrencePairSelection
 }
 
 // OccurrenceCountBounds bounds the reachable count for independent occurrence

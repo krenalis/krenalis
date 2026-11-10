@@ -39,7 +39,8 @@ type Filter struct {
 // FilterRule represents a condition or a nested filter group.
 // It is implemented by *FilterCondition, *FilterCountCondition,
 // *FilterSumCondition, *FilterAverageCondition, *FilterExperienceCondition,
-// *FilterLatestNCondition, *FilterOccurredInCondition, *FilterMoneyCondition
+// *FilterLatestNCondition, *FilterLastVersusPreviousCondition,
+// *FilterOccurredInCondition, *FilterMoneyCondition
 // and *Filter.
 type FilterRule interface {
 	filterRule()
@@ -106,6 +107,7 @@ func (filter *Filter) hasBehavior(includeExtended bool) bool {
 			case *FilterCountCondition:
 				return true
 			case *FilterSumCondition, *FilterAverageCondition, *FilterExperienceCondition, *FilterLatestNCondition,
+				*FilterLastVersusPreviousCondition,
 				*FilterOccurredInCondition, *FilterMoneyCondition:
 				if includeExtended {
 					return true
@@ -442,6 +444,14 @@ func marshalFilterJSON(b *json.Buffer, filter *Filter) error {
 			if err != nil {
 				return err
 			}
+		case *FilterLastVersusPreviousCondition:
+			if rule == nil {
+				return errors.New("filter lastVersusPrevious condition cannot be nil")
+			}
+			err = b.Encode(rule)
+			if err != nil {
+				return err
+			}
 		case *FilterLatestNCondition:
 			if rule == nil {
 				return errors.New("filter latestN condition cannot be nil")
@@ -519,6 +529,8 @@ func unmarshalFilterRule(dec *json.Decoder, depth int, expectGroup bool, context
 	var hasAverage bool
 	var experience FilterExperience
 	var hasExperience bool
+	var lastPrevious FilterLastVersusPrevious
+	var hasLastPrevious bool
 	var latestN FilterLatestN
 	var hasLatestN bool
 	var occurredIn FilterPeriod
@@ -638,6 +650,19 @@ func unmarshalFilterRule(dec *json.Decoder, depth int, expectGroup bool, context
 			} else {
 				err = dec.Decode(&experience)
 			}
+		case "lastVersusPrevious":
+			if context != profileFilterRule {
+				return nil, 0, errors.New("lastVersusPrevious is not allowed in an occurrence predicate")
+			}
+			if hasLastPrevious {
+				return nil, 0, errors.New("duplicate filter property lastVersusPrevious")
+			}
+			hasLastPrevious = true
+			if expectGroup {
+				err = dec.SkipValue()
+			} else {
+				err = dec.Decode(&lastPrevious)
+			}
 		case "latestN":
 			if context != profileFilterRule {
 				return nil, 0, errors.New("latestN is not allowed in an occurrence predicate")
@@ -690,6 +715,7 @@ func unmarshalFilterRule(dec *json.Decoder, depth int, expectGroup bool, context
 	_ = dec.SkipToken() // skip '}'
 
 	if hasCalendar && (!hasRules || hasCount || hasSum || hasAverage || hasExperience || hasLatestN ||
+		hasLastPrevious ||
 		hasOccurredIn || hasMoney || hasProperty) {
 		return nil, 0, errors.New("defaultCalendar is only allowed on the root group")
 	}
@@ -697,7 +723,8 @@ func unmarshalFilterRule(dec *json.Decoder, depth int, expectGroup bool, context
 		if expectGroup {
 			return nil, 0, errors.New("filter must be a group")
 		}
-		if hasRules || hasProperty || hasCount || hasSum || hasAverage || hasExperience || hasLatestN || hasOccurredIn {
+		if hasRules || hasProperty || hasCount || hasSum || hasAverage || hasExperience || hasLatestN ||
+			hasLastPrevious || hasOccurredIn {
 			return nil, 0, errors.New("money condition cannot contain another subject")
 		}
 		if !hasOperator || !hasValues {
@@ -709,11 +736,21 @@ func unmarshalFilterRule(dec *json.Decoder, depth int, expectGroup bool, context
 		if expectGroup {
 			return nil, 0, errors.New("filter must be a group")
 		}
-		if hasRules || hasProperty || hasCount || hasSum || hasAverage || hasExperience || hasLatestN ||
+		if hasRules || hasProperty || hasCount || hasSum || hasAverage || hasExperience || hasLatestN || hasLastPrevious ||
 			hasOperator || hasValues {
 			return nil, 0, errors.New("occurredIn condition cannot contain another subject, operator or values")
 		}
 		return &FilterOccurredInCondition{OccurredIn: occurredIn}, 0, nil
+	}
+	if hasLastPrevious {
+		if expectGroup {
+			return nil, 0, errors.New("filter must be a group")
+		}
+		if hasRules || hasProperty || hasCount || hasSum || hasAverage || hasExperience || hasLatestN ||
+			hasOperator || hasValues {
+			return nil, 0, errors.New("lastVersusPrevious condition cannot contain another subject, operator or values")
+		}
+		return &FilterLastVersusPreviousCondition{LastVersusPrevious: lastPrevious}, 0, nil
 	}
 	if hasLatestN {
 		if expectGroup {
@@ -1124,6 +1161,8 @@ func prepareFilterGroup(filter *Filter, validation *filterValidation, depth int)
 			return nil, errors.New("occurredIn requires experience verify")
 		case *FilterExperienceCondition:
 			return nil, errors.New("experience requires Unified profile filtering")
+		case *FilterLastVersusPreviousCondition:
+			return nil, errors.New("lastVersusPrevious requires Unified profile filtering")
 		case *FilterLatestNCondition:
 			return nil, errors.New("latestN requires Unified profile filtering")
 		default:

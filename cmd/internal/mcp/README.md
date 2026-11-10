@@ -15,6 +15,14 @@ enablement and unrestricted main connection as `query-profiles`. No event payloa
 evaluation, not a snapshot or an alternative segment-membership policy; all
 explanations remain unavailable on the unverified Snowflake backend.
 
+`lastVersusPrevious` compares the reported total of the last two recorded
+Order Completed messages in one governed native currency. Its base is shared
+with experience/latestN; only difference with four ordered comparisons executes.
+Explanations describe the ordered pair's candidate union, absence and uniqueness,
+and requested/normalized tests, without returning amounts or witnesses. The
+guide distinguishes this population from the last two messages of all currencies.
+The Snowflake gate remains closed for this form too.
+
 ## Event catalog
 
 `list-event-definitions` returns metadata summaries, with optional literal

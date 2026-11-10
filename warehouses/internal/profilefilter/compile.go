@@ -45,6 +45,8 @@ func (c *compiler) condition(node warehouses.FilterCondition) (string, error) {
 		return c.average(n)
 	case *warehouses.SelectedOccurrence:
 		return c.experience(n)
+	case *warehouses.LastPreviousDifference:
+		return c.lastPrevious(n)
 	case *warehouses.LatestOccurrences:
 		return c.latestN(n)
 	case *warehouses.FilterGroup:
@@ -220,6 +222,12 @@ func (c *compiler) rule(node warehouses.FilterCondition) (string, error) {
 		term.average = true
 	}
 	switch node.(type) {
+	case *warehouses.LastPreviousDifference:
+		alias := "v" + strconv.Itoa(count)
+		term.lower = "CAST(COALESCE(" + alias + ".candidates,0) AS BIGINT)"
+		term.upper = "COALESCE(" + alias + ".absent,1)"
+		term.pairUnique = "CASE WHEN " + alias + ".absent=0 AND " + alias + ".candidates=2 AND " +
+			alias + ".first_time<" + alias + ".last_time THEN TRUE ELSE FALSE END"
 	case *warehouses.SelectedOccurrence, *warehouses.LatestOccurrences:
 		alias := "v" + strconv.Itoa(count)
 		term.lower, term.upper = "COALESCE("+alias+".candidates,0)", "COALESCE("+alias+".absent,1)"

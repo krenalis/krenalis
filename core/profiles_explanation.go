@@ -28,18 +28,19 @@ type ProfileFilterExplanation struct {
 }
 
 // ProfileRuleExplanation follows the input filter's group and rule order.
-// Kind is and, or, record, count, sum, average, experience or latestN.
+// Kind identifies a logical group, Record, reduction or selected experience.
 // Result is MATCH, NO_MATCH or UNKNOWN.
 // Record results do not identify which operand caused a SQL NULL.
 type ProfileRuleExplanation struct {
-	Kind       string                        `json:"kind"`
-	Result     string                        `json:"result"`
-	Rules      []ProfileRuleExplanation      `json:"rules,omitzero"`
-	Count      *ProfileCountExplanation      `json:"count,omitzero"`
-	Sum        *ProfileSumExplanation        `json:"sum,omitzero"`
-	Average    *ProfileAverageExplanation    `json:"average,omitzero"`
-	Experience *ProfileExperienceExplanation `json:"experience,omitzero"`
-	LatestN    *ProfileLatestNExplanation    `json:"latestN,omitzero"`
+	Kind               string                                `json:"kind"`
+	Result             string                                `json:"result"`
+	Rules              []ProfileRuleExplanation              `json:"rules,omitzero"`
+	Count              *ProfileCountExplanation              `json:"count,omitzero"`
+	Sum                *ProfileSumExplanation                `json:"sum,omitzero"`
+	Average            *ProfileAverageExplanation            `json:"average,omitzero"`
+	Experience         *ProfileExperienceExplanation         `json:"experience,omitzero"`
+	LatestN            *ProfileLatestNExplanation            `json:"latestN,omitzero"`
+	LastVersusPrevious *ProfileLastVersusPreviousExplanation `json:"lastVersusPrevious,omitzero"`
 }
 
 // ProfileExperienceExplanation describes selection before verification.
@@ -397,6 +398,44 @@ func explainProfileRule(rule warehouses.FilterCondition, semantic unified.Rule, 
 		}
 	case *warehouses.RecordFilter:
 		result.Kind = "record"
+	case *warehouses.LastPreviousDifference:
+		if node.Pair == nil || semantic.LastVersusPrevious == nil {
+			return ProfileRuleExplanation{}, errors.New("core: missing lastVersusPrevious explanation")
+		}
+		last := semantic.LastVersusPrevious
+		normalized, err := last.Check.NormalizedTest()
+		if err != nil {
+			return ProfileRuleExplanation{}, errors.New("core: unresolved difference explanation")
+		}
+		comparisonOperators := map[unified.Comparison]FilterOperator{unified.Less: OpIsLessThan,
+			unified.LessOrEqual: OpIsLessThanOrEqualTo, unified.Greater: OpIsGreaterThan,
+			unified.GreaterOrEqual: OpIsGreaterThanOrEqualTo}
+		selection := ProfileExperienceSelection{Kind: "ambiguous", Absence: "impossible", Candidates: node.Pair.Candidates}
+		if node.Pair.AbsencePossible {
+			selection.Absence = "possible"
+		}
+		if node.Pair.Candidates == 0 {
+			selection.Kind, selection.Absence = "absent", "certain"
+		} else if node.Pair.Unique {
+			selection.Kind = "unique"
+		}
+		definition, revision := last.Field.Reference()
+		result.Kind = "lastVersusPrevious"
+		result.LastVersusPrevious = &ProfileLastVersusPreviousExplanation{Start: rule.Start, End: rule.End,
+			UnboundedStart: rule.UnboundedStart, Field: FilterSumField{Definition: definition, MeaningRevision: revision},
+			CurrencyField:  FilterCurrencyField{Definition: last.Currency.Definition, MeaningRevision: last.Currency.Revision},
+			NativeCurrency: last.Currency.Value, Selection: selection,
+			Check: ProfileLastPreviousCheckExplanation{Kind: "difference", Requested: ProfileMoneyComparison{
+				Operator: comparisonOperators[last.Check.Test.Operator], Values: []decimal.Decimal{last.Check.Test.Value}},
+				Normalized: ProfileNormalizedDifferenceComparison{ReadableDifferences: normalized.ReadableDifferences}}}
+		if comparison := normalized.Comparison; comparison != nil {
+			result.LastVersusPrevious.Check.Normalized.Operator = comparisonOperators[comparison.Operator]
+			result.LastVersusPrevious.Check.Normalized.Values = []decimal.Decimal{comparison.Value}
+		}
+		if history := last.Scope.History; history != nil {
+			definition, revision := history.Reference()
+			result.LastVersusPrevious.History = &FilterHistory{Definition: definition, MeaningRevision: revision}
+		}
 	case *warehouses.LatestOccurrences:
 		if node.Experience == nil || semantic.LatestN == nil {
 			return ProfileRuleExplanation{}, errors.New("core: missing profile explanation latestN")

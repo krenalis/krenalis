@@ -1060,3 +1060,99 @@ error classification, including large redundant naturals and negative zero.
 The sources are coherent fixtures; the three deferred infrastructure guarantees
 are not implemented by this increment. Operations remain complete and exact or
 return a technical error, never a partial or invented semantic result.
+
+### LastVersusPrevious: ordered monetary difference
+
+The public lastVersusPrevious rule reuses FilterExperienceBase, its decoder and
+period/currency rules. Its field is commerce.order_completed.total@1, on track
+Order Completed, registered-message grain. Both currencyField/nativeCurrency
+are required for execution; omitting both is a capability error after complete
+validation. A partial pair, null, unknown revision or incompatible source is
+invalid. Raw where overlaps with either bound monetary path remain unavailable.
+The three deferred infrastructure guarantees remain prerequisites of the query
+view, not features of this increment.
+
+LastPreviousCheck validates the four canonical variants before admission:
+sameValue/differentValue carry only kind; difference/ratio carry seven numeric
+comparisons, with an inclusive, ordered two-value interval. Only difference's
+four ordered comparisons execute. The public inclusive interval is a deliberate
+subset of the normative interval forms. state.Where and Record persistence do
+not acquire this node. Other valid checks remain explicitly unimplemented.
+
+The difference is always Last - Previous in the base currency: 100 followed by
+70 is -30, and a decrease of at least 30 means <= -30. Selecting the last two EUR
+messages differs from selecting the last two messages and verifying both EUR.
+The latter monetary comparison without a common base currency is unavailable.
+A period restricts the population before selection; there is no fallback.
+
+Exactness requires determined identity/timestamp, independent optional memberships
+and value unknowns across identities, and every order of timestamp ties. For
+an ordered pair (x=Last,y=Previous), x!=y and tx>=ty. Let R(ty) count certain
+identities strictly later than y. The pair is compatible exactly when:
+
+- R=0: x is any other non-excluded identity with tx>=ty;
+- R=1: x is that sole later certain identity;
+- R>=2: y cannot be Previous.
+
+After copy checks, SQL groups by (profile,timestamp), with n_t identities, k_t
+readable and u_t unreadable amounts, their readable extrema gmin/gmax, and the
+certain count/value. Descending inclusive ROWS windows aggregate counts and
+extrema; LAG of those cumulative columns produces strictly later suffixes.
+Count suffixes coalesce to zero; missing MIN/MAX remain NULL. No pair join or
+ordering enumeration is needed. Three disjoint families supply reachable
+extrema:
+
+| Family | Conditions | Minimum / maximum difference |
+| --- | --- | --- |
+| Later x, current y | R=0, later readable and current readable | laterMin-gmax / laterMax-gmin |
+| Tied x,y | R=0, k_t>=2 | gmin-gmax / gmax-gmin |
+| Forced later x=z | R=1, z and y readable | az-gmax / az-gmin |
+
+The k_t>=2 test forbids a fictitious self-pair. For each family, any compatible
+unreadable member makes an unknown difference possible. An old unreadable row
+with two later certain identities is irrelevant. Global L/H are reachable
+extrema, without asserting every value between them is reachable. Ordered tests
+need only those extrema. Equality and intervals are not approximated from L/H.
+
+Fewer than two possible identities means NO_MATCH. Otherwise a compatible
+unknown difference makes every finite ordered test UNKNOWN, even when its
+readable normalization is none/all. With readable pairs only, >=t is NO_MATCH
+if H<t, MATCH if at least two identities are certain and L>=t, UNKNOWN otherwise;
+<= is symmetric. Possible absence blocks MATCH, not NO_MATCH. A possible pair
+with no unknown amount and missing/inverted finite extrema is an execution
+fault, not UNKNOWN. Complete exact result or technical error remains mandatory.
+
+Two Decimal(18,4) amounts have a Decimal(19,4) difference in inclusive +/-D,
+D=199999999999999.9998. Arithmetic widens both operands before subtraction.
+Core quantizes exact thresholds (global 76/37 limits) to the scale-four grid:
+>=ceil4(t), >floor4(t)+tick, <=floor4(t), <ceil4(t)-tick. Bounds outside the
+readable domain become explicit readableDifferences none/all. Unlike existing
+ordered money's +/-1e14 clipped sentinels, these closed modes are new and do not
+change old explanations or SQL. They concern readable pairs only; unknown
+amounts have no certified sign or finite business domain. Negative thresholds
+and exponents are retained exactly and can be decoded from explanations.
+
+Candidates counts the union of identities in compatible ordered pairs, zero
+on certain shortage. When a complete pair is possible, this union contains
+identities with fewer than two strictly later certain identities. Unique means
+absence impossible, two candidates and different timestamps. A timestamp tie
+is ambiguous even if the set has exactly two members. Explanations append a
+bounded pair_unique protocol column only to statements containing this new
+node; existing six/eight-column statements remain unchanged. Mixed trees keep
+pair, Count, Sum and Experience metadata distinct. The decoder checks closed
+forms and consistency, handles cancellation/Scan/Rows.Err/Close, and discards
+all results on failure. No amount or difference extremum crosses this boundary.
+
+Relevant copies must agree on qualification, exact timestamp, reading
+readability and known value, even when differing values pass the same test.
+Certainly excluded identities retain the existing timestamp-conflict exemption.
+Explanation fault checks stay scoped to the requested profile, including its
+copies elsewhere. The oracle enumerates subsets, chronological tie orders and
+unknown-value witnesses independently of the SQL formula, comparing exact
+rational tests and all profile selection metadata. HTTP/MCP exercise the same
+backend path, mixed trees, empty pages/totals and closed normalized JSON. Both
+drivers use the shared composer; Snowflake has local rendering tests only and
+remains gated until remote conformance is established.
+Its activation probes must cover Decimal(19,4) subtraction, strict suffixes
+with NULL extrema and mixed seven/nine-column explanation transport, in addition
+to the existing reader, time and source-contract checks.

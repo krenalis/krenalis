@@ -150,18 +150,19 @@ type Result struct {
 	At       time.Time
 }
 
-// Rule is a Record, Count, Sum, Average, Experience, LatestN or AND/OR group.
+// Rule is a profile Record, reduction, selected experience or AND/OR group.
 // Root nil means AllProfiles. Record contains schema-prepared operands.
 // Validation is separate from canonicalization and never mutates state.Where.
 type Rule struct {
-	Record     *state.WhereCondition
-	Count      *Count
-	Sum        *Sum
-	Average    *Average
-	Experience *Experience
-	LatestN    *LatestN
-	Operator   state.WhereLogical
-	Children   []Rule
+	Record             *state.WhereCondition
+	Count              *Count
+	Sum                *Sum
+	Average            *Average
+	Experience         *Experience
+	LatestN            *LatestN
+	LastVersusPrevious *LastVersusPrevious
+	Operator           state.WhereLogical
+	Children           []Rule
 }
 
 // Scope qualifies recorded track/page/screen messages at message_id grain.
@@ -366,6 +367,7 @@ func validateRule(rule Rule, at time.Time, depth int, nodes *int) error {
 	}
 	if rule.Record != nil {
 		if rule.Count != nil || rule.Sum != nil || rule.Average != nil || rule.Experience != nil || rule.LatestN != nil ||
+			rule.LastVersusPrevious != nil ||
 			rule.Operator != 0 || len(rule.Children) != 0 {
 			return fmt.Errorf("profile Record condition cannot contain other rules")
 		}
@@ -374,6 +376,13 @@ func validateRule(rule Rule, at time.Time, depth int, nodes *int) error {
 			return fmt.Errorf("invalid prepared profile Record condition")
 		}
 		return nil
+	}
+	if rule.LastVersusPrevious != nil {
+		if rule.Count != nil || rule.Sum != nil || rule.Average != nil || rule.Experience != nil || rule.LatestN != nil ||
+			rule.Operator != 0 || len(rule.Children) != 0 {
+			return fmt.Errorf("lastVersusPrevious cannot contain other rules")
+		}
+		return rule.LastVersusPrevious.validate(at)
 	}
 	if rule.LatestN != nil {
 		if rule.Count != nil || rule.Sum != nil || rule.Average != nil || rule.Experience != nil ||

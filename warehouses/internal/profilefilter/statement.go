@@ -27,13 +27,15 @@ type Statement struct {
 	AverageNodes []bool
 	// ExperienceNodes identifies selection candidate/absence metadata rows.
 	ExperienceNodes []bool
+	// PairNodes identifies ordered Last/Previous selection metadata rows.
+	PairNodes []bool
 }
 
 // ReadExplanation consumes the explanation protocol compiled by this statement.
 // Decoding, cancellation, source or Close failure discards the whole result.
 func (q Statement) ReadExplanation(ctx context.Context, rows warehouses.Rows, profile string) ([]warehouses.FilterNodeOutcome, error) {
 
-	result, err := readExplanation(ctx, rows, q.CountNodes, q.SumNodes, q.ExperienceNodes, profile)
+	result, err := readExplanation(ctx, rows, q.CountNodes, q.SumNodes, q.ExperienceNodes, q.PairNodes, profile)
 	if err != nil {
 		return nil, err
 	}

@@ -26,7 +26,7 @@ type SourceBinding struct {
 	Record        func(*state.Where) (warehouses.Expr, error)
 }
 
-// Prepare specializes Record, Count, Sum, Average and First/Last/Nth.
+// Prepare specializes the supported Record, V and selected-experience forms.
 // It preserves every main-tree node and child order one to one.
 // It returns *UnsupportedError for valid-language forms outside this subset.
 // The supplied bindings already determine source meaning and evidence model;
@@ -110,6 +110,9 @@ func prepareRule(rule Rule, bindings Bindings, at time.Time, source SourceBindin
 	}
 	if rule.Sum != nil {
 		return rule.Sum.prepare(at, source)
+	}
+	if rule.LastVersusPrevious != nil {
+		return rule.LastVersusPrevious.prepare(at, source)
 	}
 	if rule.LatestN != nil {
 		return rule.LatestN.prepare(at, source)

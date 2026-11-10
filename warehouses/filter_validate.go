@@ -70,6 +70,15 @@ func validateFilterCondition(node FilterCondition, depth int, nodes, physical *i
 			return fmt.Errorf("warehouses: nil profile Record condition")
 		}
 		return validateRecordQualification(n.Expr, 1, physical)
+	case *LastPreviousDifference:
+		err := n.validate()
+		if err != nil {
+			return err
+		}
+		population := &IndependentOccurrenceCount{Source: n.Source, Start: n.Start, End: n.End,
+			UnboundedStart: n.UnboundedStart, Qualification: n.Qualification}
+		populationNodes := 0
+		return validateFilterCondition(population, depth, &populationNodes, physical)
 	case *LatestOccurrences:
 		if n == nil || n.Size < 1 || n.Size > 10 || n.Predicate == nil {
 			return fmt.Errorf("warehouses: latestN requires size 1 to 10 and a predicate")
