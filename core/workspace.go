@@ -309,7 +309,11 @@ func (this *Workspace) Attributes(ctx context.Context, kpid string) (json.Value,
 // information, maximum character count, enum values, etc...).
 func (this Workspace) ColumnTypeDescription(t types.Type) (string, error) {
 	this.core.mustBeOpen()
-	return this.store.ColumnTypeDescription(t)
+	description, err := this.store.ColumnTypeDescription(t)
+	if err != nil {
+		err = fmt.Errorf("%s", err)
+	}
+	return description, err
 }
 
 // authorizedOAuthAccount represents an authorized OAuth account that can be
@@ -1033,7 +1037,8 @@ func (this *Workspace) Events(ctx context.Context, properties []string, filter *
 // If the KPID does not exist, still return an empty slice instead of an error.
 //
 // It returns an errors.UnprocessableError error with code MaintenanceMode if
-// the data warehouse is in maintenance mode.
+// the data warehouse is in maintenance mode, or an errors.UnavailableError if
+// the data warehouse returns an error.
 func (this *Workspace) Identities(ctx context.Context, kpid string, first, limit int) ([]Identity, int, error) {
 	this.core.mustBeOpen()
 	id, err := uuid.Parse(kpid)
@@ -1686,25 +1691,25 @@ func (this *Workspace) TestWarehouseUpdate(ctx context.Context, settings, mcpSet
 	ws := this.workspace
 	settings, err := this.core.datastore.ValidateWarehouseSettings(ctx, ws.Organization().ID, ws.Warehouse.Platform, settings)
 	if err != nil {
-		if err, ok := err.(*warehouses.SettingsError); ok {
+		if err, ok := errors.AsType[*warehouses.SettingsError](err); ok {
 			return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse settings are not valid: %w", err.Err)
 		}
-		return err
+		return fmt.Errorf("%s", err)
 	}
 	if mcpSettings != nil {
 		mcpSettings, err = this.core.datastore.ValidateWarehouseSettings(ctx, ws.Organization().ID, ws.Warehouse.Platform, mcpSettings)
 		if err != nil {
-			if err, ok := err.(*warehouses.SettingsError); ok {
+			if err, ok := errors.AsType[*warehouses.SettingsError](err); ok {
 				return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse MCP settings are not valid: %w", err.Err)
 			}
-			return err
+			return fmt.Errorf("%s", err)
 		}
 		if bytes.Equal(settings, mcpSettings) {
 			return errors.Unprocessable(InvalidWarehouseSettings, "the MCP settings must be different from the data warehouse settings")
 		}
 		err = this.core.datastore.CheckMCPSettings(ctx, ws.Organization().ID, ws.Warehouse.Platform, mcpSettings)
 		if err != nil {
-			if err, ok := err.(*warehouses.SettingsNotReadOnly); ok {
+			if err, ok := errors.AsType[*warehouses.SettingsNotReadOnly](err); ok {
 				return errors.Unprocessable(NotReadOnlyMCPSettings, "invalid MCP settings: %s", err)
 			}
 			if err, ok := err.(*datastore.WarehouseError); ok {
@@ -1874,26 +1879,26 @@ func (this *Workspace) UpdateWarehouse(ctx context.Context, mode WarehouseMode, 
 
 	settings, err := this.core.datastore.ValidateWarehouseSettings(ctx, ws.Organization().ID, ws.Warehouse.Platform, settings)
 	if err != nil {
-		if err, ok := err.(*warehouses.SettingsError); ok {
+		if err, ok := errors.AsType[*warehouses.SettingsError](err); ok {
 			return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse settings are not valid: %w", err.Err)
 		}
-		return err
+		return fmt.Errorf("%s", err)
 	}
 
 	if mcpSettings != nil {
 		mcpSettings, err = this.core.datastore.ValidateWarehouseSettings(ctx, ws.Organization().ID, ws.Warehouse.Platform, mcpSettings)
 		if err != nil {
-			if err, ok := err.(*warehouses.SettingsError); ok {
+			if err, ok := errors.AsType[*warehouses.SettingsError](err); ok {
 				return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse MCP settings are not valid: %w", err.Err)
 			}
-			return err
+			return fmt.Errorf("%s", err)
 		}
 		if bytes.Equal(settings, mcpSettings) {
 			return errors.Unprocessable(InvalidWarehouseSettings, "the MCP settings must be different from the data warehouse settings")
 		}
 		err = this.core.datastore.CheckMCPSettings(ctx, ws.Organization().ID, ws.Warehouse.Platform, mcpSettings)
 		if err != nil {
-			if err, ok := err.(*warehouses.SettingsNotReadOnly); ok {
+			if err, ok := errors.AsType[*warehouses.SettingsNotReadOnly](err); ok {
 				return errors.Unprocessable(NotReadOnlyMCPSettings, "invalid MCP settings: %s", err)
 			}
 			if err, ok := err.(*datastore.WarehouseError); ok {
@@ -2027,7 +2032,8 @@ func (this *Workspace) Warehouse(ctx context.Context) (string, json.Value, json.
 // If there are no identities, a nil slice is returned.
 //
 // It returns an errors.UnprocessableError error with code MaintenanceMode if
-// the data warehouse is in maintenance mode.
+// the data warehouse is in maintenance mode, or an errors.UnavailableError if
+// the data warehouse returns an error.
 func (this *Workspace) identities(ctx context.Context, where *state.Where, first, limit int) ([]Identity, int, error) {
 
 	// Retrieve the identities from the data warehouse.
@@ -2049,6 +2055,9 @@ func (this *Workspace) identities(ctx context.Context, where *state.Where, first
 	if err != nil {
 		if err == datastore.ErrMaintenanceMode {
 			return nil, 0, errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
+		}
+		if err, ok := errors.AsType[*datastore.WarehouseError](err); ok {
+			return nil, 0, errors.Unavailable("%s", err)
 		}
 		return nil, 0, err
 	}

@@ -43,32 +43,6 @@ var ErrMaintenanceMode = errors.New("the data warehouse is in maintenance mode")
 // longer exists.
 var ErrWorkspaceNotExist = errors.New("workspace does not exist anymore")
 
-// WarehouseError represents an error with the data warehouse.
-type WarehouseError struct {
-	Err error
-}
-
-func (err *WarehouseError) Error() string {
-	return fmt.Sprintf("data warehouse: %s", err.Err)
-}
-
-// warehouseError wraps err in *WarehouseError if it is an internal error.
-func warehouseError(err error) error {
-	if err == nil {
-		return nil
-	}
-	switch err.(type) {
-	case
-		*warehouses.RejectedReadOnlyQueryError,
-		*warehouses.NonInitializableError,
-		*warehouses.OperationError,
-		*warehouses.SettingsError,
-		*warehouses.SettingsNotReadOnly:
-		return err
-	}
-	return &WarehouseError{Err: err}
-}
-
 // destinationsProfilesTable represents the krenalis_destination_profiles table.
 var destinationsProfilesTable = warehouses.Table{
 	Name: "krenalis_destination_profiles",
@@ -110,7 +84,7 @@ func newStore(ds *Datastore, ws *state.Workspace) *Store {
 		eventIdentityWriters: map[string]*EventIdentityWriter{},
 	}
 	store.mc = newModeCoordinator(ws.Warehouse.Mode)
-	dw := warehouses.Registered(ws.Warehouse.Platform).New(newStateSettingsLoader(ws), dialer.DialWith(ws.Organization().ID))
+	dw := newWarehouse(ws.Warehouse.Platform, newStateSettingsLoader(ws), dialer.DialWith(ws.Organization().ID))
 	store.wh.Store(dw)
 	store.columnByProperty.user = profileColumnByProperty(ws.ProfileSchema)
 	store.columnByProperty.user["_kpid"] = warehouses.Column{Name: "_kpid", Type: types.UUID()}
@@ -141,7 +115,8 @@ func (loader *stateSettingsLoader) Load(ctx context.Context, settings any) error
 //
 // opID is an identifier that uniquely identifies a specific alter columns
 // operation; if the method is called again passing the same identifier, whether
-// the operation ended successfully or with a *warehouses.OperationError error,
+// the operation ended successfully or with an error wrapping
+// *warehouses.OperationError,
 // that result is returned again.
 //
 // schema is the profile schema without meta properties (this parameter is
@@ -160,7 +135,7 @@ func (loader *stateSettingsLoader) Load(ctx context.Context, settings any) error
 //
 // (2) the context was canceled;
 //
-// (3) the operation ended with an error of type *warehouses.OperationError, and
+// (3) the operation ended with an error wrapping *warehouses.OperationError, and
 // this means that even if the method is called again with the same ID, this
 // error is still returned;
 //
@@ -204,9 +179,7 @@ func (store *Store) CountIdentities(ctx context.Context, pipelines []string) (*w
 			WithoutProfile: map[string]int{},
 		}, nil
 	}
-	counts, err := store.warehouse().CountIdentities(ctx, pipelines)
-
-	return counts, warehouseError(err)
+	return store.warehouse().CountIdentities(ctx, pipelines)
 }
 
 // DeleteDestinationProfiles deletes the destination profiles of the provided
@@ -569,7 +542,8 @@ func (store *Store) Repair(ctx context.Context, userSchema types.Type) error {
 //
 // opID is an identifier that uniquely identifies a specific resolve identities
 // operation; if the method is called again passing the same identifier, whether
-// the operation ended successfully or with a *warehouses.OperationError error,
+// the operation ended successfully or with an error wrapping
+// *warehouses.OperationError,
 // that result is returned again.
 //
 // This method, once called, can then return in five distinct cases:
@@ -581,7 +555,7 @@ func (store *Store) Repair(ctx context.Context, userSchema types.Type) error {
 //
 // (3) the context was canceled;
 //
-// (4) the operation ended with an error of type *warehouses.OperationError, and
+// (4) the operation ended with an error wrapping *warehouses.OperationError, and
 // this means that even if the method is called again with the same ID, this
 // error is still returned;
 //
@@ -673,7 +647,7 @@ func (store *Store) TestWarehouseUpdate(ctx context.Context, toSettings json.Val
 	}
 
 	// Count the users on the warehouse that will be connected.
-	dw := warehouses.Registered(ws.Warehouse.Platform).New(newStateSettingsLoader(ws), dialer.DialWith(ws.Organization().ID))
+	dw := newWarehouse(ws.Warehouse.Platform, newStateSettingsLoader(ws), dialer.DialWith(ws.Organization().ID))
 	defer func() {
 		err := dw.Close()
 		if err != nil {
@@ -683,11 +657,11 @@ func (store *Store) TestWarehouseUpdate(ctx context.Context, toSettings json.Val
 	// Even if rows is not read, it is assigned because it must be closed.
 	rows, count2, err := dw.Query(ctx, query, true)
 	if err != nil {
-		return warehouseError(err)
+		return err
 	}
 	err = rows.Close()
 	if err != nil {
-		return warehouseError(err)
+		return err
 	}
 	// If the number of users is different, it means (except for the "unlucky"
 	// cases where Identity Resolution is in progress) that an attempt is being
@@ -723,7 +697,7 @@ func (store *Store) close() error {
 	}
 	err := store.warehouse().Close()
 	if err != nil {
-		err = fmt.Errorf("error occurred closing data warehouse: %s", err)
+		err = fmt.Errorf("cannot close %s", err)
 	}
 	return err
 }
