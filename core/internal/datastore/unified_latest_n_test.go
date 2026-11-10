@@ -85,37 +85,47 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,tim
 					assertUnifiedTruths(t, result, want)
 					// Exercise every accepted interval, plus the other public variants,
 					// against counts from actual subsets, orders and body completions.
-					quantifiers := []unified.LatestNQuantifier{{Kind: unified.LatestSome}}
+					// Expected bounds are independent of the production normalization.
+					type quantifierCase struct {
+						requested    unified.LatestNQuantifier
+						lower, upper int
+					}
+					quantifiers := []quantifierCase{{unified.LatestNQuantifier{Kind: unified.LatestSome}, 1, size}}
 					for lower := 0; lower <= size; lower++ {
-						for _, op := range []unified.Comparison{unified.Equal, unified.GreaterOrEqual, unified.LessOrEqual} {
-							quantifiers = append(quantifiers, unified.LatestNQuantifier{Kind: unified.LatestCardinality,
-								Operator: op, Value: fmt.Sprint(lower)})
+						for _, test := range []struct {
+							operator     unified.Comparison
+							lower, upper int
+						}{
+							{unified.Equal, lower, lower},
+							{unified.GreaterOrEqual, lower, size},
+							{unified.LessOrEqual, 0, lower},
+						} {
+							quantifiers = append(quantifiers, quantifierCase{unified.LatestNQuantifier{
+								Kind: unified.LatestCardinality, Operator: test.operator, Value: fmt.Sprint(lower)},
+								test.lower, test.upper})
 						}
 						for upper := lower; upper <= size; upper++ {
-							quantifiers = append(quantifiers, unified.LatestNQuantifier{Kind: unified.LatestCardinality,
-								Operator: unified.Between, Value: fmt.Sprint(lower), Upper: fmt.Sprint(upper)})
+							quantifiers = append(quantifiers, quantifierCase{unified.LatestNQuantifier{
+								Kind: unified.LatestCardinality, Operator: unified.Between,
+								Value: fmt.Sprint(lower), Upper: fmt.Sprint(upper)}, lower, upper})
 						}
 					}
 					for _, quantifier := range quantifiers {
 
-						latest.Quantifier = quantifier
-						accepted, err := quantifier.Accepted(size)
-						if err != nil {
-							t.Fatalf("expected compatible quantifier, got %v", err)
-						}
+						latest.Quantifier = quantifier.requested
 						expected := make([]unified.Truth, len(histories))
 						for code := range histories {
-							expected[code] = latestCountTruth(counts[code], selections[code], int(accepted.Lower), int(*accepted.Upper))
+							expected[code] = latestCountTruth(counts[code], selections[code], quantifier.lower, quantifier.upper)
 						}
 						actual, err := store.UnifiedProfiles(t.Context(), root, unified.Bindings{}, at, unified.Page{Limit: 1000})
 						if err != nil {
 							t.Fatalf("expected exact Latest(%d) quantifier %+v, got %v", size, quantifier, err)
 						}
 						assertUnifiedTruths(t, actual, expected)
-						if accepted.Lower == int64(size) && *accepted.Upper == int64(size) && !reflect.DeepEqual(actual, result) {
+						if quantifier.lower == size && quantifier.upper == size && !reflect.DeepEqual(actual, result) {
 							t.Fatal("expected All and cardinality N to agree, got different results")
 						}
-						if accepted.Lower == 0 && *accepted.Upper == int64(size) {
+						if quantifier.lower == 0 && quantifier.upper == size {
 							where, err := unified.RecordPredicate(latest.Where)
 							if err != nil {
 								t.Fatalf("expected Record population, got %v", err)
@@ -133,7 +143,7 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,tim
 
 						// The selected sets do not depend on the quantifier. Check all
 						// profiles of the mixed fixture, not just its aggregate totals.
-						if ti == 1 && bi == 2 && size == 2 && quantifier.Kind == unified.LatestSome {
+						if ti == 1 && bi == 2 && size == 2 && quantifier.requested.Kind == unified.LatestSome {
 							for code := range histories {
 								explained, err := store.ExplainUnifiedProfile(t.Context(), root, unified.Bindings{}, at, unifiedTestID(code+1))
 								if err != nil {

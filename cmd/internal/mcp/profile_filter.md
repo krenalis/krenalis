@@ -866,8 +866,9 @@ Counts close over jointly compatible complete blocks. With N=2 and three
 certain tied messages, two passing and one failing, Some is MATCH, All is
 UNKNOWN, and Exactly 0 is NO_MATCH. With a possibly short base even a
 predicate true on every full block can remain UNKNOWN. An unknown per-message
-predicate is resolved only where it can affect the requested test. This is
-neither independent position-by-position selection nor K's N2 composition.
+predicate makes the result UNKNOWN only when its completions can change the
+requested test. This is neither independent position-by-position selection nor
+K's N2 composition.
 
 Explanations have kind latestN and a latestN object with the same period/history
 and base currency metadata as experience, plus size, the requested quantifier,
