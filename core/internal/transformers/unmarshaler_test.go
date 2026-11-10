@@ -200,6 +200,10 @@ func Test_Unmarshal(t *testing.T) {
 			Type: types.Int(16),
 		},
 		{
+			Name: "Int16_Year",
+			Type: types.Int(16).AsYear(),
+		},
+		{
 			Name: "Int24",
 			Type: types.Int(24),
 		},
@@ -268,10 +272,6 @@ func Test_Unmarshal(t *testing.T) {
 			Type: types.Time(),
 		},
 		{
-			Name: "Year",
-			Type: types.Int(16).AsYear(),
-		},
-		{
 			Name: "UUID",
 			Type: types.UUID(),
 		},
@@ -335,6 +335,7 @@ func Test_Unmarshal(t *testing.T) {
 				"Boolean":             true,
 				"Int8":                -12,
 				"Int16":               8023,
+				"Int16_Year":          2023,
 				"Int24":               -2880217,
 				"Int32":               1307298102,
 				"Int64":               927041163082605,
@@ -352,7 +353,6 @@ func Test_Unmarshal(t *testing.T) {
 				"DateTime":            time.Date(2023, 10, 17, 9, 34, 25, 836540129, time.UTC),
 				"Date":                time.Date(2023, 10, 17, 0, 0, 0, 0, time.UTC),
 				"Time":                time.Date(1970, 01, 01, 9, 34, 25, 836540129, time.UTC),
-				"Year":                2023,
 				"UUID":                "550e8400-e29b-41d4-a716-446655440000",
 				"JSON":                json.Value(`{"foo": 5,"boo": true}`),
 				"JSON_null":           json.Value(`null`),
@@ -379,7 +379,7 @@ func Test_Unmarshal(t *testing.T) {
 			schema:       schema,
 			preserveJSON: false,
 			timeTruncate: time.Nanosecond,
-			data:         `{"records":[{"value":{"String":"some text","String_nil":null,"Boolean":true,"Int8":-12,"Int16":8023,"Int24":-2880217,"Int32":1307298102,"Int64":"927041163082605","Uint8":12,"Uint16":8023,"Uint24":2880217,"Uint32":1307298102,"Uint64":"927041163082605","Float32":57.16038,"Float64":18372.36240184391,"Float64_NaN":"NaN","Float64_Infinity":"Infinity","Float64_NegInfinity":"-Infinity","Decimal":"1752.064","DateTime":"2023-10-17T09:34:25.836540129Z","Date":"2023-10-17","Time":"09:34:25.836540129","Year":2023,"UUID":"550e8400-e29b-41d4-a716-446655440000","JSON":{"foo": 5,"boo": true},"JSON_null":null,"IP":"192.158.1.38","Array":["foo","boo"],"Object":{"a":false,"b":9},"Map":{"a":1,"b":2,"c":3}}}]}`,
+			data:         `{"records":[{"value":{"String":"some text","String_nil":null,"Boolean":true,"Int8":-12,"Int16":8023,"Int16_Year":2023,"Int24":-2880217,"Int32":1307298102,"Int64":"927041163082605","Uint8":12,"Uint16":8023,"Uint24":2880217,"Uint32":1307298102,"Uint64":"927041163082605","Float32":57.16038,"Float64":18372.36240184391,"Float64_NaN":"NaN","Float64_Infinity":"Infinity","Float64_NegInfinity":"-Infinity","Decimal":"1752.064","DateTime":"2023-10-17T09:34:25.836540129Z","Date":"2023-10-17","Time":"09:34:25.836540129","UUID":"550e8400-e29b-41d4-a716-446655440000","JSON":{"foo": 5,"boo": true},"JSON_null":null,"IP":"192.158.1.38","Array":["foo","boo"],"Object":{"a":false,"b":9},"Map":{"a":1,"b":2,"c":3}}}]}`,
 			records:      records,
 		},
 		{
@@ -387,7 +387,7 @@ func Test_Unmarshal(t *testing.T) {
 			schema:       schema,
 			preserveJSON: true,
 			timeTruncate: time.Nanosecond,
-			data:         `{"records":[{"value":{"String":"some text","String_nil":null,"Boolean":true,"Int8":-12,"Int16":8023,"Int24":-2880217,"Int32":1307298102,"Int64":"927041163082605","Uint8":12,"Uint16":8023,"Uint24":2880217,"Uint32":1307298102,"Uint64":"927041163082605","Float32":57.16038,"Float64":18372.36240184391,"Float64_NaN":"NaN","Float64_Infinity":"Infinity","Float64_NegInfinity":"-Infinity","Decimal":"1752.064","DateTime":"2023-10-17T09:34:25.836540129Z","Date":"2023-10-17","Time":"09:34:25.836540129","Year":2023,"UUID":"550e8400-e29b-41d4-a716-446655440000","JSON":"{\"foo\": 5,\"boo\": true}","JSON_null":"null","IP":"192.158.1.38","Array":["foo","boo"],"Object":{"a":false,"b":9},"Map":{"a":1,"b":2,"c":3}}}]}`,
+			data:         `{"records":[{"value":{"String":"some text","String_nil":null,"Boolean":true,"Int8":-12,"Int16":8023,"Int16_Year":2023,"Int24":-2880217,"Int32":1307298102,"Int64":"927041163082605","Uint8":12,"Uint16":8023,"Uint24":2880217,"Uint32":1307298102,"Uint64":"927041163082605","Float32":57.16038,"Float64":18372.36240184391,"Float64_NaN":"NaN","Float64_Infinity":"Infinity","Float64_NegInfinity":"-Infinity","Decimal":"1752.064","DateTime":"2023-10-17T09:34:25.836540129Z","Date":"2023-10-17","Time":"09:34:25.836540129","UUID":"550e8400-e29b-41d4-a716-446655440000","JSON":"{\"foo\": 5,\"boo\": true}","JSON_null":"null","IP":"192.158.1.38","Array":["foo","boo"],"Object":{"a":false,"b":9},"Map":{"a":1,"b":2,"c":3}}}]}`,
 			records:      records,
 		},
 		{
@@ -395,7 +395,7 @@ func Test_Unmarshal(t *testing.T) {
 			schema:       schema,
 			preserveJSON: false,
 			timeTruncate: time.Microsecond,
-			data:         `{"records":[{"value":{"String":"some text","String_nil":null,"Boolean":true,"Int8":-12,"Int16":8023,"Int24":-2880217,"Int32":1307298102,"Int64":927041163082605,"Uint8":12,"Uint16":8023,"Uint24":2880217,"Uint32":1307298102,"Uint64":927041163082605,"Float32":57.16038,"Float64":18372.36240184391,"Float64_NaN":"NaN","Float64_Infinity":"Infinity","Float64_NegInfinity":"-Infinity","Decimal":"1752.064","DateTime":"2023-10-17 09:34:25.83654","Date":"2023-10-17","Time":"09:34:25.83654","Year":2023,"UUID":"550e8400-e29b-41d4-a716-446655440000","JSON":{"foo": 5,"boo": true},"JSON_null":null,"IP":"192.158.1.38","Array":["foo","boo"],"Object":{"a":false,"b":9},"Map":{"a":1,"b":2,"c":3}}}]}`,
+			data:         `{"records":[{"value":{"String":"some text","String_nil":null,"Boolean":true,"Int8":-12,"Int16":8023,"Int16_Year":2023,"Int24":-2880217,"Int32":1307298102,"Int64":927041163082605,"Uint8":12,"Uint16":8023,"Uint24":2880217,"Uint32":1307298102,"Uint64":927041163082605,"Float32":57.16038,"Float64":18372.36240184391,"Float64_NaN":"NaN","Float64_Infinity":"Infinity","Float64_NegInfinity":"-Infinity","Decimal":"1752.064","DateTime":"2023-10-17 09:34:25.83654","Date":"2023-10-17","Time":"09:34:25.83654","UUID":"550e8400-e29b-41d4-a716-446655440000","JSON":{"foo": 5,"boo": true},"JSON_null":null,"IP":"192.158.1.38","Array":["foo","boo"],"Object":{"a":false,"b":9},"Map":{"a":1,"b":2,"c":3}}}]}`,
 			records:      records,
 		},
 		{
@@ -403,7 +403,7 @@ func Test_Unmarshal(t *testing.T) {
 			schema:       schema,
 			preserveJSON: true,
 			timeTruncate: time.Microsecond,
-			data:         `{"records":[{"value":{"String":"some text","String_nil":null,"Boolean":true,"Int8":-12,"Int16":8023,"Int24":-2880217,"Int32":1307298102,"Int64":927041163082605,"Uint8":12,"Uint16":8023,"Uint24":2880217,"Uint32":1307298102,"Uint64":927041163082605,"Float32":57.16038,"Float64":18372.36240184391,"Float64_NaN":"NaN","Float64_Infinity":"Infinity","Float64_NegInfinity":"-Infinity","Decimal":"1752.064","DateTime":"2023-10-17 09:34:25.83654","Date":"2023-10-17","Time":"09:34:25.83654","Year":2023,"UUID":"550e8400-e29b-41d4-a716-446655440000","JSON":"{\"foo\": 5,\"boo\": true}","JSON_null":"null","IP":"192.158.1.38","Array":["foo","boo"],"Object":{"a":false,"b":9},"Map":{"a":1,"b":2,"c":3}}}]}`,
+			data:         `{"records":[{"value":{"String":"some text","String_nil":null,"Boolean":true,"Int8":-12,"Int16":8023,"Int16_Year":2023,"Int24":-2880217,"Int32":1307298102,"Int64":927041163082605,"Uint8":12,"Uint16":8023,"Uint24":2880217,"Uint32":1307298102,"Uint64":927041163082605,"Float32":57.16038,"Float64":18372.36240184391,"Float64_NaN":"NaN","Float64_Infinity":"Infinity","Float64_NegInfinity":"-Infinity","Decimal":"1752.064","DateTime":"2023-10-17 09:34:25.83654","Date":"2023-10-17","Time":"09:34:25.83654","UUID":"550e8400-e29b-41d4-a716-446655440000","JSON":"{\"foo\": 5,\"boo\": true}","JSON_null":"null","IP":"192.158.1.38","Array":["foo","boo"],"Object":{"a":false,"b":9},"Map":{"a":1,"b":2,"c":3}}}]}`,
 			records:      records,
 		},
 		{

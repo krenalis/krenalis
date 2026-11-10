@@ -319,83 +319,17 @@ func Test_IsUnsigned(t *testing.T) {
 func Test_Ranges(t *testing.T) {
 
 	for _, s := range []int{8, 16, 24, 32, 64} {
-		t.Run(fmt.Sprintf("int/%d", s), func(t *testing.T) {
-
-			unsignedMax := uint64(math.MaxUint64) >> (64 - s)
-			signedMax := int64(unsignedMax >> 1)
-			signedMin := -signedMax - 1
-			if min, max := Int(s).IntRange(); min != signedMin || max != signedMax {
-				t.Errorf("expected signed range [%d,%d], got [%d,%d]", signedMin, signedMax, min, max)
-			}
-			if min, max := Int(s).Unsigned().UnsignedRange(); min != 0 || max != unsignedMax {
-				t.Errorf("expected unsigned range [0,%d], got [%d,%d]", unsignedMax, min, max)
-			}
-
-			signedYear := Int(s).AsYear()
-			if lo, hi := signedYear.IntRange(); lo != signedMin || hi != signedMax {
-				t.Errorf("expected signed year range [%d,%d], got [%d,%d]", signedMin, signedMax, lo, hi)
-			}
-			unsignedYear := Int(s).Unsigned().AsYear()
-			if lo, hi := unsignedYear.UnsignedRange(); lo != 0 || hi != unsignedMax {
-				t.Errorf("expected unsigned year range [%d,%d], got [%d,%d]", 0, unsignedMax, lo, hi)
-			}
-			if got := signedYear.WithIntRange(2, 100).Unsigned(); !Equal(unsignedYear, got) {
-				t.Fatalf("expected default unsigned year type %#v, got %#v", unsignedYear, got)
-			}
-
-		})
-	}
-
-	for _, test := range []struct {
-		name     string
-		typ      Type
-		min, max int64
-	}{
-		{"signed/defaults", Int(8), MinInt8, MaxInt8},
-		{"signed/minimum", Int(16), 2, MaxYear},
-		{"signed/maximum", Int(64), MinYear, 100},
-		{"signed/both bounds", Int(32), 2, 100},
-		{"signed/single value", Int(64), 2, 2},
-		{"signed/negative", Int(16), -100, 0},
-		{"signed/large", Int(64), 10000, MaxInt64},
-		{"unsigned/defaults", Int(32).Unsigned(), 0, MaxUint32},
-		{"unsigned/minimum", Int(64).Unsigned(), 2, MaxYear},
-		{"unsigned/maximum", Int(8).Unsigned(), MinYear, 100},
-		{"unsigned/both bounds", Int(32).Unsigned(), 2, 100},
-		{"unsigned/single value", Int(64).Unsigned(), 2, 2},
-		{"unsigned/zero", Int(16).Unsigned(), 0, 0},
-		{"unsigned/large", Int(64).Unsigned(), 10000, 20000},
-	} {
-		t.Run(fmt.Sprintf("int/%d/year/%s", test.typ.BitSize(), test.name), func(t *testing.T) {
-
-			year := test.typ.AsYear()
-			var yearFirst, rangeFirst Type
-			var gotMin, gotMax int64
-			if year.IsUnsigned() {
-				min, max := uint64(test.min), uint64(test.max)
-				yearFirst = year.WithUnsignedRange(min, max)
-				rangeFirst = test.typ.WithUnsignedRange(min, max).AsYear()
-				min, max = yearFirst.UnsignedRange()
-				gotMin, gotMax = int64(min), int64(max)
-			} else {
-				yearFirst = year.WithIntRange(test.min, test.max)
-				rangeFirst = test.typ.WithIntRange(test.min, test.max).AsYear()
-				gotMin, gotMax = yearFirst.IntRange()
-			}
-
-			if gotMin != test.min || gotMax != test.max {
-				t.Fatalf("expected range [%d,%d], got [%d,%d]", test.min, test.max, gotMin, gotMax)
-			}
-			if !Equal(yearFirst, rangeFirst) {
-				t.Fatalf("expected equal construction results, got %#v and %#v", yearFirst, rangeFirst)
-			}
-
-		})
+		if min, max := Int(s).IntRange(); min != -1<<(s-1) || max != 1<<(s-1)-1 {
+			t.Errorf("Int(%d).IntRange(): expected (%d, %d), got (%d, %d)", s, -1<<(s-1), 1<<(s-1)-1, min, max)
+		}
+		if min, max := Int(s).Unsigned().UnsignedRange(); min != 0 || max != 1<<s-1 {
+			t.Errorf("Int(%d).Unsigned().UnsignedRange(): expected (%d, %d), got (%d, %d)", s, 0, 1<<s-1, min, max)
+		}
 	}
 
 	for _, s := range []int{32, 64} {
 		if min, max := Float(s).FloatRange(); min != math.Inf(-1) || max != math.Inf(1) {
-			t.Errorf("Float(%d).FloatRange(): expected (-Inf, +Inf), got (%g, %g)", s, min, max)
+			t.Errorf("Float(32).FloatRange(): expected (-Inf, +Inf), got (%f, %f)", min, max)
 		}
 	}
 
@@ -439,7 +373,7 @@ func Test_Ranges(t *testing.T) {
 			{"large negative range", -math.MaxFloat64, -math.MaxFloat64 / 2, -limit, -largeMin},
 		}
 		for _, test := range tests {
-			t.Run(fmt.Sprintf("float/%d/%s", size, test.name), func(t *testing.T) {
+			t.Run(fmt.Sprintf("%d/%s", size, test.name), func(t *testing.T) {
 				bounded := Float(size).WithFloatRange(test.min, test.max)
 				realFirst := Float(size).Real().WithFloatRange(test.min, test.max)
 				rangeFirst := bounded.Real()

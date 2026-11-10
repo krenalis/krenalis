@@ -1,4 +1,4 @@
-import Type, { IntType, Semantics, Unit } from '../../lib/api/types/types';
+import Type, { Semantics, Unit } from '../../lib/api/types/types';
 
 interface UnitOption {
 	groupLabel?: string;
@@ -45,12 +45,6 @@ const UNIT_OPTIONS: UnitOption[] = [
 ];
 
 const DURATION_UNIT_OPTIONS = UNIT_OPTIONS.filter((option) => option.isDurationUnit === true);
-
-function getIntegerTypeRange(type: IntType): [bigint, bigint] {
-	const one = BigInt(1);
-	const magnitude = one << BigInt(type.bitSize - (type.unsigned ? 0 : 1));
-	return type.unsigned ? [BigInt(0), magnitude - one] : [-magnitude, magnitude - one];
-}
 
 function getPropertyValueType(type: Type | null): Type | null {
 	if (type?.kind === 'array' || type?.kind === 'map') {
@@ -363,7 +357,6 @@ function toPythonType(type: Type, preserveJSON: boolean, nullable?: boolean) {
 export {
 	DURATION_UNIT_OPTIONS,
 	UNIT_OPTIONS,
-	getIntegerTypeRange,
 	getPropertyValueType,
 	getProfileSchemaTypePresentation,
 	getTypeSemantics,

@@ -282,7 +282,7 @@ func (t Type) AsURL() Type {
 func (t Type) AsYear() Type {
 	t, err := t.withSemantics(YearSemantics, nil)
 	if err != nil {
-		panic("tools/types: " + err.Error())
+		panic(err.Error())
 	}
 	return t
 }

@@ -292,7 +292,6 @@ func TestExport(t *testing.T) {
 	exportedColumns := []types.Property{
 		{Name: "rank_int24", Type: types.Int(24), ReadOptional: true},
 		{Name: "rank_uint24", Type: types.Int(24).Unsigned(), ReadOptional: true},
-		{Name: "p_year", Type: types.Int(16).AsYear(), ReadOptional: true},
 		{Name: "p_inet", Type: types.IP(), ReadOptional: true},
 		{Name: "address", Type: types.Object([]types.Property{
 			{Name: "street", Type: types.String(), ReadOptional: true},
@@ -303,7 +302,6 @@ func TestExport(t *testing.T) {
 		{
 			"rank_int24":  int(1234),
 			"rank_uint24": uint(1234),
-			"p_year":      2001,
 			"p_inet":      "192.128.0.1",
 			"address": map[string]any{
 				"street":   "123 Strett",

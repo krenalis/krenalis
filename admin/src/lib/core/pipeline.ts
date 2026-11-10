@@ -22,7 +22,6 @@ import Type, { ArrayType, FloatType, IntType, MapType, ObjectType, Property, Str
 import API from '../api/api';
 import TransformedConnection from './connection';
 import { filterOrderingPropertySchema } from '../../components/helpers/getSchemaComboboxItems';
-import { getIntegerTypeRange } from '../../components/helpers/types';
 import {
 	formatString,
 	isDate,
@@ -2011,23 +2010,19 @@ const getTransformationFunctionReturnField = (
 		case 'boolean':
 			f += isPython ? 'False' : 'false';
 			break;
-		case 'int': {
-			const [typeMinimum, typeMaximum] = getIntegerTypeRange(property.type);
-			const minimum = BigInt(property.type.minimum ?? typeMinimum);
-			const maximum = BigInt(property.type.maximum ?? typeMaximum);
-			let value = BigInt(property.type.semantics === 'year' ? 2000 : 0);
-			if (value < minimum) {
-				value = minimum;
-			}
-			if (value > maximum) {
-				value = maximum;
-			}
-			f += value.toString();
-			if (!isPython && property.type.bitSize === 64) {
-				f += 'n';
+		case 'int':
+			if (property.type.semantics === 'year') {
+				f += !isPython && property.type.bitSize === 64 ? '2000n' : '2000';
+			} else if (isPython) {
+				f += '0';
+			} else {
+				if (property.type.bitSize === 64) {
+					f += '0n'; // bigint
+				} else {
+					f += '0';
+				}
 			}
 			break;
-		}
 		case 'float':
 			f += isPython ? '0.0' : '0';
 			break;

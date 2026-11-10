@@ -27,13 +27,6 @@ import { Filter, FilterCondition, FilterLogical, FilterOperator } from '../../..
 import { checkIfPropertyExists, pipelineObjectLabels } from './Pipeline.helpers';
 import { StringType } from '../../../lib/api/types/types';
 
-const YEAR_FILTER_OPERATOR_LABELS: Partial<Record<FilterOperator, string>> = {
-	'is less than': 'is before',
-	'is less than or equal to': 'is on or before',
-	'is greater than': 'is after',
-	'is greater than or equal to': 'is on or after',
-};
-
 // countFilterRules returns the number of groups and conditions below filter.
 const countFilterRules = (filter: Filter): number =>
 	filter.rules.reduce((count, rule) => count + 1 + (isFilterGroup(rule) ? countFilterRules(rule) : 0), 0);
@@ -305,7 +298,6 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 		const property = flatInputSchema?.[base];
 		const isUnary = isUnaryOperator(condition.operator);
 		const isJSON = property?.type === 'json';
-		const isYear = property?.full.type.kind === 'int' && property.full.type.semantics === 'year';
 		const isBetween = isBetweenOperator(condition.operator);
 		const isOneOf = isOneOfOperator(condition.operator);
 		const isInvalidProperty = property == null;
@@ -363,9 +355,7 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 				{property != null
 					? getCompatibleFilterOperators(property, propertyPath !== '').map((index) => (
 							<WaOption key={index} value={String(index)}>
-								{isYear
-									? (YEAR_FILTER_OPERATOR_LABELS[FILTER_OPERATORS[index]] ?? FILTER_OPERATORS[index])
-									: FILTER_OPERATORS[index]}
+								{FILTER_OPERATORS[index]}
 							</WaOption>
 						))
 					: FILTER_OPERATORS.map((operator, index) => (

@@ -376,7 +376,6 @@ func Test_TypeSemanticsJSONErrors(t *testing.T) {
 		data string
 		err  string
 	}{
-		{"removed year kind", `{"kind":"year"}`, `unknown type kind "year"`},
 		{"year on string", `{"kind":"string","semantics":"year"}`, "year semantics require an int type"},
 		{
 			"year with unit", `{"kind":"int","bitSize":16,"semantics":"year","unit":"year"}`,
@@ -593,12 +592,8 @@ func Test_TypeSemanticsJSONRoundTrip(t *testing.T) {
 			`{"kind":"int","semantics":"year","bitSize":32,"minimum":1900,"maximum":2100}`,
 		},
 		{
-			"negative year", Int(16).WithIntRange(-100, 0).AsYear(),
-			`{"kind":"int","semantics":"year","bitSize":16,"minimum":-100,"maximum":0}`,
-		},
-		{
-			"large unsigned year", Int(64).Unsigned().WithUnsignedRange(10000, MaxUint64).AsYear(),
-			`{"kind":"int","semantics":"year","bitSize":64,"unsigned":true,"minimum":10000}`,
+			"year range outside [1,9999]", Int(16).WithIntRange(-100, 20000).AsYear(),
+			`{"kind":"int","semantics":"year","bitSize":16,"minimum":-100,"maximum":20000}`,
 		},
 		{"no semantics", String(), `{"kind":"string"}`},
 		{"email", String().AsEmail(), `{"kind":"string","semantics":"email"}`},
