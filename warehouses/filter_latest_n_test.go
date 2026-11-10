@@ -21,6 +21,35 @@ func TestValidateLatestN(t *testing.T) {
 	request := ProfileOutcomeRequest{Population: ProfileSource{Table: "profiles",
 		Key: Column{Name: "id", Type: types.UUID()}}, Limit: 1}
 	for _, test := range []struct {
+		name     string
+		accepted *CountRange
+		invalid  bool
+	}{
+		{"All", nil, false},
+		{"Some", &CountRange{Lower: 1, Upper: new(int64(2))}, false},
+		{"zero", &CountRange{Upper: new(int64(0))}, false},
+		{"full", &CountRange{Upper: new(int64(2))}, false},
+		{"missing upper", &CountRange{}, true},
+		{"negative", &CountRange{Lower: -1, Upper: new(int64(2))}, true},
+		{"inverted", &CountRange{Lower: 2, Upper: new(int64(1))}, true},
+		{"beyond block", &CountRange{Upper: new(int64(3))}, true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			modified := node
+			modified.Accepted = test.accepted
+			err := ValidateProfileFilter(Filter{Root: &modified}, request)
+			if err != nil {
+				if !test.invalid {
+					t.Fatalf("expected valid accepted range, got %v", err)
+				}
+				return
+			}
+			if test.invalid {
+				t.Fatal("expected invalid accepted range, got success")
+			}
+		})
+	}
+	for _, test := range []struct {
 		size                                        int
 		missingPredicate, missingIdentity, reversed bool
 	}{

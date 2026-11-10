@@ -799,7 +799,7 @@ supplied. The money array retains each verify currency and requested/normalized
 comparison. Neither metadata set replaces the other. Experiences without base
 currency retain their prior JSON shape and meaning.
 
-## Latest N: All on a complete selected block
+## Latest N: quantification on a complete selected block
 
 A separate `latestN` rule selects the latest N recorded messages from its base
 and tests one uniform `predicate` on the entire compatible block. `size` is a
@@ -841,9 +841,9 @@ qualification. This equivalence requires a window ending at T; do not extend
 it to ago bands or completed calendar periods. Retention, deletion and late
 imports can change which registered messages make up a historical block.
 
-Only `{"kind":"all"}` is executable. Some and Cardinality are recognized and
-validated but return FilterCapabilityNotImplemented. Never emulate them with
-SQL or other filters. Their closed forms are `{"kind":"some"}` and:
+Three explicit quantifiers execute: `{"kind":"all"}` requires the predicate on
+every selected message; `{"kind":"some"}` requires it on at least one.
+Cardinality tests how many messages within the complete block pass:
 
 ```json
 {"kind":"cardinality","operator":"is greater than or equal to","values":[2]}
@@ -856,21 +856,33 @@ not silently rewritten. Values are JSON naturals (zero allowed, -0 reads as 0),
 without fractions or exponents: one operand, two for between. Inverted intervals
 and tests incompatible with [0,N] are invalid. Redundant upper bounds are valid.
 All and Some have no operator/values; unknown fields, kinds and null are invalid.
-Even Cardinality >= 0 requires a complete block. "At least two of the latest three
-orders" is this unavailable Cardinality; "at least two orders in the last 30 days"
-is an executable Count. Do not substitute one for the other.
+Even Cardinality >= 0 requires a complete block: certain shortage gives NO_MATCH,
+possible shortage prevents MATCH. Absence is not a block with zero passing
+messages. "At least two of the latest three orders" uses latestN with size 3
+and Cardinality >=2; "at least two orders in the last 30 days" uses Count.
+Do not substitute one for the other.
+
+Counts close over jointly compatible complete blocks. With N=2 and three
+certain tied messages, two passing and one failing, Some is MATCH, All is
+UNKNOWN, and Exactly 0 is NO_MATCH. With a possibly short base even a
+predicate true on every full block can remain UNKNOWN. An unknown per-message
+predicate is resolved only where it can affect the requested test. This is
+neither independent position-by-position selection nor K's N2 composition.
 
 Explanations have kind latestN and a latestN object with the same period/history
 and base currency metadata as experience, plus size, the requested quantifier,
-selection and any money metadata (paths relative to predicate). No witness or
-number of compatible blocks is returned. selection.candidates counts the union
-of identities in complete compatible blocks. With certain shortage it is zero;
+selection and any money metadata (paths relative to predicate). Quantifier
+operands remain plain natural digits, without truncating redundant upper bounds
+to size; -0 is reported as 0. The internal reachable-count extrema, witnesses
+and number of compatible blocks are not returned. selection.candidates counts
+the union of identities in complete compatible blocks. With certain shortage it is zero;
 absence is certain. Otherwise absence is possible or impossible. selection.kind
 is unique exactly when absence is impossible and candidates equals size: it
 describes the set, not its internal order. Three certain tied messages selected
 with size=3 form a unique set. An unknown predicate can still make its result
-UNKNOWN. Latest(1)/All has Last's outcome and selection metadata, while retaining
-the requested latestN form. Snowflake remains unavailable pending real tests.
+UNKNOWN. Latest(1)/All and Latest(1)/Some have Last's outcome and selection
+metadata, while retaining the requested latestN form. Snowflake remains
+unavailable pending real tests.
 
 ## Examples
 

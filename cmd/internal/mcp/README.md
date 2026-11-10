@@ -158,12 +158,15 @@ or amounts retain UNKNOWN, subject to the independent Kleene sample guard.
 It excludes other native currencies without conversion or business deduplication.
 
 Latest N uses its own `latestN` rule with the same experience base, size 1–10,
-a uniform Record/money predicate and an explicit quantifier. Only All executes;
-Some and canonical Cardinality tests are fully validated, then unavailable.
+a uniform Record/money predicate and an explicit All, Some or canonical
+Cardinality quantifier. Cardinality uses is (exactly), >=, <= and inclusive
+between, with natural JSON operands and complete static validation.
 Compatible whole blocks, including uncertain membership and timestamp ties,
 are closed together. A short block never satisfies the rule. Explanations
 retain the requested size/quantifier, candidate union and possible shortage;
-uniqueness concerns the selected set, not the internal order of tied messages.
+natural operands remain plain digits (-0 becomes 0), including redundant upper
+bounds. Internal reachable-count extrema are not exposed. Uniqueness concerns
+the selected set, not the internal order of tied messages.
 There is no occurredIn in this block predicate; trailing-window existence can
 use Count with the same population. See profile-filter-doc for the distinction
 from Count of passing messages and the two meanings of currency in the base

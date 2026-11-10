@@ -6,6 +6,7 @@ package datastore
 
 import (
 	"fmt"
+	"math/bits"
 	"reflect"
 	"strings"
 	"testing"
@@ -72,14 +73,81 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,tim
 					root := &unified.Rule{LatestN: latest}
 					want := make([]unified.Truth, len(histories))
 					selections := make([]warehouses.OccurrenceSelection, len(histories))
+					counts := make([]map[int]bool, len(histories))
 					for code, history := range histories {
-						want[code], selections[code] = enumerateLatestAll(history, size)
+						counts[code], selections[code] = enumerateLatestCounts(history, size)
+						want[code] = latestCountTruth(counts[code], selections[code], size, size)
 					}
 					result, err := store.UnifiedProfiles(t.Context(), root, unified.Bindings{}, at, unified.Page{Limit: 1000})
 					if err != nil {
 						t.Fatalf("expected exact Latest(%d)/All enumeration, got %v", size, err)
 					}
 					assertUnifiedTruths(t, result, want)
+					// Exercise every accepted interval, plus the other public variants,
+					// against counts from actual subsets, orders and body completions.
+					quantifiers := []unified.LatestNQuantifier{{Kind: unified.LatestSome}}
+					for lower := 0; lower <= size; lower++ {
+						for _, op := range []unified.Comparison{unified.Equal, unified.GreaterOrEqual, unified.LessOrEqual} {
+							quantifiers = append(quantifiers, unified.LatestNQuantifier{Kind: unified.LatestCardinality,
+								Operator: op, Value: fmt.Sprint(lower)})
+						}
+						for upper := lower; upper <= size; upper++ {
+							quantifiers = append(quantifiers, unified.LatestNQuantifier{Kind: unified.LatestCardinality,
+								Operator: unified.Between, Value: fmt.Sprint(lower), Upper: fmt.Sprint(upper)})
+						}
+					}
+					for _, quantifier := range quantifiers {
+
+						latest.Quantifier = quantifier
+						accepted, err := quantifier.Accepted(size)
+						if err != nil {
+							t.Fatalf("expected compatible quantifier, got %v", err)
+						}
+						expected := make([]unified.Truth, len(histories))
+						for code := range histories {
+							expected[code] = latestCountTruth(counts[code], selections[code], int(accepted.Lower), int(*accepted.Upper))
+						}
+						actual, err := store.UnifiedProfiles(t.Context(), root, unified.Bindings{}, at, unified.Page{Limit: 1000})
+						if err != nil {
+							t.Fatalf("expected exact Latest(%d) quantifier %+v, got %v", size, quantifier, err)
+						}
+						assertUnifiedTruths(t, actual, expected)
+						if accepted.Lower == int64(size) && *accepted.Upper == int64(size) && !reflect.DeepEqual(actual, result) {
+							t.Fatal("expected All and cardinality N to agree, got different results")
+						}
+						if accepted.Lower == 0 && *accepted.Upper == int64(size) {
+							where, err := unified.RecordPredicate(latest.Where)
+							if err != nil {
+								t.Fatalf("expected Record population, got %v", err)
+							}
+							count := &unified.Rule{Count: &unified.Count{Scope: latest.Scope, Where: where,
+								Test: unified.CountTest{Operator: unified.GreaterOrEqual, Value: uint64(size)}}}
+							complete, err := store.UnifiedProfiles(t.Context(), count, unified.Bindings{}, at, unified.Page{Limit: 1000})
+							if err != nil {
+								t.Fatalf("expected complete-block Count differential, got %v", err)
+							}
+							if !reflect.DeepEqual(actual, complete) {
+								t.Fatal("expected complete-block guard equivalent to Count >= N, got different results")
+							}
+						}
+
+						// The selected sets do not depend on the quantifier. Check all
+						// profiles of the mixed fixture, not just its aggregate totals.
+						if ti == 1 && bi == 2 && size == 2 && quantifier.Kind == unified.LatestSome {
+							for code := range histories {
+								explained, err := store.ExplainUnifiedProfile(t.Context(), root, unified.Bindings{}, at, unifiedTestID(code+1))
+								if err != nil {
+									t.Fatalf("expected Some selection, got %v", err)
+								}
+								if explained.Nodes[0].Truth != expected[code] || *explained.Nodes[0].Experience != selections[code] {
+									t.Fatalf("expected Some truth %v and selection %+v for %d, got %+v",
+										expected[code], selections[code], code, explained.Nodes)
+								}
+							}
+						}
+
+					}
+					latest.Quantifier = unified.LatestNQuantifier{}
 					if size == 1 || bi == 0 {
 						var equivalent unified.Rule
 						if size == 1 {
@@ -237,6 +305,17 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,tim
 			if *explained.Nodes[0].Experience != selection {
 				t.Fatalf("expected selection %+v, got %+v", selection, explained.Nodes[0].Experience)
 			}
+			counts, _ := enumerateLatestCounts(test.rows, test.size)
+			for value := 0; value <= test.size; value++ {
+				latest.Quantifier = unified.LatestNQuantifier{Kind: unified.LatestCardinality,
+					Operator: unified.Equal, Value: fmt.Sprint(value)}
+				actual, err := store.UnifiedProfiles(t.Context(), root, unified.Bindings{}, at, unified.Page{Limit: 10})
+				if err != nil {
+					t.Fatalf("expected money block cardinality %d, got %v", value, err)
+				}
+				assertUnifiedTruths(t, actual, []unified.Truth{latestCountTruth(counts, selection, value, value), unified.NoMatch})
+			}
+			latest.Quantifier = unified.LatestNQuantifier{}
 
 			latest.Predicate.Money.NativeCurrency = "USD"
 			result, err = store.UnifiedProfiles(t.Context(), root, unified.Bindings{}, at, unified.Page{Limit: 10})
@@ -244,6 +323,19 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,tim
 				t.Fatalf("expected conditioned different-currency FALSE, got %v", err)
 			}
 			assertUnifiedTruths(t, result, []unified.Truth{unified.NoMatch, unified.NoMatch})
+			latest.Quantifier = unified.LatestNQuantifier{Kind: unified.LatestCardinality,
+				Operator: unified.Equal, Value: "0"}
+			result, err = store.UnifiedProfiles(t.Context(), root, unified.Bindings{}, at, unified.Page{Limit: 10})
+			if err != nil {
+				t.Fatalf("expected cardinality zero with conditioned different currency, got %v", err)
+			}
+			zeroCounts := map[int]bool{}
+			if len(counts) != 0 {
+				zeroCounts[0] = true
+			}
+			zero := latestCountTruth(zeroCounts, selection, 0, 0)
+			assertUnifiedTruths(t, result, []unified.Truth{zero, unified.NoMatch})
+			latest.Quantifier = unified.LatestNQuantifier{}
 
 			latest.Predicate = &unified.OccurrencePredicate{Operator: state.OpOr,
 				Children: []unified.OccurrencePredicate{*latest.Predicate, {Record: &state.WhereCondition{
@@ -257,6 +349,12 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,tim
 				passing[i].verification = 1
 			}
 			always, _ := enumerateLatestAll(passing, test.size)
+			assertUnifiedTruths(t, result, []unified.Truth{always, unified.NoMatch})
+			latest.Quantifier = unified.LatestNQuantifier{Kind: unified.LatestSome}
+			result, err = store.UnifiedProfiles(t.Context(), root, unified.Bindings{}, at, unified.Page{Limit: 10})
+			if err != nil {
+				t.Fatalf("expected Some with conditioned FALSE under OR, got %v", err)
+			}
 			assertUnifiedTruths(t, result, []unified.Truth{always, unified.NoMatch})
 
 		})
@@ -284,33 +382,37 @@ FROM (VALUES `+test.rows+`) v(id,stamp,payload)`)
 					Scope: unified.Scope{Event: "Order Completed", Grain: "registered-message", Start: at.AddDate(0, -1, 0), End: at},
 					Predicate: &unified.OccurrencePredicate{Money: &unified.Money{Field: field, NativeCurrency: "EUR",
 						Test: unified.SumTest{Operator: unified.Greater, Value: decimal.MustParse("100")}}}}}
-				result, err := store.UnifiedProfiles(t.Context(), root, unified.Bindings{}, at, unified.Page{Limit: 10})
-				if err != nil {
-					if !test.fault || result != nil || !strings.Contains(err.Error(), "occurrence source violates") {
-						t.Fatalf("expected source fault=%v without partial result, got %+v, %v", test.fault, result, err)
+				for _, quantifier := range []unified.LatestNQuantifier{{}, {Kind: unified.LatestSome},
+					{Kind: unified.LatestCardinality, Operator: unified.GreaterOrEqual, Value: "0"}} {
+					root.LatestN.Quantifier = quantifier
+					result, err := store.UnifiedProfiles(t.Context(), root, unified.Bindings{}, at, unified.Page{Limit: 10})
+					if err != nil {
+						if !test.fault || result != nil || !strings.Contains(err.Error(), "occurrence source violates") {
+							t.Fatalf("expected source fault=%v without partial result, got %+v, %v", test.fault, result, err)
+						}
 					}
-				}
-				if err == nil {
-					if test.fault {
-						t.Fatal("expected source fault before insufficient base, got success")
+					if err == nil {
+						if test.fault {
+							t.Fatal("expected source fault before insufficient base, got success")
+						}
+						assertUnifiedTruths(t, result, []unified.Truth{unified.NoMatch, unified.NoMatch})
 					}
-					assertUnifiedTruths(t, result, []unified.Truth{unified.NoMatch, unified.NoMatch})
-				}
-				explained, err := store.ExplainUnifiedProfile(t.Context(), root, unified.Bindings{}, at, unifiedTestID(1))
-				if err != nil {
-					if !test.fault || explained != nil || !strings.Contains(err.Error(), "occurrence source violates") {
-						t.Fatalf("expected explanation fault=%v without partial result, got %+v, %v", test.fault, explained, err)
+					explained, err := store.ExplainUnifiedProfile(t.Context(), root, unified.Bindings{}, at, unifiedTestID(1))
+					if err != nil {
+						if !test.fault || explained != nil || !strings.Contains(err.Error(), "occurrence source violates") {
+							t.Fatalf("expected explanation fault=%v without partial result, got %+v, %v", test.fault, explained, err)
+						}
 					}
-				}
-				if err == nil && test.fault {
-					t.Fatal("expected source fault before explanation, got success")
-				}
-				other, err := store.ExplainUnifiedProfile(t.Context(), root, unified.Bindings{}, at, unifiedTestID(2))
-				if err != nil {
-					t.Fatalf("expected unrelated profile unaffected by faults, got %v", err)
-				}
-				if other.Nodes[0].Truth != unified.NoMatch {
-					t.Fatalf("expected NO_MATCH for unrelated profile, got %+v", other.Nodes)
+					if err == nil && test.fault {
+						t.Fatal("expected source fault before explanation, got success")
+					}
+					other, err := store.ExplainUnifiedProfile(t.Context(), root, unified.Bindings{}, at, unifiedTestID(2))
+					if err != nil {
+						t.Fatalf("expected unrelated profile unaffected by faults, got %v", err)
+					}
+					if other.Nodes[0].Truth != unified.NoMatch {
+						t.Fatalf("expected NO_MATCH for unrelated profile, got %+v", other.Nodes)
+					}
 				}
 			})
 		}
@@ -349,8 +451,15 @@ FROM (VALUES
 
 }
 
-// enumerateLatestAll independently enumerates actual chronological selections.
+// enumerateLatestAll uses the same independently enumerated blocks for All.
 func enumerateLatestAll(history []nthOracleOccurrence, size int) (unified.Truth, warehouses.OccurrenceSelection) {
+	counts, selection := enumerateLatestCounts(history, size)
+	return latestCountTruth(counts, selection, size, size), selection
+}
+
+// enumerateLatestCounts enumerates membership subsets, chronological orders and
+// local body completions. It does not use ranks, extrema or count continuity.
+func enumerateLatestCounts(history []nthOracleOccurrence, size int) (map[int]bool, warehouses.OccurrenceSelection) {
 
 	blocks := map[int]bool{}
 	selection := warehouses.OccurrenceSelection{}
@@ -397,7 +506,7 @@ func enumerateLatestAll(history []nthOracleOccurrence, size int) (unified.Truth,
 		permute(0)
 	}
 
-	seen := [2]bool{selection.AbsencePossible, false}
+	counts := map[int]bool{}
 	for mask := range 1 << len(history) {
 		valid := true
 		for i, row := range history {
@@ -409,11 +518,7 @@ func enumerateLatestAll(history []nthOracleOccurrence, size int) (unified.Truth,
 			continue
 		}
 		for block := range blocks {
-			value := 0
-			if mask&block == block {
-				value = 1
-			}
-			seen[value] = true
+			counts[bits.OnesCount(uint(mask&block))] = true
 		}
 	}
 	for i := range history {
@@ -421,12 +526,24 @@ func enumerateLatestAll(history []nthOracleOccurrence, size int) (unified.Truth,
 			selection.Candidates++
 		}
 	}
-	truth := unified.Unknown
-	if !seen[1] {
-		truth = unified.NoMatch
-	} else if !seen[0] {
-		truth = unified.Match
-	}
+	return counts, selection
+}
 
-	return truth, selection
+// latestCountTruth supervaluates an explicit reachable set, including shortage.
+func latestCountTruth(counts map[int]bool, selection warehouses.OccurrenceSelection, lower, upper int) unified.Truth {
+	passing, failing := false, selection.AbsencePossible
+	for count := range counts {
+		if count >= lower && count <= upper {
+			passing = true
+		} else {
+			failing = true
+		}
+	}
+	if !passing {
+		return unified.NoMatch
+	}
+	if !failing {
+		return unified.Match
+	}
+	return unified.Unknown
 }

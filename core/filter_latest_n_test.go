@@ -25,6 +25,56 @@ const latestNConditionJSON = `{"latestN":{"base":{"source":{"kind":"recordedEven
 	`{"property":"properties.order_id","operator":"starts with","values":["WEB-"]}]},` +
 	`"quantifier":{"kind":"all"}}}`
 
+// TestExplainLatestNQuantifier retains requested natural digits, not bounds.
+func TestExplainLatestNQuantifier(t *testing.T) {
+	at := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
+	for _, requested := range []string{
+		`{"kind":"all"}`, `{"kind":"some"}`,
+		`{"kind":"cardinality","operator":"is","values":[-0]}`,
+		`{"kind":"cardinality","operator":"is greater than or equal to","values":[2]}`,
+		`{"kind":"cardinality","operator":"is less than or equal to","values":[100]}`,
+		`{"kind":"cardinality","operator":"is between","values":[2,1000000000000000000000000000000]}`,
+	} {
+		t.Run(requested, func(t *testing.T) {
+
+			var condition FilterLatestNCondition
+			err := json.Unmarshal([]byte(strings.Replace(latestNConditionJSON, `{"kind":"all"}`, requested, 1)), &condition)
+			if err != nil {
+				t.Fatalf("expected quantifier decoding, got %v", err)
+			}
+			rule, err := prepareFilterLatestN(&condition, nil)
+			if err != nil {
+				t.Fatalf("expected quantifier preparation, got %v", err)
+			}
+			index := 0
+			result, err := explainProfileRule(&warehouses.LatestOccurrences{Size: 3, End: at}, rule,
+				[]warehouses.FilterNodeOutcome{{Truth: warehouses.FilterUnknown, Experience: &warehouses.OccurrenceSelection{
+					Candidates: 4, AbsencePossible: true}}}, &index, at)
+			if err != nil {
+				t.Fatalf("expected quantifier explanation, got %v", err)
+			}
+			encoded, err := json.Marshal(result.LatestN.Quantifier)
+			if err != nil {
+				t.Fatalf("expected quantifier encoding, got %v", err)
+			}
+			expected := strings.ReplaceAll(requested, "-0", "0")
+			if string(encoded) != expected {
+				t.Fatalf("expected requested quantifier %s, got %s", expected, encoded)
+			}
+			var reloaded FilterLatestNQuantifier
+			err = json.Unmarshal(encoded, &reloaded)
+			if err != nil {
+				t.Fatalf("expected explanation quantifier accepted by public decoder, got %v", err)
+			}
+			_, err = reloaded.prepare(3)
+			if err != nil {
+				t.Fatalf("expected reloaded quantifier preparation, got %v", err)
+			}
+
+		})
+	}
+}
+
 // TestExplainLatestNSelection observes set ambiguity, not permutations of ties.
 func TestExplainLatestNSelection(t *testing.T) {
 	at := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
@@ -127,7 +177,7 @@ func TestFilterLatestNCodec(t *testing.T) {
 
 }
 
-// TestFilterLatestNQuantifiers classifies incompatibility before availability.
+// TestFilterLatestNQuantifiers separates incompatible and redundant tests.
 func TestFilterLatestNQuantifiers(t *testing.T) {
 	for _, test := range []struct {
 		name, quantifier string
@@ -169,16 +219,24 @@ func TestFilterLatestNQuantifiers(t *testing.T) {
 			if err != nil {
 				t.Fatalf("expected structurally decoded quantifier, got %v", err)
 			}
-			_, err = prepareFilterLatestN(&condition, nil)
+			rule, err := prepareFilterLatestN(&condition, nil)
 			if err != nil {
-				_, unsupported := errors.AsType[*unified.UnsupportedError](err)
-				if unsupported == test.invalid || test.name == "all" {
+				if _, unsupported := errors.AsType[*unified.UnsupportedError](err); unsupported || !test.invalid {
 					t.Fatalf("expected invalid=%v, got %v", test.invalid, err)
 				}
 				return
 			}
-			if test.name != "all" {
-				t.Fatal("expected invalid or unavailable quantifier, got success")
+			if test.invalid || rule.LatestN == nil {
+				t.Fatalf("expected invalid=%v, got %+v", test.invalid, rule)
+			}
+			want := unified.LatestAll
+			if condition.LatestN.Quantifier.Kind == "some" {
+				want = unified.LatestSome
+			} else if condition.LatestN.Quantifier.Kind == "cardinality" {
+				want = unified.LatestCardinality
+			}
+			if rule.LatestN.Quantifier.Kind != want {
+				t.Fatalf("expected quantifier kind %d, got %+v", want, rule.LatestN.Quantifier)
 			}
 		})
 	}
@@ -245,7 +303,8 @@ func TestFilterLatestNValidation(t *testing.T) {
 	}
 
 	unsupported := condition
-	unsupported.LatestN.Quantifier.Kind = "some"
+	unsupported.LatestN.Base.Period = FilterPeriod{Kind: "elapsedLookback",
+		Duration: &FilterDuration{Value: json.Value("100000000000000000000"), Unit: "day"}}
 	invalid := condition
 	invalid.LatestN.Size = json.Value("0")
 	for _, rules := range [][]FilterRule{{&unsupported, &invalid}, {&invalid, &unsupported}} {

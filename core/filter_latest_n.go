@@ -14,7 +14,7 @@ import (
 
 // FilterLatestN selects a complete block before applying one uniform predicate.
 // Predicate admits Record and money, not occurredIn. Size is from 1 to 10.
-// Only All is executable; Some and Cardinality remain unavailable.
+// All, Some and canonical Cardinality tests require a complete block.
 type FilterLatestN struct {
 	Base       FilterExperienceBase    `json:"base"`
 	Size       json.Value              `json:"size"`
@@ -106,7 +106,7 @@ func (*FilterLatestNCondition) filterRule() {}
 // FilterLatestNQuantifier is All, Some or a canonical Cardinality test.
 // All and Some admit only Kind. Cardinality requires Operator and Values:
 // is (exactly), >= (at least), <= (at most), or inclusive between.
-// Explanations retain the requested quantifier without normalization.
+// Explanations retain the requested test with canonical natural digits.
 type FilterLatestNQuantifier struct {
 	Kind     string         `json:"kind"`
 	Operator FilterOperator `json:"operator,omitzero"`
@@ -148,48 +148,54 @@ func (quantifier *FilterLatestNQuantifier) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// validate checks canonical cardinalities against [0,size] without narrowing
-// the requested test. Only an empty intersection is statically incompatible.
-func (quantifier FilterLatestNQuantifier) validate(size filterCountInteger) error {
-	if quantifier.Kind == "all" || quantifier.Kind == "some" {
+// prepare reads natural operands once and retains their canonical digits.
+// The semantic quantifier validates compatibility and normalizes execution.
+func (quantifier FilterLatestNQuantifier) prepare(size int) (unified.LatestNQuantifier, error) {
+	result := unified.LatestNQuantifier{}
+	switch quantifier.Kind {
+	case "all", "some":
 		if quantifier.Operator != "" || quantifier.Values != nil {
-			return errors.New("latestN all and some admit only kind")
+			return result, errors.New("latestN all and some admit only kind")
 		}
-		return nil
-	}
-	if quantifier.Kind != "cardinality" {
-		return errors.New("invalid latestN quantifier kind")
-	}
-	arity := 1
-	switch quantifier.Operator {
-	case OpIs, OpIsGreaterThanOrEqualTo, OpIsLessThanOrEqualTo:
-		// These canonical cardinalities have one natural operand.
-	case OpIsBetween:
-		arity = 2
-	default:
-		return errors.New("latestN cardinality accepts only is, is greater than or equal to, " +
-			"is less than or equal to, and is between")
-	}
-	if len(quantifier.Values) != arity {
-		return errors.New("invalid latestN cardinality arity")
-	}
-	lower, err := parseFilterCountInteger(quantifier.Values[0])
-	if err != nil {
-		return err
-	}
-	if arity == 2 {
-		upper, err := parseFilterCountInteger(quantifier.Values[1])
+		if quantifier.Kind == "some" {
+			result.Kind = unified.LatestSome
+		}
+	case "cardinality":
+		result.Kind = unified.LatestCardinality
+		arity := 1
+		switch quantifier.Operator {
+		case OpIs:
+			result.Operator = unified.Equal
+		case OpIsGreaterThanOrEqualTo:
+			result.Operator = unified.GreaterOrEqual
+		case OpIsLessThanOrEqualTo:
+			result.Operator = unified.LessOrEqual
+		case OpIsBetween:
+			result.Operator, arity = unified.Between, 2
+		default:
+			return result, errors.New("latestN cardinality accepts only is, is greater than or equal to, " +
+				"is less than or equal to, and is between")
+		}
+		if len(quantifier.Values) != arity {
+			return result, errors.New("invalid latestN cardinality arity")
+		}
+		value, err := parseFilterCountInteger(quantifier.Values[0])
 		if err != nil {
-			return err
+			return result, err
 		}
-		if upper.compare(lower) < 0 {
-			return errors.New("inverted latestN cardinality interval")
+		result.Value = string(value)
+		if arity == 2 {
+			upper, err := parseFilterCountInteger(quantifier.Values[1])
+			if err != nil {
+				return result, err
+			}
+			result.Upper = string(upper)
 		}
+	default:
+		return result, errors.New("invalid latestN quantifier kind")
 	}
-	if quantifier.Operator != OpIsLessThanOrEqualTo && lower.compare(size) > 0 {
-		return errors.New("latestN cardinality is statically incompatible with size")
-	}
-	return nil
+	_, err := result.Accepted(size)
+	return result, err
 }
 
 func prepareFilterLatestN(condition *FilterLatestNCondition, calendar *unified.Calendar) (unified.Rule, error) {
@@ -204,7 +210,8 @@ func prepareFilterLatestN(condition *FilterLatestNCondition, calendar *unified.C
 	if size == "0" || size.compare("10") > 0 {
 		return unified.Rule{}, errors.New("latestN size must be an integer from 1 to 10")
 	}
-	err = latest.Quantifier.validate(size)
+	n, _ := size.uint64() // The validated size is at most 10.
+	quantifier, err := latest.Quantifier.prepare(int(n))
 	if err != nil {
 		return unified.Rule{}, err
 	}
@@ -212,10 +219,6 @@ func prepareFilterLatestN(condition *FilterLatestNCondition, calendar *unified.C
 	if err != nil {
 		return unified.Rule{}, err
 	}
-	if latest.Quantifier.Kind != "all" {
-		return unified.Rule{}, &unified.UnsupportedError{Capability: "latestN Some and Cardinality"}
-	}
-	n, _ := size.uint64() // The validated size is at most 10.
-	return unified.Rule{LatestN: &unified.LatestN{Size: int(n), Scope: base.Scope, Where: base.Where,
-		Currency: base.Currency, Predicate: base.Verify}}, nil
+	return unified.Rule{LatestN: &unified.LatestN{Size: int(n), Quantifier: quantifier,
+		Scope: base.Scope, Where: base.Where, Currency: base.Currency, Predicate: base.Verify}}, nil
 }

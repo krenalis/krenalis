@@ -958,15 +958,19 @@ values before chronological selection; absence remains an alternative. Source
 faults still concern relevant qualification/verification outcomes, so two different
 non-EUR currencies are not a fault when both copies are certainly excluded.
 
-### Latest N with All
+### Latest N with All, Some and Cardinality
 
 LatestN is a separate semantic node and public rule; it shares experience.base's
 decoder and preparation. It binds the same Count population and conditional
-local predicate, producing warehouses.LatestOccurrences. Only All is executable.
-Some and Cardinality are recognized with complete public validation first.
-Cardinality uses four canonical comparisons over JSON naturals, lexical Count
-parsing and intersection with [0,N] for static compatibility. Redundant tests
-remain valid; no Cardinality equivalence is activated in this increment.
+local predicate, producing warehouses.LatestOccurrences. All, Some and the four
+canonical Cardinality tests execute on complete blocks. Cardinality uses lexical
+Count parsing for JSON naturals and intersection with [0,N] for static
+compatibility. Redundant upper bounds remain valid. Requested operands are
+canonical digit strings in the semantic model, without bounded-integer or
+floating-point conversion; execution derives an inclusive range within [0,N].
+The physical Accepted range requires a finite upper endpoint; nil retains All's
+original SQL. Cardinality [N,N] deliberately takes the general path, providing
+a differential against All without changing existing SQL or arguments.
 
 The exact algorithm requires determined identities and timestamps, independent
 optional membership and local predicate values across identities, and every
@@ -992,18 +996,67 @@ SQL uses explicit descending cumulative ROWS frames after timestamp grouping.
 Existing First/Last/Nth SQL and transport remain unchanged. Both drivers use
 this shared composer; Snowflake remains gated without remote certification.
 
+For Some and Cardinality, let F be the counts of TRUE predicates reachable on
+complete compatible blocks. Under the hypotheses above F is a contiguous set
+of integers. To connect two completions, add optional identities until all are
+present, adjust tie permutations by adjacent swaps and change local body
+completions, then remove the unwanted optional identities. Every intermediate
+world still has a complete block. Each step changes its TRUE count by at most
+one, so no integer between the reachable extrema can be missing. Shared facts
+between identities or correlated optional memberships invalidate this proof;
+they remain outside this supported model, not approximated as UNKNOWN.
+
+Extrema use the same timestamp groups and descending explicit frames. At a
+boundary tau, cT/cF/cU count certain later TRUE/FALSE/UNKNOWN identities;
+oT/oF/oU count optional later identities; gT/gF/gU count all identities at tau.
+Write r=cT+cF+cU, s=N-r, o=oT+oF+oU and g=gT+gF+gU. For 1<=s<=o+g:
+
+```text
+lo(tau) = cT + max(0, s - (oF+oU+gF+gU))
+hi(tau) = cT + cU + min(s, oT+oU+gT+gU)
+L = min lo(tau); H = max hi(tau)
+```
+
+This relaxed frontier need not choose an identity at tau: any added choice is
+a valid block with a newer actual frontier, so global extrema stay exact.
+SQL uses CASE for min/max of known operands, avoiding dialect-specific
+GREATEST/LEAST NULL behavior. Both finite extrema are reachable. With C certain
+and P non-excluded identities, an accepted inclusive range [a,b] closes as:
+
+- P<N or [L,H] disjoint from [a,b]: NO_MATCH.
+- C>=N and [L,H] contained in [a,b]: MATCH.
+- Otherwise: UNKNOWN.
+
+All accepts [N,N], Some [1,N]; the four Cardinality comparisons normalize to
+bounded inclusive intervals. Absence is never counted as zero: even >=0 is
+NO_MATCH on a certainly short base and UNKNOWN on a possibly short base when
+some complete block passes. This is E's closure of compatible blocks, not K's
+compositional N2 quantification or independent winners at separate positions.
+
+Mutation checks cover every UNKNOWN counter, slot computation, frontier bounds
+and the shortage guard. Removing an entire frontier bound can be globally
+redundant: on a complete base those invalid frontiers have lo>=L and hi<=H;
+on a short base the separate candidate/shortage check closes NO_MATCH anyway.
+The bounds remain explicit to keep each frontier meaningful. Making either
+bound strict is not equivalent and is caught by the PostgreSQL oracle.
+
 The existing candidate/absence explanation protocol is reused. LatestN explains
 uniqueness of the selected set: absence impossible and candidate union size N.
-Internal tie permutations do not change a uniform All predicate. It retains
-size, the requested All quantifier, period/history and separate base/predicate
-currency metadata; no ordered witnesses or combinatorial block count is exposed.
+Internal tie permutations do not change any of the three quantifiers. It
+retains size, the requested quantifier, period/history and separate
+base/predicate currency metadata. Requested natural operands remain plain
+digits, including redundant large upper bounds; -0 is canonicalized to 0.
+L/H, ordered witnesses and the combinatorial block count are not exposed.
 
 The PostgreSQL oracle enumerates subsets, chronological tie permutations and
 local body completions independently of the cumulative formula. Tests compare
 outcomes and measured candidate unions, including every profile in one mixed
 fixture, Latest(1)/Last and all-TRUE/Count>=N differentials, N=10 with eleven
-identities, duplicated copies and source faults before shortage. HTTP/MCP tests
-exercise listing, empty pages/totals, explanations and error classification.
+identities, duplicated copies and source faults before shortage. The same
+independent oracle enumerates the entire reachable set for Some and every
+accepted Cardinality interval; Exactly N is differential with All. HTTP/MCP
+exercise listing, empty pages/totals, canonical quantifier explanations and
+error classification, including large redundant naturals and negative zero.
 The sources are coherent fixtures; the three deferred infrastructure guarantees
 are not implemented by this increment. Operations remain complete and exact or
 return a technical error, never a partial or invented semantic result.

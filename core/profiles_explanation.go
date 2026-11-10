@@ -75,7 +75,7 @@ type ProfileOccurredInExplanation struct {
 	End   time.Time `json:"end"`
 }
 
-// ProfileLatestNExplanation describes All on a complete selected block.
+// ProfileLatestNExplanation describes a predicate on a complete selected block.
 // Selection describes the set, not its unobserved internal order: it is unique
 // exactly when absence is impossible and Candidates equals Size.
 // Quantifier is the requested form. Money paths are relative to Predicate.
@@ -415,6 +415,24 @@ func explainProfileRule(rule warehouses.FilterCondition, semantic unified.Rule, 
 		result.LatestN = &ProfileLatestNExplanation{Start: rule.Start, End: rule.End,
 			UnboundedStart: rule.UnboundedStart, Size: semantic.LatestN.Size,
 			Quantifier: FilterLatestNQuantifier{Kind: "all"}, Selection: selection}
+		quantifier := semantic.LatestN.Quantifier
+		switch quantifier.Kind {
+		case unified.LatestAll:
+			// The zero value preserves existing All explanations.
+		case unified.LatestSome:
+			result.LatestN.Quantifier.Kind = "some"
+		case unified.LatestCardinality:
+			operators := map[unified.Comparison]FilterOperator{unified.Equal: OpIs,
+				unified.GreaterOrEqual: OpIsGreaterThanOrEqualTo, unified.LessOrEqual: OpIsLessThanOrEqualTo,
+				unified.Between: OpIsBetween}
+			result.LatestN.Quantifier = FilterLatestNQuantifier{Kind: "cardinality",
+				Operator: operators[quantifier.Operator], Values: []json.Value{json.Value(quantifier.Value)}}
+			if quantifier.Operator == unified.Between {
+				result.LatestN.Quantifier.Values = append(result.LatestN.Quantifier.Values, json.Value(quantifier.Upper))
+			}
+		default:
+			return ProfileRuleExplanation{}, errors.New("core: invalid latestN explanation quantifier")
+		}
 		if currency := semantic.LatestN.Currency; currency != nil {
 			result.LatestN.CurrencyField = &FilterCurrencyField{
 				Definition: currency.Definition, MeaningRevision: currency.Revision}

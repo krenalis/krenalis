@@ -74,6 +74,10 @@ func validateFilterCondition(node FilterCondition, depth int, nodes, physical *i
 		if n == nil || n.Size < 1 || n.Size > 10 || n.Predicate == nil {
 			return fmt.Errorf("warehouses: latestN requires size 1 to 10 and a predicate")
 		}
+		if r := n.Accepted; r != nil && (r.Upper == nil || r.Lower < 0 || *r.Upper < r.Lower ||
+			*r.Upper > int64(n.Size)) {
+			return fmt.Errorf("warehouses: invalid latestN accepted range")
+		}
 		selection := &SelectedOccurrence{Source: n.Source, Start: n.Start, End: n.End,
 			UnboundedStart: n.UnboundedStart, Qualification: n.Qualification, Verify: n.Predicate}
 		selectionNodes := 0

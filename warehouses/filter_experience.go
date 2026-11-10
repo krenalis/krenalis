@@ -30,7 +30,7 @@ type SelectedOccurrence struct {
 
 func (*SelectedOccurrence) filterCondition() {}
 
-// LatestOccurrences applies All to every compatible complete block of Size.
+// LatestOccurrences tests counts on compatible complete blocks of Size.
 // It shares SelectedOccurrence's source, copy and independence contracts.
 // Size is 1 to 10. Predicate is conditional on membership in Qualification.
 // Every ordering of ties is allowed; the block's internal order is unobserved.
@@ -41,6 +41,9 @@ type LatestOccurrences struct {
 	UnboundedStart bool
 	Qualification  RowQualification
 	Predicate      RowQualification
+	// Accepted is inclusive within [0,Size], with a non-nil Upper.
+	// Nil retains All and its original SQL.
+	Accepted *CountRange
 }
 
 func (*LatestOccurrences) filterCondition() {}

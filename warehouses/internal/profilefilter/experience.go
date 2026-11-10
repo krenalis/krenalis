@@ -12,13 +12,13 @@ import (
 )
 
 func (c *compiler) experience(node *warehouses.SelectedOccurrence) (string, error) {
-	return c.selection(node, 0)
+	return c.selection(node, 0, nil)
 }
 
 func (c *compiler) latestN(node *warehouses.LatestOccurrences) (string, error) {
 	base := &warehouses.SelectedOccurrence{Source: node.Source, Start: node.Start, End: node.End,
 		UnboundedStart: node.UnboundedStart, Qualification: node.Qualification, Verify: node.Predicate}
-	return c.selection(base, node.Size)
+	return c.selection(base, node.Size, node.Accepted)
 }
 
 // selection preserves compatible occurrences or complete LatestN blocks.
@@ -26,7 +26,7 @@ func (c *compiler) latestN(node *warehouses.LatestOccurrences) (string, error) {
 // optional occurrences; ties remain candidates. Nth preserves possible ranks.
 // A positive size selects LatestN blocks. No ID tie-break or greedy choice
 // closes any selection.
-func (c *compiler) selection(node *warehouses.SelectedOccurrence, size int) (string, error) {
+func (c *compiler) selection(node *warehouses.SelectedOccurrence, size int, accepted *warehouses.CountRange) (string, error) {
 
 	n := strconv.Itoa(c.counts)
 	c.counts++
@@ -102,7 +102,11 @@ func (c *compiler) selection(node *warehouses.SelectedOccurrence, size int) (str
  MAX(CASE WHEN in_period=1 AND (qualification IS DISTINCT FROM FALSE) THEN `+body+` END) AS verify_max
  FROM copies`+n+` GROUP BY occurrence_id)`)
 	if size != 0 {
-		c.latestBlocks(n, size)
+		if accepted == nil {
+			c.latestBlocks(n, size)
+		} else {
+			c.latestBlockCounts(n, size)
+		}
 	} else if node.Nth != 0 {
 		position, before := strconv.Itoa(node.Nth), strconv.Itoa(node.Nth-1)
 		c.ctes = append(c.ctes, "base"+n+` AS (SELECT profile_id,time_min,state_min,verify_min
@@ -147,6 +151,14 @@ func (c *compiler) selection(node *warehouses.SelectedOccurrence, size int) (str
 	alias := "v" + n
 	c.joins = append(c.joins, "LEFT JOIN selected"+n+" "+alias+" ON "+alias+".profile_id=p."+q("$profile_id"))
 	candidates, absent := "COALESCE("+alias+".candidates,0)", "COALESCE("+alias+".absent,1)"
+
+	if accepted != nil {
+		lower, upper := strconv.FormatInt(accepted.Lower, 10), strconv.FormatInt(*accepted.Upper, 10)
+		return "CASE WHEN " + candidates + "=0 OR " + alias + ".max_count<" + lower +
+			" OR " + alias + ".min_count>" + upper + " THEN FALSE WHEN " + absent + "=0 AND " +
+			alias + ".min_count>=" + lower + " AND " + alias + ".max_count<=" + upper +
+			" THEN TRUE ELSE CAST(NULL AS BOOLEAN) END", nil
+	}
 
 	if size != 0 {
 		return "CASE WHEN " + absent + "=0 AND COALESCE(" + alias + ".passed,0)=" + candidates +

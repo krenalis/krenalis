@@ -936,10 +936,68 @@ FROM (VALUES
 				}
 			})
 		}
+		for _, test := range []struct{ name, quantifier, canonical, totals, result string }{
+			{"Some", `{"kind":"some"}`, `{"kind":"some"}`, `"match":2,"noMatch":1,"unknown":1`, "MATCH"},
+			{"exact zero", `{"kind":"cardinality","operator":"is","values":[-0]}`, `{"kind":"cardinality","operator":"is","values":[0]}`, `"match":0,"noMatch":4,"unknown":0`, "NO_MATCH"},
+			{"exact one", `{"kind":"cardinality","operator":"is","values":[1]}`, `{"kind":"cardinality","operator":"is","values":[1]}`, `"match":1,"noMatch":3,"unknown":0`, "MATCH"},
+			{"exact two", `{"kind":"cardinality","operator":"is","values":[2]}`, `{"kind":"cardinality","operator":"is","values":[2]}`, `"match":1,"noMatch":2,"unknown":1`, "NO_MATCH"},
+			{"at least zero", `{"kind":"cardinality","operator":"is greater than or equal to","values":[0]}`, `{"kind":"cardinality","operator":"is greater than or equal to","values":[0]}`, `"match":2,"noMatch":1,"unknown":1`, "MATCH"},
+			{"at most zero", `{"kind":"cardinality","operator":"is less than or equal to","values":[0]}`, `{"kind":"cardinality","operator":"is less than or equal to","values":[0]}`, `"match":0,"noMatch":4,"unknown":0`, "NO_MATCH"},
+			{"between", `{"kind":"cardinality","operator":"is between","values":[1,1]}`, `{"kind":"cardinality","operator":"is between","values":[1,1]}`, `"match":1,"noMatch":3,"unknown":0`, "MATCH"},
+			{"redundant upper", `{"kind":"cardinality","operator":"is less than or equal to","values":[1000000000000000000000000000000]}`, `{"kind":"cardinality","operator":"is less than or equal to","values":[1000000000000000000000000000000]}`, `"match":2,"noMatch":1,"unknown":1`, "MATCH"},
+			{"redundant between", `{"kind":"cardinality","operator":"is between","values":[1,100]}`, `{"kind":"cardinality","operator":"is between","values":[1,100]}`, `"match":2,"noMatch":1,"unknown":1`, "MATCH"},
+		} {
+			t.Run(test.name, func(t *testing.T) {
+
+				modified := strings.Replace(filter, `{"kind":"all"}`, test.quantifier, 1)
+				for _, first := range []int{0, 99} {
+					var expected json.RawMessage
+					k.Call("GET", "/v1/profiles?filter="+url.QueryEscape(modified)+"&at="+
+						url.QueryEscape(at)+"&first="+strconv.Itoa(first), nil, nil, &expected)
+					actual := assertResult(t, tool(t, "query-profiles", map[string]any{
+						"filter": modified, "at": at, "first": first}))
+					if actual != string(expected) || !strings.Contains(actual, test.totals) ||
+						first == 99 && !strings.HasPrefix(actual, `{"profiles":[]`) {
+						t.Fatalf("expected HTTP/MCP quantifier totals %s, got %s", test.totals, actual)
+					}
+				}
+
+				id := "00000000-0000-0000-0000-000000000002"
+				var expected json.RawMessage
+				k.Call("GET", "/v1/profiles/"+id+"/filter-explanation?filter="+url.QueryEscape(modified)+
+					"&at="+url.QueryEscape(at), nil, nil, &expected)
+				actual := assertResult(t, tool(t, "explain-profile-filter", map[string]any{
+					"kpid": id, "filter": modified, "at": at}))
+				if actual != string(expected) || !strings.Contains(actual, `"quantifier":`+test.canonical) ||
+					!strings.Contains(actual, `"result":"`+test.result+`"`) ||
+					!strings.Contains(actual, `"selection":{"kind":"ambiguous","absence":"impossible","candidates":3}`) {
+					t.Fatalf("expected canonical quantifier %s with %s and unchanged selection, got %s", test.canonical, test.result, actual)
+				}
+
+			})
+		}
+		// Reconstruct each profile's reachable set through the public decoder,
+		// service, database and explanation, without exposing internal extrema.
+		reachable := make([][]int, 4)
+		for count := 0; count <= 2; count++ {
+			quantifier := fmt.Sprintf(`{"kind":"cardinality","operator":"is","values":[%d]}`, count)
+			modified := strings.Replace(filter, `{"kind":"all"}`, quantifier, 1)
+			for profile := range 4 {
+				id := fmt.Sprintf("00000000-0000-0000-0000-%012d", profile+1)
+				var explanation struct {
+					Rule struct{ Result string }
+				}
+				k.Call("GET", "/v1/profiles/"+id+"/filter-explanation?filter="+url.QueryEscape(modified)+
+					"&at="+url.QueryEscape(at), nil, nil, &explanation)
+				if explanation.Rule.Result != "NO_MATCH" {
+					reachable[profile] = append(reachable[profile], count)
+				}
+			}
+		}
+		if expected := [][]int{{2}, {1}, {2}, nil}; !reflect.DeepEqual(reachable, expected) {
+			t.Fatalf("expected reachable counts %v including no complete block for profile 4, got %v", expected, reachable)
+		}
 		for _, test := range []struct{ name, quantifier, code string }{
-			{"some", `{"kind":"some"}`, "FilterCapabilityNotImplemented"},
-			{"cardinality zero", `{"kind":"cardinality","operator":"is greater than or equal to","values":[0]}`, "FilterCapabilityNotImplemented"},
-			{"redundant upper", `{"kind":"cardinality","operator":"is less than or equal to","values":[1000000000000000000000000000000]}`, "FilterCapabilityNotImplemented"},
 			{"impossible", `{"kind":"cardinality","operator":"is","values":[3]}`, "InvalidArguments"},
 			{"invalid operator", `{"kind":"cardinality","operator":"is greater than","values":[1]}`, "InvalidArguments"},
 			{"unknown kind", `{"kind":"none"}`, "InvalidArguments"},
