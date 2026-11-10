@@ -1094,6 +1094,7 @@ func unmarshalType(dec *json.Decoder) (Type, error) {
 		}
 		semanticsOption = durationUnit
 	}
+
 	t, err = t.withSemantics(semantics, semanticsOption)
 	if err != nil {
 		return Type{}, err
