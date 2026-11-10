@@ -325,7 +325,7 @@ func (t Type) WithCurrency(currency string) Type {
 //   - semantics is not NoSemantics
 //   - option is valid for the specified semantics, or nil if no options are
 //     supported
-//   - t has not already semantics
+//   - t does not already have semantics
 //   - t has no constraints if semantics is country or phone
 //   - t's kind supports the specified semantics and option
 //
