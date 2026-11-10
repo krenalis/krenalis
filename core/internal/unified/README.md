@@ -734,8 +734,13 @@ Decimal values that lost digits in scientific-notation writes are not recovered
 in general. The writer is unchanged. Snowflake's returned JSON can also lose
 DOUBLE digits; fixing that exposure remains separate work before claiming
 agreement between filter decisions and displayed values. Local mutations
-restoring binary bounds or rounding operands are rejected by
-`TestJSONDoubleBounds`. These changes do not open the verification gate.
+restoring binary bounds, rounding operands or using nearest-away rounding at
+halfway ties are rejected by `TestJSONDoubleBounds`. Positive and negative
+canonical midpoint fixtures also check nearest-even storage, equality and
+ordering in the real Snowflake suite. Their remote run is pending: the added
+fixtures passed local checks, but Snowflake's network policy blocked test
+setup and the user deferred that run. These changes do not open the verification
+gate.
 
 Membership cost remains a scale-check item. The 100-rule limit is not a bound
 on the number of operands in one Record membership condition. An isolated Go

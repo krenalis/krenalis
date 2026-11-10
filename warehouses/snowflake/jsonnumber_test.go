@@ -26,6 +26,7 @@ func TestJSONDoubleBounds(t *testing.T) {
 	for _, text := range []string{"0", "-0", "100", "1.25", "0.1", "-0.1", "1e-37", "-1e-37", "1e75",
 		"100.00000000000001", "100.00000000000000001", "-100.00000000000000001",
 		"1234567.1", "12345678.9", "0.00001", "0.000015", "0.30000000000000004",
+		"182771880194942800", "-182771880194942800",
 		"99999999999999.9999", "-99999999999999.9999",
 		"123456789012345678901234567890123456789", strings.Repeat("9", 76),
 		"-" + strings.Repeat("9", 39) + "." + strings.Repeat("8", 37)} {
@@ -69,6 +70,7 @@ func TestJSONNumbers(t *testing.T) {
 		"1.1", "1.1E0", "1.25E0", "1.0000000000000001E2", "1.00000000000000001E2", "-1.1E0",
 		"1.2345671e+06", "1.23456789e+07", "1e-05", "1.5e-05",
 		"0.30000000000000004", "3.0000000000000004E-1",
+		"1.827718801949428E17", "-1.827718801949428E17", "182771880194942800", "-182771880194942800",
 		"1E-310", "1E75", "9.99999999999999375E13", "-9.99999999999999375E13", "100.00001",
 		"1.7976931348623157E308", "-1.7976931348623157E308",
 		"99999999999999.9999", "-99999999999999.9999", "0.0000000000000000000000000000000000001",
@@ -107,6 +109,7 @@ TO_VARIANT(TO_DOUBLE('%s')),ARRAY_CONSTRUCT(TO_VARIANT(TO_DOUBLE('%s')))`, id, s
 	for _, literal := range []string{"0", "-1", "0.1", "-0.1", "1.25", "100", "100.00000000000001",
 		"100.00000000000000001", "100.00000000000000002", "1234567.1", "12345678.9",
 		"0.00001", "0.000015", "0.30000000000000004",
+		"182771880194942800", "-182771880194942800",
 		"99999999999999.9999", "-99999999999999.9999", "1e-37", "1e75", strings.Repeat("9", 76),
 		"123456789012345678901234567890123456789", "123456789012345678901234567890123456788",
 		"-123456789012345678901234567890123456789", "12345678901234567890123456789012345678.9",
@@ -160,6 +163,10 @@ TO_VARIANT(TO_DOUBLE('%s')),ARRAY_CONSTRUCT(TO_VARIANT(TO_DOUBLE('%s')))`, id, s
 		if id >= jsonFixtureCount && kind.String != "DOUBLE" {
 			t.Fatalf("expected non-finite DOUBLE fixture, got %s", kind.String)
 		}
+		if (inputs[id] == "1.827718801949428E17" || inputs[id] == "-1.827718801949428E17") &&
+			kind.String != "DOUBLE" {
+			t.Fatalf("expected midpoint DOUBLE fixture, got %s", kind.String)
+		}
 		if (inputs[id] == "0.1234567890123456789012345678901234567" ||
 			inputs[id] == "-0.1234567890123456789012345678901234567") && kind.String != "DECIMAL" {
 			t.Fatalf("expected fixed-point scale-37 fixture, got %s", kind.String)
@@ -194,6 +201,16 @@ TO_VARIANT(TO_DOUBLE('%s')),ARRAY_CONSTRUCT(TO_VARIANT(TO_DOUBLE('%s')))`, id, s
 			}
 			if inputs[id] == "1.0000000000000001E2" && double.Float64 != math.Nextafter(100, math.Inf(1)) {
 				t.Fatalf("expected the DOUBLE after 100, got %.17g", double.Float64)
+			}
+			if inputs[id] == "1.827718801949428E17" || inputs[id] == "-1.827718801949428E17" {
+				// The canonical decimal is exactly halfway: choose the even neighbor.
+				want := float64(182771880194942784)
+				if inputs[id][0] == '-' {
+					want = -want
+				}
+				if double.Float64 != want {
+					t.Fatalf("expected nearest-even DOUBLE %.17g, got %.17g", want, double.Float64)
+				}
 			}
 		default:
 			// Other fixture kinds are not numbers.
