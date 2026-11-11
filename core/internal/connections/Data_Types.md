@@ -42,7 +42,7 @@
 
 [^5]: For the connector, the support for arrays is not implemented neither for the `Query` method nor for the `Upsert` method, but for the latter it may be implemented by changing the `quoteTable` function.
 
-[^6]: As Snowflake `VARIANT` type.
+[^6]: As Snowflake `VARIANT` type. JSON numbers retain the server's text without an intermediate `float64` conversion. INTEGER/DECIMAL digits remain exact; FLOAT values may be rounded by Snowflake's JSON serialization. This does not guarantee a binary64 round trip. The same limit applies to numbers inside ARRAY and OBJECT; see [Snowflake JSON numbers](../../../warehouses/snowflake/README.md).
 
 [^7]: Only supports `array(json)` and `map(json)` as Snowflake `ARRAY` and `OBJECT` types.
 

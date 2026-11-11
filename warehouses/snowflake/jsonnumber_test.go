@@ -289,7 +289,7 @@ TO_VARIANT(TO_DOUBLE('%s')),ARRAY_CONSTRUCT(TO_VARIANT(TO_DOUBLE('%s')))`, id, s
 	t.Logf("checked %d exact stored-value comparisons", count*len(tests))
 
 	// Read the new fixed-point writes through the warehouse's actual scanner.
-	// Finite DOUBLE JSON output remains the separate reader correction.
+	// FLOAT JSON output preserves the server's text under the accepted contract.
 	var ids []any
 	for i := range mergedFixtureCount {
 		if expectedFixed[i] != nil {

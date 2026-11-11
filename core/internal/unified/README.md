@@ -731,9 +731,11 @@ Record DOUBLE reading now follows the user-approved canonical decimal contract:
 money reading remains binary-exact on the Decimal(18,4) grid. For example, a
 DOUBLE from `1.1E0` is 1.1 in Record and unknown as a governed amount. Krenalis
 Decimal values that lost digits in scientific-notation writes are not recovered
-in general. Snowflake's returned JSON can also lose
-DOUBLE digits; fixing that exposure remains separate work before claiming
-agreement between filter decisions and displayed values. Local mutations
+in general. Returned JSON preserves Snowflake's text: INTEGER/DECIMAL digits
+remain exact, while FLOAT/DOUBLE values can have fewer digits than their
+canonical reading. The user-approved output contract accepts this limit;
+displayed JSON is not a binary64 round-trip guarantee. Record comparisons and
+the governed money reading remain unchanged. Local mutations
 restoring binary bounds, rounding operands or using nearest-away rounding at
 halfway ties are rejected by `TestJSONDoubleBounds`. Positive and negative
 canonical midpoint fixtures also check nearest-even storage, equality and
@@ -758,10 +760,12 @@ Local tests cover exact rational equivalence, precision/scale boundaries,
 large exponents, nested documents, byte preservation, idempotence and CSV
 serialization in both packages. The adjusted real-database tests retain
 historical DOUBLE fixtures separately. Remote execution of these changes is
-pending while Snowflake testing is deferred. Returned JSON still needs a
-separate correction for finite DOUBLEs before claiming faithful INTEGER,
-DECIMAL and FLOAT JSON output from both query paths. DECFLOAT and other native
-types remain outside this increment; the Unified gate stays closed.
+pending while Snowflake testing is deferred. The connector and warehouse use
+the same JSON output contract, without corrective queries or changes to the
+user's SQL. A profile can satisfy `value > 100` while the returned JSON shows
+100. See [Snowflake JSON numbers](../../../warehouses/snowflake/README.md).
+DECFLOAT and other native types remain outside this increment; the Unified
+gate stays closed.
 
 Membership cost remains a scale-check item. The 100-rule limit is not a bound
 on the number of operands in one Record membership condition. An isolated Go

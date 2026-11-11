@@ -70,6 +70,13 @@ refer to the entire profile population before pagination, from the same
 evaluation as the page. The page contains only MATCH profiles. UNKNOWN is not
 NO_MATCH and is not an execution error. An empty page still returns totals.
 
+On Snowflake, floating-point numbers in returned JSON can be rounded by the
+server even though the filter compares their canonical values. A profile can
+match `value > 100` while its returned JSON shows 100. Do not reclassify the
+profile by reevaluating that displayed value; explain the precision limit if
+it accounts for a visible discrepancy. Integer and decimal JSON digits remain
+exact. This does not change the Snowflake capability gate.
+
 `at` is a nonfuture RFC3339 instant, exactly representable at microsecond
 precision. Omission fixes T once. Reuse the returned `evaluation.at` for subsequent
 pages to anchor relative periods. It does not freeze the data, identity mappings
