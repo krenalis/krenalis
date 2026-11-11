@@ -388,7 +388,8 @@ applied before the target pool opens. A timeout currently can lose the original
 57014 diagnostic: pgx supplies a cursor without field metadata and the adapter
 returns `profile outcome schema mismatch`. The tests retain this existing
 behavior, including `UnavailableError` and no partial result; they do not change
-production error handling.
+production error handling. Its cancellation check also requires the target
+to disappear before the 30-second UDF delay could complete naturally.
 
 The vendored Snowflake driver currently sends cancellation synchronously,
 without a separate cleanup deadline. Measured cancellation latency includes
@@ -412,3 +413,38 @@ env -u KRENALIS_SKIP_SNOWFLAKE_TESTS KRENALIS_SNOWFLAKE_CAMPAIGN_DIR="$campaign_
   -overlay "$standard_overlay/overlay.json" ./test/snowflaketester \
   -run '^TestCampaignInventory$' -timeout=2m
 ```
+
+### Interruption results on 2026-11-11
+
+The UTC campaign on `e62f2d64a` passed all four running-query scenarios and
+all four corresponding recovery requests. Each block reports three PASS nodes
+(two scenarios and their parent), with no FAIL or SKIP:
+
+| Profile | Path | Server code | Client elapsed |
+| --- | --- | ---: | ---: |
+| timeout | membership | 630 | 10,758 ms from call |
+| timeout | explanation | 630 | 10,716 ms from call |
+| cancellation | membership | 604 | 130 ms after cancel |
+| cancellation | explanation | 604 | 141 ms after cancel |
+
+Each block verified three physical connections under the requested profile;
+the read-only inventory verified one standard connection. All three manifests
+report stable sources, exit 0 and no invalid session records. The two fixture
+schemas have matching CREATE/DROP records. A separate server inventory found
+zero remaining campaign schemas and 23 other test schemas, which were untouched.
+
+Evidence is outside the checkout at
+`/private/var/folders/v8/wf803m8x1q9fvcwkvfps6qtr0000gn/T/krenalis-snowflake-interruption-hgaekg26/`:
+`timeout.jsonl`, `cancellation.jsonl`, their manifests and
+`inventory/inventory.jsonl` with its manifest. Logs contain masked Output;
+manifest schema ledgers were extracted before masking. `run.py --audit` reports
+two created and two dropped schemas, with no issues. The earlier raw feasibility
+probes, including the corrected schema-name attempt, remain separate evidence;
+they are not counted as Unified scenario passes.
+
+Local checks passed: the datastore suite with `-short`, then the final targeted
+PostgreSQL timeout/cancellation tests, 26 Python runner/overlay tests, test-helper
+race tests, vet and build of the affected packages. The full datastore suite ran
+before the cancellation test entry points were added; the final targeted run
+covers that addition. Production code, session configuration and the closed
+Snowflake gate did not change.

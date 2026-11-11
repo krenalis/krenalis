@@ -120,7 +120,8 @@ type unifiedInterruptionState struct {
 	code           int64
 }
 
-// TestUnifiedCancellationPostgreSQL cancels both read paths after execution starts.
+// TestUnifiedCancellationPostgreSQL cancels both read paths after execution
+// starts.
 func TestUnifiedCancellationPostgreSQL(t *testing.T) {
 	testUnifiedInterruption(t, "PostgreSQL", "cancellation")
 }
@@ -250,7 +251,8 @@ func testUnifiedInterruption(t *testing.T, name, profile string) {
 	if err != nil {
 		t.Fatalf("expected random query tag, got %v", err)
 	}
-	observer := newUnifiedInterruptionObserver(t, dw, name, "krenalis-interruption/"+hex.EncodeToString(random[:]), profile)
+	tag := "krenalis-interruption/" + hex.EncodeToString(random[:])
+	observer := newUnifiedInterruptionObserver(t, dw, name, tag, profile)
 	switch name {
 	case "PostgreSQL":
 		execUnifiedFixture(t, dw, `CREATE TABLE profiles (_kpid uuid PRIMARY KEY);
@@ -394,6 +396,12 @@ SELECT * FROM krenalis_events_base WHERE delay_probe(message_id,30)`)
 			}
 			clientElapsed := time.Since(measured)
 			terminal := observer.wait(t, false)
+			// PostgreSQL has no query-history status here. Requiring its
+			// disappearance before the 30-second delay can finish excludes
+			// natural completion mistaken for server-side cancellation.
+			if name == "PostgreSQL" && profile == "cancellation" && time.Since(started) >= 20*time.Second {
+				t.Fatal("expected PostgreSQL cancellation before natural completion, got delayed termination")
+			}
 			code := int64(630)
 			if profile == "cancellation" {
 				code = 604
