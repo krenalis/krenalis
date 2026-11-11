@@ -11,6 +11,8 @@ import (
 	"io"
 	"log/slog"
 	"strings"
+
+	"github.com/snowflakedb/gosnowflake/v2"
 )
 
 // SessionConnector checks each new connection in a campaign overlay. The
@@ -57,7 +59,8 @@ func (c SessionConnector) Connect(ctx context.Context) (connection driver.Conn, 
 	if !ok {
 		return nil, fmt.Errorf("test/snowflaketester: session connection does not support QueryContext")
 	}
-	rows, err := queryer.QueryContext(ctx, "SHOW PARAMETERS IN SESSION", nil)
+	verification := gosnowflake.WithQueryTag(ctx, "krenalis-session-verification")
+	rows, err := queryer.QueryContext(verification, "SHOW PARAMETERS IN SESSION", nil)
 	if err != nil {
 		return nil, err
 	}

@@ -13,6 +13,9 @@ import (
 	"io"
 	"strings"
 	"testing"
+	"time"
+
+	"github.com/snowflakedb/gosnowflake/v2"
 )
 
 type sessionTestConnector struct {
@@ -40,10 +43,11 @@ func (*sessionTestConnector) Driver() driver.Driver {
 }
 
 type sessionTestConn struct {
-	connector *sessionTestConnector
-	rows      *sessionTestRows
-	queries   int
-	closed    int
+	queryContext context.Context
+	connector    *sessionTestConnector
+	rows         *sessionTestRows
+	queries      int
+	closed       int
 }
 
 // Begin rejects unexpected transactions.
@@ -65,6 +69,7 @@ func (*sessionTestConn) Prepare(string) (driver.Stmt, error) {
 // QueryContext returns the synthetic SHOW PARAMETERS response.
 func (c *sessionTestConn) QueryContext(ctx context.Context, query string, args []driver.NamedValue) (driver.Rows, error) {
 	c.queries++
+	c.queryContext = ctx
 	if query != "SHOW PARAMETERS IN SESSION" || len(args) != 0 || ctx == nil {
 		return nil, fmt.Errorf("test/snowflaketester: unexpected session query")
 	}
@@ -294,6 +299,44 @@ func TestSessionConnectorProfiles(t *testing.T) {
 			})
 		}
 	}
+}
+
+// TestSessionConnectorQueryTag separates verification from the target query.
+func TestSessionConnectorQueryTag(t *testing.T) {
+
+	ctx, cancel := context.WithTimeout(gosnowflake.WithQueryTag(t.Context(), "target-query"), time.Minute)
+	defer cancel()
+	underlying := &sessionTestConnector{columns: []string{"key", "value"}, values: sessionTestValues("UTC")}
+	checked := SessionConnector{Connector: underlying, Timezone: "UTC"}
+	conn, err := checked.Connect(ctx)
+	if err != nil {
+		t.Fatalf("expected verified connection, got %v", err)
+	}
+	err = conn.Close()
+	if err != nil {
+		t.Fatalf("expected connection cleanup, got %v", err)
+	}
+	verification := underlying.connections[0].queryContext
+	// This is the key read by the vendored driver's request builder.
+	key := gosnowflake.ContextKey("QUERY_TAG")
+	if verification.Value(key) != "krenalis-session-verification" || ctx.Value(key) != "target-query" {
+		t.Fatal("expected distinct verification and target tags, got mixed tags")
+	}
+	expected, _ := ctx.Deadline()
+	deadline, ok := verification.Deadline()
+	if !ok || deadline != expected {
+		t.Fatalf("expected inherited verification deadline %v, got %v, %t", expected, deadline, ok)
+	}
+	cancel()
+	err = verification.Err()
+	if err != nil {
+		if !errors.Is(err, context.Canceled) {
+			t.Fatalf("expected inherited verification cancellation, got %v", err)
+		}
+		return
+	}
+
+	t.Fatal("expected verification cancellation, got nil")
 }
 
 func sessionTestValues(timezone string) [][]driver.Value {

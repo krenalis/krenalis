@@ -375,12 +375,16 @@ KRENALIS_SKIP_SNOWFLAKE_TESTS=true go test ./core/internal/datastore \
 ```
 
 A distinct observer session reads query history by a unique context query tag.
-Its own tag prevents accidental target-tag reuse. The observer alone raises its
+Its own tag prevents accidental target-tag reuse. Session verification also
+uses a distinct tag, including when a request opens a replacement connection. The observer alone raises its
 pinned session limit to 60 seconds for metadata reads; the target pool is never
 altered. RUNNING must be observed before interruption. A terminal Snowflake
 record must have `FAILED_WITH_ERROR`, code 630 for timeout or 604 for cancellation,
 and end time at or after start time. In-progress end times can be the Unix epoch,
-so a non-NULL end time alone does not establish termination.
+so a non-NULL end time alone does not establish termination. A nonblocking check
+also rejects an operation that already returned before cancel. Timeout client
+durations must be at least the configured limit (two seconds on PostgreSQL, ten
+on Snowflake); PostgreSQL must return before twenty seconds.
 
 PostgreSQL uses a disposable database, a volatile `pg_sleep` function and
 `pg_stat_activity`. Its timeout profile uses a two-second database default,

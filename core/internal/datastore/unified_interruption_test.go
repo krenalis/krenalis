@@ -317,8 +317,9 @@ var until = Date.now() + SECONDS * 1000; while (Date.now() < until) {} return tr
 
 			execUnifiedFixtureStatement(t, dw, `CREATE OR REPLACE VIEW krenalis_events AS
 SELECT * FROM krenalis_events_base WHERE delay_probe(message_id,30)`)
-			observer.tag += "/" + operation.name
-			ctx, cancel := context.WithTimeout(gosnowflake.WithQueryTag(t.Context(), observer.tag), 90*time.Second)
+			scenario := *observer
+			scenario.tag = tag + "/" + operation.name
+			ctx, cancel := context.WithTimeout(gosnowflake.WithQueryTag(t.Context(), scenario.tag), 90*time.Second)
 			defer cancel()
 			type outcome struct {
 				partial bool
@@ -340,9 +341,14 @@ SELECT * FROM krenalis_events_base WHERE delay_probe(message_id,30)`)
 				partial, err := operation.call(ctx)
 				done <- outcome{partial, err}
 			}()
-			observer.wait(t, true)
+			scenario.wait(t, true)
 			measured := started
 			if profile == "cancellation" {
+				select {
+				case <-done:
+					t.Fatal("expected operation still in progress before cancellation, got completed operation")
+				default:
+				}
 				measured = time.Now()
 				cancel()
 			}
@@ -395,7 +401,17 @@ SELECT * FROM krenalis_events_base WHERE delay_probe(message_id,30)`)
 				t.Fatalf("expected server timeout before client deadline, got %v", ctx.Err())
 			}
 			clientElapsed := time.Since(measured)
-			terminal := observer.wait(t, false)
+			if profile == "timeout" {
+				minimum := 2 * time.Second
+				if name == "Snowflake" {
+					minimum = 10 * time.Second
+				}
+				if clientElapsed < minimum || name == "PostgreSQL" && clientElapsed >= 20*time.Second {
+					t.Fatalf("expected server timeout after at least %v and before natural completion, got %v",
+						minimum, clientElapsed)
+				}
+			}
+			terminal := scenario.wait(t, false)
 			// PostgreSQL has no query-history status here. Requiring its
 			// disappearance before the 30-second delay can finish excludes
 			// natural completion mistaken for server-side cancellation.
@@ -414,7 +430,7 @@ SELECT * FROM krenalis_events_base WHERE delay_probe(message_id,30)`)
 
 			execUnifiedFixtureStatement(t, dw, `CREATE OR REPLACE VIEW krenalis_events AS
 SELECT * FROM krenalis_events_base`)
-			complete, err := operation.call(gosnowflake.WithQueryTag(t.Context(), observer.tag+"/recovery"))
+			complete, err := operation.call(gosnowflake.WithQueryTag(t.Context(), scenario.tag+"/recovery"))
 			if err != nil {
 				t.Fatalf("expected healthy follow-up on the same warehouse, got %v", err)
 			}
