@@ -14,7 +14,8 @@ const requestQueue: QueuedRequest[] = [];
 let isProcessingQueue = false;
 let syncToken: string | null = null;
 
-// processQueue sends queued requests in order. Each request uses the
+// processQueue processes queued requests sequentially, from sending
+// each request to receiving its response headers. Each request uses the
 // latest Sync-Token, which is updated from 200 response headers before
 // starting the next request. Fetch errors reject the affected request
 // without stopping the queue.
