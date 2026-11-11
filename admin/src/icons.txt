@@ -5,11 +5,13 @@ arrow-clockwise.svg
 arrow-counterclockwise.svg
 arrow-down-circle.svg
 arrow-down-right-square.svg
+arrow-down.svg
 arrow-left.svg
 arrow-right-short.svg
 arrow-right.svg
 arrow-up-circle.svg
 arrow-up-right-square.svg
+arrow-up.svg
 arrows-collapse.svg
 arrows-expand.svg
 arrows.svg

@@ -1,4 +1,5 @@
 import React from 'react';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import './GridKeyboardHints.css';
 
 interface GridKeyboardHintsProps {
@@ -33,8 +34,12 @@ const GridKeyboardHints = ({
 				role={hasNavigationAriaLabel ? 'note' : undefined}
 			>
 				<span className='grid-keyboard-hints__keys' aria-hidden={hasNavigationAriaLabel || undefined}>
-					<kbd>↑</kbd>
-					<kbd>↓</kbd>
+					<kbd>
+						<WaIcon name='arrow-up' label='Up arrow' />
+					</kbd>
+					<kbd>
+						<WaIcon name='arrow-down' label='Down arrow' />
+					</kbd>
 				</span>
 				<span aria-hidden={hasNavigationAriaLabel || undefined}>{navigationLabel}</span>
 			</div>
@@ -58,8 +63,12 @@ const GridKeyboardHints = ({
 					<span className='grid-keyboard-hints__keys'>
 						<kbd>Shift</kbd>
 						<span className='grid-keyboard-hints__plus'>+</span>
-						<kbd>↑</kbd>
-						<kbd>↓</kbd>
+						<kbd>
+							<WaIcon name='arrow-up' label='Up arrow' />
+						</kbd>
+						<kbd>
+							<WaIcon name='arrow-down' label='Down arrow' />
+						</kbd>
 					</span>
 					<span>Reorder</span>
 				</div>

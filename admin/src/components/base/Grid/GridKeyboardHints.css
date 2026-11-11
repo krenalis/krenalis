@@ -64,6 +64,10 @@
 	padding: 0 5px;
 }
 
+.grid-keyboard-hints kbd:has(wa-icon) {
+	padding-inline: 0;
+}
+
 .grid-keyboard-hints__plus {
 	color: var(--wa-color-neutral-60);
 	padding-inline: 1px;

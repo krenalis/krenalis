@@ -245,7 +245,7 @@ test(`Render the profile grid and manage visible columns`, async ({ page }) => {
 	await expect(headers.nth(8)).toHaveText('shipping_address › City');
 	const hints = page.locator('.profiles-list .grid-keyboard-hints__hint');
 	await expect(hints).toHaveCount(1);
-	await expect(hints).toHaveText('↑↓Navigate profiles');
+	await expect(hints).toHaveText('Navigate profiles');
 	await expect(hints).toHaveAccessibleName('Use Up and Down arrow keys to navigate profiles.');
 	await expect(hints.locator('.grid-keyboard-hints__keys')).toHaveAttribute('aria-hidden', 'true');
 	await expect(hints.locator('kbd')).toHaveCount(2);
