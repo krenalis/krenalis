@@ -333,21 +333,31 @@ func testUnifiedConformanceSelections(t *testing.T, store *Store, dw warehouses.
 			First: selector.first, Nth: selector.nth, Scope: scope, Currency: currency, Verify: money}}})
 	}
 	for _, size := range []int{1, 2, 10} {
-		for _, quantifier := range []unified.LatestNQuantifier{{}, {Kind: unified.LatestSome},
-			{Kind: unified.LatestCardinality, Operator: unified.Equal, Value: "1"},
-			{Kind: unified.LatestCardinality, Operator: unified.LessOrEqual, Value: "1"}} {
-			checks = append(checks, check{fmt.Sprintf("latest%d/%d/%d", size, quantifier.Kind, quantifier.Operator),
-				unified.Rule{LatestN: &unified.LatestN{Size: size, Quantifier: quantifier, Scope: scope,
+		for _, quantifier := range []struct {
+			name  string
+			value unified.LatestNQuantifier
+		}{
+			{"all", unified.LatestNQuantifier{}},
+			{"some", unified.LatestNQuantifier{Kind: unified.LatestSome}},
+			{"exactly1", unified.LatestNQuantifier{Kind: unified.LatestCardinality, Operator: unified.Equal, Value: "1"}},
+			{"atMost1", unified.LatestNQuantifier{Kind: unified.LatestCardinality, Operator: unified.LessOrEqual, Value: "1"}},
+		} {
+			checks = append(checks, check{fmt.Sprintf("latest%d/%s", size, quantifier.name),
+				unified.Rule{LatestN: &unified.LatestN{Size: size, Quantifier: quantifier.value, Scope: scope,
 					Currency: currency, Predicate: money}}})
 		}
 	}
-	for _, operator := range []unified.Comparison{
-		unified.Less, unified.LessOrEqual, unified.Greater, unified.GreaterOrEqual,
+	for _, test := range []struct {
+		name     string
+		operator unified.Comparison
+	}{
+		{"lt", unified.Less}, {"le", unified.LessOrEqual},
+		{"gt", unified.Greater}, {"ge", unified.GreaterOrEqual},
 	} {
-		checks = append(checks, check{fmt.Sprintf("difference/%d", operator), unified.Rule{
+		checks = append(checks, check{"difference/" + test.name, unified.Rule{
 			LastVersusPrevious: &unified.LastVersusPrevious{Scope: scope, Field: field, Currency: currency,
 				Check: unified.LastPreviousCheck{Kind: unified.LastPreviousDifference,
-					Test: unified.SumTest{Operator: operator, Value: decimal.MustParse("-30")}}}}})
+					Test: unified.SumTest{Operator: test.operator, Value: decimal.MustParse("-30")}}}}})
 	}
 	for _, check := range checks {
 		t.Run(check.name, func(t *testing.T) {
@@ -464,10 +474,17 @@ func testUnifiedConformanceSelections(t *testing.T, store *Store, dw warehouses.
 			`,received_at,sent_at,properties FROM krenalis_events WHERE message_id='`+id+`'`)
 	}
 	root := &checks[0].rule
+	before, err := store.UnifiedProfiles(t.Context(), root, unified.Bindings{}, at, unified.Page{Limit: 100})
+	if err != nil {
+		t.Fatalf("expected selection before excluded copies, got %v", err)
+	}
 	copyRow("selection/5/1")
-	_, err = store.UnifiedProfiles(t.Context(), root, unified.Bindings{}, at, unified.Page{Limit: 100})
+	after, err := store.UnifiedProfiles(t.Context(), root, unified.Bindings{}, at, unified.Page{Limit: 100})
 	if err != nil {
 		t.Fatalf("expected excluded timestamp copies to be ignored, got %v", err)
+	}
+	if !reflect.DeepEqual(after, before) {
+		t.Fatalf("expected excluded copies to preserve the selection %+v, got %+v", before, after)
 	}
 	copyRow("selection/1/0")
 	result, err := store.UnifiedProfiles(t.Context(), root, unified.Bindings{}, at, unified.Page{Limit: 100})

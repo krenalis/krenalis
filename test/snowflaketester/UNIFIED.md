@@ -44,7 +44,7 @@ coherent, fully attributed view; it does not test asynchronous publication.
 
 The bounded fixture complements the full PostgreSQL completion oracles; it does
 not replace them. It avoids running the exhaustive suites remotely. Its selection
-block has 22 batched membership checks and 204 individual explanations, rather
+block has 22 main batched membership checks and 204 individual explanations, rather
 than thousands of remote oracle queries. The named subtests can be selected
 separately, for example `-run '^TestUnifiedConformancePostgreSQL$/periods'`.
 
@@ -94,31 +94,57 @@ commits. Do not enable shell tracing. No application or demo data is needed.
 Keep runs sequential (`-parallel=1 -p=1`), retain JSON test results, check cleanup
 and redact server diagnostics before sharing them: driver errors can contain
 account, database, user or schema identifiers. A skipped test is not a pass.
-The fixture sets UTC, TIMESTAMP_NTZ mapping and a 60-second statement timeout;
-remote checks must also confirm the active session and physical timestamp types.
-It does not configure warehouses or resource monitors.
+The fixture requests UTC, TIMESTAMP_NTZ mapping and a 60-second statement timeout
+through ALTER SESSION on one pooled connection. Other connections need not have
+these settings: this is neither proof of timezone independence nor a test-wide
+server timeout. Before activation, repeat the temporal cases with a non-UTC DST
+zone on every connection and record TIMEZONE, TIMESTAMP_TYPE_MAPPING,
+TIMESTAMP_INPUT_FORMAT and STATEMENT_TIMEOUT_IN_SECONDS from the active sessions.
+Production settings and test-user/warehouse defaults are not changed here.
+
+The environment owner must verify server-side time limits and resource controls
+cover every test connection. A session setting can override a user default;
+warehouse and session timeouts interact as described in the
+[Snowflake cost-control documentation](https://docs.snowflake.com/en/user-guide/cost-controlling-controls).
+`go test -timeout` can terminate the test process without server cancellation or
+`t.Cleanup`, so it is not a substitute for those controls.
+
+For new blocks, `run.py` uses Python 3.11+ and its standard library. It saves a
+source manifest before starting Go and again
+after it exits: HEAD, working-tree status, test-file and modified source hashes,
+overlay/replacement hashes, Go version, driver version, exact command and result.
+It reports source changes during the run as a nonzero exit, even if Go passes.
+Skipped blocks and selections that execute no tests also return a nonzero exit.
+Use fresh output names outside the checkout; evidence is never overwritten.
+The helper does not source `.env` files. It masks Snowflake test environment
+values in output before writing the log; inspect redacted logs before sharing.
+The manifest contains source metadata only; credentials belong in the environment,
+never command arguments. The helper adds `-mod=vendor -parallel=1 -p=1 -failfast
+-count=1 -json`, matching the flags used in the live runner.
 
 Run the following blocks in order, stopping on a failed prerequisite:
 
 ```sh
 # Credentials must already have been supplied through the environment.
 # These commands are remote, including tests that do not need the Unified gate.
-KRENALIS_SKIP_SNOWFLAKE_TESTS=false go test ./warehouses/snowflake \
+KRENALIS_SKIP_SNOWFLAKE_TESTS=false python3 test/snowflaketester/run.py \
+  "$campaign_dir/physical-warehouse.jsonl" -- ./warehouses/snowflake \
   -run '^(TestJSONNumbers|TestProfileExactDecimal|TestJSONExpressions|Test_Merge)$' \
-  -parallel=1 -p=1 -count=1 -timeout=30m -json > "$campaign_dir/physical-warehouse.jsonl"
+  -timeout=30m
 
-KRENALIS_SKIP_SNOWFLAKE_TESTS=false go test ./connectors/snowflake \
-  -run '^Test_Merge_Query$' -parallel=1 -p=1 -count=1 -timeout=15m \
-  -json > "$campaign_dir/physical-connector.jsonl"
+KRENALIS_SKIP_SNOWFLAKE_TESTS=false python3 test/snowflaketester/run.py \
+  "$campaign_dir/physical-connector.jsonl" -- ./connectors/snowflake \
+  -run '^Test_Merge_Query$' -timeout=15m
 
-KRENALIS_SKIP_SNOWFLAKE_TESTS=false go test -overlay "$campaign_dir/overlay.json" \
+KRENALIS_SKIP_SNOWFLAKE_TESTS=false python3 test/snowflaketester/run.py \
+  "$campaign_dir/unified-snowflake.jsonl" -- -overlay "$campaign_dir/overlay.json" \
   ./core/internal/datastore -run '^TestUnified(StoredNumbers|Conformance)Snowflake$' \
-  -parallel=1 -p=1 -count=1 -timeout=45m -json > "$campaign_dir/unified-snowflake.jsonl"
+  -timeout=45m
 
 # The PostgreSQL arm is skipped: this block isolates real Snowflake Record reads.
-KRENALIS_SKIP_SNOWFLAKE_TESTS=false go test ./core/internal/datastore \
-  -run '^TestJSONFloatFilters$/Snowflake' -parallel=1 -p=1 -count=1 -timeout=15m \
-  -json > "$campaign_dir/record-floats.jsonl"
+KRENALIS_SKIP_SNOWFLAKE_TESTS=false python3 test/snowflaketester/run.py \
+  "$campaign_dir/record-floats.jsonl" -- ./core/internal/datastore \
+  -run '^TestJSONFloatFilters$/Snowflake' -timeout=15m
 ```
 
 Physical numeric expectations follow the approved
@@ -128,6 +154,47 @@ INTEGER/DECIMAL values; compare native DOUBLE transport separately from returned
 JSON display text. A rounded display is an accepted output limit, not a reason to
 weaken Record or governed monetary expectations. Do not add corrective queries,
 rewrite connector SQL or restore the discarded result dictionary.
+
+## Cleanup after completion or interruption
+
+Audit created/dropped schema records, including failed runs and timeout logs:
+
+```sh
+python3 - "$campaign_dir" <<'PY'
+import collections
+import json
+import pathlib
+import re
+import sys
+
+created, dropped = collections.Counter(), collections.Counter()
+for path in pathlib.Path(sys.argv[1]).glob("*.jsonl"):
+    for line in path.open():
+        try:
+            message = json.loads(line).get("Output", "")
+        except json.JSONDecodeError:
+            continue
+        for action, name in re.findall(r"Snowflake test schema (created|dropped) schema=(\S+)", message):
+            (created if action == "created" else dropped)[name] += 1
+remaining = list((created - dropped).elements())
+print(json.dumps({"schemas_without_drop_record": remaining}))
+sys.exit(bool(remaining))
+PY
+```
+
+A process can die between CREATE and its log record. After an interrupted run,
+also inspect the supplied test database using
+[SHOW SCHEMAS](https://docs.snowflake.com/en/sql-reference/sql/show-schemas):
+
+```sql
+SHOW SCHEMAS IN DATABASE <test_database>
+  STARTS WITH 'KRENALIS_TEST_SCHEMA_' LIMIT 1000;
+```
+
+Match exact schema names with this run's logs and query history; do not drop a
+prefix wholesale, since other test runs can still be using their schemas.
+Confirm outstanding queries have stopped, then remove only this run's schemas.
+If results reach the limit, finish the inventory before treating it as complete.
 
 ## Live results on 2026-11-11
 
@@ -149,7 +216,8 @@ The new writer stored `1.1E0` as DECIMAL 1.1 and `1.00000000000000001E2` as
 DECIMAL 100.000000000000001. Historical PARSE_JSON fixtures retained DOUBLE
 storage and their separately approved reading. The Unified fixtures passed
 outcomes, explanations, calendars, microsecond borders, copies and source-fault
-isolation. All ten temporary schemas created across attempts were dropped.
+isolation. All ten schemas logged as created across attempts were logged as
+dropped; this count is not an independent server inventory after a hard timeout.
 
 Two fixture defects were found and corrected before completing the blocks:
 `TestJSONExpressions` assumed scientific inputs were always DOUBLE and derived
@@ -160,12 +228,18 @@ empty SQL NULL placeholder; it now skips that placeholder. Numeric expectations
 were not weakened, and the corrected type assertions detect loss in new writes.
 
 After `TestJSONExpressions` passed, its process encountered the second fixture
-defect in `TestJSONNumbers`. The numeric/Merge tests were then rerun separately;
+defect in `TestJSONNumbers`. The numeric/Merge tests were then rerun separately
+with `-run '^(TestJSONNumbers|TestProfileExactDecimal|Test_Merge)$'` and the same
+vendor, sequential and fail-fast flags;
 the table combines successful test nodes from these runs. Initial failed attempts
 are retained alongside successful runs, rather than counted as passes.
 Logs were redacted before writing under
 `/tmp/krenalis-snowflake-campaign-live-20261111/`; `evidence-summary.json`
 identifies the relevant log for each block. No credentials are included here.
+These historical logs did not capture commit/source manifests. Their source
+provenance is therefore incomplete; the helper above applies to subsequent runs,
+without retroactively certifying them. Historical subtest labels `latest2/1/0`
+and `difference/3` correspond to the current `latest2/some` and `difference/le`.
 
 ## Coverage still required before activation
 
@@ -188,6 +262,8 @@ In particular, the following work remains explicit:
 - Statement timeout/cancellation during execution, scan/iteration/close errors,
   malformed/oversized results, additional timestamp precisions, session changes
   and a small scale/resource smoke test.
+- Non-UTC session settings and timestamp input formats on every test connection,
+  with effective parameters and environment-wide server time limits recorded.
 
 No gate change follows automatically from a green reduced suite. Resolve observed
 differences, finish the acceptance checklist and keep a repeatable remote
