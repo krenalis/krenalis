@@ -353,6 +353,27 @@ option in `run.py`; missing, inconsistent or mixed profile evidence fails the
 block. The standard profile remains the default and accepts legacy session
 records without an explicit profile.
 
+Run the two remote blocks sequentially in fresh overlay directories:
+
+```sh
+python3 -B test/snowflaketester/prepare.py "$campaign_dir/timeout-overlay" --timezone UTC --profile timeout
+python3 -B test/snowflaketester/prepare.py "$campaign_dir/cancellation-overlay" --timezone UTC --profile cancellation
+
+KRENALIS_SKIP_SNOWFLAKE_TESTS=false python3 test/snowflaketester/run.py --require-schemas \
+  --require-session-timezone UTC --require-session-profile timeout "$campaign_dir/timeout.jsonl" -- \
+  -overlay "$campaign_dir/timeout-overlay/overlay.json" ./core/internal/datastore \
+  -run '^TestUnifiedTimeoutSnowflake$' -timeout=4m
+
+KRENALIS_SKIP_SNOWFLAKE_TESTS=false python3 test/snowflaketester/run.py --require-schemas \
+  --require-session-timezone UTC --require-session-profile cancellation "$campaign_dir/cancellation.jsonl" -- \
+  -overlay "$campaign_dir/cancellation-overlay/overlay.json" ./core/internal/datastore \
+  -run '^TestUnifiedCancellationSnowflake$' -timeout=4m
+
+# Local counterpart; no Snowflake credentials are used.
+KRENALIS_SKIP_SNOWFLAKE_TESTS=true go test ./core/internal/datastore \
+  -run '^TestUnified(Cancellation|Timeout)PostgreSQL$' -count=1 -timeout=3m
+```
+
 A distinct observer session reads query history by a unique context query tag.
 Its own tag prevents accidental target-tag reuse. The observer alone raises its
 pinned session limit to 60 seconds for metadata reads; the target pool is never
@@ -368,6 +389,14 @@ applied before the target pool opens. A timeout currently can lose the original
 returns `profile outcome schema mismatch`. The tests retain this existing
 behavior, including `UnavailableError` and no partial result; they do not change
 production error handling.
+
+The vendored Snowflake driver currently sends cancellation synchronously,
+without a separate cleanup deadline. Measured cancellation latency includes
+this step; the test's observation bounds do not establish a production latency
+guarantee. The datastore retains its opaque `UnavailableError`, so cancellation
+is not identifiable through `errors.Is` above that boundary. Download
+interruption after query completion, mode changes and credit/resource controls
+remain outside these fixtures.
 
 The read-only inventory can be repeated against names from any campaign's
 manifests, including incomplete runs. It bounds files, schema names and server

@@ -120,17 +120,27 @@ type unifiedInterruptionState struct {
 	code           int64
 }
 
+// TestUnifiedCancellationPostgreSQL cancels both read paths after execution starts.
+func TestUnifiedCancellationPostgreSQL(t *testing.T) {
+	testUnifiedInterruption(t, "PostgreSQL", "cancellation")
+}
+
+// TestUnifiedCancellationSnowflake requires the isolated cancellation overlay.
+func TestUnifiedCancellationSnowflake(t *testing.T) {
+	testUnifiedInterruption(t, "Snowflake", "cancellation")
+}
+
 // TestUnifiedTimeoutPostgreSQL checks a server timeout during both read paths.
 func TestUnifiedTimeoutPostgreSQL(t *testing.T) {
-	testUnifiedInterruption(t, "PostgreSQL")
+	testUnifiedInterruption(t, "PostgreSQL", "timeout")
 }
 
 // TestUnifiedTimeoutSnowflake requires the isolated timeout session overlay.
 func TestUnifiedTimeoutSnowflake(t *testing.T) {
-	testUnifiedInterruption(t, "Snowflake")
+	testUnifiedInterruption(t, "Snowflake", "timeout")
 }
 
-func newUnifiedInterruptionObserver(t *testing.T, dw warehouses.Warehouse, name, tag string) *unifiedInterruptionObserver {
+func newUnifiedInterruptionObserver(t *testing.T, dw warehouses.Warehouse, name, tag, profile string) *unifiedInterruptionObserver {
 
 	t.Helper()
 	observer := &unifiedInterruptionObserver{tag: tag, application: tag}
@@ -167,8 +177,12 @@ func newUnifiedInterruptionObserver(t *testing.T, dw warehouses.Warehouse, name,
 		})
 		// The warehouse pool has not opened yet. Only this disposable database
 		// inherits the short timeout and unique application name.
+		timeout := "2s"
+		if profile == "cancellation" {
+			timeout = "60s"
+		}
 		_, err = observer.pg.Exec(t.Context(), "ALTER DATABASE "+pgx.Identifier{settings.Database}.Sanitize()+
-			" SET statement_timeout='2s'")
+			" SET statement_timeout='"+timeout+"'")
 		if err != nil {
 			t.Fatalf("expected disposable database timeout, got %v", err)
 		}
@@ -211,7 +225,7 @@ func newUnifiedInterruptionObserver(t *testing.T, dw warehouses.Warehouse, name,
 	return observer
 }
 
-func testUnifiedInterruption(t *testing.T, name string) {
+func testUnifiedInterruption(t *testing.T, name, profile string) {
 
 	t.Helper()
 	if testing.Short() {
@@ -236,7 +250,7 @@ func testUnifiedInterruption(t *testing.T, name string) {
 	if err != nil {
 		t.Fatalf("expected random query tag, got %v", err)
 	}
-	observer := newUnifiedInterruptionObserver(t, dw, name, "krenalis-interruption/"+hex.EncodeToString(random[:]))
+	observer := newUnifiedInterruptionObserver(t, dw, name, "krenalis-interruption/"+hex.EncodeToString(random[:]), profile)
 	switch name {
 	case "PostgreSQL":
 		execUnifiedFixture(t, dw, `CREATE TABLE profiles (_kpid uuid PRIMARY KEY);
@@ -325,6 +339,11 @@ SELECT * FROM krenalis_events_base WHERE delay_probe(message_id,30)`)
 				done <- outcome{partial, err}
 			}()
 			observer.wait(t, true)
+			measured := started
+			if profile == "cancellation" {
+				measured = time.Now()
+				cancel()
+			}
 			var result outcome
 			select {
 			case result = <-done:
@@ -332,46 +351,62 @@ SELECT * FROM krenalis_events_base WHERE delay_probe(message_id,30)`)
 				t.Fatal("expected completed interrupted operation, got client timeout")
 			}
 			if result.err == nil {
-				t.Fatalf("expected server timeout error, got success, partial=%t", result.partial)
+				t.Fatalf("expected interrupted operation error, got success, partial=%t", result.partial)
 			}
 			if result.err != nil {
 				unavailable, ok := errors.AsType[*UnavailableError](result.err)
 				if !ok || result.partial {
 					t.Fatalf("expected UnavailableError without partial data, got %T, partial=%t", result.err, result.partial)
 				}
-				switch name {
-				case "PostgreSQL":
-					failure, ok := errors.AsType[*pgconn.PgError](unavailable.Err)
-					if ok && failure.Code != "57014" {
-						t.Fatalf("expected PostgreSQL cancellation code 57014, got %s", failure.Code)
+				if errors.Is(result.err, context.Canceled) {
+					t.Fatal("expected opaque UnavailableError, got exported cancellation identity")
+				}
+				if profile == "cancellation" {
+					if !errors.Is(unavailable.Err, context.Canceled) &&
+						(name != "PostgreSQL" || unavailable.Err.Error() !=
+							"warehouses/postgresql: profile outcome schema mismatch") {
+						t.Fatalf("expected current cancellation cause, got %T", unavailable.Err)
 					}
-					// pgx may return a cursor without field metadata when the
-					// statement fails. The adapter currently replaces its error.
-					if !ok && unavailable.Err.Error() != "warehouses/postgresql: profile outcome schema mismatch" {
-						t.Fatalf("expected current PostgreSQL timeout diagnostic, got %T", unavailable.Err)
+				} else {
+					switch name {
+					case "PostgreSQL":
+						failure, ok := errors.AsType[*pgconn.PgError](unavailable.Err)
+						if ok && failure.Code != "57014" {
+							t.Fatalf("expected PostgreSQL cancellation code 57014, got %s", failure.Code)
+						}
+						// pgx may return a cursor without field metadata when the
+						// statement fails. The adapter currently replaces its error.
+						if !ok && unavailable.Err.Error() != "warehouses/postgresql: profile outcome schema mismatch" {
+							t.Fatalf("expected current PostgreSQL timeout diagnostic, got %T", unavailable.Err)
+						}
+					case "Snowflake":
+						failure, ok := errors.AsType[*gosnowflake.SnowflakeError](unavailable.Err)
+						if !ok || failure.Number != 630 {
+							t.Fatalf("expected Snowflake timeout 630, got %T", unavailable.Err)
+						}
+					default:
+						t.Fatalf("expected supported warehouse, got %s", name)
 					}
-				case "Snowflake":
-					failure, ok := errors.AsType[*gosnowflake.SnowflakeError](unavailable.Err)
-					if !ok || failure.Number != 630 {
-						t.Fatalf("expected Snowflake timeout 630, got %T", unavailable.Err)
-					}
-				default:
-					t.Fatalf("expected supported warehouse, got %s", name)
 				}
 			}
-			if ctx.Err() != nil {
+			if profile == "timeout" && ctx.Err() != nil {
 				t.Fatalf("expected server timeout before client deadline, got %v", ctx.Err())
 			}
+			clientElapsed := time.Since(measured)
 			terminal := observer.wait(t, false)
-			if name == "Snowflake" && terminal.code != 630 {
-				t.Fatalf("expected terminal server timeout 630, got %d", terminal.code)
+			code := int64(630)
+			if profile == "cancellation" {
+				code = 604
 			}
-			t.Logf("interruption server_timeout=true server_code=%d elapsed_ms=%d", terminal.code,
-				time.Since(started).Milliseconds())
+			if name == "Snowflake" && terminal.code != code {
+				t.Fatalf("expected terminal server code %d, got %d", code, terminal.code)
+			}
+			t.Logf("interruption profile=%s server_code=%d client_elapsed_ms=%d total_elapsed_ms=%d", profile,
+				terminal.code, clientElapsed.Milliseconds(), time.Since(started).Milliseconds())
 
 			execUnifiedFixtureStatement(t, dw, `CREATE OR REPLACE VIEW krenalis_events AS
 SELECT * FROM krenalis_events_base`)
-			complete, err := operation.call(t.Context())
+			complete, err := operation.call(gosnowflake.WithQueryTag(t.Context(), observer.tag+"/recovery"))
 			if err != nil {
 				t.Fatalf("expected healthy follow-up on the same warehouse, got %v", err)
 			}
