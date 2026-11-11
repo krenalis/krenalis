@@ -54,6 +54,10 @@ func (warehouse *PostgreSQL) ProfileOutcomes(ctx context.Context, filter warehou
 	}
 	if len(rows.FieldDescriptions()) != len(query.Columns) {
 		rows.Close()
+		err = rows.Err()
+		if err != nil {
+			return nil, err
+		}
 		return nil, fmt.Errorf("warehouses/postgresql: profile outcome schema mismatch")
 	}
 	scanner := newScanner(query.Columns, rows)

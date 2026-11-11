@@ -58,6 +58,10 @@ func (warehouse *Snowflake) ProfileOutcomes(ctx context.Context, filter warehous
 	}
 	if len(columns) != len(query.Columns) {
 		_ = rows.Close()
+		err = rows.Err()
+		if err != nil {
+			return nil, err
+		}
 		return nil, fmt.Errorf("warehouses/snowflake: profile outcome schema mismatch")
 	}
 	scanner := newScanner(query.Columns, rows)

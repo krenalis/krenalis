@@ -358,10 +358,8 @@ SELECT * FROM krenalis_events_base WHERE delay_probe(message_id,30)`)
 			case <-time.After(60 * time.Second):
 				t.Fatal("expected completed interrupted operation, got client timeout")
 			}
-			if result.err == nil {
-				t.Fatalf("expected interrupted operation error, got success, partial=%t", result.partial)
-			}
 			if result.err != nil {
+
 				unavailable, ok := errors.AsType[*UnavailableError](result.err)
 				if !ok || result.partial {
 					t.Fatalf("expected UnavailableError without partial data, got %T, partial=%t", result.err, result.partial)
@@ -370,22 +368,15 @@ SELECT * FROM krenalis_events_base WHERE delay_probe(message_id,30)`)
 					t.Fatal("expected opaque UnavailableError, got exported cancellation identity")
 				}
 				if profile == "cancellation" {
-					if !errors.Is(unavailable.Err, context.Canceled) &&
-						(name != "PostgreSQL" || unavailable.Err.Error() !=
-							"warehouses/postgresql: profile outcome schema mismatch") {
-						t.Fatalf("expected current cancellation cause, got %T", unavailable.Err)
+					if !errors.Is(unavailable.Err, context.Canceled) {
+						t.Fatalf("expected context cancellation cause, got %T", unavailable.Err)
 					}
 				} else {
 					switch name {
 					case "PostgreSQL":
 						failure, ok := errors.AsType[*pgconn.PgError](unavailable.Err)
-						if ok && failure.Code != "57014" {
-							t.Fatalf("expected PostgreSQL cancellation code 57014, got %s", failure.Code)
-						}
-						// pgx may return a cursor without field metadata when the
-						// statement fails. The adapter currently replaces its error.
-						if !ok && unavailable.Err.Error() != "warehouses/postgresql: profile outcome schema mismatch" {
-							t.Fatalf("expected current PostgreSQL timeout diagnostic, got %T", unavailable.Err)
+						if !ok || failure.Code != "57014" {
+							t.Fatalf("expected PostgreSQL timeout code 57014, got %T", unavailable.Err)
 						}
 					case "Snowflake":
 						failure, ok := errors.AsType[*gosnowflake.SnowflakeError](unavailable.Err)
@@ -396,47 +387,51 @@ SELECT * FROM krenalis_events_base WHERE delay_probe(message_id,30)`)
 						t.Fatalf("expected supported warehouse, got %s", name)
 					}
 				}
-			}
-			if profile == "timeout" && ctx.Err() != nil {
-				t.Fatalf("expected server timeout before client deadline, got %v", ctx.Err())
-			}
-			clientElapsed := time.Since(measured)
-			if profile == "timeout" {
-				minimum := 2 * time.Second
-				if name == "Snowflake" {
-					minimum = 10 * time.Second
+				if profile == "timeout" && ctx.Err() != nil {
+					t.Fatalf("expected server timeout before client deadline, got %v", ctx.Err())
 				}
-				if clientElapsed < minimum || name == "PostgreSQL" && clientElapsed >= 20*time.Second {
-					t.Fatalf("expected server timeout after at least %v and before natural completion, got %v",
-						minimum, clientElapsed)
+				clientElapsed := time.Since(measured)
+				if profile == "timeout" {
+					minimum := 2 * time.Second
+					if name == "Snowflake" {
+						minimum = 10 * time.Second
+					}
+					if clientElapsed < minimum || name == "PostgreSQL" && clientElapsed >= 20*time.Second {
+						t.Fatalf("expected server timeout after at least %v and before natural completion, got %v",
+							minimum, clientElapsed)
+					}
 				}
-			}
-			terminal := scenario.wait(t, false)
-			// PostgreSQL has no query-history status here. Requiring its
-			// disappearance before the 30-second delay can finish excludes
-			// natural completion mistaken for server-side cancellation.
-			if name == "PostgreSQL" && profile == "cancellation" && time.Since(started) >= 20*time.Second {
-				t.Fatal("expected PostgreSQL cancellation before natural completion, got delayed termination")
-			}
-			code := int64(630)
-			if profile == "cancellation" {
-				code = 604
-			}
-			if name == "Snowflake" && terminal.code != code {
-				t.Fatalf("expected terminal server code %d, got %d", code, terminal.code)
-			}
-			t.Logf("interruption profile=%s server_code=%d client_elapsed_ms=%d total_elapsed_ms=%d", profile,
-				terminal.code, clientElapsed.Milliseconds(), time.Since(started).Milliseconds())
+				terminal := scenario.wait(t, false)
+				// PostgreSQL has no query-history status here. Requiring its
+				// disappearance before the 30-second delay can finish excludes
+				// natural completion mistaken for server-side cancellation.
+				if name == "PostgreSQL" && profile == "cancellation" && time.Since(started) >= 20*time.Second {
+					t.Fatal("expected PostgreSQL cancellation before natural completion, got delayed termination")
+				}
+				code := int64(630)
+				if profile == "cancellation" {
+					code = 604
+				}
+				if name == "Snowflake" && terminal.code != code {
+					t.Fatalf("expected terminal server code %d, got %d", code, terminal.code)
+				}
+				t.Logf("interruption profile=%s server_code=%d client_elapsed_ms=%d total_elapsed_ms=%d", profile,
+					terminal.code, clientElapsed.Milliseconds(), time.Since(started).Milliseconds())
 
-			execUnifiedFixtureStatement(t, dw, `CREATE OR REPLACE VIEW krenalis_events AS
+				execUnifiedFixtureStatement(t, dw, `CREATE OR REPLACE VIEW krenalis_events AS
 SELECT * FROM krenalis_events_base`)
-			complete, err := operation.call(gosnowflake.WithQueryTag(t.Context(), scenario.tag+"/recovery"))
-			if err != nil {
-				t.Fatalf("expected healthy follow-up on the same warehouse, got %v", err)
+				complete, err := operation.call(gosnowflake.WithQueryTag(t.Context(), scenario.tag+"/recovery"))
+				if err != nil {
+					t.Fatalf("expected healthy follow-up on the same warehouse, got %v", err)
+				}
+				if !complete {
+					t.Fatal("expected complete follow-up result, got nil")
+				}
+
+				return
 			}
-			if !complete {
-				t.Fatal("expected complete follow-up result, got nil")
-			}
+
+			t.Fatalf("expected interrupted operation error, got success, partial=%t", result.partial)
 
 		})
 	}

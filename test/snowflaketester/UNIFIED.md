@@ -388,12 +388,13 @@ on Snowflake); PostgreSQL must return before twenty seconds.
 
 PostgreSQL uses a disposable database, a volatile `pg_sleep` function and
 `pg_stat_activity`. Its timeout profile uses a two-second database default,
-applied before the target pool opens. A timeout currently can lose the original
-57014 diagnostic: pgx supplies a cursor without field metadata and the adapter
-returns `profile outcome schema mismatch`. The tests retain this existing
-behavior, including `UnavailableError` and no partial result; they do not change
-production error handling. Its cancellation check also requires the target
-to disappear before the 30-second UDF delay could complete naturally.
+applied before the target pool opens. If result metadata is missing, both
+adapters close the cursor and check its stored error before reporting a schema
+mismatch. PostgreSQL tests require the original 57014 timeout code or the context
+cancellation cause, without a textual schema-mismatch exception. The public
+`UnavailableError` stays opaque and no partial result is returned. Cancellation
+also requires the target to disappear before the 30-second UDF delay could
+complete naturally.
 
 The vendored Snowflake driver currently sends cancellation synchronously,
 without a separate cleanup deadline. Measured cancellation latency includes
