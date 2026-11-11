@@ -26,6 +26,8 @@ go test ./core/internal/datastore \
   -count=1 -timeout=5m -json > /tmp/unified-fixtures-postgresql.jsonl
 
 go test ./test -run '^TestEqualityOfMergeFiles$' -count=1
+
+python3 -B -m unittest discover -s test/snowflaketester -p 'test_run.py'
 ```
 
 `TestUnifiedConformancePostgreSQL/Snowflake` shares fixture data, expected results
@@ -116,33 +118,42 @@ overlay/replacement hashes, Go version, driver version, exact command and result
 It reports source changes during the run as a nonzero exit, even if Go passes.
 Skipped blocks and selections that execute no tests also return a nonzero exit.
 Use fresh output names outside the checkout; evidence is never overwritten.
-The helper does not source `.env` files. It masks Snowflake test environment
-values in output before writing the log; inspect redacted logs before sharing.
-The manifest contains source metadata only; credentials belong in the environment,
-never command arguments. The helper adds `-mod=vendor -parallel=1 -p=1 -failfast
+The helper does not source `.env` files. It decodes Go JSON events and masks
+Snowflake test environment values case-insensitively in their `Output` only,
+then re-encodes the event. Package, test and action metadata remain unchanged;
+non-event lines are masked as text. Values at most four characters long are
+flagged by variable name in the manifest, without recording their values.
+Inspect redacted logs before sharing.
+The manifest contains source and schema metadata; credentials belong in the
+environment, never command arguments. The helper adds `-mod=vendor -parallel=1 -p=1 -failfast
 -count=1 -json`, matching the flags used in the live runner.
+For remote blocks, `--require-schemas` also requires nonempty, balanced schema
+records; `KRENALIS_SKIP_SNOWFLAKE_TESTS=false` enables the same requirement.
+The helper collects generated schema names before masking output and
+updates the manifest when creation/drop records arrive, including before a run
+completes. Generated schema names are not credentials.
 
 Run the following blocks in order, stopping on a failed prerequisite:
 
 ```sh
 # Credentials must already have been supplied through the environment.
 # These commands are remote, including tests that do not need the Unified gate.
-KRENALIS_SKIP_SNOWFLAKE_TESTS=false python3 test/snowflaketester/run.py \
+KRENALIS_SKIP_SNOWFLAKE_TESTS=false python3 test/snowflaketester/run.py --require-schemas \
   "$campaign_dir/physical-warehouse.jsonl" -- ./warehouses/snowflake \
   -run '^(TestJSONNumbers|TestProfileExactDecimal|TestJSONExpressions|Test_Merge)$' \
   -timeout=30m
 
-KRENALIS_SKIP_SNOWFLAKE_TESTS=false python3 test/snowflaketester/run.py \
+KRENALIS_SKIP_SNOWFLAKE_TESTS=false python3 test/snowflaketester/run.py --require-schemas \
   "$campaign_dir/physical-connector.jsonl" -- ./connectors/snowflake \
   -run '^Test_Merge_Query$' -timeout=15m
 
-KRENALIS_SKIP_SNOWFLAKE_TESTS=false python3 test/snowflaketester/run.py \
+KRENALIS_SKIP_SNOWFLAKE_TESTS=false python3 test/snowflaketester/run.py --require-schemas \
   "$campaign_dir/unified-snowflake.jsonl" -- -overlay "$campaign_dir/overlay.json" \
   ./core/internal/datastore -run '^TestUnified(StoredNumbers|Conformance)Snowflake$' \
   -timeout=45m
 
 # The PostgreSQL arm is skipped: this block isolates real Snowflake Record reads.
-KRENALIS_SKIP_SNOWFLAKE_TESTS=false python3 test/snowflaketester/run.py \
+KRENALIS_SKIP_SNOWFLAKE_TESTS=false python3 test/snowflaketester/run.py --require-schemas \
   "$campaign_dir/record-floats.jsonl" -- ./core/internal/datastore \
   -run '^TestJSONFloatFilters$/Snowflake' -timeout=15m
 ```
@@ -157,30 +168,18 @@ rewrite connector SQL or restore the discarded result dictionary.
 
 ## Cleanup after completion or interruption
 
-Audit created/dropped schema records, including failed runs and timeout logs:
+Audit schema records collected in manifests before redaction, including failed
+runs and interrupted runs:
 
 ```sh
-python3 - "$campaign_dir" <<'PY'
-import collections
-import json
-import pathlib
-import re
-import sys
-
-created, dropped = collections.Counter(), collections.Counter()
-for path in pathlib.Path(sys.argv[1]).glob("*.jsonl"):
-    for line in path.open():
-        try:
-            message = json.loads(line).get("Output", "")
-        except json.JSONDecodeError:
-            continue
-        for action, name in re.findall(r"Snowflake test schema (created|dropped) schema=(\S+)", message):
-            (created if action == "created" else dropped)[name] += 1
-remaining = list((created - dropped).elements())
-print(json.dumps({"schemas_without_drop_record": remaining}))
-sys.exit(bool(remaining))
-PY
+python3 test/snowflaketester/run.py --audit "$campaign_dir"
 ```
+
+The audit reports manifest and created/dropped record totals, missing drops and
+unmatched drops. No manifests, incomplete/invalid manifests or required schema
+records missing from a block make it fail. It does not infer cleanup from a
+zero count after searching redacted text. Older manifests without schema evidence
+cannot pass this audit; use their original records and the server inventory.
 
 A process can die between CREATE and its log record. After an interrupted run,
 also inspect the supplied test database using
