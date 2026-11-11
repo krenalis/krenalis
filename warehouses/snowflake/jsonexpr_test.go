@@ -348,12 +348,12 @@ func TestJSONExpressions(t *testing.T) {
 	// Check storage precision separately from comparisons with stored values.
 	// Explicit lower and upper bounds also exercise positive comparisons.
 	for i, fixture := range []struct {
-		raw, lower, upper string
-		changed           bool
+		raw, lower, upper, kind string
+		changed                 bool
 	}{
-		{"9007199254740993e0", "9007199254740991", "9007199254740994", true},
-		{"1.234567890123456789e0", "1.23456789012345", "1.23456789012347", true},
-		{"0.1234567890123456789012345678901234567890123456789", "0.12345678901234", "0.12345678901235", true},
+		{"9007199254740993e0", "9007199254740991", "9007199254740994", "INTEGER", false},
+		{"1.234567890123456789e0", "1.23456789012345", "1.23456789012347", "DECIMAL", false},
+		{"0.1234567890123456789012345678901234567890123456789", "0.12345678901234", "0.12345678901235", "DOUBLE", true},
 	} {
 		t.Run("numeric representation/"+fixture.raw, func(t *testing.T) {
 
@@ -403,17 +403,28 @@ func TestJSONExpressions(t *testing.T) {
 			}
 			original := json.Value(fixture.raw)
 			storedOperand := json.Value(string(stored))
-			// The scanner's JSON can lose digits from the canonical DOUBLE text.
-			var binary float64
-			row := db.QueryRowContext(t.Context(), `SELECT AS_DOUBLE("VALUE") FROM `+
+			// New writes preserve fixed-point values when possible; DOUBLEs
+			// retain their canonical reading despite rounded display text.
+			var kind string
+			var binary sql.NullFloat64
+			row := db.QueryRowContext(t.Context(), `SELECT TYPEOF("VALUE"),AS_DOUBLE("VALUE") FROM `+
 				quoteIdent(table.Name)+` WHERE "ID"=`+strconv.Itoa(id))
-			err = row.Scan(&binary)
+			err = row.Scan(&kind, &binary)
 			if err != nil {
-				t.Fatalf("expected exact binary fixture transport, got %v", err)
+				t.Fatalf("expected numeric fixture transport, got %v", err)
 			}
-			exact, _ := new(big.Rat).SetString(strconv.FormatFloat(binary, 'g', -1, 64))
+			if kind != fixture.kind {
+				t.Fatalf("expected %s storage for %s, got %s", fixture.kind, fixture.raw, kind)
+			}
+			exact, _ := new(big.Rat).SetString(number.String())
+			if kind == "DOUBLE" {
+				if !binary.Valid {
+					t.Fatal("expected binary DOUBLE transport, got NULL")
+				}
+				exact, _ = new(big.Rat).SetString(strconv.FormatFloat(binary.Float64, 'g', -1, 64))
+			}
 			if exact == nil {
-				t.Fatalf("expected finite stored fixture, got %g", binary)
+				t.Fatalf("expected finite stored fixture, got %s", stored)
 			}
 			originalValue, _ := new(big.Rat).SetString(originalNumber.String())
 			displayValue, _ := new(big.Rat).SetString(number.String())

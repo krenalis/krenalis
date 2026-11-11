@@ -93,7 +93,7 @@ func TestJSONNumbers(t *testing.T) {
 	mergedFixtureCount := len(inputs)
 	// Keep scientific DOUBLE fixtures as well as the new fixed-point writes.
 	for _, raw := range inputs {
-		if json.Value(raw).Kind() != json.Number || !strings.ContainsAny(raw, "eE") {
+		if raw == "" || json.Value(raw).Kind() != json.Number || !strings.ContainsAny(raw, "eE") {
 			continue
 		}
 		id := len(inputs)

@@ -85,8 +85,8 @@ intentionally expect it to be closed. There is no runtime bypass.
 
 ## Remote execution, when authorized
 
-Remote testing is currently deferred. Do not execute this section until the user
-re-enables it. Use the existing `KRENALIS_SNOWFLAKE_TESTER_*` environment variables,
+The user authorised the live campaign on 2026-11-11. Use the existing
+`KRENALIS_SNOWFLAKE_TESTER_*` environment variables,
 an isolated test database/role and the temporary schemas created by
 `snowflaketester`. Do not include credential files or values in commands, logs or
 commits. Do not enable shell tracing. No application or demo data is needed.
@@ -129,15 +129,54 @@ JSON display text. A rounded display is an accepted output limit, not a reason t
 weaken Record or governed monetary expectations. Do not add corrective queries,
 rewrite connector SQL or restore the discarded result dictionary.
 
+## Live results on 2026-11-11
+
+The prepared blocks ran against the supplied test database with real writes and
+reads. No production gate or implementation code changed. Successful test nodes
+(including parent nodes) were:
+
+| Block | PASS | SKIP |
+| --- | ---: | ---: |
+| `TestJSONExpressions` | 334 | 0 |
+| `TestJSONNumbers`, `TestProfileExactDecimal`, `Test_Merge` | 3 | 0 |
+| Connector `Test_Merge_Query` | 1 | 0 |
+| `TestUnifiedConformanceSnowflake`, `TestUnifiedStoredNumbersSnowflake` | 44 | 0 |
+| `TestJSONFloatFilters/Snowflake` | 482 | 0 |
+
+These are 864 successful nodes, not 864 distinct SQL queries. The numeric batch
+checked 21,216 exact comparisons; the last block checked 480 Float Record cases.
+The new writer stored `1.1E0` as DECIMAL 1.1 and `1.00000000000000001E2` as
+DECIMAL 100.000000000000001. Historical PARSE_JSON fixtures retained DOUBLE
+storage and their separately approved reading. The Unified fixtures passed
+outcomes, explanations, calendars, microsecond borders, copies and source-fault
+isolation. All ten temporary schemas created across attempts were dropped.
+
+Two fixture defects were found and corrected before completing the blocks:
+`TestJSONExpressions` assumed scientific inputs were always DOUBLE and derived
+its oracle from a floating-point conversion even for new fixed-point writes;
+it now asserts the physical type and uses exact fixed-point values. The loop
+adding historical DOUBLE fixtures in `TestJSONNumbers` called JSON Kind on the
+empty SQL NULL placeholder; it now skips that placeholder. Numeric expectations
+were not weakened, and the corrected type assertions detect loss in new writes.
+
+After `TestJSONExpressions` passed, its process encountered the second fixture
+defect in `TestJSONNumbers`. The numeric/Merge tests were then rerun separately;
+the table combines successful test nodes from these runs. Initial failed attempts
+are retained alongside successful runs, rather than counted as passes.
+Logs were redacted before writing under
+`/tmp/krenalis-snowflake-campaign-live-20261111/`; `evidence-summary.json`
+identifies the relevant log for each block. No credentials are included here.
+
 ## Coverage still required before activation
 
 Passing the commands above is necessary, but is not the complete acceptance
 checklist. Record actual results against each block in the Unified README.
 In particular, the following work remains explicit:
 
-- Remote physical results for the new writer, midpoint fixtures, NUMBER borders,
-  nested Array/Map and server JSON output; native FLOAT extraction versus nested
-  output in VARIANT/OBJECT/ARRAY, both Arrow and JSON result transport.
+- Additional nested Array/Map numeric boundaries and native FLOAT extraction
+  versus nested output in VARIANT/OBJECT/ARRAY, explicitly verifying both Arrow
+  and JSON result transport. The successful default-driver runs above do not
+  certify both transport formats.
 - Remaining Record operator/collation/Float-NaN cases and all source-conflict
   classes, Sum/Average independent where and minimum counterexamples, Count money
   predicates, mixed explanation layouts, projections and nonempty pagination.

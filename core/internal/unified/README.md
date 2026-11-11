@@ -637,20 +637,20 @@ coherence between those views remains an integration assumption to verify.
 
 PostgreSQL is enabled for this internal subset. Snowflake has the mirrored
 physical adapter and transport implementation, shared-compiler/local tests and
-an explicit **inactive Unified gate**. No Snowflake credentials were configured
-for this work; no remote query, scanner, precision/overflow, timestamp, NULL,
-subquery or count/page conformance is claimed. Real Snowflake probes and the
-common runtime fixtures must pass before changing that gate. PostgreSQL writer
-round-trips are verified by the fixture above; Snowflake writer/CSV round-trips
-remain unverified. Snowflake activation also requires
+an explicit **inactive Unified gate**. The bounded live campaign below now
+verifies numeric storage/readings, real writer round-trips and shared runtime
+fixtures. It does not establish conformance for the complete implemented
+subset; the remaining acceptance checks must pass before changing the gate.
+Snowflake activation also requires
 resolving the declared ordinary-text collation and Float/NaN questions.
 
 ### Consolidated Snowflake verification campaign
 
 The [campaign runbook](../../../test/snowflaketester/UNIFIED.md) collects the
 local checks, isolated gate-overlay preparation, ordered remote commands and
-remaining acceptance gaps. The shared bounded fixtures run on PostgreSQL now;
-their Snowflake execution remains pending.
+remaining acceptance gaps. The shared bounded fixtures passed on PostgreSQL
+and, on 2026-11-11, on real Snowflake. The runbook records the successful
+blocks, corrected fixture defects and coverage still required before activation.
 
 The following is the common acceptance checklist for the currently implemented
 subset, not a claim of remote conformance. Run physical probes before deciding
@@ -744,10 +744,9 @@ the governed money reading remain unchanged. Local mutations
 restoring binary bounds, rounding operands or using nearest-away rounding at
 halfway ties are rejected by `TestJSONDoubleBounds`. Positive and negative
 canonical midpoint fixtures also check nearest-even storage, equality and
-ordering in the real Snowflake suite. Their remote run is pending: the added
-fixtures passed local checks, but Snowflake's network policy blocked test
-setup and the user deferred that run. These changes do not open the verification
-gate.
+ordering in the real Snowflake suite. After the earlier network-policy block,
+these fixtures passed remotely on 2026-11-11. These changes do not open the
+verification gate.
 
 New Snowflake JSON writes expand scientific number tokens to plain decimal
 when their exact values fit precision 38 and scale 37. The warehouse and
@@ -764,8 +763,9 @@ errors under the existing qualification and reading contracts.
 Local tests cover exact rational equivalence, precision/scale boundaries,
 large exponents, nested documents, byte preservation, idempotence and CSV
 serialization in both packages. The adjusted real-database tests retain
-historical DOUBLE fixtures separately. Remote execution of these changes is
-pending while Snowflake testing is deferred. The connector and warehouse use
+historical DOUBLE fixtures separately. Both Merge/read paths and the numeric
+and bounded Unified fixtures passed remotely on 2026-11-11; the runbook records
+the results and remaining coverage. The connector and warehouse use
 the same JSON output contract, without corrective queries or changes to the
 user's SQL. A profile can satisfy `value > 100` while the returned JSON shows
 100. See [Snowflake JSON numbers](../../../warehouses/snowflake/README.md).

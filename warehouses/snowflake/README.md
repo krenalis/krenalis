@@ -46,9 +46,11 @@ ordering, parsing or persistence.
 
 Local regressions cover numeric text preservation and the connector's single,
 unchanged query. They simulate driver results and do not certify server
-serialization or physical storage. Remaining remote checks include the two
-real Merge/read paths, NUMBER borders, nested containers, native FLOAT
-extraction versus JSON display, Record decisions and relevant error/resource
-cases. The Unified Snowflake gate remains closed until its complete campaign
+serialization or physical storage. The
+[2026-11-11 live campaign](../../test/snowflaketester/UNIFIED.md#live-results-on-2026-11-11)
+verified both real Merge/read paths, NUMBER borders, numeric comparisons and
+bounded Unified fixtures. Remaining checks include additional nested numeric
+boundaries, explicit Arrow/JSON transport probes and error/resource cases.
+The Unified Snowflake gate remains closed until its complete campaign
 passes; this accepted JSON output limit does not open it. DECFLOAT and other
 additional native types remain outside this increment.
