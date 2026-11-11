@@ -43,17 +43,19 @@ func (o *unifiedInterruptionObserver) read(t *testing.T) unifiedInterruptionStat
 	defer cancel()
 	var result unifiedInterruptionState
 	if o.pg != nil {
-		row := o.pg.QueryRow(ctx, `SELECT count(*) FROM pg_stat_activity
+		row := o.pg.QueryRow(ctx, `SELECT count(*),count(*) FILTER (WHERE wait_event='PgSleep') FROM pg_stat_activity
 WHERE application_name=$1 AND state='active' AND pid<>pg_backend_pid()`, o.application)
-		var active int
-		err := row.Scan(&active)
+		var active, sleeping int
+		err := row.Scan(&active, &sleeping)
 		if err != nil {
 			t.Fatalf("expected PostgreSQL query activity, got %v", err)
 		}
-		if active < 0 || active > 1 {
-			t.Fatalf("expected at most one active target query, got %d", active)
+		if active < 0 || active > 1 || sleeping < 0 || sleeping > active {
+			t.Fatalf("expected at most one active target and its sleeping subset, got %d, %d", active, sleeping)
 		}
-		return unifiedInterruptionState{running: active == 1, ended: active == 0}
+		// Wait for execution inside the UDF, beyond the extended-protocol
+		// startup where a cancellation request can arrive too early.
+		return unifiedInterruptionState{running: sleeping == 1, ended: active == 0}
 	}
 
 	// Tag the observer too: a target tag must never persist on this session.

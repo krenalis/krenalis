@@ -69,8 +69,16 @@ KRENALIS_SKIP_SNOWFLAKE_TESTS=true go test -overlay "$campaign_dir/overlay.json"
   -count=1 -json > "$campaign_dir/compile-only.jsonl"
 ```
 
-This last command must report SKIP for both tests. Test the production gate
-separately without an overlay (`TestUnifiedProfilesSnowflakeGate` above). Do not
+This last command must report SKIP for both tests. The database/sql cursor
+failure regression uses an in-memory driver and can run with this overlay
+without credentials or network access:
+
+```sh
+KRENALIS_SKIP_SNOWFLAKE_TESTS=true go test -overlay "$campaign_dir/overlay.json" \
+  ./warehouses/snowflake -run '^TestProfileSchemaFailures$' -race -count=1
+```
+
+Test the production gate separately without an overlay (`TestUnifiedProfilesSnowflakeGate` above). Do not
 run the whole datastore package with the gate overlaid: gate-contract assertions
 intentionally expect it to be closed. There is no runtime bypass.
 Run the remote blocks once with UTC, then in a fresh campaign directory prepared
@@ -387,7 +395,10 @@ durations must be at least the configured limit (two seconds on PostgreSQL, ten
 on Snowflake); PostgreSQL must return before twenty seconds.
 
 PostgreSQL uses a disposable database, a volatile `pg_sleep` function and
-`pg_stat_activity`. Its timeout profile uses a two-second database default,
+`pg_stat_activity`. Execution is established only when `wait_event='PgSleep'`,
+while termination still requires no active target query. This avoids canceling
+in the extended-protocol startup before the UDF begins. Its timeout profile
+uses a two-second database default,
 applied before the target pool opens. If result metadata is missing, both
 adapters close the cursor and check its stored error before reporting a schema
 mismatch. PostgreSQL tests require the original 57014 timeout code or the context

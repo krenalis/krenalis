@@ -98,12 +98,13 @@ func assertSettingsNotReadOnly(t *testing.T, err error) {
 // checkReadOnlyQuery describes one expected SQL query and the rows or error
 // returned by the fake CheckReadOnlyAccess database connection.
 type checkReadOnlyQuery struct {
-	match   string
-	suffix  string
-	cols    []string
-	rows    [][]driver.Value
-	maxRows int
-	err     error
+	match    string
+	suffix   string
+	cols     []string
+	rows     [][]driver.Value
+	maxRows  int
+	err      error
+	closeErr error
 }
 
 // newCheckReadOnlyTestDB returns a database backed by a fake driver that
@@ -193,14 +194,15 @@ func (c *checkReadOnlyConn) QueryContext(_ context.Context, query string, _ []dr
 	if response.maxRows > 0 && len(rows) > response.maxRows {
 		rows = rows[:response.maxRows]
 	}
-	return &checkReadOnlyRows{cols: response.cols, rows: rows}, nil
+	return &checkReadOnlyRows{cols: response.cols, rows: rows, closeErr: response.closeErr}, nil
 }
 
 // checkReadOnlyRows implements driver.Rows over an in-memory row slice.
 type checkReadOnlyRows struct {
-	cols []string
-	rows [][]driver.Value
-	next int
+	cols     []string
+	rows     [][]driver.Value
+	next     int
+	closeErr error
 }
 
 // Columns returns the configured result column names.
@@ -210,7 +212,7 @@ func (r *checkReadOnlyRows) Columns() []string {
 
 // Close closes the fake result set.
 func (r *checkReadOnlyRows) Close() error {
-	return nil
+	return r.closeErr
 }
 
 // Next copies the next configured row into dest.
