@@ -647,6 +647,11 @@ resolving the declared ordinary-text collation and Float/NaN questions.
 
 ### Consolidated Snowflake verification campaign
 
+The [campaign runbook](../../../test/snowflaketester/UNIFIED.md) collects the
+local checks, isolated gate-overlay preparation, ordered remote commands and
+remaining acceptance gaps. The shared bounded fixtures run on PostgreSQL now;
+their Snowflake execution remains pending.
+
 The following is the common acceptance checklist for the currently implemented
 subset, not a claim of remote conformance. Run physical probes before deciding
 how fixtures are represented; keep their semantic expectations unchanged. Any
