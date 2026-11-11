@@ -57,9 +57,7 @@ func testUnifiedConformance(t *testing.T, name string) {
 CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,name text,
  timestamp timestamp(6),received_at timestamp(6),sent_at timestamp(6),properties jsonb)`)
 	case "Snowflake":
-		execUnifiedFixture(t, dw, `ALTER SESSION SET TIMEZONE='UTC',
- TIMESTAMP_TYPE_MAPPING='TIMESTAMP_NTZ',STATEMENT_TIMEOUT_IN_SECONDS=60;
-CREATE TABLE "PROFILES" ("_KPID" VARCHAR(36));
+		execUnifiedFixture(t, dw, `CREATE TABLE "PROFILES" ("_KPID" VARCHAR(36));
 CREATE TABLE "KRENALIS_EVENTS" ("KPID" VARCHAR(36),"MESSAGE_ID" VARCHAR,"TYPE" VARCHAR,
  "EVENT" VARCHAR,"NAME" VARCHAR,"TIMESTAMP" TIMESTAMP_NTZ(9),
  "RECEIVED_AT" TIMESTAMP_NTZ(9),"SENT_AT" TIMESTAMP_NTZ(9),"PROPERTIES" VARIANT)`)

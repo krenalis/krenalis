@@ -27,7 +27,8 @@ go test ./core/internal/datastore \
 
 go test ./test -run '^TestEqualityOfMergeFiles$' -count=1
 
-python3 -B -m unittest discover -s test/snowflaketester -p 'test_run.py'
+go test ./test/snowflaketester -race -count=1
+python3 -B -m unittest discover -s test/snowflaketester -p 'test_*.py'
 ```
 
 `TestUnifiedConformancePostgreSQL/Snowflake` shares fixture data, expected results
@@ -50,29 +51,16 @@ block has 22 main batched membership checks and 204 individual explanations, rat
 than thousands of remote oracle queries. The named subtests can be selected
 separately, for example `-run '^TestUnifiedConformancePostgreSQL$/periods'`.
 
-## Preparing an isolated gate overlay
+## Preparing an isolated gate and session overlay
 
-Prepare this only for testing. It copies the current file, changes exactly the
-gate constant, and leaves the tracked source untouched. Regenerate after changes
-to that source file; do not reuse an old copy of its implementation.
+Prepare this only for testing. The helper copies the current sources, opens the
+gate in the overlay and sets login parameters in all three connection factories:
+warehouse, connector and schema-creation helper. Tracked production sources stay
+unchanged. Regenerate after source changes; do not reuse old implementation copies.
 
 ```sh
 campaign_dir=$(mktemp -d /tmp/krenalis-snowflake-campaign.XXXXXX)
-python3 - "$PWD" "$campaign_dir" <<'PY'
-import json
-import pathlib
-import sys
-
-root, output = map(pathlib.Path, sys.argv[1:])
-source = root / "warehouses/snowflake/profile_filter.go"
-text = source.read_text()
-old = "const profileFilterVerified = false"
-if text.count(old) != 1:
-    raise SystemExit("expected one closed Snowflake gate")
-target = output / "profile_filter.go"
-target.write_text(text.replace(old, "const profileFilterVerified = true"))
-(output / "overlay.json").write_text(json.dumps({"Replace": {str(source): str(target)}}))
-PY
+python3 -B test/snowflaketester/prepare.py "$campaign_dir" --timezone UTC
 
 # Compile and prove that the bootstrap still skips before credential access.
 KRENALIS_SKIP_SNOWFLAKE_TESTS=true go test -overlay "$campaign_dir/overlay.json" \
@@ -84,6 +72,10 @@ This last command must report SKIP for both tests. Test the production gate
 separately without an overlay (`TestUnifiedProfilesSnowflakeGate` above). Do not
 run the whole datastore package with the gate overlaid: gate-contract assertions
 intentionally expect it to be closed. There is no runtime bypass.
+Run the remote blocks once with UTC, then in a fresh campaign directory prepared
+with `--timezone America/Los_Angeles`. This DST zone differs from the Rome calendar
+used by the fixtures. Both runs use the same expectations and cover half-open
+microsecond borders and the spring/autumn calendar transitions.
 
 ## Remote execution, when authorized
 
@@ -96,13 +88,23 @@ commits. Do not enable shell tracing. No application or demo data is needed.
 Keep runs sequential (`-parallel=1 -p=1`), retain JSON test results, check cleanup
 and redact server diagnostics before sharing them: driver errors can contain
 account, database, user or schema identifiers. A skipped test is not a pass.
-The fixture requests UTC, TIMESTAMP_NTZ mapping and a 60-second statement timeout
-through ALTER SESSION on one pooled connection. Other connections need not have
-these settings: this is neither proof of timezone independence nor a test-wide
-server timeout. Before activation, repeat the temporal cases with a non-UTC DST
-zone on every connection and record TIMEZONE, TIMESTAMP_TYPE_MAPPING,
-TIMESTAMP_INPUT_FORMAT and STATEMENT_TIMEOUT_IN_SECONDS from the active sessions.
-Production settings and test-user/warehouse defaults are not changed here.
+The overlay passes TIMEZONE, TIMESTAMP_TYPE_MAPPING=TIMESTAMP_NTZ,
+TIMESTAMP_INPUT_FORMAT=AUTO and STATEMENT_TIMEOUT_IN_SECONDS=60 through
+`Config.Params`. The vendored driver copies this configuration for each
+[Connect](../../vendor/github.com/snowflakedb/gosnowflake/v2/connector.go#L34),
+[initializes the session parameters](../../vendor/github.com/snowflakedb/gosnowflake/v2/connection.go#L680)
+and [sends them at login](../../vendor/github.com/snowflakedb/gosnowflake/v2/auth.go#L299).
+This includes replacement connections opened later.
+The overlay's `SessionConnector` checks
+[SHOW PARAMETERS IN SESSION](https://docs.snowflake.com/en/sql-reference/sql/show-parameters)
+on each new physical connection before returning it to the pool. It logs the four
+verified values, closes a connection that fails verification and leaves the
+underlying driver connection unchanged. This diagnostic query runs only in the
+test overlay; production queries and settings do not change.
+The fixtures do not reset TIMEZONE or the timestamp formats. The numeric tests
+retain their 60-second timeout on their single connection when run without the
+overlay. Session changes after verification and other timestamp input formats
+remain separate coverage.
 
 The environment owner must verify server-side time limits and resource controls
 cover every test connection. A session setting can override a user default;
@@ -148,12 +150,12 @@ Run the following blocks in order, stopping on a failed prerequisite:
 # Credentials must already have been supplied through the environment.
 # These commands are remote, including tests that do not need the Unified gate.
 KRENALIS_SKIP_SNOWFLAKE_TESTS=false python3 test/snowflaketester/run.py --require-schemas \
-  "$campaign_dir/physical-warehouse.jsonl" -- ./warehouses/snowflake \
+  "$campaign_dir/physical-warehouse.jsonl" -- -overlay "$campaign_dir/overlay.json" ./warehouses/snowflake \
   -run '^(TestJSONNumbers|TestProfileExactDecimal|TestJSONExpressions|Test_Merge)$' \
   -timeout=30m
 
 KRENALIS_SKIP_SNOWFLAKE_TESTS=false python3 test/snowflaketester/run.py --require-schemas \
-  "$campaign_dir/physical-connector.jsonl" -- ./connectors/snowflake \
+  "$campaign_dir/physical-connector.jsonl" -- -overlay "$campaign_dir/overlay.json" ./connectors/snowflake \
   -run '^Test_Merge_Query$' -timeout=15m
 
 KRENALIS_SKIP_SNOWFLAKE_TESTS=false python3 test/snowflaketester/run.py --require-schemas \
@@ -163,7 +165,7 @@ KRENALIS_SKIP_SNOWFLAKE_TESTS=false python3 test/snowflaketester/run.py --requir
 
 # The PostgreSQL arm is skipped: this block isolates real Snowflake Record reads.
 KRENALIS_SKIP_SNOWFLAKE_TESTS=false python3 test/snowflaketester/run.py --require-schemas \
-  "$campaign_dir/record-floats.jsonl" -- ./core/internal/datastore \
+  "$campaign_dir/record-floats.jsonl" -- -overlay "$campaign_dir/overlay.json" ./core/internal/datastore \
   -run '^TestJSONFloatFilters$/Snowflake' -timeout=15m
 ```
 
@@ -274,6 +276,8 @@ In particular, the following work remains explicit:
   and a small scale/resource smoke test.
 - Non-UTC session settings and timestamp input formats on every test connection,
   with effective parameters and environment-wide server time limits recorded.
+  The per-connection login/verification overlay is prepared locally; the UTC and
+  America/Los_Angeles remote runs have not yet been performed with it.
 
 No gate change follows automatically from a green reduced suite. Resolve observed
 differences, finish the acceptance checklist and keep a repeatable remote

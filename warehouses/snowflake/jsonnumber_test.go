@@ -59,7 +59,7 @@ func TestJSONNumbers(t *testing.T) {
 
 	warehouse, db := newTestSnowflakeWarehouse(t)
 	db.SetMaxOpenConns(1)
-	mustExecSQL(t, db, "ALTER SESSION SET TIMEZONE='UTC', STATEMENT_TIMEOUT_IN_SECONDS=60")
+	mustExecSQL(t, db, "ALTER SESSION SET STATEMENT_TIMEOUT_IN_SECONDS=60")
 	mustExecSQL(t, db, `CREATE TABLE "JSON_NUMBERS" ("ID" INTEGER,"VALUE" VARIANT,"ELEMENTS" ARRAY)`)
 	column := warehouses.Column{Name: "value", Type: types.JSON(), Nullable: true}
 	elements := warehouses.Column{Name: "elements", Type: types.Array(types.JSON()), Nullable: true}
@@ -346,7 +346,7 @@ func TestProfileExactDecimal(t *testing.T) {
 
 	warehouse, db := newTestSnowflakeWarehouse(t)
 	db.SetMaxOpenConns(1)
-	mustExecSQL(t, db, "ALTER SESSION SET TIMEZONE='UTC', STATEMENT_TIMEOUT_IN_SECONDS=60")
+	mustExecSQL(t, db, "ALTER SESSION SET STATEMENT_TIMEOUT_IN_SECONDS=60")
 	mustExecSQL(t, db, `CREATE TABLE "EXACT_DECIMALS" ("ID" INTEGER,"VALUE" VARIANT)`)
 	column := warehouses.Column{Name: "value", Type: types.JSON(), Nullable: true}
 	table := warehouses.Table{Name: "exact_decimals", Keys: []string{"id"}, Columns: []warehouses.Column{
