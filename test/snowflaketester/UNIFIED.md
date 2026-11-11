@@ -118,11 +118,20 @@ overlay/replacement hashes, Go version, driver version, exact command and result
 It reports source changes during the run as a nonzero exit, even if Go passes.
 Skipped blocks and selections that execute no tests also return a nonzero exit.
 Use fresh output names outside the checkout; evidence is never overwritten.
-The helper does not source `.env` files. It decodes Go JSON events and masks
-Snowflake test environment values case-insensitively in their `Output` only,
-then re-encodes the event. Package, test and action metadata remain unchanged;
+The helper does not source `.env` files. It decodes Go JSON events and rejoins
+adjacent `Output` fragments with the same package/import path, test and action
+until a newline, stream change or EOF. It then masks Snowflake test environment
+values case-insensitively in `Output` only and re-encodes the event, retaining
+the first fragment's metadata. Package, test and action metadata remain unchanged;
 non-event lines are masked as text. Values at most four characters long are
 flagged by variable name in the manifest, without recording their values.
+Reassembly is limited to 4 MiB of UTF-8 output per line. Oversized output is
+replaced in full with `<OUTPUT_EXCEEDS_LIMIT>`, the manifest records the limit
+violation and the block fails (exit 5 if otherwise successful). The helper keeps
+draining Go output so test cleanup can finish. The schema audit also fails,
+since omitted output could contain schema records.
+Exit 2 also covers invalid arguments; a manifest distinguishes source changes
+during a run from argument errors that prevent a run from starting.
 Inspect redacted logs before sharing.
 The manifest contains source and schema metadata; credentials belong in the
 environment, never command arguments. The helper adds `-mod=vendor -parallel=1 -p=1 -failfast
@@ -180,6 +189,8 @@ unmatched drops. No manifests, incomplete/invalid manifests or required schema
 records missing from a block make it fail. It does not infer cleanup from a
 zero count after searching redacted text. Older manifests without schema evidence
 cannot pass this audit; use their original records and the server inventory.
+A remote attempt that fails before any CREATE also fails the audit for missing
+required records; use the server inventory to verify cleanup in that case.
 
 A process can die between CREATE and its log record. After an interrupted run,
 also inspect the supplied test database using

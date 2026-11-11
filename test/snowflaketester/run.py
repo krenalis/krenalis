@@ -16,6 +16,7 @@ import subprocess
 import sys
 
 
+MAX_OUTPUT_BYTES = 4 * 1024 * 1024
 SCHEMA_NAME = r"KRENALIS_TEST_SCHEMA_[0-9]+_[0-9a-f]{32}"
 SCHEMA_EVENT = re.compile(r"Snowflake test schema (created|dropped) schema=(" + SCHEMA_NAME + r")\b", re.IGNORECASE)
 
@@ -36,6 +37,8 @@ def audit_schemas(directory):
             continue
         if manifest.get("state") != "complete":
             issues.append(path.name + ": incomplete run")
+        if manifest.get("output_limit_exceeded"):
+            issues.append(path.name + ": output exceeded the reassembly limit")
         for action, total in [("created", created), ("dropped", dropped)]:
             records = schemas.get(action)
             if not isinstance(records, dict) or any(not isinstance(name, str) or
@@ -52,6 +55,48 @@ def audit_schemas(directory):
                       "schemas_dropped": sum(dropped.values()), "schemas_without_drop_record": remaining,
                       "drops_without_create_record": unmatched_drops, "issues": issues}))
     return int(bool(issues or remaining or unmatched_drops))
+
+
+def output_events(lines):
+    """Reassemble adjacent Go Output fragments with the first event's metadata."""
+    pending = None
+    text = bytearray()
+    exceeded = False
+
+    def finish():
+        pending["Output"] = "<OUTPUT_EXCEEDS_LIMIT>\n" if exceeded else text.decode("utf-8")
+        return pending, exceeded
+
+    for line in lines:
+        try:
+            event = json.loads(line)
+        except json.JSONDecodeError:
+            event = None
+        is_event = isinstance(event, dict) and "Action" in event
+        output = event.get("Output") if is_event else None
+        key = tuple(event.get(name) for name in ("Package", "ImportPath", "Test", "Action")) if is_event else None
+        if pending is not None and (not isinstance(output, str) or key != pending_key):
+            yield finish()
+            pending = None
+        if not isinstance(output, str):
+            yield event if is_event else line, False
+            continue
+        if pending is None:
+            pending, pending_key = event, key
+            text.clear()
+            exceeded = False
+        if not exceeded:
+            fragment = output.encode("utf-8")
+            if len(fragment) > MAX_OUTPUT_BYTES - len(text):
+                text.clear()
+                exceeded = True
+            else:
+                text.extend(fragment)
+        if output.endswith("\n"):
+            yield finish()
+            pending = None
+    if pending is not None:
+        yield finish()
 
 
 def source_snapshot(root, arguments):
@@ -149,7 +194,9 @@ def main():
                 "schemas": {"required": options.require_schemas or
                             os.environ.get("KRENALIS_SKIP_SNOWFLAKE_TESTS") == "false",
                             "created": {}, "dropped": {}},
+                "output_limit_exceeded": False,
                 "redaction": {"case_insensitive": True, "output_only": True,
+                              "max_output_bytes": MAX_OUTPUT_BYTES,
                               "short_value_keys": sorted(short_value_keys)}}
     log_path.parent.mkdir(parents=True, exist_ok=True)
     write_manifest(manifest_path, manifest)
@@ -157,12 +204,10 @@ def main():
     with os.fdopen(os.open(log_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600), "w") as log:
         process = subprocess.Popen(command, cwd=root, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                    text=True, errors="replace")
-        for line in process.stdout:
-            try:
-                event = json.loads(line)
-            except json.JSONDecodeError:
-                event = None
-            if isinstance(event, dict) and "Action" in event:
+        for event, exceeded in output_events(process.stdout):
+            if exceeded:
+                manifest["output_limit_exceeded"] = True
+            if isinstance(event, dict):
                 if event.get("Test") and event.get("Action") in ("pass", "skip", "fail"):
                     counts[event["Action"]] += 1
                 output = event.get("Output")
@@ -177,8 +222,8 @@ def main():
                     if mask is not None:
                         event["Output"] = mask.sub("<SNOWFLAKE_TEST_VALUE>", output)
                 line = json.dumps(event) + "\n"
-            elif mask is not None:
-                line = mask.sub("<SNOWFLAKE_TEST_VALUE>", line)
+            else:
+                line = mask.sub("<SNOWFLAKE_TEST_VALUE>", event) if mask is not None else event
             log.write(line)
             log.flush()
         code = process.wait()
@@ -195,6 +240,8 @@ def main():
     if code == 0 and (schemas["created"] != schemas["dropped"] or
                       schemas["required"] and not schemas["created"]):
         code = 4
+    if code == 0 and manifest["output_limit_exceeded"]:
+        code = 5
     manifest["exit"] = code
     write_manifest(manifest_path, manifest)
     print(json.dumps({"log": str(log_path), "manifest": str(manifest_path), "exit": manifest["exit"],

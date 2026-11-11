@@ -33,6 +33,11 @@ if sys.argv[1:] == ['version']:
 if os.environ.get('FAKE_MUTATE'):
     path = pathlib.Path(os.environ['FAKE_MUTATE'])
     path.write_text(path.read_text() + '// changed during test\n')
+if os.environ.get('FAKE_OUTPUT_BYTES'):
+    length = int(os.environ['FAKE_OUTPUT_BYTES']) - 1
+    for offset in range(0, length, 1024):
+        print(json.dumps({'Action': 'output', 'Output': 'x' * min(1024, length - offset)}))
+    print(json.dumps({'Action': 'output', 'Output': '\n'}))
 for event in json.loads(os.environ['FAKE_EVENTS']):
     if isinstance(event, str):
         print(event)
@@ -53,7 +58,7 @@ raise SystemExit(int(os.environ.get('FAKE_EXIT', '0')))
                                 cwd=ROOT, env=self.environment, capture_output=True, text=True)
         return result, json.loads(result.stdout)
 
-    def block(self, events, *, values=None, arguments=None, require_schemas=False, go_exit=0, mutate=None):
+    def block(self, events, *, values=None, arguments=None, require_schemas=False, go_exit=0, mutate=None, output_bytes=None):
         self.number += 1
         path = self.directory / str(self.number) / "run.jsonl"
         environment = dict(self.environment, FAKE_EVENTS=json.dumps(events), FAKE_EXIT=str(go_exit))
@@ -61,6 +66,8 @@ raise SystemExit(int(os.environ.get('FAKE_EXIT', '0')))
             environment.update({"KRENALIS_SNOWFLAKE_TESTER_" + key: value for key, value in values.items()})
         if mutate:
             environment["FAKE_MUTATE"] = str(mutate)
+        if output_bytes is not None:
+            environment["FAKE_OUTPUT_BYTES"] = str(output_bytes)
         command = [sys.executable, str(RUNNER)]
         if require_schemas:
             command.append("--require-schemas")
@@ -88,6 +95,83 @@ raise SystemExit(int(os.environ.get('FAKE_EXIT', '0')))
         self.assertNotIn(password, path.read_text())
         self.assertNotIn(r"fake\u0026pw\u003cx\u003e", path.read_text())
         self.assertEqual(manifest["counts"], {"pass": 1})
+
+    def test_fragmented_output_masks_complete_value(self):
+        password = "fake&pw<x>"
+        output = "x" * 4090 + password + " tail\n"
+        events = [self.event("output", output[offset:offset + 1024]) for offset in range(0, len(output), 1024)]
+        events[1]["Time"] = "2026-11-11T00:00:01Z"
+        result, path, manifest = self.block([*events, self.event("pass")], values={"PASSWORD": password})
+        self.assertEqual(result.returncode, 0)
+        decoded = [json.loads(line) for line in path.read_text().splitlines()]
+        self.assertEqual(len(decoded), 2)
+        self.assertEqual(decoded[0], dict(events[0], Output="x" * 4090 + "<SNOWFLAKE_TEST_VALUE> tail\n"))
+        self.assertFalse(manifest["output_limit_exceeded"])
+
+    def test_fragmented_schema_records_are_tracked_before_redaction(self):
+        events = []
+        for action in ["created", "dropped"]:
+            output = "x" * 4090 + "Snowflake test schema " + action + " schema=" + SCHEMA + "\n"
+            events.extend(self.event("output", output[offset:offset + 1024])
+                          for offset in range(0, len(output), 1024))
+        result, path, manifest = self.block([*events, self.event("pass")],
+                                            values={"DATABASE": "krenalis", "ROLE": "test"}, require_schemas=True)
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual(len(path.read_text().splitlines()), 3)
+        self.assertEqual(manifest["schemas"], {"required": True, "created": {SCHEMA.upper(): 1},
+                                              "dropped": {SCHEMA.upper(): 1}})
+        audit, evidence = self.audit(path.parent)
+        self.assertEqual(audit.returncode, 0)
+        self.assertEqual((evidence["schemas_created"], evidence["schemas_dropped"]), (1, 1))
+
+    def test_unterminated_output_flushes_at_eof_and_before_other_events(self):
+        events = [self.event("output", "fake&"), self.event("output", "pw<x>")]
+        for following in [[], [self.event("pass")], ["other line", self.event("pass")]]:
+            with self.subTest(following=following):
+                result, path, _ = self.block(events + following, values={"PASSWORD": "fake&pw<x>"})
+                self.assertEqual(result.returncode, 0 if following else 3)
+                lines = path.read_text().splitlines()
+                self.assertEqual(json.loads(lines[0])["Output"], "<SNOWFLAKE_TEST_VALUE>")
+                self.assertEqual(len(lines), 1 + len(following))
+                if following and isinstance(following[0], str):
+                    self.assertEqual(lines[1], following[0])
+
+    def test_fragment_keys_keep_output_streams_separate(self):
+        for field in ["Package", "ImportPath", "Test", "Action"]:
+            with self.subTest(field=field):
+                first = self.event("output", "first")
+                second = dict(self.event("output", "second\n"), **{field: "other"})
+                result, path, _ = self.block([first, second, self.event("pass")])
+                self.assertEqual(result.returncode, 0)
+                self.assertEqual([json.loads(line) for line in path.read_text().splitlines()],
+                                 [first, second, self.event("pass")])
+
+    def test_output_reassembly_limit_fails_without_interrupting_cleanup(self):
+        limit = 4 * 1024 * 1024
+        events = [self.event("output", "Snowflake test schema created schema=" + SCHEMA + "\n"),
+                  self.event("output", "Snowflake test schema dropped schema=" + SCHEMA + "\n"),
+                  self.event("pass")]
+        for length, expected in [(limit, 0), (limit + 1, 5)]:
+            with self.subTest(length=length):
+                result, path, manifest = self.block(events, output_bytes=length, require_schemas=True)
+                self.assertEqual(result.returncode, expected)
+                self.assertEqual(manifest["exit"], expected)
+                self.assertEqual(manifest["go_exit"], 0)
+                self.assertEqual(manifest["state"], "complete")
+                self.assertEqual(manifest["output_limit_exceeded"], length > limit)
+                self.assertEqual(manifest["redaction"]["max_output_bytes"], limit)
+                self.assertEqual(manifest["schemas"]["created"], {SCHEMA.upper(): 1})
+                self.assertEqual(manifest["schemas"]["dropped"], {SCHEMA.upper(): 1})
+                decoded = [json.loads(line) for line in path.read_text().splitlines()]
+                self.assertEqual(len(decoded), 4)
+                if length > limit:
+                    self.assertEqual(decoded[0]["Output"], "<OUTPUT_EXCEEDS_LIMIT>\n")
+                    self.assertLess(path.stat().st_size, 4096)
+                else:
+                    self.assertEqual(len(decoded[0]["Output"].encode("utf-8")), limit)
+                audit, evidence = self.audit(path.parent)
+                self.assertEqual(audit.returncode, int(length > limit))
+                self.assertEqual((evidence["schemas_created"], evidence["schemas_dropped"]), (1, 1))
 
     def test_identifier_case_and_account_spelling(self):
         values = {"USER": "fake_user", "DATABASE": "fake_db", "ROLE": "fake_role",
