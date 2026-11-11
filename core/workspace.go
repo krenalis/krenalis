@@ -307,7 +307,7 @@ func (this *Workspace) Attributes(ctx context.Context, kpid string) (json.Value,
 // The description is not required to be a syntactically valid warehouse type,
 // and may therefore include additional human-readable details (such as type
 // information, maximum character count, enum values, etc...).
-func (this Workspace) ColumnTypeDescription(t types.Type) (string, error) {
+func (this *Workspace) ColumnTypeDescription(t types.Type) (string, error) {
 	this.core.mustBeOpen()
 	return this.store.ColumnTypeDescription(t)
 }
