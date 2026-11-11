@@ -60,7 +60,7 @@ raise SystemExit(int(os.environ.get('FAKE_EXIT', '0')))
                                 cwd=ROOT, env=self.environment, capture_output=True, text=True)
         return result, json.loads(result.stdout)
 
-    def block(self, events, *, values=None, arguments=None, require_schemas=False, go_exit=0, mutate=None, output_bytes=None, require_session_timezone=None):
+    def block(self, events, *, values=None, arguments=None, require_schemas=False, go_exit=0, mutate=None, output_bytes=None, require_session_timezone=None, require_session_profile=None):
         self.number += 1
         path = self.directory / str(self.number) / "run.jsonl"
         environment = dict(self.environment, FAKE_EVENTS=json.dumps(events), FAKE_EXIT=str(go_exit))
@@ -75,6 +75,8 @@ raise SystemExit(int(os.environ.get('FAKE_EXIT', '0')))
             command.append("--require-schemas")
         if require_session_timezone is not None:
             command.extend(["--require-session-timezone", require_session_timezone])
+        if require_session_profile is not None:
+            command.extend(["--require-session-profile", require_session_profile])
         command.extend([str(path), "--", *(arguments or ["./warehouses/snowflake"])])
         result = subprocess.run(command, cwd=ROOT, env=environment, capture_output=True, text=True)
         self.assertEqual(result.stderr, "")
@@ -304,6 +306,26 @@ raise SystemExit(int(os.environ.get('FAKE_EXIT', '0')))
                 self.assertEqual(result.returncode, expected)
                 self.assertEqual(manifest["exit"], expected)
                 self.assertEqual(manifest["sessions"]["verified"], {})
+
+    def test_session_profiles(self):
+        for profile, timeout in [("standard", "60"), ("timeout", "10"), ("cancellation", "60")]:
+            output = SESSION.format(timezone="UTC").replace("parameters timezone", "parameters profile=" + profile + " timezone")
+            output = output.replace("=60", "=" + timeout).rstrip()
+            if profile != "standard":
+                output += " use_cached_result=false"
+            output += "\n"
+            for text, expected in [(output, 0), ("", 6), (SESSION.format(timezone="UTC"), 0 if profile == "standard" else 6),
+                                   (output.replace("=false", "=true"), 0 if profile == "standard" else 6),
+                                   (output.replace("=" + timeout, "=99"), 6),
+                                   (output.replace("profile=" + profile, "profile=unknown"), 6),
+                                   (output + output.replace("profile=" + profile, "profile=unknown"), 6)]:
+                with self.subTest(profile=profile, text=text):
+                    result, _, manifest = self.block([self.event("output", text), self.event("pass")],
+                                                     require_session_timezone="UTC", require_session_profile=profile)
+                    self.assertEqual(result.returncode, expected)
+                    self.assertEqual(manifest["session_profiles"]["required"], profile)
+                    if expected == 0:
+                        self.assertEqual(manifest["session_profiles"]["verified"], {profile: 1})
 
     def test_session_timezone_options_reject_invalid_uses(self):
         for options in [["--require-session-timezone", "Europe/Rome"],

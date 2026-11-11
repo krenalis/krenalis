@@ -20,11 +20,13 @@ MAX_OUTPUT_BYTES = 4 * 1024 * 1024
 SCHEMA_NAME = r"KRENALIS_TEST_SCHEMA_[0-9]+_[0-9a-f]{32}"
 SCHEMA_EVENT = re.compile(r"Snowflake test schema (created|dropped) schema=(" + SCHEMA_NAME + r")\b", re.IGNORECASE)
 SESSION_TIMEZONES = ("UTC", "America/Los_Angeles")
+SESSION_PROFILES = ("standard", "timeout", "cancellation")
 # Count malformed markers without retaining their untrusted field values.
 SESSION_EVENT = re.compile(
-    r'Snowflake test session parameters\b(?:"?[ \t]+timezone=(UTC|America/Los_Angeles)[ \t]+'
+    r'Snowflake test session parameters\b(?:"?(?:[ \t]+profile=(standard|timeout|cancellation))?'
+    r'[ \t]+timezone=(UTC|America/Los_Angeles)[ \t]+'
     r'timestamp_type_mapping=TIMESTAMP_NTZ[ \t]+timestamp_input_format=AUTO[ \t]+'
-    r'statement_timeout_in_seconds=60(?=\s|$))?')
+    r'statement_timeout_in_seconds=(60|10)(?=\s|$)(?:[ \t]+use_cached_result=(false)(?=\s|$))?)?')
 
 
 def audit_schemas(directory):
@@ -159,12 +161,15 @@ def main():
     parser.add_argument("--require-schemas", action="store_true", help="require schema creation and complete cleanup")
     parser.add_argument("--require-session-timezone", choices=SESSION_TIMEZONES,
                         help="require session verification records with this timezone only")
+    parser.add_argument("--require-session-profile", choices=SESSION_PROFILES,
+                        help="require verification records with this session profile only")
     parser.add_argument("path", type=Path)
     parser.add_argument("go_args", nargs=argparse.REMAINDER)
     options = parser.parse_args()
     arguments = options.go_args
     if options.audit:
-        if arguments or options.require_schemas or options.require_session_timezone is not None:
+        if (arguments or options.require_schemas or options.require_session_timezone is not None or
+                options.require_session_profile is not None):
             parser.error("--audit takes only a manifest directory")
         return audit_schemas(options.path)
     if arguments[:1] == ["--"]:
@@ -204,6 +209,7 @@ def main():
                             "created": {}, "dropped": {}},
                 "sessions": {"required_timezone": options.require_session_timezone,
                              "verified": {}, "invalid_records": 0},
+                "session_profiles": {"required": options.require_session_profile, "verified": {}},
                 "output_limit_exceeded": False,
                 "redaction": {"case_insensitive": True, "output_only": True,
                               "max_output_bytes": MAX_OUTPUT_BYTES,
@@ -228,12 +234,16 @@ def main():
                         name = name.upper()
                         names[name] = names.get(name, 0) + 1
                     session_records = SESSION_EVENT.findall(output)
-                    for timezone in session_records:
-                        if timezone == "":
+                    for profile, timezone, timeout, cache in session_records:
+                        profile = profile or "standard"
+                        expected_timeout = "10" if profile == "timeout" else "60"
+                        if timezone == "" or timeout != expected_timeout or profile != "standard" and cache != "false":
                             manifest["sessions"]["invalid_records"] += 1
                         else:
                             verified = manifest["sessions"]["verified"]
                             verified[timezone] = verified.get(timezone, 0) + 1
+                            profiles = manifest["session_profiles"]["verified"]
+                            profiles[profile] = profiles.get(profile, 0) + 1
                     if records or session_records:
                         write_manifest(manifest_path, manifest)
                     if mask is not None:
@@ -262,6 +272,10 @@ def main():
     sessions = manifest["sessions"]
     if code == 0 and sessions["required_timezone"] is not None:
         if sessions["invalid_records"] or set(sessions["verified"]) != {sessions["required_timezone"]}:
+            code = 6
+    profiles = manifest["session_profiles"]
+    if code == 0 and profiles["required"] is not None:
+        if sessions["invalid_records"] or set(profiles["verified"]) != {profiles["required"]}:
             code = 6
     manifest["exit"] = code
     write_manifest(manifest_path, manifest)

@@ -18,6 +18,8 @@ import (
 type SessionConnector struct {
 	driver.Connector
 	Timezone string
+	// Profile selects standard (the zero value), timeout or cancellation.
+	Profile string
 }
 
 // Connect opens a connection and checks its effective session parameters.
@@ -26,6 +28,17 @@ func (c SessionConnector) Connect(ctx context.Context) (connection driver.Conn, 
 
 	if c.Connector == nil || c.Timezone != "UTC" && c.Timezone != "America/Los_Angeles" {
 		return nil, fmt.Errorf("test/snowflaketester: invalid campaign session connector")
+	}
+	profile, timeout := c.Profile, "60"
+	switch profile {
+	case "", "standard":
+		profile = "standard"
+	case "timeout":
+		timeout = "10"
+	case "cancellation":
+		// Cancellation retains the safety timeout while disabling result reuse.
+	default:
+		return nil, fmt.Errorf("test/snowflaketester: invalid campaign session profile")
 	}
 	connected, err := c.Connector.Connect(ctx)
 	if err != nil {
@@ -87,7 +100,10 @@ func (c SessionConnector) Connect(ctx context.Context) (connection driver.Conn, 
 		"TIMEZONE":                     c.Timezone,
 		"TIMESTAMP_TYPE_MAPPING":       "TIMESTAMP_NTZ",
 		"TIMESTAMP_INPUT_FORMAT":       "AUTO",
-		"STATEMENT_TIMEOUT_IN_SECONDS": "60",
+		"STATEMENT_TIMEOUT_IN_SECONDS": timeout,
+	}
+	if profile != "standard" {
+		expected["USE_CACHED_RESULT"] = "false"
 	}
 	seen := map[string]bool{}
 	values := make([]driver.Value, len(columns))
@@ -119,9 +135,13 @@ func (c SessionConnector) Connect(ctx context.Context) (connection driver.Conn, 
 	if len(seen) != len(expected) {
 		return nil, fmt.Errorf("test/snowflaketester: missing required session parameters")
 	}
-	slog.Info("Snowflake test session parameters", "timezone", c.Timezone,
+	attributes := []any{"profile", profile, "timezone", c.Timezone,
 		"timestamp_type_mapping", "TIMESTAMP_NTZ", "timestamp_input_format", "AUTO",
-		"statement_timeout_in_seconds", 60)
+		"statement_timeout_in_seconds", timeout}
+	if profile != "standard" {
+		attributes = append(attributes, "use_cached_result", false)
+	}
+	slog.Info("Snowflake test session parameters", attributes...)
 
 	return connected, nil
 }

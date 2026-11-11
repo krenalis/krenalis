@@ -335,3 +335,51 @@ No gate change follows automatically from a green reduced suite. Resolve observe
 differences, finish the acceptance checklist and keep a repeatable remote
 regression subset before deciding activation. The deferred infrastructure work
 and support for additional native numeric types remain separate.
+
+## Running-query timeout and cancellation
+
+The interruption fixtures replace the event source with a view over a single
+Merge-written event. A volatile UDF delays reads without a large dataset.
+Membership and explanation must fail without partial results, stop on the
+server, and then succeed with exact reference results on the same warehouse
+once the view is restored. This checks interruption, not query-plan performance.
+
+Prepare separate UTC overlays with `prepare.py --profile timeout` and
+`prepare.py --profile cancellation`. The timeout profile uses a 10-second
+statement limit; cancellation retains 60 seconds. Both disable cached results.
+Every new physical connection verifies these settings. Require
+`--require-session-profile timeout` or `cancellation` alongside the timezone
+option in `run.py`; missing, inconsistent or mixed profile evidence fails the
+block. The standard profile remains the default and accepts legacy session
+records without an explicit profile.
+
+A distinct observer session reads query history by a unique context query tag.
+Its own tag prevents accidental target-tag reuse. The observer alone raises its
+pinned session limit to 60 seconds for metadata reads; the target pool is never
+altered. RUNNING must be observed before interruption. A terminal Snowflake
+record must have `FAILED_WITH_ERROR`, code 630 for timeout or 604 for cancellation,
+and end time at or after start time. In-progress end times can be the Unix epoch,
+so a non-NULL end time alone does not establish termination.
+
+PostgreSQL uses a disposable database, a volatile `pg_sleep` function and
+`pg_stat_activity`. Its timeout profile uses a two-second database default,
+applied before the target pool opens. A timeout currently can lose the original
+57014 diagnostic: pgx supplies a cursor without field metadata and the adapter
+returns `profile outcome schema mismatch`. The tests retain this existing
+behavior, including `UnavailableError` and no partial result; they do not change
+production error handling.
+
+The read-only inventory can be repeated against names from any campaign's
+manifests, including incomplete runs. It bounds files, schema names and server
+rows, and refuses an empty ledger or an inventory reaching its row limit.
+It neither creates nor drops schemas, and leaves unrelated schemas alone:
+
+```sh
+# Use a standard UTC overlay. Credentials are already in the environment.
+# Unset the skip flag: false would require schema creation in this read-only run.
+env -u KRENALIS_SKIP_SNOWFLAKE_TESTS KRENALIS_SNOWFLAKE_CAMPAIGN_DIR="$campaign_dir" \
+  python3 test/snowflaketester/run.py --require-session-timezone UTC \
+  --require-session-profile standard "$inventory_dir/inventory.jsonl" -- \
+  -overlay "$standard_overlay/overlay.json" ./test/snowflaketester \
+  -run '^TestCampaignInventory$' -timeout=2m
+```

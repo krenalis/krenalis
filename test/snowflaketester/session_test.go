@@ -248,6 +248,54 @@ func TestSessionConnectorPool(t *testing.T) {
 	}
 }
 
+// TestSessionConnectorProfiles checks the timeout and cancellation contracts.
+func TestSessionConnectorProfiles(t *testing.T) {
+	for _, profile := range []string{"standard", "timeout", "cancellation"} {
+		for _, change := range []string{"none", "timeout", "cache", "profile"} {
+			t.Run(profile+"/"+change, func(t *testing.T) {
+				underlying := &sessionTestConnector{columns: []string{"key", "value"}, values: sessionTestValues("UTC")}
+				if profile == "timeout" {
+					underlying.values[3][1] = "10"
+				}
+				underlying.values = append(underlying.values, []driver.Value{"USE_CACHED_RESULT", "false"})
+				checked := SessionConnector{Connector: underlying, Timezone: "UTC", Profile: profile}
+				switch change {
+				case "none":
+					// Keep the requested session profile.
+				case "timeout":
+					underlying.values[3][1] = "0"
+				case "cache":
+					underlying.values[4][1] = "true"
+				case "profile":
+					checked.Profile = "unknown"
+				default:
+					t.Fatalf("expected known mutation, got %s", change)
+				}
+				valid := change == "none" || profile == "standard" && change == "cache"
+				conn, err := checked.Connect(t.Context())
+				if err != nil {
+					if valid || conn != nil {
+						t.Fatalf("expected valid=%t and no failed connection, got %T, %v", valid, conn, err)
+					}
+					for _, opened := range underlying.connections {
+						if opened.closed != 1 || opened.rows.closed != 1 {
+							t.Fatal("expected cleanup after rejected profile, got open resources")
+						}
+					}
+					return
+				}
+				if !valid || conn == nil {
+					t.Fatalf("expected rejected profile=%t, got successful connection", !valid)
+				}
+				err = conn.Close()
+				if err != nil {
+					t.Fatalf("expected verified connection cleanup, got %v", err)
+				}
+			})
+		}
+	}
+}
+
 func sessionTestValues(timezone string) [][]driver.Value {
 	return [][]driver.Value{{"TIMEZONE", timezone}, {"TIMESTAMP_TYPE_MAPPING", "TIMESTAMP_NTZ"},
 		{"TIMESTAMP_INPUT_FORMAT", "AUTO"}, {"STATEMENT_TIMEOUT_IN_SECONDS", "60"}}

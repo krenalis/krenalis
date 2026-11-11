@@ -15,6 +15,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("directory", type=Path)
     parser.add_argument("--timezone", required=True, choices=["UTC", "America/Los_Angeles"])
+    parser.add_argument("--profile", default="standard", choices=["standard", "timeout", "cancellation"])
     options = parser.parse_args()
     root = Path(__file__).resolve().parents[2]
     directory = options.directory.resolve()
@@ -24,8 +25,9 @@ def main():
         parser.error("use a fresh or empty overlay directory")
 
     replacements = {}
+    timeout = "10" if options.profile == "timeout" else "60"
     for name in ["warehouses/snowflake/profile_filter.go", "warehouses/snowflake/warehouse.go",
-                 "connectors/snowflake/snowflake.go", "test/snowflaketester/snowflaketester.go"]:
+                 "connectors/snowflake/snowflake.go", "test/snowflaketester/connection.go"]:
         source = root / name
         text = source.read_text()
         if name.endswith("profile_filter.go"):
@@ -38,10 +40,12 @@ def main():
                  '\t\t\t"TIMEZONE": new(' + json.dumps(options.timezone) + '),\n' +
                  '\t\t\t"TIMESTAMP_TYPE_MAPPING": new("TIMESTAMP_NTZ"),\n' +
                  '\t\t\t"TIMESTAMP_INPUT_FORMAT": new("AUTO"),\n' +
-                 '\t\t\t"STATEMENT_TIMEOUT_IN_SECONDS": new("60"),'),
+                 '\t\t\t"STATEMENT_TIMEOUT_IN_SECONDS": new("' + timeout + '"),' +
+                 ('\n\t\t\t"USE_CACHED_RESULT": new("false"),' if options.profile != "standard" else '')),
                 ('gosnowflake.NewConnector(gosnowflake.SnowflakeDriver{}, cfg)',
                  qualifier + 'SessionConnector{Connector: gosnowflake.NewConnector(gosnowflake.SnowflakeDriver{}, cfg), ' +
-                 'Timezone: ' + json.dumps(options.timezone) + '}'),
+                 'Timezone: ' + json.dumps(options.timezone) +
+                 (', Profile: ' + json.dumps(options.profile) if options.profile != "standard" else '') + '}'),
             ]
             if qualifier:
                 edits.append(('"github.com/krenalis/krenalis/tools/json"',
@@ -63,7 +67,7 @@ def main():
     with os.fdopen(os.open(overlay, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600), "w") as output:
         json.dump({"Replace": {source: str(target) for source, (target, _) in replacements.items()}}, output)
         output.write("\n")
-    print(json.dumps({"overlay": str(overlay), "timezone": options.timezone}))
+    print(json.dumps({"overlay": str(overlay), "timezone": options.timezone, "profile": options.profile}))
 
 
 if __name__ == "__main__":

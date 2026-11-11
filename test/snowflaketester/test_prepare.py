@@ -24,8 +24,8 @@ class PrepareTest(unittest.TestCase):
         self.environment = {key: value for key, value in os.environ.items()
                             if not key.startswith("KRENALIS_SNOWFLAKE_TESTER_")}
 
-    def prepare(self, directory, timezone):
-        return subprocess.run([sys.executable, "-B", str(PREPARE), str(directory), "--timezone", timezone],
+    def prepare(self, directory, timezone, profile="standard"):
+        return subprocess.run([sys.executable, "-B", str(PREPARE), str(directory), "--timezone", timezone, "--profile", profile],
                               cwd=ROOT, env=self.environment, capture_output=True, text=True)
 
     def test_gate_and_all_connection_paths(self):
@@ -61,6 +61,24 @@ class PrepareTest(unittest.TestCase):
                 formatted = subprocess.run(["gofmt", "-l", *replacements.values()], capture_output=True, text=True)
                 self.assertEqual((formatted.returncode, formatted.stdout, formatted.stderr), (0, "", ""))
                 self.assertEqual(overlay.stat().st_mode & 0o777, 0o600)
+
+    def test_interruption_profiles(self):
+        for profile, timeout in [("timeout", "10"), ("cancellation", "60")]:
+            with self.subTest(profile=profile):
+                directory = self.directory / profile
+                result = self.prepare(directory, "UTC", profile)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(json.loads(result.stdout)["profile"], profile)
+                replacements = json.loads((directory / "overlay.json").read_text())["Replace"]
+                for original, target in replacements.items():
+                    if Path(original).name == "profile_filter.go":
+                        continue
+                    text = Path(target).read_text()
+                    self.assertRegex(text, r'"STATEMENT_TIMEOUT_IN_SECONDS":\s+new\("' + timeout + r'"\)')
+                    self.assertRegex(text, r'"USE_CACHED_RESULT":\s+new\("false"\)')
+                    self.assertIn('Profile: "' + profile + '"', text)
+        rejected = self.prepare(self.directory / "invalid-profile", "UTC", "unknown")
+        self.assertEqual(rejected.returncode, 2)
 
     def test_existing_evidence_is_never_overwritten(self):
         directory = self.directory / "overlay"

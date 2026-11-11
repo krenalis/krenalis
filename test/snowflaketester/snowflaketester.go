@@ -29,9 +29,9 @@
 package snowflaketester
 
 import (
+	"context"
 	"crypto/rand"
 	"database/sql"
-	"database/sql/driver"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -40,11 +40,8 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
-	"os"
 	"strings"
 	"time"
-
-	"github.com/snowflakedb/gosnowflake/v2"
 )
 
 // CreateTestEnvironment creates a test environment on Snowflake.
@@ -67,89 +64,36 @@ import (
 // OIDC token is minted from GitHub on every call.
 func CreateTestEnvironment() (*TestEnvironment, error) {
 
-	// Return a clear error if env vars are not passed.
-	found := false
-	for _, v := range os.Environ() {
-		if strings.HasPrefix(v, "KRENALIS_SNOWFLAKE_TESTER_") {
-			found = true
-			break
-		}
+	// This legacy constructor has no context parameter.
+	db, settings, err := openDatabase(context.Background())
+	if err != nil {
+		return nil, err
 	}
-	if !found {
-		return nil, fmt.Errorf("creating a Snowflake test environment requires passing environment variables with your Snowflake credentials")
-	}
-
-	// Read the Snowflake settings from the environment.
-	settings := Settings{
-		Account:   os.Getenv("KRENALIS_SNOWFLAKE_TESTER_ACCOUNT"),
-		Database:  os.Getenv("KRENALIS_SNOWFLAKE_TESTER_DATABASE"),
-		Password:  os.Getenv("KRENALIS_SNOWFLAKE_TESTER_PASSWORD"),
-		Role:      os.Getenv("KRENALIS_SNOWFLAKE_TESTER_ROLE"),
-		Schema:    "", // will be set later.
-		User:      os.Getenv("KRENALIS_SNOWFLAKE_TESTER_USER"),
-		Warehouse: os.Getenv("KRENALIS_SNOWFLAKE_TESTER_WAREHOUSE"),
-	}
-
-	// When running inside GitHub Actions, mint a fresh OIDC token on every
-	// invocation. A single pre-fetched token would expire (~15 minute lifetime)
-	// before the long 'go run ./test/commit' run completes. The
-	// ACTIONS_ID_TOKEN_REQUEST_* env vars are exposed for the whole job when
-	// 'permissions: id-token: write' is set, and can be used to mint a new
-	// token on demand.
-	if reqURL, reqToken := os.Getenv("ACTIONS_ID_TOKEN_REQUEST_URL"), os.Getenv("ACTIONS_ID_TOKEN_REQUEST_TOKEN"); reqURL != "" && reqToken != "" {
-		token, err := fetchGitHubOIDCToken(reqURL, reqToken, "snowflakecomputing.com")
-		if err != nil {
-			return nil, fmt.Errorf("cannot fetch GitHub OIDC token: %s", err)
-		}
-		settings.OIDCToken = token
-		settings.Password = ""
-	}
-
-	// Instantiate a Snowflake connector.
-	cfg := gosnowflake.Config{
-		Account:   settings.Account,
-		Database:  settings.Database,
-		Role:      settings.Role,
-		User:      settings.User,
-		Warehouse: settings.Warehouse,
-		Params: map[string]*string{
-			"CLIENT_TELEMETRY_ENABLED": falseStrPtr,
-		},
-	}
-	if settings.OIDCToken != "" {
-		cfg.Authenticator = gosnowflake.AuthTypeWorkloadIdentityFederation
-		cfg.WorkloadIdentityProvider = "OIDC"
-		cfg.Token = settings.OIDCToken
-	} else {
-		cfg.Password = settings.Password
-	}
-	connector := gosnowflake.NewConnector(gosnowflake.SnowflakeDriver{}, cfg)
 
 	// Generate a random schema name and create it in the given database.
-	db := sql.OpenDB(connector)
 	schema, err := generateTestSchemaName()
 	if err != nil {
+		db.Close()
 		return nil, fmt.Errorf("cannot generate test schema name: %s", err)
 	}
 	_, err = db.Exec(fmt.Sprintf("CREATE SCHEMA %s", schema))
 	if err != nil {
+		db.Close()
 		return nil, fmt.Errorf("CREATE SCHEMA query failed: %s", err)
 	}
 	slog.Info("Snowflake test schema created", "schema", schema)
 
 	settings.Schema = schema
 	return &TestEnvironment{
-		connector: connector,
-		db:        db,
-		settings:  settings,
+		db:       db,
+		settings: settings,
 	}, nil
 }
 
 // TestEnvironment represents an instance of a test environment on Snowflake.
 type TestEnvironment struct {
-	connector driver.Connector
-	db        *sql.DB
-	settings  Settings
+	db       *sql.DB
+	settings Settings
 }
 
 // Settings represents the settings for accessing a test environment on Snowflake.
@@ -245,13 +189,13 @@ var falseStrPtr = new("false")
 // given audience. requestURL and requestToken are the values of the
 // ACTIONS_ID_TOKEN_REQUEST_URL and ACTIONS_ID_TOKEN_REQUEST_TOKEN env vars set
 // by the runner when the job has 'permissions: id-token: write'.
-func fetchGitHubOIDCToken(requestURL, requestToken, audience string) (string, error) {
+func fetchGitHubOIDCToken(ctx context.Context, requestURL, requestToken, audience string) (string, error) {
 
 	sep := "?"
 	if strings.Contains(requestURL, "?") {
 		sep = "&"
 	}
-	req, err := http.NewRequest(http.MethodGet, requestURL+sep+"audience="+url.QueryEscape(audience), nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, requestURL+sep+"audience="+url.QueryEscape(audience), nil)
 	if err != nil {
 		return "", fmt.Errorf("cannot build request: %s", err)
 	}
