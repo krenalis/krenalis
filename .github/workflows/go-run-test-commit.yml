@@ -8,9 +8,10 @@ permissions: {}
 
 jobs:
   tests:
-    # Note that 'ubuntu-latest' includes the Docker server, which is required to
-    # run './test/commit'.
-    runs-on: ubuntu-latest
+    # Note that 'ubuntu-24.04' includes the Docker server, which is required to
+    # run './test/commit'. Do not use 'ubuntu-latest': it is Ubuntu 26.04, which
+    # the Playwright version used by the Admin tests does not support.
+    runs-on: ubuntu-24.04
     environment: tests
 
     timeout-minutes: 60
