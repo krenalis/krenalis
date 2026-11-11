@@ -56,10 +56,14 @@
 }
 
 .profiles-list__grid-summary-group {
+	flex: 1;
+	flex-wrap: wrap;
 	gap: var(--wa-space-xs);
+	min-width: 0;
 }
 
 .profiles-list__filter-grid-action {
+	flex-wrap: wrap;
 	gap: var(--wa-space-s);
 	min-width: 0;
 }
@@ -693,9 +697,14 @@ wa-button.profiles-list__filter-update-results::part(label) {
 	font-size: 14px;
 }
 
-.profiles-list__filter-preview-incomplete {
+.profiles-list__filter-preview-incomplete,
+.profiles-list__filter-status {
 	color: var(--text-light);
 	font-size: 12px;
+}
+
+.profiles-list__filter-status {
+	color: var(--wa-color-warning-20);
 }
 
 .profiles-list__filter-preview-slow {
@@ -711,6 +720,10 @@ wa-button.profiles-list__filter-update-results::part(label) {
 	color: var(--wa-color-danger-40);
 	justify-content: flex-start;
 	margin-top: var(--wa-space-s);
+}
+
+.profiles-list__filter-grid-action .profiles-list__filter-grid-error {
+	margin-top: 0;
 }
 
 .profiles-list__filters--expanded + .profiles-list__layout {
@@ -796,6 +809,7 @@ wa-button.profiles-list__filter-update-results::part(label) {
 	align-items: center;
 	display: flex;
 	flex: none;
+	flex-wrap: wrap;
 	gap: var(--wa-space-s);
 	justify-content: space-between;
 	padding: 10px var(--profiles-toolbar-inline-padding);
@@ -803,6 +817,7 @@ wa-button.profiles-list__filter-update-results::part(label) {
 
 .profiles-list__toolbar-actions {
 	align-items: center;
+	align-self: flex-start;
 	display: flex;
 	flex: none;
 	gap: var(--wa-space-s);

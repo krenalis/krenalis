@@ -148,6 +148,10 @@ for (const [index, value] of values.entries()) {
 
 		await filters.getByRole('button', { name: 'Collapse', exact: true }).click();
 		await expect(filters.getByRole('button', { name: 'Expand', exact: true })).toBeVisible();
+		await expect(rows).toHaveCount(3);
+		expect(gridFilters).toEqual([null]);
+		await expect(page.locator('.profiles-list__filter-status')).toContainText('Unapplied changes');
+		await showMatches.click();
 		await expect(rows).toHaveCount(1);
 		await expect(rows).toHaveAttribute('data-id', `profile-${index + 1}`);
 		expect(gridFilters).toEqual([null, filter]);
@@ -157,12 +161,76 @@ for (const [index, value] of values.entries()) {
 		await valueInput.fill('"');
 		await filters.getByRole('button', { name: 'Collapse', exact: true }).click();
 		await filters.getByRole('button', { name: 'Expand', exact: true }).click();
-		await expect(valueInput).toHaveValue(draftValue);
+		await expect(valueInput).toHaveValue('"');
 		expect(countFilters).toEqual([filter, null, filter]);
 		expect(gridFilters).toEqual([null, filter]);
 		await expect(page.getByRole('alert')).toBeEmpty();
 	});
 }
+
+test(`Confirm a complete value on blur and retry its count while collapsed`, async ({ page }) => {
+	let countRequests = 0;
+	let gridRequests = 0;
+	let releaseCount = () => {};
+	const countCanFinish = new Promise<void>((resolve) => {
+		releaseCount = resolve;
+	});
+	await page.route(/\/v1\/profiles\/(?:query|count)$/, async (route) => {
+		if (new URL(route.request().url()).pathname.endsWith('/count')) {
+			countRequests++;
+			if (countRequests === 1) {
+				await countCanFinish;
+				await route.fulfill({
+					status: 503,
+					json: { error: { code: 'ServiceUnavailable', message: 'temporary failure' } },
+				});
+				return;
+			}
+			await route.fulfill({ json: { total: 1 } });
+			return;
+		}
+		gridRequests++;
+		await route.fulfill({ json: { profiles, total: profiles.length, hasNext: false } });
+	});
+	await page.setViewportSize({ width: 600, height: 800 });
+	await page.clock.install({ time: new Date('2026-11-11T12:00:00Z') });
+	await page.goto('https://example.test/');
+	await page.addStyleTag({ content: componentStyles });
+	await page.addScriptTag({ content: componentScript });
+	const filters = page.locator('.profiles-list__filters');
+	await filters.getByRole('button', { name: 'Expand', exact: true }).click();
+	const editor = filters.getByRole('region', { name: 'Profile filters' });
+	const property = editor.locator('.filter-editor__property');
+	await property.locator('input').fill('Name');
+	await property.locator('.combobox-list__item .schema-combobox-item__name', { hasText: /^Name$/ }).click();
+	const operator = editor.locator('.filter-editor__operator').getByRole('combobox');
+	await operator.press('Home');
+	await operator.press('Enter');
+	// Freeze the debounce so only blur can start the preview.
+	await page.clock.pauseAt(new Date('2026-11-11T12:01:00Z'));
+	await editor.locator('.filter-editor__value-input input').fill(JSON.stringify(values[0]));
+	try {
+		await filters.getByRole('button', { name: 'Collapse', exact: true }).click();
+		await expect(editor).toHaveCount(0);
+		await expect(page.locator('.profiles-list__filter-preview-count')).toBeVisible();
+		expect(countRequests).toBe(1);
+		expect(gridRequests).toBe(1);
+	} finally {
+		releaseCount();
+	}
+	const failure = page.locator('.profiles-list__filter-preview-error');
+	await expect(failure).toContainText('Unable to calculate matches.');
+	await expect(page.getByRole('button', { name: 'Show 1 match', exact: true })).toHaveCount(0);
+	await expect(page.locator('.profiles-list__filter-status')).toHaveCount(0);
+	await failure.getByRole('button', { name: 'Retry', exact: true }).click();
+	await expect(page.getByRole('button', { name: 'Show 1 match', exact: true })).toBeVisible();
+	await expect(page.locator('.profiles-list__filter-status')).toContainText('Unapplied changes');
+	await expect(page.locator('.profiles-list .grid__row--clickable')).toHaveCount(3);
+	expect(gridRequests).toBe(1);
+	const toolbar = await page.locator('.profiles-list__toolbar').boundingBox();
+	const actions = await page.locator('.profiles-list__toolbar-actions').boundingBox();
+	expect(actions.x + actions.width).toBeLessThanOrEqual(toolbar.x + toolbar.width);
+});
 
 test(`Number removable groups across nested and sibling groups`, async ({ page }) => {
 	await page.route(/\/v1\/profiles\/query$/, (route) =>
@@ -249,7 +317,8 @@ test(`Automatically show completed previews, preserve focus and remember the pre
 	await valueInput.press('Enter');
 	await expect(page.locator('.profiles-list__filter-preview-count')).toBeVisible();
 	await filters.getByText('Show matches automatically', { exact: true }).click();
-	await valueInput.focus();
+	await filters.getByRole('button', { name: 'Collapse', exact: true }).click();
+	await expect(editor).toHaveCount(0);
 	expect(gridFilters).toEqual([null]);
 	releaseCount();
 	await expect(filters).toHaveClass(/profiles-list__filters--updating-results/);
@@ -259,6 +328,8 @@ test(`Automatically show completed previews, preserve focus and remember the pre
 	);
 	await expect(page.locator('.profiles-list__filter-update-results')).toHaveCount(0);
 	await expect(rows).toHaveCount(3);
+	await filters.getByRole('button', { name: 'Expand', exact: true }).click();
+	await valueInput.focus();
 	releaseGrid();
 	await expect(rows).toHaveCount(1);
 	await expect(rows).toHaveAttribute('data-id', 'profile-1');
@@ -359,14 +430,15 @@ test(`Keep results after failed automatic updates and recover with Retry and Und
 	const valueInput = editor.locator('.filter-editor__value-input input');
 	await valueInput.fill(JSON.stringify(values[0]));
 	await valueInput.press('Enter');
-	const failure = editor.locator('.profiles-list__filter-grid-error');
+	await filters.getByRole('button', { name: 'Collapse', exact: true }).click();
+	const failure = page.locator('.profiles-list__filter-grid-error');
 	await expect(failure).toContainText('Unable to show profiles.');
 	await expect(rows).toHaveCount(3);
 	await expect(page.locator('.profiles-list__grid-summary')).toContainText('3 profiles');
 	await expect(filters).not.toHaveClass(/profiles-list__filters--updating-results/);
 	await expect(filters).not.toHaveClass(/profiles-list__filters--results-updated/);
 	await expect(page.locator('.profiles-list__filter-update-results')).toHaveCount(0);
-	await expect(valueInput).toBeFocused();
+	await expect(filters.getByRole('button', { name: 'Expand', exact: true })).toBeFocused();
 	expect(gridRequests).toBe(1);
 
 	await failure.getByRole('button', { name: 'Retry', exact: true }).click();
@@ -376,6 +448,8 @@ test(`Keep results after failed automatic updates and recover with Retry and Und
 	await expect(filters).toHaveClass(/profiles-list__filters--results-updated/);
 	expect(gridRequests).toBe(2);
 
+	await expect(editor).toHaveCount(0);
+	await filters.getByRole('button', { name: 'Expand', exact: true }).click();
 	await valueInput.fill(JSON.stringify(values[1]));
 	await valueInput.press('Enter');
 	await expect(failure).toContainText('Unable to show profiles.');

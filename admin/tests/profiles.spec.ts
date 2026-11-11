@@ -738,14 +738,10 @@ test(`Preview a completed filter and show its profiles explicitly`, async ({ pag
 	expect(documentationLayoutBeforeUpdate).not.toBeNull();
 	expect(gridSummaryLayout).not.toBeNull();
 	expect(updateResultsLayout).not.toBeNull();
-	expect(updateResultsLayout!.x).toBeGreaterThan(gridSummaryLayout!.x + gridSummaryLayout!.width);
 	expect(
-		Math.abs(
-			updateResultsLayout!.y +
-				updateResultsLayout!.height / 2 -
-				(gridSummaryLayout!.y + gridSummaryLayout!.height / 2),
-		),
-	).toBeLessThanOrEqual(1);
+		updateResultsLayout!.x > gridSummaryLayout!.x + gridSummaryLayout!.width ||
+			updateResultsLayout!.y >= gridSummaryLayout!.y + gridSummaryLayout!.height,
+	).toBe(true);
 	await updateResults.click();
 	await expect(updateResults).toHaveCount(0);
 	await expect(page.getByText('Results updated', { exact: true })).toHaveCount(0);
@@ -915,6 +911,8 @@ test(`Summarize collapsed filters within their available width`, async ({ page }
 	await fillStringFilterCondition(complexConditions.nth(2), /^Billing address › City$/, 'Milan');
 
 	await expect(page.getByRole('button', { name: 'Show 4 matches', exact: true })).toBeVisible();
+	await page.getByRole('button', { name: 'Show 4 matches', exact: true }).click();
+	await expect(filters).toHaveClass(/profiles-list__filters--results-updated/);
 	await filters.getByRole('button', { name: 'Collapse', exact: true }).click();
 	await expect(editor).toHaveCount(0);
 
@@ -1083,7 +1081,7 @@ test(`Keep the displayed grid intact when showing the preview fails`, async ({ p
 	await expect(filters).not.toHaveClass(/profiles-list__filters--results-updated/);
 });
 
-test(`Materialize the current Undo entry on Collapse and preserve its history`, async ({ page }) => {
+test(`Apply the current Undo entry explicitly after collapsing and preserve its history`, async ({ page }) => {
 	const gridRequests: Request[] = [];
 	page.on('request', (request) => {
 		const url = new URL(request.url());
@@ -1108,7 +1106,13 @@ test(`Materialize the current Undo entry on Collapse and preserve its history`, 
 	await filters.getByRole('button', { name: 'Undo', exact: true }).click();
 	await expect(valueInput).toHaveValue('Grace');
 
+	const gridRequestsBeforeCollapse = gridRequests.length;
 	await filters.getByRole('button', { name: 'Collapse', exact: true }).click();
+	await expect(filters.getByRole('region', { name: 'Profile filters' })).toHaveCount(0);
+	await expect(page.locator('.profiles-list .grid__row--clickable')).toHaveCount(4);
+	expect(gridRequests).toHaveLength(gridRequestsBeforeCollapse);
+	await expect(filters.getByRole('button', { name: 'Expand', exact: true })).toBeFocused();
+	await page.getByRole('button', { name: 'Show 1 match', exact: true }).click();
 	await expect(filters).toHaveClass(/profiles-list__filters--results-updated/);
 	await expect(page.locator('.profiles-list__grid-summary-content')).toHaveCSS(
 		'animation-name',
@@ -1128,7 +1132,7 @@ test(`Materialize the current Undo entry on Collapse and preserve its history`, 
 	await expect(filters.locator('.profiles-list__filter-summary-chip-remove')).toHaveCSS('cursor', 'pointer');
 	await expect(page.locator('.profiles-list__grid-summary')).toContainText('1 profile');
 	await expect(page.locator('.profiles-list .grid__row--clickable')).toContainText(['Grace Hopper']);
-	await expect(filters.getByRole('button', { name: 'Expand', exact: true })).toBeFocused();
+	await expect(page.locator('.profiles-list .grid')).toBeFocused();
 	const materializedFilter = gridRequests.at(-1)?.postDataJSON().filter ?? null;
 	expect(materializedFilter.rules[0].values).toEqual(['Grace']);
 
@@ -1186,6 +1190,8 @@ test(`Remove an applied filter from its collapsed chip, update the grid, and pre
 	const { filters, valueInput } = await openFirstNameFilter(page);
 	await valueInput.fill('Grace');
 	await valueInput.press('Enter');
+	await page.getByRole('button', { name: 'Show 1 match', exact: true }).click();
+	await expect(filters).toHaveClass(/profiles-list__filters--results-updated/);
 	await filters.getByRole('button', { name: 'Collapse', exact: true }).click();
 	await expect(
 		filters.locator('.profiles-list__filter-summary-visible-chips .profiles-list__filter-summary-chip-label'),
@@ -1225,9 +1231,7 @@ test(`Remove an applied filter from its collapsed chip, update the grid, and pre
 	expect(countRequests).toHaveLength(countRequestsBeforeRemoval + 2);
 });
 
-test(`Keep filters expanded when Collapse cannot update the grid and discard the error after Undo`, async ({
-	page,
-}) => {
+test(`Keep failed grid updates accessible after collapsing and discard the error after Undo`, async ({ page }) => {
 	await mockProfiles(page, {
 		profilesForRequest: (request) =>
 			request.postDataJSON().filter != null
@@ -1252,16 +1256,22 @@ test(`Keep filters expanded when Collapse cannot update the grid and discard the
 	await valueInput.press('Enter');
 	await filters.getByRole('button', { name: 'Collapse', exact: true }).click();
 
-	await expect(filters.getByRole('region', { name: 'Profile filters' })).toBeVisible();
-	await expect(filters.locator('.profiles-list__filter-grid-error')).toContainText('Unable to show profiles.');
-	await expect(filters.locator('.profiles-list__filter-summary-value')).not.toBeVisible();
+	await expect(filters.getByRole('region', { name: 'Profile filters' })).toHaveCount(0);
+	await page.getByRole('button', { name: 'Show 1 match', exact: true }).click();
+	await expect(page.locator('.profiles-list__filter-grid-error')).toContainText('Unable to show profiles.');
+	await expect(filters.locator('.profiles-list__filter-summary-value')).toHaveText('No filters');
+	await expect(filters.getByRole('region', { name: 'Profile filters' })).toHaveCount(0);
+	await expect(
+		page.locator('.profiles-list__filter-grid-action').getByRole('button', { name: 'Retry' }),
+	).toBeVisible();
 	await expect(page.locator('.profiles-list__grid-summary')).toContainText('4 profiles');
 	await expect(page.locator('.profiles-list .grid__row--clickable')).toHaveCount(4);
 
+	await filters.getByRole('button', { name: 'Expand', exact: true }).click();
 	await filters.getByRole('button', { name: 'Undo', exact: true }).click();
 	await expect(page.locator('.profiles-list__filter-preview-count')).toHaveCount(0);
 	await expect(page.locator('.profiles-list__filter-update-results')).toHaveCount(0);
-	await expect(filters.locator('.profiles-list__filter-grid-error')).toHaveCount(0);
+	await expect(page.locator('.profiles-list__filter-grid-error')).toHaveCount(0);
 	await expect(filters.getByRole('button', { name: 'Retry' })).toHaveCount(0);
 });
 
@@ -1352,7 +1362,7 @@ test(`Keep the grid unchanged when a preview fails and allow a retry`, async ({ 
 	expect(filteredCountRequests).toBe(2);
 });
 
-test(`Discard an in-flight preview when collapsing the editor`, async ({ page }) => {
+test(`Complete an in-flight preview after collapsing without changing the grid`, async ({ page }) => {
 	let markCandidateStarted = () => {};
 	let releaseCandidate = () => {};
 	const candidateStarted = new Promise<void>((resolve) => {
@@ -1393,6 +1403,7 @@ test(`Discard an in-flight preview when collapsing the editor`, async ({ page })
 	await expect(opened.editor).toHaveCount(0);
 	await expect(filters.getByRole('button', { name: 'Expand', exact: true })).toBeFocused();
 	releaseCandidate();
+	await expect(page.getByRole('button', { name: 'Show 1 match', exact: true })).toBeVisible();
 
 	await expect(filters.locator('.profiles-list__filter-summary-value')).toHaveText('No filters');
 	await expect(rows).toHaveCount(4);
@@ -1444,7 +1455,7 @@ test(`Ignore an obsolete preview after the draft changes`, async ({ page }) => {
 	await expect(page.locator('.profiles-list__grid-summary')).toContainText('4 profiles');
 });
 
-test(`Restore the current successful preview when collapsing an incomplete draft`, async ({ page }) => {
+test(`Preserve an incomplete draft when collapsing the editor`, async ({ page }) => {
 	const countRequests: URL[] = [];
 	page.on('request', (request) => {
 		const url = new URL(request.url());
@@ -1476,8 +1487,8 @@ test(`Restore the current successful preview when collapsing an incomplete draft
 
 	await filters.getByRole('button', { name: 'Expand', exact: true }).click();
 	await expect(editor.locator('.filter-editor__filter')).toHaveCount(1);
-	await expect(editor.locator('.filter-editor__property input')).toHaveValue('');
-	await expect(filters.getByRole('button', { name: 'Undo', exact: true })).toBeDisabled();
+	await expect(editor.locator('.filter-editor__property input')).toHaveValue('First name');
+	await expect(filters.getByRole('button', { name: 'Undo', exact: true })).toBeEnabled();
 	expect(countRequests).toHaveLength(0);
 });
 
@@ -1578,7 +1589,7 @@ test(`Keep an explicit grid request independent from a newer filter preview`, as
 	await expect(page.locator('.profiles-list .grid')).not.toBeFocused();
 });
 
-test(`Ignore Escape while the current filter is being materialized`, async ({ page }) => {
+test(`Collapse with Escape while the current filter is being materialized`, async ({ page }) => {
 	let markGridStarted = () => {};
 	let releaseGrid = () => {};
 	let filteredGridRequests = 0;
@@ -1616,10 +1627,12 @@ test(`Ignore Escape while the current filter is being materialized`, async ({ pa
 
 	await valueInput.focus();
 	await valueInput.press('Escape');
+	await expect(editor).toHaveCount(0);
+	await expect(page.locator('.profiles-list__filter-status')).toHaveText('Updating profiles…');
 	releaseGrid();
 
 	await expect(page.locator('.profiles-list .grid__row--clickable')).toContainText(['Grace Hopper']);
-	await expect(editor).toBeVisible();
+	await expect(editor).toHaveCount(0);
 	expect(filteredGridRequests).toBe(1);
 });
 

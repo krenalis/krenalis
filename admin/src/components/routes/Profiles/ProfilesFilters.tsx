@@ -41,7 +41,7 @@ interface FailedGridRequest {
 	message: string;
 }
 
-type GridMaterializationIntent = 'auto' | 'collapse' | 'remove' | 'show';
+type GridMaterializationIntent = 'auto' | 'remove' | 'show';
 
 interface ExpectedDisplayedContext {
 	context: string;
@@ -404,6 +404,10 @@ const ProfilesFilters = ({
 	const appliedFilterFingerprint = profileFilterFingerprint(appliedFilter);
 	const previewFilterDiffersFromGrid =
 		profileFilterResultsFingerprint(historyEntry.filter) !== profileFilterResultsFingerprint(appliedFilter);
+	const hasUnappliedChanges =
+		validatedDraft.error == null &&
+		profileFilterResultsFingerprint(validatedDraft.filter ?? null) !==
+			profileFilterResultsFingerprint(appliedFilter);
 	const propertyLabel = useCallback(
 		(property: string) => getPropertyPathDisplayValue(property, (path) => schemaProperties[path]),
 		[schemaProperties],
@@ -602,8 +606,6 @@ const ProfilesFilters = ({
 					draftRevisionRef.current === draftRevision && currentDraftFingerprint === snapshot.fingerprint;
 				if (intent === 'show' && intentIsCurrent) {
 					onInspectProfiles();
-				} else if (intent === 'collapse' && intentIsCurrent) {
-					setEditorOpen(false);
 				}
 			} catch {
 				if (gridRequestGenerationRef.current === generation) {
@@ -613,7 +615,7 @@ const ProfilesFilters = ({
 				}
 			}
 		},
-		[normalizeFilter, onInspectProfiles, onShow, setEditorOpen],
+		[normalizeFilter, onInspectProfiles, onShow],
 	);
 
 	const removeAppliedFilterRule = useCallback(
@@ -633,36 +635,6 @@ const ProfilesFilters = ({
 		},
 		[appliedFilter, materializeProfiles, pendingGridContext],
 	);
-
-	const collapseFilters = useCallback(() => {
-		const currentEntry = currentProfilesFilterHistoryEntry(sessionRef.current);
-		if (pendingGridContext === currentEntry.fingerprint) {
-			return;
-		}
-		draftRevisionRef.current++;
-		invalidatePreview();
-		updateSession((state) => ({
-			...state,
-			draft: cloneProfileFilter(currentProfilesFilterHistoryEntry(state).draft),
-			pending: undefined,
-			failure: undefined,
-		}));
-		setGridFailure(undefined);
-
-		const requiresGridMaterialization = previewFilterDiffersFromGrid;
-		if (!requiresGridMaterialization) {
-			setEditorOpen(false);
-			return;
-		}
-		void materializeProfiles(currentEntry, 'collapse');
-	}, [
-		invalidatePreview,
-		materializeProfiles,
-		pendingGridContext,
-		previewFilterDiffersFromGrid,
-		setEditorOpen,
-		updateSession,
-	]);
 
 	const displayedContext = appliedFilterFingerprint;
 	useEffect(() => {
@@ -746,11 +718,11 @@ const ProfilesFilters = ({
 				return;
 			}
 			event.preventDefault();
-			collapseFilters();
+			setEditorOpen(false);
 		};
 		document.addEventListener('keydown', onKeyDown, true);
 		return () => document.removeEventListener('keydown', onKeyDown, true);
-	}, [collapseFilters, isOpen]);
+	}, [isOpen, setEditorOpen]);
 
 	const currentPreviewContext = historyEntry.fingerprint;
 	const isShowingCurrentPreview = pendingGridContext === currentPreviewContext;
@@ -764,7 +736,6 @@ const ProfilesFilters = ({
 	useEffect(() => {
 		if (
 			!shouldAutoUpdateProfiles ||
-			!isOpen ||
 			!canUpdateResults ||
 			isShowingCurrentPreview ||
 			gridFailure?.entry === historyEntry
@@ -776,11 +747,40 @@ const ProfilesFilters = ({
 		canUpdateResults,
 		gridFailure,
 		historyEntry,
-		isOpen,
 		isShowingCurrentPreview,
 		materializeProfiles,
 		shouldAutoUpdateProfiles,
 	]);
+
+	let collapsedFilterStatus: string | undefined;
+	if (isUpdatingGridResults) {
+		collapsedFilterStatus = 'Updating profiles…';
+	} else if (
+		gridFailure == null &&
+		session.failure == null &&
+		session.pending == null &&
+		validatedDraft.error == null
+	) {
+		if (hasUnappliedChanges) {
+			collapsedFilterStatus = 'Unapplied changes · Showing previous results';
+		} else if (!isDraftDirty) {
+			collapsedFilterStatus = 'Filters applied';
+		}
+	}
+
+	const gridErrorMessage = gridFailure != null && (
+		<div className='profiles-list__filter-grid-error' role='alert'>
+			<span>{gridFailure.message}</span>
+			<WaButton
+				size='s'
+				variant='brand'
+				appearance='plain'
+				onClick={() => void materializeProfiles(gridFailure.entry, gridFailure.intent)}
+			>
+				Retry
+			</WaButton>
+		</div>
+	);
 
 	const historyActions = (
 		<>
@@ -824,8 +824,7 @@ const ProfilesFilters = ({
 						appearance='outlined'
 						aria-controls='profiles-filter-editor'
 						aria-expanded={isOpen}
-						disabled={isOpen && isShowingCurrentPreview}
-						onClick={isOpen ? collapseFilters : () => setEditorOpen(true)}
+						onClick={() => setEditorOpen(!isOpen)}
 					>
 						<WaIcon slot='start' name={isOpen ? 'chevron-up' : 'chevron-down'} aria-hidden='true' />
 						{isOpen ? 'Collapse' : 'Expand'}
@@ -884,21 +883,7 @@ const ProfilesFilters = ({
 									target='User'
 									textValueCommitDelayMs={textValueCommitDelayMs}
 								/>
-								{gridFailure != null && (
-									<div className='profiles-list__filter-grid-error' role='alert'>
-										<span>{gridFailure.message}</span>
-										<WaButton
-											size='s'
-											variant='brand'
-											appearance='plain'
-											onClick={() =>
-												void materializeProfiles(gridFailure.entry, gridFailure.intent)
-											}
-										>
-											Retry
-										</WaButton>
-									</div>
-								)}
+								{isOpen && gridErrorMessage}
 							</div>
 							<div className='profiles-list__filter-options'>
 								<WaSwitch
@@ -932,7 +917,8 @@ const ProfilesFilters = ({
 			{gridActionContainer != null &&
 				createPortal(
 					<>
-						{previewTiming.suspended && (
+						{!isOpen && gridErrorMessage}
+						{isOpen && previewTiming.suspended && (
 							<span className='profiles-list__filter-preview-slow' role='status' aria-live='polite'>
 								Counts are taking longer than usual. Press Enter to update.
 							</span>
@@ -969,6 +955,11 @@ const ProfilesFilters = ({
 								{historyEntry.total === 1 ? 'match' : 'matches'}
 							</WaButton>
 						) : null}
+						{!isOpen && collapsedFilterStatus != null && (
+							<span className='profiles-list__filter-status' role='status'>
+								{collapsedFilterStatus}
+							</span>
+						)}
 					</>,
 					gridActionContainer,
 				)}
