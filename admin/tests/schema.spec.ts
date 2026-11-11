@@ -1,5 +1,5 @@
 import { test, expect, type Locator, type Page } from '@playwright/test';
-import { login, logout, adminURL, logValidationErrors } from './utils';
+import { login, logout, adminURL, logValidationErrors, loadSyncToken, syncTokenHeaders } from './utils';
 import Type, { ObjectType, Property } from '../src/lib/api/types/types';
 import { ConsentPurpose, PrimarySources, ProfilePropertyRoles, ProfileSchema } from '../src/lib/api/types/workspace';
 
@@ -88,7 +88,7 @@ const mockProfilePropertyRoles = async (page, propertyRoles: ProfilePropertyRole
 	});
 	await page.route('**/v1/profiles/schema', async (route) => {
 		if (route.request().method() === 'PUT') {
-			await route.fulfill({ json: {} });
+			await route.fulfill({ json: {}, headers: syncTokenHeaders() });
 			return;
 		}
 		const response = await route.fetch();
@@ -169,6 +169,7 @@ const getVerticalCenter = async (locator: Locator): Promise<number> => {
 
 test.beforeEach(async ({ page }) => {
 	await login(page);
+	await loadSyncToken(page);
 });
 
 test.afterEach(async ({ page }) => {
@@ -499,7 +500,7 @@ for (const { scenario, shouldObserveAltering, shouldDelayPreview, initialStartTi
 		await page.route('**/v1/profiles/schema', async (route) => {
 			if (route.request().method() === 'PUT') {
 				alterationRequestCount++;
-				await route.fulfill({ json: {} });
+				await route.fulfill({ json: {}, headers: syncTokenHeaders() });
 				return;
 			}
 			schemaRequestCount++;
@@ -609,7 +610,11 @@ for (const shouldFailSave of [false, true]) {
 			if (route.request().method() === 'PUT') {
 				submittedSchema = route.request().postDataJSON().schema;
 				// Fail after the delayed body is read, rather than when headers arrive.
-				await route.fulfill({ contentType: 'application/json', body: shouldFailSave ? '{' : '{}' });
+				await route.fulfill({
+					contentType: 'application/json',
+					headers: syncTokenHeaders(),
+					body: shouldFailSave ? '{' : '{}',
+				});
 				return;
 			}
 			if (isAlterComplete) {
@@ -788,7 +793,7 @@ for (const {
 			if (route.request().method() === 'PUT') {
 				submittedSources.push(route.request().postDataJSON().primarySources);
 				submittedSchemas.push(route.request().postDataJSON().schema);
-				await route.fulfill({ json: {} });
+				await route.fulfill({ json: {}, headers: syncTokenHeaders() });
 				return;
 			}
 			schemaRequestCount++;
@@ -1911,7 +1916,7 @@ test(`Keep the schema review open while applying changes`, async ({ page }) => {
 			return;
 		}
 		await alterResponse;
-		await route.fulfill({ json: {} });
+		await route.fulfill({ json: {}, headers: syncTokenHeaders() });
 	});
 
 	await page.goto(`${adminURL}/profile-unification/schema`);
@@ -2290,7 +2295,7 @@ for (const [semantics, kind, structure] of [
 		});
 		await page.route('**/v1/profiles/schema', async (route) => {
 			if (route.request().method() === 'PUT') {
-				await route.fulfill({ status: 200 });
+				await route.fulfill({ status: 200, headers: syncTokenHeaders() });
 				return;
 			}
 			await route.continue();
@@ -2876,7 +2881,7 @@ test(`Render array and map property types and preserve their semantics`, async (
 			return;
 		}
 		if (request.method() === 'PUT') {
-			await route.fulfill({ status: 200 });
+			await route.fulfill({ status: 200, headers: syncTokenHeaders() });
 			return;
 		}
 		await route.continue();
@@ -3038,7 +3043,7 @@ test(`Clear the primary source when changing a new property to an array`, async 
 	});
 	await page.route('**/v1/profiles/schema', async (route) => {
 		if (route.request().method() === 'PUT') {
-			await route.fulfill({ json: {} });
+			await route.fulfill({ json: {}, headers: syncTokenHeaders() });
 			return;
 		}
 		await route.continue();
@@ -3443,7 +3448,7 @@ test(`Remove a renamed property without sending its stale RePath`, async ({ page
 test(`Remove a replacement property without sending its stale RePath`, async ({ page }) => {
 	await page.route('**/v1/profiles/schema', async (route) => {
 		if (route.request().method() === 'PUT') {
-			await route.fulfill({ json: {} });
+			await route.fulfill({ json: {}, headers: syncTokenHeaders() });
 			return;
 		}
 		const response = await route.fetch();

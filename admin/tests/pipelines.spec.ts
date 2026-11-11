@@ -13,6 +13,8 @@ import {
 	login,
 	logout,
 	adminURL,
+	loadSyncToken,
+	syncTokenHeaders,
 } from './utils';
 import { ConsentPurpose } from '../src/lib/api/types/workspace';
 import { join } from 'path';
@@ -20,6 +22,7 @@ import { writeFile } from 'fs';
 
 test.beforeEach(async ({ page }) => {
 	await login(page);
+	await loadSyncToken(page);
 });
 
 test.afterEach(async ({ page }) => {
@@ -437,7 +440,7 @@ test.describe('Matching semantics', () => {
 			await page.locator('.pipeline__transformation .combobox[data-id="firstName"] input').fill('firstName');
 			await page.keyboard.press('Escape');
 			await page.route('**/v1/pipelines', async (route) => {
-				await route.fulfill({ json: { id: 'semantics-pipeline' } });
+				await route.fulfill({ json: { id: 'semantics-pipeline' }, headers: syncTokenHeaders() });
 			});
 			const requestPromise = page.waitForRequest(
 				(request) => request.url().endsWith('/v1/pipelines') && request.method() === 'POST',
