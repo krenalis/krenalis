@@ -6,6 +6,7 @@ import { scrubURL } from '../telemetry/scrubURL';
 interface QueuedRequest {
 	url: string;
 	request: RequestInit;
+	isReadOnly: boolean;
 	resolve: (response: Response) => void;
 	reject: (error: unknown) => void;
 }
@@ -17,7 +18,9 @@ let syncToken: string | null = null;
 // processQueue processes queued requests sequentially, from sending
 // each request to receiving its response headers. Each request uses the
 // latest Sync-Token, which is updated from 200 response headers before
-// starting the next request. Fetch errors reject the affected request
+// starting the next request. Read-only requests are sent with the
+// latest Sync-Token but are not awaited, and the Sync-Token of their
+// responses is discarded. Fetch errors reject the affected request
 // without stopping the queue.
 const processQueue = async () => {
 	if (isProcessingQueue) {
@@ -33,6 +36,10 @@ const processQueue = async () => {
 				headers.set('Sync-Token', syncToken);
 			}
 			pending.request.headers = headers;
+			if (pending.isReadOnly) {
+				fetch(pending.url, pending.request).then(pending.resolve, pending.reject);
+				continue;
+			}
 			const response = await fetch(pending.url, pending.request);
 			if (response.status === 200) {
 				const token = response.headers.get('Sync-Token');
@@ -50,7 +57,14 @@ const processQueue = async () => {
 	isProcessingQueue = false;
 };
 
-const call = async (url: string, method: string, workspaceID?: string | null, body?: any, opt?: any) => {
+const call = async (
+	url: string,
+	method: string,
+	isReadOnly: boolean,
+	workspaceID?: string | null,
+	body?: any,
+	opt?: any,
+) => {
 	let headers = {
 		'Content-Type': 'application/json',
 	};
@@ -74,7 +88,7 @@ const call = async (url: string, method: string, workspaceID?: string | null, bo
 	let res: Response;
 	try {
 		res = await new Promise<Response>((resolve, reject) => {
-			requestQueue.push({ url, request, resolve, reject });
+			requestQueue.push({ url, request, isReadOnly, resolve, reject });
 			processQueue();
 		});
 	} catch (err) {
