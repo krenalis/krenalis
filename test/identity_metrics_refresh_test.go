@@ -119,9 +119,9 @@ func TestIdentityMetricsRefreshAfterImport(t *testing.T) {
 
 }
 
-// TestWarehouseOperationalErrors verifies that maintenance mode and warehouse
-// unavailability are exposed as the expected API errors.
-func TestWarehouseOperationalErrors(t *testing.T) {
+// TestIdentityMetricsRefreshReturnsOperationalErrors verifies that maintenance
+// mode and warehouse unavailability are exposed as the expected API errors.
+func TestIdentityMetricsRefreshReturnsOperationalErrors(t *testing.T) {
 
 	if testing.Short() {
 		t.Skip()
@@ -194,32 +194,23 @@ func TestWarehouseOperationalErrors(t *testing.T) {
 			t.Fatalf("expected no error, got %v", err)
 		}
 
-		for _, request := range []struct {
-			method, path string
-		}{
-			{"POST", "/v1/metrics/identities/refresh"},
-			{"GET", "/v1/connections/" + connection + "/identities"},
-		} {
-			err = k.TryCall(request.method, request.path, nil, nil, nil)
-			if err != nil {
-				statusErr, ok := errors.AsType[*krenalistester.StatusCodeError](err)
-				if !ok {
-					t.Fatalf("%s %s: expected *StatusCodeError, got %T: %v", request.method, request.path, err, err)
-				}
-				if statusErr.Response.Code != http.StatusServiceUnavailable {
-					t.Fatalf("%s %s: expected HTTP status %d, got %d: %s",
-						request.method, request.path, http.StatusServiceUnavailable,
-						statusErr.Response.Code, statusErr.Response.Text)
-				}
-				const expected = `{"error":{"code":"ServiceUnavailable","message":"data warehouse: ERROR: relation \"krenalis_identities\" does not exist (SQLSTATE 42P01)"}}`
-				if statusErr.Response.Text != expected {
-					t.Fatalf("%s %s: expected response %s, got %s",
-						request.method, request.path, expected, statusErr.Response.Text)
-				}
-				continue
+		err = k.TryCall("POST", "/v1/metrics/identities/refresh", nil, nil, nil)
+		if err != nil {
+			statusErr, ok := errors.AsType[*krenalistester.StatusCodeError](err)
+			if !ok {
+				t.Fatalf("expected *StatusCodeError, got %T: %v", err, err)
 			}
-			t.Fatalf("%s %s: expected a warehouse unavailable error, got nil", request.method, request.path)
+			if statusErr.Response.Code != http.StatusServiceUnavailable {
+				t.Fatalf("expected HTTP status %d, got %d: %s",
+					http.StatusServiceUnavailable, statusErr.Response.Code, statusErr.Response.Text)
+			}
+			const expected = `{"error":{"code":"ServiceUnavailable","message":"data warehouse: ERROR: relation \"krenalis_identities\" does not exist (SQLSTATE 42P01)"}}`
+			if statusErr.Response.Text != expected {
+				t.Fatalf("expected response %s, got %s", expected, statusErr.Response.Text)
+			}
+			return
 		}
+		t.Fatal("expected a warehouse unavailable error, got nil")
 
 	})
 

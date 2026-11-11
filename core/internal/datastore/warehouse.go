@@ -41,78 +41,122 @@ func newWarehouse(platform string, settings warehouses.SettingsLoader, dialWith 
 }
 
 // AlterProfileSchema implements [warehouses.Warehouse].
+//
+// If a data warehouse error occurs, it returns a *WarehouseError wrapping the
+// cause, which may be:
+//   - *warehouses.SettingsError if the settings are invalid
+//   - *warehouses.OperationError if the operation failed and the failure was
+//     recorded; subsequent calls with the same opID return that failure again
 func (dw *warehouse) AlterProfileSchema(ctx context.Context, opID string, columns []warehouses.Column, operations []warehouses.AlterOperation) error {
 	err := dw.inner.AlterProfileSchema(ctx, opID, columns, operations)
 	return wrapWarehouseError(err)
 }
 
 // CanInitialize implements [warehouses.Warehouse].
+//
+// If a data warehouse error occurs, it returns a *WarehouseError wrapping the
+// cause, which may be:
+//   - *warehouses.SettingsError if the settings are invalid
+//   - *warehouses.NonInitializableError if the warehouse cannot be initialized
 func (dw *warehouse) CanInitialize(ctx context.Context) error {
 	err := dw.inner.CanInitialize(ctx)
 	return wrapWarehouseError(err)
 }
 
 // CheckReadOnlyAccess implements [warehouses.Warehouse].
+//
+// If a data warehouse error occurs, it returns a *WarehouseError wrapping the
+// cause, which may be:
+//   - *warehouses.SettingsError if the settings are invalid
+//   - *warehouses.SettingsNotReadOnly if access is not read-only
 func (dw *warehouse) CheckReadOnlyAccess(ctx context.Context) error {
 	err := dw.inner.CheckReadOnlyAccess(ctx)
 	return wrapWarehouseError(err)
 }
 
 // Close implements [warehouses.Warehouse].
+//
+// If a data warehouse error occurs, it returns a *WarehouseError.
 func (dw *warehouse) Close() error {
 	err := dw.inner.Close()
 	return wrapWarehouseError(err)
 }
 
 // ColumnTypeDescription implements [warehouses.Warehouse].
+//
+// If a data warehouse error occurs, it returns a *WarehouseError.
 func (dw *warehouse) ColumnTypeDescription(t types.Type) (string, error) {
 	description, err := dw.inner.ColumnTypeDescription(t)
 	return description, wrapWarehouseError(err)
 }
 
 // CountIdentities implements [warehouses.Warehouse].
+//
+// If a data warehouse error occurs, it returns a *WarehouseError wrapping the
+// cause, which may be *warehouses.SettingsError if the settings are invalid.
 func (dw *warehouse) CountIdentities(ctx context.Context, pipelines []string) (*warehouses.IdentityCounts, error) {
 	counts, err := dw.inner.CountIdentities(ctx, pipelines)
 	return counts, wrapWarehouseError(err)
 }
 
 // Counts implements [warehouses.Warehouse].
+//
+// If a data warehouse error occurs, it returns a *WarehouseError wrapping the
+// cause, which may be *warehouses.SettingsError if the settings are invalid.
 func (dw *warehouse) Counts(ctx context.Context, table string, conditions []warehouses.Expr) ([]int, error) {
 	counts, err := dw.inner.Counts(ctx, table, conditions)
 	return counts, wrapWarehouseError(err)
 }
 
 // Delete implements [warehouses.Warehouse].
+//
+// If a data warehouse error occurs, it returns a *WarehouseError wrapping the
+// cause, which may be *warehouses.SettingsError if the settings are invalid.
 func (dw *warehouse) Delete(ctx context.Context, table string, where warehouses.Expr) error {
 	err := dw.inner.Delete(ctx, table, where)
 	return wrapWarehouseError(err)
 }
 
 // Initialize implements [warehouses.Warehouse].
+//
+// If a data warehouse error occurs, it returns a *WarehouseError wrapping the
+// cause, which may be *warehouses.SettingsError if the settings are invalid.
 func (dw *warehouse) Initialize(ctx context.Context, profileColumns []warehouses.Column) error {
 	err := dw.inner.Initialize(ctx, profileColumns)
 	return wrapWarehouseError(err)
 }
 
 // Merge implements [warehouses.Warehouse].
+//
+// If a data warehouse error occurs, it returns a *WarehouseError wrapping the
+// cause, which may be *warehouses.SettingsError if the settings are invalid.
 func (dw *warehouse) Merge(ctx context.Context, table warehouses.Table, rows [][]any, deleted []any) error {
 	err := dw.inner.Merge(ctx, table, rows, deleted)
 	return wrapWarehouseError(err)
 }
 
 // MergeIdentities implements [warehouses.Warehouse].
+//
+// If a data warehouse error occurs, it returns a *WarehouseError wrapping the
+// cause, which may be *warehouses.SettingsError if the settings are invalid.
 func (dw *warehouse) MergeIdentities(ctx context.Context, columns []warehouses.Column, rows []map[string]any) error {
 	err := dw.inner.MergeIdentities(ctx, columns, rows)
 	return wrapWarehouseError(err)
 }
 
 // PreviewAlterProfileSchema implements [warehouses.Warehouse].
+//
+// If a data warehouse error occurs, it returns a *WarehouseError wrapping the
+// cause, which may be *warehouses.SettingsError if the settings are invalid.
 func (dw *warehouse) PreviewAlterProfileSchema(ctx context.Context, columns []warehouses.Column, operations []warehouses.AlterOperation) ([]string, error) {
 	queries, err := dw.inner.PreviewAlterProfileSchema(ctx, columns, operations)
 	return queries, wrapWarehouseError(err)
 }
 
 // Query implements [warehouses.Warehouse].
+//
+// If a data warehouse error occurs, it returns a *WarehouseError wrapping the
+// cause, which may be *warehouses.SettingsError if the settings are invalid.
 func (dw *warehouse) Query(ctx context.Context, query warehouses.RowQuery, withTotal bool) (warehouses.Rows, int, error) {
 	rows, total, err := dw.inner.Query(ctx, query, withTotal)
 	if rows != nil {
@@ -122,6 +166,11 @@ func (dw *warehouse) Query(ctx context.Context, query warehouses.RowQuery, withT
 }
 
 // QueryReadOnly implements [warehouses.Warehouse].
+//
+// If a data warehouse error occurs, it returns a *WarehouseError wrapping the
+// cause, which may be:
+//   - *warehouses.SettingsError if the settings are invalid
+//   - *warehouses.RejectedReadOnlyQueryError if the query is rejected
 func (dw *warehouse) QueryReadOnly(ctx context.Context, query string) (warehouses.Rows, int, error) {
 	rows, columnCount, err := dw.inner.QueryReadOnly(ctx, query)
 	if rows != nil {
@@ -131,30 +180,48 @@ func (dw *warehouse) QueryReadOnly(ctx context.Context, query string) (warehouse
 }
 
 // Repair implements [warehouses.Warehouse].
+//
+// If a data warehouse error occurs, it returns a *WarehouseError wrapping the
+// cause, which may be *warehouses.SettingsError if the settings are invalid.
 func (dw *warehouse) Repair(ctx context.Context, profileColumns []warehouses.Column) error {
 	err := dw.inner.Repair(ctx, profileColumns)
 	return wrapWarehouseError(err)
 }
 
 // ResolveIdentities implements [warehouses.Warehouse].
+//
+// If a data warehouse error occurs, it returns a *WarehouseError wrapping the
+// cause, which may be:
+//   - *warehouses.SettingsError if the settings are invalid
+//   - *warehouses.OperationError if the operation failed and the failure was
+//     recorded; subsequent calls with the same opID return that failure again
 func (dw *warehouse) ResolveIdentities(ctx context.Context, opID string, identifiers, profileColumns []warehouses.Column, profilePrimarySources map[string]string) (*warehouses.IdentityResolutionCounts, error) {
 	counts, err := dw.inner.ResolveIdentities(ctx, opID, identifiers, profileColumns, profilePrimarySources)
 	return counts, wrapWarehouseError(err)
 }
 
 // Truncate implements [warehouses.Warehouse].
+//
+// If a data warehouse error occurs, it returns a *WarehouseError wrapping the
+// cause, which may be *warehouses.SettingsError if the settings are invalid.
 func (dw *warehouse) Truncate(ctx context.Context, table string) error {
 	err := dw.inner.Truncate(ctx, table)
 	return wrapWarehouseError(err)
 }
 
 // UnsetIdentityColumns implements [warehouses.Warehouse].
+//
+// If a data warehouse error occurs, it returns a *WarehouseError wrapping the
+// cause, which may be *warehouses.SettingsError if the settings are invalid.
 func (dw *warehouse) UnsetIdentityColumns(ctx context.Context, pipeline string, columns []warehouses.Column) error {
 	err := dw.inner.UnsetIdentityColumns(ctx, pipeline, columns)
 	return wrapWarehouseError(err)
 }
 
 // ValidateSettings implements [warehouses.Warehouse].
+//
+// If a data warehouse error occurs, it returns a *WarehouseError wrapping the
+// cause, which may be *warehouses.SettingsError if the settings are invalid.
 func (dw *warehouse) ValidateSettings(ctx context.Context) (json.Value, error) {
 	settings, err := dw.inner.ValidateSettings(ctx)
 	return settings, wrapWarehouseError(err)
@@ -166,12 +233,16 @@ type warehouseRows struct {
 }
 
 // Close implements [warehouses.Rows].
+//
+// If a data warehouse error occurs, it returns a *WarehouseError.
 func (r *warehouseRows) Close() error {
 	err := r.inner.Close()
 	return wrapWarehouseError(err)
 }
 
 // Err implements [warehouses.Rows].
+//
+// If a data warehouse error occurs, it returns a *WarehouseError.
 func (r *warehouseRows) Err() error {
 	err := r.inner.Err()
 	return wrapWarehouseError(err)
@@ -183,6 +254,8 @@ func (r *warehouseRows) Next() bool {
 }
 
 // Scan implements [warehouses.Rows].
+//
+// If a data warehouse error occurs, it returns a *WarehouseError.
 func (r *warehouseRows) Scan(dest ...any) error {
 	err := r.inner.Scan(dest...)
 	return wrapWarehouseError(err)

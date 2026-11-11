@@ -71,9 +71,10 @@ func New(st *state.State) (*Datastore, error) {
 //
 // organization is the ID of the organization performing the operation.
 //
-// It returns a *warehouses.SettingsError wrapped in a *WarehouseError if the
-// settings are invalid, or a *warehouses.NonInitializableError wrapped in a
-// *WarehouseError if the warehouse cannot be initialized.
+// If a data warehouse error occurs, it returns a *WarehouseError wrapping the
+// cause, which may be:
+//   - *warehouses.SettingsError if the settings are invalid
+//   - *warehouses.NonInitializableError if the warehouse cannot be initialized
 func (ds *Datastore) CanInitialize(ctx context.Context, organization, platform string, settings json.Value) error {
 	ds.mustBeOpen()
 	dw := newWarehouse(platform, newSettingsLoader(settings), dialer.DialWith(organization))
@@ -87,10 +88,14 @@ func (ds *Datastore) CanInitialize(ctx context.Context, organization, platform s
 
 // CheckMCPSettings checks that the MCP settings are valid, that is it checks
 // that datastore's warehouse access with these settings is read-only (at least
-// on the Krenalis tables). If access is not read-only, it returns a
-// *warehouses.SettingsNotReadOnly wrapped in a *WarehouseError.
+// on the Krenalis tables).
 //
 // organization is the ID of the organization performing the operation.
+//
+// If a data warehouse error occurs, it returns a *WarehouseError wrapping the
+// cause, which may be:
+//   - *warehouses.SettingsError if the settings are invalid
+//   - *warehouses.SettingsNotReadOnly if access is not read-only
 func (ds *Datastore) CheckMCPSettings(ctx context.Context, organization, platform string, settings json.Value) error {
 	ds.mustBeOpen()
 	dw := newWarehouse(platform, newSettingsLoader(settings), dialer.DialWith(organization))
@@ -127,7 +132,8 @@ func (ds *Datastore) Close() {
 //
 // organization is the ID of the organization performing the operation.
 //
-// It returns a *WarehouseError if an error occurs with the data warehouse.
+// If a data warehouse error occurs, it returns a *WarehouseError wrapping the
+// cause, which may be *warehouses.SettingsError if the settings are invalid.
 func (ds *Datastore) Initialize(ctx context.Context, organization, platform string, settings json.Value, profileSchema types.Type) error {
 	ds.mustBeOpen()
 	dw := newWarehouse(platform, newSettingsLoader(settings), dialer.DialWith(organization))
@@ -156,8 +162,10 @@ func (ds *Datastore) Store(workspace string) (*Store, bool) {
 // organization is the ID of the organization performing the operation.
 //
 // It returns ErrWarehousePlatformNotExist if the given warehouse platform does
-// not exist, or a *WarehouseError wrapping *warehouses.SettingsError if the
-// settings are invalid.
+// not exist.
+//
+// If a data warehouse error occurs, it returns a *WarehouseError wrapping the
+// cause, which may be *warehouses.SettingsError if the settings are invalid.
 func (ds *Datastore) ValidateWarehouseSettings(ctx context.Context, organization, platform string, settings json.Value) (json.Value, error) {
 	ds.mustBeOpen()
 	if _, ok := ds.state.WarehousePlatform(platform); !ok {
