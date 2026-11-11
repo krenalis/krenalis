@@ -453,3 +453,45 @@ race tests, vet and build of the affected packages. The full datastore suite ran
 before the cancellation test entry points were added; the final targeted run
 covers that addition. Production code, session configuration and the closed
 Snowflake gate did not change.
+
+### Post-review verification on 2026-11-11
+
+The corrections in `536845daa` and `70f413279` isolate the session-verification
+tag, use a fresh scenario tag for each operation, check that the operation has
+not returned before cancel and enforce the timeout duration bounds. Both
+adapters now return a stored cursor failure before reporting a schema mismatch;
+PostgreSQL tests require 57014 or the cancellation cause without a textual
+exception. The datastore's public error identity and the gate are unchanged.
+
+The live UTC campaign was repeated on `70f413279`, with stable sources and no
+FAIL/SKIP in either block:
+
+| Profile | Path | Server code | Client elapsed |
+| --- | --- | ---: | ---: |
+| timeout | membership | 630 | 10,619 ms from call |
+| timeout | explanation | 630 | 11,137 ms from call |
+| cancellation | membership | 604 | 1,517 ms after cancel |
+| cancellation | explanation | 604 | 1,685 ms after cancel |
+
+Each block again reports three PASS nodes and three verified connections.
+The read-only inventory reports one PASS and one standard-profile connection,
+zero remaining campaign schemas and the same 23 unrelated test schemas. Both
+created schemas have drop records and the audit reports no issues. Evidence is
+also in `/tmp/krenalis-snowflake-interruption-review-lz9eiq1v/`, using the same
+log/manifest layout as the original run.
+
+A durable local copy of both runs, outside the checkout and temporary folders,
+is stored at
+`/Users/marco/src/krenalis-test-evidence/snowflake-interruption-70f413279-bd5dda129471.zip`.
+SHA-256: `bd5dda1294715324b4d311708fade07068b15fe445cdc0d363f863bec86fd73c`.
+Its adjacent `.sha256` file verifies the archive. `INDEX.json` maps 42 archived
+files to their original paths, sizes and hashes, so original manifests and
+overlays remain unchanged. Contents are masked test output, manifests and test
+overlays; launchers and credential files are excluded.
+
+Local verification passed: four final PostgreSQL scenarios, test-helper race
+checks, 26 Python tests, profile/reader/explanation tests in both adapters and
+the shared compiler, vet and build. Three overlay mutants were detected: reuse
+of the target query tag, and removal of error preservation in each PostgreSQL
+adapter. Full datastore and full remote numeric/calendar campaigns were not
+repeated for these changes; their prior evidence remains separate.
