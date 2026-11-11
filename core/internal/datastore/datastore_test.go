@@ -84,7 +84,7 @@ func TestCountIdentitiesEmptyPipelines(t *testing.T) {
 func TestProfileCountWarehouseError(t *testing.T) {
 	warehouseErr := errors.New("warehouse count failed")
 	store := &Store{mc: newModeCoordinator(state.Normal)}
-	store.wh.Store(warehouses.Warehouse(&profileQueryWarehouse{err: warehouseErr}))
+	store.wh.Store(warehouses.Warehouse(&warehouse{inner: &profileQueryWarehouse{err: warehouseErr}}))
 	_, err := store.ProfileCount(t.Context(), nil, types.Type{})
 	if err != nil {
 		wrapped, ok := errors.AsType[*WarehouseError](err)

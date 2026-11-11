@@ -19,6 +19,7 @@ interface Config {
 const config: Config = JSON.parse(readFileSync(resolve(__dirname, './test-config.json'), 'utf-8'));
 const adminPath = 'admin';
 const adminURL = `${config.baseURL}/${adminPath}`;
+let syncToken: string | null = null;
 
 const login = async (page: Page) => {
 	await page.goto(`${adminURL}/`);
@@ -48,6 +49,21 @@ const logout = async (page: Page) => {
 		},
 	);
 	await page.goto(`${adminURL}/`);
+};
+
+// loadSyncToken loads a valid Sync-Token from the server.
+const loadSyncToken = async (page: Page) => {
+	const response = await page.request.get(`${config.baseURL}/v1/public/metadata`);
+	syncToken = response.headers()['sync-token'];
+};
+
+// syncTokenHeaders returns headers containing the Sync-Token loaded by
+// loadSyncToken.
+const syncTokenHeaders = (): Record<string, string> => {
+	if (syncToken == null) {
+		throw new Error('Sync-Token has not been loaded; call loadSyncToken first');
+	}
+	return { 'Sync-Token': syncToken };
 };
 
 const addDummySource = async (page: Page): Promise<string> => {
@@ -422,6 +438,8 @@ export {
 	adminURL,
 	login,
 	logout,
+	loadSyncToken,
+	syncTokenHeaders,
 	addDummySource,
 	addDummyDestination,
 	addPostgreSQLSource,

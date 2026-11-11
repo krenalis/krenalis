@@ -1645,7 +1645,7 @@ func (core *Core) executeAlterProfileSchema(workspace, opID string, schema types
 			}
 			// In case of OperationError log it, then go on and send an
 			// EndAlterProfileSchema notification.
-			if err2, ok := err.(*warehouses.OperationError); ok {
+			if err2, ok := errors.AsType[*warehouses.OperationError](err); ok {
 				slog.Error("alter schema ended with an error", "error", err2)
 				alterSchemaErr = err2
 				break
