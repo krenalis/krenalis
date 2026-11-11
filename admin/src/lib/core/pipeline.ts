@@ -30,6 +30,7 @@ import {
 	isFloat,
 	isIP,
 	isInt,
+	isTime,
 	isUnsigned,
 	isUUID,
 	isValidPropertyPath,
@@ -74,6 +75,7 @@ const FILTER_OPERATORS: FilterOperator[] = [
 
 const MAX_FILTER_DEPTH = 4;
 const MAX_FILTER_RULE_COUNT = 100;
+const MAX_FILTER_VALUE_LENGTH = 80;
 
 // isFilterGroup reports whether rule is a filter group.
 const isFilterGroup = (rule: FilterRule): rule is Filter => 'rules' in rule;
@@ -2168,6 +2170,20 @@ const validateAndNormalizeFilterCondition = (
 		values = conditionValues;
 	}
 
+	const hasAllowedValues = property.type === 'string' && (property.full.type as StringType).values != null;
+	if (!hasAllowedValues) {
+		for (const v of values) {
+			if ([...v].length > MAX_FILTER_VALUE_LENGTH) {
+				throw new Error(
+					`The filter value on the property "${propertyName}" is longer than ${MAX_FILTER_VALUE_LENGTH} characters`,
+				);
+			}
+			if (v.includes('\0')) {
+				throw new Error(`The filter value on the property "${propertyName}" cannot contain the NUL character`);
+			}
+		}
+	}
+
 	try {
 		validateFilterConditionValues(property.full.type, conditionValues, propertyName);
 	} catch (err) {
@@ -2205,6 +2221,8 @@ const validateFilterConditionValues = (type: Type, values: string[], propertyNam
 			throwIfInvalid(isDateTime(v), type.kind);
 		} else if (type.kind === 'date') {
 			throwIfInvalid(isDate(v), type.kind);
+		} else if (type.kind === 'time') {
+			throwIfInvalid(isTime(v), type.kind);
 		} else if (type.kind === 'year') {
 			throwIfInvalid(isYear(v), type.kind);
 		} else if (type.kind === 'uuid') {
@@ -2244,7 +2262,10 @@ const validateMatching = (inMatching: Property, outMatching: Property) => {
 		}
 	}
 
-	if (!typeSemanticsAreEqual(inMatching.type, outMatching.type)) {
+	// Check semantics compatibility.
+	const hasInSemantics = 'semantics' in inMatching.type && inMatching.type.semantics != null;
+	const hasOutSemantics = 'semantics' in outMatching.type && outMatching.type.semantics != null;
+	if (hasInSemantics && hasOutSemantics && !typeSemanticsAreEqual(inMatching.type, outMatching.type)) {
 		throw new Error('Input and output matching properties do not have the same semantics and options');
 	}
 };

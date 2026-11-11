@@ -277,7 +277,7 @@ func (identities *Identities) MetricsPerDate(ctx context.Context, workspace stri
 // If the workspace does not exist, it returns [ErrWorkspaceNotFound].
 // If the data warehouse is in maintenance mode, it returns the
 // datastore.ErrMaintenanceMode error. If an error occurs with the data
-// warehouse, it returns an *datastore.UnavailableError error.
+// warehouse, it returns a *datastore.WarehouseError error.
 func (identities *Identities) Refresh(ctx context.Context, workspace string) error {
 
 	ws, ok := identities.metrics.state.Workspace(workspace)

@@ -37,33 +37,6 @@ func Test_CountryFormat(t *testing.T) {
 	}
 }
 
-// Test_DurationUnit tests duration unit names and lookup.
-func Test_DurationUnit(t *testing.T) {
-	tests := []struct {
-		unit DurationUnit
-		name string
-	}{
-		{Millisecond, "millisecond"},
-		{Second, "second"},
-		{Minute, "minute"},
-		{Hour, "hour"},
-		{Day, "day"},
-		{Week, "week"},
-	}
-	for _, test := range tests {
-		if got := test.unit.String(); got != test.name {
-			t.Errorf("expected name %q, got %q", test.name, got)
-		}
-		got, ok := DurationUnitByName(test.name)
-		if !ok || got != test.unit {
-			t.Errorf("expected unit %d and true, got %d and %t", test.unit, got, ok)
-		}
-	}
-	if got, ok := DurationUnitByName("seconds"); ok || got != DurationUnit(0) {
-		t.Fatalf("expected invalid unit and false, got %d and %t", got, ok)
-	}
-}
-
 // Test_Semantics tests names and lookup for semantics.
 func Test_Semantics(t *testing.T) {
 	tests := []struct {
@@ -116,16 +89,11 @@ func Test_SemanticsInvalidStrings(t *testing.T) {
 		{CountryFormat(1), "%!CountryFormat(1)"},
 		{CountryFormat(4), "%!CountryFormat(4)"},
 		{CountryFormat(127), "%!CountryFormat(127)"},
-		{DurationUnit(-128), "%!DurationUnit(-128)"},
-		{DurationUnit(-1), "%!DurationUnit(-1)"},
-		{DurationUnit(0), "%!DurationUnit(0)"},
-		{DurationUnit(7), "%!DurationUnit(7)"},
-		{DurationUnit(127), "%!DurationUnit(127)"},
-		{UnitOfMeasure(-128), "%!UnitOfMeasure(-128)"},
-		{UnitOfMeasure(-1), "%!UnitOfMeasure(-1)"},
-		{UnitOfMeasure(0), "%!UnitOfMeasure(0)"},
-		{UnitOfMeasure(21), "%!UnitOfMeasure(21)"},
-		{UnitOfMeasure(127), "%!UnitOfMeasure(127)"},
+		{Unit(-128), "%!Unit(-128)"},
+		{Unit(-1), "%!Unit(-1)"},
+		{Unit(0), "%!Unit(0)"},
+		{Unit(29), "%!Unit(29)"},
+		{Unit(127), "%!Unit(127)"},
 	}
 	for _, test := range tests {
 		if got := test.value.String(); got != test.name {
@@ -187,10 +155,10 @@ func Test_TypeSemanticsConfiguration(t *testing.T) {
 	if currency, ok := money.Currency(); !ok || currency != "EUR" {
 		t.Fatalf("expected EUR and true, got %q and %t", currency, ok)
 	}
-	if got := Decimal(10, 2).AsMeasurement(Kilogram).UnitOfMeasure(); got != Kilogram {
+	if got := Decimal(10, 2).AsMeasurement(Kilogram).Unit(); got != Kilogram {
 		t.Fatalf("expected kilogram, got %s", got)
 	}
-	if got := Int(64).AsDuration(Week).DurationUnit(); got != Week {
+	if got := Int(64).AsDuration(Week).Unit(); got != Week {
 		t.Fatalf("expected week, got %s", got)
 	}
 }
@@ -221,15 +189,15 @@ func Test_TypeSemanticsConfigurationPanics(t *testing.T) {
 		{"money on real float", func() { Float(64).Real().AsMoney() }},
 		{"percentage on int", func() { Int(32).AsPercentage() }},
 		{"measurement on JSON", func() { JSON().AsMeasurement(Kilogram) }},
-		{"measurement invalid unit", func() { Int(64).AsMeasurement(UnitOfMeasure(0)) }},
+		{"measurement invalid unit", func() { Int(64).AsMeasurement(Unit(0)) }},
 		{"duration on ordinary float", func() { Float(32).AsDuration(Second) }},
-		{"duration invalid unit", func() { Int(64).AsDuration(DurationUnit(0)) }},
+		{"duration invalid unit", func() { Int(64).AsDuration(Unit(0)) }},
+		{"duration measurement-only unit", func() { Int(64).AsDuration(Kilogram) }},
 		{"duplicate semantics", func() { String().AsEmail().AsPhone() }},
 		{"invalid currency", func() { Decimal(10, 2).AsMoney().WithCurrency("usd") }},
 		{"currency without money", func() { Decimal(10, 2).WithCurrency("EUR") }},
 		{"country format without country", func() { String().CountryFormat() }},
-		{"duration unit without duration", func() { Int(64).DurationUnit() }},
-		{"unit of measure without measurement", func() { Decimal(10, 2).UnitOfMeasure() }},
+		{"unit without measurement or duration", func() { Decimal(10, 2).Unit() }},
 		{"max bytes after country", func() { String().AsCountry(ISO3166Alpha2).WithMaxBytes(2) }},
 		{"max length after country", func() { String().AsCountry(ISO3166Alpha2).WithMaxLength(2) }},
 		{"pattern after country", func() { String().AsCountry(ISO3166Alpha2).WithPattern(regexp.MustCompile(".")) }},
@@ -268,6 +236,35 @@ func Test_TypeSemanticsCopyOnWrite(t *testing.T) {
 	}
 }
 
+// Test_TypeHasSemantics tests whether a type has semantics.
+func Test_TypeHasSemantics(t *testing.T) {
+	tests := []struct {
+		name  string
+		type_ Type
+		want  bool
+	}{
+		{"zero", Type{}, false},
+		{"string", String(), false},
+		{"constrained string", String().WithMaxLength(10), false},
+		{"nested semantics", Array(String().AsEmail()), false},
+		{"email", String().AsEmail(), true},
+		{"phone", String().AsPhone(), true},
+		{"URL", String().AsURL(), true},
+		{"country", String().AsCountry(ISO3166Alpha2), true},
+		{"money", Decimal(10, 2).AsMoney(), true},
+		{"percentage", Decimal(10, 2).AsPercentage(), true},
+		{"measurement", Int(64).AsMeasurement(Kilogram), true},
+		{"duration", Int(32).AsDuration(Second), true},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := test.type_.HasSemantics(); got != test.want {
+				t.Fatalf("expected HasSemantics to return %t, got %t", test.want, got)
+			}
+		})
+	}
+}
+
 // Test_EqualSemantics tests semantics equality while ignoring kind and
 // unrelated type properties.
 func Test_EqualSemantics(t *testing.T) {
@@ -288,6 +285,7 @@ func Test_EqualSemantics(t *testing.T) {
 		{"different duration unit", Int(64).AsDuration(Second), Int(64).AsDuration(Minute), false},
 		{"equal measurement", Decimal(10, 2).AsMeasurement(Kilogram), Int(64).AsMeasurement(Kilogram), true},
 		{"different measurement unit", Decimal(10, 2).AsMeasurement(Kilogram), Int(64).AsMeasurement(Gram), false},
+		{"measurement and duration with same unit", Int(64).AsMeasurement(Second), Int(64).AsDuration(Second), false},
 		{"money without currency", Decimal(10, 2).AsMoney(), Decimal(18, 4).AsMoney(), true},
 		{
 			"equal money currency", Decimal(10, 2).AsMoney().WithCurrency("EUR"),
@@ -444,8 +442,12 @@ func Test_TypeSemanticsJSONErrors(t *testing.T) {
 		},
 		{"missing duration unit", `{"kind":"int","bitSize":64,"semantics":"duration"}`, "missing duration unit"},
 		{
-			"invalid duration unit", `{"kind":"int","bitSize":64,"semantics":"duration","unit":"month"}`,
-			`invalid duration unit "month"`,
+			"invalid duration unit", `{"kind":"int","bitSize":64,"semantics":"duration","unit":"fortnight"}`,
+			`invalid duration unit "fortnight"`,
+		},
+		{
+			"measurement-only duration unit", `{"kind":"int","bitSize":64,"semantics":"duration","unit":"kg"}`,
+			`invalid duration unit "kg"`,
 		},
 		{
 			"unexpected email currency", `{"kind":"string","semantics":"email","currency":"EUR"}`,
@@ -557,8 +559,16 @@ func Test_TypeSemanticsJSONRoundTrip(t *testing.T) {
 			`{"kind":"decimal","semantics":"measurement","unit":"kg","precision":10,"scale":2}`,
 		},
 		{
+			"measurement time unit", Float(64).Real().AsMeasurement(Second),
+			`{"kind":"float","semantics":"measurement","unit":"second","bitSize":64,"real":true}`,
+		},
+		{
 			"duration", Int(64).AsDuration(Millisecond),
 			`{"kind":"int","semantics":"duration","unit":"millisecond","bitSize":64}`,
+		},
+		{
+			"duration year", Float(64).Real().AsDuration(YearUnit),
+			`{"kind":"float","semantics":"duration","unit":"year","bitSize":64,"real":true}`,
 		},
 		{"array email", Array(String().AsEmail()), `{"kind":"array","elementType":{"kind":"string","semantics":"email"}}`},
 		{
@@ -588,43 +598,63 @@ func Test_TypeSemanticsJSONRoundTrip(t *testing.T) {
 	}
 }
 
-// Test_UnitOfMeasure tests unit-of-measure names and lookup.
-func Test_UnitOfMeasure(t *testing.T) {
+// Test_Unit tests unit names, lookup, and usability.
+func Test_Unit(t *testing.T) {
 	tests := []struct {
-		unit UnitOfMeasure
-		name string
+		unit     Unit
+		name     string
+		duration bool
 	}{
-		{Gram, "g"},
-		{Kilogram, "kg"},
-		{Millimeter, "mm"},
-		{Centimeter, "cm"},
-		{Meter, "m"},
-		{Kilometer, "km"},
-		{Milliliter, "mL"},
-		{Liter, "L"},
-		{Byte, "B"},
-		{Kilobyte, "kB"},
-		{Megabyte, "MB"},
-		{Gigabyte, "GB"},
-		{Celsius, "°C"},
-		{Fahrenheit, "°F"},
-		{Ounce, "oz"},
-		{Pound, "lb"},
-		{Inch, "in"},
-		{Foot, "ft"},
-		{Yard, "yd"},
-		{Mile, "mi"},
+		{Gram, "g", false},
+		{Kilogram, "kg", false},
+		{Millimeter, "mm", false},
+		{Centimeter, "cm", false},
+		{Meter, "m", false},
+		{Kilometer, "km", false},
+		{Milliliter, "mL", false},
+		{Liter, "L", false},
+		{Byte, "B", false},
+		{Kilobyte, "kB", false},
+		{Megabyte, "MB", false},
+		{Gigabyte, "GB", false},
+		{Celsius, "°C", false},
+		{Fahrenheit, "°F", false},
+		{Ounce, "oz", false},
+		{Pound, "lb", false},
+		{Inch, "in", false},
+		{Foot, "ft", false},
+		{Yard, "yd", false},
+		{Mile, "mi", false},
+		{Millisecond, "millisecond", true},
+		{Second, "second", true},
+		{Minute, "minute", true},
+		{Hour, "hour", true},
+		{Day, "day", true},
+		{Week, "week", true},
+		{Month, "month", true},
+		{YearUnit, "year", true},
 	}
 	for _, test := range tests {
 		if got := test.unit.String(); got != test.name {
 			t.Errorf("expected name %q, got %q", test.name, got)
 		}
-		got, ok := UnitOfMeasureByName(test.name)
+		got, ok := UnitByName(test.name)
 		if !ok || got != test.unit {
 			t.Errorf("expected unit %d and true, got %d and %t", test.unit, got, ok)
 		}
+		if !test.unit.IsMeasurementUnit() {
+			t.Errorf("expected IsMeasurementUnit of %s to be true, got false", test.name)
+		}
+		if got := test.unit.IsDurationUnit(); got != test.duration {
+			t.Errorf("expected IsDurationUnit of %s to be %t, got %t", test.name, test.duration, got)
+		}
 	}
-	if got, ok := UnitOfMeasureByName("kilogram"); ok || got != UnitOfMeasure(0) {
+	if got, ok := UnitByName("kilogram"); ok || got != Unit(0) {
 		t.Fatalf("expected invalid unit and false, got %d and %t", got, ok)
+	}
+	for _, u := range []Unit{-1, 0, 29} {
+		if m, d := u.IsMeasurementUnit(), u.IsDurationUnit(); m || d {
+			t.Errorf("expected IsMeasurementUnit and IsDurationUnit of %d to be false, got %t and %t", u, m, d)
+		}
 	}
 }

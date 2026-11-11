@@ -201,7 +201,7 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 			if !outSchema.Valid() {
 				return errors.BadRequest("output schema is required by the mapping")
 			}
-			transformer, err := mappings.New(tr.Mapping, inSchema, outSchema, false)
+			transformer, err := mappings.New(tr.Mapping, inSchema, outSchema)
 			if err != nil {
 				return errors.BadRequest("invalid mapping: %s", err)
 			}
@@ -342,18 +342,11 @@ func validatePipelineToSet(pipeline PipelineToSet, v validationState) error {
 			}
 		}
 		// Check the semantics.
-		if !types.EqualSemantics(in.Type, out.Type) {
+		if in.Type.HasSemantics() && out.Type.HasSemantics() && !types.EqualSemantics(in.Type, out.Type) {
 			if in.Type.Semantics() != out.Type.Semantics() {
-				inSemantics, outSemantics := in.Type.Semantics().String(), out.Type.Semantics().String()
-				if in.Type.Semantics() == types.NoSemantics {
-					inSemantics = "no"
-				}
-				if out.Type.Semantics() == types.NoSemantics {
-					outSemantics = "no"
-				}
 				return errors.BadRequest(
 					"input matching property has %s semantics, but output matching property requires %s semantics",
-					inSemantics, outSemantics)
+					in.Type.Semantics(), out.Type.Semantics())
 			}
 			option := "semantics option"
 			switch in.Type.Semantics() {

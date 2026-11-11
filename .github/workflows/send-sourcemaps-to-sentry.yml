@@ -31,7 +31,7 @@ jobs:
           persist-credentials: false
 
       - name: Setup Go (needed for building assets)
-        uses: actions/setup-go@v6
+        uses: actions/setup-go@v7
         with:
           # Keep in sync with the version within ".github/workflows/*.yml".
           # Keep in sync with the version within "Dockerfile".
@@ -48,7 +48,7 @@ jobs:
         run: go generate
 
       - name: Decompress .br assets using Brotli
-        run: find -name "*.br" -not -path "./shoelace/*" | xargs brotli -dvf
+        run: find -name "*.br" -not -path "./icons/*" | xargs brotli -dvf
         working-directory: ./admin/assets
 
       - name: Upload the source maps to Sentry
