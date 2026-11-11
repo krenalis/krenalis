@@ -49,13 +49,6 @@ const processQueue = async () => {
 	isProcessingQueue = false;
 };
 
-const enqueueRequest = (url: string, request: RequestInit): Promise<Response> => {
-	return new Promise((resolve, reject) => {
-		requestQueue.push({ url, request, resolve, reject });
-		processQueue();
-	});
-};
-
 const call = async (url: string, method: string, workspaceID?: string | null, body?: any, opt?: any) => {
 	let headers = {
 		'Content-Type': 'application/json',
@@ -79,7 +72,10 @@ const call = async (url: string, method: string, workspaceID?: string | null, bo
 
 	let res: Response;
 	try {
-		res = await enqueueRequest(url, request);
+		res = await new Promise<Response>((resolve, reject) => {
+			requestQueue.push({ url, request, resolve, reject });
+			processQueue();
+		});
 	} catch (err) {
 		if (err.name === 'AbortError') {
 			throw err;
