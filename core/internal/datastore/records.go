@@ -164,7 +164,7 @@ func records(ctx context.Context, warehouse warehouses.Warehouse, query Query, c
 		Limit:     query.Limit,
 	}, false)
 	if err != nil {
-		return nil, warehouseError(err)
+		return nil, err
 	}
 
 	records := &Records{
@@ -366,6 +366,8 @@ func (r *Records) Close() error {
 
 // Err returns any error encountered during iteration which may have occurred
 // after an explicit or implicit Close.
+//
+// If a data warehouse error occurs, it returns a *WarehouseError.
 func (r *Records) Err() error {
 	return r.err
 }
