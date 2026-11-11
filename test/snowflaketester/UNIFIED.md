@@ -268,6 +268,43 @@ provenance is therefore incomplete; the helper above applies to subsequent runs,
 without retroactively certifying them. Historical subtest labels `latest2/1/0`
 and `difference/3` correspond to the current `latest2/some` and `difference/le`.
 
+## Live UTC/non-UTC results on 2026-11-11
+
+All four blocks ran twice on `981927691abc1ea79766d2c5fd2e1c88ff6aa72e`, first
+with UTC and then with America/Los_Angeles. Each run used its own freshly
+generated overlay, required session evidence and retained source manifests.
+All eight blocks reported stable sources, no malformed session records and
+successful output-redaction checks.
+
+| Block | UTC PASS | America/Los_Angeles PASS | SKIP |
+| --- | ---: | ---: | ---: |
+| Physical warehouse | 337 | 337 | 0 |
+| Physical connector | 1 | 1 | 0 |
+| Unified conformance and stored numbers | 44 | 44 | 0 |
+| Float Record filters | 482 | 482 | 0 |
+| Total, including parent nodes | 864 | 864 | 0 |
+
+The sorted package/test/action records matched across the two configurations.
+Each configuration recorded 19 session verifications: 8 for the warehouse
+block, 5 for the connector, 4 for Unified and 2 for Float Record filters. Every
+record confirmed the requested timezone, NTZ mapping, AUTO timestamp input and
+the 60-second statement timeout. These results cover the fixture expectations,
+including the Rome calendar's spring/autumn transitions and microsecond borders.
+No statement timed out; timeout/cancellation failure behavior was not exercised.
+
+Each manifest audit reported 8 schemas created and 8 dropped, with no missing
+or unmatched records. A separate read-only server inventory checked all 16
+campaign schema names and found none remaining. It listed 23 other test schemas,
+which were left untouched. The inventory itself passed with stable sources.
+
+Evidence is under `/tmp/krenalis-snowflake-p1-live-zsbbhh91/`: `summary.json`,
+the `UTC/` and `America-Los_Angeles/` manifests and redacted JSON logs, and
+`inventory/report.json` with the inventory's source overlay and manifest.
+No implementation change was needed. This verifies P1's two session
+configurations; resource-monitor policies and credit limits were not inspected.
+The production gate remains closed and the remaining acceptance coverage below
+still applies.
+
 ## Coverage still required before activation
 
 Passing the commands above is necessary, but is not the complete acceptance
@@ -289,10 +326,10 @@ In particular, the following work remains explicit:
 - Statement timeout/cancellation during execution, scan/iteration/close errors,
   malformed/oversized results, additional timestamp precisions, session changes
   and a small scale/resource smoke test.
-- Non-UTC session settings and timestamp input formats on every test connection,
-  with effective parameters and environment-wide server time limits recorded.
-  The per-connection login/verification overlay is prepared locally; the UTC and
-  America/Los_Angeles remote runs have not yet been performed with it.
+- Timestamp input formats beyond AUTO and environment-level resource controls.
+  UTC and America/Los_Angeles with NTZ/AUTO and per-session 60-second statement
+  limits are covered above; these runs do not verify resource-monitor policies
+  or credit limits.
 
 No gate change follows automatically from a green reduced suite. Resolve observed
 differences, finish the acceptance checklist and keep a repeatable remote
