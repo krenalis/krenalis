@@ -1645,12 +1645,10 @@ func (core *Core) executeAlterProfileSchema(workspace, opID string, schema types
 			}
 			// In case of OperationError log it, then go on and send an
 			// EndAlterProfileSchema notification.
-			if err != nil {
-				if err2, ok := errors.AsType[*warehouses.OperationError](err); ok {
-					slog.Error("alter schema ended with an error", "error", err2)
-					alterSchemaErr = err2
-					break
-				}
+			if err2, ok := errors.AsType[*warehouses.OperationError](err); ok {
+				slog.Error("alter schema ended with an error", "error", err2)
+				alterSchemaErr = err2
+				break
 			}
 			// In case of unknown error, try again.
 			slog.Error("alter schema on warehouse returned an unknown error; retrying", "retry_after", bo.WaitTime(), "error", err)

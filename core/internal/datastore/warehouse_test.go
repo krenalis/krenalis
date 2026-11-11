@@ -69,8 +69,8 @@ func (r *errorRows) Scan(dest ...any) error {
 	return nil
 }
 
-// TestWarehouseErrors verifies that callers can identify the original error
-// through exactly one WarehouseError, including terminal operation errors.
+// TestWarehouseErrors verifies that wrapping adds exactly one *WarehouseError
+// and preserves the original cause, including *warehouses.OperationError.
 func TestWarehouseErrors(t *testing.T) {
 	tests := []struct {
 		name  string
@@ -98,8 +98,8 @@ func TestWarehouseErrors(t *testing.T) {
 	}
 }
 
-// TestWarehouseRows verifies that both query methods preserve results and wrap
-// errors encountered during scanning, iteration, and closing.
+// TestWarehouseRows verifies that both query methods preserve row values and
+// counts and wrap errors from queries, scanning, iteration, and closing.
 func TestWarehouseRows(t *testing.T) {
 	for _, method := range []string{"Query", "QueryReadOnly"} {
 		t.Run(method, func(t *testing.T) {
@@ -136,9 +136,6 @@ func TestWarehouseRows(t *testing.T) {
 			}
 			assertWarehouseError(t, rows.Err(), nil)
 
-			innerRows.scanErr = errors.New("scan failed")
-			err = rows.Scan(values...)
-			assertWarehouseError(t, err, innerRows.scanErr)
 			innerRows.rowsErr = errors.New("iteration failed")
 			assertWarehouseError(t, rows.Err(), innerRows.rowsErr)
 			innerRows.closeErr = errors.New("close failed")
@@ -147,6 +144,19 @@ func TestWarehouseRows(t *testing.T) {
 			if !innerRows.closed {
 				t.Fatal("expected closed rows, got open rows")
 			}
+
+			scanRows := &errorRows{next: true, scanErr: errors.New("scan failed")}
+			inner.rows = scanRows
+			rows, _, err = query()
+			if err != nil {
+				t.Fatalf("expected successful query, got %v", err)
+			}
+			if rows == nil || !rows.Next() {
+				t.Fatal("expected a row, got none")
+			}
+			defer rows.Close()
+			err = rows.Scan(values...)
+			assertWarehouseError(t, err, scanRows.scanErr)
 
 			inner.rows = nil
 			inner.err = &warehouses.RejectedReadOnlyQueryError{Msg: "query rejected"}
@@ -160,8 +170,8 @@ func TestWarehouseRows(t *testing.T) {
 	}
 }
 
-// assertWarehouseError checks that err wraps cause exactly once, preserving
-// error identity, or is nil when cause is nil.
+// assertWarehouseError checks that err is nil if cause is nil, and otherwise is
+// a *WarehouseError wrapping cause directly.
 func assertWarehouseError(t *testing.T, err, cause error) {
 	t.Helper()
 	if err != nil {
@@ -169,11 +179,18 @@ func assertWarehouseError(t *testing.T, err, cause error) {
 			t.Fatalf("expected no error, got %v", err)
 		}
 		wrapped, ok := err.(*WarehouseError)
-		if !ok {
-			t.Fatalf("expected WarehouseError, got %T", err)
+		if !ok || wrapped == nil {
+			t.Fatalf("expected non-nil *WarehouseError, got %#v", err)
 		}
-		if wrapped.Err != cause || !errors.Is(err, cause) {
+		if wrapped.Err != cause {
 			t.Fatalf("expected original cause %v, got %v", cause, wrapped.Err)
+		}
+		unwrapped := errors.Unwrap(err)
+		if unwrapped != cause {
+			t.Fatalf("expected Unwrap() to return %v, got %v", cause, unwrapped)
+		}
+		if !errors.Is(err, cause) {
+			t.Fatal("expected errors.Is(err, cause) to return true, got false")
 		}
 		return
 	}
