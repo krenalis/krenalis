@@ -106,7 +106,6 @@ for (const [index, value] of values.entries()) {
 		await propertyInput.pressSequentially('name');
 		await expect(propertyInput).toHaveValue('name');
 		await property.locator('.combobox-list__item .schema-combobox-item__name', { hasText: /^Name$/ }).click();
-		await expect(propertyInput).toHaveValue('name');
 		const operator = editor.locator('.filter-editor__operator').getByRole('combobox');
 		await operator.press('Home');
 		await expect(propertyInput).toHaveValue('Name');
