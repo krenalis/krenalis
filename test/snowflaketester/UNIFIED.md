@@ -59,8 +59,9 @@ warehouse, connector and schema-creation helper. Tracked production sources stay
 unchanged. Regenerate after source changes; do not reuse old implementation copies.
 
 ```sh
+session_timezone=UTC
 campaign_dir=$(mktemp -d /tmp/krenalis-snowflake-campaign.XXXXXX)
-python3 -B test/snowflaketester/prepare.py "$campaign_dir" --timezone UTC
+python3 -B test/snowflaketester/prepare.py "$campaign_dir" --timezone "$session_timezone"
 
 # Compile and prove that the bootstrap still skips before credential access.
 KRENALIS_SKIP_SNOWFLAKE_TESTS=true go test -overlay "$campaign_dir/overlay.json" \
@@ -73,7 +74,7 @@ separately without an overlay (`TestUnifiedProfilesSnowflakeGate` above). Do not
 run the whole datastore package with the gate overlaid: gate-contract assertions
 intentionally expect it to be closed. There is no runtime bypass.
 Run the remote blocks once with UTC, then in a fresh campaign directory prepared
-with `--timezone America/Los_Angeles`. This DST zone differs from the Rome calendar
+after setting `session_timezone=America/Los_Angeles`. This DST zone differs from the Rome calendar
 used by the fixtures. Both runs use the same expectations and cover half-open
 microsecond borders and the spring/autumn calendar transitions.
 
@@ -143,6 +144,16 @@ records; `KRENALIS_SKIP_SNOWFLAKE_TESTS=false` enables the same requirement.
 The helper collects generated schema names before masking output and
 updates the manifest when creation/drop records arrive, including before a run
 completes. Generated schema names are not credentials.
+The campaign commands also require `--require-session-timezone "$session_timezone"`.
+Before masking, the runner records session verification counts by timezone in
+`sessions.verified`, the requested zone in `sessions.required_timezone` and the
+number of malformed records in `sessions.invalid_records`. Only the two campaign
+timezone names are stored; unrecognized field values are discarded.
+A block fails if verification records are absent, malformed, mixed or use a
+different timezone (exit 6 if otherwise successful). This also detects an omitted
+or wrong overlay. Without the option, session collection does not add a failure
+condition. Inspect each block's exit and session evidence alongside the schema
+cleanup audit.
 
 Run the following blocks in order, stopping on a failed prerequisite:
 
@@ -150,22 +161,26 @@ Run the following blocks in order, stopping on a failed prerequisite:
 # Credentials must already have been supplied through the environment.
 # These commands are remote, including tests that do not need the Unified gate.
 KRENALIS_SKIP_SNOWFLAKE_TESTS=false python3 test/snowflaketester/run.py --require-schemas \
-  "$campaign_dir/physical-warehouse.jsonl" -- -overlay "$campaign_dir/overlay.json" ./warehouses/snowflake \
+  --require-session-timezone "$session_timezone" "$campaign_dir/physical-warehouse.jsonl" -- \
+  -overlay "$campaign_dir/overlay.json" ./warehouses/snowflake \
   -run '^(TestJSONNumbers|TestProfileExactDecimal|TestJSONExpressions|Test_Merge)$' \
   -timeout=30m
 
 KRENALIS_SKIP_SNOWFLAKE_TESTS=false python3 test/snowflaketester/run.py --require-schemas \
-  "$campaign_dir/physical-connector.jsonl" -- -overlay "$campaign_dir/overlay.json" ./connectors/snowflake \
+  --require-session-timezone "$session_timezone" "$campaign_dir/physical-connector.jsonl" -- \
+  -overlay "$campaign_dir/overlay.json" ./connectors/snowflake \
   -run '^Test_Merge_Query$' -timeout=15m
 
 KRENALIS_SKIP_SNOWFLAKE_TESTS=false python3 test/snowflaketester/run.py --require-schemas \
-  "$campaign_dir/unified-snowflake.jsonl" -- -overlay "$campaign_dir/overlay.json" \
+  --require-session-timezone "$session_timezone" "$campaign_dir/unified-snowflake.jsonl" -- \
+  -overlay "$campaign_dir/overlay.json" \
   ./core/internal/datastore -run '^TestUnified(StoredNumbers|Conformance)Snowflake$' \
   -timeout=45m
 
 # The PostgreSQL arm is skipped: this block isolates real Snowflake Record reads.
 KRENALIS_SKIP_SNOWFLAKE_TESTS=false python3 test/snowflaketester/run.py --require-schemas \
-  "$campaign_dir/record-floats.jsonl" -- -overlay "$campaign_dir/overlay.json" ./core/internal/datastore \
+  --require-session-timezone "$session_timezone" "$campaign_dir/record-floats.jsonl" -- \
+  -overlay "$campaign_dir/overlay.json" ./core/internal/datastore \
   -run '^TestJSONFloatFilters$/Snowflake' -timeout=15m
 ```
 

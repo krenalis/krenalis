@@ -15,6 +15,8 @@ ROOT = Path(__file__).resolve().parents[2]
 RUNNER = Path(__file__).with_name("run.py")
 PACKAGE = "github.com/krenalis/krenalis/warehouses/snowflake"
 SCHEMA = "KRENALIS_TEST_SCHEMA_123_" + "abcdef01" * 4
+SESSION = ("Snowflake test session parameters timezone={timezone} timestamp_type_mapping=TIMESTAMP_NTZ "
+           "timestamp_input_format=AUTO statement_timeout_in_seconds=60\n")
 
 
 class RunTest(unittest.TestCase):
@@ -58,7 +60,7 @@ raise SystemExit(int(os.environ.get('FAKE_EXIT', '0')))
                                 cwd=ROOT, env=self.environment, capture_output=True, text=True)
         return result, json.loads(result.stdout)
 
-    def block(self, events, *, values=None, arguments=None, require_schemas=False, go_exit=0, mutate=None, output_bytes=None):
+    def block(self, events, *, values=None, arguments=None, require_schemas=False, go_exit=0, mutate=None, output_bytes=None, require_session_timezone=None):
         self.number += 1
         path = self.directory / str(self.number) / "run.jsonl"
         environment = dict(self.environment, FAKE_EVENTS=json.dumps(events), FAKE_EXIT=str(go_exit))
@@ -71,6 +73,8 @@ raise SystemExit(int(os.environ.get('FAKE_EXIT', '0')))
         command = [sys.executable, str(RUNNER)]
         if require_schemas:
             command.append("--require-schemas")
+        if require_session_timezone is not None:
+            command.extend(["--require-session-timezone", require_session_timezone])
         command.extend([str(path), "--", *(arguments or ["./warehouses/snowflake"])])
         result = subprocess.run(command, cwd=ROOT, env=environment, capture_output=True, text=True)
         self.assertEqual(result.stderr, "")
@@ -240,6 +244,77 @@ raise SystemExit(int(os.environ.get('FAKE_EXIT', '0')))
         result, _, manifest = self.block([self.event("pass")])
         self.assertEqual(result.returncode, 4)
         self.assertTrue(manifest["schemas"]["required"])
+
+    def test_session_timezone_is_recorded_before_redaction(self):
+        for timezone in ["UTC", "America/Los_Angeles"]:
+            with self.subTest(timezone=timezone):
+                record = SESSION.format(timezone=timezone)
+                output = "x" * 4090 + record
+                events = [self.event("output", output[offset:offset + 1024])
+                          for offset in range(0, len(output), 1024)]
+                result, path, manifest = self.block([*events, self.event("output", record), self.event("pass")],
+                    values={"DATABASE": timezone, "ROLE": "test"}, require_session_timezone=timezone)
+                self.assertEqual(result.returncode, 0)
+                self.assertEqual(manifest["sessions"], {"required_timezone": timezone,
+                    "verified": {timezone: 2}, "invalid_records": 0})
+                self.assertNotIn("timezone=" + timezone, path.read_text())
+                self.assertEqual(manifest["counts"], {"pass": 1})
+
+    def test_session_timezone_requirement_rejects_missing_or_different_records(self):
+        utc, other = SESSION.format(timezone="UTC"), SESSION.format(timezone="America/Los_Angeles")
+        unknown = SESSION.format(timezone="sensitive" * 1024)
+        for outputs, verified, invalid in [
+            ([], {}, 0),
+            ([utc], {}, 0),  # A raw non-event line is not verification evidence.
+            ([self.event("output", other)], {"America/Los_Angeles": 1}, 0),
+            ([self.event("output", utc + other)], {"UTC": 1, "America/Los_Angeles": 1}, 0),
+            ([self.event("output", utc + SESSION.format(timezone="Europe/Rome"))], {"UTC": 1}, 1),
+            ([self.event("output", utc + unknown)], {"UTC": 1}, 1),
+            ([self.event("output", utc + utc.replace("=60", "=600"))], {"UTC": 1}, 1),
+            ([self.event("output", "Snowflake test session parameters\n")], {}, 1),
+        ]:
+            with self.subTest(verified=verified, invalid=invalid):
+                result, _, manifest = self.block([*outputs, self.event("pass")], require_session_timezone="UTC")
+                self.assertEqual(result.returncode, 6)
+                self.assertEqual(manifest["go_exit"], 0)
+                self.assertEqual(manifest["exit"], 6)
+                self.assertEqual(manifest["sessions"], {"required_timezone": "UTC", "verified": verified,
+                                                       "invalid_records": invalid})
+                self.assertNotIn("sensitive" * 1024, json.dumps(manifest))
+
+    def test_session_timezone_collection_is_optional(self):
+        for output, verified in [("no session records\n", {}),
+                                 (SESSION.format(timezone="UTC") + SESSION.format(timezone="America/Los_Angeles"),
+                                  {"UTC": 1, "America/Los_Angeles": 1})]:
+            with self.subTest(verified=verified):
+                result, _, manifest = self.block([self.event("output", output), self.event("pass")])
+                self.assertEqual(result.returncode, 0)
+                self.assertEqual(manifest["sessions"], {"required_timezone": None, "verified": verified,
+                                                       "invalid_records": 0})
+
+    def test_session_timezone_preserves_existing_failure_codes(self):
+        for events, options, expected in [
+            ([self.event("fail")], {"go_exit": 1}, 1),
+            ([self.event("skip"), self.event("pass")], {}, 3),
+            ([self.event("pass")], {"require_schemas": True}, 4),
+            ([self.event("pass")], {"output_bytes": 4 * 1024 * 1024 + 1}, 5),
+        ]:
+            with self.subTest(expected=expected):
+                result, _, manifest = self.block(events, require_session_timezone="UTC", **options)
+                self.assertEqual(result.returncode, expected)
+                self.assertEqual(manifest["exit"], expected)
+                self.assertEqual(manifest["sessions"]["verified"], {})
+
+    def test_session_timezone_options_reject_invalid_uses(self):
+        for options in [["--require-session-timezone", "Europe/Rome"],
+                        ["--audit", "--require-session-timezone", "UTC"]]:
+            with self.subTest(options=options):
+                path = self.directory / "invalid.jsonl"
+                result = subprocess.run([sys.executable, str(RUNNER), *options, str(path)], cwd=ROOT,
+                                        env=self.environment, capture_output=True, text=True)
+                self.assertEqual(result.returncode, 2)
+                self.assertFalse(path.exists())
+                self.assertFalse(path.with_suffix(".manifest.json").exists())
 
     def test_audit_rejects_absent_or_old_evidence(self):
         directory = self.directory / "audit"

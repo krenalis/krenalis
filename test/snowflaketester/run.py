@@ -19,6 +19,12 @@ import sys
 MAX_OUTPUT_BYTES = 4 * 1024 * 1024
 SCHEMA_NAME = r"KRENALIS_TEST_SCHEMA_[0-9]+_[0-9a-f]{32}"
 SCHEMA_EVENT = re.compile(r"Snowflake test schema (created|dropped) schema=(" + SCHEMA_NAME + r")\b", re.IGNORECASE)
+SESSION_TIMEZONES = ("UTC", "America/Los_Angeles")
+# Count malformed markers without retaining their untrusted field values.
+SESSION_EVENT = re.compile(
+    r'Snowflake test session parameters\b(?:"?[ \t]+timezone=(UTC|America/Los_Angeles)[ \t]+'
+    r'timestamp_type_mapping=TIMESTAMP_NTZ[ \t]+timestamp_input_format=AUTO[ \t]+'
+    r'statement_timeout_in_seconds=60(?=\s|$))?')
 
 
 def audit_schemas(directory):
@@ -151,12 +157,14 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--audit", action="store_true", help="audit schema evidence in a manifest directory")
     parser.add_argument("--require-schemas", action="store_true", help="require schema creation and complete cleanup")
+    parser.add_argument("--require-session-timezone", choices=SESSION_TIMEZONES,
+                        help="require session verification records with this timezone only")
     parser.add_argument("path", type=Path)
     parser.add_argument("go_args", nargs=argparse.REMAINDER)
     options = parser.parse_args()
     arguments = options.go_args
     if options.audit:
-        if arguments or options.require_schemas:
+        if arguments or options.require_schemas or options.require_session_timezone is not None:
             parser.error("--audit takes only a manifest directory")
         return audit_schemas(options.path)
     if arguments[:1] == ["--"]:
@@ -194,6 +202,8 @@ def main():
                 "schemas": {"required": options.require_schemas or
                             os.environ.get("KRENALIS_SKIP_SNOWFLAKE_TESTS") == "false",
                             "created": {}, "dropped": {}},
+                "sessions": {"required_timezone": options.require_session_timezone,
+                             "verified": {}, "invalid_records": 0},
                 "output_limit_exceeded": False,
                 "redaction": {"case_insensitive": True, "output_only": True,
                               "max_output_bytes": MAX_OUTPUT_BYTES,
@@ -217,7 +227,14 @@ def main():
                         names = manifest["schemas"][action.lower()]
                         name = name.upper()
                         names[name] = names.get(name, 0) + 1
-                    if records:
+                    session_records = SESSION_EVENT.findall(output)
+                    for timezone in session_records:
+                        if timezone == "":
+                            manifest["sessions"]["invalid_records"] += 1
+                        else:
+                            verified = manifest["sessions"]["verified"]
+                            verified[timezone] = verified.get(timezone, 0) + 1
+                    if records or session_records:
                         write_manifest(manifest_path, manifest)
                     if mask is not None:
                         event["Output"] = mask.sub("<SNOWFLAKE_TEST_VALUE>", output)
@@ -242,6 +259,10 @@ def main():
         code = 4
     if code == 0 and manifest["output_limit_exceeded"]:
         code = 5
+    sessions = manifest["sessions"]
+    if code == 0 and sessions["required_timezone"] is not None:
+        if sessions["invalid_records"] or set(sessions["verified"]) != {sessions["required_timezone"]}:
+            code = 6
     manifest["exit"] = code
     write_manifest(manifest_path, manifest)
     print(json.dumps({"log": str(log_path), "manifest": str(manifest_path), "exit": manifest["exit"],
