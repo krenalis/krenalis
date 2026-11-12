@@ -1403,9 +1403,7 @@ func (this *Workspace) StartIdentityResolution(ctx context.Context) error {
 //   - DifferentWarehouse, if the settings connect to a different
 //     data warehouse.
 //   - InvalidWarehouseSettings, if the settings are not valid.
-//   - NotReadOnlyMCPSettings, if the MCP settings do not grant access to a
-//     read-only user on the data warehouse.
-func (this *Workspace) TestWarehouseUpdate(ctx context.Context, settings, mcpSettings json.Value) error {
+func (this *Workspace) TestWarehouseUpdate(ctx context.Context, settings json.Value) error {
 	this.core.mustBeOpen()
 	ws := this.workspace
 	settings, err := this.core.datastore.ValidateWarehouseSettings(ctx, ws.Organization().ID, ws.Warehouse.Platform, settings)
@@ -1414,28 +1412,6 @@ func (this *Workspace) TestWarehouseUpdate(ctx context.Context, settings, mcpSet
 			return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse settings are not valid: %w", err.Err)
 		}
 		return err
-	}
-	if mcpSettings != nil {
-		mcpSettings, err = this.core.datastore.ValidateWarehouseSettings(ctx, ws.Organization().ID, ws.Warehouse.Platform, mcpSettings)
-		if err != nil {
-			if err, ok := err.(*warehouses.SettingsError); ok {
-				return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse MCP settings are not valid: %w", err.Err)
-			}
-			return err
-		}
-		if bytes.Equal(settings, mcpSettings) {
-			return errors.Unprocessable(InvalidWarehouseSettings, "the MCP settings must be different from the data warehouse settings")
-		}
-		err = this.core.datastore.CheckMCPSettings(ctx, ws.Organization().ID, ws.Warehouse.Platform, mcpSettings)
-		if err != nil {
-			if err, ok := err.(*warehouses.SettingsNotReadOnly); ok {
-				return errors.Unprocessable(NotReadOnlyMCPSettings, "invalid MCP settings: %s", err)
-			}
-			if err, ok := err.(*datastore.UnavailableError); ok {
-				return errors.Unavailable("%s", err)
-			}
-			return err
-		}
 	}
 	err = this.store.TestWarehouseUpdate(ctx, settings)
 	if err != nil {
@@ -1581,8 +1557,7 @@ func (this *Workspace) UpdateIdentityResolutionSettings(ctx context.Context, run
 	return err
 }
 
-// UpdateWarehouse updates the mode, settings and MCP settings (which can be
-// nil) of the warehouse associated with the workspace.
+// UpdateWarehouse updates the mode and settings of the workspace warehouse.
 //
 // If cancelIncompatibleOperations is true, the operations currently in progress
 // on the warehouse that are incompatible with mode are canceled.
@@ -1593,9 +1568,7 @@ func (this *Workspace) UpdateIdentityResolutionSettings(ctx context.Context, run
 //   - DifferentWarehouse, if the settings connect to a different
 //     data warehouse.
 //   - InvalidWarehouseSettings, if the settings are not valid.
-//   - NotReadOnlyMCPSettings, if the MCP settings do not grant access to a
-//     read-only user on the data warehouse.
-func (this *Workspace) UpdateWarehouse(ctx context.Context, mode WarehouseMode, settings, mcpSettings json.Value, cancelIncompatibleOperations bool) error {
+func (this *Workspace) UpdateWarehouse(ctx context.Context, mode WarehouseMode, settings json.Value, cancelIncompatibleOperations bool) error {
 	this.core.mustBeOpen()
 
 	switch mode {
@@ -1612,29 +1585,6 @@ func (this *Workspace) UpdateWarehouse(ctx context.Context, mode WarehouseMode, 
 			return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse settings are not valid: %w", err.Err)
 		}
 		return err
-	}
-
-	if mcpSettings != nil {
-		mcpSettings, err = this.core.datastore.ValidateWarehouseSettings(ctx, ws.Organization().ID, ws.Warehouse.Platform, mcpSettings)
-		if err != nil {
-			if err, ok := err.(*warehouses.SettingsError); ok {
-				return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse MCP settings are not valid: %w", err.Err)
-			}
-			return err
-		}
-		if bytes.Equal(settings, mcpSettings) {
-			return errors.Unprocessable(InvalidWarehouseSettings, "the MCP settings must be different from the data warehouse settings")
-		}
-		err = this.core.datastore.CheckMCPSettings(ctx, ws.Organization().ID, ws.Warehouse.Platform, mcpSettings)
-		if err != nil {
-			if err, ok := err.(*warehouses.SettingsNotReadOnly); ok {
-				return errors.Unprocessable(NotReadOnlyMCPSettings, "invalid MCP settings: %s", err)
-			}
-			if err, ok := err.(*datastore.UnavailableError); ok {
-				return errors.Unavailable("%s", err)
-			}
-			return err
-		}
 	}
 
 	err = this.store.TestWarehouseUpdate(ctx, settings)
@@ -1657,16 +1607,10 @@ func (this *Workspace) UpdateWarehouse(ctx context.Context, mode WarehouseMode, 
 	if err != nil {
 		return err
 	}
-	if mcpSettings != nil {
-		n.MCPSettings, err = ws.EncryptWarehouseMCPSettings(ctx, mcpSettings)
-		if err != nil {
-			return err
-		}
-	}
 
 	err = this.core.state.Transaction(ctx, func(tx *db.Tx) (any, error) {
-		result, err := tx.Exec(ctx, "UPDATE workspaces SET warehouse_mode = $1, warehouse_settings = $2, warehouse_mcp_settings = $3 WHERE id = $4",
-			n.Mode, n.Settings, n.MCPSettings, n.Workspace)
+		result, err := tx.Exec(ctx, "UPDATE workspaces SET warehouse_mode = $1, warehouse_settings = $2 WHERE id = $3",
+			n.Mode, n.Settings, n.Workspace)
 		if err != nil {
 			return nil, err
 		}
@@ -1732,21 +1676,14 @@ func (this *Workspace) UpdateWarehouseMode(ctx context.Context, mode WarehouseMo
 	return err
 }
 
-// Warehouse returns platform, settings and MCP settings of the data warehouse
-// for the workspace.
-func (this *Workspace) Warehouse(ctx context.Context) (string, json.Value, json.Value, error) {
+// Warehouse returns the platform and settings of the workspace warehouse.
+func (this *Workspace) Warehouse(ctx context.Context) (string, json.Value, error) {
 	this.core.mustBeOpen()
-	ws := this.workspace
-	settings, err := ws.WarehouseSettings(ctx)
+	settings, err := this.workspace.WarehouseSettings(ctx)
 	if err != nil {
-		return "", nil, nil, err
+		return "", nil, err
 	}
-	mcpSettings, err := ws.WarehouseMCPSettings(ctx)
-	if err != nil {
-		clear(settings)
-		return "", nil, nil, err
-	}
-	return ws.Warehouse.Platform, settings, mcpSettings, nil
+	return this.workspace.Warehouse.Platform, settings, nil
 }
 
 // identities returns the identities matching the provided where condition and

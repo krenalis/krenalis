@@ -657,11 +657,10 @@ type CreateWorkspace struct {
 	ProfileSchema                  types.Type
 	ResolveIdentitiesOnBatchImport bool
 	Warehouse                      struct {
-		Platform       string
-		Mode           WarehouseMode
-		Settings       []byte
-		SettingsKey    []byte
-		MCPSettingsKey []byte
+		Platform    string
+		Mode        WarehouseMode
+		Settings    []byte
+		SettingsKey []byte
 	}
 	UIPreferences UIPreferences
 }
@@ -692,7 +691,6 @@ func (state *State) createWorkspace(n notification) string {
 	ws.Warehouse.Mode = e.Warehouse.Mode
 	ws.Warehouse.settings = e.Warehouse.Settings
 	ws.Warehouse.settingsKey = state.cipher.Key(e.Warehouse.SettingsKey)
-	ws.Warehouse.mcpSettingsKey = state.cipher.Key(e.Warehouse.MCPSettingsKey)
 	state.mu.Lock()
 	state.workspaces[e.ID] = &ws
 	state.mu.Unlock()
@@ -1778,20 +1776,13 @@ type UpdateWarehouse struct {
 	Workspace                    string
 	Mode                         WarehouseMode
 	Settings                     []byte
-	MCPSettings                  []byte
 	CancelIncompatibleOperations bool
 	settingsHaveChanged          bool
-	mcpSettingsHaveChanged       bool
 }
 
 // SettingsHaveChanged reports whether settings have changed.
 func (n UpdateWarehouse) SettingsHaveChanged() bool {
 	return n.settingsHaveChanged
-}
-
-// MCPSettingsHaveChanged reports whether MCP settings have changed.
-func (n UpdateWarehouse) MCPSettingsHaveChanged() bool {
-	return n.mcpSettingsHaveChanged
 }
 
 // updateWarehouse updates a warehouse.
@@ -1802,9 +1793,6 @@ func (state *State) updateWarehouse(n notification) string {
 		w.Warehouse.Mode = e.Mode
 		if e.settingsHaveChanged = !bytes.Equal(w.Warehouse.settings, e.Settings); e.settingsHaveChanged {
 			w.Warehouse.settings = e.Settings
-		}
-		if e.mcpSettingsHaveChanged = !bytes.Equal(w.Warehouse.mcpSettings, e.MCPSettings); e.mcpSettingsHaveChanged {
-			w.Warehouse.mcpSettings = e.MCPSettings
 		}
 	})
 	dispatchNotification(state, e)

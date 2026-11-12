@@ -5,9 +5,12 @@
 package test
 
 import (
+	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/krenalis/krenalis/test/krenalistester"
+	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 )
 
@@ -48,5 +51,43 @@ func TestWarehouse(t *testing.T) {
 	// The call to UpdateWarehouse should also succeed, as the warehouse
 	// to connect to is the same as the one currently connected to.
 	k.UpdateWarehouse("Normal", settings)
+
+	t.Run("no warehouse MCP credentials", func(t *testing.T) {
+		var response map[string]json.Value
+		k.Call("GET", "/v1/warehouse", nil, nil, &response)
+		if _, present := response["mcpSettings"]; present {
+			t.Fatal("expected no mcpSettings response field, got present")
+		}
+	})
+
+	for _, endpoint := range []string{"/v1/warehouse/test", "/v1/warehouse"} {
+		t.Run(endpoint+"/null", func(t *testing.T) {
+			k.Call("PUT", endpoint, nil, map[string]any{
+				"settings": settings, "mode": "Normal", "mcpSettings": nil,
+			}, nil)
+		})
+		for _, test := range []struct {
+			name  string
+			value any
+		}{
+			{"object", map[string]any{"username": "retired"}},
+			{"array", []any{}}, {"string", ""}, {"boolean", false}, {"number", 0},
+		} {
+			t.Run(endpoint+"/"+test.name, func(t *testing.T) {
+				err := k.TryCall("PUT", endpoint, nil, map[string]any{
+					"settings": settings, "mode": "Normal", "mcpSettings": test.value,
+				}, nil)
+				if err != nil {
+					status, ok := err.(*krenalistester.StatusCodeError)
+					if !ok || status.Response.Code != http.StatusBadRequest ||
+						!strings.Contains(status.Response.Text, "mcpSettings has been removed") {
+						t.Fatalf("expected removed-field HTTP 400, got %v", err)
+					}
+					return
+				}
+				t.Fatal("expected removed-field HTTP 400, got success")
+			})
+		}
+	}
 
 }

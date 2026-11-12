@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"reflect"
 	"slices"
-	"strings"
 	"testing"
 	"time"
 
@@ -470,116 +469,6 @@ func Test_stripZeroBytes(t *testing.T) {
 				t.Fatalf("expected %q, got %q", test.expected, got)
 			}
 		})
-	}
-}
-
-// Test_QueryReadOnly verifies that QueryReadOnly returns rows for valid
-// read-only statements.
-func Test_QueryReadOnly(t *testing.T) {
-	wh, pool := newTestPostgreSQLWarehouse(t)
-
-	mustExecSQL(t, pool, `CREATE TABLE "test_queryreadonly" ("id" integer PRIMARY KEY, "name" text)`)
-	mustExecSQL(t, pool, `INSERT INTO "test_queryreadonly" ("id", "name") VALUES (1, 'a'), (2, 'b')`)
-
-	rows, columnCount, err := wh.QueryReadOnly(context.Background(), `SELECT "id", "name" FROM "test_queryreadonly" ORDER BY "id"`)
-	if err != nil {
-		t.Fatalf("QueryReadOnly returned error: %s", err)
-	}
-	defer rows.Close()
-	if columnCount != 2 {
-		t.Fatalf("expected 2 columns, got %d", columnCount)
-	}
-
-	var id int32
-	var name string
-	if !rows.Next() {
-		t.Fatal("expected first row, got none")
-	}
-	if err := rows.Scan(&id, &name); err != nil {
-		t.Fatalf("unexpected scan error on first row: %s", err)
-	}
-	if id != 1 || name != "a" {
-		t.Fatalf("unexpected first row: id=%d name=%q", id, name)
-	}
-
-	if !rows.Next() {
-		t.Fatal("expected second row, got none")
-	}
-	if err := rows.Scan(&id, &name); err != nil {
-		t.Fatalf("unexpected scan error on second row: %s", err)
-	}
-	if id != 2 || name != "b" {
-		t.Fatalf("unexpected second row: id=%d name=%q", id, name)
-	}
-
-	if rows.Next() {
-		t.Fatal("expected 2 rows, got more")
-	}
-	if err := rows.Err(); err != nil {
-		t.Fatalf("unexpected rows error: %s", err)
-	}
-}
-
-// Test_QueryReadOnly_closeIdempotent ensures that closing read-only rows more
-// than once is harmless.
-func Test_QueryReadOnly_closeIdempotent(t *testing.T) {
-	wh, _ := newTestPostgreSQLWarehouse(t)
-
-	rows, _, err := wh.QueryReadOnly(context.Background(), `SELECT 1`)
-	if err != nil {
-		t.Fatalf("QueryReadOnly returned error: %s", err)
-	}
-	if err := rows.Close(); err != nil {
-		t.Fatalf("first Close returned error: %s", err)
-	}
-	if err := rows.Close(); err != nil {
-		t.Fatalf("second Close returned error: %s", err)
-	}
-}
-
-// Test_QueryReadOnly_readOnlyTransaction ensures that PostgreSQL still enforces
-// read-only execution if a statement slips past lexical validation.
-func Test_QueryReadOnly_readOnlyTransaction(t *testing.T) {
-	wh, pool := newTestPostgreSQLWarehouse(t)
-
-	mustExecSQL(t, pool, `CREATE TABLE "test_queryreadonly_writes" ("value" integer NOT NULL)`)
-	mustExecSQL(t, pool, `
-CREATE FUNCTION test_queryreadonly_write(integer, integer)
-RETURNS integer
-LANGUAGE plpgsql
-AS $$
-BEGIN
-	INSERT INTO "test_queryreadonly_writes" ("value") VALUES ($1 + $2);
-	RETURN $1 + $2;
-END;
-$$`)
-	mustExecSQL(t, pool, `
-CREATE OPERATOR <#> (
-	LEFTARG = integer,
-	RIGHTARG = integer,
-	FUNCTION = test_queryreadonly_write
-)`)
-
-	rows, _, err := wh.QueryReadOnly(context.Background(), `SELECT 1 <#> 2`)
-	if err == nil {
-		defer rows.Close()
-		for rows.Next() {
-		}
-		err = rows.Err()
-	}
-	if err == nil {
-		t.Fatal("expected QueryReadOnly to fail in a read-only transaction")
-	}
-	if !strings.Contains(err.Error(), "read-only transaction") {
-		t.Fatalf("expected read-only transaction error, got %q", err)
-	}
-
-	var count int
-	if err := pool.QueryRow(context.Background(), `SELECT COUNT(*) FROM "test_queryreadonly_writes"`).Scan(&count); err != nil {
-		t.Fatalf("cannot count writes: %s", err)
-	}
-	if count != 0 {
-		t.Fatalf("expected 0 writes, got %d", count)
 	}
 }
 

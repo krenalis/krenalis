@@ -113,7 +113,7 @@ func TestNotificationProducer(t *testing.T) {
 		{"create-empty-mapping-and-object", CreatePipeline{Transformation: Transformation{Mapping: map[string]string{}, InPaths: []string{}, OutPaths: []string{}}, FormatSettings: json.Value(`{}`)}, 1},
 		{"update-no-transformation-unset-nil", UpdatePipeline{}, 1},
 		{"update-function-no-mapping-unset-empty", UpdatePipeline{Transformation: Transformation{Function: function}, PropertiesToUnset: []string{}}, 1},
-		{"remove-mcp-settings", UpdateWarehouse{Workspace: stateTestWorkspaceID, MCPSettings: nil}, 1},
+		{"warehouse-settings", UpdateWarehouse{Workspace: stateTestWorkspaceID, Settings: []byte("updated")}, 1},
 	}
 	// These are encoded SQL-buffer lengths. Raw Base64 cannot have length
 	// 1 modulo 4, so 8000 is the nearest attainable size above 7998.
@@ -206,18 +206,18 @@ func TestNotificationProducer(t *testing.T) {
 					t.Fatal("expected absent mapping and original function/unset properties including nil/empty, got different values")
 				}
 			case *UpdateWarehouse:
-				if e.MCPSettings != nil {
-					t.Fatalf("expected nil MCP settings, got %#v", e.MCPSettings)
+				if !bytes.Equal(e.Settings, tc.event.(UpdateWarehouse).Settings) {
+					t.Fatalf("expected warehouse settings %s, got %s", tc.event.(UpdateWarehouse).Settings, e.Settings)
 				}
 				for _, n := range []notification{logged, received} {
 					org := &Organization{mu: &sync.Mutex{}, workspaces: map[string]*Workspace{}}
 					ws := &Workspace{mu: &sync.Mutex{}, ID: stateTestWorkspaceID, organization: org}
-					ws.Warehouse.mcpSettings = []byte("previous value")
+					ws.Warehouse.settings = []byte("previous value")
 					org.workspaces[ws.ID] = ws
 					state := &State{mu: &sync.Mutex{}, workspaces: map[string]*Workspace{ws.ID: ws}}
 					state.updateWarehouse(n)
-					if state.workspaces[ws.ID].Warehouse.mcpSettings != nil {
-						t.Fatal("expected removal of previous MCP settings, got retained value")
+					if !bytes.Equal(state.workspaces[ws.ID].Warehouse.settings, e.Settings) {
+						t.Fatal("expected updated warehouse settings, got previous value")
 					}
 				}
 			}

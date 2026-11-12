@@ -562,10 +562,6 @@ func (this *Organization) CreateWorkspace(ctx context.Context, name string, prof
 	if err != nil {
 		return "", err
 	}
-	n.Warehouse.MCPSettingsKey, err = this.core.state.GenerateKmsDataKey(ctx)
-	if err != nil {
-		return "", err
-	}
 
 	// Encode the profile schema to JSON.
 	encodedProfileSchema, err := json.Marshal(n.ProfileSchema)
@@ -592,12 +588,12 @@ func (this *Organization) CreateWorkspace(ctx context.Context, name string, prof
 			_, err = tx.Exec(ctx, "INSERT INTO workspaces (id, organization, name,"+
 				" profile_schema, resolve_identities_on_batch_import, ui_profile_image, ui_profile_first_name,"+
 				" ui_profile_last_name, ui_profile_extra, warehouse_name, warehouse_mode,"+
-				" warehouse_settings, kms_encrypted_warehouse_settings_key, kms_encrypted_warehouse_mcp_settings_key)"+
-				" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)",
+				" warehouse_settings, kms_encrypted_warehouse_settings_key)"+
+				" VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)",
 				n.ID, n.Organization, n.Name, encodedProfileSchema, n.ResolveIdentitiesOnBatchImport,
 				n.UIPreferences.Profile.Image, n.UIPreferences.Profile.FirstName,
 				n.UIPreferences.Profile.LastName, n.UIPreferences.Profile.Extra, n.Warehouse.Platform,
-				n.Warehouse.Mode, n.Warehouse.Settings, n.Warehouse.SettingsKey, n.Warehouse.MCPSettingsKey)
+				n.Warehouse.Mode, n.Warehouse.Settings, n.Warehouse.SettingsKey)
 			if err != nil {
 				if db.IsForeignKeyViolation(err) {
 					if db.ErrConstraintName(err) == "workspaces_organization_fkey" {

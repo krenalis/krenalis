@@ -893,12 +893,10 @@ type Workspace struct {
 	bucket      *ratelimiter.Bucket
 	eventBucket *ratelimiter.Bucket
 	Warehouse   struct {
-		Platform       string
-		Mode           WarehouseMode
-		settings       []byte
-		mcpSettings    []byte // decoded, it can be a JSON object or json.Value(nil)
-		settingsKey    *cipher.Key
-		mcpSettingsKey *cipher.Key
+		Platform    string
+		Mode        WarehouseMode
+		settings    []byte
+		settingsKey *cipher.Key
 	}
 	connections                    map[string]*Connection
 	ID                             string
@@ -1039,36 +1037,6 @@ func (workspace *Workspace) EncryptWarehouseSettings(ctx context.Context, settin
 	return key.Encrypt(ctx, settings)
 }
 
-// EncryptWarehouseMCPSettings encrypts the given MCP settings with the settings
-// key. If the given settings are the same as the current MCP settings, it
-// returns the current encrypted MCP settings.
-func (workspace *Workspace) EncryptWarehouseMCPSettings(ctx context.Context, settings json.Value) ([]byte, error) {
-	workspace.mu.Lock()
-	ciphertext := workspace.Warehouse.mcpSettings
-	workspace.mu.Unlock()
-	key := workspace.Warehouse.mcpSettingsKey
-	if ciphertext != nil {
-		plaintext, err := key.Decrypt(ctx, ciphertext)
-		if err != nil {
-			return nil, err
-		}
-		defer clear(plaintext)
-		if bytes.Equal(plaintext, settings) {
-			return ciphertext, nil
-		}
-	}
-	return key.Encrypt(ctx, settings)
-}
-
-// HasWarehouseMCPSettings reports whether the workspace has MCP settings
-// configured for the warehouse.
-func (workspace *Workspace) HasWarehouseMCPSettings() bool {
-	workspace.mu.Lock()
-	has := workspace.Warehouse.mcpSettings != nil
-	workspace.mu.Unlock()
-	return has
-}
-
 // NumPipelinesToPurge returns the number of pipelines to purge for the
 // workspace.
 func (workspace *Workspace) NumPipelinesToPurge() int {
@@ -1112,26 +1080,6 @@ func (workspace *Workspace) WarehouseSettings(ctx context.Context) (json.Value, 
 	settings := workspace.Warehouse.settings
 	workspace.mu.Unlock()
 	key := workspace.Warehouse.settingsKey
-	data, err := key.Decrypt(ctx, settings)
-	if err != nil {
-		return nil, err
-	}
-	if !json.Valid(data) {
-		return nil, errors.New("invalid settings")
-	}
-	return data, nil
-}
-
-// WarehouseMCPSettings returns the warehouse MCP settings.
-// It returns nil if there are no MCP settings.
-func (workspace *Workspace) WarehouseMCPSettings(ctx context.Context) (json.Value, error) {
-	workspace.mu.Lock()
-	settings := workspace.Warehouse.mcpSettings
-	workspace.mu.Unlock()
-	if settings == nil {
-		return nil, nil
-	}
-	key := workspace.Warehouse.mcpSettingsKey
 	data, err := key.Decrypt(ctx, settings)
 	if err != nil {
 		return nil, err

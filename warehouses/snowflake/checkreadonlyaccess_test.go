@@ -12,91 +12,10 @@ import (
 	"io"
 	"strings"
 	"testing"
-
-	"github.com/krenalis/krenalis/warehouses"
 )
 
-// Test_CheckReadOnlyAccess_rejectsNonReadOnlyPrivileges verifies that
-// CheckReadOnlyAccess rejects active Snowflake roles with non-read-only
-// privileges on Krenalis tables.
-func Test_CheckReadOnlyAccess_rejectsNonReadOnlyPrivileges(t *testing.T) {
-	db, queries := newCheckReadOnlyTestDB(t, []checkReadOnlyQuery{
-		{
-			match: `FROM "KRENALIS_PROFILE_SCHEMA_VERSIONS"`,
-			cols:  []string{"VERSION"},
-			rows:  [][]driver.Value{{int64(1)}},
-		},
-		{
-			match: `FROM "INFORMATION_SCHEMA"."TABLE_PRIVILEGES"`,
-			cols:  []string{"TABLE_NAME", "PRIVILEGE_TYPE"},
-			rows:  [][]driver.Value{{"KRENALIS_IDENTITIES", "INSERT"}},
-		},
-	})
-	defer db.Close()
-
-	wh := &Snowflake{db: db}
-	err := wh.CheckReadOnlyAccess(t.Context())
-	assertSettingsNotReadOnly(t, err)
-
-	if got := strings.Join(*queries, "\n"); !strings.Contains(got, `IS_ROLE_IN_SESSION("GRANTEE")`) {
-		t.Fatalf("expected role hierarchy check in query, got:\n%s", got)
-	}
-	if got := strings.Join(*queries, "\n"); !strings.Contains(got, `IS_DATABASE_ROLE_IN_SESSION("GRANTEE")`) {
-		t.Fatalf("expected database role hierarchy check in query, got:\n%s", got)
-	}
-	if !strings.Contains(err.Error(), "KRENALIS_IDENTITIES (INSERT)") {
-		t.Fatalf("expected KRENALIS_IDENTITIES INSERT in error, got %q", err.Error())
-	}
-}
-
-// Test_CheckReadOnlyAccess_acceptsExpectedReadOnlySurface verifies that
-// CheckReadOnlyAccess accepts credentials when no disallowed table privilege is
-// reported.
-func Test_CheckReadOnlyAccess_acceptsExpectedReadOnlySurface(t *testing.T) {
-	db, queries := newCheckReadOnlyTestDB(t, []checkReadOnlyQuery{
-		{
-			match: `FROM "KRENALIS_PROFILE_SCHEMA_VERSIONS"`,
-			cols:  []string{"VERSION"},
-			rows:  [][]driver.Value{{int64(1)}},
-		},
-		{
-			match: `FROM "INFORMATION_SCHEMA"."TABLE_PRIVILEGES"`,
-			cols:  []string{"TABLE_NAME", "PRIVILEGE_TYPE"},
-		},
-	})
-	defer db.Close()
-
-	wh := &Snowflake{db: db}
-	err := wh.CheckReadOnlyAccess(t.Context())
-	if err != nil {
-		t.Fatalf("expected read-only access to be accepted, got %s", err)
-	}
-	if got := len(*queries); got != 2 {
-		t.Fatalf("expected 2 queries, got %d:\n%s", got, strings.Join(*queries, "\n"))
-	}
-
-	got := strings.Join(*queries, "\n")
-	for _, want := range []string{
-		`KRENALIS_IDENTITIES`,
-		`KRENALIS_PROFILES_1`,
-	} {
-		if !strings.Contains(got, want) {
-			t.Fatalf("expected query to contain %q, got:\n%s", want, got)
-		}
-	}
-}
-
-// assertSettingsNotReadOnly fails the test unless err wraps a
-// warehouses.SettingsNotReadOnly value.
-func assertSettingsNotReadOnly(t *testing.T, err error) {
-	t.Helper()
-	if _, ok := errors.AsType[*warehouses.SettingsNotReadOnly](err); !ok {
-		t.Fatalf("expected warehouses.SettingsNotReadOnly, got %T (%v)", err, err)
-	}
-}
-
 // checkReadOnlyQuery describes one expected SQL query and the rows or error
-// returned by the fake CheckReadOnlyAccess database connection.
+// returned by the fake warehouse database connection.
 type checkReadOnlyQuery struct {
 	match    string
 	suffix   string
@@ -122,7 +41,7 @@ func newCheckReadOnlyTestDB(t *testing.T, responses []checkReadOnlyQuery) (*sql.
 }
 
 // checkReadOnlyConnector implements driver.Connector for the fake
-// CheckReadOnlyAccess database.
+// warehouse database.
 type checkReadOnlyConnector struct {
 	t         *testing.T
 	responses []checkReadOnlyQuery
@@ -149,7 +68,7 @@ func (checkReadOnlyDriver) Open(string) (driver.Conn, error) {
 }
 
 // checkReadOnlyConn implements the query-capable subset of driver.Conn used by
-// CheckReadOnlyAccess.
+// warehouse queries.
 type checkReadOnlyConn struct {
 	connector *checkReadOnlyConnector
 }
@@ -164,8 +83,7 @@ func (c *checkReadOnlyConn) Close() error {
 	return nil
 }
 
-// Begin is not implemented because CheckReadOnlyAccess does not start
-// transactions.
+// Begin is not implemented by the query-only test connection.
 func (c *checkReadOnlyConn) Begin() (driver.Tx, error) {
 	return nil, errors.New("checkReadOnlyConn.Begin is not implemented")
 }

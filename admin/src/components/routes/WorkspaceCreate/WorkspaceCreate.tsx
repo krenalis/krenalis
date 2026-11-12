@@ -79,7 +79,6 @@ const WorkspaceCreate = () => {
 
 		let warehouse = selectedWarehouse;
 		let settings = warehouseSettings;
-		let mcpSettings = null;
 		if (selectedWarehouse === 'PostgreSQL-Docker') {
 			warehouse = 'PostgreSQL';
 			settings = {
@@ -87,14 +86,6 @@ const WorkspaceCreate = () => {
 				port: 5432,
 				username: 'warehouse',
 				password: 'warehouse',
-				database: 'warehouse',
-				schema: 'public',
-			};
-			mcpSettings = {
-				host: 'warehouse',
-				port: 5432,
-				username: 'warehouse_ro',
-				password: 'warehouse_ro',
 				database: 'warehouse',
 				schema: 'public',
 			};
@@ -153,7 +144,6 @@ const WorkspaceCreate = () => {
 			}
 			try {
 				const newApi = new API(window.location.origin, id);
-				await newApi.workspaces.updateWarehouse(name, 'Normal', settings, mcpSettings, false);
 				for (const purpose of INITIAL_CONSENT_PURPOSES) {
 					await newApi.workspaces.addConsentPurpose(purpose.name, [{ purposeCode: purpose.purposeCode }], {
 						property: `consents.${purpose.purposeCode}`,

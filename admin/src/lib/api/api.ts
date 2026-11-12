@@ -795,10 +795,9 @@ class Workspaces {
 		});
 	};
 
-	testWarehouseUpdate = async (settings: any, mcpSettings: any): Promise<void> => {
+	testWarehouseUpdate = async (settings: any): Promise<void> => {
 		return await call(`${this.apiURL}/warehouse/test`, http.PUT, this.workspaceID, {
 			settings,
-			mcpSettings,
 		});
 	};
 
@@ -806,14 +805,12 @@ class Workspaces {
 		name: string,
 		mode: WarehouseMode,
 		settings: any,
-		mcpSettings: any | null,
 		cancelIncompatibleOperations: boolean,
 	): Promise<void> => {
 		return await call(`${this.apiURL}/warehouse`, http.PUT, this.workspaceID, {
 			name,
 			mode,
 			settings,
-			mcpSettings,
 			cancelIncompatibleOperations,
 		});
 	};

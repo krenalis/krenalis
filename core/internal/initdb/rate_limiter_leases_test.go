@@ -119,9 +119,8 @@ func TestRateLimitLeaseTimestampMonotonic(t *testing.T) {
 			warehouse_name,
 			warehouse_mode,
 			warehouse_settings,
-			kms_encrypted_warehouse_settings_key,
-			kms_encrypted_warehouse_mcp_settings_key
-		) VALUES ($1, $2, 'test', 'test', 'Normal', '\x01', '\x01', '\x01')`,
+			kms_encrypted_warehouse_settings_key
+		) VALUES ($1, $2, 'test', 'test', 'Normal', '\x01', '\x01')`,
 		workspaceID, organizationID)
 	if err != nil {
 		t.Fatal(err)

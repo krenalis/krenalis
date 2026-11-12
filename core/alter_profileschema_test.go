@@ -103,10 +103,10 @@ func TestAlterProfileSchemaFinalization(t *testing.T) {
 		// Only primary sources change, so execution needs no warehouse DDL.
 		_, err = database.Exec(t.Context(), `INSERT INTO workspaces
 				(id, organization, name, warehouse_name, warehouse_mode, warehouse_settings,
-				kms_encrypted_warehouse_settings_key, kms_encrypted_warehouse_mcp_settings_key,
+				kms_encrypted_warehouse_settings_key,
 				profile_schema, identifiers, alter_profile_schema_id, alter_profile_schema_schema,
 				alter_profile_schema_primary_sources, alter_profile_schema_operations)
-				SELECT $1, id, 'test', $5, 'Normal', '', '', '', $2, ARRAY['email'], $3, $2,
+				SELECT $1, id, 'test', $5, 'Normal', '', '', $2, ARRAY['email'], $3, $2,
 				jsonb_build_object('email', $4::text), '[]' FROM organizations`, workspace, raw, opID, source, platform)
 		if err != nil {
 			t.Fatalf("expected pending schema operation, got %v", err)

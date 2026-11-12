@@ -686,10 +686,10 @@ func (workspace workspace) TestWarehouseUpdate(_ http.ResponseWriter, r *http.Re
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	if body.MCPSettings != nil && body.MCPSettings.IsNull() {
-		body.MCPSettings = nil
+	if body.MCPSettings != nil && !body.MCPSettings.IsNull() {
+		return nil, errors.BadRequest("mcpSettings has been removed; warehouse credentials no longer configure MCP access")
 	}
-	err = ws.TestWarehouseUpdate(r.Context(), body.Settings, body.MCPSettings)
+	err = ws.TestWarehouseUpdate(r.Context(), body.Settings)
 	return nil, err
 }
 
@@ -787,10 +787,10 @@ func (workspace workspace) UpdateWarehouse(_ http.ResponseWriter, r *http.Reques
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	if body.MCPSettings != nil && body.MCPSettings.IsNull() {
-		body.MCPSettings = nil
+	if body.MCPSettings != nil && !body.MCPSettings.IsNull() {
+		return nil, errors.BadRequest("mcpSettings has been removed; warehouse credentials no longer configure MCP access")
 	}
-	err = ws.UpdateWarehouse(r.Context(), body.Mode, body.Settings, body.MCPSettings, body.CancelIncompatibleOperations)
+	err = ws.UpdateWarehouse(r.Context(), body.Mode, body.Settings, body.CancelIncompatibleOperations)
 	return nil, err
 }
 
@@ -990,20 +990,18 @@ func (workspace workspace) Profiles(w http.ResponseWriter, r *http.Request) (any
 	return nil, nil
 }
 
-// Warehouse returns the platform, settings and MCP settings of the data
-// warehouse for a workspace.
+// Warehouse returns the platform and settings of a workspace data warehouse.
 func (workspace workspace) Warehouse(_ http.ResponseWriter, r *http.Request) (any, error) {
 	ws, err := workspace.admitWorkspaceRequest(r, x1)
 	if err != nil {
 		return nil, err
 	}
-	platform, settings, mcpSettings, err := ws.Warehouse(r.Context())
+	platform, settings, err := ws.Warehouse(r.Context())
 	if err != nil {
 		return nil, err
 	}
 	return map[string]any{
-		"platform":    platform,
-		"settings":    settings,
-		"mcpSettings": mcpSettings,
+		"platform": platform,
+		"settings": settings,
 	}, nil
 }

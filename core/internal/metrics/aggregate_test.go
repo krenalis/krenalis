@@ -68,8 +68,8 @@ func newAggregateMetricsTestDatabase(t *testing.T) (*db.DB, string) {
 	}
 	_, err = database.Exec(ctx, `INSERT INTO workspaces
 		(id, organization, name, warehouse_name, warehouse_mode, warehouse_settings,
-		kms_encrypted_warehouse_settings_key, kms_encrypted_warehouse_mcp_settings_key)
-		VALUES ('workspace111', $1, 'metrics test', 'metrics test', 'Normal', $2, $2, $2)`,
+		kms_encrypted_warehouse_settings_key)
+		VALUES ('workspace111', $1, 'metrics test', 'metrics test', 'Normal', $2, $2)`,
 		organization, []byte{1})
 	if err != nil {
 		t.Fatal(err)

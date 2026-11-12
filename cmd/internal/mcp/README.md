@@ -65,6 +65,10 @@ profile properties and supported event conditions through the main connection.
 Administrators must review existing MCP keys when upgrading and revoke keys that
 should no longer have this access. No new key is created or re-scoped automatically.
 
+The warehouse settings API no longer returns `mcpSettings`. Its update/test PUTs
+accept omission or null for that retired field and reject any non-null value
+with HTTP 400; credential payloads cannot silently configure MCP access.
+
 On Snowflake this selects the main virtual warehouse. Record-only queries use the
 existing Record path. Behavioral queries and explanations retain the unverified
 backend gate and return an actionable capability error. Local tests do not

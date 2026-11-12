@@ -123,8 +123,8 @@ func TestUnifiedWritersPostgreSQL(t *testing.T) {
 	const eventPipeline = "555555555555"
 	_, err = database.Exec(t.Context(), `INSERT INTO workspaces
 (id,organization,name,warehouse_name,warehouse_mode,warehouse_settings,
- kms_encrypted_warehouse_settings_key,kms_encrypted_warehouse_mcp_settings_key,profile_schema,identifiers)
- SELECT $1,id,'Unified Writers',$2,'Normal','','','',$3,ARRAY[]::text[] FROM organizations`,
+ kms_encrypted_warehouse_settings_key,profile_schema,identifiers)
+ SELECT $1,id,'Unified Writers',$2,'Normal','','',$3,ARRAY[]::text[] FROM organizations`,
 		workspaceID, platform, encodedSchema)
 	if err != nil {
 		t.Fatalf("expected workspace state, got %v", err)

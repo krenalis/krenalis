@@ -87,23 +87,6 @@ func (ds *Datastore) CanInitialize(ctx context.Context, organization, platform s
 	return unavailableError(dw.Close())
 }
 
-// CheckMCPSettings checks that the MCP settings are valid, that is it checks
-// that datastore's warehouse access with these settings is read-only (at least
-// on the Krenalis tables), returning a *warehouses.WarehouseSettingsNotReadOnly
-// error in case it is not, explaining the reason.
-//
-// organization is the ID of the organization performing the operation.
-func (ds *Datastore) CheckMCPSettings(ctx context.Context, organization, platform string, settings json.Value) error {
-	ds.mustBeOpen()
-	dw := warehouses.Registered(platform).New(newSettingsLoader(settings), dialer.DialWith(organization))
-	defer dw.Close()
-	err := dw.CheckReadOnlyAccess(ctx)
-	if err != nil {
-		return unavailableError(err)
-	}
-	return unavailableError(dw.Close())
-}
-
 // Close closes the datastore. When Close is called, no other calls to
 // datastore's methods should be in progress and no other shall be made.
 // It panics if it has already been called.

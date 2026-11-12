@@ -12,3 +12,13 @@ base release. See `.agents/skills/release-upgrade/SKILL.md`.
   intended kind before release. This change provides no conversion or legacy
   reader; the release must address persisted filters before using the new
   format. Ordinary integer operands remain JSON numbers at every bit size.
+- Remove `workspaces.warehouse_mcp_settings` and
+  `workspaces.kms_encrypted_warehouse_mcp_settings_key`, discarding the stored
+  warehouse MCP credentials and their dedicated encryption key without
+  conversion. Preserve access keys of type MCP. Perform the upgrade offline:
+  stop all nodes before removing the columns, then restart all nodes on the
+  same new version; old nodes still write both columns. MCP profile access now
+  uses the main connection for every valid workspace-scoped MCP key, including
+  existing keys without warehouse MCP settings and keys formerly restricted
+  by read-only warehouse grants. Document this access change in the release
+  notes so administrators can review and revoke existing keys as needed.

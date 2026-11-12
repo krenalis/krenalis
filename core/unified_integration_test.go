@@ -131,8 +131,8 @@ INSERT INTO unified_v.krenalis_events VALUES
 	}
 	_, err = database.Exec(t.Context(), `INSERT INTO workspaces
  (id,organization,name,warehouse_name,warehouse_mode,warehouse_settings,
- kms_encrypted_warehouse_settings_key,kms_encrypted_warehouse_mcp_settings_key,profile_schema,identifiers)
- SELECT '111111111111',id,'Unified Count',$1,'Normal','','','',$2,ARRAY[]::text[] FROM organizations`, platform, schema)
+ kms_encrypted_warehouse_settings_key,profile_schema,identifiers)
+ SELECT '111111111111',id,'Unified Count',$1,'Normal','','',$2,ARRAY[]::text[] FROM organizations`, platform, schema)
 	if err != nil {
 		t.Fatalf("expected workspace state fixture, got %v", err)
 	}
@@ -142,8 +142,8 @@ INSERT INTO unified_v.krenalis_events VALUES
 		func(warehouses.SettingsLoader, warehouses.DialWith) *snowflake.Snowflake { return unverified })
 	_, err = database.Exec(t.Context(), `INSERT INTO workspaces
  (id,organization,name,warehouse_name,warehouse_mode,warehouse_settings,
- kms_encrypted_warehouse_settings_key,kms_encrypted_warehouse_mcp_settings_key,profile_schema,identifiers)
- SELECT '222222222222',id,'Unverified Count',$1,'Normal','','','',$2,ARRAY[]::text[]
+ kms_encrypted_warehouse_settings_key,profile_schema,identifiers)
+ SELECT '222222222222',id,'Unverified Count',$1,'Normal','','',$2,ARRAY[]::text[]
  FROM organizations`, unverifiedPlatform, schema)
 	if err != nil {
 		t.Fatalf("expected unverified backend fixture, got %v", err)

@@ -290,8 +290,8 @@ func newIdentityMetricsTestDatabase(t *testing.T) *db.DB {
 	} {
 		_, err := database.Exec(ctx, `INSERT INTO workspaces
 			(id, organization, name, warehouse_name, warehouse_mode, warehouse_settings,
-			kms_encrypted_warehouse_settings_key, kms_encrypted_warehouse_mcp_settings_key)
-			VALUES ($1, $2, 'metrics test', 'metrics test', 'Normal', $3, $3, $3)`,
+			kms_encrypted_warehouse_settings_key)
+			VALUES ($1, $2, 'metrics test', 'metrics test', 'Normal', $3, $3)`,
 			workspace, organization, []byte{1})
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
@@ -337,8 +337,8 @@ func TestDeletedConnectionMetricsRead(t *testing.T) {
 	const deletedConnection = "D33333333333"
 	_, err := database.Exec(ctx, `INSERT INTO workspaces
 		(id, organization, name, warehouse_name, warehouse_mode, warehouse_settings,
-		kms_encrypted_warehouse_settings_key, kms_encrypted_warehouse_mcp_settings_key)
-		VALUES ($1, $2, 'metrics test', 'metrics test', 'Normal', $3, $3, $3)`,
+		kms_encrypted_warehouse_settings_key)
+		VALUES ($1, $2, 'metrics test', 'metrics test', 'Normal', $3, $3)`,
 		workspace, organization, []byte{1})
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
@@ -573,8 +573,8 @@ func TestIdentityConnectionMetricsPerDate(t *testing.T) {
 	const workspace = "6PaS2mM6JwN4"
 	_, err := database.Exec(ctx, `INSERT INTO workspaces
 		(id, organization, name, warehouse_name, warehouse_mode, warehouse_settings,
-		kms_encrypted_warehouse_settings_key, kms_encrypted_warehouse_mcp_settings_key)
-		VALUES ($1, $2, 'metrics test', 'metrics test', 'Normal', $3, $3, $3)`,
+		kms_encrypted_warehouse_settings_key)
+		VALUES ($1, $2, 'metrics test', 'metrics test', 'Normal', $3, $3)`,
 		workspace, organization, []byte{1})
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)

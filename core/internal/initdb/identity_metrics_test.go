@@ -62,8 +62,8 @@ func TestIdentityMetricsSchema(t *testing.T) {
 	}
 	_, err = database.Exec(ctx, `INSERT INTO workspaces
 		(id, organization, name, warehouse_name, warehouse_mode, warehouse_settings,
-		kms_encrypted_warehouse_settings_key, kms_encrypted_warehouse_mcp_settings_key)
-		VALUES ('workspace111', $1, 'test', 'test', 'Normal', '\x01', '\x01', '\x01')`, organization)
+		kms_encrypted_warehouse_settings_key)
+		VALUES ('workspace111', $1, 'test', 'test', 'Normal', '\x01', '\x01')`, organization)
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
 	}

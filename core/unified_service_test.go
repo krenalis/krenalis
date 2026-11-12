@@ -196,8 +196,8 @@ func newUnifiedServiceWorkspace(t *testing.T, name string) (*Workspace, warehous
 	}
 	_, err = database.Exec(t.Context(), `INSERT INTO workspaces
  (id,organization,name,warehouse_name,warehouse_mode,warehouse_settings,
- kms_encrypted_warehouse_settings_key,kms_encrypted_warehouse_mcp_settings_key,profile_schema,identifiers)
- SELECT '111111111111',id,'Unified service',$1,'Normal','','','',$2,ARRAY[]::text[] FROM organizations`,
+ kms_encrypted_warehouse_settings_key,profile_schema,identifiers)
+ SELECT '111111111111',id,'Unified service',$1,'Normal','','',$2,ARRAY[]::text[] FROM organizations`,
 		platform, encoded)
 	if err != nil {
 		t.Fatalf("expected workspace state fixture, got %v", err)

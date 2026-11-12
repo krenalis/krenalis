@@ -1,8 +1,7 @@
-import React, { useContext, useState, useLayoutEffect, useRef } from 'react';
+import React, { useContext, useState, useLayoutEffect } from 'react';
 import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
 import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
 import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
-import SlCheckbox from '@shoelace-style/shoelace/dist/react/checkbox/index.js';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
 import { Warehouse } from './DataWarehouse.helpers';
 import appContext from '../../../context/AppContext';
@@ -19,7 +18,6 @@ interface DataWarehouseSettingsProps {
 	setSelectedWarehouse: React.Dispatch<React.SetStateAction<Warehouse | undefined>>;
 	currentMode: WarehouseMode | undefined;
 	currentSettings: WarehouseSettings | undefined;
-	currentMCPSettings: WarehouseSettings | undefined;
 }
 
 const DataWarehouseSettings = ({
@@ -27,18 +25,13 @@ const DataWarehouseSettings = ({
 	setSelectedWarehouse,
 	currentMode,
 	currentSettings,
-	currentMCPSettings,
 }: DataWarehouseSettingsProps) => {
 	const [mode, setMode] = useState<WarehouseMode>(currentMode || 'Normal');
 	const [settings, setSettings] = useState<Record<string, any> | undefined>(currentSettings);
-	const [mcpSettings, setMCPSettings] = useState<Record<string, any> | undefined>(currentMCPSettings);
 	const [isCheckLoading, setIsCheckLoading] = useState<boolean>(false);
 	const [isPipelineButtonLoading, setIsPipelineButtonLoading] = useState<boolean>(false);
-	const [isMCPEnabled, setIsMCPEnabled] = useState<boolean>(currentMCPSettings != null);
 
 	const { setTitle, api, handleError, showStatus, setIsLoadingWorkspaces } = useContext(appContext);
-
-	const usernameRef = useRef<any>(null);
 
 	useLayoutEffect(() => {
 		setTitle(`${selectedWarehouse.name} settings`);
@@ -53,10 +46,7 @@ const DataWarehouseSettings = ({
 	const onCheck = async () => {
 		setIsCheckLoading(true);
 		try {
-			await api.workspaces.testWarehouseUpdate(
-				settings,
-				isMCPEnabled ? (mcpSettings == null ? {} : mcpSettings) : null,
-			);
+			await api.workspaces.testWarehouseUpdate(settings);
 		} catch (err) {
 			setTimeout(() => {
 				handleError(err);
@@ -74,22 +64,6 @@ const DataWarehouseSettings = ({
 		}, 300);
 	};
 
-	const onEnableMCPSettings = () => {
-		setIsMCPEnabled(!isMCPEnabled);
-		if (!isMCPEnabled && mcpSettings == null) {
-			// pre-fill the settings with the values of the main credentials
-			// form (apart from username and password) and focus the username
-			// input.
-			const s = structuredClone(settings);
-			delete s.username;
-			delete s.password;
-			setMCPSettings(s);
-			setTimeout(() => {
-				usernameRef.current?.focus();
-			}, 300);
-		}
-	};
-
 	const onSave = async () => {
 		setIsPipelineButtonLoading(true);
 		try {
@@ -97,7 +71,6 @@ const DataWarehouseSettings = ({
 				selectedWarehouse.name,
 				mode,
 				settings,
-				isMCPEnabled ? (mcpSettings == null ? {} : mcpSettings) : null,
 				false,
 			);
 		} catch (err) {
@@ -172,39 +145,6 @@ const DataWarehouseSettings = ({
 							<SnowflakeSettings setSettings={setSettings} settings={settings} precompileDefault={true} />
 						)}
 					</div>
-				</Section>
-				<Section
-					title={warehouseSectionTexts.mcp.title}
-					description={warehouseSectionTexts.mcp.description}
-					padded={true}
-					annotated={true}
-				>
-					<SlCheckbox
-						checked={isMCPEnabled}
-						onSlChange={onEnableMCPSettings}
-						className='warehouse-settings__mcp-checkbox'
-					>
-						Grant read-only access to the data warehouse for AI queries
-					</SlCheckbox>
-					{isMCPEnabled && (
-						<div className='warehouse-settings__mcp-form'>
-							{selectedWarehouse.name === 'PostgreSQL' ? (
-								<PostgreSQLSettings
-									setSettings={setMCPSettings}
-									settings={mcpSettings}
-									precompileDefault={false}
-									inputRef={usernameRef}
-								/>
-							) : (
-								<SnowflakeSettings
-									setSettings={setMCPSettings}
-									settings={mcpSettings}
-									precompileDefault={false}
-									inputRef={usernameRef}
-								/>
-							)}
-						</div>
-					)}
 				</Section>
 			</div>
 			<div className='warehouse-settings__buttons'>

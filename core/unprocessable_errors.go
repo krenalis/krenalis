@@ -46,7 +46,6 @@ const (
 	MembersLimitReached            errors.Code = "MembersLimitReached"
 	MetricResultTooLarge           errors.Code = "MetricResultTooLarge"
 	NoColumnsFound                 errors.Code = "NoColumnsFound"
-	NotReadOnlyMCPSettings         errors.Code = "NotReadOnlyMCPSettings"
 	OperationAlreadyExecuting      errors.Code = "OperationAlreadyExecuting"
 	OrderNotExist                  errors.Code = "OrderNotExist"
 	OrderTypeNotSortable           errors.Code = "OrderTypeNotSortable"

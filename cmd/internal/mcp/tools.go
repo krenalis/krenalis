@@ -52,7 +52,7 @@ var tools = []server.ServerTool{
 			if err != nil {
 				return nil, err
 			}
-			platform, _, _, err := ws.Warehouse(ctx)
+			platform, _, err := ws.Warehouse(ctx)
 			if err != nil {
 				return nil, err
 			}

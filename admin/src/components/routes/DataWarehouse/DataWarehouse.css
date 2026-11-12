@@ -108,8 +108,7 @@
 	padding-left: 0;
 }
 
-.warehouse-settings__main-form > sl-input,
-.warehouse-settings__mcp-form > sl-input {
+.warehouse-settings__main-form > sl-input {
 	margin-bottom: 20px;
 }
 
@@ -117,8 +116,7 @@
 	margin-top: -8px;
 }
 
-.warehouse-settings__main-form > sl-input:last-child,
-.warehouse-settings__mcp-form > sl-input:last-child {
+.warehouse-settings__main-form > sl-input:last-child {
 	margin-bottom: 0;
 }
 
@@ -128,10 +126,6 @@
 
 .warehouse-info .section:nth-child(2) {
 	margin-top: 44px;
-}
-
-.warehouse-info__mcp-not-configured > span {
-	font-weight: 600;
 }
 
 .warehouse-settings__settings h2 {
@@ -161,11 +155,6 @@
 
 .warehouse-settings__mode-description {
 	font-size: 13px;
-}
-
-.warehouse-settings__mcp-form {
-	padding-left: 27px;
-	margin-top: 25px;
 }
 
 .warehouse-settings__buttons {

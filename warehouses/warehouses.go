@@ -133,22 +133,6 @@ func (op *AlterOperationType) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// RejectedReadOnlyQueryError reports that QueryReadOnly rejected a query.
-//
-// Function contains the normalized function name when the rejection is caused
-// by a non-allowed function or built-in. It is empty for other rejected
-// queries.
-//
-// Msg contains a human-readable description of the rejection.
-type RejectedReadOnlyQueryError struct {
-	Msg      string
-	Function string
-}
-
-func (e *RejectedReadOnlyQueryError) Error() string {
-	return e.Msg
-}
-
 // IdentityCounts contains counts of anonymous and recognized identities,
 // including those without a profile, grouped by connection.
 // A missing connection is equivalent to zero.
@@ -195,11 +179,6 @@ type Warehouse interface {
 	// It returns a *NonInitializableError error if the data warehouse
 	// cannot be initialized.
 	CanInitialize(ctx context.Context) error
-
-	// CheckReadOnlyAccess checks that the warehouse access is read-only, returning
-	// a *SettingsNotReadOnly error in case it is not, which may contain
-	// additional details.
-	CheckReadOnlyAccess(ctx context.Context) error
 
 	// Close closes the data warehouse. When Close is called, no other calls to
 	// data warehouse's methods are in progress and no more will be made.
@@ -285,21 +264,6 @@ type Warehouse interface {
 	// data directly into these arguments, rather than into the values they point
 	// to.
 	Query(ctx context.Context, query RowQuery, withTotal bool) (Rows, int, error)
-
-	// QueryReadOnly executes a read-only query and returns the results and the
-	// number of columns in each row.
-	//
-	// It rejects queries that the implementation does not accept as read-only.
-	// This validation is conservative, so some valid SQL queries may still be
-	// rejected.
-	//
-	// See the implementation documentation for security assumptions and
-	// deployment requirements.
-	//
-	// If the query is rejected, the returned error is a
-	// *RejectedReadOnlyQueryError. Its Function field is populated when the
-	// rejection is caused by a non-allowed function or built-in.
-	QueryReadOnly(ctx context.Context, query string) (Rows, int, error)
 
 	// ResolveIdentities resolves the identities.
 	//
@@ -780,16 +744,6 @@ func (e *SettingsError) Error() string {
 // a...) error.
 func SettingsErrorf(format string, a ...any) error {
 	return &SettingsError{Err: fmt.Errorf(format, a...)}
-}
-
-// SettingsNotReadOnly is an error that informs that the warehouse settings that
-// should be read only also have write access.
-type SettingsNotReadOnly struct {
-	Err error
-}
-
-func (err *SettingsNotReadOnly) Error() string {
-	return err.Err.Error()
 }
 
 // Expr represents a subset of SQL expressions.

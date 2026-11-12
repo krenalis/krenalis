@@ -344,8 +344,8 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 	// Read all workspaces.
 	state.workspaces = map[string]*Workspace{}
 	err = tx.QueryScan(ctx, "SELECT id, organization, name, warehouse_name,"+
-		" warehouse_mode, warehouse_settings, kms_encrypted_warehouse_settings_key, warehouse_mcp_settings,"+
-		" kms_encrypted_warehouse_mcp_settings_key, alter_profile_schema_id, alter_profile_schema_schema,"+
+		" warehouse_mode, warehouse_settings, kms_encrypted_warehouse_settings_key,"+
+		" alter_profile_schema_id, alter_profile_schema_schema,"+
 		" alter_profile_schema_primary_sources, alter_profile_schema_operations,"+
 		" alter_profile_schema_start_time, alter_profile_schema_end_time, alter_profile_schema_error,"+
 		" profile_schema, resolve_identities_on_batch_import, identifiers, ir_id, ir_start_time,"+
@@ -363,9 +363,9 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 					accounts:        map[int]*Account{},
 					consentPurposes: map[string]*ConsentPurpose{},
 				}
-				var settingsKey, mcpSettingsKey []byte
+				var settingsKey []byte
 				if err := rows.Scan(&ws.ID, &organizationID, &ws.Name, &warehousePlatform,
-					&warehouseMode, &ws.Warehouse.settings, &settingsKey, &ws.Warehouse.mcpSettings, &mcpSettingsKey,
+					&warehouseMode, &ws.Warehouse.settings, &settingsKey,
 					&ws.AlterProfileSchema.ID, &alterProfileSchemaSchema,
 					&ws.AlterProfileSchema.PrimarySources, &ws.AlterProfileSchema.Operations,
 					&ws.AlterProfileSchema.StartTime, &ws.AlterProfileSchema.EndTime,
@@ -385,7 +385,6 @@ func (state *State) load(ctx context.Context, oauthCredentials map[string]*OAuth
 				ws.Warehouse.Platform = warehousePlatform
 				ws.Warehouse.Mode = warehouseMode
 				ws.Warehouse.settingsKey = state.cipher.Key(settingsKey)
-				ws.Warehouse.mcpSettingsKey = state.cipher.Key(mcpSettingsKey)
 				err = json.Unmarshal(profileSchema, &ws.ProfileSchema)
 				if err != nil {
 					return fmt.Errorf("cannot load profile schema for workspace %s: %s", ws.ID, err)

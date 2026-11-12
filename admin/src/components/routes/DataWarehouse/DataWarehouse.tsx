@@ -17,7 +17,6 @@ const DataWarehouse = () => {
 	const [connectedWarehouse, setConnectedWarehouse] = useState<string>();
 	const [selectedWarehouse, setSelectedWarehouse] = useState<Warehouse>();
 	const [warehouseSettings, setWarehouseSettings] = useState<WarehouseSettings>();
-	const [warehouseMCPSettings, setWarehouseMCPSettings] = useState<WarehouseSettings>();
 	const [isLoading, setIsLoading] = useState<boolean>(true);
 
 	const { api, handleError, selectedWorkspace, workspaces, setTitle } = useContext(appContext);
@@ -32,7 +31,6 @@ const DataWarehouse = () => {
 				const response = await api.workspaces.warehouse();
 				setConnectedWarehouse(response.platform);
 				setWarehouseSettings(response.settings);
-				setWarehouseMCPSettings(response.mcpSettings);
 			} catch (err) {
 				handleError(err);
 				return;
@@ -68,13 +66,11 @@ const DataWarehouse = () => {
 					setSelectedWarehouse={setSelectedWarehouse}
 					currentMode={warehouseMode}
 					currentSettings={warehouseSettings}
-					currentMCPSettings={warehouseMCPSettings}
 				/>
 			) : (
 				<WarehouseInfo
 					warehouseName={connectedWarehouse}
 					warehouseSettings={warehouseSettings!}
-					warehouseMCPSettings={warehouseMCPSettings}
 					warehouseMode={warehouseMode}
 					setSelectedWarehouse={setSelectedWarehouse}
 				/>
@@ -86,7 +82,6 @@ const DataWarehouse = () => {
 interface WarehouseInfoProps {
 	warehouseName: string;
 	warehouseSettings: WarehouseSettings;
-	warehouseMCPSettings: WarehouseSettings;
 	warehouseMode: WarehouseMode;
 	setSelectedWarehouse: React.Dispatch<React.SetStateAction<Warehouse | undefined>>;
 }
@@ -106,13 +101,6 @@ const warehouseSectionTexts = {
 		title: 'Main credentials',
 		description: 'Read and write credentials used by Krenalis for accessing the data warehouse',
 	},
-	mcp: {
-		title: 'Read-only credentials',
-		description:
-			"Credentials used by the MCP SQL tool. Configuring them also enables query-profiles on Krenalis's main connection. " +
-			'Permissions on the separate MCP user do not restrict profile queries or their event conditions. ' +
-			'Snowflake uses the main virtual warehouse for query-profiles; Count is currently unavailable on Snowflake.',
-	},
 };
 
 const warehouseInfoColumns: GridColumn[] = [
@@ -127,7 +115,6 @@ const warehouseInfoColumns: GridColumn[] = [
 const WarehouseInfo = ({
 	warehouseName,
 	warehouseSettings,
-	warehouseMCPSettings,
 	warehouseMode,
 	setSelectedWarehouse,
 }: WarehouseInfoProps) => {
@@ -163,20 +150,6 @@ const WarehouseInfo = ({
 		rows.push(row);
 	}
 
-	const mcpRows: GridRow[] = [];
-	for (const k in warehouseMCPSettings) {
-		if (k.toLowerCase() === 'oidctoken') continue;
-		let value: ReactNode;
-		if (k === 'Password' || k === 'password') {
-			value = <PasswordToggle password={warehouseMCPSettings[k]} />;
-		} else {
-			value = warehouseMCPSettings[k];
-		}
-		const label = k[0].toUpperCase() + k.slice(1);
-		const row: GridRow = { cells: [<span style={{ fontWeight: '600' }}>{label}</span>, value] };
-		mcpRows.push(row);
-	}
-
 	return (
 		<div className='warehouse-info'>
 			<div className='warehouse-info__info'>
@@ -208,33 +181,6 @@ const WarehouseInfo = ({
 				annotated={true}
 			>
 				<Grid rows={rows} columns={warehouseInfoColumns} />
-			</Section>
-			<Section
-				title={warehouseSectionTexts.mcp.title}
-				description={
-					<>
-						<span>{warehouseSectionTexts.mcp.description}</span>
-						<a
-							href='https://www.krenalis.com/docs/ref/admin/warehouse-read-only-mcp-credentials'
-							target='_blank'
-							rel='noopener'
-						>
-							Set up AI querying
-						</a>
-					</>
-				}
-				padded={mcpRows.length === 0}
-				annotated={true}
-			>
-				{mcpRows.length > 0 ? (
-					<div className='warehouse-info__settings'>
-						<Grid rows={mcpRows} columns={warehouseInfoColumns} />
-					</div>
-				) : (
-					<div className='warehouse-info__mcp-not-configured'>
-						No credentials have been set. AI-based queries currently have no access to this data warehouse.
-					</div>
-				)}
 			</Section>
 		</div>
 	);
