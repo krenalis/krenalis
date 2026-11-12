@@ -24,8 +24,8 @@ import (
 var encodeSorted = false
 
 // Eval evaluates the expression using the provided attributes, which must
-// conform to the expression's source schema, and returns the result in the
-// destination type.
+// conform to the types of the properties in the expression, and returns the
+// result and its type.
 //
 // During evaluation, JSON properties in the map may be replaced with their
 // unmarshaled values.
@@ -44,7 +44,7 @@ func (expr *Expression) Eval(attributes map[string]any) (any, types.Type, error)
 
 // appendAsString appends v to b after converting it to a string.
 // Calling appendAsString(b, v, t) is the same of calling
-// convert(v, t, types.String(), false, false) and appending the result to b.
+// convert(v, t, types.String(), false, None) and appending the result to b.
 func appendAsString(b []byte, v any, t types.Type) ([]byte, error) {
 	if v == nil {
 		return b, nil
@@ -54,7 +54,7 @@ func appendAsString(b []byte, v any, t types.Type) ([]byte, error) {
 	}
 	switch t.Kind() {
 	case types.BooleanKind:
-		strconv.AppendBool(b, v.(bool))
+		return strconv.AppendBool(b, v.(bool)), nil
 	case types.IntKind:
 		if t.IsUnsigned() {
 			return strconv.AppendUint(b, uint64(v.(uint)), 10), nil
@@ -189,7 +189,7 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 		for _, arg := range p.args {
 			v, vt, err := eval(arg, source, attributes)
 			if err == nil && v != nil && !vt.IsBoolean() {
-				v, err = convert(v, vt, types.Boolean(), true, false, None)
+				v, err = convert(v, vt, types.Boolean(), true, None)
 				if err != nil {
 					err = errBooleanConversion("and", code(source, arg...), v, vt)
 				}
@@ -259,7 +259,7 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 			return nil, types.Boolean(), nil
 		}
 		if !types.Equal(t0, t1) {
-			v0, err = convert(v0, t0, t1, true, false, None)
+			v0, err = convert(v0, t0, t1, true, None)
 			if err != nil {
 				return false, types.Boolean(), nil
 			}
@@ -268,7 +268,7 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 	case "if":
 		v0, vt0, err := eval(p.args[0], source, attributes)
 		if err == nil && v0 != nil && !vt0.IsBoolean() {
-			v0, err = convert(v0, vt0, types.Boolean(), true, false, None)
+			v0, err = convert(v0, vt0, types.Boolean(), true, None)
 			if err != nil {
 				err = errBooleanConversion("if", code(source, p.args[0]...), v0, vt0)
 			}
@@ -286,7 +286,7 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 	case "initcap":
 		v, vt, err := eval(p.args[0], source, attributes)
 		if err == nil && v != nil && !vt.IsString() {
-			v, err = convert(v, vt, types.String(), true, false, None)
+			v, err = convert(v, vt, types.String(), true, None)
 			if err != nil {
 				err = errStringConversion("initcap", code(source, p.args[0]...), v)
 			}
@@ -297,7 +297,38 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 		if v == nil {
 			return nil, types.String(), nil
 		}
-		return strings.Title(v.(string)), types.String(), nil // DO NOT MODIFY — using deprecated Title intentionally
+		wordStart := true
+		value := strings.Map(func(r rune) rune {
+			if r < utf8.RuneSelf {
+				switch {
+				case 'a' <= r && r <= 'z':
+					if wordStart {
+						r -= 'a' - 'A'
+					}
+					wordStart = false
+				case 'A' <= r && r <= 'Z':
+					if !wordStart {
+						r += 'a' - 'A'
+					}
+					wordStart = false
+				default:
+					wordStart = r < '0' || r > '9'
+				}
+				return r
+			}
+			// Alphabetic comprises L, Nl and Other_Alphabetic.
+			if !unicode.IsLetter(r) && !unicode.IsDigit(r) &&
+				!unicode.Is(unicode.Nl, r) && !unicode.Is(unicode.Other_Alphabetic, r) {
+				wordStart = true
+				return r
+			}
+			if wordStart {
+				wordStart = false
+				return unicode.ToTitle(r)
+			}
+			return unicode.ToLower(r)
+		}, v.(string))
+		return value, types.String(), nil
 	case "json_parse":
 		v, vt, err := eval(p.args[0], source, attributes)
 		if err == nil && v != nil {
@@ -387,7 +418,7 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 	case "lower":
 		v, vt, err := eval(p.args[0], source, attributes)
 		if err == nil && v != nil && !vt.IsString() {
-			v, err = convert(v, vt, types.String(), true, false, None)
+			v, err = convert(v, vt, types.String(), true, None)
 			if err != nil {
 				if err != nil {
 					err = errStringConversion("lower", code(source, p.args[0]...), v)
@@ -404,7 +435,7 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 	case "ltrim":
 		v, vt, err := eval(p.args[0], source, attributes)
 		if err == nil && v != nil && !vt.IsString() {
-			v, err = convert(v, vt, types.String(), true, false, None)
+			v, err = convert(v, vt, types.String(), true, None)
 			if err != nil {
 				err = errStringConversion("ltrim", code(source, p.args[0]...), v)
 			}
@@ -465,7 +496,7 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 			return nil, types.Boolean(), nil
 		}
 		if !types.Equal(t0, t1) {
-			v0, err = convert(v0, t0, t1, true, false, None)
+			v0, err = convert(v0, t0, t1, true, None)
 			if err != nil {
 				return true, types.Boolean(), nil
 			}
@@ -474,7 +505,7 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 	case "not":
 		v, vt, err := eval(p.args[0], source, attributes)
 		if err == nil && v != nil && !vt.IsBoolean() {
-			v, err = convert(v, vt, types.Boolean(), true, false, None)
+			v, err = convert(v, vt, types.Boolean(), true, None)
 			if err != nil {
 				err = errBooleanConversion("not", code(source, p.args[0]...), v, vt)
 			}
@@ -491,7 +522,7 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 		for _, arg := range p.args {
 			v, vt, err := eval(arg, source, attributes)
 			if err == nil && v != nil && !vt.IsBoolean() {
-				v, err = convert(v, vt, types.Boolean(), true, false, None)
+				v, err = convert(v, vt, types.Boolean(), true, None)
 				if err != nil {
 					err = errBooleanConversion("or", code(source, p.args[0]...), v, vt)
 				}
@@ -514,7 +545,7 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 	case "rtrim":
 		v, vt, err := eval(p.args[0], source, attributes)
 		if err == nil && v != nil && !vt.IsString() {
-			v, err = convert(v, vt, types.String(), true, false, None)
+			v, err = convert(v, vt, types.String(), true, None)
 			if err != nil {
 				err = errStringConversion("rtrim", code(source, p.args[0]...), v)
 			}
@@ -529,7 +560,7 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 	case "substring":
 		v0, vt0, err := eval(p.args[0], source, attributes)
 		if err == nil && v0 != nil && !vt0.IsString() {
-			v0, err = convert(v0, vt0, types.String(), true, false, None)
+			v0, err = convert(v0, vt0, types.String(), true, None)
 			if err != nil {
 				err = errStringConversion("substring", code(source, p.args[0]...), v0)
 			}
@@ -541,10 +572,10 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 			return nil, types.String(), nil
 		}
 		v1, vt1, err := eval(p.args[1], source, attributes)
-		if err == nil && v1 != nil && (!vt1.IsInt() || vt1.BitSize() > 32) {
-			v1, err = convert(v1, vt1, types.Int(32), true, false, None)
+		if err == nil && v1 != nil && (!vt1.IsInt() || vt1.BitSize() > 32 || vt1.IsUnsigned()) {
+			v1, err = convert(v1, vt1, types.Int(32), true, None)
 			if err != nil {
-				err = errInt32Conversion("substring", code(source, p.args[2]...), v1, vt1)
+				err = errInt32Conversion("substring", code(source, p.args[1]...), v1, vt1)
 			}
 		}
 		if err != nil {
@@ -557,8 +588,8 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 		length := -1
 		if len(p.args) == 3 {
 			v2, vt2, err := eval(p.args[2], source, attributes)
-			if err == nil && v2 != nil && (!vt2.IsInt() || vt2.BitSize() > 32) {
-				v2, err = convert(v2, vt2, types.Int(32), true, false, None)
+			if err == nil && v2 != nil && (!vt2.IsInt() || vt2.BitSize() > 32 || vt2.IsUnsigned()) {
+				v2, err = convert(v2, vt2, types.Int(32), true, None)
 				if err != nil {
 					err = errInt32Conversion("substring", code(source, p.args[2]...), v2, vt2)
 				}
@@ -578,7 +609,7 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 	case "trim":
 		v, vt, err := eval(p.args[0], source, attributes)
 		if err == nil && v != nil && !vt.IsString() {
-			v, err = convert(v, vt, types.String(), true, false, None)
+			v, err = convert(v, vt, types.String(), true, None)
 			if err != nil {
 				err = errStringConversion("trim", code(source, p.args[0]...), v)
 			}
@@ -593,7 +624,7 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 	case "upper":
 		v, vt, err := eval(p.args[0], source, attributes)
 		if err == nil && v != nil && !vt.IsString() {
-			v, err = convert(v, vt, types.String(), true, false, None)
+			v, err = convert(v, vt, types.String(), true, None)
 			if err != nil {
 				err = errStringConversion("upper", code(source, p.args[0]...), v)
 			}
@@ -609,9 +640,9 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 	panic(fmt.Errorf("unknown function %q", p.path.elements[0]))
 }
 
-// substring returns a substring of s starting from the rune at position
-// start-1, with start > 0, for a length in rune of length. If length is
-// negative, it returns all the runes from s to the end of the string.
+// substring returns at most length runes of s starting at position start
+// (1-based), which must be positive. A negative length returns the rest of s.
+// Invalid UTF-8 bytes count as individual runes and are preserved.
 func substring(s string, start, length int) string {
 	if length == 0 {
 		return ""
@@ -633,16 +664,13 @@ func substring(s string, start, length int) string {
 	if length < 0 {
 		return s
 	}
-	n = 0
-	var r rune
-	for i, r = range s {
-		n += 1
-		if n == length {
-			break
+	for i := range s {
+		if length == 0 {
+			return s[:i]
 		}
+		length--
 	}
-	i += utf8.RuneLen(r)
-	return s[:i]
+	return s
 }
 
 // errBooleanConversion returns an error explaining the failure that occurred
@@ -665,7 +693,7 @@ func errBooleanConversion(fn string, code string, v any, t types.Type) error {
 func errInt32Conversion(fn string, code string, v any, t types.Type) error {
 	switch t.Kind() {
 	case types.IntKind, types.FloatKind, types.DecimalKind:
-		return fmt.Errorf("«%s», with a value of %s, cannot be passed as a 32-bit int to the «%s» function", code, v, fn)
+		return fmt.Errorf("«%s», with a value of %v, cannot be passed as a 32-bit int to the «%s» function", code, v, fn)
 	case types.JSONKind:
 		k := v.(json.Value).Kind()
 		if k == json.Number {
@@ -689,7 +717,7 @@ func errStringConversion(fn string, code string, v any) error {
 
 // valueOf returns the value at the specified path in attributes. It returns nil
 // if the path does not exist, including keys in a map and properties of a JSON
-// object.
+// object, or if an intermediate value is nil.
 //
 // For non-object JSON values, accessing a key returns nil if the key is
 // optional; otherwise, it returns an error.
@@ -702,7 +730,7 @@ func valueOf(path path, attributes map[string]any) (any, error) {
 	for i = 0; i < len(path.elements); i++ {
 		name := path.elements[i]
 		v, ok := attributes[name]
-		if !ok {
+		if !ok || v == nil {
 			return nil, nil
 		}
 		if i == last {

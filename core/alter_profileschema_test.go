@@ -43,15 +43,15 @@ func TestAlterProfileSchemaFinalization(t *testing.T) {
 	container, err := postgres.Run(t.Context(), testimages.PostgreSQL,
 		postgres.WithDatabase("krenalis"), postgres.WithUsername("krenalis"), postgres.WithPassword("krenalis"),
 		postgres.BasicWaitStrategies())
-	if err != nil {
-		t.Fatalf("expected PostgreSQL container, got %v", err)
-	}
 	t.Cleanup(func() {
 		err := testcontainers.TerminateContainer(container)
 		if err != nil {
 			t.Errorf("expected container termination, got %v", err)
 		}
 	})
+	if err != nil {
+		t.Fatalf("expected PostgreSQL container, got %v", err)
+	}
 	host, err := container.Host(t.Context())
 	if err != nil {
 		t.Fatalf("expected container host, got %v", err)
@@ -605,7 +605,7 @@ func Test_checkAllowedTypesProfileSchema(t *testing.T) {
 					Name: "measurements", Type: types.Map(types.Decimal(18, 4).AsMeasurement(types.Kilogram)),
 					ReadOptional: true,
 				},
-				{Name: "duration", Type: types.Int(64).AsDuration(types.Second), ReadOptional: true},
+				{Name: "duration", Type: types.Float(64).Real().AsDuration(types.Second), ReadOptional: true},
 				{Name: "shipping_address", Type: types.Object([]types.Property{
 					{Name: "street1", Type: types.String(), ReadOptional: true},
 					{Name: "street2", Type: types.String(), ReadOptional: true},
@@ -791,23 +791,23 @@ func Test_checkAllowedTypesProfileSchema(t *testing.T) {
 					Name: "duration", Type: types.Decimal(10, 2).AsDuration(types.Second), ReadOptional: true,
 				},
 			}),
-			err: "profile schema properties with duration semantics must have signed int(64) values",
+			err: "profile schema properties with duration semantics must have real float(64) values",
 		},
 		{
-			name: "Duration semantics on int(32)",
+			name: "Duration semantics on int(64)",
 			schema: types.Object([]types.Property{
-				{Name: "duration", Type: types.Int(32).AsDuration(types.Second), ReadOptional: true},
+				{Name: "duration", Type: types.Int(64).AsDuration(types.Second), ReadOptional: true},
 			}),
-			err: "profile schema properties with duration semantics must have signed int(64) values",
+			err: "profile schema properties with duration semantics must have real float(64) values",
 		},
 		{
-			name: "Duration semantics on unsigned int(64)",
+			name: "Duration semantics on real float(32)",
 			schema: types.Object([]types.Property{
 				{
-					Name: "duration", Type: types.Int(64).Unsigned().AsDuration(types.Second), ReadOptional: true,
+					Name: "duration", Type: types.Float(32).Real().AsDuration(types.Second), ReadOptional: true,
 				},
 			}),
-			err: "profile schema properties with duration semantics must have signed int(64) values",
+			err: "profile schema properties with duration semantics must have real float(64) values",
 		},
 	}
 

@@ -7,9 +7,9 @@ import { CONFIRM_ANIMATION_DURATION } from '../PipelineWrapper/Pipeline.constant
 import appContext from '../../../context/AppContext';
 import AlertDialog from '../../base/AlertDialog/AlertDialog';
 import ConfirmByTyping from '../../base/ConfirmByTyping/ConfirmByTyping';
-import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import SlDivider from '@shoelace-style/shoelace/dist/react/divider/index.js';
+import WaInput from '@awesome.me/webawesome/dist/react/input/index.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaDivider from '@awesome.me/webawesome/dist/react/divider/index.js';
 
 const GeneralSettings = () => {
 	const [name, setName] = useState<string>('');
@@ -89,25 +89,25 @@ const GeneralSettings = () => {
 	return (
 		<div className='general-settings'>
 			<div className='general-settings__title'>General</div>
-			<SlInput
+			<WaInput
 				className='general-settings__name'
 				maxlength={100}
 				label="Workspace's name"
 				name='workspace-name'
 				value={name}
-				onSlInput={onNameInput}
+				onInput={onNameInput}
 			/>
-			<SlButton className='general-settings__save-workspace-button' variant='primary' onClick={onSave}>
+			<WaButton className='general-settings__save-workspace-button' variant='brand' onClick={onSave}>
 				Save
-			</SlButton>
-			<SlDivider />
+			</WaButton>
+			<WaDivider />
 			<DangerZone>
 				<div className='general-settings__deletion-title'>Delete the workspace</div>
 				<div className='general-settings__deletion-description-and-button'>
 					<div className='general-settings__deletion-description'>Delete permanently the workspace</div>
-					<SlButton className='general-settings__deletion-button' variant='danger' onClick={onDelete}>
+					<WaButton className='general-settings__deletion-button' variant='danger' onClick={onDelete}>
 						Delete
-					</SlButton>
+					</WaButton>
 				</div>
 			</DangerZone>
 			<AlertDialog
@@ -117,7 +117,9 @@ const GeneralSettings = () => {
 				title={<span>Delete the workspace?</span>}
 				actions={
 					<>
-						<SlButton onClick={onCancelDeletion}>Cancel</SlButton>
+						<WaButton appearance='outlined' onClick={onCancelDeletion}>
+							Cancel
+						</WaButton>
 						<FeedbackButton
 							ref={deleteButtonRef}
 							className='general-settings__alert-deletion-button'

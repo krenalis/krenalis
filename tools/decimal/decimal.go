@@ -162,6 +162,24 @@ func (x Decimal) Equal(y Decimal) bool {
 	return x.b.Cmp(&y.b) == 0
 }
 
+// Float32 returns the float32 value closest to x and a bool indicating whether
+// the float32 represents exactly x. Overflow returns an infinity and false.
+func (x Decimal) Float32() (float32, bool) {
+	sign := x.b.Sign()
+	if sign == 0 {
+		return 0, true
+	}
+	// Avoid enormous powers of ten for values that round to infinity or zero.
+	order := x.b.Precision() - x.b.Scale()
+	if order > 39 {
+		return float32(math.Inf(sign)), false
+	}
+	if order < -45 {
+		return float32(math.Copysign(0, float64(sign))), false
+	}
+	return x.b.Rat(nil).Float32()
+}
+
 // Float64 returns the float64 value closest to x and a bool indicating whether
 // the float64 represents exactly x.
 func (x Decimal) Float64() (float64, bool) {
@@ -663,11 +681,9 @@ func Parse[T ~string | ~[]byte](n T, precision, scale int) (Decimal, error) {
 		}
 	}
 	if x.s != "" && dot != 0 {
-		if x.s[len(x.s)-zeros-1] == '0' {
-			zeros--
-		}
 		if zeros > 0 {
-			x.s = x.s[:len(x.s)-zeros]
+			// Nonzero exponents disable trimming; s+zeros gives the number of fractional digits.
+			x.s = x.s[:len(x.s)-min(zeros, s+zeros)]
 		}
 		x.s = strings.TrimSuffix(x.s, ".")
 	}

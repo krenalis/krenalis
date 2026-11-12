@@ -341,6 +341,97 @@ func Test_Decode(t *testing.T) {
 
 }
 
+// Test_DecodeFloatRanges checks how float ranges handle infinities and NaN.
+func Test_DecodeFloatRanges(t *testing.T) {
+	tests := []struct {
+		name     string
+		min, max float64
+		input    string
+		want     float64
+		wantErr  string
+	}{
+		{
+			name:    "positive infinity with finite bounds",
+			min:     0,
+			max:     1,
+			input:   `"Infinity"`,
+			wantErr: "is out of range [0, 1]: +Inf",
+		},
+		{
+			name:    "negative infinity with finite bounds",
+			min:     0,
+			max:     1,
+			input:   `"-Infinity"`,
+			wantErr: "is out of range [0, 1]: -Inf",
+		},
+		{
+			name:  "positive infinity with infinite upper bound",
+			min:   0,
+			max:   math.Inf(1),
+			input: `"Infinity"`,
+			want:  math.Inf(1),
+		},
+		{
+			name:    "negative infinity below finite lower bound",
+			min:     0,
+			max:     math.Inf(1),
+			input:   `"-Infinity"`,
+			wantErr: "is out of range [0, +Inf]: -Inf",
+		},
+		{
+			name:    "positive infinity above finite upper bound",
+			min:     math.Inf(-1),
+			max:     0,
+			input:   `"Infinity"`,
+			wantErr: "is out of range [-Inf, 0]: +Inf",
+		},
+		{
+			name:  "negative infinity with infinite lower bound",
+			min:   math.Inf(-1),
+			max:   0,
+			input: `"-Infinity"`,
+			want:  math.Inf(-1),
+		},
+		{
+			name:  "NaN with finite bounds",
+			min:   0,
+			max:   1,
+			input: `"NaN"`,
+			want:  math.NaN(),
+		},
+	}
+	for _, size := range []int{32, 64} {
+		for _, test := range tests {
+			t.Run(fmt.Sprintf("float%d/%s", size, test.name), func(t *testing.T) {
+				typ := Float(size).WithFloatRange(test.min, test.max)
+				got, err := Decode[float64](strings.NewReader(test.input), typ)
+				if err != nil {
+					if test.wantErr == "" {
+						t.Fatalf("expected no decoding error, got %v", err)
+					}
+					if _, ok := errors.AsType[*SchemaValidationError](err); !ok {
+						t.Fatalf("expected a SchemaValidationError, got %T: %v", err, err)
+					}
+					if !strings.Contains(err.Error(), test.wantErr) {
+						t.Fatalf("expected error containing %q, got %q", test.wantErr, err)
+					}
+					return
+				}
+				if test.wantErr != "" {
+					t.Fatalf("expected error containing %q, got value %g", test.wantErr, got)
+				}
+				if math.IsNaN(test.want) {
+					if !math.IsNaN(got) {
+						t.Fatalf("expected NaN, got %g", got)
+					}
+				} else if got != test.want {
+					t.Fatalf("expected value %g, got %g", test.want, got)
+				}
+			})
+		}
+	}
+}
+
 // Test_IsDecimal checks the range of all supported decimal types.
 func Test_IsDecimal(t *testing.T) {
 	for _, test := range []struct {

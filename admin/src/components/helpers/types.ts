@@ -1,15 +1,11 @@
-import Type, { DurationUnit, Semantics, UnitOfMeasure } from '../../lib/api/types/types';
+import Type, { Semantics, Unit } from '../../lib/api/types/types';
 
-interface UnitOfMeasureOption {
+interface UnitOption {
 	groupLabel?: string;
-	label: string;
-	value: UnitOfMeasure;
-}
-
-interface DurationUnitOption {
+	isDurationUnit?: boolean;
 	label: string;
 	symbol: string;
-	value: DurationUnit;
+	value: Unit;
 }
 
 interface ProfileSchemaTypePresentation {
@@ -17,37 +13,38 @@ interface ProfileSchemaTypePresentation {
 	primary: string;
 }
 
-const UNIT_OF_MEASURE_OPTIONS: UnitOfMeasureOption[] = [
-	{ value: 'mm', label: 'Millimetre', groupLabel: 'Length' },
-	{ value: 'cm', label: 'Centimetre' },
-	{ value: 'm', label: 'Metre' },
-	{ value: 'km', label: 'Kilometre' },
-	{ value: 'in', label: 'Inch' },
-	{ value: 'ft', label: 'Foot' },
-	{ value: 'yd', label: 'Yard' },
-	{ value: 'mi', label: 'Mile' },
-	{ value: 'g', label: 'Gram', groupLabel: 'Weight' },
-	{ value: 'kg', label: 'Kilogram' },
-	{ value: 'oz', label: 'Ounce' },
-	{ value: 'lb', label: 'Pound' },
-	{ value: 'B', label: 'Byte', groupLabel: 'Data size' },
-	{ value: 'kB', label: 'Kilobyte' },
-	{ value: 'MB', label: 'Megabyte' },
-	{ value: 'GB', label: 'Gigabyte' },
-	{ value: '°C', label: 'Degree Celsius', groupLabel: 'Temperature' },
-	{ value: '°F', label: 'Degree Fahrenheit' },
-	{ value: 'mL', label: 'Millilitre', groupLabel: 'Volume' },
-	{ value: 'L', label: 'Litre' },
+const UNIT_OPTIONS: UnitOption[] = [
+	{ value: 'mm', label: 'Millimetre', symbol: 'mm', groupLabel: 'Length' },
+	{ value: 'cm', label: 'Centimetre', symbol: 'cm' },
+	{ value: 'm', label: 'Metre', symbol: 'm' },
+	{ value: 'km', label: 'Kilometre', symbol: 'km' },
+	{ value: 'in', label: 'Inch', symbol: 'in' },
+	{ value: 'ft', label: 'Foot', symbol: 'ft' },
+	{ value: 'yd', label: 'Yard', symbol: 'yd' },
+	{ value: 'mi', label: 'Mile', symbol: 'mi' },
+	{ value: 'g', label: 'Gram', symbol: 'g', groupLabel: 'Weight' },
+	{ value: 'kg', label: 'Kilogram', symbol: 'kg' },
+	{ value: 'oz', label: 'Ounce', symbol: 'oz' },
+	{ value: 'lb', label: 'Pound', symbol: 'lb' },
+	{ value: 'B', label: 'Byte', symbol: 'B', groupLabel: 'Data size' },
+	{ value: 'kB', label: 'Kilobyte', symbol: 'kB' },
+	{ value: 'MB', label: 'Megabyte', symbol: 'MB' },
+	{ value: 'GB', label: 'Gigabyte', symbol: 'GB' },
+	{ value: '°C', label: 'Degree Celsius', symbol: '°C', groupLabel: 'Temperature' },
+	{ value: '°F', label: 'Degree Fahrenheit', symbol: '°F' },
+	{ value: 'mL', label: 'Millilitre', symbol: 'mL', groupLabel: 'Volume' },
+	{ value: 'L', label: 'Litre', symbol: 'L' },
+	{ value: 'millisecond', label: 'Millisecond', symbol: 'ms', groupLabel: 'Time', isDurationUnit: true },
+	{ value: 'second', label: 'Second', symbol: 's', isDurationUnit: true },
+	{ value: 'minute', label: 'Minute', symbol: 'min', isDurationUnit: true },
+	{ value: 'hour', label: 'Hour', symbol: 'h', isDurationUnit: true },
+	{ value: 'day', label: 'Day', symbol: 'd', isDurationUnit: true },
+	{ value: 'week', label: 'Week', symbol: 'wk', isDurationUnit: true },
+	{ value: 'month', label: 'Month', symbol: 'mo', isDurationUnit: true },
+	{ value: 'year', label: 'Year', symbol: 'yr', isDurationUnit: true },
 ];
 
-const DURATION_UNIT_OPTIONS: DurationUnitOption[] = [
-	{ value: 'millisecond', label: 'Milliseconds', symbol: 'ms' },
-	{ value: 'second', label: 'Seconds', symbol: 's' },
-	{ value: 'minute', label: 'Minutes', symbol: 'min' },
-	{ value: 'hour', label: 'Hours', symbol: 'h' },
-	{ value: 'day', label: 'Days', symbol: 'd' },
-	{ value: 'week', label: 'Weeks', symbol: 'wk' },
-];
+const DURATION_UNIT_OPTIONS = UNIT_OPTIONS.filter((option) => option.isDurationUnit === true);
 
 function getPropertyValueType(type: Type | null): Type | null {
 	if (type?.kind === 'array' || type?.kind === 'map') {
@@ -76,12 +73,8 @@ function getProfileSchemaTypePresentation(type: Type): ProfileSchemaTypePresenta
 			}
 			break;
 		case 'measurement':
-			if ('unit' in valueType) {
-				primary += ` — ${valueType.unit}`;
-			}
-			break;
 		case 'duration': {
-			const unit = DURATION_UNIT_OPTIONS.find((option) => 'unit' in valueType && option.value === valueType.unit);
+			const unit = UNIT_OPTIONS.find((option) => 'unit' in valueType && option.value === valueType.unit);
 			if (unit != null) {
 				primary += ` — ${unit.symbol}`;
 			}
@@ -368,7 +361,7 @@ function toPythonType(type: Type, preserveJSON: boolean, nullable?: boolean) {
 
 export {
 	DURATION_UNIT_OPTIONS,
-	UNIT_OF_MEASURE_OPTIONS,
+	UNIT_OPTIONS,
 	getPropertyValueType,
 	getProfileSchemaTypePresentation,
 	getTypeSemantics,

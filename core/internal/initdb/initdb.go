@@ -18,10 +18,16 @@ import (
 	"github.com/krenalis/krenalis/tools/kms"
 )
 
+// initLockKey is the arbitrary key of the advisory lock that serializes the
+// initialization of the database. The lock is database-wide, so instances
+// using different schemas of the same database also wait for each other.
+const initLockKey = 1766325504
+
 // InitIfEmpty initializes the PostgreSQL database if it is empty.
 // If dockerMember is true, the initial member name and email are set to
 // "User" and "docker@krenalis.com" instead of "ACME inc" and
 // "acme@krenalis.com", respectively.
+// It is safe to call it concurrently from several Krenalis instances.
 func InitIfEmpty(ctx context.Context, db *db.DB, kms kms.Kms, dockerMember bool) error {
 
 	isEmpty, err := databaseIsEmpty(ctx, db)
@@ -46,7 +52,23 @@ func InitIfEmpty(ctx context.Context, db *db.DB, kms kms.Kms, dockerMember bool)
 	// Initialize the PostgreSQL database in a transaction, so if it is
 	// fails, there is no need to manually empty the database.
 	err = db.Transaction(ctx, func(tx *dbpkg.Tx) error {
-		err := initialize(ctx, tx, dockerMember)
+
+		// Serialize the initialization with other Krenalis instances, and check
+		// again under the lock that no other instance has initialized it.
+		_, err := tx.Exec(ctx, "SELECT pg_advisory_xact_lock($1)", initLockKey)
+		if err != nil {
+			return fmt.Errorf("cannot lock PostgreSQL database for initialization: %s", err)
+		}
+		isEmpty, err := databaseIsEmpty(ctx, tx)
+		if err != nil {
+			return fmt.Errorf("cannot check if PostgreSQL database is empty or not: %s", err)
+		}
+		if !isEmpty {
+			slog.Info("the PostgreSQL database is no longer empty, so it won't be initialized")
+			return nil
+		}
+
+		err = initialize(ctx, tx, dockerMember)
 		if err != nil {
 			return fmt.Errorf("cannot initialize PostgreSQL database: %s", err)
 		}
@@ -56,6 +78,7 @@ func InitIfEmpty(ctx context.Context, db *db.DB, kms kms.Kms, dockerMember bool)
 			return err
 		}
 		slog.Info("Admin console and notifications keys created")
+
 		return nil
 	})
 
@@ -100,7 +123,7 @@ func generateKmsEncryptedKeys(ctx context.Context, kms kms.Kms) (httpSecretKey, 
 // databaseIsEmpty reports whether the given PostgreSQL database is empty, that
 // is, if it does not contain any database objects (such as tables, views,
 // types, etc.).
-func databaseIsEmpty(ctx context.Context, db *db.DB) (bool, error) {
+func databaseIsEmpty(ctx context.Context, conn db.Connection) (bool, error) {
 	const query = `SELECT COUNT(*)
 	FROM
 		"pg_class" "c"
@@ -109,7 +132,7 @@ func databaseIsEmpty(ctx context.Context, db *db.DB) (bool, error) {
 		"n"."nspname" = current_schema()
 		AND "n"."nspname" NOT LIKE 'pg\_toast%'`
 	var count int
-	err := db.QueryRow(ctx, query).Scan(&count)
+	err := conn.QueryRow(ctx, query).Scan(&count)
 	if err != nil {
 		return false, err
 	}

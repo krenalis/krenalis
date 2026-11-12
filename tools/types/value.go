@@ -512,6 +512,9 @@ func (d decoder) value(v json.Value, t Type) (any, error) {
 				} else {
 					n = math.Inf(-1)
 				}
+				if min, max := t.FloatRange(); n < min || n > max {
+					return nil, newErrInvalidValue(fmt.Sprintf("is out of range [%g, %g]: %g", min, max, n), "")
+				}
 				return n, nil
 			}
 		}
