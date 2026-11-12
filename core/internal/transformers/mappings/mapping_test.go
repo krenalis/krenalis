@@ -1224,7 +1224,7 @@ func TestNestedConversionErrors(t *testing.T) {
 			}
 			_, err = mapping.Transform(map[string]any{"value": test.value}, None)
 			if err != nil {
-				if _, ok := err.(ValidationError); !ok {
+				if _, ok := errors.AsType[ValidationError](err); !ok {
 					t.Fatalf("expected ValidationError, got %T: %v", err, err)
 				}
 				want := fmt.Sprintf("«value» is not convertible to the «%s» type while mapping to «result»",
