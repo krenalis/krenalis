@@ -55,7 +55,6 @@ const appContext = {
 } as unknown as React.ContextType<typeof AppContext>;
 const profilesContext: React.ContextType<typeof ProfilesContext> = {
 	appliedFilter: null,
-	previewProfilesFilter: async () => ({ total: 1 }),
 	showProfilesFilter: async () => true,
 	profiles: [],
 	profilesTotal: 1,

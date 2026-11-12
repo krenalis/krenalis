@@ -23,10 +23,6 @@ import {
 	profileFilterFingerprint,
 	profileFilterResultsFingerprint,
 } from '../src/components/routes/Profiles/profilesFilterSession';
-import {
-	createProfilesPreviewTiming,
-	recordProfilesPreviewLatency,
-} from '../src/components/routes/Profiles/profilesPreviewTiming';
 
 const profile = (index: number): ResponseProfile => ({
 	kpid: `profile-${index}`,
@@ -321,12 +317,12 @@ test(`Normalize filter drafts without silently accepting partial conditions`, ()
 	}
 });
 
-test(`Initialize filter history from the displayed filter and last observed total`, () => {
+test(`Initialize filter history from the displayed filter`, () => {
 	const filter: Filter = {
 		operator: 'and',
 		rules: [{ property: 'email', operator: 'contains', values: ['example.com'] }],
 	};
-	const session = createProfilesFilterSession(filter, 12);
+	const session = createProfilesFilterSession(filter);
 
 	expect(session.history).toHaveLength(1);
 	expect(currentProfilesFilterHistoryEntry(session)).toEqual({
@@ -334,7 +330,6 @@ test(`Initialize filter history from the displayed filter and last observed tota
 		draft: filter,
 		fingerprint: profileFilterFingerprint(filter),
 	});
-	expect(session.preview).toEqual({ fingerprint: profileFilterFingerprint(filter), total: 12 });
 	expect(session.draft).not.toBe(filter);
 });
 
@@ -365,7 +360,7 @@ test(`Commit filter history without match counts and truncate a redo branch`, ()
 		operator: 'and',
 		rules: [{ property: 'email', operator: 'contains', values: ['example.net'] }],
 	};
-	let session = createProfilesFilterSession(null, 20);
+	let session = createProfilesFilterSession(null);
 	session = commitProfilesFilter(session, filterB);
 	session = commitProfilesFilter(session, filterC);
 
@@ -375,7 +370,6 @@ test(`Commit filter history without match counts and truncate a redo branch`, ()
 	expect(session.history.map(({ filter }) => filter)).toEqual([null, filterB, filterD]);
 	expect(session.historyIndex).toBe(2);
 	expect(session.draft).toEqual(filterD);
-	expect(session.preview).toEqual({ fingerprint: profileFilterFingerprint(null), total: 20 });
 });
 
 test(`Confirm an unchanged filter without adding history or discarding Redo`, () => {
@@ -383,7 +377,7 @@ test(`Confirm an unchanged filter without adding history or discarding Redo`, ()
 		operator: 'and',
 		rules: [{ property: 'email', operator: 'contains', values: ['example.com'] }],
 	};
-	let session = createProfilesFilterSession(filter, 12);
+	let session = createProfilesFilterSession(filter);
 	session = commitProfilesFilter(session, null);
 	session = { ...session, draft: filter, historyIndex: 0 };
 	expect(commitProfilesFilter(session, structuredClone(filter))).toBe(session);
@@ -403,51 +397,6 @@ test(`Confirm an unchanged filter without adding history or discarding Redo`, ()
 	session = commitProfilesFilter(session, filter, draft);
 	expect(session.draft).toEqual(draft);
 	expect(session.history).toHaveLength(2);
-});
-
-test(`Adapt the text preview delay only after enough stable latency measurements`, () => {
-	let timing = createProfilesPreviewTiming();
-	timing = recordProfilesPreviewLatency(timing, 2000);
-	timing = recordProfilesPreviewLatency(timing, 2000);
-	expect(timing.delayMs).toBe(1000);
-
-	timing = recordProfilesPreviewLatency(timing, 2000);
-	expect(timing.delayMs).toBe(1000);
-	timing = recordProfilesPreviewLatency(timing, 2000);
-	expect(timing.delayMs).toBe(1500);
-
-	timing = recordProfilesPreviewLatency(timing, 5000);
-	timing = recordProfilesPreviewLatency(timing, 5000);
-	timing = recordProfilesPreviewLatency(timing, 5000);
-	expect(timing.delayMs).toBe(1500);
-	timing = recordProfilesPreviewLatency(timing, 5000);
-	expect(timing.delayMs).toBe(2500);
-	expect(timing.latencySamples).toHaveLength(5);
-});
-
-test(`Use the true median when adapting from an even number of latency measurements`, () => {
-	let timing = createProfilesPreviewTiming();
-	timing = recordProfilesPreviewLatency(timing, 1000);
-	timing = recordProfilesPreviewLatency(timing, 5000);
-	timing = recordProfilesPreviewLatency(timing, 5000);
-	timing = recordProfilesPreviewLatency(timing, 1000);
-
-	expect(timing.delayMs).toBe(1000);
-	expect(timing.delayCandidate).toBe(1500);
-});
-
-test(`Suspend and conservatively restore automatic text previews`, () => {
-	let timing = createProfilesPreviewTiming();
-	timing = recordProfilesPreviewLatency(timing, 9000);
-	timing = recordProfilesPreviewLatency(timing, 9000);
-	timing = recordProfilesPreviewLatency(timing, 9000);
-	expect(timing.suspended).toBe(true);
-
-	timing = recordProfilesPreviewLatency(timing, 3000);
-	expect(timing.suspended).toBe(true);
-	timing = recordProfilesPreviewLatency(timing, 3000);
-	expect(timing.suspended).toBe(false);
-	expect(timing.delayMs).toBe(2500);
 });
 
 test('Keep only the latest fifty confirmed filter versions', () => {
@@ -480,7 +429,7 @@ test('Initialize a quoted profile filter draft without changing its values', () 
 			},
 		],
 	};
-	const session = createProfilesFilterSession(filter, 1);
+	const session = createProfilesFilterSession(filter);
 	expect(validateAndNormalizeFilter(session.draft!, filterSchema)).toEqual(filter);
 	expect(currentProfilesFilterHistoryEntry(session).filter).toEqual(filter);
 });
@@ -491,7 +440,7 @@ test('Keep the exact quoted draft in confirmed filter history', () => {
 		rules: [{ property: 'email', operator: 'is one of', values: ['"  Ada  "', '\'"Ada"\''] }],
 	};
 	const filter = validateAndNormalizeFilter(draft, filterSchema)!;
-	let session = createProfilesFilterSession(null, 2);
+	let session = createProfilesFilterSession(null);
 	session = commitProfilesFilter(session, filter, draft);
 	expect(session.draft).toEqual(draft);
 	expect(session.draft).not.toBe(draft);

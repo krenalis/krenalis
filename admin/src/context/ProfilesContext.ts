@@ -1,12 +1,11 @@
 import { createContext } from 'react';
 import { ProfileProperty, ProfileSchemaProperties } from '../components/routes/Profiles/Profiles.types';
-import { CountProfilesResponse, ResponseProfile } from '../lib/api/types/responses';
+import { ResponseProfile } from '../lib/api/types/responses';
 import { Filter } from '../lib/api/types/pipeline';
 import { ObjectType } from '../lib/api/types/types';
 
 interface ProfilesContext {
 	appliedFilter: Filter | null;
-	previewProfilesFilter: (filter: Filter | null, signal?: AbortSignal) => Promise<CountProfilesResponse>;
 	showProfilesFilter: (filter: Filter | null) => Promise<boolean>;
 	profiles: ResponseProfile[];
 	profilesTotal: number;

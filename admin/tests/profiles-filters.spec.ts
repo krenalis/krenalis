@@ -7,7 +7,6 @@ import { build } from 'esbuild';
 import { resolve } from 'path';
 import { Filter, FilterCondition } from '../src/lib/api/types/pipeline';
 import { ObjectType } from '../src/lib/api/types/types';
-import { PROFILES_SHOW_MATCHES_AUTOMATICALLY_KEY } from '../src/constants/storage';
 
 const schema: ObjectType = {
 	kind: 'object',
@@ -51,6 +50,9 @@ test.beforeAll(async () => {
 
 test.beforeEach(async ({ page }) => {
 	await page.route('**/*', (route) => route.abort());
+	await page.route('**/v1/profiles/count', (route) => {
+		expect(route.request().url(), 'expected no separate count request').toBe('');
+	});
 	await page.route('https://example.test/', (route) =>
 		route.fulfill({ contentType: 'text/html', body: '<div id="root"></div>' }),
 	);
@@ -70,7 +72,6 @@ test.beforeEach(async ({ page }) => {
 
 for (const [index, value] of values.entries()) {
 	test(`Preserve ${JSON.stringify(value)} through Undo, Redo and closing the filter editor`, async ({ page }) => {
-		const countFilters: (Filter | null)[] = [];
 		const gridFilters: (Filter | null)[] = [];
 		const filter: Filter = {
 			operator: 'and',
@@ -78,7 +79,7 @@ for (const [index, value] of values.entries()) {
 		};
 		const draftValue = JSON.stringify(value);
 		await page.emulateMedia({ reducedMotion: 'reduce' });
-		await page.route(/\/v1\/profiles\/(?:query|count)$/, async (route) => {
+		await page.route(/\/v1\/profiles\/query$/, async (route) => {
 			const url = new URL(route.request().url());
 			expect(route.request().method()).toBe('POST');
 			expect(url.search).toBe('');
@@ -88,13 +89,8 @@ for (const [index, value] of values.entries()) {
 			const result = profiles.filter(
 				(profile) => requestedFilter == null || profile.attributes.name === requestedValue,
 			);
-			if (url.pathname.endsWith('/count')) {
-				countFilters.push(requestedFilter);
-				await route.fulfill({ json: { total: result.length } });
-			} else {
-				gridFilters.push(requestedFilter);
-				await route.fulfill({ json: { profiles: result, total: result.length, hasNext: false } });
-			}
+			gridFilters.push(requestedFilter);
+			await route.fulfill({ json: { profiles: result, total: result.length, hasNext: false } });
 		});
 		await page.goto('https://example.test/');
 		await page.addStyleTag({ content: componentStyles });
@@ -103,7 +99,7 @@ for (const [index, value] of values.entries()) {
 		await expect(rows).toHaveCount(3);
 
 		const filters = page.locator('.profiles-list__filters');
-		await filters.getByRole('button', { name: 'Expand', exact: true }).click();
+		await filters.getByRole('button', { name: 'Add filter', exact: true }).click();
 		const editor = filters.getByRole('region', { name: 'Profile filters' });
 		const property = editor.locator('.filter-editor__property');
 		const propertyInput = property.locator('input');
@@ -124,334 +120,43 @@ for (const [index, value] of values.entries()) {
 		const valueInput = editor.locator('.filter-editor__value-input input');
 		await valueInput.fill(draftValue);
 		await valueInput.press('Enter');
-		const showMatches = page.getByRole('button', { name: 'Show 1 match', exact: true });
-		await expect(showMatches).toBeVisible();
-		expect(countFilters).toEqual([filter]);
+		const applyFilters = page.getByRole('button', { name: 'Apply filters', exact: true });
+		await expect(applyFilters).toBeEnabled();
 		await expect(rows).toHaveCount(3);
 
 		await valueInput.fill('');
 		const undo = filters.getByRole('button', { name: 'Undo', exact: true });
 		await undo.click();
 		await expect(valueInput).toHaveValue(draftValue);
-		await expect(showMatches).toBeVisible();
-		expect(countFilters).toEqual([filter]);
+		await expect(applyFilters).toBeEnabled();
 
 		await undo.click();
 		await expect(property.locator('input')).toHaveValue('');
-		await expect(page.locator('.profiles-list__filter-preview-count')).toHaveCount(0);
+		await expect(applyFilters).toBeDisabled();
 		const redo = filters.getByRole('button', { name: 'Redo', exact: true });
 		await expect(redo).toBeEnabled();
 		await redo.click();
 		await expect(valueInput).toHaveValue(draftValue);
-		await expect(showMatches).toBeVisible();
-		expect(countFilters).toEqual([filter, null, filter]);
+		await expect(applyFilters).toBeEnabled();
 		await expect(rows).toHaveCount(3);
 
 		await filters.getByRole('button', { name: 'Collapse', exact: true }).click();
-		await expect(filters.getByRole('button', { name: 'Expand', exact: true })).toBeVisible();
-		await expect(rows).toHaveCount(3);
-		expect(gridFilters).toEqual([null]);
-		await expect(page.locator('.profiles-list__filter-status')).toContainText('Unapplied changes');
-		await showMatches.click();
+		await expect(filters.getByRole('button', { name: 'Edit filters', exact: true })).toBeVisible();
 		await expect(rows).toHaveCount(1);
 		await expect(rows).toHaveAttribute('data-id', `profile-${index + 1}`);
 		expect(gridFilters).toEqual([null, filter]);
 
-		await filters.getByRole('button', { name: 'Expand', exact: true }).click();
+		await filters.getByRole('button', { name: 'Edit filters', exact: true }).click();
 		await expect(valueInput).toHaveValue(draftValue);
 		await valueInput.fill('"');
 		await filters.getByRole('button', { name: 'Collapse', exact: true }).click();
-		await filters.getByRole('button', { name: 'Expand', exact: true }).click();
+		await expect(editor).toBeVisible();
+		await expect(applyFilters).toBeDisabled();
 		await expect(valueInput).toHaveValue('"');
-		expect(countFilters).toEqual([filter, null, filter]);
 		expect(gridFilters).toEqual([null, filter]);
 		await expect(page.getByRole('alert')).toBeEmpty();
 	});
 }
-
-test(`Confirm a complete value on blur and retry its count while collapsed`, async ({ page }) => {
-	let countRequests = 0;
-	let gridRequests = 0;
-	let releaseCount = () => {};
-	const countCanFinish = new Promise<void>((resolve) => {
-		releaseCount = resolve;
-	});
-	await page.route(/\/v1\/profiles\/(?:query|count)$/, async (route) => {
-		if (new URL(route.request().url()).pathname.endsWith('/count')) {
-			countRequests++;
-			if (countRequests === 1) {
-				await countCanFinish;
-				await route.fulfill({
-					status: 503,
-					json: { error: { code: 'ServiceUnavailable', message: 'temporary failure' } },
-				});
-				return;
-			}
-			await route.fulfill({ json: { total: 1 } });
-			return;
-		}
-		gridRequests++;
-		await route.fulfill({ json: { profiles, total: profiles.length, hasNext: false } });
-	});
-	await page.setViewportSize({ width: 600, height: 800 });
-	await page.clock.install({ time: new Date('2026-11-11T12:00:00Z') });
-	await page.goto('https://example.test/');
-	await page.addStyleTag({ content: componentStyles });
-	await page.addScriptTag({ content: componentScript });
-	const filters = page.locator('.profiles-list__filters');
-	await filters.getByRole('button', { name: 'Expand', exact: true }).click();
-	const editor = filters.getByRole('region', { name: 'Profile filters' });
-	const property = editor.locator('.filter-editor__property');
-	await property.locator('input').fill('Name');
-	await property.locator('.combobox-list__item .schema-combobox-item__name', { hasText: /^Name$/ }).click();
-	const operator = editor.locator('.filter-editor__operator').getByRole('combobox');
-	await operator.press('Home');
-	await operator.press('Enter');
-	// Freeze the debounce so only blur can start the preview.
-	await page.clock.pauseAt(new Date('2026-11-11T12:01:00Z'));
-	await editor.locator('.filter-editor__value-input input').fill(JSON.stringify(values[0]));
-	try {
-		await filters.getByRole('button', { name: 'Collapse', exact: true }).click();
-		await expect(editor).toHaveCount(0);
-		await expect(page.locator('.profiles-list__filter-preview-count')).toBeVisible();
-		expect(countRequests).toBe(1);
-		expect(gridRequests).toBe(1);
-	} finally {
-		releaseCount();
-	}
-	const failure = page.locator('.profiles-list__filter-preview-error');
-	await expect(failure).toContainText('Unable to calculate matches.');
-	await expect(page.getByRole('button', { name: 'Show 1 match', exact: true })).toHaveCount(0);
-	await expect(page.locator('.profiles-list__filter-status')).toHaveCount(0);
-	await failure.getByRole('button', { name: 'Retry', exact: true }).click();
-	await expect(page.getByRole('button', { name: 'Show 1 match', exact: true })).toBeVisible();
-	await expect(page.locator('.profiles-list__filter-status')).toContainText('Unapplied changes');
-	await expect(page.locator('.profiles-list .grid__row--clickable')).toHaveCount(3);
-	expect(gridRequests).toBe(1);
-	const toolbar = await page.locator('.profiles-list__toolbar').boundingBox();
-	const actions = await page.locator('.profiles-list__toolbar-actions').boundingBox();
-	expect(actions.x + actions.width).toBeLessThanOrEqual(toolbar.x + toolbar.width);
-});
-
-for (const isAutomatic of [false, true]) {
-	test(`Preview typing without committing history in ${isAutomatic ? 'automatic' : 'manual'} mode`, async ({
-		page,
-	}) => {
-		const countValues: (string | null)[] = [];
-		const gridFilters: (Filter | null)[] = [];
-		await page.route(/\/v1\/profiles\/(?:query|count)$/, async (route) => {
-			const filter: Filter | null = route.request().postDataJSON().filter ?? null;
-			const value = (filter?.rules[0] as FilterCondition | undefined)?.values?.[0] ?? null;
-			const result = profiles.filter((profile) => filter == null || profile.attributes.name === value);
-			if (new URL(route.request().url()).pathname.endsWith('/count')) {
-				countValues.push(value);
-				await route.fulfill({ json: { total: result.length } });
-			} else {
-				gridFilters.push(filter);
-				await route.fulfill({ json: { profiles: result, total: result.length, hasNext: false } });
-			}
-		});
-		await page.emulateMedia({ reducedMotion: 'reduce' });
-		await page.clock.install({ time: new Date('2026-11-12T12:00:00Z') });
-		await page.goto('https://example.test/');
-		await page.addStyleTag({ content: componentStyles });
-		await page.addScriptTag({ content: componentScript });
-		const rows = page.locator('.profiles-list .grid__row--clickable');
-		await expect(rows).toHaveCount(3);
-		const filters = page.locator('.profiles-list__filters');
-		await filters.getByRole('button', { name: 'Expand', exact: true }).click();
-		if (isAutomatic) {
-			await filters.getByText('Show matches automatically', { exact: true }).click();
-		}
-		const editor = filters.getByRole('region', { name: 'Profile filters' });
-		const property = editor.locator('.filter-editor__property');
-		await property.locator('input').fill('Name');
-		await property.locator('.combobox-list__item .schema-combobox-item__name', { hasText: /^Name$/ }).click();
-		const operator = editor.locator('.filter-editor__operator').getByRole('combobox');
-		await operator.press('Home');
-		await operator.press('Enter');
-		await page.clock.pauseAt(new Date('2026-11-12T12:01:00Z'));
-		const valueInput = editor.locator('.filter-editor__value-input input');
-		for (const value of values.slice(0, 2)) {
-			await valueInput.fill(JSON.stringify(value));
-			await page.clock.runFor(1000);
-			await expect(page.locator('.profiles-list__filter-preview-count')).toHaveCount(0);
-		}
-		expect(countValues).toEqual(values.slice(0, 2));
-		expect(gridFilters).toEqual([null]);
-		await expect(page.locator('.profiles-list__filter-update-results')).toHaveCount(0);
-		await expect(rows).toHaveCount(3);
-
-		await valueInput.press('Enter');
-		await valueInput.press('Enter');
-		await filters.locator('.profiles-list__filter-title').click();
-		if (isAutomatic) {
-			await expect(rows).toHaveAttribute('data-id', 'profile-2');
-		} else {
-			await expect(page.getByRole('button', { name: 'Show 1 match', exact: true })).toBeVisible();
-		}
-		expect(countValues).toEqual(values.slice(0, 2));
-		await filters.getByRole('button', { name: 'Undo', exact: true }).click();
-		await expect(property.locator('input')).toHaveValue('');
-		await expect(page.locator('.profiles-list__filter-preview-count')).toHaveCount(0);
-		await filters.getByRole('button', { name: 'Redo', exact: true }).click();
-		await expect(valueInput).toHaveValue(JSON.stringify(values[1]));
-		await expect(page.locator('.profiles-list__filter-preview-count')).toHaveCount(0);
-		await expect(filters.getByRole('button', { name: 'Redo', exact: true })).toBeDisabled();
-		await page.clock.resume();
-
-		const rootActions = editor.locator('.filter-editor__group--root > .filter-editor__group-actions');
-		for (const action of ['Add a condition', 'Add a group']) {
-			await rootActions.getByRole('button', { name: action, exact: true }).click();
-			const logical = editor.locator('.filter-editor__logical').first().getByRole('combobox');
-			await logical.press('End');
-			await logical.press('Enter');
-			await expect(page.locator('.profiles-list__filter-preview-incomplete')).toBeVisible();
-			await filters.getByRole('button', { name: 'Undo', exact: true }).click();
-			await expect(editor.locator('.filter-editor__condition')).toHaveCount(1);
-			await expect(valueInput).toHaveValue(JSON.stringify(values[1]));
-			await expect(filters.getByRole('button', { name: 'Redo', exact: true })).toBeDisabled();
-		}
-		await operator.click();
-		await page.getByRole('option', { name: 'is one of', exact: true }).click();
-		await expect(page.locator('.profiles-list__filter-preview-count')).toHaveCount(0);
-		await editor.getByRole('button', { name: 'Add value', exact: true }).click();
-		const logical = editor.locator('.filter-editor__logical').first().getByRole('combobox');
-		await logical.press('End');
-		await logical.press('Enter');
-		await expect(page.locator('.profiles-list__filter-preview-incomplete')).toBeVisible();
-		await filters.getByRole('button', { name: 'Undo', exact: true }).click();
-		await expect(valueInput).toHaveCount(1);
-		await expect(valueInput).toHaveValue(JSON.stringify(values[1]));
-		await expect(filters.getByRole('button', { name: 'Redo', exact: true })).toBeDisabled();
-	});
-}
-
-test(`Navigate confirmed versions while counts are pending and after they fail`, async ({ page }) => {
-	let gridRequests = 0;
-	let releaseCounts = () => {};
-	const countsCanFinish = new Promise<void>((resolve) => {
-		releaseCounts = resolve;
-	});
-	await page.route(/\/v1\/profiles\/(?:query|count)$/, async (route) => {
-		if (new URL(route.request().url()).pathname.endsWith('/count')) {
-			await countsCanFinish;
-			await route.fulfill({
-				status: 503,
-				json: { error: { code: 'ServiceUnavailable', message: 'temporary failure' } },
-			});
-			return;
-		}
-		gridRequests++;
-		await route.fulfill({ json: { profiles, total: profiles.length, hasNext: false } });
-	});
-	await page.goto('https://example.test/');
-	await page.addStyleTag({ content: componentStyles });
-	await page.addScriptTag({ content: componentScript });
-	const filters = page.locator('.profiles-list__filters');
-	await filters.getByRole('button', { name: 'Expand', exact: true }).click();
-	await filters.getByText('Show matches automatically', { exact: true }).click();
-	const editor = filters.getByRole('region', { name: 'Profile filters' });
-	const property = editor.locator('.filter-editor__property');
-	await property.locator('input').fill('Name');
-	await property.locator('.combobox-list__item .schema-combobox-item__name', { hasText: /^Name$/ }).click();
-	const operator = editor.locator('.filter-editor__operator').getByRole('combobox');
-	await operator.press('Home');
-	await operator.press('Enter');
-	const valueInput = editor.locator('.filter-editor__value-input input');
-	const undo = filters.getByRole('button', { name: 'Undo', exact: true });
-	const redo = filters.getByRole('button', { name: 'Redo', exact: true });
-	try {
-		await valueInput.fill(JSON.stringify(values[0]));
-		await valueInput.press('Enter');
-		await expect(page.locator('.profiles-list__filter-preview-count')).toBeVisible();
-		await undo.click();
-		await expect(property.locator('input')).toHaveValue('');
-		await expect(redo).toBeEnabled();
-		await redo.click();
-		await expect(valueInput).toHaveValue(JSON.stringify(values[0]));
-		for (const value of values.slice(1)) {
-			await valueInput.fill(JSON.stringify(value));
-			await valueInput.press('Enter');
-		}
-		await expect(page.locator('.profiles-list__filter-preview-count')).toBeVisible();
-		await expect(page.locator('.profiles-list .grid__row--clickable')).toHaveCount(3);
-	} finally {
-		releaseCounts();
-	}
-	const failure = page.locator('.profiles-list__filter-preview-error');
-	await expect(failure).toBeVisible();
-	await undo.click();
-	await expect(valueInput).toHaveValue(JSON.stringify(values[1]));
-	await valueInput.fill('Unconfirmed');
-	await redo.click();
-	await expect(valueInput).toHaveValue(JSON.stringify(values[2]));
-	for (const value of values.slice(0, 2).reverse()) {
-		await undo.click();
-		await expect(valueInput).toHaveValue(JSON.stringify(value));
-	}
-	await undo.click();
-	await expect(property.locator('input')).toHaveValue('');
-	for (const value of values) {
-		await redo.click();
-		await expect(valueInput).toHaveValue(JSON.stringify(value));
-	}
-	await expect(failure).toBeVisible();
-	await expect(redo).toBeDisabled();
-	await expect(page.locator('.profiles-list .grid__row--clickable')).toHaveCount(3);
-	expect(gridRequests).toBe(1);
-});
-
-test(`Keep chip removal in history when its grid request fails`, async ({ page }) => {
-	let gridRequests = 0;
-	await page.route(/\/v1\/profiles\/(?:query|count)$/, async (route) => {
-		const filter: Filter | null = route.request().postDataJSON().filter ?? null;
-		if (new URL(route.request().url()).pathname.endsWith('/count')) {
-			await route.fulfill({ json: { total: filter == null ? profiles.length : 1 } });
-			return;
-		}
-		gridRequests++;
-		if (filter == null && gridRequests > 1) {
-			await route.fulfill({
-				status: 503,
-				json: { error: { code: 'ServiceUnavailable', message: 'temporary failure' } },
-			});
-			return;
-		}
-		const result = filter == null ? profiles : [profiles[0]];
-		await route.fulfill({ json: { profiles: result, total: result.length, hasNext: false } });
-	});
-	await page.goto('https://example.test/');
-	await page.addStyleTag({ content: componentStyles });
-	await page.addScriptTag({ content: componentScript });
-	const filters = page.locator('.profiles-list__filters');
-	await filters.getByRole('button', { name: 'Expand', exact: true }).click();
-	const editor = filters.getByRole('region', { name: 'Profile filters' });
-	const property = editor.locator('.filter-editor__property');
-	await property.locator('input').fill('Name');
-	await property.locator('.combobox-list__item .schema-combobox-item__name', { hasText: /^Name$/ }).click();
-	const operator = editor.locator('.filter-editor__operator').getByRole('combobox');
-	await operator.press('Home');
-	await operator.press('Enter');
-	const valueInput = editor.locator('.filter-editor__value-input input');
-	await valueInput.fill(JSON.stringify(values[0]));
-	await valueInput.press('Enter');
-	await page.getByRole('button', { name: 'Show 1 match', exact: true }).click();
-	const rows = page.locator('.profiles-list .grid__row--clickable');
-	await expect(rows).toHaveAttribute('data-id', 'profile-1');
-	await filters.getByRole('button', { name: 'Collapse', exact: true }).click();
-	await filters.getByRole('button', { name: /^Remove condition:/ }).click();
-	await expect(page.locator('.profiles-list__filter-grid-error')).toBeVisible();
-	await expect(rows).toHaveAttribute('data-id', 'profile-1');
-	await filters.getByRole('button', { name: 'Expand', exact: true }).click();
-	await expect(property.locator('input')).toHaveValue('');
-	await filters.getByRole('button', { name: 'Undo', exact: true }).click();
-	await expect(valueInput).toHaveValue(JSON.stringify(values[0]));
-	await filters.getByRole('button', { name: 'Redo', exact: true }).click();
-	await expect(property.locator('input')).toHaveValue('');
-	await expect(page.getByRole('button', { name: 'Show 3 matches', exact: true })).toBeVisible();
-	expect(gridRequests).toBe(3);
-});
 
 test(`Number removable groups across nested and sibling groups`, async ({ page }) => {
 	await page.route(/\/v1\/profiles\/query$/, (route) =>
@@ -461,7 +166,7 @@ test(`Number removable groups across nested and sibling groups`, async ({ page }
 	await page.addStyleTag({ content: componentStyles });
 	await page.addScriptTag({ content: componentScript });
 	const filters = page.locator('.profiles-list__filters');
-	await filters.getByRole('button', { name: 'Expand', exact: true }).click();
+	await filters.getByRole('button', { name: 'Add filter', exact: true }).click();
 	const rootActions = filters.locator('.filter-editor__group--root > .filter-editor__group-actions');
 	await rootActions.getByRole('button', { name: 'Add a group', exact: true }).click();
 	const groups = filters.locator('.filter-editor__group:not(.filter-editor__group--root)');
@@ -487,162 +192,196 @@ test(`Number removable groups across nested and sibling groups`, async ({ page }
 	await expect(groups.getByRole('button', { name: 'Remove condition 2', exact: true })).toBeDisabled();
 });
 
-test(`Automatically show completed previews, preserve focus and remember the preference`, async ({ page }) => {
-	const countFilters: (Filter | null)[] = [];
+test(`Apply several edits with one request and keep history independent from queries`, async ({ page }) => {
 	const gridFilters: (Filter | null)[] = [];
-	let releaseCount = () => {};
-	let releaseGrid = () => {};
-	const countCanFinish = new Promise<void>((resolve) => {
-		releaseCount = resolve;
-	});
-	const gridCanFinish = new Promise<void>((resolve) => {
-		releaseGrid = resolve;
-	});
-	await page.route(/\/v1\/profiles\/(?:query|count)$/, async (route) => {
-		const url = new URL(route.request().url());
+	await page.route(/\/v1\/profiles\/query$/, async (route) => {
 		const filter: Filter | null = route.request().postDataJSON().filter ?? null;
+		gridFilters.push(filter);
 		const value = (filter?.rules[0] as FilterCondition | undefined)?.values?.[0];
 		const result = profiles.filter((profile) => filter == null || profile.attributes.name === value);
-		if (url.pathname.endsWith('/count')) {
-			countFilters.push(filter);
-			await countCanFinish;
-			await route.fulfill({ json: { total: result.length } });
-		} else {
+		await route.fulfill({ json: { profiles: result, total: result.length, hasNext: false } });
+	});
+	await page.emulateMedia({ reducedMotion: 'reduce' });
+	await page.clock.install({ time: new Date('2026-11-12T12:00:00Z') });
+	await page.goto('https://example.test/');
+	await page.addStyleTag({ content: componentStyles });
+	await page.addScriptTag({ content: componentScript });
+	const rows = page.locator('.profiles-list .grid__row--clickable');
+	await expect(rows).toHaveCount(3);
+	const filters = page.locator('.profiles-list__filters');
+	await filters.getByRole('button', { name: 'Add filter', exact: true }).click();
+	const editor = filters.getByRole('region', { name: 'Profile filters' });
+	const applyFilters = editor.getByRole('button', { name: 'Apply filters', exact: true });
+	await expect(applyFilters).toBeDisabled();
+	await expect(editor.locator('.profiles-list__filter-apply')).toHaveAttribute('variant', 'neutral');
+	const property = editor.locator('.filter-editor__property');
+	await property.locator('input').fill('Name');
+	await property.locator('.combobox-list__item .schema-combobox-item__name', { hasText: /^Name$/ }).click();
+	const operator = editor.locator('.filter-editor__operator').getByRole('combobox');
+	await operator.press('Home');
+	await operator.press('Enter');
+	const valueInput = editor.locator('.filter-editor__value-input input');
+	await valueInput.fill('Ad');
+	await page.clock.runFor(2000);
+	await valueInput.fill(JSON.stringify(values[0]));
+	await page.clock.runFor(2000);
+	await expect(applyFilters).toBeEnabled();
+	await expect(editor.locator('.profiles-list__filter-apply')).toHaveAttribute('variant', 'brand');
+	await valueInput.press('Enter');
+	await valueInput.fill(JSON.stringify(values[1]));
+	await valueInput.blur();
+	await filters.getByRole('button', { name: 'Undo', exact: true }).click();
+	await expect(valueInput).toHaveValue(JSON.stringify(values[0]));
+	await filters.getByRole('button', { name: 'Redo', exact: true }).click();
+	await expect(valueInput).toHaveValue(JSON.stringify(values[1]));
+	await expect(rows).toHaveCount(3);
+	expect(gridFilters).toEqual([null]);
+	const buttonLayout = await applyFilters.boundingBox();
+	await page.clock.pauseAt(new Date('2026-11-12T12:01:00Z'));
+	await applyFilters.click();
+	await expect(rows).toHaveCount(1);
+	await expect(rows).toHaveAttribute('data-id', 'profile-2');
+	await expect(page.locator('.profiles-list__grid-summary')).toContainText('1 profile');
+	const spinner = editor.locator('.profiles-list__filter-apply wa-spinner');
+	await expect(spinner).toBeVisible();
+	await expect(applyFilters).toBeDisabled();
+	await expect(editor.locator('.profiles-list__filter-apply')).toHaveAttribute('variant', 'brand');
+	await expect(editor.locator('.profiles-list__filter-shortcut')).toHaveAttribute('aria-disabled', 'true');
+	expect(await applyFilters.boundingBox()).toEqual(buttonLayout);
+	await page.clock.runFor(399);
+	await expect(spinner).toBeVisible();
+	await page.clock.runFor(1);
+	await expect(spinner).toHaveCount(0);
+	await expect(applyFilters).toBeDisabled();
+	expect(gridFilters).toEqual([
+		null,
+		{ operator: 'and', rules: [{ property: 'name', operator: 'is', values: [values[1]] }] },
+	]);
+});
+
+for (const { platform, modifier, shortcut } of [
+	{ platform: 'MacIntel', modifier: 'Meta', shortcut: '⌘ + Enter' },
+	{ platform: 'Win32', modifier: 'Control', shortcut: 'Ctrl + Enter' },
+]) {
+	test(`Apply filters with ${shortcut} only inside the editor`, async ({ page }) => {
+		await page.emulateMedia({ reducedMotion: 'reduce' });
+		await page.clock.install({ time: new Date('2026-11-12T12:00:00Z') });
+		await page.addInitScript((platform) => {
+			Object.defineProperty(navigator, 'platform', { value: platform });
+		}, platform);
+		const gridFilters: (Filter | null)[] = [];
+		let releaseGrid = () => {};
+		const gridCanFinish = new Promise<void>((resolve) => {
+			releaseGrid = resolve;
+		});
+		await page.route(/\/v1\/profiles\/query$/, async (route) => {
+			const filter: Filter | null = route.request().postDataJSON().filter ?? null;
 			gridFilters.push(filter);
 			if (filter != null) {
 				await gridCanFinish;
+				await route.fulfill({ json: { profiles: [profiles[0]], total: 1, hasNext: false } });
+				return;
 			}
-			await route.fulfill({ json: { profiles: result, total: result.length, hasNext: false } });
-		}
-	});
-	await page.goto('https://example.test/');
-	await page.addStyleTag({ content: componentStyles });
-	await page.addScriptTag({ content: componentScript });
-	const rows = page.locator('.profiles-list .grid__row--clickable');
-	const filters = page.locator('.profiles-list__filters');
-	const automaticUpdates = filters.getByRole('switch', { name: 'Show matches automatically' });
-	await expect(rows).toHaveCount(3);
-	await expect(automaticUpdates).not.toBeVisible();
-	await filters.getByRole('button', { name: 'Expand', exact: true }).click();
-	await expect(automaticUpdates).not.toBeChecked();
-	const editor = filters.getByRole('region', { name: 'Profile filters' });
-	const property = editor.locator('.filter-editor__property');
-	await property.locator('wa-input').click();
-	await property.locator('input').fill('Name');
-	await property.locator('.combobox-list__item .schema-combobox-item__name', { hasText: /^Name$/ }).click();
-	const operator = editor.locator('.filter-editor__operator').getByRole('combobox');
-	await operator.press('Home');
-	await operator.press('Enter');
-	const valueInput = editor.locator('.filter-editor__value-input input');
-	await valueInput.fill(JSON.stringify(values[0]));
-	await valueInput.press('Enter');
-	await expect(page.locator('.profiles-list__filter-preview-count')).toBeVisible();
-	await filters.getByText('Show matches automatically', { exact: true }).click();
-	await filters.getByRole('button', { name: 'Collapse', exact: true }).click();
-	await expect(editor).toHaveCount(0);
-	expect(gridFilters).toEqual([null]);
-	releaseCount();
-	await expect(filters).toHaveClass(/profiles-list__filters--updating-results/);
-	await expect(page.locator('.profiles-list__grid-summary-sweep')).toHaveCSS(
-		'animation-name',
-		'profiles-list__grid-summary-sweep',
-	);
-	await expect(page.locator('.profiles-list__filter-update-results')).toHaveCount(0);
-	await expect(rows).toHaveCount(3);
-	await filters.getByRole('button', { name: 'Expand', exact: true }).click();
-	await valueInput.focus();
-	releaseGrid();
-	await expect(rows).toHaveCount(1);
-	await expect(rows).toHaveAttribute('data-id', 'profile-1');
-	await expect(filters).toHaveClass(/profiles-list__filters--results-updated/);
-	await expect(page.locator('.profiles-list__grid-summary-content')).toHaveCSS(
-		'animation-name',
-		'profiles-list__grid-summary-success',
-	);
-	await expect(valueInput).toBeFocused();
-	expect(gridFilters).toEqual([null, countFilters[0]]);
-
-	await valueInput.fill('Missing');
-	await valueInput.press('Enter');
-	await expect(rows).toHaveCount(0);
-	await expect(page.locator('.profiles-list__grid-summary')).toContainText('0 profiles');
-	await expect(valueInput).toBeFocused();
-	await filters.getByRole('button', { name: 'Undo', exact: true }).click();
-	await expect(rows).toHaveCount(1);
-	await expect(rows).toHaveAttribute('data-id', 'profile-1');
-	await filters.getByRole('button', { name: 'Redo', exact: true }).click();
-	await expect(rows).toHaveCount(0);
-	expect(gridFilters.slice(1)).toEqual(countFilters);
-
-	await filters.getByText('Show matches automatically', { exact: true }).click();
-	await valueInput.fill(JSON.stringify(values[1]));
-	await valueInput.press('Enter');
-	await expect(page.getByRole('button', { name: 'Show 1 match', exact: true })).toBeVisible();
-	await expect(rows).toHaveCount(0);
-	expect(gridFilters).toHaveLength(5);
-	await filters.getByText('Show matches automatically', { exact: true }).click();
-	await expect(rows).toHaveCount(1);
-	await expect(rows).toHaveAttribute('data-id', 'profile-2');
-	expect(gridFilters.slice(1)).toEqual(countFilters);
-	await expect(page.locator('.profiles-list__filter-update-results')).toHaveCount(0);
-	await filters.getByRole('button', { name: 'Collapse', exact: true }).click();
-	await expect(automaticUpdates).not.toBeVisible();
-	await expect(page.getByRole('alert')).toBeEmpty();
-
-	await page.reload();
-	await page.addStyleTag({ content: componentStyles });
-	await page.addScriptTag({ content: componentScript });
-	await filters.getByRole('button', { name: 'Expand', exact: true }).click();
-	await expect(automaticUpdates).toBeChecked();
-	expect(await page.evaluate((key) => localStorage.getItem(key), PROFILES_SHOW_MATCHES_AUTOMATICALLY_KEY)).toBe(
-		'true',
-	);
-	await filters.getByText('Show matches automatically', { exact: true }).click();
-	await expect(automaticUpdates).not.toBeChecked();
-	expect(await page.evaluate((key) => localStorage.getItem(key), PROFILES_SHOW_MATCHES_AUTOMATICALLY_KEY)).toBe(
-		'false',
-	);
-
-	await page.reload();
-	await page.addStyleTag({ content: componentStyles });
-	await page.addScriptTag({ content: componentScript });
-	await filters.getByRole('button', { name: 'Expand', exact: true }).click();
-	await expect(automaticUpdates).not.toBeChecked();
-});
-
-test(`Keep results after failed automatic updates and recover with Retry and Undo`, async ({ page }) => {
-	let gridRequests = 0;
-	await page.route(/\/v1\/profiles\/(?:query|count)$/, async (route) => {
-		const url = new URL(route.request().url());
-		if (url.pathname.endsWith('/count')) {
-			await route.fulfill({ json: { total: 1 } });
-			return;
-		}
-		if (route.request().postDataJSON().filter == null) {
 			await route.fulfill({ json: { profiles, total: profiles.length, hasNext: false } });
-			return;
+		});
+		await page.goto('https://example.test/');
+		await page.addStyleTag({ content: componentStyles });
+		await page.addScriptTag({ content: componentScript });
+		const rows = page.locator('.profiles-list .grid__row--clickable');
+		await expect(rows).toHaveCount(3);
+		const filters = page.locator('.profiles-list__filters');
+		await filters.getByRole('button', { name: 'Add filter', exact: true }).click();
+		const editor = filters.getByRole('region', { name: 'Profile filters' });
+		const applyFilters = editor.getByRole('button', { name: 'Apply filters', exact: true });
+		const hint = editor.locator('.profiles-list__filter-shortcut');
+		await expect(hint.locator('kbd')).toHaveText([modifier === 'Meta' ? '⌘' : 'Ctrl', 'Enter']);
+		await expect(hint).toBeVisible();
+		await expect(applyFilters).toBeDisabled();
+		await expect(hint).toHaveAttribute('aria-disabled', 'true');
+		const buttonLayout = await applyFilters.boundingBox();
+		const hintLayout = await hint.boundingBox();
+		const editorLayout = await editor.boundingBox();
+		const bottomInset = editorLayout.y + editorLayout.height - buttonLayout.y - buttonLayout.height;
+		const rightInset = editorLayout.x + editorLayout.width - buttonLayout.x - buttonLayout.width;
+		expect(Math.abs(bottomInset - rightInset)).toBeLessThanOrEqual(1);
+		expect(hintLayout.y).toBeGreaterThanOrEqual(buttonLayout.y + buttonLayout.height);
+		expect(
+			Math.abs(hintLayout.x + hintLayout.width / 2 - buttonLayout.x - buttonLayout.width / 2),
+		).toBeLessThanOrEqual(1);
+		const property = editor.locator('.filter-editor__property');
+		await property.locator('input').focus();
+		await page.keyboard.press(`${modifier}+Enter`);
+		expect(gridFilters).toEqual([null]);
+		await property.locator('input').fill('Name');
+		await property.locator('.combobox-list__item .schema-combobox-item__name', { hasText: /^Name$/ }).click();
+		const operator = editor.locator('.filter-editor__operator').getByRole('combobox');
+		await operator.press('Home');
+		await operator.press('Enter');
+		const valueInput = editor.locator('.filter-editor__value-input input');
+		await valueInput.press(`${modifier}+Enter`);
+		await expect(applyFilters).toBeDisabled();
+		expect(gridFilters).toEqual([null]);
+		await valueInput.fill(JSON.stringify(values[1]));
+		await valueInput.press('Enter');
+		await expect(hint).not.toHaveAttribute('aria-disabled');
+		await valueInput.blur();
+		await page.keyboard.press(`${modifier}+Enter`);
+		expect(gridFilters).toEqual([null]);
+		await valueInput.fill(JSON.stringify(values[0]));
+		await page.clock.pauseAt(new Date('2026-11-12T12:01:00Z'));
+		try {
+			await valueInput.press(`${modifier}+Enter`);
+			await expect(applyFilters).toBeDisabled();
+			await expect.poll(() => gridFilters.length).toBe(2);
+			await expect(rows).toHaveCount(3);
+			await page.clock.runFor(500);
+			await expect(editor.locator('.profiles-list__filter-apply wa-spinner')).toBeVisible();
+			await valueInput.press(`${modifier}+Enter`);
+			expect(gridFilters).toEqual([
+				null,
+				{ operator: 'and', rules: [{ property: 'name', operator: 'is', values: [values[0]] }] },
+			]);
+		} finally {
+			releaseGrid();
 		}
-		gridRequests++;
-		if (gridRequests === 1 || gridRequests === 3) {
-			await route.fulfill({
-				status: 503,
-				json: { error: { code: 'ServiceUnavailable', message: 'temporary failure' } },
-			});
-			return;
-		}
-		await route.fulfill({ json: { profiles: [profiles[0]], total: 1, hasNext: false } });
+		await expect(rows).toHaveCount(1);
+		await expect(rows).toHaveAttribute('data-id', 'profile-1');
+		await expect(editor.locator('.profiles-list__filter-apply wa-spinner')).toHaveCount(0);
+		await expect(applyFilters).toBeDisabled();
+		await expect(hint).toBeVisible();
+		await valueInput.press(`${modifier}+Enter`);
+		await filters.getByRole('button', { name: 'Collapse', exact: true }).click();
+		await page.keyboard.press(`${modifier}+Enter`);
+		await expect(hint).not.toBeVisible();
+		expect(gridFilters).toHaveLength(2);
 	});
+}
+
+test(`Retry a failed collapse without reopening the editor on a narrow viewport`, async ({ page }) => {
+	let filteredRequests = 0;
+	await page.route(/\/v1\/profiles\/query$/, async (route) => {
+		if (route.request().postDataJSON().filter != null) {
+			filteredRequests++;
+			if (filteredRequests === 1) {
+				await route.fulfill({
+					status: 503,
+					json: { error: { code: 'ServiceUnavailable', message: 'temporary failure' } },
+				});
+				return;
+			}
+			await route.fulfill({ json: { profiles: [profiles[0]], total: 1, hasNext: false } });
+			return;
+		}
+		await route.fulfill({ json: { profiles, total: profiles.length, hasNext: false } });
+	});
+	await page.setViewportSize({ width: 600, height: 800 });
 	await page.goto('https://example.test/');
 	await page.addStyleTag({ content: componentStyles });
 	await page.addScriptTag({ content: componentScript });
-	const rows = page.locator('.profiles-list .grid__row--clickable');
 	const filters = page.locator('.profiles-list__filters');
-	await expect(rows).toHaveCount(3);
-	await filters.getByRole('button', { name: 'Expand', exact: true }).click();
-	await filters.getByText('Show matches automatically', { exact: true }).click();
+	await filters.getByRole('button', { name: 'Add filter', exact: true }).click();
 	const editor = filters.getByRole('region', { name: 'Profile filters' });
 	const property = editor.locator('.filter-editor__property');
-	await property.locator('wa-input').click();
 	await property.locator('input').fill('Name');
 	await property.locator('.combobox-list__item .schema-combobox-item__name', { hasText: /^Name$/ }).click();
 	const operator = editor.locator('.filter-editor__operator').getByRole('combobox');
@@ -650,90 +389,19 @@ test(`Keep results after failed automatic updates and recover with Retry and Und
 	await operator.press('Enter');
 	const valueInput = editor.locator('.filter-editor__value-input input');
 	await valueInput.fill(JSON.stringify(values[0]));
-	await valueInput.press('Enter');
 	await filters.getByRole('button', { name: 'Collapse', exact: true }).click();
-	const failure = page.locator('.profiles-list__filter-grid-error');
-	await expect(failure).toContainText('Unable to show profiles.');
-	await expect(rows).toHaveCount(3);
-	await expect(page.locator('.profiles-list__grid-summary')).toContainText('3 profiles');
-	await expect(filters).not.toHaveClass(/profiles-list__filters--updating-results/);
-	await expect(filters).not.toHaveClass(/profiles-list__filters--results-updated/);
-	await expect(page.locator('.profiles-list__filter-update-results')).toHaveCount(0);
-	await expect(filters.getByRole('button', { name: 'Expand', exact: true })).toBeFocused();
-	expect(gridRequests).toBe(1);
-
-	await failure.getByRole('button', { name: 'Retry', exact: true }).click();
-	await expect(rows).toHaveCount(1);
-	await expect(rows).toHaveAttribute('data-id', 'profile-1');
-	await expect(failure).toHaveCount(0);
-	await expect(filters).toHaveClass(/profiles-list__filters--results-updated/);
-	expect(gridRequests).toBe(2);
-
+	const failure = page.locator('.profiles-list__filter-grid-action');
 	await expect(editor).toHaveCount(0);
-	await filters.getByRole('button', { name: 'Expand', exact: true }).click();
-	await valueInput.fill(JSON.stringify(values[1]));
-	await valueInput.press('Enter');
-	await expect(failure).toContainText('Unable to show profiles.');
-	expect(gridRequests).toBe(3);
-	await valueInput.fill('"');
-	await filters.getByRole('button', { name: 'Undo', exact: true }).click();
-	await expect.poll(() => gridRequests).toBe(4);
-	await expect(failure).toHaveCount(0);
-	await expect(rows).toHaveCount(1);
-});
-
-test(`Resume automatic matches after Refresh cancels their loading`, async ({ page }) => {
-	let filteredReads = 0;
-	let releaseMatches = () => {};
-	const matchesCanFinish = new Promise<void>((resolve) => {
-		releaseMatches = resolve;
-	});
-	await page.route(/\/v1\/profiles\/(?:query|count)$/, async (route) => {
-		const url = new URL(route.request().url());
-		if (url.pathname.endsWith('/count')) {
-			await route.fulfill({ json: { total: 1 } });
-			return;
-		}
-		const hasFilter = route.request().postDataJSON().filter != null;
-		if (hasFilter) {
-			filteredReads++;
-			await matchesCanFinish;
-		}
-		await route.fulfill({
-			json: {
-				profiles: hasFilter ? [profiles[0]] : profiles,
-				total: hasFilter ? 1 : profiles.length,
-				hasNext: false,
-			},
-		});
-	});
-	await page.goto('https://example.test/');
-	await page.addStyleTag({ content: componentStyles });
-	await page.addScriptTag({ content: componentScript });
-	const rows = page.locator('.profiles-list .grid__row--clickable');
-	const filters = page.locator('.profiles-list__filters');
-	await expect(rows).toHaveCount(3);
-	await filters.getByRole('button', { name: 'Expand', exact: true }).click();
-	await filters.getByText('Show matches automatically', { exact: true }).click();
-	const property = filters.locator('.filter-editor__property');
-	await property.locator('wa-input').click();
-	await property.locator('input').fill('Name');
-	await property.locator('.combobox-list__item .schema-combobox-item__name', { hasText: /^Name$/ }).click();
-	const operator = filters.locator('.filter-editor__operator').getByRole('combobox');
-	await operator.press('Home');
-	await operator.press('Enter');
-	const valueInput = filters.locator('.filter-editor__value-input input');
-	await valueInput.fill(JSON.stringify(values[0]));
-	await valueInput.press('Enter');
-	try {
-		await expect.poll(() => filteredReads).toBe(1);
-		await page.getByRole('button', { name: 'Refresh', exact: true }).click();
-		await expect.poll(() => filteredReads).toBe(2);
-	} finally {
-		releaseMatches();
-	}
-	await expect(rows).toHaveCount(1);
-	await expect(filters).toHaveClass(/profiles-list__filters--results-updated/);
-	await expect(page.locator('.profiles-list__filter-update-results')).toHaveCount(0);
-	await expect(page.getByRole('alert')).toBeEmpty();
+	await expect(failure).toContainText('Unable to apply filters.');
+	await expect(page.locator('.profiles-list .grid__row--clickable')).toHaveCount(3);
+	const toolbar = await page.locator('.profiles-list__toolbar').boundingBox();
+	const actions = await page.locator('.profiles-list__toolbar-actions').boundingBox();
+	expect(actions.x + actions.width).toBeLessThanOrEqual(toolbar.x + toolbar.width);
+	await failure.getByRole('button', { name: 'Retry', exact: true }).click();
+	await expect(page.locator('.profiles-list .grid__row--clickable')).toHaveCount(1);
+	await expect(editor).toHaveCount(0);
+	expect(filteredRequests).toBe(2);
+	await filters.getByRole('button', { name: 'Edit filters', exact: true }).click();
+	await expect(valueInput).toHaveValue(JSON.stringify(values[0]));
+	await expect(editor.getByRole('button', { name: 'Apply filters', exact: true })).toBeDisabled();
 });

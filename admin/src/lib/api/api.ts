@@ -46,7 +46,6 @@ import {
 	ExecQueryResponse,
 	PipelineRun,
 	FindProfilesResponse,
-	CountProfilesResponse,
 	Member,
 	MemberInvitationResponse,
 	MemberToSet,
@@ -604,21 +603,6 @@ class Profiles {
 		this.apiURL = url;
 		this.workspaceID = workspaceID;
 	}
-
-	count = async (
-		filter: Filter | null,
-		schema?: ObjectType,
-		signal?: AbortSignal,
-	): Promise<CountProfilesResponse> => {
-		return await call(
-			`${this.apiURL}/profiles/count`,
-			http.POST,
-			true,
-			this.workspaceID,
-			{ schema, filter: filter ?? undefined },
-			{ signal },
-		);
-	};
 
 	find = async (
 		properties: string[],

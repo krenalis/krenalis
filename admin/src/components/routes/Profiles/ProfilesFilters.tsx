@@ -3,17 +3,13 @@ import { createPortal, flushSync } from 'react-dom';
 import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import WaButtonElement from '@awesome.me/webawesome/dist/components/button/button.js';
 import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
-import WaSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
-import WaSwitch from '@awesome.me/webawesome/dist/react/switch/index.js';
 import WaTooltip from '@awesome.me/webawesome/dist/react/tooltip/index.js';
 import { FilterEditor } from '../../base/FilterEditor/FilterEditor';
 import { Filter, FilterRule } from '../../../lib/api/types/pipeline';
-import { CountProfilesResponse } from '../../../lib/api/types/responses';
 import { ObjectType } from '../../../lib/api/types/types';
 import { getFilterConditions, isFilterGroup, validateAndNormalizeFilter } from '../../../lib/core/pipeline';
-import { formatNumber } from '../../../utils/formatNumber';
 import { serializeFilter } from '../../../utils/filters';
-import { PROFILES_SHOW_MATCHES_AUTOMATICALLY_KEY } from '../../../constants/storage';
+import { sleep } from '../../../utils/sleep';
 import { getPropertyPathDisplayValue } from '../../helpers/getPropertyPathDisplayValue';
 import { ProfileSchemaProperties } from './Profiles.types';
 import {
@@ -24,11 +20,11 @@ import {
 	currentProfilesFilterHistoryEntry,
 	FilterHistoryEntry,
 	FilterSession,
-	PreviewCandidate,
 	profileFilterFingerprint,
 	profileFilterResultsFingerprint,
 } from './profilesFilterSession';
-import { createProfilesPreviewTiming, recordProfilesPreviewLatency } from './profilesPreviewTiming';
+
+const MIN_PROFILES_LOADING_DURATION_MS = 400;
 
 interface ValidatedDraft {
 	filter?: Filter | null;
@@ -37,11 +33,9 @@ interface ValidatedDraft {
 
 interface FailedGridRequest {
 	entry: FilterHistoryEntry;
-	intent: GridMaterializationIntent;
+	shouldInspect: boolean;
 	message: string;
 }
-
-type GridMaterializationIntent = 'auto' | 'remove' | 'show';
 
 interface CollapsedFilterItem {
 	fullLabel: string;
@@ -294,9 +288,7 @@ interface ProfilesFiltersProps {
 	appliedFilter: Filter | null;
 	gridActionContainer: HTMLDivElement | null;
 	onInspectProfiles: () => void;
-	onPreview: (filter: Filter | null, signal?: AbortSignal) => Promise<CountProfilesResponse>;
 	onShow: (filter: Filter | null) => Promise<boolean>;
-	profilesTotal?: number;
 	schema: ObjectType;
 	schemaProperties: ProfileSchemaProperties;
 }
@@ -305,45 +297,23 @@ const ProfilesFilters = ({
 	appliedFilter,
 	gridActionContainer,
 	onInspectProfiles,
-	onPreview,
 	onShow,
-	profilesTotal,
 	schema,
 	schemaProperties,
 }: ProfilesFiltersProps) => {
-	const [session, setSession] = useState<FilterSession>(() =>
-		createProfilesFilterSession(appliedFilter, profilesTotal),
-	);
+	const [session, setSession] = useState<FilterSession>(() => createProfilesFilterSession(appliedFilter));
 	const [isOpen, setIsOpen] = useState(false);
-	const [shouldAutoUpdateProfiles, setShouldAutoUpdateProfiles] = useState(() => {
-		try {
-			return localStorage.getItem(PROFILES_SHOW_MATCHES_AUTOMATICALLY_KEY) === 'true';
-		} catch {
-			return false;
-		}
-	});
 	const [pendingGridContext, setPendingGridContext] = useState<string>();
 	const [gridFailure, setGridFailure] = useState<FailedGridRequest>();
 	const [resultsUpdatedContext, setResultsUpdatedContext] = useState<string>();
-	const [previewTiming, setPreviewTiming] = useState(createProfilesPreviewTiming);
 	const sessionRef = useRef(session);
-	const previewGenerationRef = useRef(0);
-	const previewControllerRef = useRef<AbortController>();
-	const visibilityGenerationRef = useRef(0);
 	const gridRequestGenerationRef = useRef(0);
 	const draftRevisionRef = useRef(0);
 	const expectedDisplayedContextRef = useRef<string>();
 	const displayedContextRef = useRef<string>();
 	const panelRef = useRef<HTMLDivElement>(null);
 	const triggerRef = useRef<WaButtonElement>(null);
-
-	useEffect(() => {
-		try {
-			localStorage.setItem(PROFILES_SHOW_MATCHES_AUTOMATICALLY_KEY, String(shouldAutoUpdateProfiles));
-		} catch (error) {
-			console.error(`cannot write the automatic profile matches preference on local storage: ${error}`);
-		}
-	}, [shouldAutoUpdateProfiles]);
+	const isMac = navigator.platform.startsWith('Mac');
 
 	const updateSession = useCallback((update: (current: FilterSession) => FilterSession) => {
 		const next = update(sessionRef.current);
@@ -387,7 +357,7 @@ const ProfilesFilters = ({
 					(condition, index) => (condition.values?.length ?? 0) !== (conditions[index].values?.length ?? 0),
 				)
 			) {
-				throw new Error('Complete the filter to calculate matches');
+				throw new Error('Complete the filter before applying it');
 			}
 			return normalized;
 		},
@@ -403,96 +373,25 @@ const ProfilesFilters = ({
 	}, [normalizeFilter, session.draft]);
 
 	const historyEntry = currentProfilesFilterHistoryEntry(session);
+	const hasFilters = session.draft != null && session.draft.rules.length > 0;
 	const rawDraftFingerprint = profileFilterFingerprint(session.draft);
 	const isDraftDirty = rawDraftFingerprint !== profileFilterFingerprint(historyEntry.draft);
-	const normalizedDraftFingerprint =
-		validatedDraft.error == null ? profileFilterFingerprint(validatedDraft.filter ?? null) : undefined;
-	const hasCurrentPreview =
-		normalizedDraftFingerprint === historyEntry.fingerprint &&
-		session.preview?.fingerprint === historyEntry.fingerprint &&
-		session.failure == null;
-	const draftMatchesCurrentPreview = !isDraftDirty && hasCurrentPreview;
 	const canUndo = isDraftDirty || session.historyIndex > 0;
 	const canRedo = session.historyIndex < session.history.length - 1;
 	const appliedFilterFingerprint = profileFilterFingerprint(appliedFilter);
-	const previewFilterDiffersFromGrid =
-		profileFilterResultsFingerprint(historyEntry.filter) !== profileFilterResultsFingerprint(appliedFilter);
 	const hasUnappliedChanges =
-		validatedDraft.error == null &&
+		validatedDraft.error != null ||
 		profileFilterResultsFingerprint(validatedDraft.filter ?? null) !==
 			profileFilterResultsFingerprint(appliedFilter);
+	const isUpdatingGridResults = pendingGridContext != null;
+	const canApplyFilters = validatedDraft.error == null && hasUnappliedChanges && !isUpdatingGridResults;
 	const propertyLabel = useCallback(
 		(property: string) => getPropertyPathDisplayValue(property, (path) => schemaProperties[path]),
 		[schemaProperties],
 	);
 	const summary = useMemo(
-		() => (appliedFilter == null ? 'No filters' : serializeFilter(appliedFilter, false, propertyLabel)),
+		() => (appliedFilter == null ? 'No filters applied' : serializeFilter(appliedFilter, false, propertyLabel)),
 		[appliedFilter, propertyLabel],
-	);
-
-	const invalidatePreview = useCallback(() => {
-		previewGenerationRef.current++;
-		previewControllerRef.current?.abort();
-		previewControllerRef.current = undefined;
-	}, []);
-
-	const previewCandidate = useCallback(
-		async (candidate: PreviewCandidate) => {
-			const current = sessionRef.current;
-			if (current.pending?.fingerprint === candidate.fingerprint) {
-				return;
-			}
-
-			invalidatePreview();
-			if (current.failure == null && current.preview?.fingerprint === candidate.fingerprint) {
-				if (current.pending != null) {
-					updateSession((state) => ({ ...state, pending: undefined }));
-				}
-				return;
-			}
-			const generation = previewGenerationRef.current;
-			const controller = new AbortController();
-			previewControllerRef.current = controller;
-			updateSession((state) => ({ ...state, pending: candidate, failure: undefined }));
-
-			try {
-				const visibilityGeneration = visibilityGenerationRef.current;
-				const startedVisible = document.visibilityState === 'visible';
-				const startedAt = performance.now();
-				const response = await onPreview(candidate.filter, controller.signal);
-				if (
-					!controller.signal.aborted &&
-					startedVisible &&
-					document.visibilityState === 'visible' &&
-					visibilityGenerationRef.current === visibilityGeneration
-				) {
-					setPreviewTiming((timing) => recordProfilesPreviewLatency(timing, performance.now() - startedAt));
-				}
-				if (previewGenerationRef.current !== generation) {
-					return;
-				}
-				updateSession((state) => ({
-					...state,
-					preview: { ...response, fingerprint: candidate.fingerprint },
-					pending: undefined,
-					failure: undefined,
-				}));
-			} catch (error) {
-				if (previewGenerationRef.current !== generation || (error as any)?.name === 'AbortError') {
-					return;
-				}
-				updateSession((state) => ({
-					...state,
-					pending: undefined,
-					failure: { candidate, message: 'Unable to calculate matches.' },
-				}));
-			} finally {
-				if (previewGenerationRef.current === generation) {
-					previewControllerRef.current = undefined;
-				}
-			}
-		},
-		[invalidatePreview, onPreview, updateSession],
 	);
 
 	const onDraftChange = useCallback(
@@ -501,16 +400,10 @@ const ProfilesFilters = ({
 				return;
 			}
 			draftRevisionRef.current++;
-			invalidatePreview();
-			updateSession((state) => ({
-				...state,
-				draft,
-				pending: undefined,
-				failure: undefined,
-			}));
+			updateSession((state) => ({ ...state, draft }));
 			setGridFailure(undefined);
 		},
-		[invalidatePreview, updateSession],
+		[updateSession],
 	);
 
 	const onDraftCommit = useCallback(
@@ -522,29 +415,14 @@ const ProfilesFilters = ({
 				return;
 			}
 			updateSession((state) => commitProfilesFilter(state, filter, draft));
-			void previewCandidate({ filter, fingerprint: profileFilterFingerprint(filter) });
 		},
-		[normalizeFilter, previewCandidate, updateSession],
-	);
-
-	const onDraftPreview = useCallback(
-		(draft: Filter | null) => {
-			let filter: Filter | null;
-			try {
-				filter = normalizeFilter(draft);
-			} catch {
-				return;
-			}
-			void previewCandidate({ filter, fingerprint: profileFilterFingerprint(filter) });
-		},
-		[normalizeFilter, previewCandidate],
+		[normalizeFilter, updateSession],
 	);
 
 	const selectHistoryEntry = (historyIndex: number) => {
 		const target = sessionRef.current.history[historyIndex];
 		draftRevisionRef.current++;
 		setGridFailure(undefined);
-		void previewCandidate({ filter: target.filter, fingerprint: target.fingerprint });
 		updateSessionWithHistoryTransition((state) => ({
 			...state,
 			draft: cloneProfileFilter(target.draft),
@@ -573,12 +451,6 @@ const ProfilesFilters = ({
 		selectHistoryEntry(current.historyIndex + 1);
 	};
 
-	const retryPreview = () => {
-		if (sessionRef.current.failure != null) {
-			void previewCandidate(sessionRef.current.failure.candidate);
-		}
-	};
-
 	const restoreTriggerFocus = useCallback(() => {
 		requestAnimationFrame(() => triggerRef.current?.focus({ preventScroll: true }));
 	}, []);
@@ -596,7 +468,7 @@ const ProfilesFilters = ({
 	);
 
 	const materializeProfiles = useCallback(
-		async (entry: FilterHistoryEntry, intent: GridMaterializationIntent) => {
+		async (entry: FilterHistoryEntry, shouldInspect = true) => {
 			const snapshot = createProfileFilterHistoryEntry(entry.filter, entry.draft);
 			const snapshotContext = snapshot.fingerprint;
 			const generation = ++gridRequestGenerationRef.current;
@@ -605,8 +477,10 @@ const ProfilesFilters = ({
 			setPendingGridContext(snapshotContext);
 			setGridFailure(undefined);
 			setResultsUpdatedContext(undefined);
+			const minimumLoading = sleep(MIN_PROFILES_LOADING_DURATION_MS);
 			try {
 				const shown = await onShow(snapshot.filter);
+				await minimumLoading;
 				if (gridRequestGenerationRef.current !== generation) {
 					return;
 				}
@@ -626,14 +500,15 @@ const ProfilesFilters = ({
 				}
 				const intentIsCurrent =
 					draftRevisionRef.current === draftRevision && currentDraftFingerprint === snapshot.fingerprint;
-				if (intent === 'show' && intentIsCurrent) {
+				if (shouldInspect && intentIsCurrent) {
 					onInspectProfiles();
 				}
 			} catch {
+				await minimumLoading;
 				if (gridRequestGenerationRef.current === generation) {
 					expectedDisplayedContextRef.current = undefined;
 					setPendingGridContext(undefined);
-					setGridFailure({ entry, intent, message: 'Unable to show profiles.' });
+					setGridFailure({ entry, shouldInspect, message: 'Unable to apply filters.' });
 				}
 			}
 		},
@@ -654,32 +529,39 @@ const ProfilesFilters = ({
 			const filter = nextFilter.rules.length === 0 ? null : nextFilter;
 			const entry = createProfileFilterHistoryEntry(filter);
 			draftRevisionRef.current++;
-			invalidatePreview();
-			updateSession((state) => ({
-				...commitProfilesFilter(state, filter, entry.draft),
-				pending: undefined,
-				failure: undefined,
-			}));
-			void materializeProfiles(entry, 'remove');
+			updateSession((state) => commitProfilesFilter(state, filter, entry.draft));
+			void materializeProfiles(entry, false);
 		},
-		[appliedFilter, invalidatePreview, materializeProfiles, pendingGridContext, updateSession],
+		[appliedFilter, materializeProfiles, pendingGridContext, updateSession],
 	);
+
+	const collapseFilters = useCallback(() => {
+		const draft = sessionRef.current.draft;
+		let filter: Filter | null;
+		try {
+			filter = normalizeFilter(draft);
+		} catch {
+			return;
+		}
+		draftRevisionRef.current++;
+		updateSession((state) => commitProfilesFilter(state, filter, draft));
+		setEditorOpen(false);
+		const entry = currentProfilesFilterHistoryEntry(sessionRef.current);
+		if (pendingGridContext === entry.fingerprint) {
+			return;
+		}
+		if (
+			pendingGridContext == null &&
+			profileFilterResultsFingerprint(filter) === profileFilterResultsFingerprint(appliedFilter)
+		) {
+			return;
+		}
+		void materializeProfiles(entry, false);
+	}, [appliedFilter, materializeProfiles, normalizeFilter, pendingGridContext, setEditorOpen, updateSession]);
 
 	const displayedContext = appliedFilterFingerprint;
 	useEffect(() => {
 		if (displayedContextRef.current === displayedContext) {
-			if (
-				profilesTotal != null &&
-				sessionRef.current.history.length === 1 &&
-				sessionRef.current.preview == null &&
-				currentProfilesFilterHistoryEntry(sessionRef.current).fingerprint === displayedContext &&
-				sessionRef.current.pending == null
-			) {
-				updateSession((state) => ({
-					...state,
-					preview: { fingerprint: displayedContext, total: profilesTotal },
-				}));
-			}
 			return;
 		}
 		displayedContextRef.current = displayedContext;
@@ -687,27 +569,16 @@ const ProfilesFilters = ({
 			expectedDisplayedContextRef.current = undefined;
 			return;
 		}
-		invalidatePreview();
 		draftRevisionRef.current++;
-		setPreviewTiming(createProfilesPreviewTiming());
-		updateSession(() => createProfilesFilterSession(appliedFilter, profilesTotal));
-	}, [appliedFilter, appliedFilterFingerprint, displayedContext, invalidatePreview, profilesTotal, updateSession]);
+		updateSession(() => createProfilesFilterSession(appliedFilter));
+	}, [appliedFilter, displayedContext, updateSession]);
 
 	useEffect(
 		() => () => {
-			invalidatePreview();
 			gridRequestGenerationRef.current++;
 		},
-		[invalidatePreview],
+		[],
 	);
-
-	useEffect(() => {
-		const onVisibilityChange = () => {
-			visibilityGenerationRef.current++;
-		};
-		document.addEventListener('visibilitychange', onVisibilityChange);
-		return () => document.removeEventListener('visibilitychange', onVisibilityChange);
-	}, []);
 
 	useEffect(() => {
 		if (!isOpen) {
@@ -734,55 +605,45 @@ const ProfilesFilters = ({
 				return;
 			}
 			event.preventDefault();
-			setEditorOpen(false);
+			collapseFilters();
 		};
 		document.addEventListener('keydown', onKeyDown, true);
 		return () => document.removeEventListener('keydown', onKeyDown, true);
-	}, [isOpen, setEditorOpen]);
+	}, [collapseFilters, isOpen]);
 
-	const currentPreviewContext = historyEntry.fingerprint;
-	const isShowingCurrentPreview = pendingGridContext === currentPreviewContext;
-	const canShowCurrentPreview = draftMatchesCurrentPreview && previewFilterDiffersFromGrid;
-	const isCurrentResultsUpdateConfirmed =
-		resultsUpdatedContext === currentPreviewContext && session.pending == null && draftMatchesCurrentPreview;
-	const canUpdateResults = !isCurrentResultsUpdateConfirmed && session.pending == null && canShowCurrentPreview;
-	const isUpdatingGridResults = pendingGridContext != null;
-	const textValuePreviewDelayMs = previewTiming.suspended ? undefined : previewTiming.delayMs;
+	const applyFilters = () => {
+		if (!canApplyFilters) {
+			return;
+		}
+		const draft = sessionRef.current.draft;
+		let filter: Filter | null;
+		try {
+			filter = normalizeFilter(draft);
+		} catch {
+			return;
+		}
+		updateSession((state) => commitProfilesFilter(state, filter, draft));
+		void materializeProfiles(currentProfilesFilterHistoryEntry(sessionRef.current));
+	};
 
-	useEffect(() => {
+	const onEditorKeyDown = (event: React.KeyboardEvent<HTMLElement>) => {
+		const hasApplyModifier = isMac ? event.metaKey : event.ctrlKey;
 		if (
-			!shouldAutoUpdateProfiles ||
-			!canUpdateResults ||
-			isShowingCurrentPreview ||
-			gridFailure?.entry === historyEntry
+			!isOpen ||
+			event.key !== 'Enter' ||
+			!hasApplyModifier ||
+			event.altKey ||
+			event.shiftKey ||
+			event.nativeEvent.isComposing
 		) {
 			return;
 		}
-		void materializeProfiles(historyEntry, 'auto');
-	}, [
-		canUpdateResults,
-		gridFailure,
-		historyEntry,
-		isShowingCurrentPreview,
-		materializeProfiles,
-		shouldAutoUpdateProfiles,
-	]);
-
-	let collapsedFilterStatus: string | undefined;
-	if (isUpdatingGridResults) {
-		collapsedFilterStatus = 'Updating profiles…';
-	} else if (
-		gridFailure == null &&
-		session.failure == null &&
-		session.pending == null &&
-		validatedDraft.error == null
-	) {
-		if (hasUnappliedChanges) {
-			collapsedFilterStatus = 'Unapplied changes · Showing previous results';
-		} else if (!isDraftDirty) {
-			collapsedFilterStatus = 'Filters applied';
+		event.preventDefault();
+		event.stopPropagation();
+		if (!event.repeat) {
+			applyFilters();
 		}
-	}
+	};
 
 	const gridErrorMessage = gridFailure != null && (
 		<div className='profiles-list__filter-grid-error' role='alert'>
@@ -791,7 +652,7 @@ const ProfilesFilters = ({
 				size='s'
 				variant='brand'
 				appearance='plain'
-				onClick={() => void materializeProfiles(gridFailure.entry, gridFailure.intent)}
+				onClick={() => void materializeProfiles(gridFailure.entry, gridFailure.shouldInspect)}
 			>
 				Retry
 			</WaButton>
@@ -843,10 +704,14 @@ const ProfilesFilters = ({
 						appearance='outlined'
 						aria-controls='profiles-filter-editor'
 						aria-expanded={isOpen}
-						onClick={() => setEditorOpen(!isOpen)}
+						onClick={isOpen ? collapseFilters : () => setEditorOpen(true)}
 					>
-						<WaIcon slot='start' name={isOpen ? 'chevron-up' : 'chevron-down'} aria-hidden='true' />
-						{isOpen ? 'Collapse' : 'Expand'}
+						<WaIcon
+							slot='start'
+							name={isOpen ? 'chevron-up' : hasFilters ? 'sliders2' : 'plus'}
+							aria-hidden='true'
+						/>
+						{isOpen ? 'Collapse' : hasFilters ? 'Edit filters' : 'Add filter'}
 					</WaButton>
 				</div>
 				<div
@@ -887,6 +752,7 @@ const ProfilesFilters = ({
 							className='profiles-list__filter-editor'
 							role='region'
 							aria-label='Profile filters'
+							onKeyDownCapture={onEditorKeyDown}
 						>
 							<div className='profiles-list__filter-editor-body'>
 								<FilterEditor
@@ -894,25 +760,36 @@ const ProfilesFilters = ({
 									hoistMenus={true}
 									onChange={onDraftChange}
 									onCommit={onDraftCommit}
-									onPreview={onDraftPreview}
 									role='Destination'
 									rootActions={historyActions}
 									schema={schema}
 									showEmptyFilterAsCondition={true}
 									subject='Profiles'
 									target='User'
-									textValuePreviewDelayMs={textValuePreviewDelayMs}
 								/>
 								{isOpen && gridErrorMessage}
 							</div>
 							<div className='profiles-list__filter-options'>
-								<WaSwitch
-									size='s'
-									checked={shouldAutoUpdateProfiles}
-									onChange={(event: any) => setShouldAutoUpdateProfiles(event.target.checked)}
+								<WaButton
+									className='profiles-list__filter-apply'
+									variant={canApplyFilters || isUpdatingGridResults ? 'brand' : 'neutral'}
+									appearance='accent'
+									size='m'
+									aria-keyshortcuts={isMac ? 'Meta+Enter' : 'Control+Enter'}
+									disabled={!canApplyFilters}
+									loading={isUpdatingGridResults}
+									onClick={applyFilters}
 								>
-									Show matches automatically
-								</WaSwitch>
+									Apply filters
+								</WaButton>
+								<span
+									className={`profiles-list__filter-shortcut grid-keyboard-hints__keys${canApplyFilters ? '' : ' grid-keyboard-hints__hint--disabled'}`}
+									aria-disabled={!canApplyFilters || undefined}
+								>
+									<kbd>{isMac ? '⌘' : 'Ctrl'}</kbd>
+									<span className='grid-keyboard-hints__plus'>+</span>
+									<kbd>Enter</kbd>
+								</span>
 							</div>
 						</section>
 						<div className='profiles-list__filter-preview-context'>
@@ -938,48 +815,15 @@ const ProfilesFilters = ({
 				createPortal(
 					<>
 						{!isOpen && gridErrorMessage}
-						{isOpen && previewTiming.suspended && (
-							<span className='profiles-list__filter-preview-slow' role='status' aria-live='polite'>
-								Counts are taking longer than usual. Press Enter to update.
-							</span>
-						)}
-						{session.failure != null ? (
-							<div className='profiles-list__filter-preview-error' role='status'>
-								<span>{session.failure.message}</span>
-								<WaButton size='s' variant='brand' appearance='plain' onClick={retryPreview}>
-									Retry
-								</WaButton>
-							</div>
-						) : validatedDraft.error != null ? (
-							<span className='profiles-list__filter-preview-incomplete' role='status'>
-								Complete the filter to calculate matches
-							</span>
-						) : null}
-						{session.pending != null && (
-							<div className='profiles-list__filter-preview-count' role='status' aria-live='polite'>
-								<WaSpinner />
-								<span>Calculating profiles…</span>
-							</div>
-						)}
-						{!shouldAutoUpdateProfiles && canUpdateResults ? (
-							<WaButton
-								className='profiles-list__filter-update-results'
-								size='s'
-								variant='brand'
-								appearance='outlined'
-								disabled={isShowingCurrentPreview}
-								onClick={() => void materializeProfiles(historyEntry, 'show')}
-							>
-								{isShowingCurrentPreview && <WaSpinner />}
-								Show {formatNumber(session.preview?.total ?? 0)}{' '}
-								{session.preview?.total === 1 ? 'match' : 'matches'}
-							</WaButton>
-						) : null}
-						{!isOpen && collapsedFilterStatus != null && (
+						{isUpdatingGridResults ? (
 							<span className='profiles-list__filter-status' role='status'>
-								{collapsedFilterStatus}
+								Updating profiles…
 							</span>
-						)}
+						) : !isOpen && gridFailure == null && hasUnappliedChanges ? (
+							<span className='profiles-list__filter-status' role='status'>
+								Unapplied changes · Showing previous results
+							</span>
+						) : null}
 					</>,
 					gridActionContainer,
 				)}

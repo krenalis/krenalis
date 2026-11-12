@@ -6,7 +6,7 @@ import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import { ProfileProperty, ProfileSchemaProperties } from './Profiles.types';
 import { ObjectType } from '../../../lib/api/types/types';
 import { Filter } from '../../../lib/api/types/pipeline';
-import { CountProfilesResponse, FindProfilesResponse } from '../../../lib/api/types/responses';
+import { FindProfilesResponse } from '../../../lib/api/types/responses';
 import { ProfilePropertyRoles } from '../../../lib/api/types/workspace';
 import { flattenSchema } from '../../../lib/core/pipeline';
 import { PROFILES_PROPERTIES_KEY } from '../../../constants/storage';
@@ -423,25 +423,6 @@ const useProfiles = () => {
 		localStorage.setItem(PROFILES_PROPERTIES_KEY, JSON.stringify(properties));
 	}, []);
 
-	const previewProfilesFilter = useCallback(
-		async (filter: Filter | null, signal?: AbortSignal): Promise<CountProfilesResponse> => {
-			const executionID = executionRef.current;
-			try {
-				return await api.workspaces.profiles.count(filter, profileSchema, signal);
-			} catch (error) {
-				if (!signal?.aborted && executionRef.current === executionID) {
-					if (error instanceof UnprocessableError && error.code === 'SchemaNotAligned') {
-						applySequenceAction({ type: 'markSchemaNotAligned', executionID });
-					} else if (error instanceof NotFoundError) {
-						reportProfilesError(error);
-					}
-				}
-				throw error;
-			}
-		},
-		[api, applySequenceAction, profileSchema, reportProfilesError],
-	);
-
 	const replaceProfilesExecution = useCallback(
 		async ({
 			activeProfileID,
@@ -691,7 +672,6 @@ const useProfiles = () => {
 
 	return {
 		appliedFilter,
-		previewProfilesFilter,
 		showProfilesFilter,
 		profiles,
 		profilesTotal: sequence.total,

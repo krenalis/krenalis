@@ -1,5 +1,4 @@
 import { Filter } from '../../../lib/api/types/pipeline';
-import { CountProfilesResponse } from '../../../lib/api/types/responses';
 import { getFilterConditions } from '../../../lib/core/pipeline';
 import { formatString } from '../../../utils/filters';
 import { createProfilesValueFingerprint } from './profilesSequence';
@@ -13,27 +12,10 @@ interface FilterHistoryEntry {
 	fingerprint: string;
 }
 
-interface PreviewCandidate {
-	filter: Filter | null;
-	fingerprint: string;
-}
-
-interface FilterPreview extends CountProfilesResponse {
-	fingerprint: string;
-}
-
-interface FailedPreview {
-	candidate: PreviewCandidate;
-	message: string;
-}
-
 interface FilterSession {
 	draft: Filter | null;
 	history: FilterHistoryEntry[];
 	historyIndex: number;
-	preview?: FilterPreview;
-	pending?: PreviewCandidate;
-	failure?: FailedPreview;
 }
 
 const cloneProfileFilter = (filter: Filter | null): Filter | null => (filter == null ? null : structuredClone(filter));
@@ -64,13 +46,12 @@ const createProfileFilterHistoryEntry = (filter: Filter | null, draft?: Filter |
 	};
 };
 
-const createProfilesFilterSession = (filter: Filter | null, total?: number): FilterSession => {
+const createProfilesFilterSession = (filter: Filter | null): FilterSession => {
 	const entry = createProfileFilterHistoryEntry(filter);
 	return {
 		draft: cloneProfileFilter(entry.draft),
 		history: [entry],
 		historyIndex: 0,
-		preview: total == null ? undefined : { fingerprint: entry.fingerprint, total },
 	};
 };
 
@@ -119,4 +100,4 @@ export {
 	profileFilterFingerprint,
 	profileFilterResultsFingerprint,
 };
-export type { FailedPreview, FilterHistoryEntry, FilterSession, PreviewCandidate };
+export type { FilterHistoryEntry, FilterSession };

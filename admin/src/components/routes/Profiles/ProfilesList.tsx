@@ -31,7 +31,6 @@ const ProfilesList = () => {
 	const { api, handleError, workspaces, selectedWorkspace } = useContext(AppContext);
 	const {
 		appliedFilter,
-		previewProfilesFilter,
 		showProfilesFilter,
 		profiles,
 		profilesTotal,
@@ -245,9 +244,7 @@ const ProfilesList = () => {
 						appliedFilter={appliedFilter}
 						gridActionContainer={filterGridActionContainer}
 						onInspectProfiles={inspectProfiles}
-						onPreview={previewProfilesFilter}
 						onShow={showProfilesFilter}
-						profilesTotal={isLoading ? undefined : profilesTotal}
 						schema={profileSchema}
 						schemaProperties={profileSchemaProperties}
 					/>
