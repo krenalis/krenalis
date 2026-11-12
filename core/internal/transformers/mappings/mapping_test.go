@@ -25,8 +25,9 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-// TestMappingArray checks array conversions and validation.
-func TestMappingArray(t *testing.T) {
+// TestArrayFunction checks array construction, element conversion, and
+// validation.
+func TestArrayFunction(t *testing.T) {
 
 	date := time.Date(2025, 12, 31, 0, 0, 0, 0, time.UTC)
 	createRequiredObject := types.Object([]types.Property{{
@@ -46,6 +47,27 @@ func TestMappingArray(t *testing.T) {
 		purpose     Purpose
 	}{
 		{
+			name:        "empty array with zero maximum",
+			expression:  "array()",
+			source:      types.Int(32),
+			destination: types.Array(types.Int(32)).WithMaxElements(0),
+			expected:    []any{},
+		},
+		{
+			name:        "nonempty array above zero maximum",
+			expression:  "array(1)",
+			source:      types.Int(32),
+			destination: types.Array(types.Int(32)).WithMaxElements(0),
+			err:         "«array(1)» is not convertible to the «array(int(32))» type",
+		},
+		{
+			name:        "empty array below minimum",
+			expression:  "array()",
+			source:      types.Int(32),
+			destination: types.Array(types.Int(32)).WithMinElements(1),
+			err:         "«array()» is not convertible to the «array(int(32))» type",
+		},
+		{
 			name:        "literal date",
 			expression:  "array('2025-12-31')",
 			source:      types.String(),
@@ -53,7 +75,7 @@ func TestMappingArray(t *testing.T) {
 			expected:    []any{date},
 		},
 		{
-			name:        "dynamic date",
+			name:        "date from Excel serial",
 			expression:  "array(value)",
 			source:      types.String(),
 			destination: types.Array(types.Date()),
@@ -189,6 +211,14 @@ func TestMappingArray(t *testing.T) {
 			expected:    []any{[]any{true, false}},
 		},
 		{
+			name:        "empty array property",
+			expression:  "array(value)",
+			source:      types.Array(types.Int(8)),
+			destination: types.Array(types.Array(types.Boolean())),
+			value:       []any{},
+			expected:    []any{[]any{}},
+		},
+		{
 			name:        "map property",
 			expression:  "array(value)",
 			source:      types.Map(types.Int(8)),
@@ -268,6 +298,22 @@ func TestMappingArray(t *testing.T) {
 			expected:    []any{math.NaN()},
 		},
 		{
+			name:        "unique NaN",
+			expression:  "array(value, 1)",
+			source:      types.Float(64),
+			destination: types.Array(types.Float(64)).WithUnique(),
+			value:       math.NaN(),
+			expected:    []any{math.NaN(), float64(1)},
+		},
+		{
+			name:        "duplicate NaN",
+			expression:  "array(value, 'NaN')",
+			source:      types.Float(64),
+			destination: types.Array(types.Float(64)).WithUnique(),
+			value:       math.NaN(),
+			err:         "«array(value, 'NaN')» is not convertible to the «array(float(64))» type",
+		},
+		{
 			name:        "positive infinity",
 			expression:  "array(value)",
 			source:      types.Float(64),
@@ -282,14 +328,6 @@ func TestMappingArray(t *testing.T) {
 			destination: types.Array(types.String()),
 			value:       nil,
 			err:         "«value» is not convertible to the «string» type",
-		},
-		{
-			name:        "array elements satisfy pattern",
-			expression:  "value",
-			source:      types.Array(types.String()),
-			destination: types.Array(types.String().WithPattern(regexp.MustCompile("^ok$"))),
-			value:       []any{"ok", "ok"},
-			expected:    []any{"ok", "ok"},
 		},
 		{
 			name:        "pattern",
@@ -371,6 +409,15 @@ func TestMappingArray(t *testing.T) {
 			value:       map[string]any{},
 			err:         "«array(value)» is not convertible to the «array(object)» type",
 			purpose:     Create,
+		},
+		{
+			name:        "required/update/object",
+			expression:  "array(value)",
+			source:      updateRequiredObject,
+			destination: types.Array(updateRequiredObject),
+			value:       map[string]any{},
+			err:         "«array(value)» is not convertible to the «array(object)» type",
+			purpose:     Update,
 		},
 		{
 			name:        "required/create/map",
@@ -500,91 +547,6 @@ func TestMappingFailedConversionPreservesInput(t *testing.T) {
 
 	if !reflect.DeepEqual(input, expected) {
 		t.Errorf("expected unchanged input %#v, got %#v", expected, input)
-	}
-
-}
-
-// TestMappingNestedConversionErrors checks that constraint violations and
-// conversion errors in nested values produce a ValidationError with a generic
-// message for the containing type.
-func TestMappingNestedConversionErrors(t *testing.T) {
-
-	tests := []struct {
-		name        string
-		source      types.Type
-		destination types.Type
-		value       any
-	}{
-		{
-			name:        "array element violates pattern",
-			source:      types.Array(types.String()),
-			destination: types.Array(types.String().WithPattern(regexp.MustCompile("^ok$"))),
-			value:       []any{"ok", "invalid"},
-		},
-		{
-			name:        "map value exceeds max bytes",
-			source:      types.Map(types.String()),
-			destination: types.Map(types.String().WithMaxBytes(2)),
-			value:       map[string]any{"key": "invalid"},
-		},
-		{
-			name:   "object property exceeds max length",
-			source: types.Object([]types.Property{{Name: "key", Type: types.String()}}),
-			destination: types.Object([]types.Property{
-				{Name: "key", Type: types.String().WithMaxLength(2)},
-			}),
-			value: map[string]any{"key": "invalid"},
-		},
-		{
-			name:   "deeply nested integer below minimum",
-			source: types.JSON(),
-			destination: types.Array(types.Map(types.Object([]types.Property{
-				{Name: "key", Type: types.Int(32).WithIntRange(0, 5)},
-			}))),
-			value: json.Value(`[{"outer":{"key":-1}}]`),
-		},
-		{
-			name:        "JSON array element exceeds maximum",
-			source:      types.JSON(),
-			destination: types.Array(types.Int(32).WithIntRange(0, 5)),
-			value:       json.Value(`[6]`),
-		},
-		{
-			name:        "JSON map value exceeds int64 range",
-			source:      types.JSON(),
-			destination: types.Map(types.Int(32)),
-			value:       json.Value(`{"key":9223372036854775808}`),
-		},
-		{
-			name:        "JSON object property contains invalid date",
-			source:      types.JSON(),
-			destination: types.Object([]types.Property{{Name: "key", Type: types.Date()}}),
-			value:       json.Value(`{"key":"invalid"}`),
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			input := types.Object([]types.Property{{Name: "value", Type: test.source}})
-			output := types.Object([]types.Property{{Name: "result", Type: test.destination}})
-			mapping, err := New(map[string]string{"result": "value"}, input, output)
-			if err != nil {
-				t.Fatalf("expected mapping creation to succeed, got %v", err)
-			}
-			_, err = mapping.Transform(map[string]any{"value": test.value}, None)
-			if err != nil {
-				if _, ok := err.(ValidationError); !ok {
-					t.Fatalf("expected ValidationError, got %T: %v", err, err)
-				}
-				want := fmt.Sprintf("«value» is not convertible to the «%s» type while mapping to «result»",
-					test.destination)
-				if err.Error() != want {
-					t.Fatalf("expected error %q, got %q", want, err.Error())
-				}
-				return
-			}
-			t.Fatal("expected ValidationError, got nil")
-		})
 	}
 
 }
@@ -1133,6 +1095,97 @@ func TestMappingSharedValues(t *testing.T) {
 
 }
 
+// TestNestedConversionErrors checks that constraint violations and
+// conversion errors in nested values produce a ValidationError with a generic
+// message referring to the containing type.
+func TestNestedConversionErrors(t *testing.T) {
+
+	tests := []struct {
+		name        string
+		source      types.Type
+		destination types.Type
+		value       any
+	}{
+		{
+			name:        "array element violates pattern",
+			source:      types.Array(types.String()),
+			destination: types.Array(types.String().WithPattern(regexp.MustCompile("^ok$"))),
+			value:       []any{"ok", "invalid"},
+		},
+		{
+			name:        "array element cannot be converted to integer",
+			source:      types.Array(types.String()),
+			destination: types.Array(types.Int(32)),
+			value:       []any{"42", "invalid"},
+		},
+		{
+			name:        "map value exceeds max bytes",
+			source:      types.Map(types.String()),
+			destination: types.Map(types.String().WithMaxBytes(2)),
+			value:       map[string]any{"key": "invalid"},
+		},
+		{
+			name:   "object property exceeds max length",
+			source: types.Object([]types.Property{{Name: "key", Type: types.String()}}),
+			destination: types.Object([]types.Property{
+				{Name: "key", Type: types.String().WithMaxLength(2)},
+			}),
+			value: map[string]any{"key": "invalid"},
+		},
+		{
+			name:   "deeply nested integer below minimum",
+			source: types.JSON(),
+			destination: types.Array(types.Map(types.Object([]types.Property{
+				{Name: "key", Type: types.Int(32).WithIntRange(0, 5)},
+			}))),
+			value: json.Value(`[{"outer":{"key":-1}}]`),
+		},
+		{
+			name:        "JSON array element exceeds maximum",
+			source:      types.JSON(),
+			destination: types.Array(types.Int(32).WithIntRange(0, 5)),
+			value:       json.Value(`[6]`),
+		},
+		{
+			name:        "JSON map value exceeds int64 range",
+			source:      types.JSON(),
+			destination: types.Map(types.Int(64)),
+			value:       json.Value(`{"key":9223372036854775808}`),
+		},
+		{
+			name:        "JSON object property contains invalid date",
+			source:      types.JSON(),
+			destination: types.Object([]types.Property{{Name: "key", Type: types.Date()}}),
+			value:       json.Value(`{"key":"invalid"}`),
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			input := types.Object([]types.Property{{Name: "value", Type: test.source}})
+			output := types.Object([]types.Property{{Name: "result", Type: test.destination}})
+			mapping, err := New(map[string]string{"result": "value"}, input, output)
+			if err != nil {
+				t.Fatalf("expected mapping creation to succeed, got %v", err)
+			}
+			_, err = mapping.Transform(map[string]any{"value": test.value}, None)
+			if err != nil {
+				if _, ok := err.(ValidationError); !ok {
+					t.Fatalf("expected ValidationError, got %T: %v", err, err)
+				}
+				want := fmt.Sprintf("«value» is not convertible to the «%s» type while mapping to «result»",
+					test.destination)
+				if err.Error() != want {
+					t.Fatalf("expected error %q, got %q", want, err.Error())
+				}
+				return
+			}
+			t.Fatal("expected ValidationError, got nil")
+		})
+	}
+
+}
+
 // TestTransformDoesNotMutateInput verifies that Transform does not modify its
 // input.
 func TestTransformDoesNotMutateInput(t *testing.T) {
@@ -1213,6 +1266,13 @@ func TestTransformDoesNotMutateInput(t *testing.T) {
 			outType:  types.Map(types.Array(types.String())),
 			value:    map[string]any{"foo": []any{4.67, -1.02}},
 			expected: map[string]any{"foo": []any{"4.67", "-1.02"}},
+		},
+		{
+			name:     "array elements satisfy pattern",
+			inType:   types.Array(types.String()),
+			outType:  types.Array(types.String().WithPattern(regexp.MustCompile("^ok$"))),
+			value:    []any{"ok", "ok"},
+			expected: []any{"ok", "ok"},
 		},
 		{
 			name:     "unchanged array",
