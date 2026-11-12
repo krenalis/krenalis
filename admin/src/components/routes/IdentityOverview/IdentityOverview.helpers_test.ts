@@ -89,7 +89,7 @@ const tests: { name: string; run: () => void | Promise<void> }[] = [
 							'{"connection":"c","recognized":999999999999999,"anonymous":0,"withoutProfile":0}]}',
 						{ headers: { 'Content-Type': 'application/json' } },
 					);
-				const latest = await call('https://example.test/v1/metrics/identities/latest', 'GET');
+				const latest = await call('https://example.test/v1/metrics/identities/latest', 'GET', true);
 				const recognized = latest.connections[1].recognized;
 				equal(
 					buildIdentityMetricChartDays([{ day: '2026-08-01', total: recognized, anonymous: 0, recognized }], {

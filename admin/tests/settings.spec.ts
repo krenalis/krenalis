@@ -1,8 +1,9 @@
 import { test, expect } from '@playwright/test';
-import { login, logout, adminURL } from './utils';
+import { login, logout, adminURL, loadSyncToken, syncTokenHeaders } from './utils';
 
 test.beforeEach(async ({ page }) => {
 	await login(page);
+	await loadSyncToken(page);
 });
 
 test.afterEach(async ({ page }) => {
@@ -35,7 +36,7 @@ test(`Select the profile property of a consent purpose`, async ({ page }) => {
 	await page.route('**/v1/consent-purposes', async (route) => {
 		if (route.request().method() === 'POST') {
 			purposes.push({ id: 'created-purpose', ...route.request().postDataJSON() });
-			await route.fulfill({ json: {} });
+			await route.fulfill({ json: {}, headers: syncTokenHeaders() });
 			return;
 		}
 		await route.fulfill({
@@ -303,7 +304,7 @@ test(`Edit a consent purpose without setting the initial focus`, async ({ page }
 		});
 	});
 	await page.route('**/v1/consent-purposes/purpose', async (route) => {
-		await route.fulfill({ json: {} });
+		await route.fulfill({ json: {}, headers: syncTokenHeaders() });
 	});
 	await page.route('**/v1/profiles/schema', async (route) => {
 		await route.fulfill({
@@ -369,7 +370,7 @@ test(`Validate existing consent locations and allow clearing an invalid profile 
 	});
 	await page.route('**/v1/consent-purposes/purpose', async (route) => {
 		puts++;
-		await route.fulfill({ json: {} });
+		await route.fulfill({ json: {}, headers: syncTokenHeaders() });
 	});
 	await page.route('**/v1/profiles/schema', async (route) => {
 		await route.fulfill({
@@ -489,7 +490,7 @@ test(`Validate changed API JSON keys and clear the profile property`, async ({ p
 	});
 	await page.route('**/v1/consent-purposes/purpose', async (route) => {
 		puts++;
-		await route.fulfill({ json: {} });
+		await route.fulfill({ json: {}, headers: syncTokenHeaders() });
 	});
 	await page.route('**/v1/profiles/schema', async (route) => {
 		await route.fulfill({
