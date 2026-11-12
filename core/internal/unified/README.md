@@ -659,9 +659,20 @@ passed through both readers, and the Arrow native-type probe passed. The JSON
 native-type probe confirmed FLOAT/BOOLEAN incompatibilities and remains failed.
 The runbook records per-query format evidence, source/session checks, independent
 schema inventories and coverage still required before activation.
-Per-query format evidence applies only to the six numeric-transport blocks.
+Per-query format evidence for those runs applies only to the six numeric-transport blocks.
 The Unified conformance blocks used the session default without requesting or
 recording the response format; these runs do not establish Arrow attribution.
+
+The bounded public-service group subsequently passed on 2026-11-12 in both UTC
+and America/Los_Angeles, with the race detector: 11 test nodes per configuration.
+It uses production `Initialize`/`Merge`, real state and datastore, and identical
+handwritten public JSON expectations on PostgreSQL and Snowflake. Every observed
+application read in this group was an Arrow SELECT: query, explanation and legacy
+Record families were required separately. It verifies projections, microsecond
+profile timestamps, exact decimal explanations, selections, pages and page limits.
+The core facade and warehouse factory are test fixtures; it does not verify
+HTTP/MCP, `Core.Open`, production dialing or encrypted-settings loading. The
+runbook records its isolated schemas, independent inventories and remaining gaps.
 
 The following is the common acceptance checklist for the currently implemented
 subset, not a claim of remote conformance. Run physical probes before deciding

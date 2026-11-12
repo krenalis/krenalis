@@ -355,7 +355,7 @@ raise SystemExit(int(os.environ.get('FAKE_EXIT', '0')))
                     values={"ROLE": format}, require_result_format=format.upper(), require_result_tags=tags)
                 self.assertEqual(result.returncode, 0)
                 self.assertEqual(manifest["result_formats"], {"required": format, "required_tags": sorted(tags),
-                    "observed": {tag: {format: 1} for tag in tags}, "session_requested": {format: 1},
+                    "observed": {tag: {format: 1} for tag in tags}, "statements": {}, "session_requested": {format: 1},
                     "invalid_records": 0, "verified": True})
                 self.assertNotIn("format=" + format, path.read_text())
 
@@ -401,6 +401,35 @@ raise SystemExit(int(os.environ.get('FAKE_EXIT', '0')))
                 self.assertEqual(manifest["go_exit"], 1)
                 self.assertEqual(manifest["exit"], 1)
                 self.assertIs(manifest["result_formats"]["verified"], verified)
+
+    def test_result_format_malformed_markers_remain_invalid(self):
+        tag = "krenalis-transport/service-query"
+        session = SESSION.format(timezone="UTC").rstrip() + " go_query_result_format=ARROW\n"
+        for marker in ("Snowflake result format observed\n",
+                       "Snowflake result format observed tag=krenalis-transport/private format=arrow\n"):
+            with self.subTest(marker=marker):
+                result, _, manifest = self.block([self.event("output", session), self.event("output", marker),
+                    self.event("pass")], require_result_format="arrow", require_result_tags=[tag])
+                self.assertEqual(result.returncode, 7)
+                self.assertGreater(manifest["result_formats"]["invalid_records"], 0)
+                self.assertEqual(manifest["result_formats"]["observed"], {})
+
+    def test_service_formats_require_a_select_for_each_family(self):
+        for role in ("query", "explanation", "record"):
+            tag = "krenalis-transport/service-" + role
+            session = SESSION.format(timezone="UTC").rstrip() + " go_query_result_format=ARROW\n"
+            observed = "Snowflake result format observed tag=" + tag + " format=arrow"
+            for suffix, expected in [("", False), (" statement=other", False), (" statement=select", True),
+                                     (" statement=private", False), (" statement=select_extra", False)]:
+                with self.subTest(role=role, suffix=suffix):
+                    result, _, manifest = self.block([self.event("output", session),
+                        self.event("output", observed + suffix + "\n"), self.event("pass")],
+                        require_result_format="arrow", require_result_tags=[tag])
+                    self.assertEqual(result.returncode, 0 if expected else 7)
+                    self.assertIs(manifest["result_formats"]["verified"], expected)
+                    self.assertNotIn("private", json.dumps(manifest))
+                    if expected:
+                        self.assertEqual(manifest["result_formats"]["statements"], {tag: {"select": 1}})
 
     def test_result_format_options_are_paired_and_closed(self):
         for options in [["--require-result-format", "arrow"],

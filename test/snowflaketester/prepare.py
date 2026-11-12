@@ -27,9 +27,13 @@ RESULT_OBSERVER = '''
 		default:
 			// Unknown metadata cannot attest a result format.
 		}
-		fmt.Printf("Snowflake result format observed tag=%s format=%s\\n", tag, format)
+		statement := "other"
+		if data.StatementTypeID == statementTypeIDSelect {
+			statement = "select"
+		}
+		fmt.Printf("Snowflake result format observed tag=%s format=%s statement=%s\\n", tag, format, statement)
 	default:
-		// Only the closed set of transport fixture reads is observed.
+		// Only the closed set of campaign application reads is observed.
 	}
 '''
 

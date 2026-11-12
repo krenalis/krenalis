@@ -141,10 +141,12 @@ func TestTransportOverlayObservation(t *testing.T) {
     tags = append(tags, "", "krenalis-session-verification", "krenalis-transport/unknown")
     for _, tag := range tags {
         for _, format := range []string{"arrow", "json", "untrusted"} {
-            ctx := context.WithValue(t.Context(), queryTag, tag)
-            downloader := populateChunkDownloader(ctx, nil, execResponseData{QueryResultFormat: format})
-            if string(downloader.getQueryResultFormat()) != format {
-                t.Fatalf("expected original format %s, got %s", format, downloader.getQueryResultFormat())
+            for _, statement := range []int64{statementTypeIDSelect, statementTypeIDSelect + 1} {
+                ctx := context.WithValue(t.Context(), queryTag, tag)
+                downloader := populateChunkDownloader(ctx, nil, execResponseData{QueryResultFormat: format, StatementTypeID: statement})
+                if string(downloader.getQueryResultFormat()) != format {
+                    t.Fatalf("expected original format %s, got %s", format, downloader.getQueryResultFormat())
+                }
             }
         }
     }
@@ -158,9 +160,10 @@ func TestTransportOverlayObservation(t *testing.T) {
         checked = subprocess.run(command, cwd=ROOT, env=self.environment, capture_output=True, text=True, timeout=180)
         self.assertEqual(checked.returncode, 0, checked.stdout + checked.stderr)
         output = "".join(json.loads(line).get("Output", "") for line in checked.stdout.splitlines())
-        records = re.findall(r'Snowflake result format observed tag=(\S+) format=(\S+)', output)
-        self.assertEqual(sorted(records), sorted((tag, actual) for tag in RESULT_TAGS
-                                                for actual in ("arrow", "json", "unknown")))
+        records = re.findall(r'Snowflake result format observed tag=(\S+) format=(\S+) statement=(\S+)', output)
+        self.assertEqual(sorted(records), sorted((tag, actual, statement) for tag in RESULT_TAGS
+                                                for actual in ("arrow", "json", "unknown")
+                                                for statement in ("select", "other")))
         self.assertNotIn("format=untrusted", output)
 
     def test_existing_evidence_is_never_overwritten(self):

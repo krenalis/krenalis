@@ -534,6 +534,89 @@ manifests and masked logs, ledger audits, and the `inventory/` results. Output
 checks found no occurrences of the six Snowflake configuration values in either
 campaign's test output. No implementation or production gate changed.
 
+## Public Profiles service
+
+`TestUnifiedServicePostgreSQL` and `TestUnifiedServiceSnowflake` use the same
+six profiles, thirteen recorded messages and handwritten public JSON oracles.
+Both initialize their warehouse with production `Initialize` and publish the
+fixtures through `Merge`. The application database remains a disposable local
+PostgreSQL container in both tests. No publisher or pipeline runs concurrently.
+
+The group checks public membership/totals, every Count money explanation,
+Sum/Average exact decimal inputs, Nth/occurredIn and absence, Latest N, an
+ambiguous ordered pair, projection/schema serialization, microsecond profile
+timestamps, NULLS LAST/UUID pagination, a missing profile and oversized-page
+rejection without a partial result. October in Europe/Rome crosses DST; events
+on both half-open boundaries distinguish the intended calendar window.
+
+Run locally first, with no Snowflake credentials:
+
+```sh
+KRENALIS_SKIP_SNOWFLAKE_TESTS=true go test ./core -race \
+  -run '^TestUnified(ServicePostgreSQL|WorkspacePostgreSQL)$' -count=1 -timeout=10m
+```
+
+Run Snowflake separately from the existing PostgreSQL service test: that test
+contains a deliberately unconfigured Snowflake workspace whose gate must stay
+closed. A normal build of the new Snowflake test skips before loading credentials.
+With authorized live access, execute the complete bounded group in each session
+timezone, using a fresh directory and the existing credential environment:
+
+```sh
+service_campaign=$(mktemp -d /tmp/krenalis-unified-service-live.XXXXXX)
+for service_timezone in UTC America/Los_Angeles; do
+  service_dir="$service_campaign/$service_timezone"
+  python3 -B test/snowflaketester/prepare.py "$service_dir" \
+    --timezone "$service_timezone" --result-format ARROW
+  KRENALIS_SKIP_SNOWFLAKE_TESTS=false python3 test/snowflaketester/run.py \
+    --require-schemas --require-session-timezone "$service_timezone" \
+    --require-result-format ARROW \
+    --require-result-tag krenalis-transport/service-query \
+    --require-result-tag krenalis-transport/service-explanation \
+    --require-result-tag krenalis-transport/service-record \
+    "$service_dir/service.jsonl" -- -overlay "$service_dir/overlay.json" ./core \
+    -run '^TestUnifiedServiceSnowflake$' -race -timeout=15m
+done
+```
+
+The closed service tags are set on public-method contexts, outside initialization
+and writes. The driver observer records format and `statement=select|other` from
+response metadata. The runner requires at least one SELECT for every service tag,
+and the requested format on every observed response, including any `other`.
+Historical manifests without statement metadata remain usable for transport
+tags; new service evidence requires it. Check each result independently and use
+the ledger audit and independent `TestCampaignInventory` described above.
+
+This group verifies the public core facade with real state and datastore. Its
+warehouse factory uses an alias returning a real test instance with no production
+dialer or encrypted-settings loading. It does not run `Core.Open`, the HTTP
+handler, authentication or MCP. Page JSON uses the same schema-directed attribute
+encoder as the handler, not an HTTP request. HTTP remains the next increment;
+Snowflake MCP configuration awaits a dedicated read-only access configuration.
+This group's format evidence does not retroactively label the 435 conformance
+nodes, and does not open the production gate.
+
+### Live public-service results on 2026-11-12
+
+The complete group passed with the race detector in both UTC and
+America/Los_Angeles: 11 PASS nodes per configuration, no FAIL or SKIP. The same
+handwritten JSON oracles passed on local PostgreSQL; they were not adjusted for
+Snowflake. In each remote configuration the observer recorded 17 Unified-query,
+18 explanation and two legacy-Record SELECT responses, all Arrow. Both verified
+connections per configuration had the requested session parameters. Every run
+had stable source/overlay hashes.
+
+Each configuration created and dropped one schema. Separate read-only inventories
+confirmed zero remaining schemas from each run, and both ledger audits passed.
+The four remote JSONL logs contain none of the six Snowflake configuration values.
+The evidence directory is
+`/private/tmp/krenalis-unified-service-live-8wbl_pqf/`: per-zone manifests/logs and
+overlays, `inventory/`, `credential-output-check.json`, the PostgreSQL baseline,
+and the two local mutation checks. Both mutations were detected: increasing the
+public Count uncertainty and truncating public update timestamps to milliseconds.
+The ordinary, unoverlaid Snowflake test still skipped at the closed gate without
+credentials. HTTP/MCP and the other acceptance gaps below remain open.
+
 ## Coverage still required before activation
 
 Passing the commands above is necessary, but is not the complete acceptance
@@ -547,9 +630,11 @@ In particular, the following work remains explicit:
   shared fixtures. The added groups now provide remote evidence for Count money,
   Sum/Average where and minimum, covered conflicts, mixed explanations,
   projections and pagination. Not every Record case has a Snowflake setup yet.
-- Real core service plus HTTP/MCP on Snowflake. The current
-  `TestUnifiedWorkspacePostgreSQL` and `TestProfilesMCP` hard-code PostgreSQL
-  setup/DML. Running them unchanged verifies the local service, not Snowflake.
+- Real core service plus HTTP/MCP on Snowflake. The bounded public-service
+  group passed as recorded above; HTTP/MCP still require a Snowflake-aware
+  server bootstrap. Running
+  `TestUnifiedWorkspacePostgreSQL` or `TestProfilesMCP` unchanged verifies their
+  PostgreSQL setup, not Snowflake.
 - Further scan/iteration/close failures, malformed/oversized results, additional
   timestamp precisions, session changes and a small scale/resource smoke test.
   Running-query timeout/cancellation evidence is recorded separately below.

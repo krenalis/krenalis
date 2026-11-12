@@ -4,7 +4,7 @@
 
 package snowflaketester
 
-// Query tags identify the application reads observed by the transport overlay.
+// Query tags identify application reads observed by the campaign overlay.
 const (
 	WarehouseValuesTag    = "krenalis-transport/warehouse-values"
 	WarehouseReferenceTag = "krenalis-transport/warehouse-reference"
@@ -12,6 +12,9 @@ const (
 	ConnectorValuesTag    = "krenalis-transport/connector-values"
 	ConnectorReferenceTag = "krenalis-transport/connector-reference"
 	ConnectorNativeTag    = "krenalis-transport/connector-native"
+	ServiceQueryTag       = "krenalis-transport/service-query"
+	ServiceExplanationTag = "krenalis-transport/service-explanation"
+	ServiceRecordTag      = "krenalis-transport/service-record"
 )
 
 const requestedResultFormat = ""

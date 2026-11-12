@@ -16,7 +16,7 @@ import subprocess
 import sys
 
 sys.dont_write_bytecode = True
-from transport import RESULT_TAGS
+from transport import RESULT_TAGS, SERVICE_TAGS
 
 
 MAX_OUTPUT_BYTES = 4 * 1024 * 1024
@@ -33,7 +33,8 @@ SESSION_EVENT = re.compile(
     r'(?:[ \t]+go_query_result_format=(?:(ARROW|JSON)(?=\s|$)|[^\r\n]*))?)?')
 RESULT_EVENT = re.compile(
     r'Snowflake result format observed\b(?:[ \t]+tag=(' +
-    "|".join(re.escape(tag) for tag in RESULT_TAGS) + r')[ \t]+format=(arrow|json|unknown)(?=\s|$))?')
+    "|".join(re.escape(tag) for tag in RESULT_TAGS) + r')[ \t]+format=(arrow|json|unknown)(?=\s|$)'
+    r'(?:[ \t]+statement=(?:(select|other)(?=\s|$)|[^\r\n]*))?)?')
 
 
 def audit_schemas(directory):
@@ -226,7 +227,7 @@ def main():
                 "session_profiles": {"required": options.require_session_profile, "verified": {}},
                 "result_formats": {"required": options.require_result_format,
                                    "required_tags": sorted(set(options.require_result_tag)),
-                                   "observed": {}, "session_requested": {}, "invalid_records": 0,
+                                   "observed": {}, "statements": {}, "session_requested": {}, "invalid_records": 0,
                                    "verified": None},
                 "output_limit_exceeded": False,
                 "redaction": {"case_insensitive": True, "output_only": True,
@@ -271,14 +272,20 @@ def main():
                                 name = requested_format.lower()
                                 requested = formats["session_requested"]
                                 requested[name] = requested.get(name, 0) + 1
-                    result_records = RESULT_EVENT.findall(output)
-                    for tag, actual_format in result_records:
+                    result_records = list(RESULT_EVENT.finditer(output))
+                    for record in result_records:
+                        tag, actual_format, statement = record.groups()
                         formats = manifest["result_formats"]
-                        if tag == "" or actual_format == "unknown":
+                        if tag is None or actual_format in (None, "unknown"):
                             formats["invalid_records"] += 1
-                        if tag != "":
+                        if statement is None and ("statement=" in record.group() or tag in SERVICE_TAGS):
+                            formats["invalid_records"] += 1
+                        if tag is not None:
                             observed = formats["observed"].setdefault(tag, {})
                             observed[actual_format] = observed.get(actual_format, 0) + 1
+                            if statement is not None:
+                                statements = formats["statements"].setdefault(tag, {})
+                                statements[statement] = statements.get(statement, 0) + 1
                     if records or session_records or result_records:
                         write_manifest(manifest_path, manifest)
                     if mask is not None:
@@ -317,6 +324,8 @@ def main():
         expected = {formats["required"]}
         formats["verified"] = not (formats["invalid_records"] or set(formats["session_requested"]) != expected or
                 any(tag not in formats["observed"] for tag in formats["required_tags"]) or
+                any(formats["statements"].get(tag, {}).get("select", 0) == 0
+                    for tag in formats["required_tags"] if tag in SERVICE_TAGS) or
                 any(set(observed) != expected for observed in formats["observed"].values()))
         if code == 0 and not formats["verified"]:
             code = 7
