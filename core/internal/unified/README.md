@@ -676,6 +676,16 @@ The core facade and warehouse factory are test fixtures; it does not verify
 HTTP/MCP, `Core.Open`, production dialing or encrypted-settings loading. The
 runbook records its isolated schemas, independent inventories and remaining gaps.
 
+The subsequent HTTP group passed in both session timezones with the race
+detector: nine nodes each, using identical full-response JSON expectations on
+PostgreSQL and Snowflake. It runs the actual server, login and workspace-creation
+API, production factory/dialer, initialization and encrypted-settings loader.
+Each configuration observed seven query, three explanation and two legacy Record
+SELECTs, all Arrow, with five verified sessions and complete schema cleanup.
+It covers exact decimal output, SQL NULL omission, pagination and HTTP errors.
+MCP read-only access and the other activation gaps remain open; neither this
+group nor its test-only format configuration opens the production gate.
+
 The following is the common acceptance checklist for the currently implemented
 subset, not a claim of remote conformance. Run physical probes before deciding
 how fixtures are represented; keep their semantic expectations unchanged. Any

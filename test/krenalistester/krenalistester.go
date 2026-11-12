@@ -5,6 +5,7 @@
 package krenalistester
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	_ "embed"
@@ -74,6 +75,8 @@ type Krenalis struct {
 	natsAckWait           string
 	overrideProfileSchema *types.Type
 	populateProfileSchema bool
+	warehousePlatform     string
+	warehouseSettings     json.RawMessage
 }
 
 var assetsAlreadyGenerated bool
@@ -89,8 +92,8 @@ func (k *Krenalis) Addr() string {
 // NewKrenalisInstance initializes a new instance of Krenalis for testing.
 //
 // After initializing an instance, its options can be set (via
-// [PopulateProfileSchema], [SetFileSystemRoot], [SetNATSAckWait], and
-// [SetProfileSchema]) before calling [Start].
+// [PopulateProfileSchema], [SetFileSystemRoot], [SetNATSAckWait],
+// [SetProfileSchema], and [SetWarehouse]) before calling [Start].
 func NewKrenalisInstance(t *testing.T) *Krenalis {
 
 	if !launchKrenalisExternally {
@@ -188,6 +191,17 @@ func (k *Krenalis) SetProfileSchema(schema types.Type) {
 	k.overrideProfileSchema = &schema
 }
 
+// SetWarehouse sets the platform and settings of the initial workspace.
+// Call it before [Start]. The settings are copied and must be a JSON object.
+// Without this option, a disposable PostgreSQL warehouse is started.
+func (k *Krenalis) SetWarehouse(platform string, settings json.RawMessage) {
+	if platform == "" || !json.Valid(settings) || bytes.TrimSpace(settings)[0] != '{' {
+		panic("test/krenalistester: warehouse requires a platform and JSON object settings")
+	}
+	k.warehousePlatform = platform
+	k.warehouseSettings = bytes.Clone(settings)
+}
+
 // Start starts the Krenalis instance.
 //
 // After calling this method, the [Stop] method must be called to stop the
@@ -205,7 +219,7 @@ func (k *Krenalis) Start() {
 	}()
 
 	containersStarted := sync.WaitGroup{}
-	containersStarted.Add(3) // NATS + PostgreSQL (db) + PostgreSQL (warehouse).
+	containersStarted.Add(2) // NATS + PostgreSQL (db).
 
 	// Start the NATS container.
 	go func() {
@@ -266,34 +280,37 @@ func (k *Krenalis) Start() {
 	}()
 
 	// Start the warehouse container and set the global test settings.
-	go func() {
-		warehouseContainer, err := _postgres.Run(ctx,
-			testimages.PostgreSQL,
-			_postgres.WithDatabase("test_warehouse"),
-			_postgres.WithUsername("test_warehouse"),
-			_postgres.WithPassword("test_warehouse"),
-			_postgres.BasicWaitStrategies(),
-		)
-		k.stopWarehouseContainer = func() error {
-			return testcontainers.TerminateContainer(warehouseContainer)
-		}
-		if err != nil {
-			panic(fmt.Sprintf("cannot start the warehouse container: %s", err))
-		}
-		warehouseHost, err := warehouseContainer.Host(ctx)
-		if err != nil {
-			panic(err)
-		}
-		warehousePort, err := warehouseContainer.MappedPort(ctx, "5432/tcp")
-		if err != nil {
-			panic(err)
-		}
-		testsSettingsMu.Lock()
-		testsSettings.Warehouse.Host = warehouseHost
-		testsSettings.Warehouse.Port = int(warehousePort.Num())
-		testsSettingsMu.Unlock()
-		containersStarted.Done()
-	}()
+	if k.warehousePlatform == "" {
+		containersStarted.Add(1)
+		go func() {
+			warehouseContainer, err := _postgres.Run(ctx,
+				testimages.PostgreSQL,
+				_postgres.WithDatabase("test_warehouse"),
+				_postgres.WithUsername("test_warehouse"),
+				_postgres.WithPassword("test_warehouse"),
+				_postgres.BasicWaitStrategies(),
+			)
+			k.stopWarehouseContainer = func() error {
+				return testcontainers.TerminateContainer(warehouseContainer)
+			}
+			if err != nil {
+				panic(fmt.Sprintf("cannot start the warehouse container: %s", err))
+			}
+			warehouseHost, err := warehouseContainer.Host(ctx)
+			if err != nil {
+				panic(err)
+			}
+			warehousePort, err := warehouseContainer.MappedPort(ctx, "5432/tcp")
+			if err != nil {
+				panic(err)
+			}
+			testsSettingsMu.Lock()
+			testsSettings.Warehouse.Host = warehouseHost
+			testsSettings.Warehouse.Port = int(warehousePort.Num())
+			testsSettingsMu.Unlock()
+			containersStarted.Done()
+		}()
+	}
 
 	// Wait for the containers to be started.
 	k.t.Log("waiting for the containers to be started")
@@ -323,6 +340,7 @@ func (k *Krenalis) Start() {
 	// Launch Krenalis.
 	ctxWithCancel, cancel := context.WithCancel(ctx)
 	k.cancel = cancel
+	k.krenalisRunning = make(chan struct{})
 
 	if launchKrenalisExternally {
 		// Create, if necessary, the directory that will hold the Krenalis
@@ -374,7 +392,6 @@ func (k *Krenalis) Start() {
 			krenalisAlreadyBuilt = true
 		}
 		go func() {
-			k.krenalisRunning = make(chan struct{})
 			defer func() {
 				close(k.krenalisRunning)
 			}()
@@ -424,7 +441,6 @@ func (k *Krenalis) Start() {
 			k.t.Fatal(err)
 		}
 		go func() {
-			k.krenalisRunning = make(chan struct{})
 			defer func() {
 				close(k.krenalisRunning)
 			}()
@@ -509,6 +525,9 @@ func (k *Krenalis) Start() {
 // CountEventsInWarehouse returns the counts of events stored in the "events"
 // table of the testing data warehouse.
 func (k *Krenalis) CountEventsInWarehouse(ctx context.Context) int {
+	if k.warehousePlatform != "" {
+		panic("test/krenalistester: CountEventsInWarehouse requires the default PostgreSQL warehouse")
+	}
 	pool, err := ConnectionPool(ctx, testsSettings.Warehouse)
 	if err != nil {
 		k.t.Fatalf("cannot open warehouse for executing query tests: %s", err)
@@ -583,6 +602,9 @@ func (k *Krenalis) createWorkspace(name string, profileSchema types.Type, uiPref
 			"settings": testsSettings.Warehouse,
 		},
 		"uiPreferences": uiPreferences,
+	}
+	if k.warehousePlatform != "" {
+		req["warehouse"] = map[string]any{"platform": k.warehousePlatform, "settings": k.warehouseSettings}
 	}
 	var response struct {
 		ID string `json:"id"`

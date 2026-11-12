@@ -27,8 +27,12 @@ class PrepareTest(unittest.TestCase):
         self.environment = {key: value for key, value in os.environ.items()
                             if not key.startswith("KRENALIS_SNOWFLAKE_TESTER_")}
 
-    def prepare(self, directory, timezone, profile="standard", result_format=None):
+    def prepare(self, directory, timezone, profile="standard", result_format=None, http=False, http_assets=None):
         options = ["--result-format", result_format] if result_format is not None else []
+        if http:
+            options.append("--http")
+        if http_assets is not None:
+            options.extend(["--http-assets", str(http_assets)])
         return subprocess.run([sys.executable, "-B", str(PREPARE), str(directory), "--timezone", timezone, "--profile", profile, *options],
                               cwd=ROOT, env=self.environment, capture_output=True, text=True)
 
@@ -165,6 +169,57 @@ func TestTransportOverlayObservation(t *testing.T) {
                                                 for actual in ("arrow", "json", "unknown")
                                                 for statement in ("select", "other")))
         self.assertNotIn("format=untrusted", output)
+
+    def test_http_overlay_tags_core_reads_and_internal_server(self):
+        assets = (self.directory / "assets").resolve()
+        assets.mkdir()
+        (assets / "index.js.br").write_bytes(b"asset-path-fixture")
+        directory = self.directory / "http"
+        result = self.prepare(directory, "UTC", result_format="ARROW", http=True, http_assets=assets)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        replacements = json.loads((directory / "overlay.json").read_text())["Replace"]
+        self.assertEqual(len(replacements), 9)
+        original = ROOT / "test/krenalistester/krenalistester.go"
+        text = Path(replacements[str(original)]).read_text()
+        self.assertEqual(text.count("const launchKrenalisExternally = false"), 1)
+        self.assertEqual(text.count("const needToGenerateAssets = false"), 1)
+        self.assertIn("assets := os.DirFS(" + json.dumps(str(assets)) + ")", text)
+        restored = text.replace("const launchKrenalisExternally = false", "const launchKrenalisExternally = true")
+        restored = restored.replace("const needToGenerateAssets = false",
+                                    "const needToGenerateAssets = !launchKrenalisExternally")
+        restored = restored.replace("assets := os.DirFS(" + json.dumps(str(assets)) + ")",
+                                    'assets := os.DirFS(filepath.Join(k.repo, "admin", "assets"))')
+        self.assertEqual(restored, original.read_text())
+        for name, tags in [("profiles_query.go", ["ServiceRecordTag", "ServiceQueryTag"]),
+                           ("profiles_explanation.go", ["ServiceExplanationTag"])]:
+            source = ROOT / "core" / name
+            text = Path(replacements[str(source)]).read_text()
+            for tag in tags:
+                pattern = r'^[ \t]+ctx = snowflaketester.ServiceContext\(ctx, snowflaketester\.' + tag + r'\)\n'
+                self.assertEqual(len(re.findall(pattern, text, re.MULTILINE)), 1)
+                text = re.sub(pattern, "", text, flags=re.MULTILINE)
+            text = text.replace('\t"github.com/krenalis/krenalis/test/snowflaketester"\n', "")
+            self.assertEqual(text, source.read_text())
+        marker = (ROOT / "test/krenalistester/server_mode.go").read_text()
+        self.assertIn("return !launchKrenalisExternally", marker)
+        self.assertTrue(json.loads(result.stdout)["http"])
+
+    def test_http_overlay_requires_explicit_assets_arrow_and_standard_profile(self):
+        assets = (self.directory / "assets").resolve()
+        assets.mkdir()
+        (assets / "index.js.br").write_bytes(b"asset-path-fixture")
+        for number, options in enumerate([
+                {"http": True}, {"http_assets": assets},
+                {"http": True, "http_assets": assets},
+                {"http": True, "http_assets": assets, "result_format": "JSON"},
+                {"http": True, "http_assets": assets, "result_format": "ARROW", "profile": "timeout"},
+                {"http": True, "http_assets": self.directory / "missing", "result_format": "ARROW"},
+                {"http": True, "http_assets": ROOT, "result_format": "ARROW"},
+        ]):
+            with self.subTest(options=options):
+                result = self.prepare(self.directory / str(number), "UTC", **options)
+                self.assertEqual(result.returncode, 2)
+                self.assertFalse((self.directory / str(number)).exists())
 
     def test_existing_evidence_is_never_overwritten(self):
         directory = self.directory / "overlay"

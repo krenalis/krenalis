@@ -595,8 +595,8 @@ This group verifies the public core facade with real state and datastore. Its
 warehouse factory uses an alias returning a real test instance with no production
 dialer or encrypted-settings loading. It does not run `Core.Open`, the HTTP
 handler, authentication or MCP. Page JSON uses the same schema-directed attribute
-encoder as the handler, not an HTTP request. HTTP remains the next increment;
-Snowflake MCP configuration awaits a dedicated read-only access configuration.
+encoder as the handler, not an HTTP request. The HTTP group below covers that
+separate path; Snowflake MCP awaits a dedicated read-only access configuration.
 This group's format evidence does not retroactively label the 435 conformance
 nodes, and does not open the production gate.
 
@@ -622,7 +622,8 @@ overlays, `inventory/`, `credential-output-check.json`, the PostgreSQL baseline,
 and the two local mutation checks. Both mutations were detected: increasing the
 public Count uncertainty and truncating public update timestamps to milliseconds.
 The ordinary, unoverlaid Snowflake test still skipped at the closed gate without
-credentials. HTTP/MCP and the other acceptance gaps below remain open.
+credentials. HTTP was verified separately below; MCP and the other acceptance
+gaps remain open.
 
 After review, the refined fixtures were rerun in both session timezones with the
 race detector: 11 PASS nodes each, no FAIL/SKIP. The new projection fixes SQL NULL
@@ -642,6 +643,113 @@ new projection golden. Removing nil attributes again still passes: Unified alrea
 omits them before building the public response, so that mutation is a no-op.
 Both inventories also saw 23 other test schemas; none was modified.
 
+## Profiles HTTP endpoints
+
+`TestProfilesHTTPPostgreSQL` and `TestProfilesHTTPSnowflake` share four profiles,
+five recorded messages and handwritten full-response JSON expectations. They run
+a real server, log in, create the workspace through `POST /v1/workspaces`, disable
+identity resolution and use a workspace-restricted API key. No pipeline runs.
+The Snowflake case uses the registered production provider, settings validation,
+`CanInitialize`, `Initialize`, organization dialer and encrypted-settings loader.
+Only the fixture writer receives its settings directly.
+
+The HTTP cases cover Count money and UNKNOWN, Sum with minimum and exact decimal
+explanations, full/descending/empty pages, projection with SQL NULL omission,
+Decimal(38,10) beyond 2^53, nested JSON null, objects, arrays and microsecond
+timestamps. A pure Record page has its own complete golden and no `evaluation`.
+Missing-profile and oversized-page responses must be 404 and 422 respectively,
+with the complete error body and no partial page. Every response checks status
+and JSON Content-Type; bodies are compared as compact JSON bytes, without a
+float64 decoding step.
+
+The tester's `SetWarehouse` option copies settings per instance and skips only
+the warehouse PostgreSQL container. The application PostgreSQL and NATS remain
+disposable local containers. The normal tester still starts an external server;
+`UsesInternalServer` derives from its existing launch constant. Snowflake skips
+before credentials unless both the internal-server and gate overlays are present.
+The HTTP overlay changes neither SQL nor handler behavior. It adds the three
+service tags at the public core delegation sites, covering all downstream reads,
+and reuses the existing session verifier and driver response observer.
+
+Prepare real Admin assets outside the checkout; UI behavior is not tested. The
+HTTP overlay disables automatic asset generation and uses that filesystem,
+avoiding the tester's pre-existing asset-generation wait problem. Do not use the
+`freshadminassets` build tag or run `go generate` in the checkout for this group.
+
+```sh
+# First verify the ordinary external server locally, without Snowflake settings.
+KRENALIS_SKIP_SNOWFLAKE_TESTS=true KRENALIS_TESTS_ADDR=127.0.0.1:2027 \
+  go test ./test -run '^TestProfilesHTTPPostgreSQL$' -race -count=1 -timeout=10m
+
+http_campaign=$(mktemp -d /tmp/krenalis-unified-http-live.XXXXXX)
+go build -mod=vendor -o "$http_campaign/admin-gen" ./admin
+mkdir "$http_campaign/asset-root"
+(cd "$http_campaign/asset-root" && "$http_campaign/admin-gen")
+for http_timezone in UTC America/Los_Angeles; do
+  python3 -B test/snowflaketester/prepare.py "$http_campaign/$http_timezone" \
+    --timezone "$http_timezone" --result-format ARROW --http \
+    --http-assets "$http_campaign/asset-root/admin/assets"
+done
+
+# Verify the internal build on PostgreSQL before the remote runs.
+KRENALIS_SKIP_SNOWFLAKE_TESTS=true KRENALIS_TESTS_ADDR=127.0.0.1:2027 \
+  python3 test/snowflaketester/run.py "$http_campaign/postgresql.jsonl" -- \
+    -overlay "$http_campaign/UTC/overlay.json" ./test \
+    -run '^TestProfilesHTTPPostgreSQL$' -race -timeout=10m
+
+# Authorized live access and the existing credential environment are required.
+for http_timezone in UTC America/Los_Angeles; do
+  http_dir="$http_campaign/$http_timezone"
+  KRENALIS_SKIP_SNOWFLAKE_TESTS=false KRENALIS_TESTS_ADDR=127.0.0.1:2027 \
+    python3 test/snowflaketester/run.py \
+    --require-schemas --require-session-timezone "$http_timezone" \
+    --require-result-format ARROW \
+    --require-result-tag krenalis-transport/service-query \
+    --require-result-tag krenalis-transport/service-explanation \
+    --require-result-tag krenalis-transport/service-record \
+    "$http_dir/http.jsonl" -- -overlay "$http_dir/overlay.json" ./test \
+    -run '^TestProfilesHTTPSnowflake$' -race -timeout=15m
+done
+```
+
+Select exactly one server test per process and use a free dedicated port, never
+the demo. Expected application reads per Snowflake configuration: seven Unified
+SELECTs (Count, Sum, three pages, projection, page budget), three explanation
+SELECTs (Count, Sum, missing profile), and two legacy Record SELECTs. Compare these
+exact counts with the manifest; the runner enforces presence and format, not
+exact counts. Bootstrap, fixture writes and session preflight have no service tag.
+
+Run the ledger audit and independent inventory described above for each timezone.
+Cleanup closes the fixture writer, then the server, then drops the schema. A
+pre-existing container-startup panic can bypass test cleanup: in that case use
+the ledger and inventory to identify the exact campaign schema before removing
+it. Do not remove other visible test schemas.
+
+### Live HTTP results on 2026-11-12
+
+Both configurations passed with the race detector: nine PASS nodes each, no
+FAIL/SKIP, stable source and overlay hashes. Each recorded exactly 7/3/2 SELECT
+responses for query/explanation/Record, all Arrow, and five verified sessions
+with the requested timezone, NTZ/AUTO, 60-second timeout and ARROW setting.
+The same golden passed on PostgreSQL with both internal and ordinary external
+startup, nine nodes each. The external baseline exposed a pre-existing race in
+the tester's completion channel; creating it before launching the goroutine
+fixed the race in both modes, and both complete runs passed again.
+
+Each remote configuration created and dropped one schema. Separate inventories
+and ledger audits confirmed no remaining campaign schema; the 23 other visible
+test schemas were left untouched. None of the six Snowflake settings appears in
+the four remote logs, including case and JSON-escaping variants. A local handler
+mutant replacing only Record attributes with `{}` fails the new complete golden.
+The overlay tests and all 37 Python campaign tests passed, as did the tester's
+race-enabled tests and `go vet` for both changed Go packages.
+
+Evidence is under `/private/tmp/krenalis-unified-http-live-j6mwdzkj/`: per-zone
+HTTP logs/manifests/overlays/audits, `inventory/`, credential-output check,
+PostgreSQL internal/external final logs, and the Record handler mutant. The gate
+remains closed in production. MCP read-only access, UI, production native Arrow
+configuration and the remaining activation checklist are outside this group.
+
 ## Coverage still required before activation
 
 Passing the commands above is necessary, but is not the complete acceptance
@@ -655,9 +763,8 @@ In particular, the following work remains explicit:
   shared fixtures. The added groups now provide remote evidence for Count money,
   Sum/Average where and minimum, covered conflicts, mixed explanations,
   projections and pagination. Not every Record case has a Snowflake setup yet.
-- Real core service plus HTTP/MCP on Snowflake. The bounded public-service
-  group passed as recorded above; HTTP/MCP still require a Snowflake-aware
-  server bootstrap. Running
+- MCP on Snowflake still requires a dedicated read-only configuration. The
+  bounded public-service and real HTTP groups passed as recorded above. Running
   `TestUnifiedWorkspacePostgreSQL` or `TestProfilesMCP` unchanged verifies their
   PostgreSQL setup, not Snowflake.
 - Further scan/iteration/close failures, malformed/oversized results, additional

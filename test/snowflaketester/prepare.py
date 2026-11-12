@@ -44,8 +44,18 @@ def main():
     parser.add_argument("--timezone", required=True, choices=["UTC", "America/Los_Angeles"])
     parser.add_argument("--profile", default="standard", choices=["standard", "timeout", "cancellation"])
     parser.add_argument("--result-format", choices=["ARROW", "JSON"])
+    parser.add_argument("--http", action="store_true", help="run the HTTP server inside the isolated test build")
+    parser.add_argument("--http-assets", type=Path, help="generated Admin assets outside the checkout")
     options = parser.parse_args()
     root = Path(__file__).resolve().parents[2]
+    if options.http != (options.http_assets is not None):
+        parser.error("--http and --http-assets must be provided together")
+    assets = options.http_assets.resolve() if options.http else None
+    if options.http:
+        if options.result_format != "ARROW" or options.profile != "standard":
+            parser.error("HTTP verification requires ARROW and the standard session profile")
+        if assets.is_relative_to(root) or not (assets / "index.js.br").is_file():
+            parser.error("use generated HTTP assets outside the checkout")
     directory = options.directory.resolve()
     if directory.is_relative_to(root):
         parser.error("write overlays outside the checkout")
@@ -102,6 +112,42 @@ def main():
                 parser.error("expected one overlay anchor in " + name)
             replacements[str(source)] = (directory / name, text.replace(old, new))
 
+    if options.http:
+        for name, edits in [
+            ("test/krenalistester/krenalistester.go", [
+                ("const launchKrenalisExternally = true", "const launchKrenalisExternally = false"),
+                ("const needToGenerateAssets = !launchKrenalisExternally", "const needToGenerateAssets = false"),
+                ('assets := os.DirFS(filepath.Join(k.repo, "admin", "assets"))',
+                 'assets := os.DirFS(' + json.dumps(str(assets)) + ')'),
+            ]),
+            ("core/profiles_query.go", [
+                ('"github.com/krenalis/krenalis/core/internal/unified"',
+                 '"github.com/krenalis/krenalis/core/internal/unified"\n' +
+                 '\t"github.com/krenalis/krenalis/test/snowflaketester"'),
+                ('\t\tprofiles, schema, total, err := this.profiles(ctx, query.Properties, filter,',
+                 '\t\tctx = snowflaketester.ServiceContext(ctx, snowflaketester.ServiceRecordTag)\n' +
+                 '\t\tprofiles, schema, total, err := this.profiles(ctx, query.Properties, filter,'),
+                ('\tresult, err := this.store.UnifiedProfiles(ctx, &root, unified.Bindings{}, at, unified.Page{',
+                 '\tctx = snowflaketester.ServiceContext(ctx, snowflaketester.ServiceQueryTag)\n' +
+                 '\tresult, err := this.store.UnifiedProfiles(ctx, &root, unified.Bindings{}, at, unified.Page{'),
+            ]),
+            ("core/profiles_explanation.go", [
+                ('"github.com/krenalis/krenalis/core/internal/unified"',
+                 '"github.com/krenalis/krenalis/core/internal/unified"\n' +
+                 '\t"github.com/krenalis/krenalis/test/snowflaketester"'),
+                ('\tresult, err := this.store.ExplainUnifiedProfile(ctx, &root, unified.Bindings{}, instant, profile)',
+                 '\tctx = snowflaketester.ServiceContext(ctx, snowflaketester.ServiceExplanationTag)\n' +
+                 '\tresult, err := this.store.ExplainUnifiedProfile(ctx, &root, unified.Bindings{}, instant, profile)'),
+            ]),
+        ]:
+            source = root / name
+            text = source.read_text()
+            for old, new in edits:
+                if text.count(old) != 1:
+                    parser.error("expected one HTTP overlay anchor in " + name)
+                text = text.replace(old, new)
+            replacements[str(source)] = (directory / name, text)
+
     directory.mkdir(mode=0o700, parents=True, exist_ok=True)
     for target, text in replacements.values():
         target.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
@@ -113,7 +159,8 @@ def main():
         json.dump({"Replace": {source: str(target) for source, (target, _) in replacements.items()}}, output)
         output.write("\n")
     print(json.dumps({"overlay": str(overlay), "timezone": options.timezone, "profile": options.profile,
-                      "result_format": options.result_format}))
+                      "result_format": options.result_format, "http": options.http,
+                      "http_assets": str(assets) if assets is not None else None}))
 
 
 if __name__ == "__main__":
