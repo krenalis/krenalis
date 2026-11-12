@@ -778,6 +778,8 @@ without decoding numeric operands or attributes through float64. The projection
 retains Decimal(38,10) beyond 2^53, nested JSON null, omitted SQL NULL with its
 schema property, objects, arrays with empty strings, and microsecond timestamps.
 The pure Record response has no `evaluation`.
+Catalog/detail/guide checks assert selected identifiers and metadata, not complete
+response JSON.
 
 Authentication errors, revocation within an existing session, disabled
 organizations, workspace isolation, full pagination, unsupported capabilities
