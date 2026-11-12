@@ -349,7 +349,7 @@
   },
   "email.opened": {
     "display_name": "Email Open Detected",
-    "description": "The email system records an open. This does not prove that the email was read in full or that a person took an action; preserve the provider's detection method."
+    "description": "The email system records an open. This does not prove that the email was read in full or that the open was a human action; preserve the provider's detection method."
   },
   "chat.conversation_ended": {
     "display_name": "Chat Conversation Ended",

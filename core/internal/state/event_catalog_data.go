@@ -10193,7 +10193,7 @@ var eventDefinitions = []EventDefinition{
 		Event:       "Email Opened",
 		DisplayName: "Email Open Detected",
 		Description: "The email system records an open. This does not prove that the email was " +
-			"read in full or that a person took an action; preserve the provider's " +
+			"read in full or that the open was a human action; preserve the provider's " +
 			"detection method.",
 		Schemas: EventSchemas{
 			Traits:     emailBouncedTraits,
