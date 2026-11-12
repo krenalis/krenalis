@@ -366,6 +366,10 @@ With JSON results, the warehouse rejects textual native FLOAT and BOOLEAN. The
 connector receives Boolean strings `1`/`0` and rejects them; it reads the native
 successor of 100 as 100. INTEGER and DECIMAL passed through both readers in both
 formats. The native JSON probe remains failed; no production correction was made.
+Native JSON FLOAT text was not logged. Its digit count and representation of the
+maximum finite value, NaN and infinities remain unmeasured; nested DOUBLE text
+does not establish these native-format properties. Native INTEGER/DECIMAL
+coverage here is limited to BIGINT and DECIMAL(38,37) on three rows.
 
 Both schema-ledger audits report three schemas created and three dropped.
 Separate read-only server inventories found none of these six schemas remaining.
@@ -374,8 +378,19 @@ Evidence, per-query format records, masked logs and `summary.json` are under
 failure occurred before schema creation and has separate evidence under
 `/private/tmp/krenalis-numeric-transport-live-dlbs2lhs/`.
 
-Account/user-level parameter inspection, forced remote chunk downloads and
+Account/user-level parameter changes, forced remote chunk downloads and
 additional native types remain outside this block. The Unified gate is closed.
+
+### Read-only parameter inspection on 2026-11-12
+
+A separate probe, without a result-format override, executed SHOW PARAMETERS
+LIKE 'GO_QUERY_RESULT_FORMAT' IN ACCOUNT, IN USER and IN SESSION. Each returned
+one exact row with value/default ARROW and an empty level. This observes the
+test environment's default; no ALTER was attempted to establish which scopes
+allow changes. It does not attribute a format to the earlier conformance runs.
+The probe created no schemas. Its bounded observations, temporary test overlay
+and source-stable manifest are under
+`/private/tmp/krenalis-snowflake-parameter-scope-t3a61rh2/`.
 
 ## Cleanup after completion or interruption
 
@@ -503,6 +518,11 @@ unchanged expectations in UTC and America/Los_Angeles sessions:
 These are test/subtest nodes, not SQL-query counts. In each configuration the
 blocks share only the parent `TestUnifiedConformanceSnowflake`; their union has
 435 nodes. Every block has stable source hashes and verified session parameters.
+These four conformance blocks used the session default without requesting or
+recording GO_QUERY_RESULT_FORMAT or the actual response format. Their passes are
+not attributed to Arrow; the per-query format observations above cover only the
+six numeric-transport blocks. Record the required and actual format in the next
+necessary acceptance run rather than repeating this suite only for attribution.
 The runs took about 14 minutes for each new-group block and 8 minutes for each
 baseline block, including setup and many individual explanations. This is not a
 production latency benchmark.

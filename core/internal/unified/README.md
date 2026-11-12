@@ -659,6 +659,9 @@ passed through both readers, and the Arrow native-type probe passed. The JSON
 native-type probe confirmed FLOAT/BOOLEAN incompatibilities and remains failed.
 The runbook records per-query format evidence, source/session checks, independent
 schema inventories and coverage still required before activation.
+Per-query format evidence applies only to the six numeric-transport blocks.
+The Unified conformance blocks used the session default without requesting or
+recording the response format; these runs do not establish Arrow attribution.
 
 The following is the common acceptance checklist for the currently implemented
 subset, not a claim of remote conformance. Run physical probes before deciding
