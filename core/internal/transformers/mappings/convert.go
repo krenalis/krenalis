@@ -419,7 +419,7 @@ func convert(v any, st, dt types.Type, nullable bool, purpose Purpose) (any, err
 			n = v.(decimal.Decimal)
 			_, scale := n.PrecisionScale()
 			if scale > dt.Scale() {
-				return v, errRangeConversion
+				return v, errInvalidConversion
 			}
 		case types.IntKind:
 			if st.IsUnsigned() {

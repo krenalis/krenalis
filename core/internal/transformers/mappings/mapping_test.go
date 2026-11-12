@@ -1474,6 +1474,7 @@ func Test_Transform(t *testing.T) {
 			{Name: "a", Type: types.String()},
 			{Name: "d", Type: types.String()},
 		}), Nullable: true},
+		{Name: "g", Type: types.Decimal(5, 3)},
 		{Name: "emptyObject", Type: types.Object([]types.Property{{Name: "foo", Type: types.String(), ReadOptional: true}})},
 	})
 
@@ -1749,6 +1750,12 @@ func Test_Transform(t *testing.T) {
 			expressions: map[string]string{"I": "a"},
 			attributes:  map[string]any{"a": "1e400"},
 			err:         ValidationError{msg: `number «a» is too small or too large for the «float(64)» type while mapping to «I»`},
+		},
+		{
+			name:        `A decimal exceeding the destination scale -> error`,
+			expressions: map[string]string{"J": "g"},
+			attributes:  map[string]any{"g": decimal.MustParse("1.234")},
+			err:         ValidationError{msg: `«g» is not convertible to the «decimal(5,2)» type while mapping to «J»`},
 		},
 		{
 			name:        `A JSON number exceeding the precision assigned to a decimal property -> error`,
