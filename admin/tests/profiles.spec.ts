@@ -1047,6 +1047,9 @@ test(`Keep the displayed grid intact when applying filters fails`, async ({ page
 	await expect(page.locator('.profile-drawer')).toBeVisible();
 	await expect(filters).not.toHaveClass(/profiles-list__filters--updating-results/);
 	await expect(filters).not.toHaveClass(/profiles-list__filters--results-updated/);
+	await expect(page.getByRole('button', { name: 'Refresh', exact: true })).toBeEnabled();
+	await expect(page.getByRole('button', { name: 'Columns', exact: true })).toBeEnabled();
+	await expect(page.getByRole('combobox', { name: 'Profiles per page', exact: true })).toBeEnabled();
 });
 
 test(`Apply the current Undo entry when collapsing and preserve its history`, async ({ page }) => {
@@ -1439,6 +1442,13 @@ test(`Keep an explicit grid request independent from newer filter edits`, async 
 	await expect(filters).toHaveClass(/profiles-list__filters--updating-results/);
 	await expect(page.locator('.profiles-list__grid-summary-content')).toContainText('4 profiles');
 	await expect(page.locator('.profiles-list__grid-summary-sweep')).toBeVisible();
+	const refresh = page.getByRole('button', { name: 'Refresh', exact: true });
+	const columns = page.locator('.profiles-list__toggle-columns');
+	const pageSize = page.getByRole('combobox', { name: 'Profiles per page', exact: true });
+	await expect(refresh).toBeDisabled();
+	await expect(columns.getByRole('button', { name: 'Columns', exact: true })).toBeDisabled();
+	await expect(columns.locator('wa-checkbox').first()).toHaveJSProperty('disabled', true);
+	await expect(pageSize).toBeDisabled();
 
 	await valueInput.fill('Ada');
 	await valueInput.press('Enter');
@@ -1454,6 +1464,10 @@ test(`Keep an explicit grid request independent from newer filter edits`, async 
 	await expect(page.getByRole('button', { name: 'Apply filters', exact: true })).toBeEnabled();
 	await expect(valueInput).toBeFocused();
 	await expect(page.locator('.profiles-list .grid')).not.toBeFocused();
+	await expect(refresh).toBeEnabled();
+	await expect(columns.getByRole('button', { name: 'Columns', exact: true })).toBeEnabled();
+	await expect(columns.locator('wa-checkbox').first()).toHaveJSProperty('disabled', false);
+	await expect(pageSize).toBeEnabled();
 });
 
 test(`Collapse with Escape while the current filter is being materialized`, async ({ page }) => {
@@ -2418,10 +2432,20 @@ test('Refresh keeps filter arguments and reloads the schema only after reset con
 	});
 	let schemaReads = 0;
 	let incompatible = false;
+	const resetSchema: ObjectType = {
+		...profileSchema,
+		properties: profileSchema.properties.filter((property) => property.name !== 'first_name'),
+	};
 	const requests: Request[] = [];
 	await page.route('**/v1/profiles/schema', async (route) => {
 		schemaReads++;
-		await route.fulfill({ json: { schema: profileSchema, propertyRoles, primarySources: {} } });
+		await route.fulfill({
+			json: {
+				schema: schemaReads === 1 ? profileSchema : resetSchema,
+				propertyRoles: schemaReads === 1 ? propertyRoles : { ...propertyRoles, firstName: '' },
+				primarySources: {},
+			},
+		});
 	});
 	await page.route('**/v1/profiles/query', async (route) => {
 		const request = route.request();
@@ -2467,6 +2491,10 @@ test('Refresh keeps filter arguments and reloads the schema only after reset con
 	await expect(filters).toContainText('No filters applied');
 	await expect(page.locator('.profiles-list .grid__row--clickable')).toHaveCount(4);
 	expect(requests.at(-1)!.postDataJSON().filter).toBeUndefined();
+	expect(requests.at(-1)!.postDataJSON().schema).toEqual(resetSchema);
+	expect(requests.at(-1)!.postDataJSON().properties).toEqual(
+		resetSchema.properties.map((property) => property.name).sort(),
+	);
 	await filters.getByRole('button', { name: 'Add filter', exact: true }).click();
 	await expect(filters.getByRole('button', { name: 'Undo', exact: true })).toBeDisabled();
 });

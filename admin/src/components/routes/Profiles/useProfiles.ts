@@ -41,6 +41,7 @@ interface InFlightProfilesRequest {
 interface ProfilesReplacement {
 	activeProfileID: string;
 	animateColumnVisibility?: boolean;
+	isFilterApplication?: boolean;
 	isRefresh?: boolean;
 	filter: Filter | null;
 	first: number;
@@ -87,6 +88,7 @@ const useProfiles = () => {
 	const [profileSchema, setProfileSchema] = useState<ObjectType>();
 	const [profileSchemaSessionID, setProfileSchemaSessionID] = useState(0);
 	const [appliedFilter, setAppliedFilter] = useState<Filter | null>(null);
+	const [isApplyingFilter, setIsApplyingFilter] = useState(false);
 
 	const { api, handleError, redirect, selectedWorkspace, warehouse, workspaces } = useContext(AppContext);
 	const sequenceRef = useRef(sequence);
@@ -119,6 +121,7 @@ const useProfiles = () => {
 		gridReplacementControllerRef.current?.abort();
 		gridReplacementControllerRef.current = undefined;
 		isRefreshPendingRef.current = false;
+		setIsApplyingFilter(false);
 	}, []);
 
 	const loadProfilesRange = useCallback(
@@ -427,6 +430,7 @@ const useProfiles = () => {
 		async ({
 			activeProfileID,
 			animateColumnVisibility,
+			isFilterApplication = false,
 			isRefresh = false,
 			filter: requestedFilter,
 			first,
@@ -442,6 +446,7 @@ const useProfiles = () => {
 			const controller = new AbortController();
 			gridReplacementControllerRef.current = controller;
 			isRefreshPendingRef.current = isRefresh;
+			setIsApplyingFilter(isFilterApplication);
 			const pageSize = sequenceRef.current.pageSize;
 			const { filter, queryKey, request } = createProfilesExecution(
 				selectedWorkspace,
@@ -514,6 +519,7 @@ const useProfiles = () => {
 				if (gridReplacementControllerRef.current === controller) {
 					gridReplacementControllerRef.current = undefined;
 					isRefreshPendingRef.current = false;
+					setIsApplyingFilter(false);
 				}
 			}
 		},
@@ -549,6 +555,7 @@ const useProfiles = () => {
 			try {
 				return await replaceProfilesExecution({
 					activeProfileID: '',
+					isFilterApplication: true,
 					filter,
 					first: 0,
 					profileProperties: profilesProperties,
@@ -679,6 +686,7 @@ const useProfiles = () => {
 		profileSchema,
 		profileSchemaProperties,
 		isLoading: sequence.isInitialLoading,
+		isApplyingFilter,
 		isBoundaryLoading: sequence.pendingFirst != null,
 		profilesFirst: sequence.visibleFirst,
 		profilesLimit: sequence.pageSize,
@@ -761,8 +769,9 @@ const profileProjection = (
 	}
 	if (propertyRoles != null) {
 		for (const path of Object.values(propertyRoles)) {
-			if (path !== '') {
-				roots.add(path.split('.')[0]);
+			const root = path.split('.')[0];
+			if (root !== '' && properties.some((property) => property.name.split('.')[0] === root)) {
+				roots.add(root);
 			}
 		}
 	}

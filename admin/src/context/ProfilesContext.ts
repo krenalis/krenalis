@@ -13,6 +13,7 @@ interface ProfilesContext {
 	profileSchema?: ObjectType;
 	profileSchemaProperties: ProfileSchemaProperties;
 	isLoading: boolean;
+	isApplyingFilter: boolean;
 	isBoundaryLoading: boolean;
 	profilesFirst: number;
 	profilesLimit: number;

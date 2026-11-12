@@ -62,6 +62,7 @@ const profilesContext: React.ContextType<typeof ProfilesContext> = {
 	profileSchema: { kind: 'object' },
 	profileSchemaProperties: {},
 	isLoading: false,
+	isApplyingFilter: false,
 	isBoundaryLoading: false,
 	profilesFirst: 0,
 	profilesLimit: 50,

@@ -38,6 +38,7 @@ const ProfilesList = () => {
 		profileSchema,
 		profileSchemaProperties,
 		isLoading,
+		isApplyingFilter,
 		isBoundaryLoading,
 		profilesFirst,
 		profilesLimit,
@@ -266,7 +267,12 @@ const ProfilesList = () => {
 								<div ref={setFilterGridActionContainer} className='profiles-list__filter-grid-action' />
 							</div>
 							<div className='profiles-list__toolbar-actions'>
-								<WaButton appearance='outlined' size='s' onClick={refreshProfiles} disabled={isLoading}>
+								<WaButton
+									appearance='outlined'
+									size='s'
+									onClick={refreshProfiles}
+									disabled={isLoading || isApplyingFilter}
+								>
 									<WaIcon slot='start' name='arrow-clockwise' />
 									Refresh
 								</WaButton>
@@ -280,6 +286,7 @@ const ProfilesList = () => {
 										className='profiles-list__toolbar-button'
 										slot='trigger'
 										size='s'
+										disabled={isApplyingFilter}
 									>
 										<WaIcon slot='start' name='layout-three-columns' />
 										Columns
@@ -314,7 +321,7 @@ const ProfilesList = () => {
 														key={property.name}
 														onChange={() => onToggleColumn(property.name)}
 														checked={property.isUsed}
-														disabled={isLastUsed}
+														disabled={isLastUsed || isApplyingFilter}
 													>
 														{property.label}
 													</WaCheckbox>
@@ -352,7 +359,7 @@ const ProfilesList = () => {
 							<ProfilesPagination
 								first={profilesFirst}
 								hasNext={hasNextPage}
-								isLoading={isLoading}
+								isLoading={isLoading || isApplyingFilter}
 								limit={profilesLimit}
 								onFirstChange={goToProfilesPage}
 								onLimitChange={setProfilesPageSize}
