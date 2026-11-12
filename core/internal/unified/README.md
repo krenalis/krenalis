@@ -649,8 +649,12 @@ resolving the declared ordinary-text collation and Float/NaN questions.
 The [campaign runbook](../../../test/snowflaketester/UNIFIED.md) collects the
 local checks, isolated gate-overlay preparation, ordered remote commands and
 remaining acceptance gaps. The shared bounded fixtures passed on PostgreSQL
-and, on 2026-11-11, on real Snowflake. The runbook records the successful
-blocks, corrected fixture defects and coverage still required before activation.
+and their original selection, period and page/screen groups passed on real
+Snowflake on 2026-11-11. Four added groups cover Count money, Sum/Average guards,
+source conflicts and projection/pagination/mixed explanations. They have passed
+on local PostgreSQL with the race detector; Snowflake execution remains pending.
+The runbook distinguishes these additions from successful remote blocks and
+records coverage still required before activation.
 
 The following is the common acceptance checklist for the currently implemented
 subset, not a claim of remote conformance. Run physical probes before deciding

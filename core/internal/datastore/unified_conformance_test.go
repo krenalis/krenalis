@@ -75,6 +75,11 @@ CREATE TABLE "KRENALIS_EVENTS" ("KPID" VARCHAR(36),"MESSAGE_ID" VARCHAR,"TYPE" V
 	t.Run("selections", func(t *testing.T) { testUnifiedConformanceSelections(t, store, dw, table, name) })
 	t.Run("periods", func(t *testing.T) { testUnifiedConformancePeriods(t, store, dw, table) })
 	t.Run("pages", func(t *testing.T) { testUnifiedConformancePages(t, store, dw, table) })
+	t.Run("count-money", func(t *testing.T) { testUnifiedConformanceCountMoney(t, store, dw, table) })
+	t.Run("guards", func(t *testing.T) { testUnifiedConformanceGuards(t, store, dw, table) })
+	t.Run("sources", func(t *testing.T) { testUnifiedConformanceSources(t, store, dw, table) })
+	// Keep protocol last: it changes the profile schema and drops the event table.
+	t.Run("protocol", func(t *testing.T) { testUnifiedConformanceProtocol(t, store, dw, table, name) })
 
 }
 

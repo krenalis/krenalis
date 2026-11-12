@@ -221,6 +221,14 @@ func moneyLiteralOracle(observation moneyLiteralObservation, test unified.SumTes
 						pass = !pass
 					case unified.Between:
 						pass = value.Cmp(lower) >= 0 && value.Cmp(upper) <= 0
+					case unified.Greater:
+						pass = value.Cmp(lower) > 0
+					case unified.GreaterOrEqual:
+						pass = value.Cmp(lower) >= 0
+					case unified.Less:
+						pass = value.Cmp(lower) < 0
+					case unified.LessOrEqual:
+						pass = value.Cmp(lower) <= 0
 					default:
 						panic(fmt.Sprintf("core/internal/datastore: unexpected literal oracle operator %d", test.Operator))
 					}

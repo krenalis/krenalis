@@ -32,10 +32,17 @@ python3 -B -m unittest discover -s test/snowflaketester -p 'test_*.py'
 ```
 
 `TestUnifiedConformancePostgreSQL/Snowflake` shares fixture data, expected results
-and assertions. Only table definitions and timestamp-copy SQL differ. Events go
-through the real Merge writer; identical copies are then inserted directly so
-that a primary key cannot hide deduplication defects. The fixture supplies a
-coherent, fully attributed view; it does not test asynchronous publication.
+and assertions. Backend-specific SQL is confined to table setup and fixture
+writes. Events go through the real Merge writer; copies are inserted into tables
+without identity constraints so that a primary key cannot hide deduplication
+defects. Normal fixtures assume coherent publication; the `sources` group
+deliberately violates attribution and copy contracts. Asynchronous publication
+is not tested.
+
+The original `selections`, `periods` and `pages` groups have remote evidence below.
+The added `count-money`, `guards`, `sources` and `protocol` groups have passed on
+local PostgreSQL with the race detector, but have **not run on Snowflake**. They
+run in a separate remote block before the baseline fixtures in the sequence below.
 
 | Fixture | Coverage |
 | --- | --- |
@@ -43,6 +50,10 @@ coherent, fully attributed view; it does not test asynchronous publication.
 | Selection assertions | Existing independent enumeration oracles supply outcomes and candidate/absence/pair metadata. Every profile's metadata is checked for Latest(2)/Some and difference <= -30; the other rules explain the first six profiles, plus all four eleven-event histories for position/size 10. All rules check exact ternary totals, profile ordering and empty matching pages. Relevant timestamp conflicts fail without partial results; excluded copies and unrelated-profile explanations remain usable. |
 | `periods` | Absolute, elapsed and ago-band periods; Rome complete days across both DST changes, complete week and month. Start/end and +/- one microsecond are checked through both Count and First/occurredIn. History includes an event in year 0001 and excludes T. received_at/sent_at deliberately lie outside the window. |
 | `pages` | Page and screen, named and unnamed, missing/empty/lowercase names, profile without events, literal dotted JSON key segments and count explanations. |
+| `count-money` (local only) | Nineteen monetary observations plus an empty profile, two identities per populated profile and physical copies. Thirteen literal tests, external currency absent/EUR/USD, nested AND/OR, Count >= 1, = 0 and != 2 with minimum 2. Independent completion oracles supply outcomes; one complete configuration checks every profile's count bounds. |
+| `guards` (local only) | Seventeen batched populations for eight Sum/Average tests: independent where/currency uncertainty, positive and negative amounts, unknown amounts counted toward minimum, certainly excluded unreadable amounts, Kleene counterexamples, exact sums beyond binary64 precision and physical-copy deduplication. Handwritten expectations check every profile's exact inputs/bounds and ternary outcome. |
+| `sources` (local only) | Relevant qualification, attribution, period, exact timestamp, readability and amount conflicts across Count, Sum, Average, selected experiences, Latest N and LastVersusPrevious; equivalent unreadable values and excluded identities; missing identity; unrelated-profile explanation isolation. Readback verifies physical copies were retained. NULL timestamps test only selected readers' existing runtime guards: known timestamps remain a source precondition for reductions. |
+| `protocol` (local only) | Six mixed Record/occurrence explanation layouts checked on all nine profiles; nonempty, partial and empty matching pages, exact totals/T, projected fields and deterministic identity tie-breaking in both sort directions. Pure Record membership/explanation works after dropping the event table, including missing profiles and an empty population. |
 | `TestUnifiedStoredNumbers*` | Shared six-profile monetary fixture: Count, Sum with minimum, Average, selected money, LastVersusPrevious and composition, with all profile outcomes/explanations, canceled operation and empty pages. |
 
 The bounded fixture complements the full PostgreSQL completion oracles; it does
@@ -50,6 +61,11 @@ not replace them. It avoids running the exhaustive suites remotely. Its selectio
 block has 22 main batched membership checks and 204 individual explanations, rather
 than thousands of remote oracle queries. The named subtests can be selected
 separately, for example `-run '^TestUnifiedConformancePostgreSQL$/periods'`.
+The remote sequence isolates the four new groups in `unified-new-groups.jsonl`.
+The subsequent `unified-snowflake.jsonl` block keeps the baseline stored-number,
+selection, period and page/screen fixtures; its `-skip` excludes the four groups
+already run. Both blocks use the same overlay, session/schema audits and timeout,
+and together cover the complete bounded fixture without repeating the new groups.
 
 ## Preparing an isolated gate and session overlay
 
@@ -180,9 +196,16 @@ KRENALIS_SKIP_SNOWFLAKE_TESTS=false python3 test/snowflaketester/run.py --requir
   -run '^Test_Merge_Query$' -timeout=15m
 
 KRENALIS_SKIP_SNOWFLAKE_TESTS=false python3 test/snowflaketester/run.py --require-schemas \
+  --require-session-timezone "$session_timezone" "$campaign_dir/unified-new-groups.jsonl" -- \
+  -overlay "$campaign_dir/overlay.json" ./core/internal/datastore \
+  -run '^TestUnifiedConformanceSnowflake$/(count-money|guards|sources|protocol)$' \
+  -timeout=45m
+
+KRENALIS_SKIP_SNOWFLAKE_TESTS=false python3 test/snowflaketester/run.py --require-schemas \
   --require-session-timezone "$session_timezone" "$campaign_dir/unified-snowflake.jsonl" -- \
   -overlay "$campaign_dir/overlay.json" \
   ./core/internal/datastore -run '^TestUnified(StoredNumbers|Conformance)Snowflake$' \
+  -skip '^TestUnifiedConformanceSnowflake$/(count-money|guards|sources|protocol)$' \
   -timeout=45m
 
 # The PostgreSQL arm is skipped: this block isolates real Snowflake Record reads.
@@ -326,14 +349,14 @@ In particular, the following work remains explicit:
 - Remaining Record operator/collation/Float-NaN cases and all source-conflict
   classes, Sum/Average independent where and minimum counterexamples, Count money
   predicates, mixed explanation layouts, projections and nonempty pagination.
-  Existing PostgreSQL fixtures name these cases; not every one has a Snowflake
-  setup yet. The bounded conformance test does not claim that coverage.
+  The four new shared groups prepare the latter checks locally; they still need
+  actual Snowflake execution. Not every Record case has a Snowflake setup yet.
 - Real core service plus HTTP/MCP on Snowflake. The current
   `TestUnifiedWorkspacePostgreSQL` and `TestProfilesMCP` hard-code PostgreSQL
   setup/DML. Running them unchanged verifies the local service, not Snowflake.
-- Statement timeout/cancellation during execution, scan/iteration/close errors,
-  malformed/oversized results, additional timestamp precisions, session changes
-  and a small scale/resource smoke test.
+- Further scan/iteration/close failures, malformed/oversized results, additional
+  timestamp precisions, session changes and a small scale/resource smoke test.
+  Running-query timeout/cancellation evidence is recorded separately below.
 - Timestamp input formats beyond AUTO and environment-level resource controls.
   UTC and America/Los_Angeles with NTZ/AUTO and per-session 60-second statement
   limits are covered above; these runs do not verify resource-monitor policies
