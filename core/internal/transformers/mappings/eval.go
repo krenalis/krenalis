@@ -116,7 +116,7 @@ func digitCountUint(n uint64) int {
 // attributes.
 //
 // If an error occurs, it will be errInvalidConversion, a TransformationError,
-// or a ValidationError.
+// a ValidationError, or an error describing an invalid function argument.
 func eval(expression []part, source string, attributes map[string]any) (any, types.Type, error) {
 
 	// Evaluate the most common cases that does not require a buffer.
@@ -182,7 +182,7 @@ func eval(expression []part, source string, attributes map[string]any) (any, typ
 // and attributes are the attributes.
 //
 // If it returns an error, it is errInvalidConversion, a TransformationError,
-// or a ValidationError.
+// a ValidationError, or an error describing an invalid function argument.
 func evalCall(p part, source string, attributes map[string]any) (any, types.Type, error) {
 	switch name := p.path.elements[0]; name {
 	case "and":
