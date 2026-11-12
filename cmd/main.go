@@ -38,7 +38,6 @@ func Main(assets fs.FS) {
 	var configStore string
 	var initDBIfEmpty bool
 	var initDockerMember bool
-	var upgradeDB bool
 	var printVersion bool
 	flag.BoolVar(&help, "help", false, "print the help for krenalis and exit")
 	flag.StringVar(&configStore, "config-store", "env:",
@@ -47,7 +46,6 @@ func Main(assets fs.FS) {
 	flag.BoolVar(&initDockerMember, "init-docker-member", false,
 		"when initializing the PostgreSQL database, also initialize the Docker member;"+
 			" this flag is primarily intended for automated scenarios involving Docker and testing purposes")
-	flag.BoolVar(&upgradeDB, "upgrade-db", false, "upgrade Krenalis's PostgreSQL database")
 	flag.BoolVar(&printVersion, "version", false, "print the Krenalis version and exit")
 	flag.Parse()
 	if help {
@@ -78,12 +76,8 @@ func Main(assets fs.FS) {
 		flag.Usage()
 		fatal(1, "the -init-docker-member flag can be provided only when the -init-db-if-empty flag is provided")
 	}
-	if upgradeDB && (initDBIfEmpty || initDockerMember) {
-		flag.Usage()
-		fatal(1, "the -upgrade-db flag cannot be combined with -init-db-if-empty or -init-docker-member")
-	}
 
-	if !upgradeDB && embeddedAssets && assets != nil {
+	if embeddedAssets && assets != nil {
 		assets, _ = fs.Sub(assets, "admin/assets")
 		_, err := fs.Stat(assets, "index.html.br")
 		if err != nil {
@@ -103,13 +97,6 @@ func Main(assets fs.FS) {
 	conf, err := loadConfig(ctx, configStore)
 	if err != nil {
 		fatal(1, err.Error())
-	}
-	if upgradeDB {
-		err = core.UpgradeDB(ctx, &core.Config{DB: conf.DB})
-		if err != nil {
-			fatal(1, err.Error())
-		}
-		return
 	}
 
 	// Unset the Krenalis environment variables, except for those intended for
