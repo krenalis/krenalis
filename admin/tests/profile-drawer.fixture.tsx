@@ -101,7 +101,7 @@ const Fixture = () => {
 						setActiveProfileID(direction === 'next' ? NEXT_PROFILE_ID : PROFILE_ID),
 				}}
 			>
-				<div className='profiles-list__grid-container profile-drawer-fixture'>
+				<div className='profile-drawer-fixture'>
 					<button onClick={() => setActiveProfileID(PROFILE_ID)}>Open profile details</button>
 					<ProfileDrawer />
 				</div>

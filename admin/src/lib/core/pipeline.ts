@@ -2251,10 +2251,7 @@ const validateAndNormalizeFilter = (
 				propertiesToHide,
 			);
 			const operatorIndex = FILTER_OPERATORS.indexOf(normalizedCondition.operator as FilterOperator);
-			if (
-				normalizedCondition.operator !== '' &&
-				!getCompatibleFilterOperators(property, path !== '').includes(operatorIndex)
-			) {
+			if (!getCompatibleFilterOperators(property, path !== '').includes(operatorIndex)) {
 				throw new Error(
 					`Operator "${normalizedCondition.operator}" cannot be used with property "${propertyName}"`,
 				);
