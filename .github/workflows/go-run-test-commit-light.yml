@@ -8,8 +8,12 @@ permissions: {}
 jobs:
   tests:
     # Note that 'ubuntu-24.04' includes the Docker server, which is required to
-    # run './test/commit'. Do not use 'ubuntu-latest': it is Ubuntu 26.04, which
-    # the Playwright version used by the Admin tests does not support.
+    # run './test/commit'.
+    #
+    # TODO(Gianluca): `ubuntu-latest` causes issues with the
+    # current version of Playwright ("Failed to install browsers; ERROR:
+    # Playwright does not support chromium on ubuntu26.04-x64"), so for now,
+    # let's pin it to version 24.04, which works.
     runs-on: ubuntu-24.04
 
     timeout-minutes: 60
