@@ -134,19 +134,19 @@ func assertProfilesHTTPJSON(t *testing.T, actual json.Value, expected string) {
 	}
 }
 
-func testProfilesHTTP(t *testing.T, platform string) {
+func newProfileTransportFixture(t *testing.T, platform string) (*krenalistester.Krenalis, warehouses.Warehouse) {
 
 	t.Helper()
 	var settings json.Value
 	if platform == "Snowflake" {
 		environment, err := snowflaketester.CreateTestEnvironment()
 		if err != nil {
-			t.Fatalf("expected isolated HTTP Snowflake environment, got %v", err)
+			t.Fatalf("expected isolated profile Snowflake environment, got %v", err)
 		}
 		t.Cleanup(func() {
 			err := environment.Teardown()
 			if err != nil {
-				t.Errorf("expected HTTP Snowflake environment cleanup, got %v", err)
+				t.Errorf("expected profile Snowflake environment cleanup, got %v", err)
 			}
 		})
 		settings = json.Value(environment.Settings().JSON())
@@ -175,7 +175,7 @@ func testProfilesHTTP(t *testing.T, platform string) {
 	t.Cleanup(func() {
 		err := dw.Close()
 		if err != nil {
-			t.Errorf("expected HTTP fixture writer cleanup, got %v", err)
+			t.Errorf("expected profile fixture writer cleanup, got %v", err)
 		}
 	})
 
@@ -194,7 +194,7 @@ func testProfilesHTTP(t *testing.T, platform string) {
 	}
 	err := dw.Merge(t.Context(), profiles, data, nil)
 	if err != nil {
-		t.Fatalf("expected HTTP profile fixtures written, got %v", err)
+		t.Fatalf("expected profile fixtures written, got %v", err)
 	}
 	events := warehouses.Table{Name: "krenalis_events", Keys: []string{"message_id"}, Columns: []warehouses.Column{
 		{Name: "kpid", Type: types.UUID()}, {Name: "message_id", Type: types.String()},
@@ -221,8 +221,16 @@ func testProfilesHTTP(t *testing.T, platform string) {
 	}
 	err = dw.Merge(t.Context(), events, data, nil)
 	if err != nil {
-		t.Fatalf("expected HTTP event fixtures written, got %v", err)
+		t.Fatalf("expected event fixtures written, got %v", err)
 	}
+
+	return k, dw
+}
+
+func testProfilesHTTP(t *testing.T, platform string) {
+
+	t.Helper()
+	k, dw := newProfileTransportFixture(t, platform)
 	c := profileHTTPClient{client: &http.Client{Timeout: time.Minute}, address: k.Addr(),
 		token: k.CreateWorkspaceRestrictedAPIKey("HTTP profile fixture")}
 	t.Cleanup(c.client.CloseIdleConnections)

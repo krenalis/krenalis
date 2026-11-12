@@ -595,8 +595,8 @@ This group verifies the public core facade with real state and datastore. Its
 warehouse factory uses an alias returning a real test instance with no production
 dialer or encrypted-settings loading. It does not run `Core.Open`, the HTTP
 handler, authentication or MCP. Page JSON uses the same schema-directed attribute
-encoder as the handler, not an HTTP request. The HTTP group below covers that
-separate path; Snowflake MCP awaits a dedicated read-only access configuration.
+encoder as the handler, not an HTTP request. The HTTP and MCP groups below cover
+the separate transports; MCP uses the main connection and a workspace MCP key.
 This group's format evidence does not retroactively label the 435 conformance
 nodes, and does not open the production gate.
 
@@ -747,7 +747,7 @@ race-enabled tests and `go vet` for both changed Go packages.
 Evidence is under `/private/tmp/krenalis-unified-http-live-j6mwdzkj/`: per-zone
 HTTP logs/manifests/overlays/audits, `inventory/`, credential-output check,
 PostgreSQL internal/external final logs, and the Record handler mutant. The gate
-remains closed in production. MCP read-only access, UI, production native Arrow
+remains closed in production. MCP transport, UI, production native Arrow
 configuration and the remaining activation checklist are outside this group.
 
 After HTTP review, the tester creates each completion channel immediately before
@@ -760,6 +760,81 @@ match counts are in `/private/tmp/krenalis-http-startup-review-zvi_k6wy/`.
 Those counts cover literal and JSON-escaped forms, case-insensitively, in all four
 remote logs: zero matches. Snowflake was not rerun for this startup-only fix;
 the live source/overlay hashes above refer to commit `e3d501268`.
+
+## Profiles MCP transport
+
+`TestProfilesMCPPostgreSQL` and `TestProfilesMCPSnowflake` reuse the HTTP group's
+four profiles and five messages through `newProfileTransportFixture`. They run
+the same real server and registered provider. A workspace-scoped MCP key created
+through the API authorizes every tool; no separate warehouse credentials or
+read-only user are needed. The SQL tool and both `readonlysql` packages have
+been removed. The main connection determines data access, including for existing
+keys formerly restricted by separate warehouse grants.
+
+Five bounded cases exercise catalog/detail/guide, Count and its UNKNOWN
+explanation, Sum with minimum and exact `170.1253` bounds, projection, and Record.
+Pages and explanations compare complete JSON text with handwritten expectations,
+without decoding numeric operands or attributes through float64. The projection
+retains Decimal(38,10) beyond 2^53, nested JSON null, omitted SQL NULL with its
+schema property, objects, arrays with empty strings, and microsecond timestamps.
+The pure Record response has no `evaluation`.
+
+Authentication errors, revocation within an existing session, disabled
+organizations, workspace isolation, full pagination, unsupported capabilities
+and the 128 KiB MCP budget remain in the larger PostgreSQL `TestProfilesMCP`.
+Legacy configuration rejection is covered by `TestWarehouse`. Do not repeat
+those backend-independent cases during the reduced Snowflake window.
+
+Use the HTTP overlay and real generated assets described above. The Snowflake
+entry point checks both internal startup and the gate before accessing
+credentials. A normal build must SKIP, not report a remote pass. Prepare fresh
+overlays from the current source; old HTTP evidence does not verify this group.
+
+```sh
+# Ordinary external server, no Snowflake settings.
+KRENALIS_SKIP_SNOWFLAKE_TESTS=true KRENALIS_TESTS_ADDR=127.0.0.1:2038 \
+  go test ./test -run '^TestProfilesMCPPostgreSQL$' -race -count=1 -timeout=10m
+
+mcp_campaign=$(mktemp -d /tmp/krenalis-unified-mcp-live.XXXXXX)
+go build -mod=vendor -o "$mcp_campaign/admin-gen" ./admin
+mkdir "$mcp_campaign/asset-root"
+(cd "$mcp_campaign/asset-root" && "$mcp_campaign/admin-gen")
+for mcp_timezone in UTC America/Los_Angeles; do
+  python3 -B test/snowflaketester/prepare.py "$mcp_campaign/$mcp_timezone" \
+    --timezone "$mcp_timezone" --result-format ARROW --http \
+    --http-assets "$mcp_campaign/asset-root/admin/assets"
+done
+
+# Verify internal startup on PostgreSQL before the remote window.
+KRENALIS_SKIP_SNOWFLAKE_TESTS=true KRENALIS_TESTS_ADDR=127.0.0.1:2038 \
+  python3 test/snowflaketester/run.py "$mcp_campaign/postgresql.jsonl" -- \
+    -overlay "$mcp_campaign/UTC/overlay.json" ./test \
+    -run '^TestProfilesMCPPostgreSQL$' -race -timeout=10m
+
+# Run only in an authorized live window, with the existing primary credentials.
+for mcp_timezone in UTC America/Los_Angeles; do
+  mcp_dir="$mcp_campaign/$mcp_timezone"
+  KRENALIS_SKIP_SNOWFLAKE_TESTS=false KRENALIS_TESTS_ADDR=127.0.0.1:2038 \
+    python3 test/snowflaketester/run.py \
+    --require-schemas --require-session-timezone "$mcp_timezone" \
+    --require-result-format ARROW \
+    --require-result-tag krenalis-transport/service-query \
+    --require-result-tag krenalis-transport/service-explanation \
+    --require-result-tag krenalis-transport/service-record \
+    "$mcp_dir/mcp.jsonl" -- -overlay "$mcp_dir/overlay.json" ./test \
+    -run '^TestProfilesMCPSnowflake$' -race -timeout=15m
+done
+```
+
+Select one server test per process and a free port, never the demo. Expect six
+PASS nodes (parent and five cases) and exactly 3/2/2 SELECT observations for
+query/explanation/Record. Nine tool calls cover the five cases; initialization,
+catalog reads and fixture writes have no service tag. Inspect exact counts in
+the manifest in addition to the runner's format/presence checks. Require stable
+source/overlay hashes, the requested session parameters, schema-ledger audit,
+credential-output masking and independent inventory as in the HTTP campaign.
+Remote execution remains pending until the next available Snowflake window.
+The production gate remains closed.
 
 ## Coverage still required before activation
 
@@ -774,10 +849,9 @@ In particular, the following work remains explicit:
   shared fixtures. The added groups now provide remote evidence for Count money,
   Sum/Average where and minimum, covered conflicts, mixed explanations,
   projections and pagination. Not every Record case has a Snowflake setup yet.
-- MCP on Snowflake still requires a dedicated read-only configuration. The
-  bounded public-service and real HTTP groups passed as recorded above. Running
-  `TestUnifiedWorkspacePostgreSQL` or `TestProfilesMCP` unchanged verifies their
-  PostgreSQL setup, not Snowflake.
+- Run the bounded MCP group on Snowflake in the next window. The public-service
+  and real HTTP groups passed as recorded above. Running PostgreSQL groups does
+  not verify the Snowflake transport; no separate MCP credentials are required.
 - Further scan/iteration/close failures, malformed/oversized results, additional
   timestamp precisions, session changes and a small scale/resource smoke test.
   Running-query timeout/cancellation evidence is recorded separately below.
