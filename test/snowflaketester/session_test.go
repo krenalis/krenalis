@@ -339,6 +339,58 @@ func TestSessionConnectorQueryTag(t *testing.T) {
 	t.Fatal("expected verification cancellation, got nil")
 }
 
+// TestSessionConnectorResultFormat verifies the login precondition independently
+// of the result format observed later for an application query.
+func TestSessionConnectorResultFormat(t *testing.T) {
+	for _, format := range []string{"ARROW", "JSON"} {
+		for _, change := range []string{"none", "lowercase", "missing", "different", "duplicate", "unsafe", "configuration"} {
+			t.Run(format+"/"+change, func(t *testing.T) {
+				underlying := &sessionTestConnector{columns: []string{"key", "value"}, values: sessionTestValues("UTC")}
+				if change != "missing" {
+					underlying.values = append(underlying.values, []driver.Value{"GO_QUERY_RESULT_FORMAT", format})
+				}
+				checked := SessionConnector{Connector: underlying, Timezone: "UTC", ResultFormat: format}
+				switch change {
+				case "none", "missing":
+					// Keep the fixture's setting or its deliberate absence.
+				case "lowercase":
+					underlying.values[4][1] = strings.ToLower(format)
+				case "different":
+					underlying.values[4][1] = "OTHER"
+				case "duplicate":
+					underlying.values = append(underlying.values, underlying.values[4])
+				case "unsafe":
+					underlying.values[4][1] = strings.Repeat("private", 1024)
+				case "configuration":
+					checked.ResultFormat = "unknown"
+				default:
+					t.Fatalf("expected known change, got %s", change)
+				}
+				valid := change == "none" || change == "lowercase"
+				conn, err := checked.Connect(t.Context())
+				if err != nil {
+					if valid || conn != nil || len(err.Error()) > 150 {
+						t.Fatalf("expected bounded rejection for %s, got %T, %v", change, conn, err)
+					}
+					for _, opened := range underlying.connections {
+						if opened.closed != 1 || opened.rows.closed != 1 {
+							t.Fatal("expected rejected connection cleanup, got open resources")
+						}
+					}
+					return
+				}
+				if !valid || conn == nil || underlying.connections[0].rows.closed != 1 {
+					t.Fatalf("expected verified setting only for an equivalent fixture, got %T", conn)
+				}
+				err = conn.Close()
+				if err != nil {
+					t.Fatalf("expected connection cleanup, got %v", err)
+				}
+			})
+		}
+	}
+}
+
 func sessionTestValues(timezone string) [][]driver.Value {
 	return [][]driver.Value{{"TIMEZONE", timezone}, {"TIMESTAMP_TYPE_MAPPING", "TIMESTAMP_NTZ"},
 		{"TIMESTAMP_INPUT_FORMAT", "AUTO"}, {"STATEMENT_TIMEOUT_IN_SECONDS", "60"}}

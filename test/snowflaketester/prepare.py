@@ -9,6 +9,29 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import sys
+
+sys.dont_write_bytecode = True
+from transport import RESULT_TAGS
+
+
+RESULT_OBSERVER = '''
+	tag, _ := ctx.Value(queryTag).(string)
+	switch tag {
+	case ''' + ",\n\t\t".join(", ".join(json.dumps(tag) for tag in RESULT_TAGS[i:i + 2])
+                            for i in range(0, len(RESULT_TAGS), 2)) + ''':
+		format := "unknown"
+		switch data.QueryResultFormat {
+		case "arrow", "json":
+			format = data.QueryResultFormat
+		default:
+			// Unknown metadata cannot attest a result format.
+		}
+		fmt.Printf("Snowflake result format observed tag=%s format=%s\\n", tag, format)
+	default:
+		// Only the closed set of transport fixture reads is observed.
+	}
+'''
 
 
 def main():
@@ -16,6 +39,7 @@ def main():
     parser.add_argument("directory", type=Path)
     parser.add_argument("--timezone", required=True, choices=["UTC", "America/Los_Angeles"])
     parser.add_argument("--profile", default="standard", choices=["standard", "timeout", "cancellation"])
+    parser.add_argument("--result-format", choices=["ARROW", "JSON"])
     options = parser.parse_args()
     root = Path(__file__).resolve().parents[2]
     directory = options.directory.resolve()
@@ -41,10 +65,13 @@ def main():
                  '\t\t\t"TIMESTAMP_TYPE_MAPPING": new("TIMESTAMP_NTZ"),\n' +
                  '\t\t\t"TIMESTAMP_INPUT_FORMAT": new("AUTO"),\n' +
                  '\t\t\t"STATEMENT_TIMEOUT_IN_SECONDS": new("' + timeout + '"),' +
+                 ('\n\t\t\t"GO_QUERY_RESULT_FORMAT": new(' + json.dumps(options.result_format) + '),'
+                  if options.result_format is not None else '') +
                  ('\n\t\t\t"USE_CACHED_RESULT": new("false"),' if options.profile != "standard" else '')),
                 ('gosnowflake.NewConnector(gosnowflake.SnowflakeDriver{}, cfg)',
                  qualifier + 'SessionConnector{Connector: gosnowflake.NewConnector(gosnowflake.SnowflakeDriver{}, cfg), ' +
                  'Timezone: ' + json.dumps(options.timezone) +
+                 (', ResultFormat: ' + json.dumps(options.result_format) if options.result_format is not None else '') +
                  (', Profile: ' + json.dumps(options.profile) if options.profile != "standard" else '') + '}'),
             ]
             if qualifier:
@@ -57,6 +84,20 @@ def main():
             text = text.replace(old, new)
         replacements[str(source)] = (directory / name, text)
 
+    if options.result_format is not None:
+        for name, old, new in [
+            ("vendor/github.com/snowflakedb/gosnowflake/v2/connection_util.go",
+             "data execResponseData) chunkDownloader {\n",
+             "data execResponseData) chunkDownloader {\n" + RESULT_OBSERVER),
+            ("test/snowflaketester/result_format.go", 'const requestedResultFormat = ""',
+             'const requestedResultFormat = ' + json.dumps(options.result_format)),
+        ]:
+            source = root / name
+            text = source.read_text()
+            if text.count(old) != 1:
+                parser.error("expected one overlay anchor in " + name)
+            replacements[str(source)] = (directory / name, text.replace(old, new))
+
     directory.mkdir(mode=0o700, parents=True, exist_ok=True)
     for target, text in replacements.values():
         target.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
@@ -67,7 +108,8 @@ def main():
     with os.fdopen(os.open(overlay, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600), "w") as output:
         json.dump({"Replace": {source: str(target) for source, (target, _) in replacements.items()}}, output)
         output.write("\n")
-    print(json.dumps({"overlay": str(overlay), "timezone": options.timezone, "profile": options.profile}))
+    print(json.dumps({"overlay": str(overlay), "timezone": options.timezone, "profile": options.profile,
+                      "result_format": options.result_format}))
 
 
 if __name__ == "__main__":

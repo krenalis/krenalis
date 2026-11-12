@@ -655,6 +655,9 @@ source conflicts and projection/pagination/mixed explanations. They have passed
 on local PostgreSQL with the race detector; Snowflake execution remains pending.
 The runbook distinguishes these additions from successful remote blocks and
 records coverage still required before activation.
+Additional Arrow/JSON transport fixtures and separate native FLOAT/BOOLEAN
+compatibility probes are prepared locally. Their format observations and
+physical numeric expectations still need verification on Snowflake.
 
 The following is the common acceptance checklist for the currently implemented
 subset, not a claim of remote conformance. Run physical probes before deciding

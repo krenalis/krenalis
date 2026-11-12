@@ -60,7 +60,7 @@ raise SystemExit(int(os.environ.get('FAKE_EXIT', '0')))
                                 cwd=ROOT, env=self.environment, capture_output=True, text=True)
         return result, json.loads(result.stdout)
 
-    def block(self, events, *, values=None, arguments=None, require_schemas=False, go_exit=0, mutate=None, output_bytes=None, require_session_timezone=None, require_session_profile=None):
+    def block(self, events, *, values=None, arguments=None, require_schemas=False, go_exit=0, mutate=None, output_bytes=None, require_session_timezone=None, require_session_profile=None, require_result_format=None, require_result_tags=()):
         self.number += 1
         path = self.directory / str(self.number) / "run.jsonl"
         environment = dict(self.environment, FAKE_EVENTS=json.dumps(events), FAKE_EXIT=str(go_exit))
@@ -77,6 +77,10 @@ raise SystemExit(int(os.environ.get('FAKE_EXIT', '0')))
             command.extend(["--require-session-timezone", require_session_timezone])
         if require_session_profile is not None:
             command.extend(["--require-session-profile", require_session_profile])
+        if require_result_format is not None:
+            command.extend(["--require-result-format", require_result_format])
+        for tag in require_result_tags:
+            command.extend(["--require-result-tag", tag])
         command.extend([str(path), "--", *(arguments or ["./warehouses/snowflake"])])
         result = subprocess.run(command, cwd=ROOT, env=environment, capture_output=True, text=True)
         self.assertEqual(result.stderr, "")
@@ -337,6 +341,79 @@ raise SystemExit(int(os.environ.get('FAKE_EXIT', '0')))
                 self.assertEqual(result.returncode, 2)
                 self.assertFalse(path.exists())
                 self.assertFalse(path.with_suffix(".manifest.json").exists())
+
+    def test_result_formats_are_observed_before_redaction(self):
+        tags = ["krenalis-transport/warehouse-values", "krenalis-transport/warehouse-reference"]
+        for format in ["arrow", "json"]:
+            with self.subTest(format=format):
+                session = SESSION.format(timezone="UTC").rstrip() + " go_query_result_format=" + format.upper() + "\n"
+                events = [self.event("output", session)]
+                for tag in tags:
+                    line = "Snowflake result format observed tag=" + tag + " format=" + format + "\n"
+                    events.extend([self.event("output", line[:30]), self.event("output", line[30:])])
+                result, path, manifest = self.block([*events, self.event("pass")],
+                    values={"ROLE": format}, require_result_format=format.upper(), require_result_tags=tags)
+                self.assertEqual(result.returncode, 0)
+                self.assertEqual(manifest["result_formats"], {"required": format, "required_tags": sorted(tags),
+                    "observed": {tag: {format: 1} for tag in tags}, "session_requested": {format: 1},
+                    "invalid_records": 0, "verified": True})
+                self.assertNotIn("format=" + format, path.read_text())
+
+    def test_result_format_requires_each_read_and_actual_metadata(self):
+        tag = "krenalis-transport/connector-values"
+        reference = "krenalis-transport/connector-reference"
+        observed = "Snowflake result format observed tag=" + tag + " format=arrow\n"
+        session = SESSION.format(timezone="UTC").rstrip() + " go_query_result_format=ARROW\n"
+        for outputs in [
+            [session],  # SHOW alone does not certify the application read.
+            [observed],  # The login precondition is also required.
+            [session, observed.replace(tag, reference)],
+            [session, observed, observed.replace("format=arrow", "format=json")],
+            [session, observed.replace("format=arrow", "format=unknown")],
+            [session, observed, observed.replace(tag, "krenalis-transport/untrusted")],
+            [session, observed, observed.replace("format=arrow", "format=" + "private" * 1024)],
+            [session, observed, session.replace("=ARROW", "=PRIVATE")],
+            [session, observed, session.replace("=ARROW", "=ARROW_EXTRA")],
+            [session.replace("=ARROW", "=JSON"), observed],
+        ]:
+            with self.subTest(outputs=outputs):
+                result, _, manifest = self.block([*(self.event("output", output) for output in outputs),
+                                                  self.event("pass")],
+                    require_result_format="arrow", require_result_tags=[tag])
+                self.assertEqual(result.returncode, 7)
+                self.assertEqual(manifest["go_exit"], 0)
+                self.assertFalse(manifest["result_formats"]["verified"])
+                self.assertNotIn("private" * 1024, json.dumps(manifest))
+
+    def test_result_format_does_not_override_existing_failure(self):
+        tag = "krenalis-transport/warehouse-values"
+        session = SESSION.format(timezone="UTC").rstrip() + " go_query_result_format=ARROW\n"
+        observed = "Snowflake result format observed tag=" + tag + " format=arrow\n"
+        for outputs, verified in [([], False), ([session, observed], True),
+                                  ([session.replace("=ARROW", "=JSON"), observed], False),
+                                  ([session, observed.replace("format=arrow", "format=json")], False),
+                                  ([session, observed.replace("format=arrow", "format=unknown")], False)]:
+            with self.subTest(outputs=outputs):
+                result, _, manifest = self.block([*(self.event("output", text) for text in outputs),
+                                                  self.event("fail")], go_exit=1,
+                    require_result_format="arrow", require_result_tags=[tag])
+                self.assertEqual(result.returncode, 1)
+                self.assertEqual(manifest["go_exit"], 1)
+                self.assertEqual(manifest["exit"], 1)
+                self.assertIs(manifest["result_formats"]["verified"], verified)
+
+    def test_result_format_options_are_paired_and_closed(self):
+        for options in [["--require-result-format", "arrow"],
+                        ["--require-result-tag", "krenalis-transport/warehouse-values"],
+                        ["--require-result-format", "arrow", "--require-result-tag", "untrusted"],
+                        ["--audit", "--require-result-format", "arrow",
+                         "--require-result-tag", "krenalis-transport/warehouse-values"]]:
+            with self.subTest(options=options):
+                path = self.directory / "invalid-format.jsonl"
+                result = subprocess.run([sys.executable, str(RUNNER), *options, str(path)], cwd=ROOT,
+                                        env=self.environment, capture_output=True, text=True)
+                self.assertEqual(result.returncode, 2)
+                self.assertFalse(path.exists())
 
     def test_audit_rejects_absent_or_old_evidence(self):
         directory = self.directory / "audit"

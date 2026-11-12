@@ -22,6 +22,8 @@ type SessionConnector struct {
 	Timezone string
 	// Profile selects standard (the zero value), timeout or cancellation.
 	Profile string
+	// ResultFormat optionally checks GO_QUERY_RESULT_FORMAT at login.
+	ResultFormat string
 }
 
 // Connect opens a connection and checks its effective session parameters.
@@ -30,6 +32,9 @@ func (c SessionConnector) Connect(ctx context.Context) (connection driver.Conn, 
 
 	if c.Connector == nil || c.Timezone != "UTC" && c.Timezone != "America/Los_Angeles" {
 		return nil, fmt.Errorf("test/snowflaketester: invalid campaign session connector")
+	}
+	if c.ResultFormat != "" && c.ResultFormat != "ARROW" && c.ResultFormat != "JSON" {
+		return nil, fmt.Errorf("test/snowflaketester: invalid campaign result format")
 	}
 	profile, timeout := c.Profile, "60"
 	switch profile {
@@ -108,6 +113,9 @@ func (c SessionConnector) Connect(ctx context.Context) (connection driver.Conn, 
 	if profile != "standard" {
 		expected["USE_CACHED_RESULT"] = "false"
 	}
+	if c.ResultFormat != "" {
+		expected["GO_QUERY_RESULT_FORMAT"] = c.ResultFormat
+	}
 	seen := map[string]bool{}
 	values := make([]driver.Value, len(columns))
 	for count := 0; ; count++ {
@@ -130,7 +138,8 @@ func (c SessionConnector) Connect(ctx context.Context) (connection driver.Conn, 
 			continue
 		}
 		value, ok := values[valueColumn].(string)
-		if !ok || value != want || seen[key] {
+		matches := value == want || key == "GO_QUERY_RESULT_FORMAT" && strings.EqualFold(value, want)
+		if !ok || !matches || seen[key] {
 			return nil, fmt.Errorf("test/snowflaketester: unexpected session parameter %s", key)
 		}
 		seen[key] = true
@@ -143,6 +152,9 @@ func (c SessionConnector) Connect(ctx context.Context) (connection driver.Conn, 
 		"statement_timeout_in_seconds", timeout}
 	if profile != "standard" {
 		attributes = append(attributes, "use_cached_result", false)
+	}
+	if c.ResultFormat != "" {
+		attributes = append(attributes, "go_query_result_format", c.ResultFormat)
 	}
 	slog.Info("Snowflake test session parameters", attributes...)
 

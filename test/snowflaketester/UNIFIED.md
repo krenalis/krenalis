@@ -226,6 +226,124 @@ JSON display text. A rounded display is an accepted output limit, not a reason t
 weaken Record or governed monetary expectations. Do not add corrective queries,
 rewrite connector SQL or restore the discarded result dictionary.
 
+## Numeric transport: prepared locally, remote execution pending
+
+`TestJSONNumericTransport` in the warehouse and connector uses shared fixtures:
+27 rows for Arrow and a compact JSON subset. Each numeric value appears in
+VARIANT, ARRAY and OBJECT, including nested arrays and literal dotted/bracketed
+keys. Real Merge writes cover exact 38-digit integers, scale 37 and scientific
+notation; explicit PARSE_JSON writes create historical DOUBLEs. Diagnostic reads
+check TYPEOF on all seven value paths and exact fixed-point values. Application
+reads must retain the server's numeric tokens, comparing JSON structure without
+depending on key order or whitespace.
+Type and numeric differences are collected across fixtures instead of stopping
+at the first mismatch. Diagnostics identify the fixture and path or column,
+report physical kinds from a closed set and quote the first unequal numeric
+tokens with a 400-character limit per token. Structural precondition failures
+still stop the read. Historical JSON uses bind parameters, not SQL string literals.
+
+Both fixtures compare application tokens with a separate diagnostic read of the
+same immutable data in the same requested format. Stability of the server's text
+between those two reads is an assumption to verify remotely; there is no
+corrective query in production. The connector fixture checks its raw query API
+and metadata, while local tests pass the complete matrix through the actual core
+normalizer. The connector's query stays unchanged.
+DOUBLE tokens, native bits and round-trip results are observations, not a renewed
+promise of binary64 identity for nested JSON. The fixture names identify common
+cases across the full and compact populations. Negative-zero sign is not an
+acceptance requirement.
+
+Arrow checks the intended ordinary path. Explicit JSON runs are compatibility
+probes, not certification of equivalent support. A separate
+`connections.TestSnowflakeNativeTransport` reads FLOAT, BOOLEAN, integer and
+decimal columns through both application readers. It uses the connector's actual
+`queryScanValue` normalization and also observes the raw native Go types.
+It collects all incompatibilities before one final failure: the warehouse's
+current rejection of textual FLOAT/BOOLEAN is expected to surface in JSON mode.
+Do not weaken this probe or change production behavior merely to obtain a pass.
+
+`prepare.py --result-format ARROW|JSON` sets the request at login in all three
+connection factories and requires its session value. Only these overlays add an
+observation to a copy of the vendored driver's `populateChunkDownloader`. It emits
+`Snowflake result format observed tag=... format=arrow|json|unknown` only for six
+closed fixture tags. It does not alter rows or decoders. SHOW/DDL/COPY responses
+are not evidence for application reads. Normal builds and the other campaign
+profiles retain their existing behavior.
+
+`run.py --require-result-format` and repeated `--require-result-tag` options are
+paired. The `result_formats` manifest records the requested session value and
+observed formats per tag before output masking. Every required tag needs at
+least one observation, and all observed formats must match. Missing, malformed,
+unknown or mixed records fail an otherwise successful block with exit 7.
+`verified` records the verdict even when Go or another check fails; it is null
+when no result format was required. Existing failures retain their original
+code. Require both `verified: true` and `source_stable: true` before attributing
+a native JSON failure to that transport. A session setting alone cannot certify
+the result format. These records and the overlay hashes complement the existing
+schema/session checks; they do not replace them.
+Both entry scripts disable local bytecode writes before importing shared code.
+
+Local checks use fake results, the real CSV encoders, connector normalization and
+an isolated driver-overlay unit test. To compile the remote fixtures without
+accessing credentials, prepare an overlay, then run with the skip variable true:
+
+```sh
+numeric_campaign=$(mktemp -d /tmp/krenalis-numeric-transport.XXXXXX)
+python3 -B test/snowflaketester/prepare.py "$numeric_campaign/ARROW" \
+  --timezone UTC --result-format ARROW
+KRENALIS_SKIP_SNOWFLAKE_TESTS=true go test -overlay "$numeric_campaign/ARROW/overlay.json" \
+  ./warehouses/snowflake ./connectors/snowflake ./core/internal/connections \
+  -run '^Test(JSONNumericTransport|SnowflakeNativeTransport)$' -count=1 -json
+```
+
+The three remote tests must SKIP here. Local passes and compilation do not attest
+either server format. These small fixtures do not deliberately force remote
+chunk downloads; that remains separate coverage.
+
+This is the next independent campaign; it does not require replaying the earlier
+Unified blocks. When live access is authorized, use fresh evidence names and UTC
+overlays. Run the four numeric blocks first, inspecting each result:
+
+```sh
+numeric_campaign=$(mktemp -d /tmp/krenalis-numeric-transport-live.XXXXXX)
+for numeric_format in ARROW JSON; do
+  numeric_dir="$numeric_campaign/$numeric_format"
+  python3 -B test/snowflaketester/prepare.py "$numeric_dir" \
+    --timezone UTC --result-format "$numeric_format"
+  for numeric_path in warehouses connectors; do
+    numeric_role=${numeric_path%s}
+    KRENALIS_SKIP_SNOWFLAKE_TESTS=false python3 test/snowflaketester/run.py \
+      --require-schemas --require-session-timezone UTC \
+      --require-result-format "$numeric_format" \
+      --require-result-tag "krenalis-transport/$numeric_role-values" \
+      --require-result-tag "krenalis-transport/$numeric_role-reference" \
+      "$numeric_dir/$numeric_role.jsonl" -- -overlay "$numeric_dir/overlay.json" \
+      "./$numeric_path/snowflake" -run '^TestJSONNumericTransport$' -timeout=15m
+  done
+done
+```
+
+Then run native probes as separate blocks, so their failure cannot hide the
+numeric checks behind `-failfast`. A JSON incompatibility is evidence to inspect,
+not permission to change contracts or open the gate:
+
+```sh
+for numeric_format in ARROW JSON; do
+  numeric_dir="$numeric_campaign/$numeric_format"
+  KRENALIS_SKIP_SNOWFLAKE_TESTS=false python3 test/snowflaketester/run.py \
+    --require-schemas --require-session-timezone UTC \
+    --require-result-format "$numeric_format" \
+    --require-result-tag krenalis-transport/warehouse-native \
+    --require-result-tag krenalis-transport/connector-native \
+    "$numeric_dir/native.jsonl" -- -overlay "$numeric_dir/overlay.json" \
+    ./core/internal/connections -run '^TestSnowflakeNativeTransport$' -timeout=15m
+  python3 test/snowflaketester/run.py --audit "$numeric_dir"
+done
+```
+
+No live result for this block has been recorded yet. Account/user-level parameter
+inspection and additional native types are outside this increment.
+
 ## Cleanup after completion or interruption
 
 Audit schema records collected in manifests before redaction, including failed
@@ -348,7 +466,8 @@ In particular, the following work remains explicit:
 - Additional nested Array/Map numeric boundaries and native FLOAT extraction
   versus nested output in VARIANT/OBJECT/ARRAY, explicitly verifying both Arrow
   and JSON result transport. The successful default-driver runs above do not
-  certify both transport formats.
+  certify both transport formats. The numeric-transport block above is prepared
+  locally and still needs execution on the server.
 - Remaining Record operator/collation/Float-NaN cases and all source-conflict
   classes, Sum/Average independent where and minimum counterexamples, Count money
   predicates, mixed explanation layouts, projections and nonempty pagination.

@@ -11,6 +11,9 @@ import sys
 import tempfile
 import unittest
 
+from prepare import RESULT_OBSERVER
+from transport import RESULT_TAGS
+
 
 ROOT = Path(__file__).resolve().parents[2]
 PREPARE = Path(__file__).with_name("prepare.py")
@@ -24,9 +27,25 @@ class PrepareTest(unittest.TestCase):
         self.environment = {key: value for key, value in os.environ.items()
                             if not key.startswith("KRENALIS_SNOWFLAKE_TESTER_")}
 
-    def prepare(self, directory, timezone, profile="standard"):
-        return subprocess.run([sys.executable, "-B", str(PREPARE), str(directory), "--timezone", timezone, "--profile", profile],
+    def prepare(self, directory, timezone, profile="standard", result_format=None):
+        options = ["--result-format", result_format] if result_format is not None else []
+        return subprocess.run([sys.executable, "-B", str(PREPARE), str(directory), "--timezone", timezone, "--profile", profile, *options],
                               cwd=ROOT, env=self.environment, capture_output=True, text=True)
+
+    def test_entry_points_do_not_write_bytecode(self):
+        directory = self.directory / "scripts"
+        directory.mkdir()
+        for name in ("prepare.py", "run.py", "transport.py"):
+            (directory / name).write_bytes(PREPARE.with_name(name).read_bytes())
+        environment = dict(self.environment)
+        environment.pop("PYTHONDONTWRITEBYTECODE", None)
+        environment.pop("PYTHONPYCACHEPREFIX", None)
+        for name in ("prepare.py", "run.py"):
+            with self.subTest(script=name):
+                result = subprocess.run([sys.executable, str(directory / name), "--help"],
+                                        env=environment, capture_output=True, text=True)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertFalse(list(directory.rglob("*.pyc")))
 
     def test_gate_and_all_connection_paths(self):
         for timezone in ["UTC", "America/Los_Angeles"]:
@@ -79,6 +98,70 @@ class PrepareTest(unittest.TestCase):
                     self.assertIn('Profile: "' + profile + '"', text)
         rejected = self.prepare(self.directory / "invalid-profile", "UTC", "unknown")
         self.assertEqual(rejected.returncode, 2)
+
+    def test_result_format_overlay(self):
+        driver = ROOT / "vendor/github.com/snowflakedb/gosnowflake/v2/connection_util.go"
+        tags = re.findall(r'"(krenalis-transport/[^"\n]+)"',
+                          (ROOT / "test/snowflaketester/result_format.go").read_text())
+        self.assertEqual(sorted(tags), sorted(RESULT_TAGS))
+        for requested in ["ARROW", "JSON"]:
+            with self.subTest(format=requested):
+                directory = self.directory / requested
+                result = self.prepare(directory, "UTC", result_format=requested)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                replacements = json.loads((directory / "overlay.json").read_text())["Replace"]
+                self.assertEqual(len(replacements), 6)
+                instrumented = Path(replacements[str(driver)]).read_text()
+                self.assertEqual(instrumented.replace(RESULT_OBSERVER, ""), driver.read_text())
+                for name in ["warehouses/snowflake/warehouse.go", "connectors/snowflake/snowflake.go",
+                             "test/snowflaketester/connection.go"]:
+                    text = Path(replacements[str(ROOT / name)]).read_text()
+                    self.assertRegex(text, r'"GO_QUERY_RESULT_FORMAT":\s+new\("' + requested + r'"\)')
+                    self.assertIn('ResultFormat: "' + requested + '"', text)
+                selection = Path(replacements[str(ROOT / "test/snowflaketester/result_format.go")]).read_text()
+                self.assertIn('const requestedResultFormat = "' + requested + '"', selection)
+        rejected = self.prepare(self.directory / "invalid-format", "UTC", result_format="unknown")
+        self.assertEqual(rejected.returncode, 2)
+
+    def test_observer_reads_response_metadata_only_for_fixture_tags(self):
+        directory = self.directory / "observer"
+        result = self.prepare(directory, "UTC", result_format="ARROW")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        overlay = directory / "overlay.json"
+        replacements = json.loads(overlay.read_text())["Replace"]
+        probe = directory / "observer_test.go"
+        probe.write_text('''package gosnowflake
+import (
+    "context"
+    "testing"
+)
+func TestTransportOverlayObservation(t *testing.T) {
+    tags := []string{
+''' + "".join("        " + json.dumps(tag) + ",\n" for tag in RESULT_TAGS) + '''    }
+    tags = append(tags, "", "krenalis-session-verification", "krenalis-transport/unknown")
+    for _, tag := range tags {
+        for _, format := range []string{"arrow", "json", "untrusted"} {
+            ctx := context.WithValue(t.Context(), queryTag, tag)
+            downloader := populateChunkDownloader(ctx, nil, execResponseData{QueryResultFormat: format})
+            if string(downloader.getQueryResultFormat()) != format {
+                t.Fatalf("expected original format %s, got %s", format, downloader.getQueryResultFormat())
+            }
+        }
+    }
+}
+''')
+        replacements[str(ROOT / "vendor/github.com/snowflakedb/gosnowflake/v2/transport_overlay_test.go")] = str(probe)
+        overlay.write_text(json.dumps({"Replace": replacements}))
+        command = ["go", "test", "-mod=vendor", "-overlay", str(overlay),
+                   "./vendor/github.com/snowflakedb/gosnowflake/v2", "-run", "^TestTransportOverlayObservation$",
+                   "-count=1", "-json"]
+        checked = subprocess.run(command, cwd=ROOT, env=self.environment, capture_output=True, text=True, timeout=180)
+        self.assertEqual(checked.returncode, 0, checked.stdout + checked.stderr)
+        output = "".join(json.loads(line).get("Output", "") for line in checked.stdout.splitlines())
+        records = re.findall(r'Snowflake result format observed tag=(\S+) format=(\S+)', output)
+        self.assertEqual(sorted(records), sorted((tag, actual) for tag in RESULT_TAGS
+                                                for actual in ("arrow", "json", "unknown")))
+        self.assertNotIn("format=untrusted", output)
 
     def test_existing_evidence_is_never_overwritten(self):
         directory = self.directory / "overlay"

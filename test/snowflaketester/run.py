@@ -15,6 +15,9 @@ import re
 import subprocess
 import sys
 
+sys.dont_write_bytecode = True
+from transport import RESULT_TAGS
+
 
 MAX_OUTPUT_BYTES = 4 * 1024 * 1024
 SCHEMA_NAME = r"KRENALIS_TEST_SCHEMA_[0-9]+_[0-9a-f]{32}"
@@ -26,7 +29,11 @@ SESSION_EVENT = re.compile(
     r'Snowflake test session parameters\b(?:"?(?:[ \t]+profile=(standard|timeout|cancellation))?'
     r'[ \t]+timezone=(UTC|America/Los_Angeles)[ \t]+'
     r'timestamp_type_mapping=TIMESTAMP_NTZ[ \t]+timestamp_input_format=AUTO[ \t]+'
-    r'statement_timeout_in_seconds=(60|10)(?=\s|$)(?:[ \t]+use_cached_result=(false)(?=\s|$))?)?')
+    r'statement_timeout_in_seconds=(60|10)(?=\s|$)(?:[ \t]+use_cached_result=(false)(?=\s|$))?'
+    r'(?:[ \t]+go_query_result_format=(?:(ARROW|JSON)(?=\s|$)|[^\r\n]*))?)?')
+RESULT_EVENT = re.compile(
+    r'Snowflake result format observed\b(?:[ \t]+tag=(' +
+    "|".join(re.escape(tag) for tag in RESULT_TAGS) + r')[ \t]+format=(arrow|json|unknown)(?=\s|$))?')
 
 
 def audit_schemas(directory):
@@ -163,15 +170,22 @@ def main():
                         help="require session verification records with this timezone only")
     parser.add_argument("--require-session-profile", choices=SESSION_PROFILES,
                         help="require verification records with this session profile only")
+    parser.add_argument("--require-result-format", type=str.lower, choices=["arrow", "json"],
+                        help="require the session setting and observed format for every requested tag")
+    parser.add_argument("--require-result-tag", choices=RESULT_TAGS, action="append", default=[],
+                        help="require result format evidence for this fixture read; may be repeated")
     parser.add_argument("path", type=Path)
     parser.add_argument("go_args", nargs=argparse.REMAINDER)
     options = parser.parse_args()
     arguments = options.go_args
     if options.audit:
         if (arguments or options.require_schemas or options.require_session_timezone is not None or
-                options.require_session_profile is not None):
+                options.require_session_profile is not None or options.require_result_format is not None or
+                options.require_result_tag):
             parser.error("--audit takes only a manifest directory")
         return audit_schemas(options.path)
+    if bool(options.require_result_format) != bool(options.require_result_tag):
+        parser.error("--require-result-format and --require-result-tag must be provided together")
     if arguments[:1] == ["--"]:
         arguments = arguments[1:]
     if not arguments:
@@ -210,6 +224,10 @@ def main():
                 "sessions": {"required_timezone": options.require_session_timezone,
                              "verified": {}, "invalid_records": 0},
                 "session_profiles": {"required": options.require_session_profile, "verified": {}},
+                "result_formats": {"required": options.require_result_format,
+                                   "required_tags": sorted(set(options.require_result_tag)),
+                                   "observed": {}, "session_requested": {}, "invalid_records": 0,
+                                   "verified": None},
                 "output_limit_exceeded": False,
                 "redaction": {"case_insensitive": True, "output_only": True,
                               "max_output_bytes": MAX_OUTPUT_BYTES,
@@ -233,8 +251,9 @@ def main():
                         names = manifest["schemas"][action.lower()]
                         name = name.upper()
                         names[name] = names.get(name, 0) + 1
-                    session_records = SESSION_EVENT.findall(output)
-                    for profile, timezone, timeout, cache in session_records:
+                    session_records = list(SESSION_EVENT.finditer(output))
+                    for record in session_records:
+                        profile, timezone, timeout, cache, requested_format = record.groups()
                         profile = profile or "standard"
                         expected_timeout = "10" if profile == "timeout" else "60"
                         if timezone == "" or timeout != expected_timeout or profile != "standard" and cache != "false":
@@ -244,7 +263,23 @@ def main():
                             verified[timezone] = verified.get(timezone, 0) + 1
                             profiles = manifest["session_profiles"]["verified"]
                             profiles[profile] = profiles.get(profile, 0) + 1
-                    if records or session_records:
+                        if "go_query_result_format=" in record.group():
+                            formats = manifest["result_formats"]
+                            if requested_format is None:
+                                formats["invalid_records"] += 1
+                            else:
+                                name = requested_format.lower()
+                                requested = formats["session_requested"]
+                                requested[name] = requested.get(name, 0) + 1
+                    result_records = RESULT_EVENT.findall(output)
+                    for tag, actual_format in result_records:
+                        formats = manifest["result_formats"]
+                        if tag == "" or actual_format == "unknown":
+                            formats["invalid_records"] += 1
+                        if tag != "":
+                            observed = formats["observed"].setdefault(tag, {})
+                            observed[actual_format] = observed.get(actual_format, 0) + 1
+                    if records or session_records or result_records:
                         write_manifest(manifest_path, manifest)
                     if mask is not None:
                         event["Output"] = mask.sub("<SNOWFLAKE_TEST_VALUE>", output)
@@ -277,6 +312,14 @@ def main():
     if code == 0 and profiles["required"] is not None:
         if sessions["invalid_records"] or set(profiles["verified"]) != {profiles["required"]}:
             code = 6
+    formats = manifest["result_formats"]
+    if formats["required"] is not None:
+        expected = {formats["required"]}
+        formats["verified"] = not (formats["invalid_records"] or set(formats["session_requested"]) != expected or
+                any(tag not in formats["observed"] for tag in formats["required_tags"]) or
+                any(set(observed) != expected for observed in formats["observed"].values()))
+        if code == 0 and not formats["verified"]:
+            code = 7
     manifest["exit"] = code
     write_manifest(manifest_path, manifest)
     print(json.dumps({"log": str(log_path), "manifest": str(manifest_path), "exit": manifest["exit"],
