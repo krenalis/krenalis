@@ -155,8 +155,66 @@ for (const [index, value] of values.entries()) {
 		await expect(valueInput).toHaveValue('"');
 		expect(gridFilters).toEqual([null, filter]);
 		await expect(page.getByRole('alert')).toBeEmpty();
+
+		await valueInput.fill(draftValue);
+		await propertyInput.focus();
+		await expect(propertyInput).toHaveValue('name');
+		await propertyInput.fill('');
+		await filters.getByRole('button', { name: 'Collapse', exact: true }).click();
+		await expect(editor).toHaveCount(0);
+		await expect(filters.getByRole('button', { name: 'Add filter', exact: true })).toBeVisible();
+		await expect(rows).toHaveCount(3);
+		expect(gridFilters).toEqual([null, filter, null]);
 	});
 }
+
+test(`Close an empty filter after clearing its placeholder property`, async ({ page }) => {
+	const gridFilters: (Filter | null)[] = [];
+	await page.route(/\/v1\/profiles\/query$/, (route) => {
+		gridFilters.push(route.request().postDataJSON().filter ?? null);
+		return route.fulfill({ json: { profiles, total: profiles.length, hasNext: false } });
+	});
+	await page.goto('https://example.test/');
+	await page.addStyleTag({ content: componentStyles });
+	await page.addScriptTag({ content: componentScript });
+	const rows = page.locator('.profiles-list .grid__row--clickable');
+	await expect(rows).toHaveCount(3);
+	const filters = page.locator('.profiles-list__filters');
+	const editor = filters.getByRole('region', { name: 'Profile filters' });
+	for (const closeWith of ['Collapse', 'Escape']) {
+		await filters.getByRole('button', { name: 'Add filter', exact: true }).click();
+		const property = editor.locator('.filter-editor__property');
+		const input = property.locator('input');
+		await input.fill('nam');
+		await input.fill('');
+		await expect(editor.getByRole('button', { name: 'Remove condition 1', exact: true })).toHaveCount(0);
+		await expect(editor.getByRole('button', { name: 'Apply filters', exact: true })).toBeDisabled();
+		await expect(property).toHaveClass(/combobox--open/);
+		await input.press('Escape');
+		await expect(property).not.toHaveClass(/combobox--open/);
+		await expect(editor).toBeVisible();
+		if (closeWith === 'Escape') {
+			await input.press('Escape');
+		} else {
+			await filters.getByRole('button', { name: 'Collapse', exact: true }).click();
+		}
+		await expect(editor).toHaveCount(0);
+		await expect(filters.getByRole('button', { name: 'Add filter', exact: true })).toBeVisible();
+		await expect(filters.locator('.profiles-list__filter-summary-value')).toHaveText('No filters applied');
+	}
+
+	await filters.getByRole('button', { name: 'Add filter', exact: true }).click();
+	await expect(filters.getByRole('button', { name: 'Undo', exact: true })).toBeDisabled();
+	await editor.getByRole('button', { name: 'Add a condition', exact: true }).click();
+	await filters.getByRole('button', { name: 'Collapse', exact: true }).click();
+	await expect(editor).toBeVisible();
+	await expect(editor.locator('.filter-editor__filter')).toHaveCount(2);
+	await editor.getByRole('button', { name: 'Remove condition 2', exact: true }).click();
+	await filters.getByRole('button', { name: 'Collapse', exact: true }).click();
+	await expect(editor).toHaveCount(0);
+	await expect(rows).toHaveCount(3);
+	expect(gridFilters).toEqual([null]);
+});
 
 test(`Number removable groups across nested and sibling groups`, async ({ page }) => {
 	await page.route(/\/v1\/profiles\/query$/, (route) =>

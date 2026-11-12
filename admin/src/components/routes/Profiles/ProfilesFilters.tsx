@@ -348,6 +348,10 @@ const ProfilesFilters = ({
 				return null;
 			}
 			const normalized = validateAndNormalizeFilter(filter, schema);
+			// A single empty condition represents an unfiltered view.
+			if (normalized == null && filter.rules.length === 1 && !isFilterGroup(filter.rules[0])) {
+				return null;
+			}
 			const draftConditions = getFilterConditions(filter);
 			const conditions = normalized == null ? [] : getFilterConditions(normalized);
 			// Empty editor placeholders belong to the draft, not to a complete version.
@@ -373,7 +377,7 @@ const ProfilesFilters = ({
 	}, [normalizeFilter, session.draft]);
 
 	const historyEntry = currentProfilesFilterHistoryEntry(session);
-	const hasFilters = session.draft != null && session.draft.rules.length > 0;
+	const hasFilters = validatedDraft.filter != null || validatedDraft.error != null;
 	const rawDraftFingerprint = profileFilterFingerprint(session.draft);
 	const isDraftDirty = rawDraftFingerprint !== profileFilterFingerprint(historyEntry.draft);
 	const canUndo = isDraftDirty || session.historyIndex > 0;
