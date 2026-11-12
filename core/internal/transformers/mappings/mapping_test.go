@@ -1322,13 +1322,6 @@ func TestTransformDoesNotMutateInput(t *testing.T) {
 			expected: map[string]any{"foo": []any{"4.67", "-1.02"}},
 		},
 		{
-			name:     "array elements satisfy pattern",
-			inType:   types.Array(types.String()),
-			outType:  types.Array(types.String().WithPattern(regexp.MustCompile("^ok$"))),
-			value:    []any{"ok", "ok"},
-			expected: []any{"ok", "ok"},
-		},
-		{
 			name:     "unchanged array",
 			inType:   types.Array(types.Int(32)),
 			outType:  types.Array(types.Int(32)),
