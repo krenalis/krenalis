@@ -652,12 +652,13 @@ remaining acceptance gaps. The shared bounded fixtures passed on PostgreSQL
 and their original selection, period and page/screen groups passed on real
 Snowflake on 2026-11-11. Four added groups cover Count money, Sum/Average guards,
 source conflicts and projection/pagination/mixed explanations. They have passed
-on local PostgreSQL with the race detector; Snowflake execution remains pending.
-The runbook distinguishes these additions from successful remote blocks and
-records coverage still required before activation.
-Additional Arrow/JSON transport fixtures and separate native FLOAT/BOOLEAN
-compatibility probes are prepared locally. Their format observations and
-physical numeric expectations still need verification on Snowflake.
+on local PostgreSQL with the race detector and on Snowflake on 2026-11-12:
+392 test nodes in each of UTC and America/Los_Angeles, plus 44 baseline nodes in
+each configuration, without skips or failures. Arrow/JSON nested numeric transport
+passed through both readers, and the Arrow native-type probe passed. The JSON
+native-type probe confirmed FLOAT/BOOLEAN incompatibilities and remains failed.
+The runbook records per-query format evidence, source/session checks, independent
+schema inventories and coverage still required before activation.
 
 The following is the common acceptance checklist for the currently implemented
 subset, not a claim of remote conformance. Run physical probes before deciding

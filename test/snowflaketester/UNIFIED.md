@@ -40,9 +40,10 @@ deliberately violates attribution and copy contracts. Asynchronous publication
 is not tested.
 
 The original `selections`, `periods` and `pages` groups have remote evidence below.
-The added `count-money`, `guards`, `sources` and `protocol` groups have passed on
-local PostgreSQL with the race detector, but have **not run on Snowflake**. They
-run in a separate remote block before the baseline fixtures in the sequence below.
+The added `count-money`, `guards`, `sources` and `protocol` groups passed on local
+PostgreSQL with the race detector and on Snowflake in both session timezones on
+2026-11-12. They run in a separate remote block before the baseline fixtures in
+the sequence below.
 
 | Fixture | Coverage |
 | --- | --- |
@@ -50,10 +51,10 @@ run in a separate remote block before the baseline fixtures in the sequence belo
 | Selection assertions | Existing independent enumeration oracles supply outcomes and candidate/absence/pair metadata. Every profile's metadata is checked for Latest(2)/Some and difference <= -30; the other rules explain the first six profiles, plus all four eleven-event histories for position/size 10. All rules check exact ternary totals, profile ordering and empty matching pages. Relevant timestamp conflicts fail without partial results; excluded copies and unrelated-profile explanations remain usable. |
 | `periods` | Absolute, elapsed and ago-band periods; Rome complete days across both DST changes, complete week and month. Start/end and +/- one microsecond are checked through both Count and First/occurredIn. History includes an event in year 0001 and excludes T. received_at/sent_at deliberately lie outside the window. |
 | `pages` | Page and screen, named and unnamed, missing/empty/lowercase names, profile without events, literal dotted JSON key segments and count explanations. |
-| `count-money` (local only) | Nineteen monetary observations plus an empty profile, two identities per populated profile and physical copies. Thirteen literal tests, external currency absent/EUR/USD, nested AND/OR, Count >= 1, = 0 and != 2 with minimum 2. Independent completion oracles supply outcomes; one complete configuration checks every profile's count bounds. |
-| `guards` (local only) | Seventeen batched populations for eight Sum/Average tests: independent where/currency uncertainty, positive and negative amounts, unknown amounts counted toward minimum, certainly excluded unreadable amounts, Kleene counterexamples, exact sums beyond binary64 precision and physical-copy deduplication. Handwritten expectations check every profile's exact inputs/bounds and ternary outcome. |
-| `sources` (local only) | Relevant qualification, attribution, period, exact timestamp, readability and amount conflicts across Count, Sum, Average, selected experiences, Latest N and LastVersusPrevious; equivalent unreadable values and excluded identities; missing identity; unrelated-profile explanation isolation. Readback verifies physical copies were retained. NULL timestamps test only selected readers' existing runtime guards: known timestamps remain a source precondition for reductions. |
-| `protocol` (local only) | Six mixed Record/occurrence explanation layouts checked on all nine profiles; nonempty, partial and empty matching pages, exact totals/T, projected fields and deterministic identity tie-breaking in both sort directions. Pure Record membership/explanation works after dropping the event table, including missing profiles and an empty population. |
+| `count-money` | Nineteen monetary observations plus an empty profile, two identities per populated profile and physical copies. Thirteen literal tests, external currency absent/EUR/USD, nested AND/OR, Count >= 1, = 0 and != 2 with minimum 2. Independent completion oracles supply outcomes; one complete configuration checks every profile's count bounds. |
+| `guards` | Seventeen batched populations for eight Sum/Average tests: independent where/currency uncertainty, positive and negative amounts, unknown amounts counted toward minimum, certainly excluded unreadable amounts, Kleene counterexamples, exact sums beyond binary64 precision and physical-copy deduplication. Handwritten expectations check every profile's exact inputs/bounds and ternary outcome. |
+| `sources` | Relevant qualification, attribution, period, exact timestamp, readability and amount conflicts across Count, Sum, Average, selected experiences, Latest N and LastVersusPrevious; equivalent unreadable values and excluded identities; missing identity; unrelated-profile explanation isolation. Readback verifies physical copies were retained. NULL timestamps test only selected readers' existing runtime guards: known timestamps remain a source precondition for reductions. |
+| `protocol` | Six mixed Record/occurrence explanation layouts checked on all nine profiles; nonempty, partial and empty matching pages, exact totals/T, projected fields and deterministic identity tie-breaking in both sort directions. Pure Record membership/explanation works after dropping the event table, including missing profiles and an empty population. |
 | `TestUnifiedStoredNumbers*` | Shared six-profile monetary fixture: Count, Sum with minimum, Average, selected money, LastVersusPrevious and composition, with all profile outcomes/explanations, canceled operation and empty pages. |
 
 The bounded fixture complements the full PostgreSQL completion oracles; it does
@@ -226,7 +227,7 @@ JSON display text. A rounded display is an accepted output limit, not a reason t
 weaken Record or governed monetary expectations. Do not add corrective queries,
 rewrite connector SQL or restore the discarded result dictionary.
 
-## Numeric transport: prepared locally, remote execution pending
+## Numeric transport: Arrow/JSON
 
 `TestJSONNumericTransport` in the warehouse and connector uses shared fixtures:
 27 rows for Arrow and a compact JSON subset. Each numeric value appears in
@@ -341,8 +342,40 @@ for numeric_format in ARROW JSON; do
 done
 ```
 
-No live result for this block has been recorded yet. Account/user-level parameter
-inspection and additional native types are outside this increment.
+### Live transport results on 2026-11-12
+
+All six blocks ran on `816c4cd6d`, using real writes and reads. Each manifest has
+`result_formats.verified: true` and `source_stable: true`, including the failed
+native JSON probe. No test was skipped.
+
+| Block | Arrow | JSON |
+| --- | --- | --- |
+| Warehouse JSON numeric transport | PASS, 27 fixtures | PASS, 17 fixtures |
+| Connector JSON numeric transport | PASS, 27 fixtures | PASS, 17 fixtures |
+| Native types through both readers | PASS | FAIL, FLOAT/BOOLEAN incompatibilities |
+
+The four numeric blocks checked 88 rows, seven physical-kind paths per row and
+all three application cells. New fixed-point writes and historical DOUBLE
+fixtures passed their distinct expectations. Bind parameters inside PARSE_JSON
+worked on the server. The seven common DOUBLE observations had identical tokens
+across the four blocks. The successor of 100 still displays as 100 when nested;
+the maximum binary64 token still exceeds the finite ParseFloat range. These
+observations preserve the approved server-text contract.
+
+With JSON results, the warehouse rejects textual native FLOAT and BOOLEAN. The
+connector receives Boolean strings `1`/`0` and rejects them; it reads the native
+successor of 100 as 100. INTEGER and DECIMAL passed through both readers in both
+formats. The native JSON probe remains failed; no production correction was made.
+
+Both schema-ledger audits report three schemas created and three dropped.
+Separate read-only server inventories found none of these six schemas remaining.
+Evidence, per-query format records, masked logs and `summary.json` are under
+`/private/tmp/krenalis-numeric-transport-live-yxltfce1/`. The initial sandbox DNS
+failure occurred before schema creation and has separate evidence under
+`/private/tmp/krenalis-numeric-transport-live-dlbs2lhs/`.
+
+Account/user-level parameter inspection, forced remote chunk downloads and
+additional native types remain outside this block. The Unified gate is closed.
 
 ## Cleanup after completion or interruption
 
@@ -457,22 +490,43 @@ configurations; resource-monitor policies and credit limits were not inspected.
 The production gate remains closed and the remaining acceptance coverage below
 still applies.
 
+## Shared conformance results on 2026-11-12
+
+The four added groups and the separate baseline block ran on `816c4cd6d`, with
+unchanged expectations in UTC and America/Los_Angeles sessions:
+
+| Block | UTC PASS | America/Los_Angeles PASS | SKIP / FAIL |
+| --- | ---: | ---: | --- |
+| Count money, guards, sources and protocol | 392 | 392 | 0 / 0 |
+| Stored numbers, selections, periods and pages | 44 | 44 | 0 / 0 |
+
+These are test/subtest nodes, not SQL-query counts. In each configuration the
+blocks share only the parent `TestUnifiedConformanceSnowflake`; their union has
+435 nodes. Every block has stable source hashes and verified session parameters.
+The runs took about 14 minutes for each new-group block and 8 minutes for each
+baseline block, including setup and many individual explanations. This is not a
+production latency benchmark.
+
+Each configuration created and dropped three schemas. Independent read-only
+inventories found zero remaining campaign schemas. Evidence is under
+`/private/tmp/krenalis-unified-conformance-live-zgm78an6/`: `summary.json`, per-zone
+manifests and masked logs, ledger audits, and the `inventory/` results. Output
+checks found no occurrences of the six Snowflake configuration values in either
+campaign's test output. No implementation or production gate changed.
+
 ## Coverage still required before activation
 
 Passing the commands above is necessary, but is not the complete acceptance
 checklist. Record actual results against each block in the Unified README.
 In particular, the following work remains explicit:
 
-- Additional nested Array/Map numeric boundaries and native FLOAT extraction
-  versus nested output in VARIANT/OBJECT/ARRAY, explicitly verifying both Arrow
-  and JSON result transport. The successful default-driver runs above do not
-  certify both transport formats. The numeric-transport block above is prepared
-  locally and still needs execution on the server.
-- Remaining Record operator/collation/Float-NaN cases and all source-conflict
-  classes, Sum/Average independent where and minimum counterexamples, Count money
-  predicates, mixed explanation layouts, projections and nonempty pagination.
-  The four new shared groups prepare the latter checks locally; they still need
-  actual Snowflake execution. Not every Record case has a Snowflake setup yet.
+- Decide how native FLOAT/BOOLEAN compatibility with JSON results affects the
+  supported transport contract. Nested numeric fixtures and the Arrow native
+  path passed above; the failed JSON native probe does not certify equivalence.
+- Remaining Record operator/collation/Float-NaN cases and source cases beyond the
+  shared fixtures. The added groups now provide remote evidence for Count money,
+  Sum/Average where and minimum, covered conflicts, mixed explanations,
+  projections and pagination. Not every Record case has a Snowflake setup yet.
 - Real core service plus HTTP/MCP on Snowflake. The current
   `TestUnifiedWorkspacePostgreSQL` and `TestProfilesMCP` hard-code PostgreSQL
   setup/DML. Running them unchanged verifies the local service, not Snowflake.
