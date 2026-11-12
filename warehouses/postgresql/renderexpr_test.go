@@ -329,6 +329,18 @@ func Test_renderExpr(t *testing.T) {
 			wantErr: "decimal operand exceeds precision 76 or scale 37",
 		},
 		{
+			name: "JSON array contains",
+			expr: warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.Array(types.JSON())},
+				warehouses.OpContains, warehouses.JSONConditionValue{String: "foo"}),
+			query: `COALESCE((EXISTS (SELECT 1 FROM unnest("values") AS krenalis_json_element(value) WHERE CASE WHEN jsonb_typeof(krenalis_json_element.value) = 'string' THEN (krenalis_json_element.value #>> '{}') COLLATE "C" = 'foo' ELSE FALSE END)), FALSE)`,
+		},
+		{
+			name: "JSON array does not contain",
+			expr: warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.Array(types.JSON())},
+				warehouses.OpDoesNotContain, warehouses.JSONConditionValue{String: "foo"}),
+			query: `NOT COALESCE((EXISTS (SELECT 1 FROM unnest("values") AS krenalis_json_element(value) WHERE CASE WHEN jsonb_typeof(krenalis_json_element.value) = 'string' THEN (krenalis_json_element.value #>> '{}') COLLATE "C" = 'foo' ELSE FALSE END)), FALSE)`,
+		},
+		{
 			name: "JSON numeric text without number",
 			expr: warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.JSON()}, warehouses.OpIs,
 				warehouses.JSONConditionValue{String: "1e999999"}),

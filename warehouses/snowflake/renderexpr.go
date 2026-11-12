@@ -151,11 +151,7 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 					if !ok {
 						return fmt.Errorf("warehouses/snowflake: unexpected operand type %T", baseExpr.Values[0])
 					}
-					precision, scale := number.PrecisionScale()
-					if precision > types.MaxDecimalPrecision || scale > types.MaxDecimalScale {
-						return fmt.Errorf("warehouses/snowflake: decimal operand exceeds precision %d or scale %d",
-							types.MaxDecimalPrecision, types.MaxDecimalScale)
-					}
+					_, scale := number.PrecisionScale()
 					numberText := "0"
 					if number.Sign() != 0 {
 						numberText = fmt.Sprintf("%.*f", scale, number)

@@ -440,12 +440,12 @@ func Test_renderExpr(t *testing.T) {
 		{
 			name:  "decimal array maximum precision",
 			expr:  warehouses.NewBaseExpr(array, warehouses.OpContains, decimal.MustParse("1e75")),
-			query: `CONTAINS("VALUE", 1e75)`,
+			query: `(ARRAY_SIZE(FILTER("VALUE", krenalis_element -> IFF(TYPEOF(krenalis_element) = 'INTEGER', TO_JSON(krenalis_element) = '1000000000000000000000000000000000000000000000000000000000000000000000000000', TRY_TO_DECFLOAT(TO_JSON(krenalis_element)) = TO_DECFLOAT('1e75')))) > 0)`,
 		},
 		{
 			name:  "decimal array maximum scale",
 			expr:  warehouses.NewBaseExpr(array, warehouses.OpDoesNotContain, decimal.MustParse("1e-37")),
-			query: `NOT CONTAINS("VALUE", 1e-37)`,
+			query: `NOT (ARRAY_SIZE(FILTER("VALUE", krenalis_element -> IFF(TYPEOF(krenalis_element) = 'INTEGER', FALSE, TRY_TO_DECFLOAT(TO_JSON(krenalis_element)) = TO_DECFLOAT('1e-37')))) > 0)`,
 		},
 		{
 			name:    "decimal excessive precision",
@@ -496,6 +496,18 @@ func Test_renderExpr(t *testing.T) {
 				}),
 			}),
 			wantErr: "decimal operand exceeds precision 76 or scale 37",
+		},
+		{
+			name: "JSON array contains",
+			expr: warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.Array(types.JSON())},
+				warehouses.OpContains, warehouses.JSONConditionValue{String: "foo"}),
+			query: `COALESCE((ARRAY_SIZE(FILTER("VALUES", krenalis_json_element -> CASE WHEN IS_VARCHAR(krenalis_json_element) THEN COLLATE(AS_VARCHAR(krenalis_json_element), 'utf8') = 'foo' ELSE FALSE END)) > 0), FALSE)`,
+		},
+		{
+			name: "JSON array does not contain",
+			expr: warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.Array(types.JSON())},
+				warehouses.OpDoesNotContain, warehouses.JSONConditionValue{String: "foo"}),
+			query: `NOT COALESCE((ARRAY_SIZE(FILTER("VALUES", krenalis_json_element -> CASE WHEN IS_VARCHAR(krenalis_json_element) THEN COLLATE(AS_VARCHAR(krenalis_json_element), 'utf8') = 'foo' ELSE FALSE END)) > 0), FALSE)`,
 		},
 		{
 			name: "JSON numeric text without number",
