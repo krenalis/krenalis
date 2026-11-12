@@ -750,6 +750,17 @@ PostgreSQL internal/external final logs, and the Record handler mutant. The gate
 remains closed in production. MCP read-only access, UI, production native Arrow
 configuration and the remaining activation checklist are outside this group.
 
+After HTTP review, the tester creates each completion channel immediately before
+launching its server goroutine, after all startup validation/build failures.
+This preserves the race fix while leaving `Stop` free to clean up an unstarted
+server. Both PostgreSQL modes passed again with `-race`, nine nodes each; forced
+failures before internal startup and external build terminated within two seconds
+and removed their containers. New local evidence and per-setting credential
+match counts are in `/private/tmp/krenalis-http-startup-review-zvi_k6wy/`.
+Those counts cover literal and JSON-escaped forms, case-insensitively, in all four
+remote logs: zero matches. Snowflake was not rerun for this startup-only fix;
+the live source/overlay hashes above refer to commit `e3d501268`.
+
 ## Coverage still required before activation
 
 Passing the commands above is necessary, but is not the complete acceptance

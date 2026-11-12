@@ -340,7 +340,6 @@ func (k *Krenalis) Start() {
 	// Launch Krenalis.
 	ctxWithCancel, cancel := context.WithCancel(ctx)
 	k.cancel = cancel
-	k.krenalisRunning = make(chan struct{})
 
 	if launchKrenalisExternally {
 		// Create, if necessary, the directory that will hold the Krenalis
@@ -391,6 +390,7 @@ func (k *Krenalis) Start() {
 			buildKrenalis(k.t, k.repo, krenalisDir)
 			krenalisAlreadyBuilt = true
 		}
+		k.krenalisRunning = make(chan struct{})
 		go func() {
 			defer func() {
 				close(k.krenalisRunning)
@@ -440,6 +440,7 @@ func (k *Krenalis) Start() {
 		if err != nil {
 			k.t.Fatal(err)
 		}
+		k.krenalisRunning = make(chan struct{})
 		go func() {
 			defer func() {
 				close(k.krenalisRunning)
