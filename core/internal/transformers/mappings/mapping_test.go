@@ -592,6 +592,270 @@ func TestArrayFunction(t *testing.T) {
 
 }
 
+// TestMapFunction checks map construction, value conversion, and validation.
+func TestMapFunction(t *testing.T) {
+
+	date := time.Date(2025, 12, 31, 0, 0, 0, 0, time.UTC)
+	createRequiredObject := types.Object([]types.Property{{
+		Name: "required", Type: types.String(), ReadOptional: true, CreateRequired: true,
+	}})
+	updateRequiredObject := types.Object([]types.Property{{
+		Name: "required", Type: types.String(), ReadOptional: true, UpdateRequired: true,
+	}})
+	tests := []struct {
+		name        string
+		expression  string
+		source      types.Type
+		destination types.Type
+		value       any
+		expected    any
+		err         string
+		purpose     Purpose
+	}{
+		{
+			name:        "date from Excel serial",
+			expression:  "map('key', value)",
+			source:      types.String(),
+			destination: types.Map(types.Date()),
+			value:       "46022",
+			expected:    map[string]any{"key": date},
+		},
+		{
+			name:        "NaN",
+			expression:  "map('key', value)",
+			source:      types.Float(64),
+			destination: types.Map(types.Float(64)),
+			value:       math.NaN(),
+			expected:    map[string]any{"key": math.NaN()},
+		},
+		{
+			name:        "positive infinity",
+			expression:  "map('key', value)",
+			source:      types.Float(64),
+			destination: types.Map(types.Float(64)),
+			value:       math.Inf(1),
+			expected:    map[string]any{"key": math.Inf(1)},
+		},
+		{
+			name:        "NaN to JSON",
+			expression:  "map('key', value)",
+			source:      types.Float(64),
+			destination: types.Map(types.JSON()),
+			value:       math.NaN(),
+			err:         "«value» is not convertible to the «json» type",
+		},
+		{
+			name:        "infinity to JSON result",
+			expression:  "map('key', value)",
+			source:      types.Float(64),
+			destination: types.JSON(),
+			value:       math.Inf(1),
+			err:         "«value» is not convertible to the «json» type",
+		},
+		{
+			name:        "JSON result",
+			expression:  "map('key', value)",
+			source:      types.String(),
+			destination: types.JSON(),
+			value:       "foo",
+			expected:    json.Value(`{"key":"foo"}`),
+		},
+		{
+			name:        "object result",
+			expression:  "map('key', value)",
+			source:      types.Boolean(),
+			destination: types.Object([]types.Property{{Name: "key", Type: types.Boolean()}}),
+			value:       true,
+			expected:    map[string]any{"key": true},
+		},
+		{
+			name:        "nested map",
+			expression:  "map('outer', map('key', value))",
+			source:      types.String(),
+			destination: types.Map(types.Map(types.Date())),
+			value:       "46022",
+			expected:    map[string]any{"outer": map[string]any{"key": date}},
+		},
+		{
+			name:        "nested array",
+			expression:  "map('key', array(value))",
+			source:      types.String(),
+			destination: types.Map(types.Array(types.Date())),
+			value:       "46022",
+			expected:    map[string]any{"key": []any{date}},
+		},
+		{
+			name:        "map in array",
+			expression:  "array(map('key', value))",
+			source:      types.String(),
+			destination: types.Array(types.Map(types.Date())),
+			value:       "46022",
+			expected:    []any{map[string]any{"key": date}},
+		},
+		{
+			name:        "pattern",
+			expression:  "map('key', value)",
+			source:      types.String(),
+			destination: types.Map(types.String().WithPattern(regexp.MustCompile("^ok$"))),
+			value:       "invalid",
+			err:         "«value» is not convertible to the «string» type",
+		},
+		{
+			name:        "null property omitted",
+			expression:  "map('omitted', value, 'kept', 'ok')",
+			source:      types.String(),
+			destination: types.Map(types.String()),
+			value:       nil,
+			expected:    map[string]any{"kept": "ok"},
+		},
+		{
+			name:        "empty string retained",
+			expression:  "map('key', value)",
+			source:      types.String(),
+			destination: types.Map(types.String()),
+			value:       "",
+			expected:    map[string]any{"key": ""},
+		},
+		{
+			name:        "false retained",
+			expression:  "map('key', value)",
+			source:      types.Boolean(),
+			destination: types.Map(types.Boolean()),
+			value:       false,
+			expected:    map[string]any{"key": false},
+		},
+		{
+			name:        "multiple entries",
+			expression:  "map('a', value, 'b', 'fixed')",
+			source:      types.String(),
+			destination: types.Map(types.String()),
+			value:       "dynamic",
+			expected:    map[string]any{"a": "dynamic", "b": "fixed"},
+		},
+		{
+			name:        "literal JSON null",
+			expression:  "map('key', null)",
+			source:      types.String(),
+			destination: types.Map(types.JSON()),
+			expected:    map[string]any{"key": json.Value("null")},
+		},
+		{
+			name:        "nil array value",
+			expression:  "map('key', value)",
+			source:      types.Array(types.Int(32)),
+			destination: types.Map(types.Array(types.Int(32))),
+			value:       []any(nil),
+			expected:    map[string]any{"key": []any(nil)},
+		},
+		{
+			name:        "nil map value",
+			expression:  "map('key', value)",
+			source:      types.Map(types.Int(32)),
+			destination: types.Map(types.Map(types.Int(32))),
+			value:       map[string]any(nil),
+			expected:    map[string]any{"key": map[string]any(nil)},
+		},
+		{
+			name:        "required/create/missing",
+			expression:  "map('key', value)",
+			source:      createRequiredObject,
+			destination: types.Map(createRequiredObject),
+			value:       map[string]any{},
+			err:         "«map('key', value)» is not convertible to the «map(object)» type",
+			purpose:     Create,
+		},
+		{
+			name:        "required/update/missing",
+			expression:  "map('key', value)",
+			source:      updateRequiredObject,
+			destination: types.Map(updateRequiredObject),
+			value:       map[string]any{},
+			err:         "«map('key', value)» is not convertible to the «map(object)» type",
+			purpose:     Update,
+		},
+		{
+			name:        "required/create/present",
+			expression:  "map('key', value)",
+			source:      createRequiredObject,
+			destination: types.Map(createRequiredObject),
+			value:       map[string]any{"required": "ok"},
+			expected:    map[string]any{"key": map[string]any{"required": "ok"}},
+			purpose:     Create,
+		},
+		{
+			name:        "required/update/present",
+			expression:  "map('key', value)",
+			source:      updateRequiredObject,
+			destination: types.Map(updateRequiredObject),
+			value:       map[string]any{"required": "ok"},
+			expected:    map[string]any{"key": map[string]any{"required": "ok"}},
+			purpose:     Update,
+		},
+		{
+			name:        "create required during update",
+			expression:  "map('key', value)",
+			source:      createRequiredObject,
+			destination: types.Map(createRequiredObject),
+			value:       map[string]any{},
+			expected:    map[string]any{"key": map[string]any{}},
+			purpose:     Update,
+		},
+		{
+			name:        "update required during create",
+			expression:  "map('key', value)",
+			source:      updateRequiredObject,
+			destination: types.Map(updateRequiredObject),
+			value:       map[string]any{},
+			expected:    map[string]any{"key": map[string]any{}},
+			purpose:     Create,
+		},
+		{
+			name:        "required/none",
+			expression:  "map('key', value)",
+			source:      createRequiredObject,
+			destination: types.Map(createRequiredObject),
+			value:       map[string]any{},
+			expected:    map[string]any{"key": map[string]any{}},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			input := types.Object([]types.Property{{Name: "value", Type: test.source, Nullable: true}})
+			output := types.Object([]types.Property{{Name: "result", Type: test.destination}})
+			mapping, err := New(map[string]string{"result": test.expression}, input, output)
+			if err != nil {
+				t.Fatalf("expected mapping creation to succeed, got %v", err)
+			}
+			got, err := mapping.Transform(map[string]any{"value": test.value}, test.purpose)
+			if err != nil {
+				if test.err == "" {
+					t.Fatalf("expected transformation to succeed, got %v", err)
+				}
+				if _, ok := errors.AsType[ValidationError](err); !ok {
+					t.Fatalf("expected ValidationError, got %T: %v", err, err)
+				}
+				want := test.err + " while mapping to «result»"
+				if err.Error() != want {
+					t.Fatalf("expected error %q, got %q", want, err.Error())
+				}
+				return
+			}
+			if test.err != "" {
+				t.Fatalf("expected error %q, got nil", test.err)
+			}
+			expected := map[string]any{"result": test.expected}
+			diff := cmp.Diff(expected, got, cmp.Comparer(func(a, b float64) bool {
+				return a == b || math.IsNaN(a) && math.IsNaN(b)
+			}))
+			if diff != "" {
+				t.Fatalf("expected no difference (-expected +got), got:\n%s", diff)
+			}
+		})
+	}
+
+}
+
 // TestMappingFailedConversionPreservesInput verifies that a failed conversion
 // leaves the input unchanged, even if an earlier element was converted.
 func TestMappingFailedConversionPreservesInput(t *testing.T) {

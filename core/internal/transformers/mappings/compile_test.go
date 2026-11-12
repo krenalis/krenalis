@@ -339,6 +339,9 @@ func Test_Compile(t *testing.T) {
 		// map.
 		{expr: "map()", dt: types.Map(types.JSON()), expected: map[string]any{}},
 		{expr: "map('a', 5)", dt: types.Map(types.JSON()), expected: map[string]any{"a": json.Value("5")}},
+		{expr: "map('a', '46022')", dt: types.Map(types.Date()), expected: map[string]any{"a": time.Date(2025, 12, 31, 0, 0, 0, 0, time.UTC)}},
+		{expr: "map('a', 256)", dt: types.Map(types.Int(8)), compileErr: errors.New("number 256 is greater than 127")},
+		{expr: "map('a', null)", dt: types.Map(types.String()), compileErr: errors.New("null is not convertible to the string type")},
 		{expr: "map('foo', 'bar', 'baz', true)", dt: types.Map(types.JSON()), expected: map[string]any{"foo": json.Value(`"bar"`), "baz": json.Value("true")}},
 		{expr: "map('a', 1, 'b')", dt: types.Map(types.JSON()), compileErr: errors.New("'map' function requires an even number of arguments")},
 		{expr: "map(1, true)", dt: types.Map(types.JSON()), compileErr: errors.New("'map' key is not string")},

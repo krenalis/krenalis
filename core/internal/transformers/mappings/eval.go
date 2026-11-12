@@ -439,12 +439,14 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 		}
 		return strings.TrimLeftFunc(v.(string), unicode.IsSpace), types.String(), nil
 	case "map":
+		et := p.typ.Elem()
 		m := make(map[string]any, len(p.args)/2)
 		for i := 0; i < len(p.args); i += 2 {
+
 			key := p.args[i][0].value.(string)
 
 			valExpr := p.args[i+1]
-			v, _, err := eval(valExpr, source, attributes)
+			v, vt, err := eval(valExpr, source, attributes)
 			if err != nil {
 				return nil, types.Type{}, err
 			}
@@ -455,22 +457,14 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 				continue
 			}
 
-			switch v.(type) {
-			case nil:
-				v = json.Value("null")
-			case json.Value:
-			default:
-				if encodeSorted {
-					var b json.Buffer
-					_ = b.EncodeSorted(v)
-					v, _ = b.Value()
-				} else {
-					v, _ = json.Marshal(v)
-				}
+			m[key], err = convert(v, vt, et, false, None)
+			if err != nil {
+				msg := fmt.Sprintf("«%s» is not convertible to the «%s» type", code(source, valExpr...), et)
+				return nil, types.Type{}, ValidationError{msg}
 			}
-			m[key] = v
+
 		}
-		return m, types.Map(types.JSON()), nil
+		return m, p.typ, nil
 	case "ne":
 		v0, t0, err := eval(p.args[0], source, attributes)
 		if err != nil {
