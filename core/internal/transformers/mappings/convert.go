@@ -708,7 +708,7 @@ func convert(v any, st, dt types.Type, nullable bool, purpose Purpose) (any, err
 			it1 := st.Elem()
 			it2 := dt.Elem()
 			sameType := types.Equal(it1, it2)
-			if !sameType || purpose != None && len(s) > 0 {
+			if !sameType || purpose != None && len(s) > 0 && (it2.IsObject() || it2.IsArray() || it2.IsMap()) {
 				d = make([]any, len(s))
 				var err error
 				for i, item := range s {
@@ -829,7 +829,8 @@ func convert(v any, st, dt types.Type, nullable bool, purpose Purpose) (any, err
 		case types.MapKind:
 			vt1 := st.Elem()
 			vt2 := dt.Elem()
-			if types.Equal(vt1, vt2) && (purpose == None || len(v.(map[string]any)) == 0) {
+			if types.Equal(vt1, vt2) && (purpose == None || len(v.(map[string]any)) == 0 ||
+				!vt2.IsObject() && !vt2.IsArray() && !vt2.IsMap()) {
 				return v, nil
 			}
 			s := v.(map[string]any)
