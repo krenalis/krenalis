@@ -548,6 +548,10 @@ ambiguous ordered pair, projection/schema serialization, microsecond profile
 timestamps, NULLS LAST/UUID pagination, a missing profile and oversized-page
 rejection without a partial result. October in Europe/Rome crosses DST; events
 on both half-open boundaries distinguish the intended calendar window.
+The projected profile has a SQL NULL label: the schema retains the property,
+while its attributes omit the key. JSON null inside the document remains null.
+The Sum/Average input `100.125 + 70.0003` yields the exact sum `170.1253`;
+binary64 addition would instead expose `170.12529999999998`.
 
 Run locally first, with no Snowflake credentials:
 
@@ -598,6 +602,9 @@ nodes, and does not open the production gate.
 
 ### Live public-service results on 2026-11-12
 
+The initial runs below used commit `9b6bd07e8`, before the NULL-projection and
+arithmetic-sensitive fixture refinements described above.
+
 The complete group passed with the race detector in both UTC and
 America/Los_Angeles: 11 PASS nodes per configuration, no FAIL or SKIP. The same
 handwritten JSON oracles passed on local PostgreSQL; they were not adjusted for
@@ -616,6 +623,24 @@ and the two local mutation checks. Both mutations were detected: increasing the
 public Count uncertainty and truncating public update timestamps to milliseconds.
 The ordinary, unoverlaid Snowflake test still skipped at the closed gate without
 credentials. HTTP/MCP and the other acceptance gaps below remain open.
+
+After review, the refined fixtures were rerun in both session timezones with the
+race detector: 11 PASS nodes each, no FAIL/SKIP. The new projection fixes SQL NULL
+as an omitted attribute while retaining its schema property; Sum/Average expose
+the exact sum `170.1253`. Column conversion for `Initialize` now uses production
+`util.PropertiesToColumns`. Each session explicitly requested ARROW through the
+overlay, unlike current production configuration. Per configuration the same
+17/18/2 application SELECT responses were observed as Arrow, with stable sources,
+two verified connections, one created/dropped schema and a clean independent
+inventory. The four new logs contain no Snowflake configuration values.
+
+New evidence is under
+`/private/tmp/krenalis-unified-service-review-live-ekuykqab/`: summary, per-zone
+logs/manifests/overlays/audits, independent inventories and credential-output check.
+The local `mutants/` check confirms that retaining SQL NULL attributes fails the
+new projection golden. Removing nil attributes again still passes: Unified already
+omits them before building the public response, so that mutation is a no-op.
+Both inventories also saw 23 other test schemas; none was modified.
 
 ## Coverage still required before activation
 

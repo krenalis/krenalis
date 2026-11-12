@@ -668,7 +668,9 @@ and America/Los_Angeles, with the race detector: 11 test nodes per configuration
 It uses production `Initialize`/`Merge`, real state and datastore, and identical
 handwritten public JSON expectations on PostgreSQL and Snowflake. Every observed
 application read in this group was an Arrow SELECT: query, explanation and legacy
-Record families were required separately. It verifies projections, microsecond
+Record families were required separately. These test sessions explicitly requested
+ARROW through the overlay; production does not set that format parameter.
+It verifies projections, microsecond
 profile timestamps, exact decimal explanations, selections, pages and page limits.
 The core facade and warehouse factory are test fixtures; it does not verify
 HTTP/MCP, `Core.Open`, production dialing or encrypted-settings loading. The

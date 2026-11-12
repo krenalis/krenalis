@@ -18,6 +18,7 @@ import (
 	"github.com/krenalis/krenalis/core/internal/db"
 	"github.com/krenalis/krenalis/core/internal/initdb"
 	"github.com/krenalis/krenalis/core/internal/state"
+	"github.com/krenalis/krenalis/core/internal/util"
 	"github.com/krenalis/krenalis/test/snowflaketester"
 	"github.com/krenalis/krenalis/test/testimages"
 	"github.com/krenalis/krenalis/tools/decimal"
@@ -184,13 +185,7 @@ func newUnifiedServiceWorkspace(t *testing.T, name string) (*Workspace, warehous
 		{Name: "tags", Type: types.Array(types.String()), ReadOptional: true},
 		{Name: "bio", Type: types.String(), ReadOptional: true},
 	})
-	var columns []warehouses.Column
-	for path, property := range schema.Properties().WalkAll() {
-		if !property.Type.IsObject() {
-			columns = append(columns, warehouses.Column{Name: strings.ReplaceAll(path, ".", "_"),
-				Type: property.Type, Nullable: true})
-		}
-	}
+	columns := util.PropertiesToColumns(schema.Properties())
 	err = dw.Initialize(t.Context(), columns)
 	if err != nil {
 		t.Fatalf("expected production warehouse initialization, got %v", err)
@@ -265,7 +260,7 @@ func testUnifiedService(t *testing.T, name string) {
 		payload string
 	}{
 		{1, "2026-10-10T10:00:00Z", "track", `{"total":100.125,"currency":"EUR"}`},
-		{1, "2026-10-20T10:00:00Z", "track", `{"total":70.0001,"currency":"EUR"}`},
+		{1, "2026-10-20T10:00:00Z", "track", `{"total":70.0003,"currency":"EUR"}`},
 		{2, "2026-10-10T10:00:00Z", "track", `{"total":20,"currency":"EUR"}`},
 		{2, "2026-10-20T10:00:00Z", "track", `{"total":150}`},
 		{4, "2026-10-21T10:00:00Z", "track", `{"total":200,"currency":"EUR"}`},
@@ -316,12 +311,12 @@ func testUnifiedService(t *testing.T, name string) {
 		}},
 		{"Sum", `{"sum":{"source":` + unifiedServiceSource + `,"period":` + unifiedServicePeriod + `,"field":` + unifiedServiceField + `,"nativeCurrency":"EUR","minimum":2},"operator":"is greater than or equal to","values":[170]}`,
 			[]string{"MATCH", "UNKNOWN", "NO_MATCH", "MATCH", "NO_MATCH", "UNKNOWN"}, map[int]string{
-				1: `{"kind":"sum","result":"MATCH","sum":{` + unifiedServiceBounds + `,"field":` + unifiedServiceField + `,"nativeCurrency":"EUR","bounds":{"lower":170.1251,"upper":170.1251},"certain":2,"uncertain":0}}`,
+				1: `{"kind":"sum","result":"MATCH","sum":{` + unifiedServiceBounds + `,"field":` + unifiedServiceField + `,"nativeCurrency":"EUR","bounds":{"lower":170.1253,"upper":170.1253},"certain":2,"uncertain":0}}`,
 				6: `{"kind":"sum","result":"UNKNOWN","sum":{` + unifiedServiceBounds + `,"field":` + unifiedServiceField + `,"nativeCurrency":"EUR","bounds":{"lower":null,"upper":null},"certain":2,"uncertain":0}}`,
 			}},
 		{"Average", `{"average":{"source":` + unifiedServiceSource + `,"period":` + unifiedServicePeriod + `,"field":` + unifiedServiceField + `,"nativeCurrency":"EUR","minimum":2},"operator":"is greater than or equal to","values":[85]}`,
 			[]string{"MATCH", "UNKNOWN", "NO_MATCH", "MATCH", "NO_MATCH", "UNKNOWN"}, map[int]string{
-				1: `{"kind":"average","result":"MATCH","average":{` + unifiedServiceBounds + `,"field":` + unifiedServiceField + `,"nativeCurrency":"EUR","sum":170.1251,"count":2,"certain":2,"uncertain":0}}`,
+				1: `{"kind":"average","result":"MATCH","average":{` + unifiedServiceBounds + `,"field":` + unifiedServiceField + `,"nativeCurrency":"EUR","sum":170.1253,"count":2,"certain":2,"uncertain":0}}`,
 				2: `{"kind":"average","result":"UNKNOWN","average":{` + unifiedServiceBounds + `,"field":` + unifiedServiceField + `,"nativeCurrency":"EUR","sum":null,"count":null,"certain":1,"uncertain":1}}`,
 			}},
 		{"Nth with occurredIn", `{"experience":{"base":` + unifiedServiceBase + `,"select":{"kind":"nth","position":2},"verify":{"operator":"and","rules":[{"occurredIn":{"kind":"elapsedLookback","duration":{"value":30,"unit":"day"}}},` + unifiedServiceMoney + `]}}}`,
@@ -468,8 +463,9 @@ func testUnifiedServicePages(t *testing.T, workspace *Workspace) {
 		}
 
 		result, err := workspace.QueryProfiles(snowflaketester.ServiceContext(t.Context(), snowflaketester.ServiceQueryTag),
-			ProfileQuery{Filter: &filter, At: unifiedServiceAt, Properties: []string{"amount", "document", "settings", "tags"},
-				Order: "label", First: 1, Limit: 1})
+			ProfileQuery{Filter: &filter, At: unifiedServiceAt,
+				Properties: []string{"label", "amount", "document", "settings", "tags"},
+				Order:      "label", First: 4, Limit: 1})
 		if err != nil {
 			t.Fatalf("expected projected public page, got %v", err)
 		}
@@ -490,9 +486,10 @@ func testUnifiedServicePages(t *testing.T, workspace *Workspace) {
 			result.Profiles[0].UpdatedAt.Format(time.RFC3339Nano) + `","attributes":` + string(attributes) + `}`)},
 			Schema: result.Schema, Total: result.Total, Evaluation: result.Evaluation}
 		assertUnifiedServiceJSON(t, page,
-			`{"profiles":[{"kpid":"00000000-0000-0000-0000-000000000001","updatedAt":"2026-10-01T12:00:00.123456Z",`+
+			`{"profiles":[{"kpid":"00000000-0000-0000-0000-000000000003","updatedAt":"2026-10-01T12:00:00.123456Z",`+
 				`"attributes":{"amount":9007199254740993.0000000001,"document":{"v":null},`+
 				`"settings":{"value":"nested"},"tags":["","x"]}}],"schema":{"kind":"object","properties":[`+
+				`{"name":"label","type":{"kind":"string"},"readOptional":true},`+
 				`{"name":"amount","type":{"kind":"decimal","precision":38,"scale":10},"readOptional":true},`+
 				`{"name":"document","type":{"kind":"json"},"readOptional":true},`+
 				`{"name":"settings","type":{"kind":"object","properties":[`+
