@@ -7,6 +7,7 @@ package state_test
 import (
 	"archive/zip"
 	"io"
+	"os"
 	"os/exec"
 	"reflect"
 	"slices"
@@ -148,7 +149,7 @@ func TestWorkspaceEventDefinitionSchemas(t *testing.T) {
 }
 
 // TestWorkspaceEventDefinitionSources compares every runtime definition with
-// the authoritative taxonomy, including its technical matcher and description.
+// the source taxonomy's technical matcher and the English catalog texts.
 func TestWorkspaceEventDefinitionSources(t *testing.T) {
 
 	archive, err := zip.OpenReader("../../../filtering/event-catalog/cdp-event-taxonomy.zip")
@@ -167,10 +168,8 @@ func TestWorkspaceEventDefinitionSources(t *testing.T) {
 	}
 	var source struct {
 		Definitions []struct {
-			ID          string `json:"id"`
-			DisplayName string `json:"display_name"`
-			Description string `json:"description"`
-			Match       struct {
+			ID    string `json:"id"`
+			Match struct {
 				AnyOf []struct {
 					All []struct {
 						Field string `json:"field"`
@@ -184,6 +183,21 @@ func TestWorkspaceEventDefinitionSources(t *testing.T) {
 	err = json.Unmarshal(data, &source)
 	if err != nil {
 		t.Fatalf("expected a decoded source taxonomy, got %v", err)
+	}
+	data, err = os.ReadFile("../../../filtering/event-catalog/event_texts_en.json")
+	if err != nil {
+		t.Fatalf("expected English catalog texts, got %v", err)
+	}
+	var texts map[string]struct {
+		DisplayName string `json:"display_name"`
+		Description string `json:"description"`
+	}
+	err = json.Unmarshal(data, &texts)
+	if err != nil {
+		t.Fatalf("expected decoded English texts, got %v", err)
+	}
+	if len(texts) != len(source.Definitions) {
+		t.Fatalf("expected %d English texts, got %d", len(source.Definitions), len(texts))
 	}
 
 	var workspace state.Workspace
@@ -207,8 +221,9 @@ func TestWorkspaceEventDefinitionSources(t *testing.T) {
 			eventOrName = match["name"]
 		}
 		got := workspace.LookupEventDefinition(match["type"], eventOrName)
-		if got.ID != definition.ID || got.DisplayName != definition.DisplayName || got.Description != definition.Description {
-			t.Fatalf("expected source metadata for %s, got different metadata for %s", definition.ID, got.ID)
+		text, present := texts[definition.ID]
+		if !present || got.ID != definition.ID || got.DisplayName != text.DisplayName || got.Description != text.Description {
+			t.Fatalf("expected source matcher and English texts for %s, got different metadata for %s", definition.ID, got.ID)
 		}
 	}
 

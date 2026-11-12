@@ -6,9 +6,12 @@ di file o dipendenze Python a runtime.
 
 ## Fonti e rigenerazione
 
-- `cdp-event-taxonomy.zip`, versione 1.1.0: ID, nomi tecnici, etichette,
-  descrizioni e matcher. Conserva anche i metadati di ricerca e i 16 binding
-  di compatibilità, che questo incremento non abilita.
+- `cdp-event-taxonomy.zip`, versione 1.1.0: ID, nomi tecnici, etichette e
+  descrizioni originali in italiano, matcher. Conserva anche i metadati di
+  ricerca e i 16 binding di compatibilità, che questo incremento non abilita.
+- `event_texts_en.json`: traduzioni inglesi di `display_name` e `description`,
+  indicizzate per ID, usate per i testi del catalogo compilato. Gli archivi
+  originali e i nomi tecnici rimangono invariati.
 - `cdp-event-properties.zip`, versione 1.0.0: il suo
   `cdp-event-properties.json` è la fonte delle proprietà e delle descrizioni.
   I JSON Schema dei payload sono derivati, non una seconda fonte da modificare.
@@ -26,9 +29,10 @@ python3 -m unittest discover -s filtering/event-catalog -p 'test_*.py'
 ```
 
 Il generatore verifica i manifest SHA-256 dei due archivi, la loro baseline
-comune e la corrispondenza dei 102 ID. Riutilizza dal pacchetto delle proprietà
-i criteri del profilo `documented` e l'espansione dei campi condivisi. Non modifica
-gli archivi, i JSON Schema consegnati o altri file derivati dei pacchetti.
+comune, la corrispondenza dei 102 ID e la completezza dei testi inglesi.
+Riutilizza dal pacchetto delle proprietà i criteri del profilo `documented` e
+l'espansione dei campi condivisi. Non modifica gli archivi, i JSON Schema
+consegnati o altri file derivati dei pacchetti.
 Il manifest verifica la coerenza interna, non l'autenticità: archivi e helper
 eseguibili sono input del repository che devono già essere considerati fidati.
 
@@ -48,8 +52,10 @@ Gli schemi identici possono essere condivisi perché `types.Type` è immutabile.
 `state.EventDefinition` espone i campi già concordati: ID, Type, Event, Name,
 DisplayName, Description, Trigger e Schemas. `Trigger` rimane vuoto quando le
 fonti non forniscono un campo separato: non viene inventata una garanzia di
-emissione dell'evento. Gli altri metadati del catalogo originale restano negli
-archivi; non sono stati aggiunti al contratto runtime di questo incremento.
+emissione dell'evento. DisplayName e Description sono in inglese, come le
+descrizioni delle proprietà già fornite dall'archivio delle proprietà.
+Gli altri metadati del catalogo originale restano negli archivi; non sono stati
+aggiunti al contratto runtime di questo incremento.
 
 `Workspace.EventDefinitions` restituisce una copia dello slice.
 `Workspace.LookupEventDefinition` confronta esattamente tipo e nome tecnico;

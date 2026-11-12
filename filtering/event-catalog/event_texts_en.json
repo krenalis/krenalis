@@ -1,0 +1,410 @@
+{
+  "auth.signed_in": {
+    "display_name": "Signed In",
+    "description": "The user has signed in to the service. This does not represent a failed attempt, a visit to the login page, or the reassociation of an already authenticated user through identify."
+  },
+  "auth.signed_out": {
+    "display_name": "Signed Out",
+    "description": "The user has signed out of the service. This does not imply session expiration, browser closure, or inactivity unless a separate local contract documents those cases."
+  },
+  "auth.signed_up": {
+    "display_name": "Signed Up",
+    "description": "The user has registered for the service. This measures registration, not a visit to the signup page or an identify call alone. It does not guarantee email verification or activation of a paid plan."
+  },
+  "form.submitted": {
+    "display_name": "Form Submitted",
+    "description": "A form submission has been detected. The official recommendation does not establish whether the server accepted it: use a validated property or a specific business event to require success. This does not automatically mean a lead was captured."
+  },
+  "identity.identified": {
+    "display_name": "Identity and Traits Recorded",
+    "description": "An identify call has been received that associates identifiers and may supply a person's attributes. It may repeat known data or occur on page load. It does not prove a login, a new registration, or an actual profile change."
+  },
+  "lead.captured": {
+    "display_name": "Lead Captured",
+    "description": "The capture of a prospective customer's details has been recorded. This does not guarantee sales qualification, an appointment, a purchase, or marketing consent; those facts require separate signals and attributes."
+  },
+  "web.page_viewed": {
+    "display_name": "Page Viewed",
+    "description": "A web page view has been recorded, including calls without a name. This supports navigation filters by URL or page; it does not establish a distinct session, that the content was read, or a conversion."
+  },
+  "web.search_submitted": {
+    "display_name": "Site Search Submitted",
+    "description": "The user has submitted a query to the site's internal search. This does not guarantee available results, result clicks, or a product search. Use commerce.products_searched for the product catalog; define the scope to avoid duplicates."
+  },
+  "communication.email_unsubscribed": {
+    "display_name": "Unsubscribed from Email",
+    "description": "An opt-out from marketing email has been recorded within the provider's declared scope: one list or all marketing email. This is not cancellation of a paid subscription, does not automatically cover transactional email, and does not prove that all consent has been withdrawn across every channel."
+  },
+  "communication.newsletter_subscribed": {
+    "display_name": "Newsletter Subscription Confirmed",
+    "description": "The subscription system confirms enrollment in the specified newsletter or list. For an email confirmation flow, emit this event after confirmation. A form submission attempt is insufficient; this is not a paid subscription."
+  },
+  "content.shared": {
+    "display_name": "Content Shared",
+    "description": "Content sharing has been recorded at the locally defined tracking point. The name alone does not guarantee publication on an external platform, delivery to the recipient, or that the content was read."
+  },
+  "content.viewed": {
+    "display_name": "Content Viewed",
+    "description": "A view of identifiable content, such as an article, has been recorded. This does not mean the content was read in full. Use this event only when the content view adds information beyond the page view."
+  },
+  "feature.used": {
+    "display_name": "Feature Used",
+    "description": "Use of a feature identified in the tracking plan has been recorded. The operation that constitutes use must be declared: the official example name does not guarantee that the operation succeeded or produced a result."
+  },
+  "form.initiated": {
+    "display_name": "Form Interaction Started",
+    "description": "Interaction with a form has begun according to the start threshold declared in the tracking plan. The form's presence on the page is insufficient; this does not prove submission or lead capture."
+  },
+  "interaction.button_clicked": {
+    "display_name": "Button Clicked",
+    "description": "The user has activated a button selected by the tracking plan. This does not automatically indicate a successful submission, purchase, authentication, or completion of the associated function."
+  },
+  "interaction.link_clicked": {
+    "display_name": "Link Clicked",
+    "description": "The user has activated a link. This measures interaction with the link without proving that the destination loaded or the associated business action succeeded."
+  },
+  "profile.updated": {
+    "display_name": "Profile Updated",
+    "description": "The system confirms that an actual change to profile data has been saved. Do not use this event for a repeated identify call or merely opening the profile form."
+  },
+  "commerce.product_added": {
+    "display_name": "Product Added to Cart",
+    "description": "A product has been added to the cart. This is not creation of a product in the catalog, addition to a wishlist, or completion of a purchase. quantity describes the quantity according to the local contract."
+  },
+  "commerce.checkout_started": {
+    "display_name": "Checkout Started",
+    "description": "The checkout flow has started for an order or transaction. The Segment specification places this signal at the start of checkout and refers to a created transaction; it does not guarantee a confirmed order or payment."
+  },
+  "commerce.order_completed": {
+    "display_name": "Order Completed",
+    "description": "Successful completion of an order or transaction has been recorded. This is the canonical ecommerce signal for a completed purchase; it does not guarantee bank settlement, delivery, or the absence of later cancellations and refunds."
+  },
+  "commerce.product_viewed": {
+    "display_name": "Product Details Viewed",
+    "description": "A view of a product's details has been recorded, including in a window or screen. This is not a mere list impression or a purchase. Repeated views of the same product_id count as multiple events, not multiple distinct products."
+  },
+  "commerce.product_list_filtered": {
+    "display_name": "Product List Filtered",
+    "description": "A selection of filters has been applied to a product list or category. filters and sorts describe the filters and sorting; this is not a text search or a product detail view."
+  },
+  "commerce.product_list_viewed": {
+    "display_name": "Product List Viewed",
+    "description": "A product list or category has been viewed. The presence of products in the array does not prove that their details were opened."
+  },
+  "commerce.products_searched": {
+    "display_name": "Products Searched",
+    "description": "A search of the product catalog, not a general editorial search or a result click. The query text or object specifies what was searched for."
+  },
+  "commerce.cart_viewed": {
+    "display_name": "Cart Viewed",
+    "description": "The cart has been viewed and its contents may be reported. This does not prove that checkout started or a purchase occurred."
+  },
+  "commerce.product_removed": {
+    "display_name": "Product Removed from Cart",
+    "description": "A product has been removed from the cart. This does not indicate deletion from the catalog, order cancellation, or the return of purchased goods."
+  },
+  "commerce.checkout_step_completed": {
+    "display_name": "Checkout Step Completed",
+    "description": "A specific checkout step has been completed. Even the final step does not replace the Order Completed event."
+  },
+  "commerce.checkout_step_viewed": {
+    "display_name": "Checkout Step Viewed",
+    "description": "A specific checkout step, identified by step and checkout_id, has been viewed. This does not prove completion of the step or the order."
+  },
+  "commerce.coupon_applied": {
+    "display_name": "Coupon Applied",
+    "description": "A coupon has been applied to the cart or order. This does not prove that the order was completed or the promotion generated a purchase."
+  },
+  "commerce.coupon_denied": {
+    "display_name": "Coupon Rejected",
+    "description": "The system has rejected a coupon for the cart or order. reason may distinguish the causes; this is not the voluntary removal of a valid coupon."
+  },
+  "commerce.coupon_entered": {
+    "display_name": "Coupon Entered",
+    "description": "A coupon code has been entered for the cart or order. This does not mean the code is valid or the discount was applied."
+  },
+  "commerce.coupon_removed": {
+    "display_name": "Coupon Removed",
+    "description": "A coupon has been removed from the cart or order. This does not automatically indicate an invalid code or a refund of the discount."
+  },
+  "commerce.product_shipped": {
+    "display_name": "Product Shipped",
+    "description": "Shipment of a product has been recorded according to the local logistics contract. This does not guarantee delivery or shipment of every order line; the SDK example does not define a complete fulfillment taxonomy."
+  },
+  "commerce.order_cancelled": {
+    "display_name": "Order Cancelled",
+    "description": "Cancellation of an order has been recorded. This does not prove that a refund was issued or goods were returned."
+  },
+  "commerce.order_created": {
+    "display_name": "Order Created",
+    "description": "The system has created a new persisted order entity. The order may be a draft or await confirmation or payment. This is not equivalent to checkout starting, an order being completed, or funds being collected."
+  },
+  "commerce.order_updated": {
+    "display_name": "Order Updated",
+    "description": "An existing order or transaction has been updated. This is not a new purchase; the number of updates does not measure the number of orders."
+  },
+  "commerce.payment_authorized": {
+    "display_name": "Payment Authorized",
+    "description": "The payment system confirms authorization for a specific attempt and amount. Authorization is not capture of funds and may expire or be revoked."
+  },
+  "commerce.payment_captured": {
+    "display_name": "Payment Captured",
+    "description": "The payment system confirms capture of a specific amount. This does not represent card entry or authorization alone; final availability of the funds follows the provider's contract."
+  },
+  "commerce.payment_failed": {
+    "display_name": "Payment Attempt Failed",
+    "description": "The system has confirmed that a payment attempt failed. The order may be paid in a later attempt; the absence of Payment Captured is insufficient to generate this event."
+  },
+  "commerce.payment_info_entered": {
+    "display_name": "Payment Details Entered",
+    "description": "The details needed for payment have been entered successfully. This does not establish authorization, a charge, capture of funds, or completion of the order."
+  },
+  "commerce.product_clicked": {
+    "display_name": "Product Clicked",
+    "description": "The user has selected a product by clicking it. This does not guarantee that the details loaded; that is represented by Product Viewed."
+  },
+  "commerce.promotion_clicked": {
+    "display_name": "Promotion Clicked",
+    "description": "A click on a promotion has been detected. This does not guarantee that the destination was viewed, a discount was applied, or a conversion occurred."
+  },
+  "commerce.promotion_viewed": {
+    "display_name": "Promotion Viewed",
+    "description": "A promotion view has been detected. This does not prove a click, coupon application, or purchase."
+  },
+  "commerce.order_refunded": {
+    "display_name": "Order Refunded",
+    "description": "A refund relating to an order has been recorded. This is not merely a refund request or a physical return; the event alone does not establish whether the refund is full or partial."
+  },
+  "commerce.refund_requested": {
+    "display_name": "Refund Requested",
+    "description": "A request for a monetary refund has been recorded. This does not establish that the refund was approved, issued, or credited. It does not necessarily require a physical return."
+  },
+  "commerce.return_received": {
+    "display_name": "Return Received",
+    "description": "The logistics system confirms physical receipt of returned goods. This does not prove final approval or a refund."
+  },
+  "commerce.return_requested": {
+    "display_name": "Return Requested",
+    "description": "A request to return goods relating to an order has been submitted. This does not establish return authorization, receipt of the product, or a refund."
+  },
+  "commerce.product_reviewed": {
+    "display_name": "Product Reviewed",
+    "description": "A product review has been recorded. The name does not guarantee publication after moderation or a specific numeric scale for rating."
+  },
+  "commerce.cart_shared": {
+    "display_name": "Cart Shared",
+    "description": "Sharing of the cart has been recorded. This does not prove that a recipient opened it, copied it, or purchased its contents."
+  },
+  "commerce.product_shared": {
+    "display_name": "Product Shared",
+    "description": "Sharing of a product with one or more recipients has been recorded. This does not prove receipt, opening, or purchase by the recipients."
+  },
+  "commerce.product_added_to_wishlist": {
+    "display_name": "Product Added to Wishlist",
+    "description": "A product has been added to the wishlist. It has not necessarily been added to the cart or purchased."
+  },
+  "commerce.product_removed_from_wishlist": {
+    "display_name": "Product Removed from Wishlist",
+    "description": "A product has been removed from the wishlist. This is not equivalent to removal from the cart or abandonment of a purchase."
+  },
+  "commerce.wishlist_product_added_to_cart": {
+    "display_name": "Wishlist Product Added to Cart",
+    "description": "A product on the wishlist has been added to the cart. This does not guarantee its removal from the wishlist. It may overlap with Product Added in the same implementation: avoid counting the same addition twice."
+  },
+  "b2b.account_added_user": {
+    "display_name": "User Added to Account",
+    "description": "A person has been added to a business account. The event concerns membership; it does not imply a new registration across the service or necessarily identify the administrator who added the person."
+  },
+  "b2b.account_created": {
+    "display_name": "Business Account Created",
+    "description": "A business account or organization has been created. This is not necessarily a person's registration."
+  },
+  "b2b.account_deleted": {
+    "display_name": "Business Account Deleted",
+    "description": "A business account has been deleted. This does not imply deletion of every associated person's profile or their events."
+  },
+  "b2b.account_removed_user": {
+    "display_name": "User Removed from Account",
+    "description": "A person has been removed from a business account. This does not imply deletion of their identity or loss of access to other accounts."
+  },
+  "b2b.invite_sent": {
+    "display_name": "Invitation Sent",
+    "description": "An invitation to join the account has been sent. This does not prove receipt, acceptance, or that the invitee joined. The actor profile and the invitee may be different people."
+  },
+  "identity.group_associated": {
+    "display_name": "Group Association Recorded",
+    "description": "A group call has been received that links a person to a group and may supply group attributes. This does not establish that the person was first added, the account was created, or membership actually changed."
+  },
+  "b2b.trial_ended": {
+    "display_name": "Trial Ended",
+    "description": "The trial period has ended. The event alone does not distinguish conversion to a paid plan, expiration without a purchase, or another cause."
+  },
+  "b2b.trial_started": {
+    "display_name": "Trial Started",
+    "description": "A trial period for the service or plan has started. This does not indicate a paid subscription; the group, plan, and dates define the trial's context."
+  },
+  "content.article_bookmarked": {
+    "display_name": "Article Bookmarked",
+    "description": "Bookmarking of an article has been recorded. This does not imply that it was read in full or shared."
+  },
+  "content.article_completed": {
+    "display_name": "Article Completed",
+    "description": "The local completion criterion for an article has been reached. The official source does not define a time or scroll threshold, and the event does not prove understanding of the text."
+  },
+  "content.comment_submitted": {
+    "display_name": "Comment Submitted",
+    "description": "A comment on content has been submitted. This does not guarantee publication, moderation approval, or that other users read it."
+  },
+  "content.content_curated": {
+    "display_name": "Content Curated",
+    "description": "An action to select or curate content has been recorded. This is not equivalent to merely viewing it, producing original content, or sharing it."
+  },
+  "content.content_produced": {
+    "display_name": "Content Produced",
+    "description": "Production of content has been recorded. The tracking plan must distinguish drafts, saves, and publication; the example name does not guarantee public visibility."
+  },
+  "video.ad_completed": {
+    "display_name": "Video Ad Completed",
+    "description": "Playback of the advertising asset ends. This is not equivalent to completion of the main content or a click on the ad."
+  },
+  "video.ad_playing": {
+    "display_name": "Video Ad Progress",
+    "description": "Periodic progress during ad playback. This is a periodic update: do not count each message as a new ad impression."
+  },
+  "video.ad_started": {
+    "display_name": "Video Ad Started",
+    "description": "An advertising asset starts playing. This does not prove that the ad was completed or clicked."
+  },
+  "video.content_completed": {
+    "display_name": "Video Content Completed",
+    "description": "A content segment ends; its position and duration coincide. This does not prove that the entire video was watched without skipping; an asset may be divided into segments."
+  },
+  "video.content_playing": {
+    "display_name": "Video Content Progress",
+    "description": "A periodic heartbeat reporting progress during content playback. This is a periodic signal, not a new view: the raw count measures heartbeats."
+  },
+  "video.content_started": {
+    "display_name": "Video Content Started",
+    "description": "A content segment starts within the session. This is distinct from starting the player or an ad."
+  },
+  "video.playback_buffer_completed": {
+    "display_name": "Video Buffering Ended",
+    "description": "The player finishes buffering. This is not completion of playback."
+  },
+  "video.playback_buffer_started": {
+    "display_name": "Video Buffering Started",
+    "description": "The player starts buffering content or an ad. This is not a new content start or a new view."
+  },
+  "video.playback_completed": {
+    "display_name": "Video Session Completed",
+    "description": "The entire player playback session ends. This is the end of the player session, distinct from the end of an individual piece of content."
+  },
+  "video.playback_exited": {
+    "display_name": "Video Playback Abandoned",
+    "description": "The user abandons playback or the stream. This does not imply completion of the content; this event is documented here only by Segment."
+  },
+  "video.playback_interrupted": {
+    "display_name": "Video Playback Interrupted",
+    "description": "Playback is interrupted involuntarily. Do not attribute the interruption to a deliberate choice to pause."
+  },
+  "video.playback_paused": {
+    "display_name": "Video Playback Paused",
+    "description": "The user pauses the player. This is a pause, not an involuntary interruption or an exit from the player."
+  },
+  "video.playback_resumed": {
+    "display_name": "Video Playback Resumed",
+    "description": "The user resumes after a pause. Do not count the resumption as a new session start."
+  },
+  "video.playback_seek_completed": {
+    "display_name": "Video Seek Completed",
+    "description": "Manual seeking within playback ends. This does not prove that the skipped content was watched."
+  },
+  "video.playback_seek_started": {
+    "display_name": "Video Seek Started",
+    "description": "The user starts seeking manually within playback. The requested position has not necessarily been reached yet."
+  },
+  "video.playback_started": {
+    "display_name": "Video Session Started",
+    "description": "The player session starts after the last user action needed for playback. This does not guarantee that the main content has started: the session may begin with an ad."
+  },
+  "video.quality_updated": {
+    "display_name": "Video Quality Updated",
+    "description": "Video playback quality parameters have changed. This is technical player telemetry, not a view or a commercial action."
+  },
+  "email.bounced": {
+    "display_name": "Email Bounced",
+    "description": "The server reports that the message cannot be delivered. This does not prove that the address does not exist: distinguish temporary and permanent causes if the provider exposes them."
+  },
+  "email.delivered": {
+    "display_name": "Email Delivered to Server",
+    "description": "The recipient's server confirms receipt of the message. This does not guarantee inbox placement or that a person read it."
+  },
+  "email.link_clicked": {
+    "display_name": "Email Link Clicked",
+    "description": "A click on a link in the email body has been detected. This signal alone does not prove that the email was read in full or a purchase occurred."
+  },
+  "email.marked_as_spam": {
+    "display_name": "Email Marked as Spam",
+    "description": "The recipient marks the message as spam. This is not automatically equivalent to a global unsubscribe or a bounce."
+  },
+  "email.opened": {
+    "display_name": "Email Open Detected",
+    "description": "The email system records an open. This does not prove that the email was read in full or that a person took an action; preserve the provider's detection method."
+  },
+  "chat.conversation_ended": {
+    "display_name": "Chat Conversation Ended",
+    "description": "The customer or agent explicitly declares the conversation ended. Do not infer this from inactivity or page closure alone."
+  },
+  "chat.conversation_started": {
+    "display_name": "Chat Conversation Started",
+    "description": "The customer sends the first message of the conversation. Opening the widget without sending a message is insufficient."
+  },
+  "chat.message_received": {
+    "display_name": "Chat Message Received by Customer",
+    "description": "The customer receives a message from the agent. The direction is agent to customer; this does not prove that it was read."
+  },
+  "chat.message_sent": {
+    "display_name": "Chat Message Sent by Customer",
+    "description": "The customer sends a message to the agent. The direction is customer to agent."
+  },
+  "experiment.viewed": {
+    "display_name": "Experiment Variant Viewed",
+    "description": "Exposure to a variant of an active experiment has been recorded. This does not indicate a conversion, the experiment's outcome, or proof of its causal effect."
+  },
+  "lead.demo_requested": {
+    "display_name": "Demo Requested",
+    "description": "An explicit request for a product demo has been recorded. This does not prove that an appointment was confirmed or the demo took place."
+  },
+  "lead.qualified": {
+    "display_name": "Lead Qualified",
+    "description": "The sales system has classified the lead as qualified according to a declared rule. This is not equivalent to merely capturing a lead or making a sale."
+  },
+  "subscription.cancelled": {
+    "display_name": "Subscription Cancelled",
+    "description": "Cancellation of the subscription has taken effect under the proposed contract. A cancellation scheduled for the end of the period must have a separate event or state. This is not an email unsubscribe."
+  },
+  "subscription.renewed": {
+    "display_name": "Subscription Renewed",
+    "description": "The system confirms the start of a new period for an existing subscription. An issued invoice or a payment attempt is insufficient; specify whether renewal depends on collection of payment."
+  },
+  "subscription.started": {
+    "display_name": "Subscription Started",
+    "description": "The start of a service subscription has been recorded according to the local contract. A newsletter or trial is insufficient; the example name does not guarantee that payment was collected."
+  },
+  "subscription.upgraded": {
+    "display_name": "Subscription Upgraded",
+    "description": "An upgrade of the subscription to a higher plan has been recorded. The example name does not define how billing adjustments are calculated or whether payment was collected; this does not represent every plan change."
+  },
+  "identity.alias_recorded": {
+    "display_name": "Identifier Association Requested",
+    "description": "An alias call has been received with a previous and a current identifier. This is an identity operation for systems that support it, not an event synonym or universal proof of a profile merge."
+  },
+  "app.screen_viewed": {
+    "display_name": "Screen Viewed",
+    "description": "An application screen view has been recorded. The general specification allows the name to be absent. This does not establish a distinct session or a business action."
+  },
+  "legacy.identity_merge": {
+    "display_name": "Legacy Identity Merge Request",
+    "description": "A legacy RudderStack merge payload for warehouse identity resolution. This is only for recognizing archives from earlier implementations; it is not a current method or a customer action."
+  }
+}

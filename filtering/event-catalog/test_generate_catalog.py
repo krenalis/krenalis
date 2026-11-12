@@ -2,6 +2,7 @@
 # Use of this source code is governed by an Elastic License 2.0
 # that can be found in the LICENSE file.
 
+import json
 from pathlib import Path
 import tempfile
 import unittest
@@ -9,6 +10,27 @@ from unittest.mock import patch
 
 import generate_catalog
 from generate_catalog import native_type
+
+
+class EventTextsTest(unittest.TestCase):
+    def test_invalid_texts(self):
+        texts = json.loads(generate_catalog.TEXTS.read_text())
+        event_id = "commerce.order_completed"
+        for name, value, message in [
+            ("missing event", {k: v for k, v in texts.items() if k != event_id}, "exactly the source event IDs"),
+            ("extra event", texts | {"custom.event": texts[event_id]}, "exactly the source event IDs"),
+            ("array", [], "exactly the source event IDs"),
+            ("missing description", texts | {event_id: {"display_name": "Order Completed"}}, "nonempty English"),
+            ("extra field", texts | {event_id: texts[event_id] | {"event": "renamed"}}, "nonempty English"),
+            ("blank name", texts | {event_id: texts[event_id] | {"display_name": " "}}, "nonempty English"),
+            ("null description", texts | {event_id: texts[event_id] | {"description": None}}, "nonempty English"),
+        ]:
+            with self.subTest(name=name), tempfile.TemporaryDirectory() as directory:
+                path = Path(directory) / "texts.json"
+                path.write_text(json.dumps(value))
+                with patch.object(generate_catalog, "TEXTS", path), patch("sys.argv", ["generate_catalog.py", "--check"]):
+                    with self.assertRaisesRegex(ValueError, message):
+                        generate_catalog.main()
 
 
 class NativeChoicesTest(unittest.TestCase):

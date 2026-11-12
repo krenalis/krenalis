@@ -24,6 +24,7 @@ from native_type_choices import TYPE_CHOICES
 
 HERE = Path(__file__).resolve().parent
 OUTPUT = HERE.parents[1] / "core/internal/state/event_catalog_data.go"
+TEXTS = HERE / "event_texts_en.json"
 PROPERTY_NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 
 
@@ -127,6 +128,16 @@ def main():
     if len(events) != 102 or set(events) != {event["id"] for event in taxonomy["definitions"]}:
         raise ValueError("Expected the same 102 unique definitions in both sources")
 
+    texts = json.loads(TEXTS.read_text())
+    if not isinstance(texts, dict) or set(texts) != set(events):
+        raise ValueError("Expected English texts for exactly the source event IDs")
+    for event_id, text in texts.items():
+        if (
+            not isinstance(text, dict) or set(text) != {"display_name", "description"}
+            or any(not isinstance(value, str) or not value.strip() for value in text.values())
+        ):
+            raise ValueError(f"Expected nonempty English display_name and description for {event_id}")
+
     with tempfile.TemporaryDirectory(prefix="krenalis-event-catalog-") as directory:
         helper = Path(directory) / "generate_event_schemas.py"
         helper.write_bytes(property_files["generate_event_schemas.py"])
@@ -172,8 +183,8 @@ def main():
         lines = ["\t{"]
         for key, value in (
             ("ID", event_id), ("Type", match["type"]), ("Event", match.get("event", "")),
-            ("Name", match.get("name", "")), ("DisplayName", definition["display_name"]),
-            ("Description", definition["description"]),
+            ("Name", match.get("name", "")), ("DisplayName", texts[event_id]["display_name"]),
+            ("Description", texts[event_id]["description"]),
         ):
             if value:
                 lines.append(field(key, value, 2))

@@ -26,7 +26,7 @@ func TestEventCatalogFacade(t *testing.T) {
 		t.Fatalf("expected 102 entries, got %d", len(definitions))
 	}
 	definitions[0].ID = "changed"
-	for _, query := range []string{"ORDER COMPLETED", " commerce.order_completed ", "Ordine completato"} {
+	for _, query := range []string{"ORDER COMPLETED", " commerce.order_completed ", "bank settlement"} {
 		matches, err := workspace.EventDefinitions(query)
 		if err != nil {
 			t.Fatalf("expected matching definitions, got %v", err)

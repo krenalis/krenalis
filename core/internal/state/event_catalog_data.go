@@ -9111,10 +9111,10 @@ var eventDefinitions = []EventDefinition{
 		ID:          "auth.signed_in",
 		Type:        "track",
 		Event:       "Signed In",
-		DisplayName: "Accesso effettuato",
-		Description: "L’utente ha effettuato l’accesso al servizio. Non rappresenta un tentativo " +
-			"fallito, una pagina di login visitata o la riassociazione di un utente già " +
-			"autenticato tramite identify.",
+		DisplayName: "Signed In",
+		Description: "The user has signed in to the service. This does not represent a failed " +
+			"attempt, a visit to the login page, or the reassociation of an already " +
+			"authenticated user through identify.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: authSignedInProperties,
@@ -9124,10 +9124,10 @@ var eventDefinitions = []EventDefinition{
 		ID:          "auth.signed_out",
 		Type:        "track",
 		Event:       "Signed Out",
-		DisplayName: "Uscita effettuata",
-		Description: "L’utente ha eseguito l’uscita dal servizio. Non inferisce scadenza della " +
-			"sessione, chiusura del browser o inattività, salvo un distinto contratto " +
-			"locale che documenti tali casi.",
+		DisplayName: "Signed Out",
+		Description: "The user has signed out of the service. This does not imply session " +
+			"expiration, browser closure, or inactivity unless a separate local " +
+			"contract documents those cases.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: authSignedOutProperties,
@@ -9137,10 +9137,10 @@ var eventDefinitions = []EventDefinition{
 		ID:          "auth.signed_up",
 		Type:        "track",
 		Event:       "Signed Up",
-		DisplayName: "Registrazione completata",
-		Description: "L’utente si è registrato al servizio. Misura la registrazione, non la " +
-			"visita alla pagina di iscrizione o il semplice invio di identify. Non " +
-			"garantisce verifica email o attivazione di un piano a pagamento.",
+		DisplayName: "Signed Up",
+		Description: "The user has registered for the service. This measures registration, not a " +
+			"visit to the signup page or an identify call alone. It does not guarantee " +
+			"email verification or activation of a paid plan.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: authSignedUpProperties,
@@ -9150,11 +9150,11 @@ var eventDefinitions = []EventDefinition{
 		ID:          "form.submitted",
 		Type:        "track",
 		Event:       "Form Submitted",
-		DisplayName: "Modulo inviato",
-		Description: "È stato rilevato l’invio di un modulo. La raccomandazione ufficiale non " +
-			"stabilisce se il server lo abbia accettato: per richiedere successo usare " +
-			"una proprietà validata o un evento business specifico. Non equivale " +
-			"automaticamente a lead acquisito.",
+		DisplayName: "Form Submitted",
+		Description: "A form submission has been detected. The official recommendation does not " +
+			"establish whether the server accepted it: use a validated property or a " +
+			"specific business event to require success. This does not automatically " +
+			"mean a lead was captured.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: formSubmittedProperties,
@@ -9163,11 +9163,11 @@ var eventDefinitions = []EventDefinition{
 	{
 		ID:          "identity.identified",
 		Type:        "identify",
-		DisplayName: "Identità e tratti registrati",
-		Description: "È stata ricevuta una chiamata identify che associa identificatori e può " +
-			"trasmettere attributi di una persona. Può ripetere dati già noti o " +
-			"avvenire al caricamento pagina. Non dimostra un login, una nuova " +
-			"registrazione o una modifica effettiva del profilo.",
+		DisplayName: "Identity and Traits Recorded",
+		Description: "An identify call has been received that associates identifiers and may " +
+			"supply a person's attributes. It may repeat known data or occur on page " +
+			"load. It does not prove a login, a new registration, or an actual profile " +
+			"change.",
 		Schemas: EventSchemas{
 			Traits: identityIdentifiedTraits,
 		},
@@ -9176,10 +9176,10 @@ var eventDefinitions = []EventDefinition{
 		ID:          "lead.captured",
 		Type:        "track",
 		Event:       "Lead Captured",
-		DisplayName: "Contatto commerciale acquisito",
-		Description: "È stata registrata l’acquisizione dei dati di un potenziale cliente. Non " +
-			"garantisce qualificazione commerciale, appuntamento, acquisto o consenso " +
-			"marketing; questi fatti richiedono segnali e attributi separati.",
+		DisplayName: "Lead Captured",
+		Description: "The capture of a prospective customer's details has been recorded. This " +
+			"does not guarantee sales qualification, an appointment, a purchase, or " +
+			"marketing consent; those facts require separate signals and attributes.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: leadCapturedProperties,
@@ -9188,11 +9188,10 @@ var eventDefinitions = []EventDefinition{
 	{
 		ID:          "web.page_viewed",
 		Type:        "page",
-		DisplayName: "Pagina visualizzata",
-		Description: "È stata registrata la visualizzazione di una pagina web, anche quando la " +
-			"chiamata non contiene un nome. Consente filtri di navigazione per URL o " +
-			"pagina; non certifica una sessione distinta, la lettura del contenuto o " +
-			"una conversione.",
+		DisplayName: "Page Viewed",
+		Description: "A web page view has been recorded, including calls without a name. This " +
+			"supports navigation filters by URL or page; it does not establish a " +
+			"distinct session, that the content was read, or a conversion.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: webPageViewedProperties,
@@ -9202,11 +9201,11 @@ var eventDefinitions = []EventDefinition{
 		ID:          "web.search_submitted",
 		Type:        "track",
 		Event:       "Search Submitted",
-		DisplayName: "Ricerca interna inviata",
-		Description: "L’utente ha inviato una query alla ricerca interna del sito. Non " +
-			"garantisce risultati disponibili, clic sui risultati o ricerca di " +
-			"prodotti. Per il catalogo prodotti usare commerce.products_searched; " +
-			"l’ambito deve evitare duplicazioni.",
+		DisplayName: "Site Search Submitted",
+		Description: "The user has submitted a query to the site's internal search. This does " +
+			"not guarantee available results, result clicks, or a product search. Use " +
+			"commerce.products_searched for the product catalog; define the scope to " +
+			"avoid duplicates.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: webSearchSubmittedProperties,
@@ -9216,12 +9215,12 @@ var eventDefinitions = []EventDefinition{
 		ID:          "communication.email_unsubscribed",
 		Type:        "track",
 		Event:       "Unsubscribed",
-		DisplayName: "Disiscrizione dalle email",
-		Description: "È stata registrata la rinuncia a ricevere email marketing nell’ambito " +
-			"dichiarato dal provider: una lista oppure tutte le email marketing. Non è " +
-			"la cancellazione di un abbonamento a pagamento, non riguarda " +
-			"automaticamente email transazionali e non dimostra revoca di tutti i " +
-			"consensi su ogni canale.",
+		DisplayName: "Unsubscribed from Email",
+		Description: "An opt-out from marketing email has been recorded within the provider's " +
+			"declared scope: one list or all marketing email. This is not cancellation " +
+			"of a paid subscription, does not automatically cover transactional email, " +
+			"and does not prove that all consent has been withdrawn across every " +
+			"channel.",
 		Schemas: EventSchemas{
 			Traits:     communicationEmailUnsubscribedTraits,
 			Properties: communicationEmailUnsubscribedProperties,
@@ -9231,11 +9230,10 @@ var eventDefinitions = []EventDefinition{
 		ID:          "communication.newsletter_subscribed",
 		Type:        "track",
 		Event:       "Newsletter Subscribed",
-		DisplayName: "Iscrizione newsletter confermata",
-		Description: "Il sistema di iscrizione conferma l’inserimento nella newsletter o lista " +
-			"indicata. Per un flusso con conferma via email, emettere dopo tale " +
-			"conferma. Un tentativo di invio modulo non basta; non è un abbonamento " +
-			"commerciale.",
+		DisplayName: "Newsletter Subscription Confirmed",
+		Description: "The subscription system confirms enrollment in the specified newsletter or " +
+			"list. For an email confirmation flow, emit this event after confirmation. " +
+			"A form submission attempt is insufficient; this is not a paid subscription.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: communicationNewsletterSubscribedProperties,
@@ -9245,10 +9243,10 @@ var eventDefinitions = []EventDefinition{
 		ID:          "content.shared",
 		Type:        "track",
 		Event:       "Content Shared",
-		DisplayName: "Contenuto condiviso",
-		Description: "È stata registrata una condivisione di contenuto secondo il punto di " +
-			"rilevazione locale. Il nome da solo non garantisce pubblicazione sulla " +
-			"piattaforma esterna, consegna al destinatario o lettura.",
+		DisplayName: "Content Shared",
+		Description: "Content sharing has been recorded at the locally defined tracking point. " +
+			"The name alone does not guarantee publication on an external platform, " +
+			"delivery to the recipient, or that the content was read.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: contentSharedProperties,
@@ -9258,11 +9256,10 @@ var eventDefinitions = []EventDefinition{
 		ID:          "content.viewed",
 		Type:        "track",
 		Event:       "Content Viewed",
-		DisplayName: "Contenuto visualizzato",
-		Description: "È stata registrata la visualizzazione di un contenuto identificabile, per " +
-			"esempio un articolo. Non equivale a lettura completa. Usare questo evento " +
-			"solo se la visualizzazione del contenuto aggiunge informazione rispetto " +
-			"alla page view.",
+		DisplayName: "Content Viewed",
+		Description: "A view of identifiable content, such as an article, has been recorded. " +
+			"This does not mean the content was read in full. Use this event only when " +
+			"the content view adds information beyond the page view.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: contentViewedProperties,
@@ -9272,11 +9269,10 @@ var eventDefinitions = []EventDefinition{
 		ID:          "feature.used",
 		Type:        "track",
 		Event:       "Feature Used",
-		DisplayName: "Funzionalità utilizzata",
-		Description: "È stato registrato l’uso di una funzionalità identificata nel tracking " +
-			"plan. Occorre dichiarare quale operazione costituisce utilizzo: il nome " +
-			"ufficiale di esempio non garantisce successo dell’operazione né creazione " +
-			"di un risultato.",
+		DisplayName: "Feature Used",
+		Description: "Use of a feature identified in the tracking plan has been recorded. The " +
+			"operation that constitutes use must be declared: the official example name " +
+			"does not guarantee that the operation succeeded or produced a result.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: featureUsedProperties,
@@ -9286,10 +9282,10 @@ var eventDefinitions = []EventDefinition{
 		ID:          "form.initiated",
 		Type:        "track",
 		Event:       "Form Initiated",
-		DisplayName: "Compilazione modulo iniziata",
-		Description: "È iniziata l’interazione con un modulo secondo la soglia di avvio " +
-			"dichiarata nel tracking plan. Non basta la presenza del modulo nella " +
-			"pagina; non prova invio o acquisizione di un contatto.",
+		DisplayName: "Form Interaction Started",
+		Description: "Interaction with a form has begun according to the start threshold " +
+			"declared in the tracking plan. The form's presence on the page is " +
+			"insufficient; this does not prove submission or lead capture.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: formInitiatedProperties,
@@ -9299,10 +9295,10 @@ var eventDefinitions = []EventDefinition{
 		ID:          "interaction.button_clicked",
 		Type:        "track",
 		Event:       "Button Clicked",
-		DisplayName: "Pulsante selezionato",
-		Description: "L’utente ha attivato un pulsante selezionato dal tracking plan. Non indica " +
-			"automaticamente invio riuscito, acquisto, autenticazione o completamento " +
-			"della funzione associata.",
+		DisplayName: "Button Clicked",
+		Description: "The user has activated a button selected by the tracking plan. This does " +
+			"not automatically indicate a successful submission, purchase, " +
+			"authentication, or completion of the associated function.",
 		Schemas: EventSchemas{
 			Traits:     interactionButtonClickedTraits,
 			Properties: interactionButtonClickedProperties,
@@ -9312,10 +9308,10 @@ var eventDefinitions = []EventDefinition{
 		ID:          "interaction.link_clicked",
 		Type:        "track",
 		Event:       "Link Clicked",
-		DisplayName: "Link selezionato",
-		Description: "L’utente ha attivato un collegamento. Questo misura l’interazione col " +
-			"link, senza provare che la destinazione sia stata caricata o che l’azione " +
-			"di business collegata sia riuscita.",
+		DisplayName: "Link Clicked",
+		Description: "The user has activated a link. This measures interaction with the link " +
+			"without proving that the destination loaded or the associated business " +
+			"action succeeded.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: interactionLinkClickedProperties,
@@ -9325,10 +9321,10 @@ var eventDefinitions = []EventDefinition{
 		ID:          "profile.updated",
 		Type:        "track",
 		Event:       "Profile Updated",
-		DisplayName: "Profilo modificato",
-		Description: "Il sistema conferma il salvataggio di una modifica effettiva ai dati del " +
-			"profilo. Non usare questo evento per una semplice ripetizione di identify " +
-			"o per la sola apertura del modulo del profilo.",
+		DisplayName: "Profile Updated",
+		Description: "The system confirms that an actual change to profile data has been saved. " +
+			"Do not use this event for a repeated identify call or merely opening the " +
+			"profile form.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: profileUpdatedProperties,
@@ -9338,10 +9334,10 @@ var eventDefinitions = []EventDefinition{
 		ID:          "commerce.product_added",
 		Type:        "track",
 		Event:       "Product Added",
-		DisplayName: "Prodotto aggiunto al carrello",
-		Description: "Un prodotto è stato aggiunto al carrello. Non è la creazione di un " +
-			"prodotto nel catalogo, l’aggiunta alla wishlist o il completamento di un " +
-			"acquisto. quantity descrive la quantità secondo il contratto locale.",
+		DisplayName: "Product Added to Cart",
+		Description: "A product has been added to the cart. This is not creation of a product in " +
+			"the catalog, addition to a wishlist, or completion of a purchase. quantity " +
+			"describes the quantity according to the local contract.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: commerceProductAddedProperties,
@@ -9351,10 +9347,10 @@ var eventDefinitions = []EventDefinition{
 		ID:          "commerce.checkout_started",
 		Type:        "track",
 		Event:       "Checkout Started",
-		DisplayName: "Checkout iniziato",
-		Description: "È stato avviato il percorso di checkout per un ordine o transazione. La " +
-			"spec Segment colloca il segnale all’inizio del checkout e parla di " +
-			"transazione creata; non garantisce un ordine confermato o un pagamento.",
+		DisplayName: "Checkout Started",
+		Description: "The checkout flow has started for an order or transaction. The Segment " +
+			"specification places this signal at the start of checkout and refers to a " +
+			"created transaction; it does not guarantee a confirmed order or payment.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: commerceCheckoutStartedProperties,
@@ -9364,11 +9360,11 @@ var eventDefinitions = []EventDefinition{
 		ID:          "commerce.order_completed",
 		Type:        "track",
 		Event:       "Order Completed",
-		DisplayName: "Ordine completato",
-		Description: "È stata registrata la conclusione riuscita di un ordine o transazione. È " +
-			"il segnale ecommerce canonico per un acquisto concluso; non garantisce " +
-			"settlement bancario, consegna o assenza di successivi annullamenti e " +
-			"rimborsi.",
+		DisplayName: "Order Completed",
+		Description: "Successful completion of an order or transaction has been recorded. This " +
+			"is the canonical ecommerce signal for a completed purchase; it does not " +
+			"guarantee bank settlement, delivery, or the absence of later cancellations " +
+			"and refunds.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: commerceOrderCompletedProperties,
@@ -9378,11 +9374,11 @@ var eventDefinitions = []EventDefinition{
 		ID:          "commerce.product_viewed",
 		Type:        "track",
 		Event:       "Product Viewed",
-		DisplayName: "Dettaglio prodotto visualizzato",
-		Description: "È stata registrata la visualizzazione dei dettagli di un prodotto, anche " +
-			"in una finestra o schermata. Non è una semplice impressione in una lista " +
-			"né un acquisto. Ripetizioni sullo stesso product_id contano come più " +
-			"eventi, non più prodotti distinti.",
+		DisplayName: "Product Details Viewed",
+		Description: "A view of a product's details has been recorded, including in a window or " +
+			"screen. This is not a mere list impression or a purchase. Repeated views " +
+			"of the same product_id count as multiple events, not multiple distinct " +
+			"products.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: commerceProductViewedProperties,
@@ -9392,10 +9388,10 @@ var eventDefinitions = []EventDefinition{
 		ID:          "commerce.product_list_filtered",
 		Type:        "track",
 		Event:       "Product List Filtered",
-		DisplayName: "Lista prodotti filtrata",
-		Description: "È stata applicata una selezione di filtri alla lista o categoria prodotti. " +
-			"filters e sorts descrivono filtri e ordinamenti; non equivale a ricerca " +
-			"testuale o dettaglio prodotto.",
+		DisplayName: "Product List Filtered",
+		Description: "A selection of filters has been applied to a product list or category. " +
+			"filters and sorts describe the filters and sorting; this is not a text " +
+			"search or a product detail view.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: commerceProductListFilteredProperties,
@@ -9405,9 +9401,9 @@ var eventDefinitions = []EventDefinition{
 		ID:          "commerce.product_list_viewed",
 		Type:        "track",
 		Event:       "Product List Viewed",
-		DisplayName: "Lista prodotti visualizzata",
-		Description: "È stata visualizzata una lista o categoria di prodotti. La presenza di " +
-			"prodotti nell’array non prova che siano stati aperti i relativi dettagli.",
+		DisplayName: "Product List Viewed",
+		Description: "A product list or category has been viewed. The presence of products in " +
+			"the array does not prove that their details were opened.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: commerceProductListViewedProperties,
@@ -9417,9 +9413,9 @@ var eventDefinitions = []EventDefinition{
 		ID:          "commerce.products_searched",
 		Type:        "track",
 		Event:       "Products Searched",
-		DisplayName: "Prodotti cercati",
-		Description: "Ricerca nel catalogo prodotti; non generica ricerca editoriale né clic su " +
-			"un risultato. Il testo o oggetto query precisa ciò che è stato cercato.",
+		DisplayName: "Products Searched",
+		Description: "A search of the product catalog, not a general editorial search or a " +
+			"result click. The query text or object specifies what was searched for.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: commerceProductsSearchedProperties,
@@ -9429,9 +9425,9 @@ var eventDefinitions = []EventDefinition{
 		ID:          "commerce.cart_viewed",
 		Type:        "track",
 		Event:       "Cart Viewed",
-		DisplayName: "Carrello visualizzato",
-		Description: "È stato visualizzato il carrello e può esserne riportato il contenuto. Non " +
-			"prova l’avvio del checkout o un acquisto.",
+		DisplayName: "Cart Viewed",
+		Description: "The cart has been viewed and its contents may be reported. This does not " +
+			"prove that checkout started or a purchase occurred.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: commerceCartViewedProperties,
@@ -9441,9 +9437,9 @@ var eventDefinitions = []EventDefinition{
 		ID:          "commerce.product_removed",
 		Type:        "track",
 		Event:       "Product Removed",
-		DisplayName: "Prodotto rimosso dal carrello",
-		Description: "Un prodotto è stato rimosso dal carrello. Non indica eliminazione dal " +
-			"catalogo, annullamento di ordine o reso di merce già acquistata.",
+		DisplayName: "Product Removed from Cart",
+		Description: "A product has been removed from the cart. This does not indicate deletion " +
+			"from the catalog, order cancellation, or the return of purchased goods.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: commerceProductRemovedProperties,
@@ -9453,9 +9449,9 @@ var eventDefinitions = []EventDefinition{
 		ID:          "commerce.checkout_step_completed",
 		Type:        "track",
 		Event:       "Checkout Step Completed",
-		DisplayName: "Passaggio checkout completato",
-		Description: "È stato completato uno specifico passaggio del checkout. Anche l’ultimo " +
-			"passaggio non sostituisce l’evento Order Completed.",
+		DisplayName: "Checkout Step Completed",
+		Description: "A specific checkout step has been completed. Even the final step does not " +
+			"replace the Order Completed event.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: commerceCheckoutStepCompletedProperties,
@@ -9465,9 +9461,9 @@ var eventDefinitions = []EventDefinition{
 		ID:          "commerce.checkout_step_viewed",
 		Type:        "track",
 		Event:       "Checkout Step Viewed",
-		DisplayName: "Passaggio checkout visualizzato",
-		Description: "È stato visualizzato uno specifico passaggio del checkout, identificato da " +
-			"step e checkout_id. Non dimostra completamento del passaggio o dell’ordine.",
+		DisplayName: "Checkout Step Viewed",
+		Description: "A specific checkout step, identified by step and checkout_id, has been " +
+			"viewed. This does not prove completion of the step or the order.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: commerceCheckoutStepViewedProperties,
@@ -9477,10 +9473,9 @@ var eventDefinitions = []EventDefinition{
 		ID:          "commerce.coupon_applied",
 		Type:        "track",
 		Event:       "Coupon Applied",
-		DisplayName: "Coupon applicato",
-		Description: "Un coupon è stato applicato al carrello o all’ordine. Non prova che " +
-			"l’ordine sia stato completato o che la promozione abbia generato un " +
-			"acquisto.",
+		DisplayName: "Coupon Applied",
+		Description: "A coupon has been applied to the cart or order. This does not prove that " +
+			"the order was completed or the promotion generated a purchase.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: commerceCouponAppliedProperties,
@@ -9490,9 +9485,10 @@ var eventDefinitions = []EventDefinition{
 		ID:          "commerce.coupon_denied",
 		Type:        "track",
 		Event:       "Coupon Denied",
-		DisplayName: "Coupon rifiutato",
-		Description: "Il sistema ha rifiutato un coupon per il carrello o l’ordine. reason può " +
-			"distinguere i motivi; non è una rimozione volontaria di un coupon valido.",
+		DisplayName: "Coupon Rejected",
+		Description: "The system has rejected a coupon for the cart or order. reason may " +
+			"distinguish the causes; this is not the voluntary removal of a valid " +
+			"coupon.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: commerceCouponDeniedProperties,
@@ -9502,9 +9498,9 @@ var eventDefinitions = []EventDefinition{
 		ID:          "commerce.coupon_entered",
 		Type:        "track",
 		Event:       "Coupon Entered",
-		DisplayName: "Coupon inserito",
-		Description: "Un codice coupon è stato inserito nel carrello o nell’ordine. Non " +
-			"significa che il codice sia valido o che lo sconto sia stato applicato.",
+		DisplayName: "Coupon Entered",
+		Description: "A coupon code has been entered for the cart or order. This does not mean " +
+			"the code is valid or the discount was applied.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: commerceCouponEnteredProperties,
@@ -9514,9 +9510,9 @@ var eventDefinitions = []EventDefinition{
 		ID:          "commerce.coupon_removed",
 		Type:        "track",
 		Event:       "Coupon Removed",
-		DisplayName: "Coupon rimosso",
-		Description: "Un coupon è stato rimosso dal carrello o dall’ordine. Non indica " +
-			"automaticamente invalidità del codice o rimborso dello sconto.",
+		DisplayName: "Coupon Removed",
+		Description: "A coupon has been removed from the cart or order. This does not " +
+			"automatically indicate an invalid code or a refund of the discount.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: commerceCouponRemovedProperties,
@@ -9526,11 +9522,10 @@ var eventDefinitions = []EventDefinition{
 		ID:          "commerce.product_shipped",
 		Type:        "track",
 		Event:       "Product Shipped",
-		DisplayName: "Prodotto spedito",
-		Description: "È stata registrata la spedizione di un prodotto secondo il contratto " +
-			"logistico locale. Non garantisce consegna né spedizione di tutte le righe " +
-			"dell’ordine; l’esempio SDK non definisce una tassonomia completa di " +
-			"evasione.",
+		DisplayName: "Product Shipped",
+		Description: "Shipment of a product has been recorded according to the local logistics " +
+			"contract. This does not guarantee delivery or shipment of every order " +
+			"line; the SDK example does not define a complete fulfillment taxonomy.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: commerceProductShippedProperties,
@@ -9540,9 +9535,9 @@ var eventDefinitions = []EventDefinition{
 		ID:          "commerce.order_cancelled",
 		Type:        "track",
 		Event:       "Order Cancelled",
-		DisplayName: "Ordine annullato",
-		Description: "È stato registrato l’annullamento di un ordine. Non prova che sia stato " +
-			"effettuato un rimborso o che la merce sia stata restituita.",
+		DisplayName: "Order Cancelled",
+		Description: "Cancellation of an order has been recorded. This does not prove that a " +
+			"refund was issued or goods were returned.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: commerceOrderCancelledProperties,
@@ -9552,10 +9547,10 @@ var eventDefinitions = []EventDefinition{
 		ID:          "commerce.order_created",
 		Type:        "track",
 		Event:       "Order Created",
-		DisplayName: "Ordine creato",
-		Description: "Il sistema ha creato una nuova entità ordine persistita. L’ordine può " +
-			"essere in bozza o in attesa di conferma o pagamento. Non equivale a " +
-			"checkout iniziato, ordine completato o incasso.",
+		DisplayName: "Order Created",
+		Description: "The system has created a new persisted order entity. The order may be a " +
+			"draft or await confirmation or payment. This is not equivalent to checkout " +
+			"starting, an order being completed, or funds being collected.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: commerceOrderCreatedProperties,
@@ -9565,9 +9560,9 @@ var eventDefinitions = []EventDefinition{
 		ID:          "commerce.order_updated",
 		Type:        "track",
 		Event:       "Order Updated",
-		DisplayName: "Ordine modificato",
-		Description: "È stato aggiornato un ordine o una transazione esistente. Non è un nuovo " +
-			"acquisto; il numero delle modifiche non misura il numero degli ordini.",
+		DisplayName: "Order Updated",
+		Description: "An existing order or transaction has been updated. This is not a new " +
+			"purchase; the number of updates does not measure the number of orders.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: commerceOrderUpdatedProperties,
@@ -9577,10 +9572,9 @@ var eventDefinitions = []EventDefinition{
 		ID:          "commerce.payment_authorized",
 		Type:        "track",
 		Event:       "Payment Authorized",
-		DisplayName: "Pagamento autorizzato",
-		Description: "Il sistema di pagamento conferma l’autorizzazione per uno specifico " +
-			"tentativo e importo. L’autorizzazione non è la cattura dei fondi e può " +
-			"scadere o essere revocata.",
+		DisplayName: "Payment Authorized",
+		Description: "The payment system confirms authorization for a specific attempt and " +
+			"amount. Authorization is not capture of funds and may expire or be revoked.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: commercePaymentAuthorizedProperties,
@@ -9590,10 +9584,10 @@ var eventDefinitions = []EventDefinition{
 		ID:          "commerce.payment_captured",
 		Type:        "track",
 		Event:       "Payment Captured",
-		DisplayName: "Pagamento acquisito",
-		Description: "Il sistema di pagamento conferma la cattura di uno specifico importo. Non " +
-			"rappresenta il solo inserimento della carta o l’autorizzazione; la " +
-			"disponibilità finale dei fondi segue il contratto del provider.",
+		DisplayName: "Payment Captured",
+		Description: "The payment system confirms capture of a specific amount. This does not " +
+			"represent card entry or authorization alone; final availability of the " +
+			"funds follows the provider's contract.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: commercePaymentCapturedProperties,
@@ -9603,10 +9597,10 @@ var eventDefinitions = []EventDefinition{
 		ID:          "commerce.payment_failed",
 		Type:        "track",
 		Event:       "Payment Failed",
-		DisplayName: "Tentativo di pagamento fallito",
-		Description: "Un tentativo di pagamento ha un esito negativo confermato dal sistema. " +
-			"L’ordine potrebbe essere pagato con un tentativo successivo; l’assenza di " +
-			"Payment Captured non basta a generare questo evento.",
+		DisplayName: "Payment Attempt Failed",
+		Description: "The system has confirmed that a payment attempt failed. The order may be " +
+			"paid in a later attempt; the absence of Payment Captured is insufficient " +
+			"to generate this event.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: commercePaymentFailedProperties,
@@ -9616,10 +9610,10 @@ var eventDefinitions = []EventDefinition{
 		ID:          "commerce.payment_info_entered",
 		Type:        "track",
 		Event:       "Payment Info Entered",
-		DisplayName: "Dati di pagamento inseriti",
-		Description: "Sono stati inseriti con successo i dati necessari al pagamento. Non " +
-			"attesta autorizzazione, addebito, acquisizione dei fondi o completamento " +
-			"dell’ordine.",
+		DisplayName: "Payment Details Entered",
+		Description: "The details needed for payment have been entered successfully. This does " +
+			"not establish authorization, a charge, capture of funds, or completion of " +
+			"the order.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: commercePaymentInfoEnteredProperties,
@@ -9629,9 +9623,9 @@ var eventDefinitions = []EventDefinition{
 		ID:          "commerce.product_clicked",
 		Type:        "track",
 		Event:       "Product Clicked",
-		DisplayName: "Prodotto selezionato",
-		Description: "L’utente ha selezionato un prodotto con un clic. Non è una garanzia di " +
-			"caricamento dei dettagli, che appartengono a Product Viewed.",
+		DisplayName: "Product Clicked",
+		Description: "The user has selected a product by clicking it. This does not guarantee " +
+			"that the details loaded; that is represented by Product Viewed.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: commerceProductClickedProperties,
@@ -9641,9 +9635,9 @@ var eventDefinitions = []EventDefinition{
 		ID:          "commerce.promotion_clicked",
 		Type:        "track",
 		Event:       "Promotion Clicked",
-		DisplayName: "Promozione selezionata",
-		Description: "È stato rilevato un clic sulla promozione. Non garantisce visualizzazione " +
-			"della destinazione, sconto applicato o conversione.",
+		DisplayName: "Promotion Clicked",
+		Description: "A click on a promotion has been detected. This does not guarantee that the " +
+			"destination was viewed, a discount was applied, or a conversion occurred.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: commercePromotionClickedProperties,
@@ -9653,9 +9647,9 @@ var eventDefinitions = []EventDefinition{
 		ID:          "commerce.promotion_viewed",
 		Type:        "track",
 		Event:       "Promotion Viewed",
-		DisplayName: "Promozione visualizzata",
-		Description: "È stata rilevata una visualizzazione della promozione. Non prova clic, " +
-			"applicazione di coupon o acquisto.",
+		DisplayName: "Promotion Viewed",
+		Description: "A promotion view has been detected. This does not prove a click, coupon " +
+			"application, or purchase.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: commercePromotionViewedProperties,
@@ -9665,10 +9659,10 @@ var eventDefinitions = []EventDefinition{
 		ID:          "commerce.order_refunded",
 		Type:        "track",
 		Event:       "Order Refunded",
-		DisplayName: "Ordine rimborsato",
-		Description: "È stato registrato un rimborso relativo a un ordine. Non è la sola " +
-			"richiesta di rimborso né un reso fisico; il solo evento non distingue in " +
-			"modo normativo rimborso totale e parziale.",
+		DisplayName: "Order Refunded",
+		Description: "A refund relating to an order has been recorded. This is not merely a " +
+			"refund request or a physical return; the event alone does not establish " +
+			"whether the refund is full or partial.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: commerceOrderRefundedProperties,
@@ -9678,10 +9672,10 @@ var eventDefinitions = []EventDefinition{
 		ID:          "commerce.refund_requested",
 		Type:        "track",
 		Event:       "Refund Requested",
-		DisplayName: "Rimborso richiesto",
-		Description: "È stata registrata una richiesta di rimborso economico. Non attesta che il " +
-			"rimborso sia stato approvato, eseguito o accreditato. Non richiede " +
-			"necessariamente un reso fisico.",
+		DisplayName: "Refund Requested",
+		Description: "A request for a monetary refund has been recorded. This does not establish " +
+			"that the refund was approved, issued, or credited. It does not necessarily " +
+			"require a physical return.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: commerceRefundRequestedProperties,
@@ -9691,9 +9685,9 @@ var eventDefinitions = []EventDefinition{
 		ID:          "commerce.return_received",
 		Type:        "track",
 		Event:       "Return Received",
-		DisplayName: "Reso ricevuto",
-		Description: "Il sistema logistico conferma la ricezione fisica della merce restituita. " +
-			"Non prova approvazione finale o rimborso.",
+		DisplayName: "Return Received",
+		Description: "The logistics system confirms physical receipt of returned goods. This " +
+			"does not prove final approval or a refund.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: commerceReturnReceivedProperties,
@@ -9703,10 +9697,10 @@ var eventDefinitions = []EventDefinition{
 		ID:          "commerce.return_requested",
 		Type:        "track",
 		Event:       "Return Requested",
-		DisplayName: "Reso richiesto",
-		Description: "È stata presentata una richiesta di restituzione della merce relativa a un " +
-			"ordine. Non attesta autorizzazione del reso, ricezione del prodotto o " +
-			"rimborso.",
+		DisplayName: "Return Requested",
+		Description: "A request to return goods relating to an order has been submitted. This " +
+			"does not establish return authorization, receipt of the product, or a " +
+			"refund.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: commerceReturnRequestedProperties,
@@ -9716,9 +9710,9 @@ var eventDefinitions = []EventDefinition{
 		ID:          "commerce.product_reviewed",
 		Type:        "track",
 		Event:       "Product Reviewed",
-		DisplayName: "Prodotto recensito",
-		Description: "È stata registrata una recensione di prodotto. Il nome non garantisce " +
-			"pubblicazione dopo moderazione né una specifica scala numerica per rating.",
+		DisplayName: "Product Reviewed",
+		Description: "A product review has been recorded. The name does not guarantee " +
+			"publication after moderation or a specific numeric scale for rating.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: commerceProductReviewedProperties,
@@ -9728,9 +9722,9 @@ var eventDefinitions = []EventDefinition{
 		ID:          "commerce.cart_shared",
 		Type:        "track",
 		Event:       "Cart Shared",
-		DisplayName: "Carrello condiviso",
-		Description: "È stata registrata la condivisione del carrello. Non prova che un " +
-			"destinatario lo abbia aperto, copiato o acquistato.",
+		DisplayName: "Cart Shared",
+		Description: "Sharing of the cart has been recorded. This does not prove that a " +
+			"recipient opened it, copied it, or purchased its contents.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: commerceCartSharedProperties,
@@ -9740,10 +9734,9 @@ var eventDefinitions = []EventDefinition{
 		ID:          "commerce.product_shared",
 		Type:        "track",
 		Event:       "Product Shared",
-		DisplayName: "Prodotto condiviso",
-		Description: "È stata registrata la condivisione di un prodotto con uno o più " +
-			"destinatari. Non prova ricezione, apertura o acquisto da parte dei " +
-			"destinatari.",
+		DisplayName: "Product Shared",
+		Description: "Sharing of a product with one or more recipients has been recorded. This " +
+			"does not prove receipt, opening, or purchase by the recipients.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: commerceProductSharedProperties,
@@ -9753,9 +9746,9 @@ var eventDefinitions = []EventDefinition{
 		ID:          "commerce.product_added_to_wishlist",
 		Type:        "track",
 		Event:       "Product Added to Wishlist",
-		DisplayName: "Prodotto aggiunto ai desideri",
-		Description: "Un prodotto è stato aggiunto alla lista desideri. Non è stato " +
-			"necessariamente aggiunto al carrello o acquistato.",
+		DisplayName: "Product Added to Wishlist",
+		Description: "A product has been added to the wishlist. It has not necessarily been " +
+			"added to the cart or purchased.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: commerceProductAddedToWishlistProperties,
@@ -9765,9 +9758,9 @@ var eventDefinitions = []EventDefinition{
 		ID:          "commerce.product_removed_from_wishlist",
 		Type:        "track",
 		Event:       "Product Removed from Wishlist",
-		DisplayName: "Prodotto rimosso dai desideri",
-		Description: "Un prodotto è stato rimosso dalla lista desideri. Non equivale a rimozione " +
-			"dal carrello o abbandono di un acquisto.",
+		DisplayName: "Product Removed from Wishlist",
+		Description: "A product has been removed from the wishlist. This is not equivalent to " +
+			"removal from the cart or abandonment of a purchase.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: commerceProductRemovedFromWishlistProperties,
@@ -9777,11 +9770,10 @@ var eventDefinitions = []EventDefinition{
 		ID:          "commerce.wishlist_product_added_to_cart",
 		Type:        "track",
 		Event:       "Wishlist Product Added to Cart",
-		DisplayName: "Prodotto dai desideri al carrello",
-		Description: "Un prodotto presente nella wishlist è stato aggiunto al carrello. Non " +
-			"garantisce la sua rimozione dalla wishlist. Può sovrapporsi a Product " +
-			"Added nella stessa implementazione: evitare doppio conteggio della " +
-			"medesima aggiunta.",
+		DisplayName: "Wishlist Product Added to Cart",
+		Description: "A product on the wishlist has been added to the cart. This does not " +
+			"guarantee its removal from the wishlist. It may overlap with Product Added " +
+			"in the same implementation: avoid counting the same addition twice.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: commerceWishlistProductAddedToCartProperties,
@@ -9791,10 +9783,10 @@ var eventDefinitions = []EventDefinition{
 		ID:          "b2b.account_added_user",
 		Type:        "track",
 		Event:       "Account Added User",
-		DisplayName: "Utente aggiunto all’account",
-		Description: "Una persona è stata aggiunta a un account aziendale. L’evento riguarda la " +
-			"relazione di appartenenza; non implica una nuova registrazione globale o " +
-			"identifica necessariamente l’amministratore che ha effettuato l’aggiunta.",
+		DisplayName: "User Added to Account",
+		Description: "A person has been added to a business account. The event concerns " +
+			"membership; it does not imply a new registration across the service or " +
+			"necessarily identify the administrator who added the person.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: b2bAccountAddedUserProperties,
@@ -9804,9 +9796,9 @@ var eventDefinitions = []EventDefinition{
 		ID:          "b2b.account_created",
 		Type:        "track",
 		Event:       "Account Created",
-		DisplayName: "Account aziendale creato",
-		Description: "È stato creato un account aziendale o organizzazione. Non è " +
-			"necessariamente la registrazione di una persona.",
+		DisplayName: "Business Account Created",
+		Description: "A business account or organization has been created. This is not " +
+			"necessarily a person's registration.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: b2bAccountCreatedProperties,
@@ -9816,9 +9808,9 @@ var eventDefinitions = []EventDefinition{
 		ID:          "b2b.account_deleted",
 		Type:        "track",
 		Event:       "Account Deleted",
-		DisplayName: "Account aziendale eliminato",
-		Description: "È stato eliminato un account aziendale. Non implica eliminazione di tutti " +
-			"i profili delle persone associate o cancellazione dei relativi eventi.",
+		DisplayName: "Business Account Deleted",
+		Description: "A business account has been deleted. This does not imply deletion of every " +
+			"associated person's profile or their events.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: b2bAccountDeletedProperties,
@@ -9828,9 +9820,9 @@ var eventDefinitions = []EventDefinition{
 		ID:          "b2b.account_removed_user",
 		Type:        "track",
 		Event:       "Account Removed User",
-		DisplayName: "Utente rimosso dall’account",
-		Description: "Una persona è stata rimossa da un account aziendale. Non implica " +
-			"eliminazione della sua identità o perdita di accesso ad altri account.",
+		DisplayName: "User Removed from Account",
+		Description: "A person has been removed from a business account. This does not imply " +
+			"deletion of their identity or loss of access to other accounts.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: b2bAccountRemovedUserProperties,
@@ -9840,10 +9832,10 @@ var eventDefinitions = []EventDefinition{
 		ID:          "b2b.invite_sent",
 		Type:        "track",
 		Event:       "Invite Sent",
-		DisplayName: "Invito inviato",
-		Description: "È stato inviato un invito a entrare nell’account. Non prova ricezione, " +
-			"accettazione o ingresso dell’invitato. Il profilo attore e l’invitato " +
-			"possono essere persone diverse.",
+		DisplayName: "Invitation Sent",
+		Description: "An invitation to join the account has been sent. This does not prove " +
+			"receipt, acceptance, or that the invitee joined. The actor profile and the " +
+			"invitee may be different people.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: b2bInviteSentProperties,
@@ -9852,11 +9844,10 @@ var eventDefinitions = []EventDefinition{
 	{
 		ID:          "identity.group_associated",
 		Type:        "group",
-		DisplayName: "Associazione a un gruppo registrata",
-		Description: "È stata ricevuta una chiamata group che collega una persona a un gruppo e " +
-			"può trasmettere attributi del gruppo. Non attesta la prima aggiunta della " +
-			"persona, la creazione dell’account o una modifica effettiva " +
-			"dell’appartenenza.",
+		DisplayName: "Group Association Recorded",
+		Description: "A group call has been received that links a person to a group and may " +
+			"supply group attributes. This does not establish that the person was first " +
+			"added, the account was created, or membership actually changed.",
 		Schemas: EventSchemas{
 			Traits: identityGroupAssociatedTraits,
 		},
@@ -9865,9 +9856,9 @@ var eventDefinitions = []EventDefinition{
 		ID:          "b2b.trial_ended",
 		Type:        "track",
 		Event:       "Trial Ended",
-		DisplayName: "Prova terminata",
-		Description: "È terminato il periodo di prova. Il solo evento non distingue conversione " +
-			"a pagamento, scadenza senza acquisto o altra causa.",
+		DisplayName: "Trial Ended",
+		Description: "The trial period has ended. The event alone does not distinguish " +
+			"conversion to a paid plan, expiration without a purchase, or another cause.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: b2bTrialEndedProperties,
@@ -9877,10 +9868,9 @@ var eventDefinitions = []EventDefinition{
 		ID:          "b2b.trial_started",
 		Type:        "track",
 		Event:       "Trial Started",
-		DisplayName: "Prova iniziata",
-		Description: "È iniziato un periodo di prova del servizio o piano. Non indica " +
-			"sottoscrizione pagante; gruppo, piano e date delimitano il contesto della " +
-			"prova.",
+		DisplayName: "Trial Started",
+		Description: "A trial period for the service or plan has started. This does not indicate " +
+			"a paid subscription; the group, plan, and dates define the trial's context.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: b2bTrialStartedProperties,
@@ -9890,9 +9880,9 @@ var eventDefinitions = []EventDefinition{
 		ID:          "content.article_bookmarked",
 		Type:        "track",
 		Event:       "Article Bookmarked",
-		DisplayName: "Articolo salvato nei preferiti",
-		Description: "È stata registrata l’aggiunta di un articolo ai preferiti. Non implica " +
-			"lettura completa o condivisione.",
+		DisplayName: "Article Bookmarked",
+		Description: "Bookmarking of an article has been recorded. This does not imply that it " +
+			"was read in full or shared.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: contentArticleBookmarkedProperties,
@@ -9902,10 +9892,10 @@ var eventDefinitions = []EventDefinition{
 		ID:          "content.article_completed",
 		Type:        "track",
 		Event:       "Article Completed",
-		DisplayName: "Articolo completato",
-		Description: "È stato raggiunto il criterio locale di completamento di un articolo. La " +
-			"fonte ufficiale non definisce una soglia di tempo o scorrimento e non " +
-			"prova comprensione del testo.",
+		DisplayName: "Article Completed",
+		Description: "The local completion criterion for an article has been reached. The " +
+			"official source does not define a time or scroll threshold, and the event " +
+			"does not prove understanding of the text.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: contentArticleCompletedProperties,
@@ -9915,9 +9905,9 @@ var eventDefinitions = []EventDefinition{
 		ID:          "content.comment_submitted",
 		Type:        "track",
 		Event:       "Comment Submitted",
-		DisplayName: "Commento inviato",
-		Description: "È stato inviato un commento su un contenuto. Non garantisce pubblicazione, " +
-			"approvazione della moderazione o lettura da altri utenti.",
+		DisplayName: "Comment Submitted",
+		Description: "A comment on content has been submitted. This does not guarantee " +
+			"publication, moderation approval, or that other users read it.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: contentCommentSubmittedProperties,
@@ -9927,10 +9917,9 @@ var eventDefinitions = []EventDefinition{
 		ID:          "content.content_curated",
 		Type:        "track",
 		Event:       "Content Curated",
-		DisplayName: "Contenuto selezionato editorialmente",
-		Description: "È stata registrata un’azione di selezione o cura editoriale di un " +
-			"contenuto. Non equivale a semplice visualizzazione, produzione originale o " +
-			"condivisione.",
+		DisplayName: "Content Curated",
+		Description: "An action to select or curate content has been recorded. This is not " +
+			"equivalent to merely viewing it, producing original content, or sharing it.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: contentContentCuratedProperties,
@@ -9940,10 +9929,10 @@ var eventDefinitions = []EventDefinition{
 		ID:          "content.content_produced",
 		Type:        "track",
 		Event:       "Content Produced",
-		DisplayName: "Contenuto prodotto",
-		Description: "È stata registrata la produzione di un contenuto. Il tracking plan deve " +
-			"distinguere bozza, salvataggio e pubblicazione; il nome di esempio non " +
-			"garantisce visibilità pubblica.",
+		DisplayName: "Content Produced",
+		Description: "Production of content has been recorded. The tracking plan must " +
+			"distinguish drafts, saves, and publication; the example name does not " +
+			"guarantee public visibility.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: contentContentProducedProperties,
@@ -9953,9 +9942,9 @@ var eventDefinitions = []EventDefinition{
 		ID:          "video.ad_completed",
 		Type:        "track",
 		Event:       "Video Ad Completed",
-		DisplayName: "Pubblicità video completata",
-		Description: "Termina la riproduzione dell’asset pubblicitario. Non equivale a " +
-			"completamento del contenuto principale o clic sulla pubblicità.",
+		DisplayName: "Video Ad Completed",
+		Description: "Playback of the advertising asset ends. This is not equivalent to " +
+			"completion of the main content or a click on the ad.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: videoAdCompletedProperties,
@@ -9965,9 +9954,9 @@ var eventDefinitions = []EventDefinition{
 		ID:          "video.ad_playing",
 		Type:        "track",
 		Event:       "Video Ad Playing",
-		DisplayName: "Avanzamento pubblicità video",
-		Description: "Avanzamento periodico della riproduzione pubblicitaria. È un aggiornamento " +
-			"periodico: non contare ogni messaggio come nuova impressione pubblicitaria.",
+		DisplayName: "Video Ad Progress",
+		Description: "Periodic progress during ad playback. This is a periodic update: do not " +
+			"count each message as a new ad impression.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: videoAdPlayingProperties,
@@ -9977,9 +9966,8 @@ var eventDefinitions = []EventDefinition{
 		ID:          "video.ad_started",
 		Type:        "track",
 		Event:       "Video Ad Started",
-		DisplayName: "Pubblicità video iniziata",
-		Description: "Inizia un asset pubblicitario nella riproduzione. Non prova che lo spot " +
-			"sia stato completato o cliccato.",
+		DisplayName: "Video Ad Started",
+		Description: "An advertising asset starts playing. This does not prove that the ad was completed or clicked.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: videoAdCompletedProperties,
@@ -9989,10 +9977,10 @@ var eventDefinitions = []EventDefinition{
 		ID:          "video.content_completed",
 		Type:        "track",
 		Event:       "Video Content Completed",
-		DisplayName: "Contenuto video completato",
-		Description: "Termina un segmento di contenuto; posizione e durata coincidono. Non prova " +
-			"che tutto il video sia stato guardato senza salti; un asset può essere " +
-			"ripartito in segmenti.",
+		DisplayName: "Video Content Completed",
+		Description: "A content segment ends; its position and duration coincide. This does not " +
+			"prove that the entire video was watched without skipping; an asset may be " +
+			"divided into segments.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: videoContentCompletedProperties,
@@ -10002,10 +9990,9 @@ var eventDefinitions = []EventDefinition{
 		ID:          "video.content_playing",
 		Type:        "track",
 		Event:       "Video Content Playing",
-		DisplayName: "Avanzamento contenuto video",
-		Description: "Heartbeat periodico con avanzamento della riproduzione del contenuto. È un " +
-			"segnale periodico, non una nuova visualizzazione: il conteggio grezzo " +
-			"misura heartbeat.",
+		DisplayName: "Video Content Progress",
+		Description: "A periodic heartbeat reporting progress during content playback. This is a " +
+			"periodic signal, not a new view: the raw count measures heartbeats.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: videoContentCompletedProperties,
@@ -10015,9 +10002,8 @@ var eventDefinitions = []EventDefinition{
 		ID:          "video.content_started",
 		Type:        "track",
 		Event:       "Video Content Started",
-		DisplayName: "Contenuto video iniziato",
-		Description: "Inizia un segmento di contenuto nella sessione. È distinto dall’avvio del " +
-			"player e dall’inizio della pubblicità.",
+		DisplayName: "Video Content Started",
+		Description: "A content segment starts within the session. This is distinct from starting the player or an ad.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: videoContentCompletedProperties,
@@ -10027,8 +10013,8 @@ var eventDefinitions = []EventDefinition{
 		ID:          "video.playback_buffer_completed",
 		Type:        "track",
 		Event:       "Video Playback Buffer Completed",
-		DisplayName: "Buffering video terminato",
-		Description: "Termina il buffering del player. Non è il completamento della riproduzione.",
+		DisplayName: "Video Buffering Ended",
+		Description: "The player finishes buffering. This is not completion of playback.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: videoPlaybackBufferCompletedProperties,
@@ -10038,9 +10024,8 @@ var eventDefinitions = []EventDefinition{
 		ID:          "video.playback_buffer_started",
 		Type:        "track",
 		Event:       "Video Playback Buffer Started",
-		DisplayName: "Buffering video iniziato",
-		Description: "Il player inizia il buffering di contenuto o pubblicità. Non è un nuovo " +
-			"avvio di contenuto o una nuova visualizzazione.",
+		DisplayName: "Video Buffering Started",
+		Description: "The player starts buffering content or an ad. This is not a new content start or a new view.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: videoPlaybackBufferCompletedProperties,
@@ -10050,9 +10035,9 @@ var eventDefinitions = []EventDefinition{
 		ID:          "video.playback_completed",
 		Type:        "track",
 		Event:       "Video Playback Completed",
-		DisplayName: "Sessione video completata",
-		Description: "Termina l’intera sessione di riproduzione del player. È la fine della " +
-			"sessione del player, distinta dalla fine del singolo contenuto.",
+		DisplayName: "Video Session Completed",
+		Description: "The entire player playback session ends. This is the end of the player " +
+			"session, distinct from the end of an individual piece of content.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: videoPlaybackCompletedProperties,
@@ -10062,9 +10047,9 @@ var eventDefinitions = []EventDefinition{
 		ID:          "video.playback_exited",
 		Type:        "track",
 		Event:       "Video Playback Exited",
-		DisplayName: "Riproduzione video abbandonata",
-		Description: "L’utente abbandona la riproduzione o lo stream. Non implica completamento " +
-			"del contenuto; evento documentato qui soltanto da Segment.",
+		DisplayName: "Video Playback Abandoned",
+		Description: "The user abandons playback or the stream. This does not imply completion " +
+			"of the content; this event is documented here only by Segment.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: videoPlaybackExitedProperties,
@@ -10074,9 +10059,9 @@ var eventDefinitions = []EventDefinition{
 		ID:          "video.playback_interrupted",
 		Type:        "track",
 		Event:       "Video Playback Interrupted",
-		DisplayName: "Riproduzione video interrotta",
-		Description: "La riproduzione si interrompe involontariamente. Non attribuire " +
-			"l’interruzione a una scelta volontaria di pausa.",
+		DisplayName: "Video Playback Interrupted",
+		Description: "Playback is interrupted involuntarily. Do not attribute the interruption " +
+			"to a deliberate choice to pause.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: videoPlaybackInterruptedProperties,
@@ -10086,9 +10071,9 @@ var eventDefinitions = []EventDefinition{
 		ID:          "video.playback_paused",
 		Type:        "track",
 		Event:       "Video Playback Paused",
-		DisplayName: "Riproduzione video in pausa",
-		Description: "L’utente mette in pausa il player. È una pausa; non equivale a " +
-			"un’interruzione involontaria o all’uscita dal player.",
+		DisplayName: "Video Playback Paused",
+		Description: "The user pauses the player. This is a pause, not an involuntary " +
+			"interruption or an exit from the player.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: videoPlaybackPausedProperties,
@@ -10098,8 +10083,8 @@ var eventDefinitions = []EventDefinition{
 		ID:          "video.playback_resumed",
 		Type:        "track",
 		Event:       "Video Playback Resumed",
-		DisplayName: "Riproduzione video ripresa",
-		Description: "L’utente riprende dopo una pausa. Non contare la ripresa come un nuovo inizio di sessione.",
+		DisplayName: "Video Playback Resumed",
+		Description: "The user resumes after a pause. Do not count the resumption as a new session start.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: videoPlaybackPausedProperties,
@@ -10109,9 +10094,8 @@ var eventDefinitions = []EventDefinition{
 		ID:          "video.playback_seek_completed",
 		Type:        "track",
 		Event:       "Video Playback Seek Completed",
-		DisplayName: "Spostamento nel video completato",
-		Description: "Termina lo spostamento manuale nella riproduzione. Non dimostra che il " +
-			"contenuto saltato sia stato guardato.",
+		DisplayName: "Video Seek Completed",
+		Description: "Manual seeking within playback ends. This does not prove that the skipped content was watched.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: videoPlaybackSeekCompletedProperties,
@@ -10121,9 +10105,9 @@ var eventDefinitions = []EventDefinition{
 		ID:          "video.playback_seek_started",
 		Type:        "track",
 		Event:       "Video Playback Seek Started",
-		DisplayName: "Spostamento nel video iniziato",
-		Description: "L’utente avvia spostamento manuale nella riproduzione. La posizione " +
-			"richiesta non è ancora necessariamente raggiunta.",
+		DisplayName: "Video Seek Started",
+		Description: "The user starts seeking manually within playback. The requested position " +
+			"has not necessarily been reached yet.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: videoPlaybackSeekStartedProperties,
@@ -10133,10 +10117,10 @@ var eventDefinitions = []EventDefinition{
 		ID:          "video.playback_started",
 		Type:        "track",
 		Event:       "Video Playback Started",
-		DisplayName: "Sessione video iniziata",
-		Description: "Avvio della sessione del player dopo l’ultima azione utente necessaria " +
-			"alla riproduzione. Non garantisce che sia iniziato il contenuto " +
-			"principale: la sessione può iniziare con pubblicità.",
+		DisplayName: "Video Session Started",
+		Description: "The player session starts after the last user action needed for playback. " +
+			"This does not guarantee that the main content has started: the session may " +
+			"begin with an ad.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: videoPlaybackStartedProperties,
@@ -10146,9 +10130,9 @@ var eventDefinitions = []EventDefinition{
 		ID:          "video.quality_updated",
 		Type:        "track",
 		Event:       "Video Quality Updated",
-		DisplayName: "Qualità video aggiornata",
-		Description: "Sono cambiati parametri di qualità della riproduzione video. È telemetria " +
-			"tecnica del player, non una visualizzazione o un’azione commerciale.",
+		DisplayName: "Video Quality Updated",
+		Description: "Video playback quality parameters have changed. This is technical player " +
+			"telemetry, not a view or a commercial action.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: videoQualityUpdatedProperties,
@@ -10158,10 +10142,10 @@ var eventDefinitions = []EventDefinition{
 		ID:          "email.bounced",
 		Type:        "track",
 		Event:       "Email Bounced",
-		DisplayName: "Email non consegnata",
-		Description: "Il server segnala che il messaggio non può essere consegnato. Non prova " +
-			"che l’indirizzo sia inesistente: distinguere cause transitorie e " +
-			"permanenti se il provider le espone.",
+		DisplayName: "Email Bounced",
+		Description: "The server reports that the message cannot be delivered. This does not " +
+			"prove that the address does not exist: distinguish temporary and permanent " +
+			"causes if the provider exposes them.",
 		Schemas: EventSchemas{
 			Traits:     emailBouncedTraits,
 			Properties: emailBouncedProperties,
@@ -10171,9 +10155,9 @@ var eventDefinitions = []EventDefinition{
 		ID:          "email.delivered",
 		Type:        "track",
 		Event:       "Email Delivered",
-		DisplayName: "Email consegnata al server",
-		Description: "Il server destinatario conferma ricezione del messaggio. Non garantisce " +
-			"collocazione in posta in arrivo o lettura umana.",
+		DisplayName: "Email Delivered to Server",
+		Description: "The recipient's server confirms receipt of the message. This does not " +
+			"guarantee inbox placement or that a person read it.",
 		Schemas: EventSchemas{
 			Traits:     emailBouncedTraits,
 			Properties: emailDeliveredProperties,
@@ -10183,9 +10167,9 @@ var eventDefinitions = []EventDefinition{
 		ID:          "email.link_clicked",
 		Type:        "track",
 		Event:       "Email Link Clicked",
-		DisplayName: "Link email selezionato",
-		Description: "Rilevato clic su collegamento nel corpo email. Il segnale non dimostra da " +
-			"solo lettura completa o acquisto.",
+		DisplayName: "Email Link Clicked",
+		Description: "A click on a link in the email body has been detected. This signal alone " +
+			"does not prove that the email was read in full or a purchase occurred.",
 		Schemas: EventSchemas{
 			Traits:     emailBouncedTraits,
 			Properties: emailLinkClickedProperties,
@@ -10195,9 +10179,9 @@ var eventDefinitions = []EventDefinition{
 		ID:          "email.marked_as_spam",
 		Type:        "track",
 		Event:       "Email Marked as Spam",
-		DisplayName: "Email segnalata come spam",
-		Description: "Il destinatario marca il messaggio come spam. Non equivale automaticamente " +
-			"a una disiscrizione globale o a un bounce.",
+		DisplayName: "Email Marked as Spam",
+		Description: "The recipient marks the message as spam. This is not automatically " +
+			"equivalent to a global unsubscribe or a bounce.",
 		Schemas: EventSchemas{
 			Traits:     emailBouncedTraits,
 			Properties: emailMarkedAsSpamProperties,
@@ -10207,9 +10191,10 @@ var eventDefinitions = []EventDefinition{
 		ID:          "email.opened",
 		Type:        "track",
 		Event:       "Email Opened",
-		DisplayName: "Apertura email rilevata",
-		Description: "Il sistema email registra un’apertura. Non prova lettura completa o azione " +
-			"umana; conservare il metodo di rilevazione del provider.",
+		DisplayName: "Email Open Detected",
+		Description: "The email system records an open. This does not prove that the email was " +
+			"read in full or that a person took an action; preserve the provider's " +
+			"detection method.",
 		Schemas: EventSchemas{
 			Traits:     emailBouncedTraits,
 			Properties: emailOpenedProperties,
@@ -10219,9 +10204,9 @@ var eventDefinitions = []EventDefinition{
 		ID:          "chat.conversation_ended",
 		Type:        "track",
 		Event:       "Live Chat Conversation Ended",
-		DisplayName: "Conversazione chat conclusa",
-		Description: "Cliente o operatore dichiara esplicitamente conclusa la conversazione. Non " +
-			"inferire conclusione dalla sola inattività o chiusura della pagina.",
+		DisplayName: "Chat Conversation Ended",
+		Description: "The customer or agent explicitly declares the conversation ended. Do not " +
+			"infer this from inactivity or page closure alone.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: chatConversationEndedProperties,
@@ -10231,9 +10216,9 @@ var eventDefinitions = []EventDefinition{
 		ID:          "chat.conversation_started",
 		Type:        "track",
 		Event:       "Live Chat Conversation Started",
-		DisplayName: "Conversazione chat iniziata",
-		Description: "Il cliente invia il primo messaggio della conversazione. Non basta aprire " +
-			"il widget senza inviare un messaggio.",
+		DisplayName: "Chat Conversation Started",
+		Description: "The customer sends the first message of the conversation. Opening the " +
+			"widget without sending a message is insufficient.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: chatConversationStartedProperties,
@@ -10243,9 +10228,9 @@ var eventDefinitions = []EventDefinition{
 		ID:          "chat.message_received",
 		Type:        "track",
 		Event:       "Live Chat Message Received",
-		DisplayName: "Messaggio chat ricevuto dal cliente",
-		Description: "Il cliente riceve un messaggio dall’operatore. La direzione è operatore " +
-			"verso cliente; non prova lettura.",
+		DisplayName: "Chat Message Received by Customer",
+		Description: "The customer receives a message from the agent. The direction is agent to " +
+			"customer; this does not prove that it was read.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: chatMessageReceivedProperties,
@@ -10255,8 +10240,8 @@ var eventDefinitions = []EventDefinition{
 		ID:          "chat.message_sent",
 		Type:        "track",
 		Event:       "Live Chat Message Sent",
-		DisplayName: "Messaggio chat inviato dal cliente",
-		Description: "Il cliente invia un messaggio all’operatore. La direzione è cliente verso operatore.",
+		DisplayName: "Chat Message Sent by Customer",
+		Description: "The customer sends a message to the agent. The direction is customer to agent.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: chatMessageSentProperties,
@@ -10266,10 +10251,10 @@ var eventDefinitions = []EventDefinition{
 		ID:          "experiment.viewed",
 		Type:        "track",
 		Event:       "Experiment Viewed",
-		DisplayName: "Variante di esperimento visualizzata",
-		Description: "È stata registrata l’esposizione a una variante di un esperimento attivo. " +
-			"Non indica conversione, risultato dell’esperimento o prova del suo effetto " +
-			"causale.",
+		DisplayName: "Experiment Variant Viewed",
+		Description: "Exposure to a variant of an active experiment has been recorded. This does " +
+			"not indicate a conversion, the experiment's outcome, or proof of its " +
+			"causal effect.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: experimentViewedProperties,
@@ -10279,9 +10264,9 @@ var eventDefinitions = []EventDefinition{
 		ID:          "lead.demo_requested",
 		Type:        "track",
 		Event:       "Demo Requested",
-		DisplayName: "Dimostrazione richiesta",
-		Description: "È stata registrata una richiesta esplicita di dimostrazione del prodotto. " +
-			"Non prova appuntamento confermato o demo svolta.",
+		DisplayName: "Demo Requested",
+		Description: "An explicit request for a product demo has been recorded. This does not " +
+			"prove that an appointment was confirmed or the demo took place.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: leadDemoRequestedProperties,
@@ -10291,10 +10276,10 @@ var eventDefinitions = []EventDefinition{
 		ID:          "lead.qualified",
 		Type:        "track",
 		Event:       "Lead Qualified",
-		DisplayName: "Contatto qualificato",
-		Description: "Il sistema commerciale ha classificato il contatto come qualificato " +
-			"secondo una regola dichiarata. Non equivale a semplice acquisizione di un " +
-			"contatto o a vendita.",
+		DisplayName: "Lead Qualified",
+		Description: "The sales system has classified the lead as qualified according to a " +
+			"declared rule. This is not equivalent to merely capturing a lead or making " +
+			"a sale.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: leadQualifiedProperties,
@@ -10304,10 +10289,10 @@ var eventDefinitions = []EventDefinition{
 		ID:          "subscription.cancelled",
 		Type:        "track",
 		Event:       "Subscription Cancelled",
-		DisplayName: "Abbonamento cancellato",
-		Description: "È diventata effettiva la cancellazione dell’abbonamento secondo il " +
-			"contratto proposto. Una cancellazione programmata per fine periodo deve " +
-			"avere un evento o stato distinto. Non è una disiscrizione dalle email.",
+		DisplayName: "Subscription Cancelled",
+		Description: "Cancellation of the subscription has taken effect under the proposed " +
+			"contract. A cancellation scheduled for the end of the period must have a " +
+			"separate event or state. This is not an email unsubscribe.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: subscriptionCancelledProperties,
@@ -10317,10 +10302,10 @@ var eventDefinitions = []EventDefinition{
 		ID:          "subscription.renewed",
 		Type:        "track",
 		Event:       "Subscription Renewed",
-		DisplayName: "Abbonamento rinnovato",
-		Description: "Il sistema conferma l’avvio di un nuovo periodo di un abbonamento già " +
-			"esistente. Non basta una fattura emessa o un tentativo di pagamento; " +
-			"precisare se il rinnovo è subordinato all’incasso.",
+		DisplayName: "Subscription Renewed",
+		Description: "The system confirms the start of a new period for an existing " +
+			"subscription. An issued invoice or a payment attempt is insufficient; " +
+			"specify whether renewal depends on collection of payment.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: subscriptionRenewedProperties,
@@ -10330,10 +10315,10 @@ var eventDefinitions = []EventDefinition{
 		ID:          "subscription.started",
 		Type:        "track",
 		Event:       "Subscription Started",
-		DisplayName: "Abbonamento iniziato",
-		Description: "È stato registrato l’inizio di un abbonamento al servizio secondo il " +
-			"contratto locale. Non basta una newsletter o una prova; il nome di esempio " +
-			"non garantisce che sia stato incassato un pagamento.",
+		DisplayName: "Subscription Started",
+		Description: "The start of a service subscription has been recorded according to the " +
+			"local contract. A newsletter or trial is insufficient; the example name " +
+			"does not guarantee that payment was collected.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: subscriptionStartedProperties,
@@ -10343,10 +10328,10 @@ var eventDefinitions = []EventDefinition{
 		ID:          "subscription.upgraded",
 		Type:        "track",
 		Event:       "Subscription Upgraded",
-		DisplayName: "Abbonamento passato a un piano superiore",
-		Description: "È stato registrato il passaggio dell’abbonamento a un piano superiore. Il " +
-			"nome di esempio non definisce calcolo del conguaglio o incasso; non " +
-			"rappresenta ogni modifica di piano.",
+		DisplayName: "Subscription Upgraded",
+		Description: "An upgrade of the subscription to a higher plan has been recorded. The " +
+			"example name does not define how billing adjustments are calculated or " +
+			"whether payment was collected; this does not represent every plan change.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: subscriptionUpgradedProperties,
@@ -10355,10 +10340,10 @@ var eventDefinitions = []EventDefinition{
 	{
 		ID:          "identity.alias_recorded",
 		Type:        "alias",
-		DisplayName: "Associazione tra identificatori richiesta",
-		Description: "È stata ricevuta una chiamata alias con un identificatore precedente e uno " +
-			"corrente. È un’operazione sull’identità per i sistemi che la supportano; " +
-			"non è un sinonimo di evento né prova universale di fusione di profili.",
+		DisplayName: "Identifier Association Requested",
+		Description: "An alias call has been received with a previous and a current identifier. " +
+			"This is an identity operation for systems that support it, not an event " +
+			"synonym or universal proof of a profile merge.",
 		Schemas: EventSchemas{
 			Traits: eventContextTraits,
 		},
@@ -10366,10 +10351,10 @@ var eventDefinitions = []EventDefinition{
 	{
 		ID:          "app.screen_viewed",
 		Type:        "screen",
-		DisplayName: "Schermata visualizzata",
-		Description: "È stata registrata la visualizzazione di una schermata applicativa. Il " +
-			"nome può essere assente nella specifica generale. Non certifica una " +
-			"sessione distinta o un’azione di business.",
+		DisplayName: "Screen Viewed",
+		Description: "An application screen view has been recorded. The general specification " +
+			"allows the name to be absent. This does not establish a distinct session " +
+			"or a business action.",
 		Schemas: EventSchemas{
 			Traits:     eventContextTraits,
 			Properties: appScreenViewedProperties,
@@ -10378,10 +10363,10 @@ var eventDefinitions = []EventDefinition{
 	{
 		ID:          "legacy.identity_merge",
 		Type:        "merge",
-		DisplayName: "Richiesta storica di unione identità",
-		Description: "Payload storico merge di RudderStack per risoluzione identità in " +
-			"warehouse. Serve solo a riconoscere archivi di implementazioni precedenti; " +
-			"non è un metodo corrente né un’azione del cliente.",
+		DisplayName: "Legacy Identity Merge Request",
+		Description: "A legacy RudderStack merge payload for warehouse identity resolution. This " +
+			"is only for recognizing archives from earlier implementations; it is not a " +
+			"current method or a customer action.",
 		Schemas: EventSchemas{
 			Traits: eventContextTraits,
 		},
