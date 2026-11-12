@@ -416,7 +416,7 @@ func convert(v any, st, dt types.Type, nullable bool, purpose Purpose) (any, err
 		case types.StringKind:
 			n, err = decimal.Parse(v.(string), dt.Precision(), dt.Scale())
 		case types.DecimalKind:
-			n = v.(decimal.Decimal)
+			n, _ = v.(decimal.Decimal)
 			_, scale := n.PrecisionScale()
 			if scale > dt.Scale() {
 				return v, errInvalidConversion
