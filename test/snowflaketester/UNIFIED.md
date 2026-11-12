@@ -179,7 +179,10 @@ or wrong overlay. Without the option, session collection does not add a failure
 condition. Inspect each block's exit and session evidence alongside the schema
 cleanup audit.
 
-Run the following blocks in order, stopping on a failed prerequisite:
+Run the following blocks in order, stopping on a failed prerequisite.
+Once the physical blocks pass, a failure in `unified-new-groups.jsonl` does not
+block `unified-snowflake.jsonl`: run the baseline block anyway and retain both
+results.
 
 ```sh
 # Credentials must already have been supplied through the environment.
