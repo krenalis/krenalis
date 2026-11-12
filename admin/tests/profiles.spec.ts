@@ -1223,12 +1223,14 @@ test(`Remove an applied filter from its collapsed chip, update the grid, and pre
 	await expect(editor.locator('.filter-editor__property input')).toHaveValue('First name');
 	await expect(editor.locator('.filter-editor__value-input input')).toHaveValue('Grace');
 	await expect(page.getByRole('button', { name: 'Show 1 match', exact: true })).toBeVisible();
+	expect(countRequests).toHaveLength(countRequestsBeforeRemoval);
 	await expect(redo).toBeEnabled();
 	await redo.click();
 	await expect(editor.locator('.filter-editor__property input')).toHaveValue('');
 	await expect(page.getByRole('button', { name: 'Show 1 match', exact: true })).toHaveCount(0);
 	await expect(undo).toBeEnabled();
-	expect(countRequests).toHaveLength(countRequestsBeforeRemoval + 2);
+	await expect(page.locator('.profiles-list__filter-preview-count')).toHaveCount(0);
+	expect(countRequests).toHaveLength(countRequestsBeforeRemoval + 1);
 });
 
 test(`Keep failed grid updates accessible after collapsing and discard the error after Undo`, async ({ page }) => {

@@ -11,14 +11,15 @@ interface FilterHistoryEntry {
 	// Keep editor quoting separate from the parsed API values.
 	draft: Filter | null;
 	fingerprint: string;
-	total?: number;
 }
 
 interface PreviewCandidate {
 	filter: Filter | null;
-	draft?: Filter | null;
 	fingerprint: string;
-	historyIndex?: number;
+}
+
+interface FilterPreview extends CountProfilesResponse {
+	fingerprint: string;
 }
 
 interface FailedPreview {
@@ -30,6 +31,7 @@ interface FilterSession {
 	draft: Filter | null;
 	history: FilterHistoryEntry[];
 	historyIndex: number;
+	preview?: FilterPreview;
 	pending?: PreviewCandidate;
 	failure?: FailedPreview;
 }
@@ -46,11 +48,7 @@ const normalizeSingleRuleGroupOperators = (filter: Filter): Filter => ({
 	rules: filter.rules.map((rule) => ('rules' in rule ? normalizeSingleRuleGroupOperators(rule) : rule)),
 });
 
-const createProfileFilterHistoryEntry = (
-	filter: Filter | null,
-	total?: number,
-	draft?: Filter | null,
-): FilterHistoryEntry => {
+const createProfileFilterHistoryEntry = (filter: Filter | null, draft?: Filter | null): FilterHistoryEntry => {
 	const editableFilter = cloneProfileFilter(draft === undefined ? filter : draft);
 	if (draft === undefined && editableFilter != null) {
 		for (const condition of getFilterConditions(editableFilter)) {
@@ -63,53 +61,39 @@ const createProfileFilterHistoryEntry = (
 		filter: cloneProfileFilter(filter),
 		draft: editableFilter,
 		fingerprint: profileFilterFingerprint(filter),
-		total,
 	};
 };
 
 const createProfilesFilterSession = (filter: Filter | null, total?: number): FilterSession => {
-	const entry = createProfileFilterHistoryEntry(filter, total);
+	const entry = createProfileFilterHistoryEntry(filter);
 	return {
 		draft: cloneProfileFilter(entry.draft),
 		history: [entry],
 		historyIndex: 0,
+		preview: total == null ? undefined : { fingerprint: entry.fingerprint, total },
 	};
 };
 
 const currentProfilesFilterHistoryEntry = (session: FilterSession): FilterHistoryEntry =>
 	session.history[session.historyIndex];
 
-const commitProfilesFilterPreview = (
-	session: FilterSession,
-	candidate: PreviewCandidate,
-	response: CountProfilesResponse,
-): FilterSession => {
-	const entry = createProfileFilterHistoryEntry(
-		candidate.filter,
-		response.total,
-		candidate.historyIndex == null ? candidate.draft : session.history[candidate.historyIndex].draft,
-	);
-	if (candidate.historyIndex != null) {
-		const history = [...session.history];
-		history[candidate.historyIndex] = entry;
-		return {
-			...session,
-			draft: cloneProfileFilter(entry.draft),
-			history,
-			historyIndex: candidate.historyIndex,
-			pending: undefined,
-			failure: undefined,
-		};
-	}
-
-	if (currentProfilesFilterHistoryEntry(session).fingerprint === candidate.fingerprint) {
+const commitProfilesFilter = (session: FilterSession, filter: Filter | null, draft?: Filter | null): FilterSession => {
+	const entry = createProfileFilterHistoryEntry(filter, draft);
+	const current = currentProfilesFilterHistoryEntry(session);
+	if (current.fingerprint === entry.fingerprint) {
+		const draftFingerprint = profileFilterFingerprint(entry.draft);
+		if (
+			profileFilterFingerprint(current.draft) === draftFingerprint &&
+			profileFilterFingerprint(session.draft) === draftFingerprint
+		) {
+			return session;
+		}
 		const history = [...session.history];
 		history[session.historyIndex] = entry;
 		return {
 			...session,
+			draft: cloneProfileFilter(entry.draft),
 			history,
-			pending: undefined,
-			failure: undefined,
 		};
 	}
 
@@ -120,16 +104,15 @@ const commitProfilesFilterPreview = (
 
 	return {
 		...session,
+		draft: cloneProfileFilter(entry.draft),
 		history,
 		historyIndex: history.length - 1,
-		pending: undefined,
-		failure: undefined,
 	};
 };
 
 export {
 	cloneProfileFilter,
-	commitProfilesFilterPreview,
+	commitProfilesFilter,
 	createProfileFilterHistoryEntry,
 	createProfilesFilterSession,
 	currentProfilesFilterHistoryEntry,

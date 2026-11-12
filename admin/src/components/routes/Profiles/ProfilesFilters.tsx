@@ -10,7 +10,7 @@ import { FilterEditor } from '../../base/FilterEditor/FilterEditor';
 import { Filter, FilterRule } from '../../../lib/api/types/pipeline';
 import { CountProfilesResponse } from '../../../lib/api/types/responses';
 import { ObjectType } from '../../../lib/api/types/types';
-import { isFilterGroup, validateAndNormalizeFilter } from '../../../lib/core/pipeline';
+import { getFilterConditions, isFilterGroup, validateAndNormalizeFilter } from '../../../lib/core/pipeline';
 import { formatNumber } from '../../../utils/formatNumber';
 import { serializeFilter } from '../../../utils/filters';
 import { PROFILES_SHOW_MATCHES_AUTOMATICALLY_KEY } from '../../../constants/storage';
@@ -18,7 +18,7 @@ import { getPropertyPathDisplayValue } from '../../helpers/getPropertyPathDispla
 import { ProfileSchemaProperties } from './Profiles.types';
 import {
 	cloneProfileFilter,
-	commitProfilesFilterPreview,
+	commitProfilesFilter,
 	createProfileFilterHistoryEntry,
 	createProfilesFilterSession,
 	currentProfilesFilterHistoryEntry,
@@ -42,12 +42,6 @@ interface FailedGridRequest {
 }
 
 type GridMaterializationIntent = 'auto' | 'remove' | 'show';
-
-interface ExpectedDisplayedContext {
-	context: string;
-	intent: GridMaterializationIntent;
-	session: FilterSession;
-}
 
 interface CollapsedFilterItem {
 	fullLabel: string;
@@ -338,7 +332,7 @@ const ProfilesFilters = ({
 	const visibilityGenerationRef = useRef(0);
 	const gridRequestGenerationRef = useRef(0);
 	const draftRevisionRef = useRef(0);
-	const expectedDisplayedContextRef = useRef<ExpectedDisplayedContext>();
+	const expectedDisplayedContextRef = useRef<string>();
 	const displayedContextRef = useRef<string>();
 	const panelRef = useRef<HTMLDivElement>(null);
 	const triggerRef = useRef<WaButtonElement>(null);
@@ -367,7 +361,7 @@ const ProfilesFilters = ({
 			setSession(next);
 			return;
 		}
-		document.startViewTransition(() => flushSync(() => setSession(next)));
+		document.startViewTransition(() => flushSync(() => setSession(sessionRef.current)));
 	}, []);
 
 	useEffect(() => {
@@ -379,7 +373,24 @@ const ProfilesFilters = ({
 	}, [resultsUpdatedContext]);
 
 	const normalizeFilter = useCallback(
-		(filter: Filter | null): Filter | null => (filter == null ? null : validateAndNormalizeFilter(filter, schema)),
+		(filter: Filter | null): Filter | null => {
+			if (filter == null) {
+				return null;
+			}
+			const normalized = validateAndNormalizeFilter(filter, schema);
+			const draftConditions = getFilterConditions(filter);
+			const conditions = normalized == null ? [] : getFilterConditions(normalized);
+			// Empty editor placeholders belong to the draft, not to a complete version.
+			if (
+				draftConditions.length !== conditions.length ||
+				draftConditions.some(
+					(condition, index) => (condition.values?.length ?? 0) !== (conditions[index].values?.length ?? 0),
+				)
+			) {
+				throw new Error('Complete the filter to calculate matches');
+			}
+			return normalized;
+		},
 		[schema],
 	);
 
@@ -396,11 +407,13 @@ const ProfilesFilters = ({
 	const isDraftDirty = rawDraftFingerprint !== profileFilterFingerprint(historyEntry.draft);
 	const normalizedDraftFingerprint =
 		validatedDraft.error == null ? profileFilterFingerprint(validatedDraft.filter ?? null) : undefined;
-	const hasCurrentPreview = normalizedDraftFingerprint === historyEntry.fingerprint && historyEntry.total != null;
+	const hasCurrentPreview =
+		normalizedDraftFingerprint === historyEntry.fingerprint &&
+		session.preview?.fingerprint === historyEntry.fingerprint &&
+		session.failure == null;
 	const draftMatchesCurrentPreview = !isDraftDirty && hasCurrentPreview;
-	const isHistoryNavigationPending = session.pending?.historyIndex != null;
-	const canUndo = isDraftDirty || (!isHistoryNavigationPending && session.historyIndex > 0);
-	const canRedo = !isDraftDirty && session.pending == null && session.historyIndex < session.history.length - 1;
+	const canUndo = isDraftDirty || session.historyIndex > 0;
+	const canRedo = session.historyIndex < session.history.length - 1;
 	const appliedFilterFingerprint = profileFilterFingerprint(appliedFilter);
 	const previewFilterDiffersFromGrid =
 		profileFilterResultsFingerprint(historyEntry.filter) !== profileFilterResultsFingerprint(appliedFilter);
@@ -431,6 +444,12 @@ const ProfilesFilters = ({
 			}
 
 			invalidatePreview();
+			if (current.failure == null && current.preview?.fingerprint === candidate.fingerprint) {
+				if (current.pending != null) {
+					updateSession((state) => ({ ...state, pending: undefined }));
+				}
+				return;
+			}
 			const generation = previewGenerationRef.current;
 			const controller = new AbortController();
 			previewControllerRef.current = controller;
@@ -452,13 +471,12 @@ const ProfilesFilters = ({
 				if (previewGenerationRef.current !== generation) {
 					return;
 				}
-				const update = (state: FilterSession): FilterSession =>
-					commitProfilesFilterPreview(state, candidate, response);
-				if (candidate.historyIndex == null) {
-					updateSession(update);
-				} else {
-					updateSessionWithHistoryTransition(update);
-				}
+				updateSession((state) => ({
+					...state,
+					preview: { ...response, fingerprint: candidate.fingerprint },
+					pending: undefined,
+					failure: undefined,
+				}));
 			} catch (error) {
 				if (previewGenerationRef.current !== generation || (error as any)?.name === 'AbortError') {
 					return;
@@ -474,7 +492,7 @@ const ProfilesFilters = ({
 				}
 			}
 		},
-		[invalidatePreview, onPreview, updateSession, updateSessionWithHistoryTransition],
+		[invalidatePreview, onPreview, updateSession],
 	);
 
 	const onDraftChange = useCallback(
@@ -503,52 +521,56 @@ const ProfilesFilters = ({
 			} catch {
 				return;
 			}
-			void previewCandidate({
-				filter,
-				draft: cloneProfileFilter(draft),
-				fingerprint: profileFilterFingerprint(filter),
-			});
+			updateSession((state) => commitProfilesFilter(state, filter, draft));
+			void previewCandidate({ filter, fingerprint: profileFilterFingerprint(filter) });
+		},
+		[normalizeFilter, previewCandidate, updateSession],
+	);
+
+	const onDraftPreview = useCallback(
+		(draft: Filter | null) => {
+			let filter: Filter | null;
+			try {
+				filter = normalizeFilter(draft);
+			} catch {
+				return;
+			}
+			void previewCandidate({ filter, fingerprint: profileFilterFingerprint(filter) });
 		},
 		[normalizeFilter, previewCandidate],
 	);
+
+	const selectHistoryEntry = (historyIndex: number) => {
+		const target = sessionRef.current.history[historyIndex];
+		draftRevisionRef.current++;
+		setGridFailure(undefined);
+		void previewCandidate({ filter: target.filter, fingerprint: target.fingerprint });
+		updateSessionWithHistoryTransition((state) => ({
+			...state,
+			draft: cloneProfileFilter(target.draft),
+			historyIndex,
+		}));
+	};
 
 	const undo = () => {
 		const current = sessionRef.current;
 		const entry = currentProfilesFilterHistoryEntry(current);
 		if (profileFilterFingerprint(current.draft) !== profileFilterFingerprint(entry.draft)) {
-			draftRevisionRef.current++;
-			invalidatePreview();
-			updateSessionWithHistoryTransition((state) => ({
-				...state,
-				draft: cloneProfileFilter(currentProfilesFilterHistoryEntry(state).draft),
-				pending: undefined,
-				failure: undefined,
-			}));
+			selectHistoryEntry(current.historyIndex);
 			return;
 		}
-		if (current.pending != null || current.historyIndex === 0) {
+		if (current.historyIndex === 0) {
 			return;
 		}
-		const historyIndex = current.historyIndex - 1;
-		const target = current.history[historyIndex];
-		setGridFailure(undefined);
-		void previewCandidate({ filter: target.filter, fingerprint: target.fingerprint, historyIndex });
+		selectHistoryEntry(current.historyIndex - 1);
 	};
 
 	const redo = () => {
 		const current = sessionRef.current;
-		if (
-			current.pending != null ||
-			profileFilterFingerprint(current.draft) !==
-				profileFilterFingerprint(currentProfilesFilterHistoryEntry(current).draft) ||
-			current.historyIndex >= current.history.length - 1
-		) {
+		if (current.historyIndex >= current.history.length - 1) {
 			return;
 		}
-		const historyIndex = current.historyIndex + 1;
-		const target = current.history[historyIndex];
-		setGridFailure(undefined);
-		void previewCandidate({ filter: target.filter, fingerprint: target.fingerprint, historyIndex });
+		selectHistoryEntry(current.historyIndex + 1);
 	};
 
 	const retryPreview = () => {
@@ -575,11 +597,11 @@ const ProfilesFilters = ({
 
 	const materializeProfiles = useCallback(
 		async (entry: FilterHistoryEntry, intent: GridMaterializationIntent) => {
-			const snapshot = createProfileFilterHistoryEntry(entry.filter, entry.total, entry.draft);
+			const snapshot = createProfileFilterHistoryEntry(entry.filter, entry.draft);
 			const snapshotContext = snapshot.fingerprint;
 			const generation = ++gridRequestGenerationRef.current;
 			const draftRevision = draftRevisionRef.current;
-			expectedDisplayedContextRef.current = { context: snapshotContext, intent, session: sessionRef.current };
+			expectedDisplayedContextRef.current = snapshotContext;
 			setPendingGridContext(snapshotContext);
 			setGridFailure(undefined);
 			setResultsUpdatedContext(undefined);
@@ -590,7 +612,7 @@ const ProfilesFilters = ({
 				}
 				setPendingGridContext(undefined);
 				if (!shown) {
-					if (expectedDisplayedContextRef.current?.context === snapshotContext) {
+					if (expectedDisplayedContextRef.current === snapshotContext) {
 						expectedDisplayedContextRef.current = undefined;
 					}
 					return;
@@ -630,10 +652,17 @@ const ProfilesFilters = ({
 			}
 			nextFilter.rules.splice(ruleIndex, 1);
 			const filter = nextFilter.rules.length === 0 ? null : nextFilter;
-			const entry = createProfileFilterHistoryEntry(filter, undefined);
+			const entry = createProfileFilterHistoryEntry(filter);
+			draftRevisionRef.current++;
+			invalidatePreview();
+			updateSession((state) => ({
+				...commitProfilesFilter(state, filter, entry.draft),
+				pending: undefined,
+				failure: undefined,
+			}));
 			void materializeProfiles(entry, 'remove');
 		},
-		[appliedFilter, materializeProfiles, pendingGridContext],
+		[appliedFilter, invalidatePreview, materializeProfiles, pendingGridContext, updateSession],
 	);
 
 	const displayedContext = appliedFilterFingerprint;
@@ -642,33 +671,20 @@ const ProfilesFilters = ({
 			if (
 				profilesTotal != null &&
 				sessionRef.current.history.length === 1 &&
-				currentProfilesFilterHistoryEntry(sessionRef.current).total == null &&
+				sessionRef.current.preview == null &&
+				currentProfilesFilterHistoryEntry(sessionRef.current).fingerprint === displayedContext &&
 				sessionRef.current.pending == null
 			) {
 				updateSession((state) => ({
 					...state,
-					history: [createProfileFilterHistoryEntry(appliedFilter, profilesTotal)],
+					preview: { fingerprint: displayedContext, total: profilesTotal },
 				}));
 			}
 			return;
 		}
 		displayedContextRef.current = displayedContext;
-		const expectedDisplayedContext = expectedDisplayedContextRef.current;
-		if (expectedDisplayedContext?.context === displayedContext) {
+		if (expectedDisplayedContextRef.current === displayedContext) {
 			expectedDisplayedContextRef.current = undefined;
-			if (
-				expectedDisplayedContext.intent === 'remove' &&
-				sessionRef.current === expectedDisplayedContext.session
-			) {
-				updateSession((state) => {
-					const next = commitProfilesFilterPreview(
-						state,
-						{ filter: appliedFilter, fingerprint: appliedFilterFingerprint },
-						{ total: profilesTotal },
-					);
-					return { ...next, draft: cloneProfileFilter(currentProfilesFilterHistoryEntry(next).draft) };
-				});
-			}
 			return;
 		}
 		invalidatePreview();
@@ -731,7 +747,7 @@ const ProfilesFilters = ({
 		resultsUpdatedContext === currentPreviewContext && session.pending == null && draftMatchesCurrentPreview;
 	const canUpdateResults = !isCurrentResultsUpdateConfirmed && session.pending == null && canShowCurrentPreview;
 	const isUpdatingGridResults = pendingGridContext != null;
-	const textValueCommitDelayMs = previewTiming.suspended ? undefined : previewTiming.delayMs;
+	const textValuePreviewDelayMs = previewTiming.suspended ? undefined : previewTiming.delayMs;
 
 	useEffect(() => {
 		if (
@@ -782,6 +798,7 @@ const ProfilesFilters = ({
 		</div>
 	);
 
+	// History actions discard the focused draft instead of confirming it on blur.
 	const historyActions = (
 		<>
 			<WaButton
@@ -790,6 +807,7 @@ const ProfilesFilters = ({
 				variant='brand'
 				appearance='plain'
 				disabled={!canUndo}
+				onPointerDown={(event) => event.preventDefault()}
 				onClick={undo}
 			>
 				<WaIcon slot='start' name='arrow-counterclockwise' aria-hidden='true' />
@@ -801,6 +819,7 @@ const ProfilesFilters = ({
 				variant='brand'
 				appearance='plain'
 				disabled={!canRedo}
+				onPointerDown={(event) => event.preventDefault()}
 				onClick={redo}
 			>
 				<WaIcon slot='start' name='arrow-clockwise' aria-hidden='true' />
@@ -875,13 +894,14 @@ const ProfilesFilters = ({
 									hoistMenus={true}
 									onChange={onDraftChange}
 									onCommit={onDraftCommit}
+									onPreview={onDraftPreview}
 									role='Destination'
 									rootActions={historyActions}
 									schema={schema}
 									showEmptyFilterAsCondition={true}
 									subject='Profiles'
 									target='User'
-									textValueCommitDelayMs={textValueCommitDelayMs}
+									textValuePreviewDelayMs={textValuePreviewDelayMs}
 								/>
 								{isOpen && gridErrorMessage}
 							</div>
@@ -951,8 +971,8 @@ const ProfilesFilters = ({
 								onClick={() => void materializeProfiles(historyEntry, 'show')}
 							>
 								{isShowingCurrentPreview && <WaSpinner />}
-								Show {formatNumber(historyEntry.total ?? 0)}{' '}
-								{historyEntry.total === 1 ? 'match' : 'matches'}
+								Show {formatNumber(session.preview?.total ?? 0)}{' '}
+								{session.preview?.total === 1 ? 'match' : 'matches'}
 							</WaButton>
 						) : null}
 						{!isOpen && collapsedFilterStatus != null && (

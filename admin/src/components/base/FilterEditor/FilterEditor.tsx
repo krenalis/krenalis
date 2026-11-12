@@ -92,6 +92,7 @@ interface FilterEditorProps {
 	hoistMenus?: boolean;
 	onChange: (filter: Filter | null) => void;
 	onCommit?: (filter: Filter | null) => void;
+	onPreview?: (filter: Filter | null) => void;
 	propertiesToHide?: string[];
 	role: ConnectionRole;
 	rootActions?: ReactNode;
@@ -99,7 +100,7 @@ interface FilterEditorProps {
 	showEmptyFilterAsCondition?: boolean;
 	subject: string;
 	target: PipelineTarget;
-	textValueCommitDelayMs?: number;
+	textValuePreviewDelayMs?: number;
 }
 
 const FilterEditor = ({
@@ -109,6 +110,7 @@ const FilterEditor = ({
 	hoistMenus = false,
 	onChange,
 	onCommit,
+	onPreview,
 	propertiesToHide = NO_HIDDEN_PROPERTIES,
 	role,
 	rootActions,
@@ -116,7 +118,7 @@ const FilterEditor = ({
 	showEmptyFilterAsCondition = false,
 	subject,
 	target,
-	textValueCommitDelayMs,
+	textValuePreviewDelayMs,
 }: FilterEditorProps) => {
 	const editorID = useId();
 	const [conditionRemovalAnnouncement, setConditionRemovalAnnouncement] = useState('');
@@ -508,7 +510,8 @@ const FilterEditor = ({
 					disabled={isInvalidProperty || disabled}
 					onValueChange={(value) => changeFilter(updateValue(path, 0, value))}
 					onValueCommit={(value) => changeFilter(updateValue(path, 0, value), true)}
-					textValueCommitDelayMs={textValueCommitDelayMs}
+					onValuePreview={(value) => onPreview?.(updateValue(path, 0, value))}
+					textValuePreviewDelayMs={textValuePreviewDelayMs}
 				/>,
 			);
 			if (isBetween) {
@@ -524,7 +527,8 @@ const FilterEditor = ({
 						disabled={isInvalidProperty || disabled}
 						onValueChange={(value) => changeFilter(updateValue(path, 1, value))}
 						onValueCommit={(value) => changeFilter(updateValue(path, 1, value), true)}
-						textValueCommitDelayMs={textValueCommitDelayMs}
+						onValuePreview={(value) => onPreview?.(updateValue(path, 1, value))}
+						textValuePreviewDelayMs={textValuePreviewDelayMs}
 					/>,
 				);
 			} else if (isOneOf) {
@@ -539,7 +543,8 @@ const FilterEditor = ({
 								disabled={isInvalidProperty || disabled}
 								onValueChange={(value) => changeFilter(updateValue(path, valuePosition, value))}
 								onValueCommit={(value) => changeFilter(updateValue(path, valuePosition, value), true)}
-								textValueCommitDelayMs={textValueCommitDelayMs}
+								onValuePreview={(value) => onPreview?.(updateValue(path, valuePosition, value))}
+								textValuePreviewDelayMs={textValuePreviewDelayMs}
 								removable={true}
 								onRemove={() => onRemoveValue(path, valuePosition)}
 							/>
@@ -720,7 +725,8 @@ interface FilterValueControlProps {
 	disabled: boolean;
 	onValueChange: (value: string) => void;
 	onValueCommit: (value: string) => void;
-	textValueCommitDelayMs?: number;
+	onValuePreview: (value: string) => void;
+	textValuePreviewDelayMs?: number;
 	removable?: boolean;
 	onRemove?: () => void;
 }
@@ -732,64 +738,65 @@ const FilterValueControl = ({
 	disabled,
 	onValueChange,
 	onValueCommit,
-	textValueCommitDelayMs,
+	onValuePreview,
+	textValuePreviewDelayMs,
 	removable = false,
 	onRemove,
 }: FilterValueControlProps) => {
-	const idleCommitTimerRef = useRef<ReturnType<typeof setTimeout>>();
+	const idlePreviewTimerRef = useRef<ReturnType<typeof setTimeout>>();
 	const isComposingRef = useRef(false);
-	const onValueCommitRef = useRef(onValueCommit);
+	const onValuePreviewRef = useRef(onValuePreview);
 	const scheduledValueRef = useRef<string>();
-	onValueCommitRef.current = onValueCommit;
+	onValuePreviewRef.current = onValuePreview;
 
-	const cancelIdleCommit = useCallback(() => {
-		if (idleCommitTimerRef.current != null) {
-			clearTimeout(idleCommitTimerRef.current);
-			idleCommitTimerRef.current = undefined;
+	const cancelIdlePreview = useCallback(() => {
+		if (idlePreviewTimerRef.current != null) {
+			clearTimeout(idlePreviewTimerRef.current);
+			idlePreviewTimerRef.current = undefined;
 		}
 		scheduledValueRef.current = undefined;
 	}, []);
 
-	const scheduleIdleCommit = useCallback(
+	const scheduleIdlePreview = useCallback(
 		(nextValue: string) => {
-			cancelIdleCommit();
-			if (disabled || textValueCommitDelayMs == null) {
+			cancelIdlePreview();
+			if (disabled || textValuePreviewDelayMs == null) {
 				return;
 			}
 			scheduledValueRef.current = nextValue;
-			idleCommitTimerRef.current = setTimeout(() => {
-				idleCommitTimerRef.current = undefined;
+			idlePreviewTimerRef.current = setTimeout(() => {
+				idlePreviewTimerRef.current = undefined;
 				scheduledValueRef.current = undefined;
-				onValueCommitRef.current(nextValue);
-			}, textValueCommitDelayMs);
+				onValuePreviewRef.current(nextValue);
+			}, textValuePreviewDelayMs);
 		},
-		[cancelIdleCommit, disabled, textValueCommitDelayMs],
+		[cancelIdlePreview, disabled, textValuePreviewDelayMs],
 	);
 
-	useEffect(() => () => cancelIdleCommit(), [cancelIdleCommit]);
+	useEffect(() => () => cancelIdlePreview(), [cancelIdlePreview]);
 
 	useLayoutEffect(() => {
-		if (disabled || textValueCommitDelayMs == null) {
-			cancelIdleCommit();
+		if (disabled || textValuePreviewDelayMs == null) {
+			cancelIdlePreview();
 		}
-	}, [cancelIdleCommit, disabled, textValueCommitDelayMs]);
+	}, [cancelIdlePreview, disabled, textValuePreviewDelayMs]);
 
 	useEffect(() => {
 		if (scheduledValueRef.current != null && scheduledValueRef.current !== value) {
-			cancelIdleCommit();
+			cancelIdlePreview();
 		}
-	}, [cancelIdleCommit, value]);
+	}, [cancelIdlePreview, value]);
 
 	const handleInput = (event: any) => {
 		const nextValue = event.target.value;
 		onValueChange(nextValue);
 		if (!isComposingRef.current) {
-			scheduleIdleCommit(nextValue);
+			scheduleIdlePreview(nextValue);
 		}
 	};
 
 	const handleSelect = (event: any) => {
-		cancelIdleCommit();
+		cancelIdlePreview();
 		const target = event.target as any;
 		const v = event.detail?.value ?? target.value;
 		onValueChange(v);
@@ -797,25 +804,25 @@ const FilterValueControl = ({
 	};
 
 	const handleCommit = (event: any) => {
-		cancelIdleCommit();
+		cancelIdlePreview();
 		onValueCommit(event.target.value);
 	};
 
 	const handleKeyDown = (event: React.KeyboardEvent) => {
 		if (event.key === 'Enter' && !event.nativeEvent.isComposing) {
-			cancelIdleCommit();
+			cancelIdlePreview();
 			onValueCommit((event.currentTarget as any).value);
 		}
 	};
 
 	const handleCompositionStart = () => {
 		isComposingRef.current = true;
-		cancelIdleCommit();
+		cancelIdlePreview();
 	};
 
 	const handleCompositionEnd = (event: React.CompositionEvent) => {
 		isComposingRef.current = false;
-		scheduleIdleCommit((event.currentTarget as any).value);
+		scheduleIdlePreview((event.currentTarget as any).value);
 	};
 
 	const removeButton = removable ? (

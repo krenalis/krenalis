@@ -17,7 +17,7 @@ import {
 	profilesSequenceReducer,
 } from '../src/components/routes/Profiles/profilesSequence';
 import {
-	commitProfilesFilterPreview,
+	commitProfilesFilter,
 	createProfilesFilterSession,
 	currentProfilesFilterHistoryEntry,
 	profileFilterFingerprint,
@@ -333,8 +333,8 @@ test(`Initialize filter history from the displayed filter and last observed tota
 		filter,
 		draft: filter,
 		fingerprint: profileFilterFingerprint(filter),
-		total: 12,
 	});
+	expect(session.preview).toEqual({ fingerprint: profileFilterFingerprint(filter), total: 12 });
 	expect(session.draft).not.toBe(filter);
 });
 
@@ -352,7 +352,7 @@ test(`Ignore logical operators in groups that contain fewer than two rules when 
 	expect(profileFilterResultsFingerprint(twoRulesAnd)).not.toBe(profileFilterResultsFingerprint(twoRulesOr));
 });
 
-test(`Add previews to filter history and truncate a redo branch`, () => {
+test(`Commit filter history without match counts and truncate a redo branch`, () => {
 	const filterB: Filter = {
 		operator: 'and',
 		rules: [{ property: 'email', operator: 'contains', values: ['example.com'] }],
@@ -366,41 +366,43 @@ test(`Add previews to filter history and truncate a redo branch`, () => {
 		rules: [{ property: 'email', operator: 'contains', values: ['example.net'] }],
 	};
 	let session = createProfilesFilterSession(null, 20);
-	session = commitProfilesFilterPreview(
-		session,
-		{ filter: filterB, fingerprint: profileFilterFingerprint(filterB) },
-		{ total: 10 },
-	);
-	session = commitProfilesFilterPreview(
-		session,
-		{ filter: filterC, fingerprint: profileFilterFingerprint(filterC) },
-		{ total: 5 },
-	);
+	session = commitProfilesFilter(session, filterB);
+	session = commitProfilesFilter(session, filterC);
 
 	session = { ...session, draft: filterB, historyIndex: 1 };
-	session = commitProfilesFilterPreview(
-		session,
-		{ filter: filterD, fingerprint: profileFilterFingerprint(filterD) },
-		{ total: 0 },
-	);
+	session = commitProfilesFilter(session, filterD);
 
 	expect(session.history.map(({ filter }) => filter)).toEqual([null, filterB, filterD]);
 	expect(session.historyIndex).toBe(2);
-	expect(currentProfilesFilterHistoryEntry(session).total).toBe(0);
+	expect(session.draft).toEqual(filterD);
+	expect(session.preview).toEqual({ fingerprint: profileFilterFingerprint(null), total: 20 });
 });
 
-test(`Refresh history counts when data changes`, () => {
+test(`Confirm an unchanged filter without adding history or discarding Redo`, () => {
 	const filter: Filter = {
 		operator: 'and',
 		rules: [{ property: 'email', operator: 'contains', values: ['example.com'] }],
 	};
 	let session = createProfilesFilterSession(filter, 12);
-	session = commitProfilesFilterPreview(
-		session,
-		{ filter, fingerprint: profileFilterFingerprint(filter), historyIndex: 0 },
-		{ total: 14 },
-	);
-	expect(currentProfilesFilterHistoryEntry(session).total).toBe(14);
+	session = commitProfilesFilter(session, null);
+	session = { ...session, draft: filter, historyIndex: 0 };
+	expect(commitProfilesFilter(session, structuredClone(filter))).toBe(session);
+	expect(session.history).toHaveLength(2);
+	expect(session.historyIndex).toBe(0);
+
+	const draft: Filter = {
+		...filter,
+		rules: [{ property: 'email', operator: 'contains', values: ['"example.com"'] }],
+	};
+	session = commitProfilesFilter(session, filter, draft);
+	expect(session.history).toHaveLength(2);
+	expect(session.historyIndex).toBe(0);
+	expect(session.draft).toEqual(draft);
+	expect(currentProfilesFilterHistoryEntry(session).draft).toEqual(draft);
+	session = { ...session, draft: null };
+	session = commitProfilesFilter(session, filter, draft);
+	expect(session.draft).toEqual(draft);
+	expect(session.history).toHaveLength(2);
 });
 
 test(`Adapt the text preview delay only after enough stable latency measurements`, () => {
@@ -448,20 +450,18 @@ test(`Suspend and conservatively restore automatic text previews`, () => {
 	expect(timing.delayMs).toBe(2500);
 });
 
-test('A successful preview preserves placeholders in the editable draft', () => {
-	const filter: Filter = {
-		operator: 'and',
-		rules: [{ property: 'email', operator: 'contains', values: ['example'] }],
-	};
-	const draft: Filter = { ...filter, rules: [...filter.rules, { property: '', operator: 'is', values: [] }] };
-	const session = { ...createProfilesFilterSession(null, 10), draft };
-	const next = commitProfilesFilterPreview(
-		session,
-		{ filter, fingerprint: profileFilterFingerprint(filter) },
-		{ total: 3 },
-	);
-	expect(next.draft).toEqual(draft);
-	expect(currentProfilesFilterHistoryEntry(next).filter).toEqual(filter);
+test('Keep only the latest fifty confirmed filter versions', () => {
+	let session = createProfilesFilterSession(null);
+	for (let index = 0; index < 55; index++) {
+		session = commitProfilesFilter(session, {
+			operator: 'and',
+			rules: [{ property: 'email', operator: 'contains', values: [String(index)] }],
+		});
+	}
+	expect(session.history).toHaveLength(50);
+	expect(session.historyIndex).toBe(49);
+	expect((session.history[0].filter!.rules[0] as FilterCondition).values).toEqual(['5']);
+	expect((currentProfilesFilterHistoryEntry(session).filter!.rules[0] as FilterCondition).values).toEqual(['54']);
 });
 
 test('Initialize a quoted profile filter draft without changing its values', () => {
@@ -485,29 +485,18 @@ test('Initialize a quoted profile filter draft without changing its values', () 
 	expect(currentProfilesFilterHistoryEntry(session).filter).toEqual(filter);
 });
 
-test('Restore a quoted profile filter draft from history without normalizing it twice', () => {
+test('Keep the exact quoted draft in confirmed filter history', () => {
 	const draft: Filter = {
 		operator: 'and',
 		rules: [{ property: 'email', operator: 'is one of', values: ['"  Ada  "', '\'"Ada"\''] }],
 	};
 	const filter = validateAndNormalizeFilter(draft, filterSchema)!;
 	let session = createProfilesFilterSession(null, 2);
-	session = commitProfilesFilterPreview(
-		session,
-		{ filter, draft, fingerprint: profileFilterFingerprint(filter) },
-		{ total: 1 },
-	);
-	session = commitProfilesFilterPreview(
-		session,
-		{ filter: null, fingerprint: profileFilterFingerprint(null) },
-		{ total: 2 },
-	);
-	session = commitProfilesFilterPreview(
-		session,
-		{ filter, fingerprint: profileFilterFingerprint(filter), historyIndex: 1 },
-		{ total: 1 },
-	);
+	session = commitProfilesFilter(session, filter, draft);
 	expect(session.draft).toEqual(draft);
 	expect(session.draft).not.toBe(draft);
 	expect(validateAndNormalizeFilter(session.draft!, filterSchema)).toEqual(filter);
+	session = commitProfilesFilter(session, null);
+	expect(session.history[1].draft).toEqual(draft);
+	expect(session.history[1].draft).not.toBe(draft);
 });
