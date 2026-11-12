@@ -10,8 +10,8 @@ Use `list-event-definitions` to discover events by ID, technical name, display
 name or description. The optional `query` is a literal substring, not semantic
 search; omit it to compare the full catalog. Then use `get-event-definition`
 with an exact catalog ID to inspect the native schemas and property meanings.
-Both tools require a workspace MCP key and rate capacity, but not MCP warehouse
-settings. Their JSON is returned as text and structured content.
+Both tools require a workspace MCP key and rate capacity.
+Their JSON is returned as text and structured content.
 
 Catalog IDs select metadata, not filter sources. For example, retrieve
 `commerce.order_completed`, read its `event` value `Order Completed`, then use

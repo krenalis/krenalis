@@ -28,7 +28,7 @@ var listEventDefinitionsTool = server.ServerTool{
 		mcp.WithDescription("Discover catalog events by ID, technical name and business description."+
 			" Optional query is a literal case-insensitive substring, not semantic search."+
 			" Omit it to compare all definitions; use get-event-definition for property schemas."+
-			" Catalog access requires an authenticated workspace MCP key but no MCP warehouse settings."),
+			" Catalog access requires an authenticated workspace MCP key."),
 		mcp.WithString("query", mcp.Description("Optional text, at most 256 UTF-8 bytes.")),
 		mcp.WithTitleAnnotation("Discover catalog events"),
 		mcp.WithReadOnlyHintAnnotation(true),
