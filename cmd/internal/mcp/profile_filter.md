@@ -38,15 +38,22 @@ reported as unsupported, without SQL fallback.
 
 ## Connection and access
 
-MCP warehouse settings must be configured to enable profile queries. This tool
-executes through Krenalis's **main warehouse connection**, not the separate MCP
-credentials. Those credentials and their table, column and other database access
-restrictions apply to `query-data-warehouse` only. They do not restrict which
-profile or event properties `query-profiles` can read or use in conditions.
+A valid workspace-scoped MCP key enables profile queries. The organization must
+be enabled and requests consume rate capacity. No separate warehouse credentials
+or additional workspace enablement switch is required.
 
-On Snowflake, `query-profiles` uses the main virtual warehouse, even if a different
-virtual warehouse is configured for MCP. Record queries remain available; Count, Sum, Average and all selected-experience forms
-are currently unavailable on Snowflake. Do not work around that gate using SQL.
+These tools execute through Krenalis's **main warehouse connection**. Former MCP
+credentials and their table, column and other database restrictions do not limit
+which profile properties or supported event conditions a valid MCP key can read.
+This includes existing keys whose old SQL access was restricted by warehouse
+permissions. Revoke any key that should no longer have this workspace access.
+Revocation is checked on subsequent calls, including in an initialized session;
+it does not cancel an already admitted query.
+
+On Snowflake the tools use the main virtual warehouse. Record queries remain
+available; Count, Sum, Average and all selected-experience forms are currently
+unavailable until the backend gate is enabled. SQL execution is not provided.
+Never bypass an unavailable capability through direct warehouse access.
 
 ## Arguments and results
 
@@ -90,9 +97,8 @@ means reduce the page/projection; `ProfileProjectionTooWide` means request fewer
 properties. `FilterCapabilityNotImplemented` and `UnifiedFilteringUnavailable`
 must be reported to the user, not replaced with another query language.
 
-The MCP adapter also uses `InvalidArguments` for invalid requests/filters and
-`MCPNotConfigured` when MCP warehouse settings have not been configured. These
-are MCP diagnostic prefixes, not additional core error codes.
+The MCP adapter uses `InvalidArguments` for invalid requests and filters.
+This is an MCP diagnostic prefix, not an additional core error code.
 
 ## Filter syntax and supported subset
 
@@ -434,10 +440,11 @@ is different from String "100". Negative comparisons do not make missing values
 match. Count resolves governed currency through its explicit `currencyField`
 reference; Sum through its monetary field, without a separate currency override.
 
-Event names and arbitrary JSON contents are workspace-specific. Ask the user or
-use `query-data-warehouse` to discover them before constructing a filter. SQL may
-also serve other exploratory analysis. It must not be used to emulate a segment
-or complete a Unified feature that `query-profiles` cannot execute.
+Event names and arbitrary JSON contents are workspace-specific. The catalog
+provides known definitions and schemas, not an inventory of all received events
+or historical conformity. Ask the user about names or fields absent from it;
+do not invent them. There is no SQL discovery or fallback tool. Report any
+Unified capability that cannot execute instead of approximating the request.
 
 ## Monetary Average
 

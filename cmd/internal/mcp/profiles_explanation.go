@@ -25,8 +25,8 @@ var explainProfileFilterTool = server.ServerTool{
 			" LastVersusPrevious reports candidate identities, shortage and whether the ordered pair is unique."+
 			" Read profile-filter-doc first. Reuse query-profiles evaluation.at to anchor the periods;"+
 			" this is a new evaluation, not a snapshot. It does not identify which Record operand caused NULL."+
-			" Requires configured MCP settings but uses the main warehouse connection, whose data access is"+
-			" not restricted by the separate MCP credentials. Unavailable on unverified backends including Snowflake."),
+			" Requires a valid workspace-scoped MCP key and uses the main warehouse connection. Its data access is"+
+			" not restricted by former MCP credentials. Unavailable on unverified backends including Snowflake."),
 		mcp.WithString("kpid", mcp.Required(), mcp.Description("KPID of the profile to explain, as a UUID.")),
 		mcp.WithString("filter", mcp.Required(), mcp.Description("The same core.Filter JSON text used in query-profiles.")),
 		mcp.WithString("at", mcp.Description("Optional nonfuture RFC 3339 instant with microsecond precision.")),
@@ -46,10 +46,6 @@ func explainProfileFilter(ctx context.Context, req mcp.CallToolRequest) (*mcp.Ca
 	if err != nil {
 		return nil, err
 	}
-	if !ws.HasWarehouseMCPSettings() {
-		return mcp.NewToolResultError("MCPNotConfigured: configure MCP warehouse settings to enable profile queries"), nil
-	}
-
 	// Decode the wire arguments without converting filter operands to float64.
 	raw := req.Params.RawArguments
 	if len(raw) == 0 || len(raw) > maxProfileQueryArgumentBytes || !json.Valid(raw) || !json.Value(raw).IsObject() {

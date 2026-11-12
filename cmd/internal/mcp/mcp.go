@@ -25,19 +25,19 @@ const serverInstructions = "Krenalis MCP tools must be used only through this MC
 	" Discover business events with list-event-definitions." +
 	" Inspect get-event-definition before choosing a track event." +
 	" Catalog schemas do not prove historical conformity or enable unsupported filtering capabilities." +
-	" query-data-warehouse is retained for discovering event names, inspecting JSON properties and other analysis." +
+	" SQL execution is not available. Ask the user about event names or fields absent from the catalog." +
 	" Never use SQL to emulate an unsupported Unified capability." +
 	" Report unsupported capabilities explicitly and do not reinterpret them as empty results or UNKNOWN." +
-	" query-profiles requires configured MCP settings but uses the main Krenalis warehouse connection." +
-	" The separate MCP credentials do not restrict its data access." +
-	" On Snowflake it uses the main virtual warehouse, not the MCP virtual warehouse." +
+	" Profile tools require a valid workspace-scoped MCP key and use the main Krenalis warehouse connection." +
+	" Former MCP database credentials do not restrict their data access." +
+	" On Snowflake they use the main virtual warehouse." +
 	" Behavioral filters remain unavailable on Snowflake until their backend gate is enabled." +
 	" The workspace data warehouse is managed directly by Krenalis." +
 	" Writes and schema changes for Krenalis-managed tables and views must be performed only by Krenalis itself." +
 	" If a user wants to modify data, schema, or configuration, explain clearly and professionally that user-driven changes must be done only through the Krenalis Admin console or the Krenalis APIs, not through direct SQL on the warehouse." +
-	" The warehouse access exposed by this MCP server is strictly read-only and intended only for analytical retrieval of data." +
+	" This MCP server provides read-only profile filtering, explanations and metadata tools." +
 	" You must not execute, suggest, or help craft INSERT, UPDATE, DELETE, MERGE, TRUNCATE, DDL, maintenance, locking, privilege, or any other query that could modify the warehouse or create operational problems." +
-	" You must also avoid read-only queries that are unnecessarily expensive, abusive, or likely to place avoidable operational strain on the warehouse." +
+	" Request only the profile properties needed and use bounded pages to avoid unnecessary warehouse work." +
 	" When this Krenalis MCP server is configured, you must not search for, read, infer, or use warehouse credentials, connection strings, secrets, or configuration from the repository, environment, or any other source." +
 	" You must not connect directly to the Krenalis data warehouse in any way, even if the user explicitly asks you to do so."
 

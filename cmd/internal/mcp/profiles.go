@@ -57,10 +57,10 @@ var queryProfilesTool = server.ServerTool{
 			" Returns matching profiles, schema, total, and Unified evaluation with at/match/noMatch/unknown."+
 			" UNKNOWN profiles are not members and are not NO_MATCH; technical errors are not UNKNOWN."+
 			" Reuse evaluation.at on later pages to anchor periods; this does not freeze the data."+
-			" Configured MCP settings enable access, but execution uses the main Krenalis connection."+
-			" The separate MCP user's table/column permissions do not restrict this tool or its event conditions."+
-			" Snowflake uses the main virtual warehouse, not the MCP virtual warehouse; behavioral filters remain unavailable."+
-			" Do not use SQL to emulate unsupported Unified capabilities."),
+			" Requires a valid workspace-scoped MCP key and uses the main Krenalis connection."+
+			" Former MCP table/column permissions do not restrict this tool or its event conditions."+
+			" Snowflake uses the main virtual warehouse; behavioral filters remain unavailable."+
+			" SQL execution is not available; report unsupported Unified capabilities explicitly."),
 		mcp.WithString("filter", mcp.Description("core.Filter encoded as JSON text, not an object or SQL."+
 			" Numbers inside the text retain exact digits. Omit to list all profiles; null is invalid.")),
 		mcp.WithArray("properties", mcp.WithStringItems(),
@@ -112,10 +112,6 @@ func queryProfiles(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallToolR
 	if err != nil {
 		return nil, err
 	}
-	if !ws.HasWarehouseMCPSettings() {
-		return mcp.NewToolResultError("MCPNotConfigured: configure MCP warehouse settings to enable profile queries"), nil
-	}
-
 	// Decode the wire arguments without converting filter operands to float64.
 	raw := req.Params.RawArguments
 	if len(raw) == 0 && req.Params.Arguments == nil {

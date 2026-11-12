@@ -10,10 +10,39 @@ import (
 	"testing"
 
 	"github.com/krenalis/krenalis/tools/json"
-	"github.com/krenalis/krenalis/warehouses"
-
-	gmcp "github.com/mark3labs/mcp-go/mcp"
 )
+
+// TestRetiredSQLTool rejects calls to the removed SQL tool.
+func TestRetiredSQLTool(t *testing.T) {
+	mcpServer := NewMCPServer(nil)
+	defer mcpServer.Close(t.Context())
+	testServer := httptest.NewServer(mcpServer)
+	defer testServer.Close()
+	client, err := initMCPClient(t, testServer.Client(), testServer.URL)
+	if err != nil {
+		t.Fatalf("expected MCP client, got %v", err)
+	}
+	response, err := client.jsonRPCRequest("tools/call", map[string]any{
+		"name": "query-data-warehouse", "arguments": map[string]any{"query": "SELECT 1"},
+	})
+	if err != nil {
+		t.Fatalf("expected MCP response, got %v", err)
+	}
+	defer response.Body.Close()
+	var body struct {
+		Error *struct {
+			Code int `json:"code"`
+		} `json:"error"`
+		Result json.Value `json:"result"`
+	}
+	err = json.NewDecoder(response.Body).Decode(&body)
+	if err != nil {
+		t.Fatalf("expected decoded MCP error, got %v", err)
+	}
+	if body.Error == nil || body.Error.Code != -32602 || len(body.Result) != 0 {
+		t.Fatalf("expected unknown-tool error without result, got %+v", body)
+	}
+}
 
 // TestToolsList tests the MCP server method "tools/list".
 func TestToolsList(t *testing.T) {
@@ -44,7 +73,7 @@ func TestToolsList(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	const expectedToolCount = 12
+	const expectedToolCount = 11
 	if len(got.Result.Tools) != expectedToolCount {
 		t.Fatalf("expected %d tools, got %d", expectedToolCount, len(got.Result.Tools))
 	}
@@ -52,125 +81,45 @@ func TestToolsList(t *testing.T) {
 
 }
 
-func TestQueryDataWarehouseToolMetadata(t *testing.T) {
+// TestWarehouseInformationToolMetadata checks the remaining warehouse metadata.
+func TestWarehouseInformationToolMetadata(t *testing.T) {
 	mcpServer := NewMCPServer(nil)
-	defer mcpServer.Close(context.Background())
-
+	defer mcpServer.Close(t.Context())
 	testServer := httptest.NewServer(mcpServer)
 	defer testServer.Close()
-
-	mcpClient, err := initMCPClient(t, testServer.Client(), testServer.URL)
+	client, err := initMCPClient(t, testServer.Client(), testServer.URL)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("expected MCP client, got %v", err)
 	}
-
-	resp, err := mcpClient.jsonRPCRequest("tools/list", nil)
+	response, err := client.jsonRPCRequest("tools/list", nil)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("expected tool list, got %v", err)
 	}
-	defer resp.Body.Close()
-
-	var got struct {
+	defer response.Body.Close()
+	var body struct {
 		Result struct {
 			Tools []struct {
 				Name        string `json:"name"`
 				Description string `json:"description"`
-				InputSchema struct {
-					Properties map[string]struct {
-						Description string `json:"description"`
-					} `json:"properties"`
-				} `json:"inputSchema"`
 				Annotations struct {
-					ReadOnlyHint    *bool `json:"readOnlyHint"`
-					DestructiveHint *bool `json:"destructiveHint"`
-					IdempotentHint  *bool `json:"idempotentHint"`
-					OpenWorldHint   *bool `json:"openWorldHint"`
+					OpenWorldHint *bool `json:"openWorldHint"`
 				} `json:"annotations"`
 			} `json:"tools"`
 		} `json:"result"`
 	}
-	err = json.NewDecoder(resp.Body).Decode(&got)
+	err = json.NewDecoder(response.Body).Decode(&body)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("expected decoded tool list, got %v", err)
 	}
-
-	for _, tool := range got.Result.Tools {
-		if tool.Name == "warehouse-information" {
-			if tool.Description != warehouseInformationToolDescription {
-				t.Fatalf("warehouse-information description = %q, want %q", tool.Description, warehouseInformationToolDescription)
-			}
-			if tool.Annotations.OpenWorldHint == nil || *tool.Annotations.OpenWorldHint {
-				t.Fatalf("warehouse-information openWorldHint = %v, want false", tool.Annotations.OpenWorldHint)
-			}
+	for _, tool := range body.Result.Tools {
+		if tool.Name != "warehouse-information" {
 			continue
 		}
-		if tool.Name != "query-data-warehouse" {
-			continue
-		}
-		if tool.Description != queryDataWarehouseToolDescription {
-			t.Fatalf("query-data-warehouse description = %q, want %q", tool.Description, queryDataWarehouseToolDescription)
-		}
-		queryArg, ok := tool.InputSchema.Properties["query"]
-		if !ok {
-			t.Fatal("query-data-warehouse tool is missing the query argument")
-		}
-		if queryArg.Description != queryDataWarehouseQueryDescription {
-			t.Fatalf("query-data-warehouse query description = %q, want %q", queryArg.Description, queryDataWarehouseQueryDescription)
-		}
-		if tool.Annotations.ReadOnlyHint == nil || !*tool.Annotations.ReadOnlyHint {
-			t.Fatalf("query-data-warehouse readOnlyHint = %v, want true", tool.Annotations.ReadOnlyHint)
-		}
-		if tool.Annotations.DestructiveHint == nil || *tool.Annotations.DestructiveHint {
-			t.Fatalf("query-data-warehouse destructiveHint = %v, want false", tool.Annotations.DestructiveHint)
-		}
-		if tool.Annotations.IdempotentHint == nil || !*tool.Annotations.IdempotentHint {
-			t.Fatalf("query-data-warehouse idempotentHint = %v, want true", tool.Annotations.IdempotentHint)
-		}
-		if tool.Annotations.OpenWorldHint == nil || *tool.Annotations.OpenWorldHint {
-			t.Fatalf("query-data-warehouse openWorldHint = %v, want false", tool.Annotations.OpenWorldHint)
+		if tool.Description != warehouseInformationToolDescription ||
+			tool.Annotations.OpenWorldHint == nil || *tool.Annotations.OpenWorldHint {
+			t.Fatalf("expected local warehouse metadata description, got %+v", tool)
 		}
 		return
 	}
-
-	t.Fatal("query-data-warehouse tool not found")
-}
-
-func TestQueryDataWarehouseToolResultRejectedReadOnlyError(t *testing.T) {
-	err := &warehouses.RejectedReadOnlyQueryError{
-		Msg: "query rejected: function or built-in row_number is not allowed in read-only queries",
-	}
-
-	result, gotErr := queryDataWarehouseToolResult(nil, err)
-	if gotErr != nil {
-		t.Fatalf("queryDataWarehouseToolResult returned error: %v", gotErr)
-	}
-	if !result.IsError {
-		t.Fatal("queryDataWarehouseToolResult returned a non-error result")
-	}
-	if len(result.Content) != 1 {
-		t.Fatalf("queryDataWarehouseToolResult returned %d content items, want 1", len(result.Content))
-	}
-	if text := gmcp.GetTextFromContent(result.Content[0]); text != err.Error() {
-		t.Fatalf("queryDataWarehouseToolResult error text = %q, want %q", text, err.Error())
-	}
-}
-
-func TestQueryDataWarehouseToolResultPartialRows(t *testing.T) {
-	queryResult := json.Value(`[[1],[2]]`)
-	err := context.DeadlineExceeded
-
-	result, gotErr := queryDataWarehouseToolResult(queryResult, err)
-	if gotErr != nil {
-		t.Fatalf("queryDataWarehouseToolResult returned error: %v", gotErr)
-	}
-	if result.IsError {
-		t.Fatal("queryDataWarehouseToolResult returned an error result for partial rows")
-	}
-	if len(result.Content) != 1 {
-		t.Fatalf("queryDataWarehouseToolResult returned %d content items, want 1", len(result.Content))
-	}
-	want := "an error occurred: context deadline exceeded, only the following rows have been read: [[1],[2]]"
-	if text := gmcp.GetTextFromContent(result.Content[0]); text != want {
-		t.Fatalf("queryDataWarehouseToolResult text = %q, want %q", text, want)
-	}
+	t.Fatal("expected warehouse-information tool, got absent")
 }

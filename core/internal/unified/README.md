@@ -683,7 +683,7 @@ API, production factory/dialer, initialization and encrypted-settings loader.
 Each configuration observed seven query, three explanation and two legacy Record
 SELECTs, all Arrow, with five verified sessions and complete schema cleanup.
 It covers exact decimal output, SQL NULL omission, pagination and HTTP errors.
-MCP read-only access and the other activation gaps remain open; neither this
+MCP transport verification and the other activation gaps remain open; neither this
 group nor its test-only format configuration opens the production gate.
 
 The following is the common acceptance checklist for the currently implemented
@@ -902,12 +902,13 @@ all Unified capabilities.
 ## MCP entry
 
 `query-profiles` reuses `Workspace.QueryProfiles` and the same JSON filter text
-as the HTTP query parameter. MCP warehouse settings must be present, but the
-query runs on the main datastore connection. The separate MCP user's database
-permissions do not limit the profile or event properties read by this path.
+as the HTTP query parameter. A valid workspace-scoped MCP key grants access on
+the main datastore connection, without separate warehouse credentials or an
+additional workspace enablement switch. Former MCP database permissions do not
+limit the profile properties or supported event conditions read by this path.
 Snowflake uses the main virtual warehouse; its Count gate remains closed.
-The SQL tool stays available for discovery/other analysis, with instructions
-prohibiting fallback to SQL for unsupported Unified features. See
+The SQL tool is removed. The catalog supplies known definitions, while custom
+names and fields require user input until a dedicated discovery tool exists. See
 [`cmd/internal/mcp/README.md`](../../../cmd/internal/mcp/README.md) and the
 model-facing `profile-filter-doc` tool for transport, limits and examples.
 

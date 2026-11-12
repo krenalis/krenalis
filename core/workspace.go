@@ -996,14 +996,6 @@ func (this *Workspace) Events(ctx context.Context, properties []string, filter *
 	return evts, nil
 }
 
-// HasWarehouseMCPSettings reports whether MCP warehouse settings are configured.
-// Their presence enables MCP profile queries on the main connection; their
-// credentials and permissions apply only to the SQL tool.
-func (this *Workspace) HasWarehouseMCPSettings() bool {
-	this.core.mustBeOpen()
-	return this.workspace.HasWarehouseMCPSettings()
-}
-
 // Identities returns the identities for the provided KPID, and an estimate of
 // their total number without applying first and limit.
 //
@@ -1261,95 +1253,6 @@ type Profile struct {
 func (this *Workspace) Profiles(ctx context.Context, properties []string, filter *Filter, order string, orderDesc bool, first, limit int) ([]Profile, types.Type, int, error) {
 	this.core.mustBeOpen()
 	return this.profiles(ctx, properties, filter, order, orderDesc, first, limit)
-}
-
-const maxReadOnlyResponseSize = 10 * 1024 * 1024 // 10 MiB.
-
-// QueryWarehouseReadOnly executes a read-only query on the warehouse, returning
-// the result as a json.Value representing a JSON Array (representing the rows)
-// of JSON Arrays (representing the values for each column).
-//
-// If the JSON size exceeds the allowed maximum, this method returns a valid
-// JSON array of arrays containing only the rows within the limit, and
-// simultaneously returns an error indicating the issue.
-//
-// If the workspace has no MCP settings configured, this method returns an
-// error.
-//
-// TODO(Gianluca): the error handling is currently minimal. See the issue
-// https://github.com/krenalis/krenalis/issues/1667.
-func (this *Workspace) QueryWarehouseReadOnly(ctx context.Context, query string) (json.Value, error) {
-
-	this.core.mustBeOpen()
-
-	// TODO(Gianluca): here the warehouse mode is not checked. The reason is
-	// that the mode is currently stored in the store. We should review all
-	// this. This is discussed in the issue https://github.com/krenalis/krenalis/issues/1224.
-
-	// Retrieve the warehouse instance for the MCP.
-	this.core.mcpMu.Lock()
-	mcp, ok := this.core.mcp[this.workspace.ID]
-	this.core.mcpMu.Unlock()
-	if !ok {
-		return nil, errors.New("workspace not found")
-	}
-	if mcp == nil {
-		return nil, errors.New("the workspace lacks the MCP (Model Context Protocol) user configuration required to access the data warehouse")
-	}
-
-	// Execute the query on the data warehouse.
-	rows, columnCount, err := mcp.QueryReadOnly(ctx, query)
-	if err != nil {
-		return nil, err
-	}
-
-	// Build the JSON response.
-	b := json.NewBuffer()
-	defer rows.Close()
-	comma := false
-	b.WriteByte('[')
-	for rows.Next() {
-		row := make([]any, columnCount)
-		for i := range row {
-			var v any
-			row[i] = &v
-		}
-		err := rows.Scan(row...)
-		if err != nil {
-			return nil, err
-		}
-		size := b.Len()
-		if comma {
-			b.WriteByte(',')
-		}
-		err = b.Encode(row)
-		if err != nil {
-			return nil, err
-		}
-		// Truncate the response if it exceeds the limit, simultaneously
-		// returning the truncated response and an error.
-		if b.Len()+len("]") >= maxReadOnlyResponseSize {
-			b.Truncate(size)
-			b.WriteByte(']')
-			value, err := b.Value()
-			if err != nil {
-				return nil, err
-			}
-			return value, fmt.Errorf("only a subset of rows was returned because the total size exceeded the %d-byte limit", maxReadOnlyResponseSize)
-		}
-		comma = true
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	b.WriteByte(']')
-
-	value, err := b.Value()
-	if err != nil {
-		return nil, err
-	}
-
-	return value, nil
 }
 
 // Rename renames the workspace with the given new name.

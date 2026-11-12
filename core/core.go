@@ -82,14 +82,6 @@ type Core struct {
 		sync.WaitGroup
 	}
 	closed atomic.Bool
-
-	// mcp holds an instance of a warehouses.Warehouse for every workspace, and
-	// it is needed by the MCP (Model Context Protocol) server.
-	//
-	// If a workspace does not have MCP settings configured, the map has a key
-	// and the value is nil.
-	mcp   map[string]warehouses.Warehouse
-	mcpMu sync.Mutex
 }
 
 // coreActive is true while a Core instance is active.
@@ -382,31 +374,8 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 
 	core.close.ctx, core.close.cancelCtx = context.WithCancel(context.Background())
 
-	// Instantiate a warehouses.Warehouse, used by the MCP server, for every workspace.
-	core.mcp = map[string]warehouses.Warehouse{}
-	for _, ws := range core.state.Workspaces() {
-		var dw warehouses.Warehouse
-		if ws.HasWarehouseMCPSettings() {
-			dw = warehouses.Registered(ws.Warehouse.Platform).New(newMCPStateSettingsLoader(ws), dialer.DialWith(ws.Organization().ID))
-		}
-		core.mcp[ws.ID] = dw
-	}
-	defer func() {
-		if err != nil {
-			for _, mcp := range core.mcp {
-				if mcp != nil {
-					err := mcp.Close()
-					if err != nil {
-						slog.Warn("an error occurred closing the MCP warehouse connection", "error", err)
-					}
-				}
-			}
-		}
-	}()
-
 	// Listen to state changes.
 	core.state.Freeze()
-	core.state.AddListener(core.onCreateWorkspace)
 	core.state.AddListener(core.onDeleteConnection)
 	core.state.AddListener(core.onDeleteOrganization)
 	core.state.AddListener(core.onDeletePipeline)
@@ -417,7 +386,6 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 	core.state.AddListener(core.onSetOrganizationStatus)
 	core.state.AddListener(core.onStartAlterProfileSchema)
 	core.state.AddListener(core.onStartIdentityResolution)
-	core.state.AddListener(core.onUpdateWarehouse)
 	core.state.Unfreeze()
 
 	// Try to start live runs that have not started yet.
@@ -558,15 +526,6 @@ func (core *Core) Close(ctx context.Context) {
 	core.close.Wait()
 	// Close the pipeline cleaner.
 	core.pipelineCleaner.Close(context.Background())
-	// Close the MCP warehouse connections.
-	for _, mcp := range core.mcp {
-		if mcp != nil {
-			err := mcp.Close()
-			if err != nil {
-				slog.Warn("an error occurred closing the MCP warehouse connection", "error", err)
-			}
-		}
-	}
 	// Close event collector, metrics, datastore, and state.
 	core.collector.Close(ctx)
 	core.metrics.Close(context.Background())
@@ -1893,18 +1852,6 @@ func (core *Core) executeIdentityResolution(workspaceID, opID string) {
 	}
 }
 
-// onCreateWorkspace is called when a workspace is created.
-func (core *Core) onCreateWorkspace(n state.CreateWorkspace) {
-	ws, _ := core.state.Workspace(n.ID)
-	var dw warehouses.Warehouse
-	if ws.HasWarehouseMCPSettings() {
-		dw = warehouses.Registered(ws.Warehouse.Platform).New(newMCPStateSettingsLoader(ws), dialer.DialWith(ws.Organization().ID))
-	}
-	core.mcpMu.Lock()
-	core.mcp[ws.ID] = dw
-	core.mcpMu.Unlock()
-}
-
 // onDeleteConnection is called when a connection is deleted.
 func (core *Core) onDeleteConnection(n state.DeleteConnection) {
 	core.cancelConnectionLocalLiveRuns(n.Connection())
@@ -1914,7 +1861,6 @@ func (core *Core) onDeleteConnection(n state.DeleteConnection) {
 func (core *Core) onDeleteOrganization(n state.DeleteOrganization) {
 	org := n.Organization()
 	for _, ws := range org.Workspaces() {
-		core.removeMCPWarehouse(ws.ID)
 		core.cancelWorkspaceLocalLiveRuns(ws)
 	}
 }
@@ -1931,7 +1877,6 @@ func (core *Core) onDeletePipeline(n state.DeletePipeline) {
 // onDeleteWorkspace is called when a workspace is deleted.
 func (core *Core) onDeleteWorkspace(n state.DeleteWorkspace) {
 	ws := n.Workspace()
-	core.removeMCPWarehouse(n.ID)
 	core.cancelWorkspaceLocalLiveRuns(ws)
 }
 
@@ -1981,51 +1926,6 @@ func (core *Core) onStartIdentityResolution(n state.StartIdentityResolution) {
 		return
 	}
 	go core.executeIdentityResolution(n.Workspace, n.ID)
-}
-
-// onUpdateWarehouse is called when a warehouse is updated.
-func (core *Core) onUpdateWarehouse(n state.UpdateWarehouse) {
-	if !n.MCPSettingsHaveChanged() {
-		return
-	}
-	var newWarehouse, oldWarehouse warehouses.Warehouse
-	ws, _ := core.state.Workspace(n.Workspace)
-	if ws.HasWarehouseMCPSettings() {
-		// Open the new warehouse.
-		newWarehouse = warehouses.Registered(ws.Warehouse.Platform).New(newMCPStateSettingsLoader(ws), dialer.DialWith(ws.Organization().ID))
-	}
-	core.mcpMu.Lock()
-	oldWarehouse = core.mcp[n.Workspace]
-	core.mcp[n.Workspace] = newWarehouse
-	core.mcpMu.Unlock()
-	if oldWarehouse == nil {
-		return
-	}
-	// Close the old warehouse.
-	go func(workspace string) {
-		err := oldWarehouse.Close()
-		if err != nil {
-			slog.Error("core: error closing a MCP warehouse", "workspace", workspace, "error", err)
-		}
-	}(ws.ID)
-}
-
-// removeMCPWarehouse removes from core the MCP warehouse for the given
-// workspace.
-// When this method is called, the state is frozen.
-func (core *Core) removeMCPWarehouse(ws string) {
-	core.mcpMu.Lock()
-	wh, ok := core.mcp[ws]
-	delete(core.mcp, ws)
-	core.mcpMu.Unlock()
-	if ok && wh != nil {
-		go func() {
-			err := wh.Close()
-			if err != nil {
-				slog.Error("core: error closing a MCP warehouse", "workspace", ws, "error", err)
-			}
-		}()
-	}
 }
 
 // startAlterProfileSchema starts the alter of the profile schema.
@@ -2298,26 +2198,6 @@ func (s OrganizationSort) String() string {
 		return "name"
 	}
 	panic("invalid organization sort")
-}
-
-// mcpSettingsLoader is a workspaces.SettingsLoader that load the MCP settings
-// from the state.
-type mcpSettingsLoader struct {
-	ws *state.Workspace
-}
-
-func newMCPStateSettingsLoader(ws *state.Workspace) *mcpSettingsLoader {
-	return &mcpSettingsLoader{ws: ws}
-}
-
-// Load decrypts MCP settings and stores the result in the value pointed to by
-// dst. If
-func (loader *mcpSettingsLoader) Load(ctx context.Context, dst any) error {
-	s, err := loader.ws.WarehouseMCPSettings(ctx)
-	if err != nil {
-		return err
-	}
-	return json.Unmarshal(s, dst)
 }
 
 // cancelContexts tracks cancelable contexts so they can be canceled by ID.

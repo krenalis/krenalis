@@ -66,8 +66,7 @@ func TestProfilesMCP(t *testing.T) {
 	defer pool.Close()
 
 	// Publish one coherent view, with the asynchronous writer and IR inactive.
-	// The MCP role can discover countries but cannot read profile email/account
-	// or event properties. query-profiles must still use the main connection.
+	// Profile tools use the main connection without separate MCP settings.
 	_, err = pool.Exec(t.Context(), `INSERT INTO krenalis_profiles_0
  (_kpid,_updated_at,email,country,account,bio,_anonymous_count,_recognized_count)
  SELECT ('00000000-0000-0000-0000-'||lpad(n::text,12,'0'))::uuid,'2026-02-01 12:00:00.123456',
@@ -84,14 +83,12 @@ INSERT INTO krenalis_events
  SELECT _kpid,'non-track/'||event_type||'/'||_kpid,NULL,'2026-01-15','2026-02-01','2026-02-01',
  event_type::event_type,'fixture','a','{}'
  FROM profiles CROSS JOIN (VALUES ('identify'),('page'),('screen'),('group'),('alias')) types(event_type);
-CREATE ROLE mcp_profile_reader LOGIN PASSWORD 'mcp-profile-fixture';
-GRANT USAGE ON SCHEMA public TO mcp_profile_reader;
-GRANT SELECT ON krenalis_profile_schema_versions TO mcp_profile_reader;
-GRANT SELECT (_kpid,country) ON profiles TO mcp_profile_reader;`)
+`)
 	if err != nil {
-		t.Fatalf("expected coherent fixture and restricted MCP role, got %v", err)
+		t.Fatalf("expected coherent profile fixture, got %v", err)
 	}
 	var key struct {
+		ID    string `json:"id"`
 		Token string `json:"token"`
 	}
 	k.Call("POST", "/v1/keys", nil, map[string]any{"name": "Profile MCP test",
@@ -124,10 +121,7 @@ GRANT SELECT (_kpid,country) ON profiles TO mcp_profile_reader;`)
 		}
 		return result.Result.Content[0].Text
 	}
-	assertToolError(t, tool(t, "query-profiles", map[string]any{}), "MCPNotConfigured")
-	assertToolError(t, tool(t, "explain-profile-filter", map[string]any{}), "MCPNotConfigured")
-
-	// Metadata discovery needs only the scoped MCP key, not warehouse MCP settings.
+	// Metadata and profile tools share the workspace-scoped MCP key.
 	catalog := assertResult(t, tool(t, "list-event-definitions", map[string]any{"query": "ORDER COMPLETED"}))
 	var discovery struct {
 		Definitions []struct {
@@ -196,10 +190,6 @@ GRANT SELECT (_kpid,country) ON profiles TO mcp_profile_reader;`)
 	if !strings.Contains(guide, "table, column") || !strings.Contains(guide, "main virtual warehouse") {
 		t.Fatalf("expected explicit access and Snowflake documentation, got absent")
 	}
-	mcpSettings := settings
-	mcpSettings.Username, mcpSettings.Password = "mcp_profile_reader", "mcp-profile-fixture"
-	k.Call("PUT", "/v1/warehouse", nil, map[string]any{"mode": "Normal", "settings": settings,
-		"mcpSettings": mcpSettings}, nil)
 
 	// Use the discovered technical name, not the catalog ID, in an actual Count.
 	_, err = pool.Exec(t.Context(), `INSERT INTO krenalis_events
@@ -229,6 +219,68 @@ GRANT SELECT (_kpid,country) ON profiles TO mcp_profile_reader;`)
 	if !strings.Contains(defaults, `"total":4`) || strings.Contains(defaults, `"evaluation":`) {
 		t.Fatalf("expected default Record listing without evaluation, got %s", defaults)
 	}
+
+	t.Run("wrong key type", func(t *testing.T) {
+		apiToken := k.CreateWorkspaceRestrictedAPIKey("Not an MCP key")
+		wrongType := "mcp_" + strings.TrimPrefix(apiToken, "api_")
+		result := profileMCPCall(t, k.Addr(), wrongType, &session, "tools/call",
+			map[string]any{"name": "query-profiles", "arguments": map[string]any{}})
+		if result.Error == nil || result.Error.Message != "MCP key is invalid" || len(result.Result.Content) != 0 {
+			t.Fatalf("expected API-key rejection without data, got %+v", result)
+		}
+	})
+
+	t.Run("disabled organization", func(t *testing.T) {
+		organizations := k.Organizations(0, 100)
+		if len(organizations) != 1 {
+			t.Fatalf("expected one organization, got %d", len(organizations))
+		}
+		k.SetOrganizationStatus(organizations[0].ID, false)
+		defer k.SetOrganizationStatus(organizations[0].ID, true)
+		for _, name := range []string{"query-profiles", "explain-profile-filter", "profile-filter-doc"} {
+			result := tool(t, name, map[string]any{})
+			if result.Error == nil || result.Error.Message != "the organization is disabled" ||
+				len(result.Result.Content) != 0 {
+				t.Fatalf("expected disabled-organization rejection, got %+v", result)
+			}
+		}
+	})
+
+	var otherWorkspace struct {
+		ID string `json:"id"`
+	}
+	t.Run("workspace scope", func(t *testing.T) {
+		_, err := pool.Exec(t.Context(), "CREATE DATABASE test_mcp_other")
+		if err != nil {
+			t.Fatalf("expected separate workspace database, got %v", err)
+		}
+		otherSettings := settings
+		otherSettings.Database = "test_mcp_other"
+		schema := types.Object([]types.Property{{Name: "email", Type: types.String(), ReadOptional: true}})
+		k.Call("POST", "/v1/workspaces", http.Header{"Krenalis-Workspace": nil}, map[string]any{
+			"name": "Other MCP workspace", "profileSchema": schema,
+			"warehouse":     map[string]any{"platform": "PostgreSQL", "settings": otherSettings},
+			"uiPreferences": krenalistester.UIPreferences{},
+		}, &otherWorkspace)
+		var otherKey struct {
+			Token string `json:"token"`
+		}
+		k.Call("POST", "/v1/keys", nil, map[string]any{"name": "Other MCP test",
+			"workspace": otherWorkspace.ID, "type": "MCP"}, &otherKey)
+		otherSession := ""
+		profileMCPCall(t, k.Addr(), otherKey.Token, &otherSession, "initialize", map[string]any{
+			"protocolVersion": "2024-11-05", "capabilities": map[string]any{},
+			"clientInfo": map[string]any{"name": "Other MCP test", "version": "1"},
+		})
+		result := profileMCPCall(t, k.Addr(), otherKey.Token, &otherSession, "tools/call",
+			map[string]any{"name": "query-profiles", "arguments": map[string]any{}})
+		text := assertResult(t, result)
+		if !strings.Contains(text, `"profiles":[]`) || !strings.Contains(text, `"total":0`) {
+			t.Fatalf("expected only the empty second workspace, got %s", text)
+		}
+		assertToolError(t, tool(t, "query-profiles", map[string]any{"workspace": otherWorkspace.ID}), "InvalidArguments")
+	})
+
 	invalidToken := "mcp_" + strings.Repeat("1", len(token)-4)
 	rejected := profileMCPCall(t, k.Addr(), invalidToken, &session, "tools/call",
 		map[string]any{"name": "query-profiles", "arguments": map[string]any{}})
@@ -1939,13 +1991,6 @@ UPDATE krenalis_events SET properties=jsonb_set(properties,'{coupon}','"PROMO"')
 
 	})
 
-	// The SQL tool still uses the restricted connection, unlike query-profiles.
-	assertResult(t, tool(t, "query-data-warehouse", map[string]any{"query": "SELECT country FROM profiles"}))
-	denied := tool(t, "query-data-warehouse", map[string]any{"query": "SELECT email FROM profiles"})
-	if denied.Error == nil || len(denied.Result.Content) != 0 {
-		t.Fatalf("expected SQL permission failure without data, got %+v", denied)
-	}
-
 	for _, test := range []struct {
 		name string
 		args any
@@ -1995,15 +2040,6 @@ UPDATE krenalis_events SET properties=jsonb_set(properties,'{coupon}','"PROMO"')
 		assertResult(t, tool(t, "query-profiles", args))
 	}
 
-	// Removing the configuration revokes subsequent admissions. Metadata remains
-	// accessible, and SQL retains its own missing-configuration behavior.
-	k.Call("PUT", "/v1/warehouse", nil, map[string]any{"mode": "Normal", "settings": settings}, nil)
-	assertToolError(t, tool(t, "query-profiles", map[string]any{"filter": count}), "MCPNotConfigured")
-	assertToolError(t, tool(t, "explain-profile-filter", map[string]any{"filter": count}), "MCPNotConfigured")
-	assertResult(t, tool(t, "profile-filter-doc", map[string]any{}))
-	k.Call("PUT", "/v1/warehouse", nil, map[string]any{"mode": "Normal", "settings": settings,
-		"mcpSettings": mcpSettings}, nil)
-
 	// A failed query is an opaque operation failure, never UNKNOWN or partial data.
 	_, err = pool.Exec(t.Context(), "ALTER TABLE krenalis_events RENAME TO hidden_event_fixture")
 	if err != nil {
@@ -2029,6 +2065,16 @@ UPDATE krenalis_events SET properties=jsonb_set(properties,'{coupon}','"PROMO"')
 		failed.Error.Message != "cmd/internal/mcp: profile query failed" {
 		t.Fatalf("expected opaque Record failure without warehouse details, got %+v", failed)
 	}
+
+	t.Run("revoked key in existing session", func(t *testing.T) {
+		k.Call("DELETE", "/v1/keys/"+key.ID, nil, nil, nil)
+		for _, name := range []string{"query-profiles", "explain-profile-filter", "list-event-definitions"} {
+			result := tool(t, name, map[string]any{})
+			if result.Error == nil || result.Error.Message != "MCP key is invalid" || len(result.Result.Content) != 0 {
+				t.Fatalf("expected revoked-key rejection without data, got %+v", result)
+			}
+		}
+	})
 
 }
 

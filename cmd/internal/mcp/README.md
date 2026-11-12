@@ -2,16 +2,15 @@
 
 `query-profiles` calls `Workspace.QueryProfiles`, with the same Record/Count/Sum/Average
 document and execution path as `GET /v1/profiles`. `profile-filter-doc` exposes
-the supported syntax, examples and limitations to the model. The existing SQL
-tool remains available for discovery and other analysis. Server instructions
-direct profile/segment questions to Unified and prohibit SQL fallback for
-unavailable filtering capabilities.
+the supported syntax, examples and limitations to the model. The server does not
+execute client-supplied SQL. Profile and segment questions use Unified filters;
+unavailable capabilities must be reported without a fallback query language.
 
 `explain-profile-filter` calls `Workspace.ExplainProfileFilter`, also available as
 `GET /v1/profiles/{kpid}/filter-explanation`. It accepts `kpid`, JSON-text `filter`
 and optional `at`, and returns the ordered rule tree with ternary outcomes and
-resolved periods, occurrence counters and monetary bounds. It uses the same MCP
-enablement and unrestricted main connection as `query-profiles`. No event payloads are returned. It is a new
+resolved periods, occurrence counters and monetary bounds. It uses the same workspace-scoped MCP key and main connection as
+`query-profiles`. No event payloads are returned. It is a new
 evaluation, not a snapshot or an alternative segment-membership policy; all
 explanations remain unavailable on the unverified Snowflake backend.
 
@@ -30,7 +29,7 @@ case-insensitive substring search (256 UTF-8 bytes). `get-event-definition`
 accepts an exact ID and returns the native traits/properties schemas with
 descriptions and units. Both call `core.Workspace`, not internal state or the
 warehouse, and use the usual workspace MCP authentication and rate limit.
-MCP warehouse settings are not required for catalog access.
+The workspace-scoped MCP key also grants catalog access.
 
 Arguments must be an object of at most 2 KiB, with only string `query` (list)
 or `id` (get); null and unknown arguments are rejected. Results are complete
@@ -49,22 +48,32 @@ The catalog does not change invalid-event handling or ingestion conversions.
 
 ## Access and connections
 
-A workspace-scoped MCP key, enabled organization, request rate capacity and
-configured MCP warehouse settings are required. Removing those settings disables
-new profile requests. This does not terminate an already admitted query.
+A valid workspace-scoped MCP key, enabled organization and rate capacity are
+required. Profile tools use the main Krenalis datastore and its warehouse mode
+checks. They require no separate warehouse credentials or workspace enablement
+switch. Revoking a key blocks subsequent tool calls, including those made in an
+already initialized MCP session; it does not terminate a previously admitted query.
 
-The settings are an **enablement condition** for `query-profiles`. Execution uses
-the main Krenalis datastore, connection and warehouse mode checks. The separate
-MCP database credentials are used only by `query-data-warehouse`: their table,
-column, row or other database restrictions do not constrain profile queries or
-the event properties used in their predicates. Administrators must account for
-this when enabling MCP access. This change does not grant write tools or accept
-user-supplied SQL through the profile path.
+## Compatibility and data access
 
-On Snowflake this also selects the main virtual warehouse instead of the one
-possibly configured for MCP. Record-only queries use the existing Record path.
-Count, Sum and Average preserve the unverified-backend gate and return an actionable capability
-error. Local tests do not establish Snowflake runtime conformance.
+The SQL tool has been removed. Existing MCP keys retain their workspace scope
+and can query profiles even if warehouse MCP settings were never configured.
+Former read-only credentials and their table, column, row or other warehouse
+restrictions no longer constrain MCP profile data access. This also affects keys
+whose SQL access was restricted by GRANT: profile queries now read all requested
+profile properties and supported event conditions through the main connection.
+Administrators must review existing MCP keys when upgrading and revoke keys that
+should no longer have this access. No new key is created or re-scoped automatically.
+
+On Snowflake this selects the main virtual warehouse. Record-only queries use the
+existing Record path. Behavioral queries and explanations retain the unverified
+backend gate and return an actionable capability error. Local tests do not
+establish Snowflake runtime conformance.
+
+The event catalog describes known definitions, not all event names or JSON values
+actually recorded in a workspace. Ask the user about custom names and fields
+absent from the catalog. A dedicated discovery tool is a separate pre-release
+planning item, not a capability provided by SQL or inferred from schema metadata.
 
 ## Transport and limits
 
@@ -109,8 +118,7 @@ retain their deterministic tie-break, not a new Record sorting contract.
 
 `BadRequestError` and `UnprocessableError` become bounded actionable tool errors
 with their classification/code. Technical execution errors are opaque operation
-failures without profile data. The profile path does not reuse the old SQL tool's
-partial-result handling.
+failures without profile data. Profile results are complete or an error, never truncated partial success.
 
 Count accepts an explicit `currencyField` meaning reference paired with
 `nativeCurrency`; only `commerce.order_completed.currency` revision 1 for

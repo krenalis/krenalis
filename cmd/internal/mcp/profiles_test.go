@@ -101,18 +101,21 @@ func TestQueryProfilesToolMetadata(t *testing.T) {
 			tool.Annotations.DestructiveHint == nil || *tool.Annotations.DestructiveHint {
 			t.Fatalf("expected read-only non-destructive tool, got %+v", tool.Annotations)
 		}
-		for _, text := range []string{"main Krenalis connection", "table/column permissions", "main virtual warehouse"} {
+		for _, text := range []string{"workspace-scoped MCP key", "main Krenalis connection", "table/column permissions", "main virtual warehouse"} {
 			if !strings.Contains(tool.Description, text) {
 				t.Fatalf("expected access description to contain %q, got %q", text, tool.Description)
 			}
 		}
 	}
 	for _, name := range []string{
-		"query-profiles", "explain-profile-filter", "profile-filter-doc", "query-data-warehouse",
+		"query-profiles", "explain-profile-filter", "profile-filter-doc",
 	} {
 		if !found[name] {
 			t.Fatalf("expected tool %s, got absent", name)
 		}
+	}
+	if found["query-data-warehouse"] {
+		t.Fatal("expected SQL tool absent, got registered")
 	}
 	for _, text := range []string{"query-profiles", "profile-filter-doc", "Never use SQL to emulate"} {
 		if !strings.Contains(serverInstructions, text) {
