@@ -50,7 +50,15 @@ func (c *compiler) monetaryPopulation(node *warehouses.IndependentOccurrenceSum)
 	if !node.UnboundedStart {
 		within = q(node.Source.Timestamp.Name) + ">=(SELECT lower_bound FROM bounds" + n + ") AND " + within
 	}
-	table, id, profile := q(node.Source.Table), q(node.Source.Identity.Name), q(node.Source.Profile.Name)
+	table, profile := q(node.Source.Table), q(node.Source.Profile.Name)
+	id, err := c.dialect.ExactText(node.Source.Identity)
+	if err != nil {
+		return "", err
+	}
+	occurrenceID, err := c.dialect.ExactText(warehouses.Column{Name: "occurrence_id", Type: node.Source.Identity.Type})
+	if err != nil {
+		return "", err
+	}
 	profileOnly, identityProfile := "", ""
 	if c.profile != "" {
 		profileOnly = " AND CAST(" + profile + " AS VARCHAR(36))=" + c.profile
@@ -66,7 +74,7 @@ func (c *compiler) monetaryPopulation(node *warehouses.IndependentOccurrenceSum)
 		"CASE WHEN "+within+" THEN 1 ELSE 0 END AS in_period,"+
 		"CASE WHEN "+within+" THEN ("+qual+") ELSE CAST(NULL AS BOOLEAN) END AS qualification,"+
 		q(node.Value.Column.Name)+" AS sum_value FROM "+table+
-		" WHERE "+id+" IN (SELECT occurrence_id FROM ids"+n+"))")
+		" WHERE "+id+" IN (SELECT "+occurrenceID+" FROM ids"+n+"))")
 	c.ctes = append(c.ctes, "reads"+n+" AS (SELECT profile_id,occurrence_id,in_period,qualification,"+
 		"CASE WHEN in_period=1 AND qualification IS DISTINCT FROM FALSE THEN ("+value+") END AS amount FROM copies"+n+")")
 	state := "CASE WHEN qualification=TRUE THEN 1 WHEN qualification=FALSE THEN 0 ELSE 2 END"
@@ -96,7 +104,7 @@ func (c *compiler) monetaryPopulation(node *warehouses.IndependentOccurrenceSum)
  THEN 1 ELSE 0 END),0) FROM facts`+n+`)
  +(SELECT COUNT(*) FROM cnt`+n+` WHERE occurrences>9223372036854775807)
  +(SELECT COUNT(*) FROM `+table+" WHERE "+within+profileOnly+
-		" AND "+profile+" IS NOT NULL AND "+id+" IS NULL) AS failures)")
+		" AND "+profile+" IS NOT NULL AND "+q(node.Source.Identity.Name)+" IS NULL) AS failures)")
 	c.faults = append(c.faults, "fault"+n)
 	alias := "v" + n
 	c.joins = append(c.joins, "LEFT JOIN cnt"+n+" "+alias+" ON "+alias+".profile_id=p."+q("$profile_id"))

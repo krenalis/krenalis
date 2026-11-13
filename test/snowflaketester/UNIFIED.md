@@ -1159,8 +1159,89 @@ For the LA supplement, use the LA overlay, the same two tags and:
 Local isolated mutants replacing native array emptiness with `length=0`,
 inverting native absence, and restoring the old composition input all fail
 the new tests. The last is a fixture mutation, not a production-code mutation.
-Message-identity collation (N1) remains separate work below. No Record
+Message-identity collation (N1) was separate from this follow-up; its reader
+correction and evidence are recorded below. No Record
 renderer behavior or public filter admission changed; the gate stays false.
+
+## Literal message identities (N1)
+
+The shared compiler now fixes the collation of message identity in Count,
+Sum/Average, First/Last/Nth, Latest N and LastVersusPrevious. Exact expressions
+are used in identity projections and on both sides of each identity `IN`,
+including the target-profile explanation seed. The derived grouping therefore
+keeps byte-distinct IDs separate. NULL diagnostics, genuine-copy deduplication,
+source fault rules, profile UUID comparisons and user Record rendering are
+unchanged. Query SQL changes intentionally; timestamp arguments do not.
+
+`TestUnifiedIdentityPostgreSQL/Snowflake` shares ten cases under PostgreSQL
+non-deterministic ICU and Snowflake `en-ci-rtrim`. Controlled DML, rather than
+Merge, preserves every physical fixture row, and a row count checks this before
+each read. Cases cover case variants, trailing space, composed/decomposed
+Unicode, determined order and ties, identical copies, distinct profile/period/
+qualification, real copy conflicts and another profile's fault. Each complete
+explanation checks all nine nodes and applicable counts, exact sums, Average
+inputs, candidate/absence and pair metadata. Both profiles are explained in
+non-fault cases. The isolated target explanation succeeds even when the full
+population query fails for the other profile's genuine fault.
+
+Live evidence is in `/private/tmp/krenalis-identity-verify-r6psxclh/`, using the
+standard test-only gate/session/result overlays. The source base is `8b37e061f`
+plus the four compiler changes and three new test files, hashed in the manifests.
+No driver or session change is part of production code.
+
+| Run | Result | Marked SELECTs |
+| --- | --- | --- |
+| `local-unit-complete` | 673 PASS with race detection | Local profile compiler, SQL and read tests; the two remote tests matched by the broad prefix are excluded explicitly. |
+| `postgresql-regression` | 527 PASS with race detection | Local Identity, Conformance, RecordSources, Source, ProfileRecord and Pages groups. |
+| `utc` | 11 PASS | 10 query and 17 explanation SELECTs, all observed Arrow. |
+| `la` | 4 PASS | Two identity cases, their parent and a private DDL probe; 2 query and 4 explanation SELECTs, all observed Arrow. |
+| `inventory/inventory` | 1 PASS | Three owned schemas created/dropped, none remaining; 23 other test schemas visible. |
+
+UTC has two verified sessions; LA has four, including the private DDL probe.
+All use NTZ/AUTO, 60-second statement limits and requested ARROW. The schema
+audit also includes local mutants and plan probes, which create no Snowflake
+objects. No resource-monitor or credit configuration changed.
+
+Repeat the identity tests with fresh logs after loading the authorized test
+environment, without printing its values:
+
+```sh
+python3 -B test/snowflaketester/prepare.py "$campaign_dir/identity-utc" --timezone UTC --result-format ARROW
+KRENALIS_SKIP_SNOWFLAKE_TESTS=false python3 test/snowflaketester/run.py --require-schemas \
+  --require-session-timezone UTC --require-session-profile standard --require-result-format arrow \
+  --require-result-tag krenalis-transport/record-query \
+  --require-result-tag krenalis-transport/record-explanation "$campaign_dir/identity-utc.jsonl" -- \
+  -overlay "$campaign_dir/identity-utc/overlay.json" ./core/internal/datastore -race \
+  -run '^TestUnifiedIdentitySnowflake$' -timeout=8m
+```
+
+The reduced LA identity selection is
+`^TestUnifiedIdentitySnowflake$/^(tied_identities|other_profile_fault)$`, with
+the LA overlay and required timezone. Its repeat does not include the private
+DDL probe, so it produces three passing nodes rather than four.
+
+Four local mutants restore native identity independently in each compiler
+constructor; the PostgreSQL fixture detects all four. A fifth restores only
+the native left operand of the copies `IN`; the mirrored SQL contract test
+detects that partial form. This last check is structural, not a claim that the
+PostgreSQL integration fixture rejects every partially collated expression.
+
+A private PostgreSQL EXPLAIN/ANALYZE comparison used 128 profiles and 16,384
+events with a deterministic non-C identity index. The parent explanation used
+128 primary-key searches; the corrected explanation scanned the event table.
+Observed server execution was 2.424 ms versus 3.826 ms. These are single smoke
+observations, not production performance estimates or a reason to weaken
+identity semantics.
+
+The private DDL probe also confirmed an activation issue outside this reader
+fix. Under schema default `en-ci-rtrim`, an unspecified column collation and
+`COLLATE ''` both inherit the non-binary setting; explicit `COLLATE 'utf8'`
+keeps case-distinct IDs separate. INFORMATION_SCHEMA.COLUMNS.COLLATION_NAME
+reported those settings. Changing the inherited column to an uncollated
+VARCHAR with ALTER COLUMN was rejected with code 040053, incompatible collations.
+This does not establish a general migration procedure. Merge and identity
+resolution SQL remain outside this correction and need a separate decision
+before activation, as listed below. The production gate stays false.
 
 ## Coverage still required before activation
 
@@ -1180,12 +1261,14 @@ In particular, the following work remains explicit:
 - Further scan/iteration/close failures, malformed/oversized results, additional
   timestamp precisions, session changes and a small scale/resource smoke test.
   Running-query timeout/cancellation evidence is recorded separately below.
-- Resolve non-binary message-identity collation (review N1): source type/name
-  selectors are now literal, but DISTINCT, IN and GROUP BY still inherit the
-  `message_id` column collation. Distinct spellings can collapse or produce a
-  spurious copy conflict. A detected copy conflict is a technical failure,
-  not semantic UNKNOWN. This belongs to the identity/fault block and is not
-  corrected by the Record state tests.
+- Decide how managed identity columns retain literal identity in writes and
+  attribution under non-binary collation, including existing warehouses.
+  The N1 reader correction above prevents query-side identity merging, but
+  does not repair Merge or identity-resolution comparisons, or recover rows
+  already replaced. Both are pre-existing behavior outside Unified; a schema
+  guarantee with detection or explicit local corrections remains a separate
+  product/upgrade decision before activation. A detected copy conflict is a
+  technical failure, not semantic UNKNOWN.
 - Timestamp input formats beyond AUTO and environment-level resource controls.
   UTC and America/Los_Angeles with NTZ/AUTO and per-session 60-second statement
   limits are covered above; these runs do not verify resource-monitor policies

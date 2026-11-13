@@ -68,7 +68,15 @@ func (c *compiler) selection(node *warehouses.SelectedOccurrence, size int, acce
 	if !node.UnboundedStart {
 		within = timestamp + ">=(SELECT lower_bound FROM bounds" + n + ") AND " + within
 	}
-	table, id, profile := q(node.Source.Table), q(node.Source.Identity.Name), q(node.Source.Profile.Name)
+	table, profile := q(node.Source.Table), q(node.Source.Profile.Name)
+	id, err := c.dialect.ExactText(node.Source.Identity)
+	if err != nil {
+		return "", err
+	}
+	occurrenceID, err := c.dialect.ExactText(warehouses.Column{Name: "occurrence_id", Type: node.Source.Identity.Type})
+	if err != nil {
+		return "", err
+	}
 	profileOnly, identityProfile := "", ""
 	if c.profile != "" {
 		profileOnly = " AND CAST(" + profile + " AS VARCHAR(36))=" + c.profile
@@ -84,7 +92,7 @@ func (c *compiler) selection(node *warehouses.SelectedOccurrence, size int, acce
 		timestamp+" AS event_time,CASE WHEN "+within+" THEN 1 ELSE 0 END AS in_period,"+
 		"CASE WHEN "+within+" THEN ("+qual+") ELSE CAST(NULL AS BOOLEAN) END AS qualification,"+
 		"CASE WHEN "+within+" THEN ("+verify+") ELSE CAST(NULL AS BOOLEAN) END AS verification FROM "+table+
-		" WHERE "+id+" IN (SELECT occurrence_id FROM ids"+n+"))")
+		" WHERE "+id+" IN (SELECT "+occurrenceID+" FROM ids"+n+"))")
 	extreme, direction := "MAX", ">="
 	if node.First {
 		extreme, direction = "MIN", "<="
@@ -144,7 +152,7 @@ func (c *compiler) selection(node *warehouses.SelectedOccurrence, size int, acce
  (profiles>1 OR period_min<>period_max OR missing_times<>0 OR (time_min<>time_max AND state_max<>0)
  OR state_min<>state_max OR verify_min<>verify_max) THEN 1 ELSE 0 END),0) FROM facts`+n+`)
  +(SELECT COUNT(*) FROM selected`+n+` WHERE candidates>9223372036854775807)
- +(SELECT COUNT(*) FROM `+table+" WHERE (("+within+" AND "+id+" IS NULL) OR ("+
+ +(SELECT COUNT(*) FROM `+table+" WHERE (("+within+" AND "+q(node.Source.Identity.Name)+" IS NULL) OR ("+
 		timestamp+" IS NULL AND ("+faultQual+") IS DISTINCT FROM FALSE)) AND "+profile+
 		" IS NOT NULL"+profileOnly+") AS failures)")
 	c.faults = append(c.faults, "fault"+n)

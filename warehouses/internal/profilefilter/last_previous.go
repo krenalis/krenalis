@@ -58,7 +58,15 @@ func (c *compiler) lastPrevious(node *warehouses.LastPreviousDifference) (string
 	if !node.UnboundedStart {
 		within = timestamp + ">=(SELECT lower_bound FROM bounds" + n + ") AND " + within
 	}
-	table, id, profile := q(node.Source.Table), q(node.Source.Identity.Name), q(node.Source.Profile.Name)
+	table, profile := q(node.Source.Table), q(node.Source.Profile.Name)
+	id, err := c.dialect.ExactText(node.Source.Identity)
+	if err != nil {
+		return "", err
+	}
+	occurrenceID, err := c.dialect.ExactText(warehouses.Column{Name: "occurrence_id", Type: node.Source.Identity.Type})
+	if err != nil {
+		return "", err
+	}
 	profileOnly, identityProfile := "", ""
 	if c.profile != "" {
 		profileOnly = " AND CAST(" + profile + " AS VARCHAR(36))=" + c.profile
@@ -72,7 +80,7 @@ func (c *compiler) lastPrevious(node *warehouses.LastPreviousDifference) (string
 	c.ctes = append(c.ctes, "copies"+n+" AS (SELECT "+profile+" AS profile_id,"+id+" AS occurrence_id,"+
 		timestamp+" AS event_time,CASE WHEN "+within+" THEN 1 ELSE 0 END AS in_period,"+
 		"CASE WHEN "+within+" THEN ("+qual+") ELSE CAST(NULL AS BOOLEAN) END AS qualification,"+
-		q(node.Value.Column.Name)+" AS pair_value FROM "+table+" WHERE "+id+" IN (SELECT occurrence_id FROM ids"+n+"))")
+		q(node.Value.Column.Name)+" AS pair_value FROM "+table+" WHERE "+id+" IN (SELECT "+occurrenceID+" FROM ids"+n+"))")
 	c.ctes = append(c.ctes, "reads"+n+" AS (SELECT profile_id,occurrence_id,event_time,in_period,qualification,"+
 		"CASE WHEN in_period=1 AND qualification IS DISTINCT FROM FALSE THEN ("+amount+") END AS amount FROM copies"+n+")")
 	state := "CASE WHEN qualification=TRUE THEN 1 WHEN qualification=FALSE THEN 0 ELSE 2 END"
@@ -156,7 +164,7 @@ func (c *compiler) lastPrevious(node *warehouses.LastPreviousDifference) (string
  OR state_min<>state_max OR known_min<>known_max OR amount_min<>amount_max) THEN 1 ELSE 0 END),0) FROM facts`+n+`)
  +(SELECT COUNT(*) FROM selected`+n+` WHERE candidates>9223372036854775807
  OR (candidates>0 AND unknowns=0 AND (lo IS NULL OR hi IS NULL OR lo>hi)))
- +(SELECT COUNT(*) FROM `+table+" WHERE (("+within+" AND "+id+" IS NULL) OR ("+
+ +(SELECT COUNT(*) FROM `+table+" WHERE (("+within+" AND "+q(node.Source.Identity.Name)+" IS NULL) OR ("+
 		timestamp+" IS NULL AND ("+faultQual+") IS DISTINCT FROM FALSE)) AND "+profile+
 		" IS NOT NULL"+profileOnly+") AS failures)")
 	c.faults = append(c.faults, "fault"+n)

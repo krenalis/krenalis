@@ -97,7 +97,15 @@ func (c *compiler) count(node *warehouses.IndependentOccurrenceCount) (string, e
 	if !node.UnboundedStart {
 		within = q(node.Source.Timestamp.Name) + ">=(SELECT lower_bound FROM bounds" + n + ") AND " + within
 	}
-	table, id, profile := q(node.Source.Table), q(node.Source.Identity.Name), q(node.Source.Profile.Name)
+	table, profile := q(node.Source.Table), q(node.Source.Profile.Name)
+	id, err := c.dialect.ExactText(node.Source.Identity)
+	if err != nil {
+		return "", err
+	}
+	occurrenceID, err := c.dialect.ExactText(warehouses.Column{Name: "occurrence_id", Type: node.Source.Identity.Type})
+	if err != nil {
+		return "", err
+	}
 
 	// Seed identities by period, then inspect all copies, including those outside
 	// it. Grouping by (profile,identity) or filtering the copies first would hide
@@ -113,7 +121,7 @@ func (c *compiler) count(node *warehouses.IndependentOccurrenceCount) (string, e
 	c.ctes = append(c.ctes, "copies"+n+" AS (SELECT "+profile+" AS profile_id,"+id+" AS occurrence_id,"+
 		"CASE WHEN "+within+" THEN 1 ELSE 0 END AS in_period,"+
 		"CASE WHEN "+within+" THEN ("+qual+") ELSE CAST(NULL AS BOOLEAN) END AS qualification FROM "+table+
-		" WHERE "+id+" IN (SELECT occurrence_id FROM ids"+n+"))")
+		" WHERE "+id+" IN (SELECT "+occurrenceID+" FROM ids"+n+"))")
 	state := "CASE WHEN qualification=TRUE THEN 1 WHEN qualification=FALSE THEN 0 ELSE 2 END"
 	c.ctes = append(c.ctes, "facts"+n+` AS (SELECT occurrence_id,
  MIN(CAST(profile_id AS VARCHAR(36))) AS profile_id,
@@ -136,7 +144,7 @@ func (c *compiler) count(node *warehouses.IndependentOccurrenceCount) (string, e
  (profiles>1 OR period_min<>period_max OR state_min<>state_max) THEN 1 ELSE 0 END),0) FROM facts`+n+`)
  +(SELECT COUNT(*) FROM cnt`+n+` WHERE lo>9223372036854775807 OR hi>9223372036854775807)
  +(SELECT COUNT(*) FROM `+table+" WHERE "+within+profileOnly+
-		" AND "+profile+" IS NOT NULL AND "+id+" IS NULL) AS failures)")
+		" AND "+profile+" IS NOT NULL AND "+q(node.Source.Identity.Name)+" IS NULL) AS failures)")
 	c.faults = append(c.faults, "fault"+n)
 	alias := "v" + n
 	c.joins = append(c.joins, "LEFT JOIN cnt"+n+" "+alias+" ON "+alias+".profile_id=p."+q("$profile_id"))

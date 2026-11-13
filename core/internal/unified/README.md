@@ -71,7 +71,10 @@ property-reference comparison or a governed current-profile dependency.
   is **registered-message**, not business Order identity. Different message IDs
   with identical payloads remain different occurrences. Duplicate source-view
   join rows with the same identity and relevant state are deduplicated before
-  counting. Source conflicts are execution errors under this determined-identity
+  counting. Message identity is byte for byte, independently of native column
+  collation: both identity projections and both sides of identity `IN` tests
+  use the dialect's exact-text expression, including explanation seeds.
+  Source conflicts are execution errors under this determined-identity
   contract, not a general policy for semantic identity uncertainty.
 - Track event-name equality retains its local nullable qualifier. Page/screen
   sources select their type and optionally the recorded `name`. Named sources
