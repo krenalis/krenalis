@@ -297,8 +297,6 @@ func toString(v any, t types.Type) string {
 		return v.(time.Time).Format(time.DateOnly)
 	case types.TimeKind:
 		return v.(time.Time).Format("15:04:05.999999999Z07:00")
-	case types.YearKind:
-		return strconv.Itoa(v.(int))
 	case types.JSONKind:
 		return string(v.(json.Value))
 	case types.ArrayKind, types.ObjectKind, types.MapKind:
