@@ -22,7 +22,6 @@ var goTestFlags = []string{
 	"-count",
 	"1",
 	"-failfast",
-	"-v",
 	// It is important to specify a timeout, because otherwise 'go test'
 	// has a default timeout of 10 minutes (see 'go help testflag'),
 	// which may not be sufficient to run all the tests inside "/test".
@@ -126,11 +125,31 @@ func main() {
 		if cliOptions.short {
 			args = append(args, "-short")
 		}
+		// In the case of -concurrent, we want to minimize noise in the output;
+		// in other cases, since the tests are executed sequentially, the output
+		// printed by -v is convenient and informative.
+		if !cliOptions.concurrent {
+			args = append(args, "-v")
+		}
+		var pkgPaths []string
 		for _, pkg := range packages {
 			if cliOptions.noConnectorTests && strings.HasPrefix(pkg, "connectors"+string(os.PathSeparator)) {
 				continue // skip this package.
 			}
+			// With -concurrent, collect the packages to test them with a single
+			// 'go test' command.
+			if cliOptions.concurrent {
+				pkgPaths = append(pkgPaths, "./"+filepath.ToSlash(pkg))
+				continue
+			}
 			cmd := NewCmd("go", args...).InDir(repo, pkg)
+			if cliOptions.noSnowflakeTests {
+				cmd = cmd.WithEnv("KRENALIS_SKIP_SNOWFLAKE_TESTS", "true")
+			}
+			cmd.Run()
+		}
+		if cliOptions.concurrent {
+			cmd := NewCmd("go", append(args, pkgPaths...)...).InDir(repo)
 			if cliOptions.noSnowflakeTests {
 				cmd = cmd.WithEnv("KRENALIS_SKIP_SNOWFLAKE_TESTS", "true")
 			}
@@ -142,6 +161,7 @@ func main() {
 }
 
 type cliOptions struct {
+	concurrent       bool
 	justTestAdmin    bool
 	noConnectorTests bool
 	noSnowflakeTests bool
@@ -151,6 +171,7 @@ type cliOptions struct {
 
 func parseCli() cliOptions {
 
+	var concurrent bool
 	var justTestAdmin bool
 	var noGoTest bool
 	var printHelp bool
@@ -162,6 +183,8 @@ func parseCli() cliOptions {
 		" so some parts of the software and/or changes made may not be validated " +
 		"when running the script with this option"
 
+	flag.BoolVar(&concurrent, "concurrent", false, "run the Go test packages in parallel,"+
+		" with a single 'go test' command. Only the packages that fail print their output. Experimental")
 	flag.BoolVar(&justTestAdmin, "just-test-admin", false, "just regenerate the Admin files and run the Go tests"+
 		" on the Admin console. "+reducedTestSetWarning)
 	flag.BoolVar(&noConnectorTests, "no-connector-tests", false, "do not run 'go test' within the 'connectors' directory. "+reducedTestSetWarning)
@@ -200,16 +223,19 @@ func parseCli() cliOptions {
 	}
 
 	// Flags incompatible with '--just-test-admin'.
+	mutualExclusive(justTestAdmin, concurrent, "-just-test-admin", "-concurrent")
 	mutualExclusive(justTestAdmin, noConnectorTests, "-just-test-admin", "-no-connector-tests")
 	mutualExclusive(justTestAdmin, noGoTest, "-just-test-admin", "-no-go-test")
 	mutualExclusive(justTestAdmin, short, "-just-test-admin", "-short")
 	mutualExclusive(justTestAdmin, noSnowflakeTests, "-just-test-admin", "-no-snowflake-tests")
 	// Flags incompatible with '--no-go-test'.
+	mutualExclusive(noGoTest, concurrent, "-no-go-test", "-concurrent")
 	mutualExclusive(noGoTest, short, "-no-go-test", "-short")
 	mutualExclusive(noGoTest, noConnectorTests, "-no-go-test", "-no-connector-tests")
 	mutualExclusive(noGoTest, noSnowflakeTests, "-no-go-test", "-no-snowflake-tests")
 
 	return cliOptions{
+		concurrent:       concurrent,
 		justTestAdmin:    justTestAdmin,
 		noConnectorTests: noConnectorTests,
 		noSnowflakeTests: noSnowflakeTests,
@@ -314,7 +340,7 @@ func runGoTestAdmin(repo string) {
 	NewCmd("npm", "run", "minify-snippet").InDir(repo, "admin").Run()
 	NewCmd("npm", "run", "makevendor").InDir(repo, "admin").Run()
 	start := time.Now()
-	args := append([]string{"test", "-run", "^TestAdmin$", "github.com/krenalis/krenalis/test"}, goTestFlags...)
+	args := append([]string{"test", "-v", "-run", "^TestAdmin$", "github.com/krenalis/krenalis/test"}, goTestFlags...)
 	NewCmd("go", args...).Run()
 	elapsed := time.Since(start)
 	if elapsed < 2*time.Second {
