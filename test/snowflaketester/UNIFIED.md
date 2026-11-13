@@ -1225,6 +1225,8 @@ constructor; the PostgreSQL fixture detects all four. A fifth restores only
 the native left operand of the copies `IN`; the mirrored SQL contract test
 detects that partial form. This last check is structural, not a claim that the
 PostgreSQL integration fixture rejects every partially collated expression.
+Claude's independent run of this specific partial mutant also fails in the
+PostgreSQL fixture with SQLSTATE 42P22. Its Snowflake behavior is not verified.
 
 A private PostgreSQL EXPLAIN/ANALYZE comparison used 128 profiles and 16,384
 events with a deterministic non-C identity index. The parent explanation used

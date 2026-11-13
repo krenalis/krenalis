@@ -17,7 +17,6 @@ import (
 
 // TestProfileIdentitySQL keeps identity comparisons literal across CTEs.
 func TestProfileIdentitySQL(t *testing.T) {
-
 	end := time.Date(2026, 2, 1, 0, 0, 0, 123456000, time.UTC)
 	source := warehouses.OccurrenceSource{Table: "events",
 		Profile:   warehouses.Column{Name: "kpid", Type: types.UUID()},
@@ -38,7 +37,6 @@ func TestProfileIdentitySQL(t *testing.T) {
 		{"pair", &warehouses.LastPreviousDifference{Source: source, Start: end.Add(-time.Hour), End: end, Value: reading, Threshold: &threshold}},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-
 			filter := warehouses.Filter{Root: test.node}
 			query, err := profilefilter.Build(filter, request, profileFilterDialect())
 			if err != nil {
@@ -75,8 +73,6 @@ func TestProfileIdentitySQL(t *testing.T) {
 					t.Fatalf("expected two exact timestamps after %d target arguments, got %v", i, values)
 				}
 			}
-
 		})
 	}
-
 }
