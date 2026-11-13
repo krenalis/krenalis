@@ -190,7 +190,9 @@ test(`Close an empty filter after clearing its placeholder property`, async ({ p
 		await expect(property).not.toHaveClass(/combobox--open/);
 		await expect(editor).toBeVisible();
 		if (closeWith === 'Escape') {
-			await input.press('Escape');
+			await editor.click({ position: { x: 8, y: 8 } });
+			await expect(editor).toBeFocused();
+			await page.keyboard.press('Escape');
 		} else {
 			await filters.getByRole('button', { name: 'Collapse', exact: true }).click();
 		}
@@ -317,7 +319,7 @@ for (const { platform, modifier, shortcut } of [
 	{ platform: 'MacIntel', modifier: 'Meta', shortcut: '⌘ + Enter' },
 	{ platform: 'Win32', modifier: 'Control', shortcut: 'Ctrl + Enter' },
 ]) {
-	test(`Apply filters with ${shortcut} only inside the editor`, async ({ page }) => {
+	test(`Apply filters with ${shortcut} from the editor or after a passive click`, async ({ page }) => {
 		await page.emulateMedia({ reducedMotion: 'reduce' });
 		await page.clock.install({ time: new Date('2026-11-12T12:00:00Z') });
 		await page.addInitScript((platform) => {
@@ -328,12 +330,42 @@ for (const { platform, modifier, shortcut } of [
 		const gridCanFinish = new Promise<void>((resolve) => {
 			releaseGrid = resolve;
 		});
+		const drawerSchema: ObjectType = {
+			...schema,
+			properties: [
+				...schema.properties,
+				{
+					...schema.properties[0],
+					name: 'details',
+					displayName: 'Details',
+					description: '',
+					readOptional: true,
+					type: { kind: 'object', properties: schema.properties },
+				},
+			],
+		};
+		await page.route('**/v1/profiles/schema', (route) =>
+			route.fulfill({
+				json: {
+					schema: drawerSchema,
+					propertyRoles: { firstName: 'name', lastName: '', email: '', country: '', photo: '' },
+					primarySources: {},
+				},
+			}),
+		);
+		await page.route('**/v1/profiles/*/attributes/query', (route) =>
+			route.fulfill({
+				json: { attributes: { ...profiles[0].attributes, details: { name: 'Sample detail' } } },
+			}),
+		);
 		await page.route(/\/v1\/profiles\/query$/, async (route) => {
 			const filter: Filter | null = route.request().postDataJSON().filter ?? null;
 			gridFilters.push(filter);
 			if (filter != null) {
 				await gridCanFinish;
-				await route.fulfill({ json: { profiles: [profiles[0]], total: 1, hasNext: false } });
+				const value = (filter.rules[0] as FilterCondition).values?.[0];
+				const result = profiles.filter((profile) => profile.attributes.name === value);
+				await route.fulfill({ json: { profiles: result, total: result.length, hasNext: false } });
 				return;
 			}
 			await route.fulfill({ json: { profiles, total: profiles.length, hasNext: false } });
@@ -378,13 +410,57 @@ for (const { platform, modifier, shortcut } of [
 		await valueInput.fill(JSON.stringify(values[1]));
 		await valueInput.press('Enter');
 		await expect(hint).not.toHaveAttribute('aria-disabled');
-		await valueInput.blur();
+		const grid = page.locator('.profiles-list .grid');
+		await grid.focus();
+		await expect(hint).toHaveAttribute('aria-disabled', 'true');
+		await expect(hint).toHaveClass(/grid-keyboard-hints__hint--disabled/);
+		await expect(applyFilters).toBeEnabled();
+		const header = grid.getByRole('columnheader', { name: 'Name', exact: true });
+		await header.click();
+		await expect(hint).not.toHaveAttribute('aria-disabled');
+		const columns = page.locator('.profiles-list__toggle-columns');
+		await columns.getByRole('button', { name: 'Columns', exact: true }).click();
+		const columnSearch = columns.getByRole('textbox', { name: 'Search columns', exact: true });
+		await columnSearch.fill('Name');
+		await expect(hint).toHaveAttribute('aria-disabled', 'true');
+		await columns.evaluate((dropdown: any) => (dropdown.open = false));
+		await header.click();
+		await expect(hint).not.toHaveAttribute('aria-disabled');
+		await page.keyboard.down(modifier);
+		await expect(hint).not.toHaveAttribute('aria-disabled');
+		await page.keyboard.up(modifier);
+		await grid.press('ArrowDown');
+		const drawer = page.locator('.profile-drawer');
+		await expect(drawer).toBeVisible();
+		await expect(grid).toHaveAttribute('aria-activedescendant', 'profiles-grid-row-profile-1');
+		await expect(hint).toHaveAttribute('aria-disabled', 'true');
+		await header.click();
+		await expect(hint).not.toHaveAttribute('aria-disabled');
+		await rows.first().click();
+		await expect(hint).toHaveAttribute('aria-disabled', 'true');
 		await page.keyboard.press(`${modifier}+Enter`);
 		expect(gridFilters).toEqual([null]);
+		await drawer.locator('.profile-drawer__kpid-value').click();
+		expect(await page.evaluate(() => document.activeElement === document.body)).toBe(true);
+		await expect(hint).not.toHaveAttribute('aria-disabled');
+		const details = drawer.locator('.drawer-nested-attributes');
+		await details.locator('.drawer-attributes--parent .profile-drawer__attribute-key').click();
+		await expect(details).toHaveClass(/drawer-nested-attributes--expand/);
+		expect(await page.evaluate(() => document.activeElement === document.body)).toBe(true);
+		await expect(hint).toHaveAttribute('aria-disabled', 'true');
 		await valueInput.fill(JSON.stringify(values[0]));
 		await page.clock.pauseAt(new Date('2026-11-12T12:01:00Z'));
 		try {
-			await valueInput.press(`${modifier}+Enter`);
+			await editor.click({ position: { x: 8, y: 8 } });
+			await expect(editor).toBeFocused();
+			// Plain Enter triggers :focus-visible for the outline check below.
+			await page.keyboard.press('Enter');
+			await expect(applyFilters).toBeEnabled();
+			await expect(editor).toHaveCSS('outline-style', 'none');
+			await header.click();
+			await expect(grid).toBeFocused();
+			await expect(hint).not.toHaveAttribute('aria-disabled');
+			await page.keyboard.press(`${modifier}+Enter`);
 			await expect(applyFilters).toBeDisabled();
 			await expect.poll(() => gridFilters.length).toBe(2);
 			await expect(rows).toHaveCount(3);
@@ -403,11 +479,42 @@ for (const { platform, modifier, shortcut } of [
 		await expect(editor.locator('.profiles-list__filter-apply wa-spinner')).toHaveCount(0);
 		await expect(applyFilters).toBeDisabled();
 		await expect(hint).toBeVisible();
+		await valueInput.fill(JSON.stringify(values[1]));
 		await valueInput.press(`${modifier}+Enter`);
+		await expect.poll(() => gridFilters.length).toBe(3);
+		await expect(rows).toHaveAttribute('data-id', 'profile-2');
+		await page.clock.runFor(400);
+		await expect(editor.locator('.profiles-list__filter-apply wa-spinner')).toHaveCount(0);
+		const noMatchValue = 'No matching profile';
+		await valueInput.fill(noMatchValue);
+		await page.getByRole('heading', { name: 'Profiles', exact: true }).click();
+		expect(await page.evaluate(() => document.activeElement === document.body)).toBe(true);
+		await expect(hint).not.toHaveAttribute('aria-disabled');
+		await expect(hint).not.toHaveClass(/grid-keyboard-hints__hint--disabled/);
+		await page.keyboard.press(`${modifier}+Enter`);
+		await expect.poll(() => gridFilters.length).toBe(4);
+		await expect(rows).toHaveCount(0);
+		await page.clock.runFor(400);
+		await expect(editor.locator('.profiles-list__filter-apply wa-spinner')).toHaveCount(0);
+		await valueInput.fill(JSON.stringify(values[2]));
+		await grid.getByText('No profiles to show', { exact: true }).click();
+		await expect(grid).toBeFocused();
+		await expect(hint).not.toHaveAttribute('aria-disabled');
+		await page.keyboard.press(`${modifier}+Enter`);
+		await expect.poll(() => gridFilters.length).toBe(5);
+		await expect(rows).toHaveAttribute('data-id', 'profile-3');
+		await page.clock.runFor(400);
+		await expect(editor.locator('.profiles-list__filter-apply wa-spinner')).toHaveCount(0);
 		await filters.getByRole('button', { name: 'Collapse', exact: true }).click();
 		await page.keyboard.press(`${modifier}+Enter`);
 		await expect(hint).not.toBeVisible();
-		expect(gridFilters).toHaveLength(2);
+		expect(gridFilters).toEqual([
+			null,
+			{ operator: 'and', rules: [{ property: 'name', operator: 'is', values: [values[0]] }] },
+			{ operator: 'and', rules: [{ property: 'name', operator: 'is', values: [values[1]] }] },
+			{ operator: 'and', rules: [{ property: 'name', operator: 'is', values: [noMatchValue] }] },
+			{ operator: 'and', rules: [{ property: 'name', operator: 'is', values: [values[2]] }] },
+		]);
 	});
 }
 
@@ -458,4 +565,56 @@ test(`Retry a failed collapse without reopening the editor on a narrow viewport`
 	await filters.getByRole('button', { name: 'Edit filters', exact: true }).click();
 	await expect(valueInput).toHaveValue(JSON.stringify(values[0]));
 	await expect(editor.getByRole('button', { name: 'Apply filters', exact: true })).toBeDisabled();
+});
+
+test(`Apply filters with the shortcut after reopening a failed collapse`, async ({ page }) => {
+	await page.addInitScript(() => {
+		Object.defineProperty(navigator, 'platform', { value: 'Win32' });
+	});
+	const filter: Filter = {
+		operator: 'and',
+		rules: [{ property: 'name', operator: 'is', values: [values[0]] }],
+	};
+	const gridFilters: (Filter | null)[] = [];
+	await page.route(/\/v1\/profiles\/query$/, async (route) => {
+		const requestedFilter: Filter | null = route.request().postDataJSON().filter ?? null;
+		gridFilters.push(requestedFilter);
+		if (gridFilters.length === 2) {
+			await route.fulfill({
+				status: 503,
+				json: { error: { code: 'ServiceUnavailable', message: 'temporary failure' } },
+			});
+			return;
+		}
+		const result = requestedFilter == null ? profiles : [profiles[0]];
+		await route.fulfill({ json: { profiles: result, total: result.length, hasNext: false } });
+	});
+	await page.goto('https://example.test/');
+	await page.addStyleTag({ content: componentStyles });
+	await page.addScriptTag({ content: componentScript });
+	const rows = page.locator('.profiles-list .grid__row--clickable');
+	await expect(rows).toHaveCount(3);
+	const filters = page.locator('.profiles-list__filters');
+	await filters.getByRole('button', { name: 'Add filter', exact: true }).click();
+	const editor = filters.getByRole('region', { name: 'Profile filters' });
+	const property = editor.locator('.filter-editor__property');
+	await property.locator('input').fill('Name');
+	await property.locator('.combobox-list__item .schema-combobox-item__name', { hasText: /^Name$/ }).click();
+	const operator = editor.locator('.filter-editor__operator').getByRole('combobox');
+	await operator.press('Home');
+	await operator.press('Enter');
+	const valueInput = editor.locator('.filter-editor__value-input input');
+	await valueInput.fill(JSON.stringify(values[0]));
+	await filters.getByRole('button', { name: 'Collapse', exact: true }).click();
+	await expect(editor).toHaveCount(0);
+	await expect(page.locator('.profiles-list__filter-grid-action')).toContainText('Unable to apply filters.');
+	await expect(rows).toHaveCount(3);
+	await filters.getByRole('button', { name: 'Edit filters', exact: true }).click();
+	await expect(valueInput).toHaveValue(JSON.stringify(values[0]));
+	await expect(editor.getByRole('button', { name: 'Apply filters', exact: true })).toBeEnabled();
+	await expect(editor.locator('.profiles-list__filter-shortcut')).not.toHaveAttribute('aria-disabled');
+	await page.keyboard.press('Control+Enter');
+	await expect(rows).toHaveCount(1);
+	await expect(rows).toHaveAttribute('data-id', 'profile-1');
+	expect(gridFilters).toEqual([null, filter, filter]);
 });

@@ -303,6 +303,7 @@ const ProfilesFilters = ({
 }: ProfilesFiltersProps) => {
 	const [session, setSession] = useState<FilterSession>(() => createProfilesFilterSession(appliedFilter));
 	const [isOpen, setIsOpen] = useState(false);
+	const [isShortcutActive, setIsShortcutActive] = useState(true);
 	const [pendingGridContext, setPendingGridContext] = useState<string>();
 	const [gridFailure, setGridFailure] = useState<FailedGridRequest>();
 	const [resultsUpdatedContext, setResultsUpdatedContext] = useState<string>();
@@ -312,6 +313,7 @@ const ProfilesFilters = ({
 	const expectedDisplayedContextRef = useRef<string>();
 	const displayedContextRef = useRef<string>();
 	const panelRef = useRef<HTMLDivElement>(null);
+	const editorRef = useRef<HTMLElement>(null);
 	const triggerRef = useRef<WaButtonElement>(null);
 	const isMac = navigator.platform.startsWith('Mac');
 
@@ -389,6 +391,7 @@ const ProfilesFilters = ({
 			profileFilterResultsFingerprint(appliedFilter);
 	const isUpdatingGridResults = pendingGridContext != null;
 	const canApplyFilters = validatedDraft.error == null && hasUnappliedChanges && !isUpdatingGridResults;
+	const canApplyWithShortcut = canApplyFilters && isShortcutActive;
 	const propertyLabel = useCallback(
 		(property: string) => getPropertyPathDisplayValue(property, (path) => schemaProperties[path]),
 		[schemaProperties],
@@ -463,6 +466,7 @@ const ProfilesFilters = ({
 		(open: boolean) => {
 			setIsOpen(open);
 			if (open) {
+				setIsShortcutActive(true);
 				triggerRef.current?.blur();
 				return;
 			}
@@ -615,7 +619,7 @@ const ProfilesFilters = ({
 		return () => document.removeEventListener('keydown', onKeyDown, true);
 	}, [collapseFilters, isOpen]);
 
-	const applyFilters = () => {
+	const applyFilters = useCallback(() => {
 		if (!canApplyFilters) {
 			return;
 		}
@@ -628,26 +632,60 @@ const ProfilesFilters = ({
 		}
 		updateSession((state) => commitProfilesFilter(state, filter, draft));
 		void materializeProfiles(currentProfilesFilterHistoryEntry(sessionRef.current));
-	};
+	}, [canApplyFilters, materializeProfiles, normalizeFilter, updateSession]);
 
-	const onEditorKeyDown = (event: React.KeyboardEvent<HTMLElement>) => {
-		const hasApplyModifier = isMac ? event.metaKey : event.ctrlKey;
-		if (
-			!isOpen ||
-			event.key !== 'Enter' ||
-			!hasApplyModifier ||
-			event.altKey ||
-			event.shiftKey ||
-			event.nativeEvent.isComposing
-		) {
+	useEffect(() => {
+		const editor = editorRef.current;
+		if (!isOpen || editor == null) {
 			return;
 		}
-		event.preventDefault();
-		event.stopPropagation();
-		if (!event.repeat) {
-			applyFilters();
-		}
-	};
+		// The grid itself can receive a passive click without selecting a profile.
+		const isActionTarget = (target: EventTarget) =>
+			target instanceof HTMLElement &&
+			(target.matches('.grid__row--clickable, .drawer-attributes--parent') ||
+				(target.tabIndex >= 0 && !target.classList.contains('profiles-list__grid')));
+		const onClick = (event: MouseEvent) => {
+			const path = event.composedPath();
+			// This listener can be added while the opening click is still propagating.
+			if (path.includes(triggerRef.current as EventTarget)) {
+				return;
+			}
+			setIsShortcutActive(path.includes(editor) || (!event.defaultPrevented && !path.some(isActionTarget)));
+		};
+		const onFocusIn = (event: FocusEvent) => {
+			setIsShortcutActive(event.composedPath().includes(editor));
+		};
+		const onKeyDown = (event: KeyboardEvent) => {
+			const hasApplyModifier = isMac ? event.metaKey : event.ctrlKey;
+			const isApplyShortcut =
+				event.key === 'Enter' && hasApplyModifier && !event.altKey && !event.shiftKey && !event.isComposing;
+			if (!isApplyShortcut) {
+				if (
+					!event.composedPath().includes(editor) &&
+					!['Alt', 'Control', 'Meta', 'Shift'].includes(event.key)
+				) {
+					setIsShortcutActive(false);
+				}
+				return;
+			}
+			if (!isShortcutActive) {
+				return;
+			}
+			event.preventDefault();
+			event.stopPropagation();
+			if (!event.repeat) {
+				applyFilters();
+			}
+		};
+		document.addEventListener('click', onClick);
+		document.addEventListener('focusin', onFocusIn);
+		document.addEventListener('keydown', onKeyDown, true);
+		return () => {
+			document.removeEventListener('click', onClick);
+			document.removeEventListener('focusin', onFocusIn);
+			document.removeEventListener('keydown', onKeyDown, true);
+		};
+	}, [applyFilters, isMac, isOpen, isShortcutActive]);
 
 	const gridErrorMessage = gridFailure != null && (
 		<div className='profiles-list__filter-grid-error' role='alert'>
@@ -752,11 +790,12 @@ const ProfilesFilters = ({
 				<div className='profiles-list__filter-disclosure-clip'>
 					<div className='profiles-list__filter-expanded-content'>
 						<section
+							ref={editorRef}
 							id='profiles-filter-editor'
 							className='profiles-list__filter-editor'
 							role='region'
 							aria-label='Profile filters'
-							onKeyDownCapture={onEditorKeyDown}
+							tabIndex={-1}
 						>
 							<div className='profiles-list__filter-editor-body'>
 								<FilterEditor
@@ -787,9 +826,10 @@ const ProfilesFilters = ({
 									Apply filters
 								</WaButton>
 								<span
-									className={`profiles-list__filter-shortcut grid-keyboard-hints__keys${canApplyFilters ? '' : ' grid-keyboard-hints__hint--disabled'}`}
-									aria-disabled={!canApplyFilters || undefined}
+									className={`profiles-list__filter-shortcut grid-keyboard-hints__keys${canApplyWithShortcut ? '' : ' grid-keyboard-hints__hint--disabled'}`}
+									aria-disabled={!canApplyWithShortcut || undefined}
 								>
+									<span className='profiles-list__filter-shortcut-label'>Shortcut:</span>
 									<kbd>{isMac ? '⌘' : 'Ctrl'}</kbd>
 									<span className='grid-keyboard-hints__plus'>+</span>
 									<kbd>Enter</kbd>

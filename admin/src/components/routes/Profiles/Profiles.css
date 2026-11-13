@@ -522,6 +522,7 @@ html.profiles-columns-transition::view-transition-new(*):only-child {
 	grid-column: 2;
 	grid-row: 1;
 	min-width: 0;
+	outline: none;
 	padding: var(--profiles-filter-panel-padding) var(--wa-space-l) calc(var(--wa-space-l) + 11px)
 		var(--profiles-filter-panel-padding);
 	position: relative;
@@ -549,10 +550,19 @@ html.profiles-columns-transition::view-transition-new(*):only-child {
 	grid-area: 1 / 1;
 	justify-self: center;
 	position: absolute;
-	top: calc(100% + var(--wa-space-2xs) + 2px);
+	top: calc(100% + var(--wa-space-2xs) + 4px);
+}
+
+.profiles-list__filter-shortcut:not([aria-disabled='true']) {
+	color: color-mix(in srgb, var(--text-light), var(--wa-color-neutral-30));
+}
+
+.profiles-list__filter-shortcut-label {
+	margin-inline-end: 3px;
 }
 
 .profiles-list__filters .profiles-list__filter-shortcut kbd {
+	color: inherit;
 	font-size: 10px;
 	height: 18px;
 	min-width: 18px;
