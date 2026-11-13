@@ -89,7 +89,7 @@ func Test_Identities(t *testing.T) {
 	k.WaitForRunsCompletion(run1)
 	k.WaitForRunsCompletion(run2)
 
-	profiles, _, total := k.Profiles([]string{"email"}, "", false, 0, 100)
+	profiles, total := k.Profiles([]string{"email"}, "", false, 0, 100)
 
 	const expectedTotal = 4
 	if expectedTotal != total {

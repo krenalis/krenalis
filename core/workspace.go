@@ -250,16 +250,17 @@ func (this *Workspace) PipelineErrors(ctx context.Context, start, end time.Time,
 	return errs, nil
 }
 
-// Attributes returns the attributes of a profile, given its KPID.
+// Attributes returns the attributes defined by the specified schema for the
+// given profile.
 //
-// It returns an errors.NotFoundError error, if the profile does not exist.
-// It returns an errors.UnprocessableError error with code MaintenanceMode if
-// the data warehouse is in maintenance mode.
-func (this *Workspace) Attributes(ctx context.Context, kpid string) (json.Value, error) {
+// It returns an errors.NotFoundError error if the workspace or profile does not
+// exist.
+// It returns an errors.UnprocessableError error with code
+//   - MaintenanceMode, if the data warehouse is in maintenance mode.
+//   - SchemaNotAligned, if schema is not aligned with the profile schema.
+func (this *Workspace) Attributes(ctx context.Context, kpid string, schema types.Type) (json.Value, error) {
 
 	this.core.mustBeOpen()
-
-	ws := this.workspace
 
 	// Parse the KPID.
 	id, err := uuid.Parse(kpid)
@@ -268,7 +269,13 @@ func (this *Workspace) Attributes(ctx context.Context, kpid string) (json.Value,
 	}
 	kpid = id.String()
 
-	properties := this.workspace.ProfileSchema.Properties().Names()
+	if !schema.Valid() {
+		return nil, errors.BadRequest("schema is required")
+	}
+	if !schema.IsObject() {
+		return nil, errors.BadRequest("schema is not an object type")
+	}
+	properties := schema.Properties().Names()
 	where := &state.Where{
 		Operator: state.OpAnd,
 		Rules: []state.WhereRule{
@@ -285,13 +292,19 @@ func (this *Workspace) Attributes(ctx context.Context, kpid string) (json.Value,
 		Properties: properties,
 		Where:      where,
 		Limit:      1,
-	})
+	}, schema)
 	if err != nil {
+		if err == datastore.ErrWorkspaceNotExist {
+			return nil, errors.NotFound("workspace %s does not exist", this.workspace.ID)
+		}
 		if err == datastore.ErrMaintenanceMode {
 			return nil, errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
 		}
 		if err, ok := err.(*datastore.WarehouseError); ok {
 			return nil, errors.Unavailable("%s", err)
+		}
+		if err, ok := err.(*schemas.Error); ok {
+			return nil, errors.Unprocessable(SchemaNotAligned, "%s", err)
 		}
 		return nil, err
 	}
@@ -299,7 +312,7 @@ func (this *Workspace) Attributes(ctx context.Context, kpid string) (json.Value,
 		return nil, errors.NotFound("profile %q does not exist", kpid)
 	}
 
-	return types.Marshal(profiles[0], ws.ProfileSchema)
+	return types.Marshal(profiles[0], schema)
 }
 
 // ColumnTypeDescription returns a description for the warehouse column type
@@ -1003,7 +1016,7 @@ func (this *Workspace) Events(ctx context.Context, properties []string, filter *
 	evts, err := this.store.Events(ctx, datastore.Query{
 		Properties: properties,
 		Where:      where,
-		OrderBy:    order,
+		OrderBy:    []string{order},
 		OrderDesc:  orderDesc,
 		First:      first,
 		Limit:      limit,
@@ -1297,6 +1310,60 @@ func (this *Workspace) PipelineRuns(ctx context.Context) ([]*PipelineRun, error)
 	return runs, nil
 }
 
+// ProfileCount returns the number of profiles matching filter. If filter is
+// nil, it returns the total number of profiles.
+//
+// If filter is not nil, schema must be an object type with the properties used
+// by filter. If filter is nil, schema can be the invalid type.
+//
+// It returns an errors.NotFoundError error if the workspace does not exist.
+// It returns an errors.UnprocessableError error with code
+//   - MaintenanceMode, if the data warehouse is in maintenance mode.
+//   - PropertyNotExist, if a property in filter does not exist in schema.
+//   - SchemaNotAligned, if schema is valid and is not aligned with the profile
+//     schema.
+func (this *Workspace) ProfileCount(ctx context.Context, filter *Filter, schema types.Type) (int, error) {
+
+	this.core.mustBeOpen()
+
+	if filter != nil && !schema.Valid() {
+		return 0, errors.BadRequest("schema is required")
+	}
+	if schema.Valid() && !schema.IsObject() {
+		return 0, errors.BadRequest("schema is not an object type")
+	}
+
+	var where *state.Where
+	if filter != nil {
+		_, err := validateFilter(filter, schema, state.Destination, state.TargetUser)
+		if err != nil {
+			if err, ok := errors.AsType[types.PathNotExistError](err); ok {
+				return 0, errors.Unprocessable(PropertyNotExist, "filter's property %s does not exist", err.Path)
+			}
+			return 0, errors.BadRequest("filter is not valid: %s", err)
+		}
+		where = convertFilterToWhere(filter, schema)
+	}
+	total, err := this.store.ProfileCount(ctx, where, schema)
+	if err != nil {
+		if errors.Is(err, datastore.ErrWorkspaceNotExist) {
+			return 0, errors.NotFound("workspace %s does not exist", this.workspace.ID)
+		}
+		if errors.Is(err, datastore.ErrMaintenanceMode) {
+			return 0, errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
+		}
+		if err, ok := errors.AsType[*schemas.Error](err); ok {
+			return 0, errors.Unprocessable(SchemaNotAligned, "%s", err)
+		}
+		if err, ok := errors.AsType[*datastore.WarehouseError](err); ok {
+			return 0, errors.Unavailable("%s", err)
+		}
+		return 0, err
+	}
+
+	return total, nil
+}
+
 // ProfilePropertiesSuitableAsIdentifiers returns the properties of the profile
 // schema that can be used as identifiers in the Identity Resolution.
 // If none of the properties can be an identifier, this method returns the
@@ -1315,52 +1382,62 @@ type Profile struct {
 	Attributes map[string]any `json:"attributes"`
 }
 
-// Profiles returns the profiles, the profile schema, and an estimate of their
-// total number without applying first and limit. It returns the profiles that
-// satisfies the filter, if not nil, and in range [first,first+limit] with
-// first >= 0 and 0 < limit <= 1000 and only the given properties.
+// Profiles returns profiles matching filter, an estimate of their total number,
+// and whether more results are available for a subsequent call with the next
+// range.
 //
-// If properties is nil, all properties are returned; otherwise, properties
-// must contain at least one element.
+// schema must be an object type with the properties used in properties, filter,
+// and order.
 //
-// order is the name of the property by which to sort the returned profiles and
-// cannot have type json, array, object, or map; when not provided, the profiles
-// are ordered by their update time.
+// If properties is nil, all properties in schema are returned. Otherwise,
+// properties must contain at least one top-level property name.
 //
-// orderDesc control whether the returned profiles should be ordered in+
-// descending order instead of ascending, which is the default.
+// first must be in [0, math.MaxInt32] and limit in [1, 1000]. order defaults to
+// update time. Profiles with the same value for the ordering property are also
+// sorted by KPID, in ascending order if orderDesc is false and descending order
+// if it is true.
 //
-// It returns an errors.NotFoundError error, if the workspace does not exist
-// anymore. It returns an errors.UnprocessableError error with code
-//
+// It returns an errors.NotFoundError error if the workspace does not exist.
+// It returns an errors.UnprocessableError error with code
 //   - MaintenanceMode, if the data warehouse is in maintenance mode.
 //   - OrderNotExist, if order does not exist in schema.
 //   - OrderTypeNotSortable, if the type of the order property is not sortable.
-//   - PropertyNotExist, if a property does not exist.
-func (this *Workspace) Profiles(ctx context.Context, properties []string, filter *Filter, order string, orderDesc bool, first, limit int) ([]Profile, types.Type, int, error) {
+//   - PropertyNotExist, if a property in properties or filter does not exist
+//     in schema.
+//   - SchemaNotAligned, if schema is not aligned with the profile schema.
+func (this *Workspace) Profiles(ctx context.Context, schema types.Type, properties []string, filter *Filter, order string, orderDesc bool, first, limit int) ([]Profile, int, bool, error) {
 
 	this.core.mustBeOpen()
 
-	ws := this.workspace
-
-	profileProperties := ws.ProfileSchema.Properties()
+	if !schema.Valid() {
+		return nil, 0, false, errors.BadRequest("schema is required")
+	}
+	if !schema.IsObject() {
+		return nil, 0, false, errors.BadRequest("schema is not an object type")
+	}
+	profileProperties := schema.Properties()
 
 	// Validate the properties.
 	if properties == nil {
 		properties = profileProperties.Names()
 	} else {
 		if len(properties) == 0 {
-			return nil, types.Type{}, 0, errors.BadRequest("properties is empty")
+			return nil, 0, false, errors.BadRequest("properties is empty")
 		}
+		seen := map[string]bool{}
 		for _, name := range properties {
+			if seen[name] {
+				return nil, 0, false, errors.BadRequest("property %q is repeated", name)
+			}
+			seen[name] = true
 			if _, ok := profileProperties.ByName(name); !ok {
 				if name == "" {
-					return nil, types.Type{}, 0, errors.BadRequest("a property name is empty")
+					return nil, 0, false, errors.BadRequest("a property name is empty")
 				}
 				if !types.IsValidPropertyName(name) {
-					return nil, types.Type{}, 0, errors.BadRequest("property name %q is not valid", name)
+					return nil, 0, false, errors.BadRequest("property name %q is not valid", name)
 				}
-				return nil, types.Type{}, 0, errors.Unprocessable(PropertyNotExist, "property name %s does not exist", name)
+				return nil, 0, false, errors.Unprocessable(PropertyNotExist, "property name %s does not exist", name)
 			}
 		}
 	}
@@ -1368,14 +1445,14 @@ func (this *Workspace) Profiles(ctx context.Context, properties []string, filter
 	// Validate the filter.
 	var where *state.Where
 	if filter != nil {
-		_, err := validateFilter(filter, ws.ProfileSchema, state.Destination, state.TargetUser)
+		_, err := validateFilter(filter, schema, state.Destination, state.TargetUser)
 		if err != nil {
-			if err, ok := err.(types.PathNotExistError); ok {
-				return nil, types.Type{}, 0, errors.Unprocessable(PropertyNotExist, "filter's property %s does not exist", err.Path)
+			if err, ok := errors.AsType[types.PathNotExistError](err); ok {
+				return nil, 0, false, errors.Unprocessable(PropertyNotExist, "filter's property %s does not exist", err.Path)
 			}
-			return nil, types.Type{}, 0, errors.BadRequest("filter is not valid: %w", err)
+			return nil, 0, false, errors.BadRequest("filter is not valid: %s", err)
 		}
-		where = convertFilterToWhere(filter, ws.ProfileSchema)
+		where = convertFilterToWhere(filter, schema)
 	}
 
 	// Validate the order.
@@ -1383,13 +1460,13 @@ func (this *Workspace) Profiles(ctx context.Context, properties []string, filter
 		orderProperty, ok := profileProperties.ByName(order)
 		if !ok {
 			if !types.IsValidPropertyName(order) {
-				return nil, types.Type{}, 0, errors.BadRequest("order %q is not a valid property name", order)
+				return nil, 0, false, errors.BadRequest("order %q is not a valid property name", order)
 			}
-			return nil, types.Type{}, 0, errors.Unprocessable(OrderNotExist, "order %s does not exist in schema", order)
+			return nil, 0, false, errors.Unprocessable(OrderNotExist, "order %s does not exist in schema", order)
 		}
 		switch orderProperty.Type.Kind() {
 		case types.JSONKind, types.ArrayKind, types.ObjectKind, types.MapKind:
-			return nil, types.Type{}, 0, errors.Unprocessable(OrderTypeNotSortable,
+			return nil, 0, false, errors.Unprocessable(OrderTypeNotSortable,
 				"cannot sort by %s: property has type %s", order, orderProperty.Type)
 		}
 	} else {
@@ -1398,38 +1475,42 @@ func (this *Workspace) Profiles(ctx context.Context, properties []string, filter
 
 	// Validate first and limit.
 	if first < 0 || first > maxInt32 {
-		return nil, types.Type{}, 0, errors.BadRequest("first %d in not valid", first)
+		return nil, 0, false, errors.BadRequest("first %d in not valid", first)
 	}
 	if limit < 1 || limit > 1000 {
-		return nil, types.Type{}, 0, errors.BadRequest("limit %d is not valid", limit)
+		return nil, 0, false, errors.BadRequest("limit %d is not valid", limit)
 	}
 
 	// Read the profiles.
 	rows, total, err := this.store.Profiles(ctx, datastore.Query{
 		Properties: append([]string{"_kpid", "_updated_at"}, properties...),
 		Where:      where,
-		OrderBy:    order,
+		OrderBy:    []string{order, "_kpid"},
 		OrderDesc:  orderDesc,
 		First:      first,
-		Limit:      limit,
-	})
+		Limit:      limit + 1,
+	}, schema)
 	if err != nil {
 		if err == datastore.ErrMaintenanceMode {
-			return nil, types.Type{}, 0, errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
+			return nil, 0, false, errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
+		}
+		if err == datastore.ErrWorkspaceNotExist {
+			return nil, 0, false, errors.NotFound("workspace %s does not exist", this.workspace.ID)
+		}
+		if err, ok := err.(*schemas.Error); ok {
+			return nil, 0, false, errors.Unprocessable(SchemaNotAligned, "%s", err)
 		}
 		if err, ok := err.(*datastore.WarehouseError); ok {
-			return nil, types.Type{}, 0, errors.Unavailable("%s", err)
+			return nil, 0, false, errors.Unavailable("%s", err)
 		}
-		return nil, types.Type{}, 0, err
+		return nil, 0, false, err
 	}
 
-	// Create the schema to return, with only the requested properties.
-	props := make([]types.Property, len(properties))
-	for i, name := range properties {
-		props[i], _ = profileProperties.ByName(name)
+	hasNext := len(rows) > limit
+	if hasNext {
+		rows[limit] = nil
+		rows = rows[:limit]
 	}
-	schema := types.Object(props)
-
 	profiles := make([]Profile, len(rows))
 	for i, row := range rows {
 		profiles[i].KPID = row["_kpid"].(string)
@@ -1439,7 +1520,7 @@ func (this *Workspace) Profiles(ctx context.Context, properties []string, filter
 		delete(row, "_updated_at")
 	}
 
-	return profiles, schema, total, nil
+	return profiles, total, hasNext, nil
 }
 
 const maxReadOnlyResponseSize = 10 * 1024 * 1024 // 10 MiB.
@@ -2041,7 +2122,7 @@ func (this *Workspace) identities(ctx context.Context, where *state.Where, first
 			"_updated_at",
 		},
 		Where:     where,
-		OrderBy:   "_updated_at",
+		OrderBy:   []string{"_updated_at"},
 		OrderDesc: true,
 		First:     first,
 		Limit:     limit,

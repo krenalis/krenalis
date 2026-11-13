@@ -63,7 +63,7 @@ def transform(user: dict) -> dict:
 
 	// Check if the profiles have been imported - and then returned - correctly.
 
-	profiles, _, total := k.Profiles([]string{"email", "ios"}, "email", false, 0, 1)
+	profiles, total := k.Profiles([]string{"email", "ios"}, "email", false, 0, 1)
 
 	// Validate the profiles total.
 	const expectedTotal = 10

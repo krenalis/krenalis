@@ -1,0 +1,505 @@
+import { expect, test } from '@playwright/test';
+import { ResponseProfile } from '../src/lib/api/types/responses';
+import { Filter, FilterCondition, FilterOperator } from '../src/lib/api/types/pipeline';
+import { ObjectType } from '../src/lib/api/types/types';
+import {
+	FILTER_OPERATORS,
+	flattenSchema,
+	getCompatibleFilterOperators,
+	isUnaryOperator,
+	validateAndNormalizeFilter,
+} from '../src/lib/core/pipeline';
+import {
+	createProfilesQueryKey,
+	createProfilesSequenceState,
+	getProfilesPage,
+	getVisibleProfiles,
+	profilesSequenceReducer,
+} from '../src/components/routes/Profiles/profilesSequence';
+import {
+	commitProfilesFilter,
+	createProfilesFilterSession,
+	currentProfilesFilterHistoryEntry,
+	profileFilterFingerprint,
+	profileFilterResultsFingerprint,
+} from '../src/components/routes/Profiles/profilesFilterSession';
+import { getProfilesFilterErrors } from '../src/components/routes/Profiles/profilesFilterValidation';
+
+const profile = (index: number): ResponseProfile => ({
+	kpid: `profile-${index}`,
+	updatedAt: '2026-09-01T00:00:00Z',
+	attributes: { index },
+});
+
+const filterSchema: ObjectType = {
+	kind: 'object',
+	properties: [
+		{
+			name: 'email',
+			displayName: '',
+			prefilled: '',
+			type: { kind: 'string' },
+			createRequired: false,
+			updateRequired: false,
+			readOptional: true,
+			nullable: false,
+			description: '',
+		},
+	],
+};
+
+test(`Split an initial look-ahead response into visible and adjacent windows`, () => {
+	let state = createProfilesSequenceState('query', 1, 2);
+	state = profilesSequenceReducer(state, {
+		type: 'acceptRange',
+		executionID: 1,
+		first: 0,
+		profiles: [profile(1), profile(2), profile(3), profile(4)],
+		total: 5,
+		hasNext: true,
+	});
+
+	expect(getVisibleProfiles(state).map(({ kpid }) => kpid)).toEqual(['profile-1', 'profile-2']);
+	expect(getProfilesPage(state, 2)?.profiles.map(({ kpid }) => kpid)).toEqual(['profile-3', 'profile-4']);
+	expect(getProfilesPage(state, 0)?.hasNext).toBe(true);
+	expect(getProfilesPage(state, 2)?.hasNext).toBe(true);
+});
+
+test(`Ignore obsolete executions and accept changing data in the current execution`, () => {
+	let state = createProfilesSequenceState('query', 2, 2);
+	state = profilesSequenceReducer(state, {
+		type: 'acceptRange',
+		executionID: 1,
+		first: 0,
+		profiles: [profile(1)],
+		total: 1,
+		hasNext: false,
+	});
+	expect(getVisibleProfiles(state)).toEqual([]);
+
+	state = profilesSequenceReducer(state, {
+		type: 'acceptRange',
+		executionID: 2,
+		first: 0,
+		profiles: [profile(1), profile(2)],
+		total: 3,
+		hasNext: true,
+	});
+	state = profilesSequenceReducer(state, {
+		type: 'acceptRange',
+		executionID: 2,
+		first: 2,
+		profiles: [profile(3)],
+		total: 3,
+		hasNext: false,
+	});
+
+	expect(state.schemaNotAligned).toBe(false);
+	expect(getProfilesPage(state, 2)?.profiles).toEqual([profile(3)]);
+});
+
+test(`Do not let an obsolete mismatch mark the current execution stale`, () => {
+	let state = createProfilesSequenceState('query', 2, 2);
+	state = profilesSequenceReducer(state, {
+		type: 'acceptRange',
+		executionID: 2,
+		first: 0,
+		profiles: [profile(1)],
+		total: 1,
+		hasNext: false,
+	});
+	state = profilesSequenceReducer(state, {
+		type: 'markSchemaNotAligned',
+		executionID: 1,
+		message: '«email» property no longer exists',
+	});
+
+	expect(state.schemaNotAligned).toBe(false);
+	expect(state.schemaNotAlignedMessage).toBeUndefined();
+});
+
+test(`Retain useful adjacent pages and evict distant profile windows`, () => {
+	let state = createProfilesSequenceState('query', 1, 2);
+	for (let first = 0; first <= 8; first += 2) {
+		state = profilesSequenceReducer(state, {
+			type: 'acceptRange',
+			executionID: 1,
+			first,
+			profiles: [profile(first + 1), profile(first + 2)],
+			total: 10,
+			hasNext: first < 8,
+		});
+		state = profilesSequenceReducer(state, { type: 'commitPage', first, activeProfileID: '' });
+	}
+
+	expect(getProfilesPage(state, 2)).toBeUndefined();
+	expect(getProfilesPage(state, 4)).toBeDefined();
+	expect(getProfilesPage(state, 6)).toBeDefined();
+	expect(getProfilesPage(state, 8)).toBeDefined();
+});
+
+test(`Accept an empty page without requiring a data version`, () => {
+	let state = createProfilesSequenceState('query', 1, 50);
+	state = profilesSequenceReducer(state, {
+		type: 'acceptRange',
+		executionID: 1,
+		first: 0,
+		profiles: [],
+		total: 0,
+		hasNext: false,
+	});
+	expect(getVisibleProfiles(state)).toEqual([]);
+	expect(getProfilesPage(state)?.hasNext).toBe(false);
+});
+
+test(`Replace a sequence atomically after a candidate query succeeds`, () => {
+	let state = createProfilesSequenceState('old-query', 1, 2);
+	state = profilesSequenceReducer(state, {
+		type: 'acceptRange',
+		executionID: 1,
+		first: 0,
+		profiles: [profile(1), profile(2)],
+		total: 4,
+		hasNext: true,
+	});
+	state = profilesSequenceReducer(state, { type: 'setActiveProfile', profileID: 'profile-2' });
+
+	const message = '«email» property no longer exists';
+	state = profilesSequenceReducer(state, { type: 'markSchemaNotAligned', executionID: 1, message });
+	expect(state.schemaNotAligned).toBe(true);
+	expect(state.schemaNotAlignedMessage).toBe(message);
+
+	state = profilesSequenceReducer(state, {
+		type: 'replaceExecution',
+		queryKey: 'filtered-query',
+		executionID: 2,
+		pageSize: 2,
+		projection: ['email'],
+		first: 2,
+		activeProfileID: 'profile-4',
+		profiles: [profile(3), profile(4), profile(5)],
+		total: 3,
+		hasNext: false,
+	});
+
+	expect(state.queryKey).toBe('filtered-query');
+	expect(state.executionID).toBe(2);
+	expect(state.projection).toEqual(['email']);
+	expect(state.visibleFirst).toBe(2);
+	expect(state.activeProfileID).toBe('profile-4');
+	expect(state.total).toBe(3);
+	expect(state.isInitialLoading).toBe(false);
+	expect(state.schemaNotAligned).toBe(false);
+	expect(state.schemaNotAlignedMessage).toBeUndefined();
+	expect(getVisibleProfiles(state).map(({ kpid }) => kpid)).toEqual(['profile-3', 'profile-4']);
+	expect(getProfilesPage(state, 4)?.profiles.map(({ kpid }) => kpid)).toEqual(['profile-5']);
+});
+
+test(`Reset the query execution and preserve page state across a failed transition`, () => {
+	let state = createProfilesSequenceState('old-query', 1, 2);
+	state = profilesSequenceReducer(state, {
+		type: 'acceptRange',
+		executionID: 1,
+		first: 0,
+		profiles: [profile(1), profile(2)],
+		total: 4,
+		hasNext: true,
+	});
+	state = profilesSequenceReducer(state, { type: 'setActiveProfile', profileID: 'profile-2' });
+	state = profilesSequenceReducer(state, { type: 'startBoundary', first: 2 });
+	state = profilesSequenceReducer(state, { type: 'unlockBoundary' });
+
+	expect(state.visibleFirst).toBe(0);
+	expect(state.activeProfileID).toBe('profile-2');
+	expect(state.pendingFirst).toBeUndefined();
+
+	state = profilesSequenceReducer(state, {
+		type: 'reset',
+		queryKey: 'new-query',
+		executionID: 2,
+		pageSize: 3,
+		projection: ['country'],
+	});
+	expect(state.queryKey).toBe('new-query');
+	expect(state.executionID).toBe(2);
+	expect(state.pageSize).toBe(3);
+	expect(state.projection).toEqual(['country']);
+	expect(state.activeProfileID).toBe('');
+	expect(state.pages).toEqual({});
+});
+
+test(`Build deterministic query identities from canonical filters and projections`, () => {
+	const first = createProfilesQueryKey({
+		workspace: 'workspace',
+		filter: { operator: 'and', rules: [{ value: 1, property: 'country' }] },
+		order: [{ property: 'updatedAt', desc: true }],
+		pageSize: 50,
+		projection: ['country', 'email'],
+		schemaFingerprint: 'schema',
+	});
+	const second = createProfilesQueryKey({
+		workspace: 'workspace',
+		filter: { rules: [{ property: 'country', value: 1 }], operator: 'and' },
+		order: [{ desc: true, property: 'updatedAt' }],
+		pageSize: 50,
+		projection: ['country', 'email'],
+		schemaFingerprint: 'schema',
+	});
+
+	expect(first).toBe(second);
+});
+
+test(`Normalize filter drafts without silently accepting partial conditions`, () => {
+	const filter: Filter = {
+		operator: 'and',
+		rules: [
+			{ property: '', operator: '', values: [''] },
+			{ property: 'email', operator: 'contains', values: ['example.com'] },
+		],
+	};
+	expect(validateAndNormalizeFilter(filter, filterSchema)).toEqual({
+		operator: 'and',
+		rules: [{ property: 'email', operator: 'contains', values: ['example.com'] }],
+	});
+	expect(() =>
+		validateAndNormalizeFilter(
+			{ operator: 'and', rules: [{ property: 'email', operator: 'contains', values: [''] }] },
+			filterSchema,
+		),
+	).toThrow('cannot be empty');
+	for (const [condition, message] of [
+		[{ property: '', operator: 'is', values: ['Ada'] }, 'Property of filter condition is required'],
+		[{ property: '', operator: '', values: ['Ada'] }, 'Property of filter condition is required'],
+		[{ property: 'email', operator: 'is between', values: ['a'] }, 'is required'],
+		[{ property: 'email', operator: 'is true', values: [] }, 'cannot be used with property'],
+	] satisfies [FilterCondition, string][]) {
+		expect(() => validateAndNormalizeFilter({ operator: 'and', rules: [condition] }, filterSchema)).toThrow(
+			message,
+		);
+	}
+	expect(
+		validateAndNormalizeFilter(
+			{ operator: 'and', rules: [{ property: 'email', operator: 'does not exist', values: [] }] },
+			filterSchema,
+		),
+	).toEqual({ operator: 'and', rules: [{ property: 'email', operator: 'does not exist' }] });
+
+	for (const { values, nullable, readOptional, unaryOperators } of [
+		{ values: ['', 'active'], nullable: false, readOptional: false, unaryOperators: ['is empty', 'is not empty'] },
+		{ values: ['active'], nullable: true, readOptional: false, unaryOperators: ['is null', 'is not null'] },
+		{ values: ['active'], nullable: false, readOptional: true, unaryOperators: ['exists', 'does not exist'] },
+		{ values: ['active'], nullable: false, readOptional: false, unaryOperators: [] },
+	] satisfies { values: string[]; nullable: boolean; readOptional: boolean; unaryOperators: FilterOperator[] }[]) {
+		const schema: ObjectType = {
+			kind: 'object',
+			properties: [{ ...filterSchema.properties[0], type: { kind: 'string', values }, nullable, readOptional }],
+		};
+		const expectedOperators: FilterOperator[] = [
+			'is',
+			'is not',
+			'contains',
+			'does not contain',
+			'is one of',
+			'is not one of',
+			...unaryOperators,
+		];
+		expect(
+			getCompatibleFilterOperators(flattenSchema(schema).email, false).map((index) => FILTER_OPERATORS[index]),
+		).toEqual(expectedOperators);
+		for (const operator of [
+			'contains',
+			'does not contain',
+			'is empty',
+			'is not empty',
+			'is null',
+			'is not null',
+			'exists',
+			'does not exist',
+		] satisfies FilterOperator[]) {
+			const condition: FilterCondition = { property: 'email', operator };
+			if (!isUnaryOperator(operator)) {
+				condition.values = ['active'];
+			}
+			const filter: Filter = { operator: 'and', rules: [condition] };
+			if (expectedOperators.includes(operator)) {
+				expect(validateAndNormalizeFilter(filter, schema)).toEqual(filter);
+			} else {
+				expect(() => validateAndNormalizeFilter(filter, schema)).toThrow('cannot be used with property');
+			}
+		}
+	}
+});
+
+test(`Associate all invalid filter fields with their editor paths`, () => {
+	const schema: ObjectType = {
+		...filterSchema,
+		properties: [
+			...filterSchema.properties,
+			{ ...filterSchema.properties[0], name: 'birth_date', type: { kind: 'date' } },
+			{ ...filterSchema.properties[0], name: 'metadata', type: { kind: 'json' } },
+		],
+	};
+	const errors = getProfilesFilterErrors(
+		{
+			operator: 'and',
+			rules: [
+				{ property: 'birth_date', operator: 'is between', values: ['2026-02-30', 'bad date'] },
+				{
+					operator: 'or',
+					rules: [
+						{ property: '', operator: '', values: [''] },
+						{ property: 'removed', operator: 'is', values: ['value'] },
+						{ property: 'metadata..name', operator: 'is', values: ['value'] },
+						{ property: 'birth_date', operator: 'contains', values: ['2026-11-13'] },
+						{ property: 'email', operator: '', values: ['value'] },
+						{ property: 'email', operator: 'is one of', values: ['Ada', ''] },
+					],
+				},
+			],
+		},
+		schema,
+	);
+	expect(errors).toEqual({
+		'value-0-0': expect.stringContaining('not a valid date'),
+		'value-0-1': expect.stringContaining('not a valid date'),
+		'property-1-0': 'Choose a property',
+		'property-1-1': expect.stringContaining('does not exist'),
+		'path-1-2': expect.stringContaining('not valid'),
+		'operator-1-3': 'Choose a compatible operator',
+		'operator-1-4': expect.stringContaining('required'),
+		'value-1-5-1': expect.stringContaining('cannot be empty'),
+	});
+});
+
+test(`Initialize filter history from the displayed filter`, () => {
+	const filter: Filter = {
+		operator: 'and',
+		rules: [{ property: 'email', operator: 'contains', values: ['example.com'] }],
+	};
+	const session = createProfilesFilterSession(filter);
+
+	expect(session.history).toHaveLength(1);
+	expect(currentProfilesFilterHistoryEntry(session)).toEqual({
+		filter,
+		draft: filter,
+		fingerprint: profileFilterFingerprint(filter),
+	});
+	expect(session.draft).not.toBe(filter);
+});
+
+test(`Ignore logical operators in groups that contain fewer than two rules when comparing profile results`, () => {
+	const condition = { property: 'email', operator: 'contains' as const, values: ['example.com'] };
+	const oneRuleAnd: Filter = { operator: 'and', rules: [condition] };
+	const oneRuleOr: Filter = { operator: 'or', rules: [condition] };
+	const twoRulesAnd: Filter = { operator: 'and', rules: [condition, condition] };
+	const twoRulesOr: Filter = { operator: 'or', rules: [condition, condition] };
+	const nestedAnd: Filter = { operator: 'and', rules: [oneRuleAnd, condition] };
+	const nestedOr: Filter = { operator: 'and', rules: [oneRuleOr, condition] };
+
+	expect(profileFilterResultsFingerprint(oneRuleAnd)).toBe(profileFilterResultsFingerprint(oneRuleOr));
+	expect(profileFilterResultsFingerprint(nestedAnd)).toBe(profileFilterResultsFingerprint(nestedOr));
+	expect(profileFilterResultsFingerprint(twoRulesAnd)).not.toBe(profileFilterResultsFingerprint(twoRulesOr));
+});
+
+test(`Commit filter history without match counts and truncate a redo branch`, () => {
+	const filterB: Filter = {
+		operator: 'and',
+		rules: [{ property: 'email', operator: 'contains', values: ['example.com'] }],
+	};
+	const filterC: Filter = {
+		operator: 'and',
+		rules: [{ property: 'email', operator: 'contains', values: ['example.org'] }],
+	};
+	const filterD: Filter = {
+		operator: 'and',
+		rules: [{ property: 'email', operator: 'contains', values: ['example.net'] }],
+	};
+	let session = createProfilesFilterSession(null);
+	session = commitProfilesFilter(session, filterB);
+	session = commitProfilesFilter(session, filterC);
+
+	session = { ...session, draft: filterB, historyIndex: 1 };
+	session = commitProfilesFilter(session, filterD);
+
+	expect(session.history.map(({ filter }) => filter)).toEqual([null, filterB, filterD]);
+	expect(session.historyIndex).toBe(2);
+	expect(session.draft).toEqual(filterD);
+});
+
+test(`Confirm an unchanged filter without adding history or discarding Redo`, () => {
+	const filter: Filter = {
+		operator: 'and',
+		rules: [{ property: 'email', operator: 'contains', values: ['example.com'] }],
+	};
+	let session = createProfilesFilterSession(filter);
+	session = commitProfilesFilter(session, null);
+	session = { ...session, draft: filter, historyIndex: 0 };
+	expect(commitProfilesFilter(session, structuredClone(filter))).toBe(session);
+	expect(session.history).toHaveLength(2);
+	expect(session.historyIndex).toBe(0);
+
+	const draft: Filter = {
+		...filter,
+		rules: [{ property: 'email', operator: 'contains', values: ['"example.com"'] }],
+	};
+	session = commitProfilesFilter(session, filter, draft);
+	expect(session.history).toHaveLength(2);
+	expect(session.historyIndex).toBe(0);
+	expect(session.draft).toEqual(draft);
+	expect(currentProfilesFilterHistoryEntry(session).draft).toEqual(draft);
+	session = { ...session, draft: null };
+	session = commitProfilesFilter(session, filter, draft);
+	expect(session.draft).toEqual(draft);
+	expect(session.history).toHaveLength(2);
+});
+
+test('Keep only the latest fifty confirmed filter versions', () => {
+	let session = createProfilesFilterSession(null);
+	for (let index = 0; index < 55; index++) {
+		session = commitProfilesFilter(session, {
+			operator: 'and',
+			rules: [{ property: 'email', operator: 'contains', values: [String(index)] }],
+		});
+	}
+	expect(session.history).toHaveLength(50);
+	expect(session.historyIndex).toBe(49);
+	expect((session.history[0].filter!.rules[0] as FilterCondition).values).toEqual(['5']);
+	expect((currentProfilesFilterHistoryEntry(session).filter!.rules[0] as FilterCondition).values).toEqual(['54']);
+});
+
+test('Initialize a quoted profile filter draft without changing its values', () => {
+	const filter: Filter = {
+		operator: 'or',
+		rules: [
+			{
+				operator: 'and',
+				rules: [
+					{
+						property: 'email',
+						operator: 'is one of',
+						values: ['  Ada  ', '"Ada"', "'Ada'", '"Ada\\Lovelace"'],
+					},
+				],
+			},
+		],
+	};
+	const session = createProfilesFilterSession(filter);
+	expect(validateAndNormalizeFilter(session.draft!, filterSchema)).toEqual(filter);
+	expect(currentProfilesFilterHistoryEntry(session).filter).toEqual(filter);
+});
+
+test('Keep the exact quoted draft in confirmed filter history', () => {
+	const draft: Filter = {
+		operator: 'and',
+		rules: [{ property: 'email', operator: 'is one of', values: ['"  Ada  "', '\'"Ada"\''] }],
+	};
+	const filter = validateAndNormalizeFilter(draft, filterSchema)!;
+	let session = createProfilesFilterSession(null);
+	session = commitProfilesFilter(session, filter, draft);
+	expect(session.draft).toEqual(draft);
+	expect(session.draft).not.toBe(draft);
+	expect(validateAndNormalizeFilter(session.draft!, filterSchema)).toEqual(filter);
+	session = commitProfilesFilter(session, null);
+	expect(session.history[1].draft).toEqual(draft);
+	expect(session.history[1].draft).not.toBe(draft);
+});

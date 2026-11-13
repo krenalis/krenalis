@@ -82,7 +82,7 @@ func TestImportFromTwoDummies(t *testing.T) {
 	// Since the profiles have been imported from two different connections without
 	// any identity resolution identifier configured, there should be a total of
 	// 20 profiles, even if they have the same properties.
-	profiles, _, total := k.Profiles([]string{"email", "first_name", "last_name"}, "", false, 0, 100)
+	profiles, total := k.Profiles([]string{"email", "first_name", "last_name"}, "", false, 0, 100)
 	expectedTotal := 20
 	if expectedTotal != total {
 		t.Fatalf("expected total %d, got %d", expectedTotal, total)
@@ -107,7 +107,7 @@ func TestImportFromTwoDummies(t *testing.T) {
 	k.RunIdentityResolutionAndWait()
 
 	// Now the profiles should be merged, resulting in a total of 10 profiles.
-	profiles, _, total = k.Profiles([]string{"email", "first_name", "last_name"}, "", false, 0, 100)
+	profiles, total = k.Profiles([]string{"email", "first_name", "last_name"}, "", false, 0, 100)
 	expectedTotal = 10
 	if expectedTotal != total {
 		t.Fatalf("expected total %d, got %d", expectedTotal, total)

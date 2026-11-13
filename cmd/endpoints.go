@@ -82,11 +82,9 @@ func endpoints(s *apisServer) map[string]endpointHandler {
 		"GET    /pipelines/runs":                                  workspace.PipelineRuns,
 		"GET    /pipelines/runs/{id}":                             workspace.PipelineRun,
 		"GET    /pipelines/{id}":                                  workspace.Pipeline,
-		"GET    /profiles":                                        workspace.Profiles,
 		"GET    /profiles/schema":                                 workspace.ProfileSchema,
 		"GET    /profiles/schema/latest-alter":                    workspace.LatestAlterProfileSchema,
 		"GET    /profiles/schema/suitable-as-identifiers":         workspace.ProfilePropertiesSuitableAsIdentifiers, /* Admin console only */
-		"GET    /profiles/{kpid}/attributes":                      workspace.Attributes,
 		"GET    /profiles/{kpid}/events":                          workspace.ProfileEvents,
 		"GET    /profiles/{kpid}/identities":                      workspace.Identities,
 		"GET    /public/metadata":                                 api.PublicMetadata,
@@ -116,7 +114,10 @@ func endpoints(s *apisServer) map[string]endpointHandler {
 		"POST   /organizations":                                   api.CreateOrganization, /* Needs Platform Management API key */
 		"POST   /pipelines":                                       connection.CreatePipeline,
 		"POST   /pipelines/{id}/runs":                             pipeline.Run,
-		"POST   /pipelines/{id}/ui-event":                         pipeline.ServeUI,     /* Admin console only */
+		"POST   /pipelines/{id}/ui-event":                         pipeline.ServeUI, /* Admin console only */
+		"POST   /profiles/count":                                  workspace.ProfileCount,
+		"POST   /profiles/query":                                  workspace.Profiles,
+		"POST   /profiles/{kpid}/attributes/query":                workspace.Attributes,
 		"POST   /sentry/errors":                                   s.forwardSentryError, /* Admin console only */
 		"POST   /signup":                                          api.Signup,
 		"POST   /transformations":                                 api.TransformData,      /* Admin console only */

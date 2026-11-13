@@ -51,7 +51,7 @@ func TestSourceAppUsersFiltering(t *testing.T) {
 	run := k.StartPipelineRun(importUsersID)
 	k.WaitForRunsCompletionAllowFailed(run)
 
-	_, _, total := k.Profiles([]string{"email"}, "", false, 0, 100)
+	_, total := k.Profiles([]string{"email"}, "", false, 0, 100)
 
 	// Dummy exposes 10 profiles, but one of them was filtered out, so there must
 	// be 9.

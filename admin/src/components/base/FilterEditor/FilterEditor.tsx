@@ -1,0 +1,879 @@
+import React, { ReactNode, RefObject, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import './FilterEditor.css';
+import { checkIfPropertyExists } from '../../helpers/checkIfPropertyExists';
+import { getPropertyPathDisplayValue } from '../../helpers/getPropertyPathDisplayValue';
+import { getFilterPropertyComboboxItems } from '../../helpers/getSchemaComboboxItems';
+import WaOption from '@awesome.me/webawesome/dist/react/option/index.js';
+import WaSelect from '@awesome.me/webawesome/dist/react/select/index.js';
+import type WaSelectElement from '@awesome.me/webawesome/dist/components/select/select.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import type WaButtonElement from '@awesome.me/webawesome/dist/components/button/button.js';
+import WaInput from '@awesome.me/webawesome/dist/react/input/index.js';
+import type WaInputElement from '@awesome.me/webawesome/dist/components/input/input.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
+import WaTooltip from '@awesome.me/webawesome/dist/react/tooltip/index.js';
+import { Combobox } from '../Combobox/Combobox';
+import {
+	FILTER_OPERATORS,
+	MAX_FILTER_DEPTH,
+	MAX_FILTER_RULE_COUNT,
+	flattenSchema,
+	getCompatibleFilterOperators,
+	isBetweenOperator,
+	isFilterGroup,
+	isOneOfOperator,
+	isUnaryOperator,
+	splitPropertyAndPath,
+	TransformedProperty,
+} from '../../../lib/core/pipeline';
+import {
+	Filter,
+	FilterCondition,
+	FilterLogical,
+	FilterOperator,
+	PipelineTarget,
+} from '../../../lib/api/types/pipeline';
+import { ObjectType, StringType } from '../../../lib/api/types/types';
+import { ConnectionRole } from '../../../lib/api/types/connection';
+
+// countFilterRules returns the number of groups and conditions below filter.
+const countFilterRules = (filter: Filter): number =>
+	filter.rules.reduce((count, rule) => count + 1 + (isFilterGroup(rule) ? countFilterRules(rule) : 0), 0);
+
+// filterGroupAt returns the group at path in filter.
+const filterGroupAt = (filter: Filter, path: number[]): Filter => {
+	let group = filter;
+	for (const index of path) {
+		const rule = group.rules[index];
+		if (!isFilterGroup(rule)) {
+			throw new Error('Filter path does not identify a group');
+		}
+		group = rule;
+	}
+	return group;
+};
+
+// filterConditionAt returns the condition at path in filter.
+const filterConditionAt = (filter: Filter, path: number[]): FilterCondition => {
+	const group = filterGroupAt(filter, path.slice(0, -1));
+	const rule = group.rules[path[path.length - 1]];
+	if (isFilterGroup(rule)) {
+		throw new Error('Filter path does not identify a condition');
+	}
+	return rule;
+};
+
+// filterConditionValues returns the values of condition, initializing them
+// when they are absent from the API representation.
+const filterConditionValues = (condition: FilterCondition): string[] => (condition.values ??= []);
+
+// newFilterCondition returns an empty condition for the visual editor.
+const newFilterCondition = (): FilterCondition => ({ property: '', operator: '', values: [''] });
+
+// pathID returns a stable identifier for a rule path.
+const pathID = (path: number[]): string => path.join('-');
+
+const NO_HIDDEN_PROPERTIES: string[] = [];
+const EMPTY_FILTER: Filter = { operator: 'and', rules: [] };
+const EMPTY_FILTER_WITH_CONDITION: Filter = { operator: 'and', rules: [newFilterCondition()] };
+
+interface FilterEditorProps {
+	disabled?: boolean;
+	emptyFilterFocusRef?: RefObject<HTMLElement>;
+	errors?: Record<string, string>;
+	filter: Filter | null;
+	hoistMenus?: boolean;
+	onChange: (filter: Filter | null) => void;
+	onCommit?: (filter: Filter | null) => void;
+	propertiesToHide?: string[];
+	role: ConnectionRole;
+	rootActions?: ReactNode;
+	schema: ObjectType;
+	showEmptyFilterAsCondition?: boolean;
+	subject: string;
+	target: PipelineTarget;
+	validationAttempt?: number;
+}
+
+const FilterEditor = ({
+	disabled = false,
+	emptyFilterFocusRef,
+	errors,
+	filter,
+	hoistMenus = false,
+	onChange,
+	onCommit,
+	propertiesToHide = NO_HIDDEN_PROPERTIES,
+	role,
+	rootActions,
+	schema,
+	showEmptyFilterAsCondition = false,
+	subject,
+	target,
+	validationAttempt,
+}: FilterEditorProps) => {
+	const editorID = useId();
+	const [conditionRemovalAnnouncement, setConditionRemovalAnnouncement] = useState('');
+	const announcementFrameRef = useRef<number>();
+	const rootRef = useRef<HTMLDivElement>(null);
+	const pendingConditionFocusRef = useRef<number | 'add-condition'>();
+	const editableFilter = filter ?? (showEmptyFilterAsCondition ? EMPTY_FILTER_WITH_CONDITION : EMPTY_FILTER);
+	const flatInputSchema = useMemo(() => flattenSchema(schema), [schema]);
+	const propertyItems = useMemo(
+		() => getFilterPropertyComboboxItems(schema, role, target, propertiesToHide),
+		[propertiesToHide, role, schema, target],
+	);
+	const filterRuleCount = countFilterRules(editableFilter);
+
+	useEffect(
+		() => () => {
+			if (announcementFrameRef.current != null) {
+				cancelAnimationFrame(announcementFrameRef.current);
+			}
+		},
+		[],
+	);
+
+	useLayoutEffect(() => {
+		if (validationAttempt == null || validationAttempt === 0) {
+			return;
+		}
+		const input = rootRef.current?.querySelector<WaInputElement | WaSelectElement>('[aria-invalid="true"]');
+		if (input == null) {
+			return;
+		}
+		let canceled = false;
+		void input.updateComplete.then(() => {
+			if (!canceled && input.isConnected) {
+				input.focus();
+			}
+		});
+		return () => {
+			canceled = true;
+		};
+	}, [validationAttempt]);
+
+	useLayoutEffect(() => {
+		const pendingFocus = pendingConditionFocusRef.current;
+		if (pendingFocus == null) {
+			return;
+		}
+		pendingConditionFocusRef.current = undefined;
+
+		const propertyInputs = rootRef.current?.querySelectorAll<WaInputElement>('.filter-editor__property wa-input');
+		const target =
+			typeof pendingFocus === 'number'
+				? propertyInputs?.[pendingFocus]
+				: rootRef.current?.querySelector<WaButtonElement>('.filter-editor__add-condition');
+		if (target != null) {
+			// Removing a rule can remount the next input before its internal control is ready.
+			let canceled = false;
+			void target.updateComplete.then(() => {
+				if (!canceled && target.isConnected) {
+					target.focus({ preventScroll: true });
+				}
+			});
+			return () => {
+				canceled = true;
+			};
+		}
+
+		// The fallback may be a newly mounted web component whose internal control is not ready yet.
+		const animationFrame = requestAnimationFrame(() =>
+			emptyFilterFocusRef?.current?.focus({ preventScroll: true }),
+		);
+		return () => cancelAnimationFrame(animationFrame);
+	}, [emptyFilterFocusRef, filter]);
+
+	const announceConditionRemoved = () => {
+		setConditionRemovalAnnouncement('');
+		if (announcementFrameRef.current != null) {
+			cancelAnimationFrame(announcementFrameRef.current);
+		}
+		announcementFrameRef.current = requestAnimationFrame(() => {
+			announcementFrameRef.current = undefined;
+			setConditionRemovalAnnouncement('Condition removed');
+		});
+	};
+
+	const changeFilter = (updatedFilter: Filter | null, commit = false) => {
+		onChange(updatedFilter);
+		if (commit) {
+			onCommit?.(updatedFilter);
+		}
+	};
+
+	const findPropertyInSchema = (propertyName: string): TransformedProperty | undefined => {
+		if (propertyName == null || propertyName === '') {
+			return undefined;
+		}
+		return flatInputSchema[propertyName] ?? flatInputSchema[splitPropertyAndPath(propertyName, flatInputSchema)[0]];
+	};
+
+	const getPropertyValues = (property: TransformedProperty | undefined): string[] | null => {
+		if (property == null || property.type !== 'string') {
+			return null;
+		}
+		return (property.full.type as StringType).values ?? null;
+	};
+
+	const onAddCondition = (groupPath: number[]) => {
+		const updatedFilter = structuredClone(editableFilter);
+		filterGroupAt(updatedFilter, groupPath).rules.push(newFilterCondition());
+		changeFilter(updatedFilter);
+	};
+
+	const onAddGroup = (groupPath: number[]) => {
+		const updatedFilter = structuredClone(editableFilter);
+		const parent = filterGroupAt(updatedFilter, groupPath);
+		parent.rules.push({
+			operator: parent.operator === 'and' ? 'or' : 'and',
+			rules: [newFilterCondition()],
+		});
+		changeFilter(updatedFilter);
+	};
+
+	const onRemoveRule = (path: number[]) => {
+		const updatedFilter = structuredClone(editableFilter);
+		const groupPath = path.slice(0, -1);
+		const group = filterGroupAt(updatedFilter, groupPath);
+		group.rules.splice(path[path.length - 1], 1);
+
+		if (group.rules.length === 0) {
+			if (groupPath.length === 0) {
+				changeFilter(null, true);
+				return;
+			}
+			group.rules.push(newFilterCondition());
+		}
+		changeFilter(updatedFilter, true);
+	};
+
+	const onRemoveCondition = (path: number[]) => {
+		const propertyInputs = Array.from(
+			rootRef.current?.querySelectorAll<HTMLElement>('.filter-editor__property wa-input') ?? [],
+		);
+		const currentProperty = rootRef.current?.querySelector<HTMLElement>(
+			`[data-id="property-${pathID(path)}"] wa-input`,
+		);
+		const currentIndex = currentProperty == null ? -1 : propertyInputs.indexOf(currentProperty);
+
+		if (currentIndex >= 0 && currentIndex < propertyInputs.length - 1) {
+			pendingConditionFocusRef.current = currentIndex;
+		} else if (currentIndex > 0) {
+			pendingConditionFocusRef.current = currentIndex - 1;
+		} else {
+			pendingConditionFocusRef.current = 'add-condition';
+		}
+
+		announceConditionRemoved();
+		onRemoveRule(path);
+	};
+
+	const onLogicalChange = (groupPath: number[], operator: FilterLogical) => {
+		const updatedFilter = structuredClone(editableFilter);
+		filterGroupAt(updatedFilter, groupPath).operator = operator;
+		changeFilter(updatedFilter, true);
+	};
+
+	const updateProperty = (path: number[], value: string): Filter => {
+		const updatedFilter = structuredClone(editableFilter);
+		const condition = filterConditionAt(updatedFilter, path);
+		const previousPropertyName = condition.property;
+		const previousPropertyValues = getPropertyValues(findPropertyInSchema(previousPropertyName));
+		const [, previousPath] = splitPropertyAndPath(previousPropertyName, flatInputSchema);
+		const newPropertyName =
+			previousPath !== '' && flatInputSchema[value]?.type === 'json' ? `${value}.${previousPath}` : value;
+		const newProperty = findPropertyInSchema(newPropertyName);
+		const [, newPath] = splitPropertyAndPath(newPropertyName, flatInputSchema);
+
+		const compatibleOperators = getCompatibleFilterOperators(newProperty, newPath !== '');
+		if (condition.operator !== '' && !compatibleOperators.includes(FILTER_OPERATORS.indexOf(condition.operator))) {
+			condition.operator = '';
+			condition.values = [''];
+		}
+
+		condition.property = newPropertyName;
+		const newPropertyValues = getPropertyValues(newProperty);
+		if (previousPropertyName !== newPropertyName && (previousPropertyValues != null || newPropertyValues != null)) {
+			condition.values = isBetweenOperator(condition.operator) ? ['', ''] : [''];
+		}
+		return updatedFilter;
+	};
+
+	const onSelectProperty = (path: number[], value: string) => {
+		const updatedFilter = updateProperty(path, value);
+		const condition = filterConditionAt(updatedFilter, path);
+		const [, propertyPath] = splitPropertyAndPath(condition.property, flatInputSchema);
+		const compatibleOperators = getCompatibleFilterOperators(flatInputSchema[value], propertyPath !== '');
+		const currentOperatorIndex = FILTER_OPERATORS.findIndex((operator) => operator === condition.operator);
+		const isJSON = flatInputSchema[value]?.type === 'json';
+
+		if (!compatibleOperators.includes(currentOperatorIndex) && compatibleOperators.length > 0) {
+			setOperator(updatedFilter, path, FILTER_OPERATORS[compatibleOperators[0]]);
+			if (!isJSON) {
+				setTimeout(() => {
+					const property: any = document.querySelector(`[data-id="property-${pathID(path)}"]`);
+					property?.closest('.filter-editor__condition')?.querySelector('.filter-editor__operator')?.show();
+				}, 10);
+			}
+		}
+		changeFilter(updatedFilter, true);
+
+		if (isJSON) {
+			setTimeout(() => {
+				const property: any = document.querySelector(`[data-id="property-${pathID(path)}"]`);
+				property?.closest('.filter-editor__condition')?.querySelector('.filter-editor__path')?.select();
+			}, 10);
+		}
+	};
+
+	const updatePath = (path: number[], value: string): Filter => {
+		const updatedFilter = structuredClone(editableFilter);
+		const condition = filterConditionAt(updatedFilter, path);
+		const [base] = splitPropertyAndPath(condition.property, flatInputSchema);
+		const compatibleOperators = getCompatibleFilterOperators(flatInputSchema[base], value !== '');
+		if (condition.operator !== '' && !compatibleOperators.includes(FILTER_OPERATORS.indexOf(condition.operator))) {
+			condition.operator = '';
+			condition.values = [''];
+		}
+		condition.property = value === '' ? base : `${base}.${value}`;
+		return updatedFilter;
+	};
+
+	const setOperator = (updatedFilter: Filter, path: number[], operator: FilterOperator) => {
+		const condition = filterConditionAt(updatedFilter, path);
+		const values = filterConditionValues(condition);
+		condition.operator = operator;
+		if (isUnaryOperator(operator)) {
+			delete condition.values;
+		} else if (isBetweenOperator(operator)) {
+			condition.values = values.slice(0, 2);
+			while (condition.values.length < 2) {
+				condition.values.push('');
+			}
+		} else if (isOneOfOperator(operator)) {
+			if (values.length === 0) {
+				condition.values = [''];
+			}
+		} else {
+			condition.values = [values[0] ?? ''];
+		}
+	};
+
+	const changeOperator = (path: number[], operator: FilterOperator) => {
+		const updatedFilter = structuredClone(editableFilter);
+		setOperator(updatedFilter, path, operator);
+		changeFilter(updatedFilter, true);
+	};
+
+	const onOperatorSelectClose = (event: any) => {
+		const select = event.target;
+		// Hand off focus only after closing, without stealing it from a reopened menu or another control.
+		if (select.open || document.activeElement !== select) {
+			return;
+		}
+		const operator = FILTER_OPERATORS[select.value];
+		if (operator == null || isUnaryOperator(operator)) {
+			return;
+		}
+		const valueInput = select.closest('.filter-editor__condition')?.querySelector('.filter-editor__value-input');
+		if (valueInput == null) {
+			return;
+		}
+		if (valueInput.tagName === 'WA-SELECT' && !valueInput.open) {
+			valueInput.show();
+		} else {
+			valueInput.focus();
+		}
+	};
+
+	const updateValue = (path: number[], position: number, value: string): Filter => {
+		const updatedFilter = structuredClone(editableFilter);
+		filterConditionValues(filterConditionAt(updatedFilter, path))[position] = value;
+		return updatedFilter;
+	};
+
+	const onAddValue = (path: number[]) => {
+		const updatedFilter = structuredClone(editableFilter);
+		const condition = filterConditionAt(updatedFilter, path);
+		const values = filterConditionValues(condition);
+		const position = values.length;
+		values.push('');
+		changeFilter(updatedFilter);
+		setTimeout(() => {
+			const property: any = document.querySelector(`[data-id="property-${pathID(path)}"]`);
+			const inputs = property
+				?.closest('.filter-editor__condition')
+				?.querySelectorAll('.filter-editor__value-input');
+			const input = inputs?.[position];
+			if (input == null) {
+				return;
+			}
+			if (input.tagName === 'WA-SELECT') {
+				input.show();
+			} else {
+				input.focus();
+			}
+		}, 50);
+	};
+
+	const onRemoveValue = (path: number[], position: number) => {
+		const updatedFilter = structuredClone(editableFilter);
+		const condition = filterConditionAt(updatedFilter, path);
+		filterConditionValues(condition).splice(position, 1);
+		changeFilter(updatedFilter, true);
+	};
+
+	const renderCondition = (condition: FilterCondition, path: number[], conditionNumber: number): ReactNode => {
+		const id = pathID(path);
+		const groupPath = path.slice(0, -1);
+		const isOnlyRuleInNestedGroup =
+			groupPath.length > 0 && filterGroupAt(editableFilter, groupPath).rules.length === 1;
+		const isRemoveDisabled = disabled || isOnlyRuleInNestedGroup;
+		const hideRemoveButton =
+			showEmptyFilterAsCondition &&
+			groupPath.length === 0 &&
+			editableFilter.rules.length === 1 &&
+			condition.property === '' &&
+			condition.operator === '' &&
+			(condition.values == null || condition.values.every((value) => value === ''));
+		const [base, propertyPath] = splitPropertyAndPath(condition.property, flatInputSchema);
+		const property = flatInputSchema?.[base];
+		const isUnary = isUnaryOperator(condition.operator);
+		const isJSON = property?.type === 'json';
+		const isBetween = isBetweenOperator(condition.operator);
+		const isOneOf = isOneOfOperator(condition.operator);
+		const isInvalidProperty = property == null;
+		const propertyValues = getPropertyValues(property) ?? [];
+		const values = condition.values ?? [];
+		const propertyName = isJSON ? base : condition.property;
+		const propertyDisplayValue = propertyItems.find((item) => item.term === propertyName)?.displayValue;
+		const formatError = (error: string | undefined): ReactNode => {
+			if (error == null) {
+				return undefined;
+			}
+			const message = error.endsWith('.') ? error : `${error}.`;
+			const quotedProperty = `"${condition.property.trim()}"`;
+			const position = message.indexOf(quotedProperty);
+			const prefix = message.slice(0, position);
+			if (position < 0 || (prefix !== 'Property ' && prefix !== 'The filter value on the property ')) {
+				return message;
+			}
+			return (
+				<>
+					{prefix}
+					<strong>
+						{getPropertyPathDisplayValue(condition.property.trim(), (path) => flatInputSchema[path]?.full)}
+					</strong>
+					{message.slice(position + quotedProperty.length)}
+				</>
+			);
+		};
+
+		const propertyInput = (
+			<Combobox
+				onInput={(_, value) => changeFilter(updateProperty(path, value))}
+				onSelect={(_, value) => onSelectProperty(path, value)}
+				value={propertyName}
+				displayValue={propertyDisplayValue}
+				className='filter-editor__property'
+				size='small'
+				name={`property-${id}`}
+				items={propertyItems}
+				isExpression={false}
+				disabled={disabled}
+				placeholder='Property'
+				caret={true}
+				controlled={true}
+				autoResize={true}
+				hoist={hoistMenus}
+				error={
+					errors == null &&
+					condition.property !== '' &&
+					checkIfPropertyExists(isJSON ? base : condition.property, flatInputSchema, propertiesToHide)
+				}
+				aria-invalid={errors?.[`property-${id}`] != null ? 'true' : undefined}
+			>
+				{errors?.[`property-${id}`] != null && (
+					<span slot='hint' role='alert'>
+						{formatError(errors[`property-${id}`])}
+					</span>
+				)}
+			</Combobox>
+		);
+		const pathInput = isJSON ? (
+			<WaInput
+				size='s'
+				className='filter-editor__path'
+				value={propertyPath}
+				onInput={(event: any) => changeFilter(updatePath(path, event.target.value))}
+				onChange={(event: any) => changeFilter(updatePath(path, event.target.value), true)}
+				name={`path-${id}`}
+				disabled={disabled}
+				placeholder='Path (optional)'
+				aria-invalid={errors?.[`path-${id}`] != null ? 'true' : undefined}
+			>
+				{errors?.[`path-${id}`] != null && (
+					<span slot='hint' role='alert'>
+						{formatError(errors[`path-${id}`])}
+					</span>
+				)}
+			</WaInput>
+		) : null;
+		const operatorSelect = (
+			<WaSelect
+				size='s'
+				name={`operator-${id}`}
+				className='filter-editor__operator'
+				value={String(FILTER_OPERATORS.findIndex((operator) => operator === condition.operator))}
+				onChange={(event: any) => changeOperator(path, FILTER_OPERATORS[event.target.value])}
+				onWaAfterHide={onOperatorSelectClose}
+				placeholder='Operator'
+				disabled={isInvalidProperty || disabled}
+				aria-invalid={errors?.[`operator-${id}`] != null ? 'true' : undefined}
+			>
+				{property != null
+					? getCompatibleFilterOperators(property, propertyPath !== '').map((index) => (
+							<WaOption key={index} value={String(index)}>
+								{FILTER_OPERATORS[index]}
+							</WaOption>
+						))
+					: FILTER_OPERATORS.map((operator, index) => (
+							<WaOption key={operator} value={String(index)}>
+								{operator}
+							</WaOption>
+						))}
+				{errors?.[`operator-${id}`] != null && (
+					<span slot='hint' role='alert'>
+						{formatError(errors[`operator-${id}`])}
+					</span>
+				)}
+			</WaSelect>
+		);
+
+		const valueElements: ReactNode[] = [];
+		if (!isUnary) {
+			valueElements.push(
+				<FilterValueControl
+					key={`value-${id}-0`}
+					name={`value-${id}-0`}
+					error={formatError(errors?.[`value-${id}-0`])}
+					value={values[0] ?? ''}
+					options={propertyValues}
+					disabled={isInvalidProperty || disabled}
+					onValueChange={(value) => changeFilter(updateValue(path, 0, value))}
+					onValueCommit={(value) => changeFilter(updateValue(path, 0, value), true)}
+				/>,
+			);
+			if (isBetween) {
+				valueElements.push(
+					<span className='filter-editor__value-and' key='and'>
+						and
+					</span>,
+					<FilterValueControl
+						key={`value-${id}-1`}
+						name={`value-${id}-1`}
+						error={formatError(errors?.[`value-${id}-1`])}
+						value={values[1] ?? ''}
+						options={propertyValues}
+						disabled={isInvalidProperty || disabled}
+						onValueChange={(value) => changeFilter(updateValue(path, 1, value))}
+						onValueCommit={(value) => changeFilter(updateValue(path, 1, value), true)}
+					/>,
+				);
+			} else if (isOneOf) {
+				for (const [position, value] of values.slice(1).entries()) {
+					const valuePosition = position + 1;
+					valueElements.push(
+						<div className='filter-editor__value' key={`value-${id}-${valuePosition}`}>
+							<FilterValueControl
+								name={`value-${id}-${valuePosition}`}
+								error={formatError(errors?.[`value-${id}-${valuePosition}`])}
+								value={value}
+								options={propertyValues}
+								disabled={isInvalidProperty || disabled}
+								onValueChange={(value) => changeFilter(updateValue(path, valuePosition, value))}
+								onValueCommit={(value) => changeFilter(updateValue(path, valuePosition, value), true)}
+								removable={true}
+								onRemove={() => onRemoveValue(path, valuePosition)}
+							/>
+						</div>,
+					);
+				}
+				valueElements.push(
+					<WaButton
+						className='filter-editor__add-value'
+						key='add-button'
+						appearance='outlined'
+						size='s'
+						disabled={disabled}
+						onClick={() => onAddValue(path)}
+					>
+						Add value
+					</WaButton>,
+				);
+			}
+		}
+
+		const removeButtonID = `${editorID}-${id}-remove-condition`;
+		const removeButton = (
+			<button
+				type='button'
+				className='filter-editor__remove-condition filter-editor__remove-rule'
+				aria-label={`Remove condition ${conditionNumber}`}
+				onClick={() => onRemoveCondition(path)}
+				disabled={isRemoveDisabled}
+			>
+				<WaIcon name='x' aria-hidden='true' />
+			</button>
+		);
+
+		return (
+			<div className='filter-editor__filter' key={id}>
+				<div className={`filter-editor__condition${isOneOf ? ' filter-editor__condition--is-one-of' : ''}`}>
+					<div className='filter-editor__property-and-operator'>
+						{propertyInput}
+						{pathInput}
+						{operatorSelect}
+					</div>
+					{isOneOf ? <div className='filter-editor__is-one-of-values'>{valueElements}</div> : valueElements}
+					{!hideRemoveButton && (
+						<div id={removeButtonID} className='filter-editor__remove-condition-wrapper'>
+							{isRemoveDisabled ? (
+								removeButton
+							) : (
+								<>
+									<WaTooltip className='app-tooltip' for={removeButtonID}>
+										Remove condition
+									</WaTooltip>
+									{removeButton}
+								</>
+							)}
+						</div>
+					)}
+				</div>
+			</div>
+		);
+	};
+
+	const renderGroup = (group: Filter, groupPath: number[], depth: number): ReactNode => {
+		const isRoot = depth === 1;
+		const currentGroupNumber = isRoot ? undefined : ++groupNumber;
+		const removeGroupTooltip = group.rules.some(isFilterGroup) ? 'Remove groups' : 'Remove group';
+
+		return (
+			<div
+				ref={isRoot ? rootRef : undefined}
+				className={`filter-editor__group${isRoot ? ' filter-editor__group--root' : ''}`}
+				key={pathID(groupPath) || 'root'}
+			>
+				<div className='filter-editor__group-header'>
+					<span className='filter-editor__group-subject'>{isRoot ? `${subject} matching` : 'matching'}</span>
+					<WaSelect
+						className='filter-editor__logical'
+						size='s'
+						value={group.operator}
+						onChange={(event: any) => onLogicalChange(groupPath, event.target.value as FilterLogical)}
+						disabled={disabled}
+						aria-label='Match rules'
+					>
+						<WaOption value='and'>all</WaOption>
+						<WaOption value='or'>any</WaOption>
+					</WaSelect>
+					<span>of the following:</span>
+					{isRoot && rootActions != null && <div className='filter-editor__root-actions'>{rootActions}</div>}
+					{!isRoot && (
+						<div className='filter-editor__remove-group-wrapper'>
+							<WaTooltip className='app-tooltip' for={`${editorID}-${pathID(groupPath)}-remove-group`}>
+								{removeGroupTooltip}
+							</WaTooltip>
+							<WaButton
+								id={`${editorID}-${pathID(groupPath)}-remove-group`}
+								className='filter-editor__remove-group filter-editor__remove-rule'
+								size='s'
+								variant='brand'
+								appearance='plain'
+								onClick={() => onRemoveRule(groupPath)}
+								disabled={disabled}
+							>
+								<WaIcon name='x' aria-hidden='true' />
+								<span className='filter-editor__remove-rule-label'>{`Remove group ${currentGroupNumber}`}</span>
+							</WaButton>
+						</div>
+					)}
+				</div>
+				<div className='filter-editor__group-rules'>
+					{group.rules.map((rule, index) => {
+						const path = [...groupPath, index];
+						const isGroup = isFilterGroup(rule);
+
+						return (
+							<div
+								className={`filter-editor__rule${isGroup ? ' filter-editor__rule--group' : ''}`}
+								key={pathID(path)}
+							>
+								{index > 0 && (
+									<div className='filter-editor__connector' aria-hidden='true'>
+										{group.operator}
+									</div>
+								)}
+								<div className='filter-editor__rule-content'>
+									{isGroup
+										? renderGroup(rule, path, depth + 1)
+										: renderCondition(rule, path, ++conditionNumber)}
+								</div>
+							</div>
+						);
+					})}
+				</div>
+				<div className='filter-editor__group-actions'>
+					<WaButton
+						className='filter-editor__add-condition'
+						size='m'
+						variant='brand'
+						appearance='plain'
+						onClick={() => onAddCondition(groupPath)}
+						disabled={disabled || filterRuleCount >= MAX_FILTER_RULE_COUNT}
+					>
+						<WaIcon slot='start' name='plus-circle' />
+						Add a condition
+					</WaButton>
+					<WaButton
+						className='filter-editor__add-group'
+						size='m'
+						variant='brand'
+						appearance='plain'
+						onClick={() => onAddGroup(groupPath)}
+						disabled={disabled || depth >= MAX_FILTER_DEPTH || filterRuleCount > MAX_FILTER_RULE_COUNT - 2}
+					>
+						<WaIcon slot='start' name='plus-circle' />
+						Add a group
+					</WaButton>
+				</div>
+			</div>
+		);
+	};
+
+	let conditionNumber = 0;
+	let groupNumber = 0;
+
+	return (
+		<>
+			{filter == null && !showEmptyFilterAsCondition ? null : renderGroup(editableFilter, [], 1)}
+			<span className='filter-editor__announcement' role='status' aria-live='polite' aria-atomic='true'>
+				{conditionRemovalAnnouncement}
+			</span>
+		</>
+	);
+};
+
+interface FilterValueControlProps {
+	error?: ReactNode;
+	name: string;
+	value: string;
+	options: string[];
+	disabled: boolean;
+	onValueChange: (value: string) => void;
+	onValueCommit: (value: string) => void;
+	removable?: boolean;
+	onRemove?: () => void;
+}
+
+const FilterValueControl = ({
+	error,
+	name,
+	value,
+	options,
+	disabled,
+	onValueChange,
+	onValueCommit,
+	removable = false,
+	onRemove,
+}: FilterValueControlProps) => {
+	const handleInput = (event: any) => {
+		onValueChange(event.target.value);
+	};
+
+	const handleSelect = (event: any) => {
+		const target = event.target as any;
+		const v = event.detail?.value ?? target.value;
+		onValueChange(v);
+		onValueCommit(v);
+	};
+
+	const handleCommit = (event: any) => {
+		onValueCommit(event.target.value);
+	};
+
+	const handleKeyDown = (event: React.KeyboardEvent) => {
+		if (event.key === 'Enter' && !event.nativeEvent.isComposing) {
+			onValueCommit((event.currentTarget as any).value);
+		}
+	};
+
+	const removeButton = removable ? (
+		<WaButton
+			slot='end'
+			appearance='outlined'
+			size='s'
+			pill
+			className='filter-editor__value-remove'
+			onClick={onRemove}
+			disabled={disabled}
+		>
+			<WaIcon name='x' />
+		</WaButton>
+	) : null;
+
+	if (options.length > 0) {
+		return (
+			<div className={removable ? 'filter-editor__value-control--removable' : undefined}>
+				<WaSelect
+					size='s'
+					className='filter-editor__value-input'
+					name={name}
+					value={value ?? ''}
+					onChange={handleSelect}
+					disabled={disabled}
+					aria-invalid={error != null ? 'true' : undefined}
+				>
+					{options.map((option, index) => (
+						<WaOption key={`${index}-${option}`} value={option}>
+							{option === '' ? '\u00A0' : option}
+						</WaOption>
+					))}
+					{removeButton}
+					{error != null && (
+						<span slot='hint' role='alert'>
+							{error}
+						</span>
+					)}
+				</WaSelect>
+			</div>
+		);
+	}
+
+	return (
+		<WaInput
+			size='s'
+			className='filter-editor__value-input'
+			value={value ?? ''}
+			onInput={handleInput}
+			onChange={handleCommit}
+			onKeyDown={handleKeyDown}
+			name={name}
+			disabled={disabled}
+			aria-invalid={error != null ? 'true' : undefined}
+		>
+			{removeButton}
+			{error != null && (
+				<span slot='hint' role='alert'>
+					{error}
+				</span>
+			)}
+		</WaInput>
+	);
+};
+
+export { FilterEditor };

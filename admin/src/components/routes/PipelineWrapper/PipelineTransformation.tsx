@@ -10,7 +10,6 @@ import React, {
 	useLayoutEffect,
 } from 'react';
 import {
-	checkIfPropertyExists,
 	updateMappingProperty,
 	getSampleIdentifiers,
 	updateMappingPropertyError,
@@ -18,6 +17,7 @@ import {
 	propertyAnnotation,
 	propertyAnnotationSeparator,
 } from './Pipeline.helpers';
+import { checkIfPropertyExists } from '../../helpers/checkIfPropertyExists';
 import {
 	getSchemaComboboxItems,
 	getUserIDColumnComboboxItems,
@@ -1585,7 +1585,15 @@ const FullscreenTransformation = ({
 				}
 				let res: FindProfilesResponse;
 				try {
-					res = await api.workspaces.profiles.find(properties, normalizedFilter, '', true, 0, 20);
+					res = await api.workspaces.profiles.find(
+						properties,
+						normalizedFilter,
+						'',
+						true,
+						0,
+						20,
+						inputSchema,
+					);
 				} catch (err) {
 					setIsLoading(false);
 					handleError(err);

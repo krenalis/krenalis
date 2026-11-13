@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"math"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -480,23 +481,59 @@ func (store *Store) ProfileRecords(ctx context.Context, query Query, consentCond
 	return records(ctx, store.warehouse(), query, consentCondition, "_kpid", store.profileColumnByProperty(), true, matching)
 }
 
-// Profiles returns the profiles according to the provided query.
+// Profiles returns the profiles matching query and an estimate of their
+// total number.
 //
+// schema must be an object type with the properties in query.Properties,
+// query.Where, and query.OrderBy. It may describe other profile properties.
+// The meta properties "_kpid" and "_updated_at" can be used in query but must
+// not be included in schema.
+//
+// query.First must be in [0, math.MaxInt32] and query.Limit must be positive.
+//
+// If the workspace no longer exists, it returns the ErrWorkspaceNotExist error.
 // If the data warehouse is in maintenance mode, it returns the
-// ErrMaintenanceMode error.
+// ErrMaintenanceMode error. If schema is not aligned with the workspace's
+// profile schema, it returns a *schemas.Error error.
 //
 // If a data warehouse error occurs, it returns a *WarehouseError wrapping the
 // cause, which may be *warehouses.SettingsError if the settings are invalid.
-func (store *Store) Profiles(ctx context.Context, query Query) ([]map[string]any, int, error) {
+func (store *Store) Profiles(ctx context.Context, query Query, schema types.Type) ([]map[string]any, int, error) {
+
 	store.mustBeOpen()
+
+	if query.First < 0 || query.First > math.MaxInt32 {
+		return nil, 0, errors.New("core/internal/datastore: offset is out of range")
+	}
+	if query.Limit < 1 {
+		return nil, 0, errors.New("core/internal/datastore: limit is out of range")
+	}
+	if !schema.IsObject() {
+		return nil, 0, errors.New("core/internal/datastore: schema is not an object type")
+	}
+
 	ctx, done, err := store.mc.StartOperation(ctx, normalMode|inspectionMode)
 	if err != nil {
 		return nil, 0, err
 	}
 	defer done()
+
+	workspace, ok := store.ds.state.Workspace(store.workspace)
+	if !ok {
+		return nil, 0, ErrWorkspaceNotExist
+	}
+	err = schemas.CheckAlignment(schema, workspace.ProfileSchema, nil)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	columns := profileColumnByProperty(schema)
+	columns["_kpid"] = warehouses.Column{Name: "_kpid", Type: types.UUID()}
+	columns["_updated_at"] = warehouses.Column{Name: "_updated_at", Type: types.DateTime()}
 	query.table = "profiles"
 	query.total = true
-	return store.query(ctx, query, store.profileColumnByProperty(), true)
+
+	return store.query(ctx, query, columns, true)
 }
 
 // PurgePipelines purges the provided pipelines from the data warehouse,
@@ -524,6 +561,53 @@ func (store *Store) PurgePipelines(ctx context.Context, pipelines []string) erro
 		return err
 	}
 	return store.warehouse().Delete(ctx, "krenalis_destination_profiles", where)
+}
+
+// ProfileCount returns the number of profiles matched by where. schema must
+// have the properties in where and may be invalid only when where is nil.
+//
+// It returns *schemas.Error if schema is not aligned, ErrWorkspaceNotExist if
+// the workspace no longer exists, or ErrMaintenanceMode in maintenance mode.
+//
+// If a data warehouse error occurs, it returns a *WarehouseError wrapping the
+// cause, which may be *warehouses.SettingsError if the settings are invalid.
+func (store *Store) ProfileCount(ctx context.Context, where *state.Where, schema types.Type) (int, error) {
+
+	store.mustBeOpen()
+
+	if (where != nil || schema.Valid()) && !schema.IsObject() {
+		return 0, errors.New("core/internal/datastore: schema is not an object type")
+	}
+	ctx, done, err := store.mc.StartOperation(ctx, normalMode|inspectionMode)
+	if err != nil {
+		return 0, err
+	}
+	defer done()
+
+	if schema.Valid() {
+		workspace, ok := store.ds.state.Workspace(store.workspace)
+		if !ok {
+			return 0, ErrWorkspaceNotExist
+		}
+		err = schemas.CheckAlignment(schema, workspace.ProfileSchema, nil)
+		if err != nil {
+			return 0, err
+		}
+	}
+
+	var expression warehouses.Expr
+	if where != nil {
+		expression, err = convertWhere(where, profileColumnByProperty(schema))
+		if err != nil {
+			return 0, err
+		}
+	}
+	counts, err := store.warehouse().Counts(ctx, "profiles", []warehouses.Expr{expression})
+	if err != nil {
+		return 0, err
+	}
+
+	return counts[0], nil
 }
 
 // Repair repairs the database objects on the data warehouse needed by Krenalis.
@@ -842,14 +926,12 @@ func (store *Store) query(ctx context.Context, query Query, columnByProperty map
 	}
 
 	var orderBy []warehouses.Column
-	var orderDesc bool
-	if query.OrderBy != "" {
-		c, ok := columnByProperty[query.OrderBy]
+	for _, path := range query.OrderBy {
+		c, ok := columnByProperty[path]
 		if !ok {
-			return nil, 0, fmt.Errorf("property path %s does not exist", query.OrderBy)
+			return nil, 0, fmt.Errorf("property path %s does not exist", path)
 		}
-		orderBy = []warehouses.Column{c}
-		orderDesc = query.OrderDesc
+		orderBy = append(orderBy, c)
 	}
 
 	rows, total, err := store.warehouse().Query(ctx, warehouses.RowQuery{
@@ -857,7 +939,7 @@ func (store *Store) query(ctx context.Context, query Query, columnByProperty map
 		Table:     query.table,
 		Where:     where,
 		OrderBy:   orderBy,
-		OrderDesc: orderDesc,
+		OrderDesc: query.OrderDesc && len(orderBy) > 0,
 		First:     query.First,
 		Limit:     query.Limit,
 	}, true)

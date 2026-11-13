@@ -22,6 +22,7 @@ declare global {
 }
 
 const PROFILE_ID = '00000000-0000-4000-8000-000000000001';
+const NEXT_PROFILE_ID = '00000000-0000-4000-8000-000000000002';
 const workspace: Workspace = {
 	id: 'workspace111',
 	name: 'Test workspace',
@@ -53,21 +54,56 @@ const appContext = {
 	},
 } as unknown as React.ContextType<typeof AppContext>;
 const profilesContext: React.ContextType<typeof ProfilesContext> = {
+	appliedFilter: null,
+	showProfilesFilter: async () => true,
 	profiles: [],
 	profilesTotal: 1,
 	profilesProperties: [],
+	profileSchema: { kind: 'object' },
+	profileSchemaProperties: {},
 	isLoading: false,
-	profileIDList: [PROFILE_ID],
-	fetchProfiles: async () => [PROFILE_ID],
+	isApplyingFilter: false,
+	isBoundaryLoading: false,
+	profilesFirst: 0,
+	profilesLimit: 50,
+	profilesProjection: [],
+	profilesExecutionID: 0,
+	profileSchemaSessionID: 0,
+	resetProfilesSchema: () => {},
+	profilesQueryKey: '',
+	hasNextPage: false,
+	activeProfileID: PROFILE_ID,
+	canNavigateNextProfile: false,
+	canNavigatePreviousProfile: false,
+	isProfileSchemaNotAligned: false,
+	goToProfilesPage: () => {},
+	markProfileSchemaNotAligned: () => {},
+	navigateProfile: () => {},
+	refreshProfiles: () => {},
+	reorderProfilesProperties: () => {},
+	setActiveProfileID: () => {},
+	setProfilesPageSize: () => {},
+	updateProfilesProperties: () => {},
 };
 
 const Fixture = () => {
-	const [selectedProfile, setSelectedProfile] = useState(PROFILE_ID);
+	const [activeProfileID, setActiveProfileID] = useState(PROFILE_ID);
 	return (
 		<AppContext.Provider value={appContext}>
-			<ProfilesContext.Provider value={profilesContext}>
-				<div className='profiles-list__grid-container profile-drawer-fixture'>
-					<ProfileDrawer selectedProfile={selectedProfile} setSelectedProfile={setSelectedProfile} />
+			<ProfilesContext.Provider
+				value={{
+					...profilesContext,
+					activeProfileID,
+					setActiveProfileID,
+					canNavigateNextProfile: activeProfileID === PROFILE_ID,
+					canNavigatePreviousProfile: activeProfileID === NEXT_PROFILE_ID,
+					navigateProfile: (direction) =>
+						setActiveProfileID(direction === 'next' ? NEXT_PROFILE_ID : PROFILE_ID),
+				}}
+			>
+				<div className='profile-drawer-fixture'>
+					<button onClick={() => setActiveProfileID(PROFILE_ID)}>Open profile details</button>
+					<ProfileDrawer />
 				</div>
 			</ProfilesContext.Provider>
 		</AppContext.Provider>

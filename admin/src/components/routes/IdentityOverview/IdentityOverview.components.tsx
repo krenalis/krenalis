@@ -1444,7 +1444,6 @@ export {
 	IDENTITY_LINK_RATE_COLOR,
 	ResolutionPeriodEmptyState,
 	SectionHeading,
-	StateMessage,
 	TypeDistributionCard,
 	ProfilesChart,
 };

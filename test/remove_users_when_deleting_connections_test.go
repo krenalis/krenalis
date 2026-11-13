@@ -61,7 +61,7 @@ func Test_RemoveUsersWhenDeletingConnections(t *testing.T) {
 	k.RunIdentityResolutionAndWait()
 
 	// Now there should be total of 20 profiles.
-	_, _, total := k.Profiles([]string{"email"}, "", false, 0, 100)
+	_, total := k.Profiles([]string{"email"}, "", false, 0, 100)
 	if total != 20 {
 		t.Fatalf("expected 20 profiles, got %d", total)
 	}
@@ -71,7 +71,7 @@ func Test_RemoveUsersWhenDeletingConnections(t *testing.T) {
 	k.DeleteConnection(dummy1)
 	time.Sleep(1 * time.Second)
 	k.RunIdentityResolutionAndWait()
-	_, _, total = k.Profiles([]string{"email"}, "", false, 0, 100)
+	_, total = k.Profiles([]string{"email"}, "", false, 0, 100)
 	if total != 10 {
 		t.Fatalf("expected 10 profiles, got %d", total)
 	}
@@ -81,7 +81,7 @@ func Test_RemoveUsersWhenDeletingConnections(t *testing.T) {
 	k.DeleteConnection(dummy2)
 	time.Sleep(1 * time.Second)
 	k.RunIdentityResolutionAndWait()
-	_, _, total = k.Profiles([]string{"email"}, "", false, 0, 100)
+	_, total = k.Profiles([]string{"email"}, "", false, 0, 100)
 	if total != 0 {
 		t.Fatalf("expected no profiles, got %d", total)
 	}

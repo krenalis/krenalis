@@ -775,8 +775,19 @@ func (workspace workspace) Attributes(_ http.ResponseWriter, r *http.Request) (a
 	if err != nil {
 		return nil, err
 	}
+	err = validateRequiredBody(r, false)
+	if err != nil {
+		return nil, err
+	}
 	kpid := r.PathValue("kpid")
-	attributes, err := ws.Attributes(r.Context(), kpid)
+	var params struct {
+		Schema types.Type `json:"schema"`
+	}
+	err = json.Decode(r.Body, &params)
+	if err != nil {
+		return nil, errors.BadRequest("%s", err)
+	}
+	attributes, err := ws.Attributes(r.Context(), kpid, params.Schema)
 	if err != nil {
 		return nil, err
 	}
@@ -948,48 +959,64 @@ func (workspace workspace) ProfileSchema(_ http.ResponseWriter, r *http.Request)
 	return ws.ProfileSchema, nil
 }
 
-// Profiles returns the profiles, the profile schema of a workspace, and an
-// estimate of their total number without applying first and limit.
+// ProfileCount returns the number of profiles of a workspace.
+func (workspace workspace) ProfileCount(_ http.ResponseWriter, r *http.Request) (any, error) {
+
+	ws, err := workspace.admitWorkspaceRequest(r, x1)
+	if err != nil {
+		return nil, err
+	}
+	err = validateRequiredBody(r, false)
+	if err != nil {
+		return nil, err
+	}
+
+	var params struct {
+		Filter *core.Filter `json:"filter"`
+		Schema types.Type   `json:"schema"`
+	}
+	err = json.Decode(r.Body, &params)
+	if err != nil {
+		return nil, errors.BadRequest("%s", err)
+	}
+	total, err := ws.ProfileCount(r.Context(), params.Filter, params.Schema)
+	if err != nil {
+		return nil, err
+	}
+
+	return map[string]any{"total": total}, nil
+}
+
+// Profiles returns profiles, an estimate of their total number without applying
+// first and limit, and the continuation state of a workspace.
 func (workspace workspace) Profiles(w http.ResponseWriter, r *http.Request) (any, error) {
 
 	ws, err := workspace.admitWorkspaceRequest(r, x1)
 	if err != nil {
 		return nil, err
 	}
-
-	// Read and parse the parameters from the query string.
-	q := r.URL.Query()
-	properties := splitQueryParameters(q["properties"])
-	var filter *core.Filter
-	if f := q.Get("filter"); f != "" {
-		err := json.Unmarshal([]byte(f), &filter)
-		if err != nil {
-			return nil, errors.BadRequest("invalid filter")
-		}
-		if filter == nil {
-			return nil, errors.BadRequest("filter cannot be null")
-		}
-	}
-	order := q.Get("order")
-	orderDesc := q.Get("orderDesc") == "true"
-	var first int
-	if f := q.Get("first"); f != "" {
-		first, err = strconv.Atoi(f)
-		if err != nil {
-			return nil, errors.BadRequest("invalid first")
-		}
-	}
-	var limit int
-	if l := q.Get("limit"); l != "" {
-		limit, err = strconv.Atoi(l)
-		if err != nil {
-			return nil, errors.BadRequest("invalid limit")
-		}
-	} else {
-		limit = 100
+	err = validateRequiredBody(r, false)
+	if err != nil {
+		return nil, err
 	}
 
-	profiles, schema, total, err := ws.Profiles(r.Context(), properties, filter, order, orderDesc, first, limit)
+	var params struct {
+		Schema     types.Type   `json:"schema"`
+		Properties []string     `json:"properties"`
+		Filter     *core.Filter `json:"filter"`
+		Order      string       `json:"order"`
+		OrderDesc  bool         `json:"orderDesc"`
+		First      int          `json:"first"`
+		Limit      int          `json:"limit"`
+	}
+	params.Limit = 100
+	err = json.Decode(r.Body, &params)
+	if err != nil {
+		return nil, errors.BadRequest("%s", err)
+	}
+
+	profiles, total, hasNext, err := ws.Profiles(r.Context(),
+		params.Schema, params.Properties, params.Filter, params.Order, params.OrderDesc, params.First, params.Limit)
 	if err != nil {
 		return nil, err
 	}
@@ -1006,16 +1033,16 @@ func (workspace workspace) Profiles(w http.ResponseWriter, r *http.Request) (any
 		buf := b.availableBuffer()
 		b.write(profile.UpdatedAt.AppendFormat(buf, time.RFC3339Nano))
 		b.writeString(`","attributes":`)
-		s, _ := types.Marshal(profile.Attributes, schema)
+		s, _ := types.Marshal(profile.Attributes, params.Schema)
 		b.write(s)
 		b.writeByte('}')
 	}
-	b.writeString(`],"schema":`)
-	buf, _ := schema.MarshalJSON()
-	b.write(buf)
-	b.writeString(`,"total":`)
-	buf = b.availableBuffer()
+	b.writeString(`],"total":`)
+	buf := b.availableBuffer()
 	b.write(strconv.AppendInt(buf, int64(total), 10))
+	b.writeString(`,"hasNext":`)
+	buf = b.availableBuffer()
+	b.write(strconv.AppendBool(buf, hasNext))
 	b.writeByte('}')
 	b.flush()
 

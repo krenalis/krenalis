@@ -1,6 +1,8 @@
 import { ReactNode } from 'react';
 
 interface GridColumn {
+	key?: string;
+	reorderable?: boolean;
 	name: string;
 	type?: string;
 	alignment?: 'left' | 'center' | 'right' | 'header-left' | 'header-center' | 'header-right';
@@ -16,6 +18,7 @@ interface StandardGridRow {
 	onClick?: () => void;
 	onToggleExpansion?: () => void;
 	animation?: string;
+	active?: boolean;
 	selected?: boolean;
 	expanded?: boolean;
 	forceExpanded?: boolean; // expands without changing the row's stored expansion state
@@ -44,6 +47,7 @@ interface GridRef {
 	expandRow: (id: string) => void;
 	focus: () => void;
 	navigate: (key: string, shiftKey?: boolean) => boolean;
+	scrollRowIntoView: (id: string) => void;
 }
 
 interface SortableRowComponent {
