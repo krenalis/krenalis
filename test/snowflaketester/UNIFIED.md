@@ -1108,6 +1108,60 @@ PostgreSQL enum/ICU setup. Native-text collation still needs the user's policy
 decision before activation; fault/resource coverage and the known native JSON
 transport issue remain separate. The production gate is still false.
 
+### Native state coverage follow-up (2026-11-13)
+
+Review R1 identified that the six state operators had only JSON coverage.
+Commit `f949bf02cf6731f8d858906c30212cd60a159a60` adds the native String/Array
+matrix above, fixes source-selector block spacing and makes the named
+UNKNOWN OR FALSE composition actually use a false Count on profile 1.
+The explanation asserts that Count outcome, so restoring the old UNKNOWN
+input is detected even though the root outcome remains UNKNOWN.
+
+Evidence directory: `/private/tmp/krenalis-record-states-5oulagik/`.
+
+| Run | PASS | Scope |
+| --- | ---: | --- |
+| `local` | 184 | all four PostgreSQL groups, race detector |
+| `utc` | 12 | native states and four compositions on Snowflake |
+| `la` | 5 | four compositions on Snowflake America/Los_Angeles |
+| `inventory/inventory` | 1 | independent read-only inventory |
+
+All four runs passed without FAIL or SKIP, with stable sources and overlays.
+The 386 tracked source hashes in the three application manifests match the
+code commit; the unchanged foreign `connectors.go` remains excluded from the
+tested dependency tree. Actual ARROW SELECT counts are 10 query/22 explanation
+in UTC, and 4/4 in LA. There are no legacy reads in these supplemental blocks.
+UTC verifies four standard sessions and LA two, all NTZ/AUTO, requested ARROW
+and 60-second statement limits, with no invalid records. The expected untagged
+Real projection failure still executes in each collation fixture.
+
+Two UTC schemas and one LA schema were created and dropped; the independent
+inventory found none of these three and 23 other visible test schemas. The
+schema audit reports no issues, and all three credential output audits are
+zero. The inventory wrapper leaves the skip variable unset and passes without
+schema-creation requirements. The full earlier matrix remains attested by the
+original campaign; only the added coverage and changed composition were
+repeated remotely.
+
+Repeat the UTC supplement with the standard UTC ARROW overlay and both
+`record-query`/`record-explanation` required tags, selecting:
+
+```sh
+-run '^TestUnifiedRecord(States|Collation)Snowflake$/^(empty|not_empty|null|not_null|exists|does_not_exist|false_AND_unknown|true_OR_unknown|unknown_AND_true|unknown_OR_false)$'
+```
+
+For the LA supplement, use the LA overlay, the same two tags and:
+
+```sh
+-run '^TestUnifiedRecordCollationSnowflake$/^(false_AND_unknown|true_OR_unknown|unknown_AND_true|unknown_OR_false)$'
+```
+
+Local isolated mutants replacing native array emptiness with `length=0`,
+inverting native absence, and restoring the old composition input all fail
+the new tests. The last is a fixture mutation, not a production-code mutation.
+Message-identity collation (N1) remains separate work below. No Record
+renderer behavior or public filter admission changed; the gate stays false.
+
 ## Coverage still required before activation
 
 Passing the commands above is necessary, but is not the complete acceptance
