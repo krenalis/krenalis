@@ -1458,6 +1458,34 @@ minimum, covered conflicts, mixed explanations, projections and pagination.
 Approving the exception settles this policy choice; it does not open the gate
 or replace the pending live chunk checks and other acceptance work below.
 
+### Native text cases outside the approved exception
+
+The review of the exception identified two separate existing cases. The current
+renderers confirm their SQL paths; no new remote verification is claimed.
+
+- PostgreSQL stores Event `type` as `event_type`, an SQL enum, while the Event
+  schema exposes a String with allowed values. Public validation rejects order,
+  intervals, prefix and suffix for that schema, but admits `contains` and
+  `does not contain`. The PostgreSQL renderer passes the enum to `POSITION`
+  without a text cast. Claude's disposable-PostgreSQL probe reported SQLSTATE
+  42883; Snowflake uses a text column. This is a pre-existing type-mapping and
+  renderer issue, not a collation rule or a new error classification. Track its
+  correction separately from this exception. Literal technical source selection
+  retains its explicit text cast and is a different path.
+- Membership in native `Array(String)` columns is outside the exception for
+  String columns. PostgreSQL renders `literal = ANY(column)`, which follows the
+  array column's collation; Snowflake renders a literal JSON element comparison
+  with `utf8`. A non-deterministic PostgreSQL collation can therefore produce a
+  different membership result. Cross-warehouse portability for this case remains
+  open; extending the exception or aligning the comparison needs a separate
+  decision. Existing filter admission and renderer behavior are unchanged.
+
+Sources: `core/internal/schemas/event.go`, `core/filters.go`,
+`warehouses/postgresql/tables/events.sql` and both `renderexpr.go` files.
+The review is `filtering/claude/revisione-deroga-testo-nativo.md`.
+These notes do not grant either case an additional exception to executor
+invariance or certify them as covered by the String-column policy.
+
 ## Coverage still required before activation
 
 Passing the commands above is necessary, but is not the complete acceptance
