@@ -211,6 +211,14 @@ those rules. Case, accents and ordering may differ between warehouses or after
 a column configuration change, even with the same Krenalis type. Krenalis does
 not track or verify the column's collation.
 
+For properties declared as `Array(String)`, `contains` and `does not contain`
+compare whole String elements using the existing warehouse rules. PostgreSQL
+uses the array column's collation; Snowflake compares the elements literally.
+The same filter can therefore differ between warehouses or after a PostgreSQL
+collation change. A typed `Array(String)` is distinct from a JSON property that
+contains an array: JSON string comparisons remain literal. Missing/null values,
+empty arrays and state operators retain their existing semantics.
+
 Treat case sensitivity on native String properties as warehouse-dependent. If
 the request requires a literal comparison independent of those rules, explain
 that this is not guaranteed for native text; trying case variants does not

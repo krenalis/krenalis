@@ -1796,13 +1796,15 @@ Ogni combinazione fonte/schema/predicato ammessa nello **unified profile filteri
 
 **Approvata dall’utente il 13 novembre 2026.** In deroga al requisito di invarianza rispetto all’executor di §14.4, i predicati Record ordinari su colonne native String conservano le regole di confronto del percorso SQL Record esistente. Uguaglianza, diversità, appartenenza, ordine, intervalli, contenimento, prefisso e suffisso seguono le regole della colonna fisica nel warehouse del workspace, anche nei body che ammettono tali predicati Record.
 
+**Estensione successiva approvata dall’utente:** la deroga comprende anche `contains` e `does not contain` sugli elementi String di proprietà dichiarate `Array(String)` nello schema Krenalis, conservando il percorso SQL Record esistente. PostgreSQL usa l’uguaglianza con la collation della colonna array; Snowflake confronta letteralmente gli elementi tramite la rappresentazione JSON già adottata. Lo stesso filtro può quindi dare esiti diversi fra i warehouse o dopo una modifica della collation PostgreSQL, anche con lo stesso schema Krenalis. Il tipo dichiarato `Array(String)` resta distinto da un valore di tipo JSON che contiene un array: quest’ultimo conserva il confronto letterale e resta fuori dalla deroga.
+
 Lo stesso filtro può dare esiti diversi su warehouse differenti o dopo una modifica delle regole di confronto della colonna, anche con lo stesso tipo Krenalis. Krenalis non rileva, registra, verifica o versiona queste regole. La deroga non introduce registry, nuovi tipi, revisioni semantiche o rilevamenti delle collation.
 
 Un errore del warehouse dovuto alle regole di confronto resta un fallimento tecnico dell’operazione, non NO_MATCH, UNKNOWN o un risultato parziale.
 
 Restano fuori dalla deroga i confronti letterali previsti per i selettori tecnici delle sorgenti, il confronto interno delle identità dei messaggi per deduplica e selezione, i confronti sulle stringhe JSON e le valute governate. Un normale predicato Record su una colonna String come `messageId`, `type`, `event` o `name` segue invece le regole della colonna: il nome del campo non lo trasforma in un selettore tecnico o in un confronto interno d’identità.
 
-La deroga non modifica il codice degli executor, le regole di assenza/null, la composizione ternaria o gli altri contesti Record esistenti. Un’eventuale futura politica uniforme per il testo nativo richiederà una decisione di compatibilità separata.
+La deroga riguarda soltanto il confronto dei valori String: non modifica il codice degli executor, le regole di assenza/null o dell’array vuoto, gli operatori di stato, la composizione ternaria o gli altri contesti Record esistenti. Un’eventuale futura politica uniforme per il testo nativo richiederà una decisione di compatibilità separata.
 
 ### 14.5 Livelli di stato tecnico
 
@@ -2053,7 +2055,7 @@ Il registro semantico con `meaningRevision` si applica ai nuovi riferimenti gove
 
 **Divergenze tecniche rimaste fuori da questo raccordo:** presenza/null di proprietà ordinary nullable non-Profile e Object appiattiti, collazioni del testo ordinary, Float/NaN e precisione temporale residua; Snowflake remoto non verificato. Vanno documentate e affrontate indipendentemente; la presente revisione non approva automaticamente modifiche a questi comportamenti. Per le combinazioni ammesse in Unified resta vincolante §14.4: le questioni aperte non autorizzano significati diversi in funzione dell’executor.
 
-**Emendamento successivo sul testo nativo:** per i soli confronti Record ordinari su colonne native String si applica la deroga esplicita approvata in §14.4.1. Le altre questioni tecniche non acquistano per questo una deroga all’invarianza.
+**Emendamento successivo sul testo nativo:** per i confronti Record ordinari su colonne native String e per `contains` / `does not contain` su `Array(String)` si applica la deroga esplicita approvata in §14.4.1. Le altre questioni tecniche non acquistano per questo una deroga all’invarianza.
 
 ---
 

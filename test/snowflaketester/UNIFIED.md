@@ -1445,6 +1445,15 @@ warehouses or after those rules change, with the same Krenalis type; Krenalis
 does not detect, store, verify or version the rules. This is a declared exception,
 not evidence of invariant native-text results across warehouses.
 
+A subsequent user-approved extension covers `contains` and `does not contain`
+on native `Array(String)` properties. PostgreSQL uses the array column's
+collation for whole-element equality; Snowflake compares the String elements
+literally through its existing JSON representation. A typed `Array(String)`
+is distinct from a JSON value containing an array; JSON comparisons remain
+outside the exception and keep their literal contracts. This only admits the
+existing String comparison differences: null/missing, empty-array and state
+operator semantics remain unchanged.
+
 Technical source selectors, internal message identity, JSON string comparisons
 and governed currencies keep their literal contracts. Ordinary Record predicates
 on native String identity/name columns still follow the column's rules. A
@@ -1458,9 +1467,10 @@ minimum, covered conflicts, mixed explanations, projections and pagination.
 Approving the exception settles this policy choice; it does not open the gate
 or replace the pending live chunk checks and other acceptance work below.
 
-### Native text cases outside the approved exception
+### Enum issue and Array(String) follow-up
 
-The review of the exception identified two separate existing cases. The current
+The review of the exception identified two existing cases. Array(String) is now
+covered by the approved extension; the enum issue remains separate. The current
 renderers confirm their SQL paths; no new remote verification is claimed.
 
 - PostgreSQL stores Event `type` as `event_type`, an SQL enum, while the Event
@@ -1472,19 +1482,30 @@ renderers confirm their SQL paths; no new remote verification is claimed.
   renderer issue, not a collation rule or a new error classification. Track its
   correction separately from this exception. Literal technical source selection
   retains its explicit text cast and is a different path.
-- Membership in native `Array(String)` columns is outside the exception for
-  String columns. PostgreSQL renders `literal = ANY(column)`, which follows the
+- Membership in native `Array(String)` columns follows the approved extension.
+  PostgreSQL renders `literal = ANY(column)`, which follows the
   array column's collation; Snowflake renders a literal JSON element comparison
   with `utf8`. A non-deterministic PostgreSQL collation can therefore produce a
-  different membership result. Cross-warehouse portability for this case remains
-  open; extending the exception or aligning the comparison needs a separate
-  decision. Existing filter admission and renderer behavior are unchanged.
+  different membership result. That difference is now explicitly admitted;
+  existing filter admission and renderer behavior are unchanged.
+
+The local probe in `/private/tmp/krenalis-array-text-r5o45o_a/` passed seven
+test nodes with the race detector, with stable source/overlay hashes and no
+FAIL or SKIP. Merge writes four profiles: `['VIP']`, `['vip']`, an empty array
+and SQL NULL, in binary and non-deterministic ICU Array(String) columns and a
+JSON control column. Both membership operators check all outcomes and totals,
+and explanations on every profile. Case-insensitive native membership matches
+`'VIP'` against `'vip'`; binary and JSON membership do not. SQL NULL remains
+UNKNOWN in both positive and negative tests, and the empty-array results are
+unchanged. The probe adds only a virtual test file through an external overlay.
+It supplies PostgreSQL evidence; the Snowflake path above is established by
+code inspection, not a new remote run.
 
 Sources: `core/internal/schemas/event.go`, `core/filters.go`,
 `warehouses/postgresql/tables/events.sql` and both `renderexpr.go` files.
 The review is `filtering/claude/revisione-deroga-testo-nativo.md`.
-These notes do not grant either case an additional exception to executor
-invariance or certify them as covered by the String-column policy.
+The enum issue is not covered by the collation exception. The Array(String)
+extension does not admit other differences in array semantics or change code.
 
 ## Coverage still required before activation
 

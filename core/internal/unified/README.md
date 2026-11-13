@@ -54,6 +54,14 @@ comparison rules. Case, accents and ordering can therefore differ between
 warehouses or after a column configuration change, with the same Krenalis type.
 Krenalis does not detect, store, verify or version these rules.
 
+The user-approved extension also covers `contains` and `does not contain` on
+properties declared as native `Array(String)`. PostgreSQL compares whole String
+elements using the array column's collation; Snowflake compares the elements
+literally through its existing JSON representation. Results can therefore differ
+between warehouses or after a PostgreSQL collation change, with the same Krenalis
+schema. A typed `Array(String)` is distinct from a JSON value containing an array;
+the latter retains its literal comparison contract and is outside the exception.
+
 Literal technical source selectors, internal message-identity comparisons for
 deduplication and selection, JSON string comparisons and governed currencies
 retain their respective contracts. A user-written Record on a native String
@@ -62,9 +70,10 @@ the field name does not turn it into a technical selector or internal identity
 comparison. A warehouse comparison error remains a technical operation failure,
 not NO_MATCH, UNKNOWN or partial success.
 
-The exception changes the declared contract, not renderer behavior, null/missing
-rules, Kleene composition or other existing Record contexts. A future uniform
-native-text policy requires a separate compatibility decision.
+The exception only concerns String value comparison. Renderer behavior,
+null/missing and empty-array rules, state operators, Kleene composition and other
+existing Record contexts remain unchanged. A future uniform native-text policy
+requires a separate compatibility decision.
 
 ## Admitted subset and evidence contract
 
