@@ -12,7 +12,6 @@ import (
 	"net"
 	"reflect"
 	"slices"
-	"strconv"
 	"time"
 	"unicode/utf8"
 
@@ -754,23 +753,6 @@ func ValidateUnsigned(name string, t types.Type, n uint) (any, error) {
 		return nil, fmt.Errorf("data warehouse returned a value of %d for column %s which is not within the expected range of [%d, %d]", n, name, min, max)
 	}
 	return n, nil
-}
-
-// ValidateYear validates a year value.
-func ValidateYear(name string, year int) (any, error) {
-	if year < types.MinYear || year > types.MaxYear {
-		return nil, fmt.Errorf("data warehouse returned a value of %d for column %s which is not a year type", year, name)
-	}
-	return year, nil
-}
-
-// ValidateYearString validates a year value represented as a string.
-func ValidateYearString(name string, year string) (any, error) {
-	y, err := strconv.Atoi(year)
-	if err != nil || y < types.MinYear || y > types.MaxYear {
-		return nil, fmt.Errorf("data warehouse returned a value of %q for column %s which is not a year type", year, name)
-	}
-	return y, nil
 }
 
 // ValidateUUID validates a uuid value.

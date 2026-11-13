@@ -327,6 +327,14 @@ func TestTypeSerialization(t *testing.T) {
 			Data: `{"kind":"int","bitSize":32,"unsigned":true,"minimum":3000000000,"maximum":4000000000}`,
 			Type: Int(32).Unsigned().WithUnsignedRange(3000000000, 4000000000),
 		}, {
+			Data:      `{"kind":"int","semantics":"year","bitSize":16}`,
+			ParseData: `{"kind":"int","bitSize":16,"semantics":"year"}`,
+			Type:      Int(16).AsYear(),
+		}, {
+			Data:      `{"kind":"int","semantics":"year","bitSize":64,"unsigned":true}`,
+			ParseData: `{"kind":"int","bitSize":64,"unsigned":true,"semantics":"year"}`,
+			Type:      Int(64).Unsigned().AsYear(),
+		}, {
 			Data: `{"kind":"float","bitSize":64,"minimum":-3.9936173,"maximum":8.00002312}`,
 			Type: Float(64).WithFloatRange(-3.9936173, 8.00002312),
 		}, {

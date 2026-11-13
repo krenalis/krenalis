@@ -293,8 +293,6 @@ func typeToPostgresType(t types.Type) string {
 		return "date"
 	case types.TimeKind:
 		return "time without time zone"
-	case types.YearKind:
-		return "smallint"
 	case types.UUIDKind:
 		return "uuid"
 	case types.JSONKind:

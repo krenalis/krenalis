@@ -35,7 +35,6 @@ func TestFirstDuplicate(t *testing.T) {
 		{"booleans", Boolean(), []any{true, false, true}, 2},
 		{"string case", String(), []any{"Foo", "foo"}, -1},
 		{"strings", String(), []any{"a", "b", "a"}, 2},
-		{"years", Year(), []any{2025, 2026, 2025}, 2},
 		{"NaN representations", Float(64), []any{math.NaN(), math.Float64frombits(0xfff0000000000001)}, 1},
 		{"one NaN", Float(64), []any{0.0, math.NaN(), math.Inf(1), math.Inf(-1)}, -1},
 		{"signed zero", Float(64), []any{0.0, math.Copysign(0, -1)}, 1},

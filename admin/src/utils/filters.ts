@@ -157,21 +157,6 @@ const isInt = (s: string): boolean => {
 	return MIN_INT <= n && n <= MAX_INT;
 };
 
-// isYear checks whether the string s represents a valid year value that can be
-// used as a filter value.
-const isYear = (s: string): boolean => {
-	if (s === '' || s.length > 4) {
-		return false;
-	}
-	for (const c of s) {
-		if (c < '0' || c > '9') {
-			return false;
-		}
-	}
-	const year = parseInt(s);
-	return MIN_YEAR <= year && year <= MAX_YEAR;
-};
-
 // isFloat checks whether the string s represents a valid float value with the
 // specified bit size, which can be either 32 or 64, and can be used as a filter
 // value.
@@ -371,7 +356,6 @@ export {
 	isUUID,
 	isUnsigned,
 	isValidPropertyPath,
-	isYear,
 	parseText,
 	serializeFilter,
 };
