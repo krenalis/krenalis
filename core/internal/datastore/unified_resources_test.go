@@ -219,6 +219,12 @@ CREATE TABLE "KRENALIS_EVENTS" ("KPID" VARCHAR(36),"MESSAGE_ID" VARCHAR,"TYPE" V
 		t.Fatal("expected malformed identity rejection, got success")
 	})
 
+	t.Run("chunk payload", func(t *testing.T) {
+		populateUnifiedChunkProfiles(t, platform, dw)
+		result := fixture.query(t, nil, unified.Page{Limit: 1000, Properties: []string{"payload"}})
+		assertUnifiedChunkProfiles(t, result)
+	})
+
 	t.Run("bounded scale", func(t *testing.T) {
 
 		execUnifiedFixture(t, dw, "TRUNCATE TABLE "+q("profile_data"))

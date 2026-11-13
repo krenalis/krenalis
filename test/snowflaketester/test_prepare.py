@@ -12,6 +12,7 @@ import tempfile
 import unittest
 
 from prepare import RESULT_OBSERVER
+from chunk_fault import DRIVER, prepare_chunk_fault
 from transport import RESULT_TAGS
 
 
@@ -27,8 +28,10 @@ class PrepareTest(unittest.TestCase):
         self.environment = {key: value for key, value in os.environ.items()
                             if not key.startswith("KRENALIS_SNOWFLAKE_TESTER_")}
 
-    def prepare(self, directory, timezone, profile="standard", result_format=None, http=False, http_assets=None):
+    def prepare(self, directory, timezone, profile="standard", result_format=None, http=False, http_assets=None, chunk_fault=False):
         options = ["--result-format", result_format] if result_format is not None else []
+        if chunk_fault:
+            options.append("--chunk-fault")
         if http:
             options.append("--http")
         if http_assets is not None:
@@ -39,7 +42,7 @@ class PrepareTest(unittest.TestCase):
     def test_entry_points_do_not_write_bytecode(self):
         directory = self.directory / "scripts"
         directory.mkdir()
-        for name in ("prepare.py", "run.py", "transport.py"):
+        for name in ("prepare.py", "run.py", "transport.py", "chunk_fault.py"):
             (directory / name).write_bytes(PREPARE.with_name(name).read_bytes())
         environment = dict(self.environment)
         environment.pop("PYTHONDONTWRITEBYTECODE", None)
@@ -169,6 +172,122 @@ func TestTransportOverlayObservation(t *testing.T) {
                                                 for actual in ("arrow", "json", "unknown")
                                                 for statement in ("select", "other")))
         self.assertNotIn("format=untrusted", output)
+        chunks = re.findall(r'Snowflake result chunks observed tag=(\S+) chunks=(\S+) statement=(\S+)', output)
+        self.assertEqual(sorted(chunks), sorted((tag, "0", statement) for tag in RESULT_TAGS
+                                               for _ in ("arrow", "json", "unknown")
+                                               for statement in ("select", "other")))
+
+    def test_chunk_fault_requires_arrow_and_a_standard_non_http_build(self):
+        for index, options in enumerate([{}, {"result_format": "JSON"},
+                {"result_format": "ARROW", "profile": "timeout"},
+                {"result_format": "ARROW", "http": True}]):
+            with self.subTest(options=options):
+                directory = self.directory / str(index)
+                result = self.prepare(directory, "UTC", chunk_fault=True, **options)
+                self.assertEqual(result.returncode, 2)
+                self.assertFalse(directory.exists())
+
+    def test_chunk_fault_anchors_fail_closed(self):
+        for name in ("connection_util.go", "chunk_downloader.go", "rows.go"):
+            with self.subTest(source=name):
+                root = self.directory / name
+                vendor = root / DRIVER
+                vendor.mkdir(parents=True)
+                for source in ("connection_util.go", "chunk_downloader.go", "rows.go"):
+                    text = (ROOT / DRIVER / source).read_text() if source != name else "changed vendor"
+                    (vendor / source).write_text(text)
+                with self.assertRaisesRegex(ValueError, "expected one chunk fault overlay anchor"):
+                    prepare_chunk_fault(root, self.directory / "output", {})
+                self.assertFalse((self.directory / "output").exists())
+
+    def test_chunk_fault_uses_real_downloader_retries_without_a_canceled_caller(self):
+        directory = self.directory / "chunk-fault"
+        result = self.prepare(directory, "UTC", result_format="ARROW", chunk_fault=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(json.loads(result.stdout)["chunk_fault"])
+        overlay = directory / "overlay.json"
+        replacements = json.loads(overlay.read_text())["Replace"]
+        self.assertEqual(len(replacements), 9)
+        self.assertFalse((ROOT / DRIVER / "chunk_fault.go").exists())
+        probe = directory / "chunk_fault_overlay_test.go"
+        probe.write_text('''package gosnowflake
+import (
+    "database/sql/driver"
+    "errors"
+    "sync"
+    "testing"
+    "testing/synctest"
+    "github.com/snowflakedb/gosnowflake/v2/internal/query"
+)
+func TestChunkFaultOverlay(t *testing.T) {
+    synctest.Test(t, func(t *testing.T) {
+
+        for _, tag := range []string{"", "krenalis-session-verification", "krenalis-transport/record-explanation"} {
+            ctx, _ := WithChunkFault(WithQueryTag(t.Context(), tag))
+            if chunkFaultObservation(ctx) != nil {
+                t.Fatalf("expected unmarked read for tag %q, got an active fault", tag)
+            }
+        }
+        if chunkFaultObservation(WithQueryTag(t.Context(), "krenalis-transport/record-query")) != nil {
+            t.Fatal("expected an unmarked query without a fault, got an active fault")
+        }
+        ctx, observed := WithChunkFault(WithQueryTag(t.Context(), "krenalis-transport/record-query"))
+        scd := populateChunkDownloader(ctx, nil, execResponseData{
+            Chunks: []query.ExecResponseChunk{{}, {}}, QueryResultFormat: "arrow",
+        }).(*snowflakeChunkDownloader)
+        scd.ChunksError = make(chan *chunkError, 1)
+        scd.DoneDownloadCond = sync.NewCond(&sync.Mutex{})
+        scd.FuncDownloadHelper = downloadChunkHelper
+        scd.FuncDownload = downloadChunk
+        scd.CurrentIndex = -1
+        scd.CurrentChunkSize = 1
+        scd.CurrentChunk = []chunkRowType{{ArrowRow: []snowflakeValue{int64(1)}}}
+
+        go downloadChunk(ctx, scd, 1)
+        synctest.Wait()
+        if observed.Attempts.Load() != 0 {
+            t.Fatalf("expected no fault before delivery, got %d attempts", observed.Attempts.Load())
+        }
+        rows := &snowflakeRows{ctx: ctx, ChunkDownloader: scd}
+        err := rows.Next(make([]driver.Value, 1))
+        if err != nil {
+            t.Fatalf("expected a valid row before the fault, got %v", err)
+        }
+        synctest.Wait()
+        for attempt := int64(1); attempt <= observed.ExpectedAttempts(); attempt++ {
+            err := scd.checkErrorRetry()
+            if attempt == observed.ExpectedAttempts() {
+                if err != nil {
+                    if !errors.Is(err, ErrChunkFault) {
+                        t.Fatalf("expected injected failure, got %v", err)
+                    }
+                }
+                if err == nil {
+                    t.Fatal("expected exhausted retries, got success")
+                }
+            } else if err != nil {
+                t.Fatalf("expected retry %d, got %v", attempt, err)
+            }
+            synctest.Wait()
+        }
+        if ctx.Err() != nil || observed.Rows.Load() != 1 || observed.Chunks.Load() != 2 ||
+            observed.Attempts.Load() != observed.ExpectedAttempts() ||
+            int64(scd.ChunksErrorCounter) != observed.ExpectedAttempts()-1 {
+            t.Fatalf("expected live caller, one row and %d attempts, got rows=%d chunks=%d attempts=%d retries=%d context=%v",
+                observed.ExpectedAttempts(), observed.Rows.Load(), observed.Chunks.Load(), observed.Attempts.Load(),
+                scd.ChunksErrorCounter, ctx.Err())
+        }
+
+    })
+}
+''')
+        replacements[str(ROOT / DRIVER / "chunk_fault_overlay_test.go")] = str(probe)
+        overlay.write_text(json.dumps({"Replace": replacements}))
+        checked = subprocess.run(["go", "test", "-mod=vendor", "-race", "-tags", "krenalis_chunkfault",
+            "-overlay", str(overlay), "./vendor/github.com/snowflakedb/gosnowflake/v2",
+            "-run", "^TestChunkFaultOverlay$", "-count=1", "-timeout=30s"], cwd=ROOT,
+            env=self.environment, capture_output=True, text=True, timeout=180)
+        self.assertEqual(checked.returncode, 0, checked.stdout + checked.stderr)
 
     def test_http_overlay_tags_core_reads_and_internal_server(self):
         assets = (self.directory / "assets").resolve()

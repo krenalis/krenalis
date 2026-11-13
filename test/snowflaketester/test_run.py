@@ -60,7 +60,7 @@ raise SystemExit(int(os.environ.get('FAKE_EXIT', '0')))
                                 cwd=ROOT, env=self.environment, capture_output=True, text=True)
         return result, json.loads(result.stdout)
 
-    def block(self, events, *, values=None, arguments=None, require_schemas=False, go_exit=0, mutate=None, output_bytes=None, require_session_timezone=None, require_session_profile=None, require_result_format=None, require_result_tags=()):
+    def block(self, events, *, values=None, arguments=None, require_schemas=False, go_exit=0, mutate=None, output_bytes=None, require_session_timezone=None, require_session_profile=None, require_result_format=None, require_result_tags=(), require_remote_chunks=()):
         self.number += 1
         path = self.directory / str(self.number) / "run.jsonl"
         environment = dict(self.environment, FAKE_EVENTS=json.dumps(events), FAKE_EXIT=str(go_exit))
@@ -81,6 +81,8 @@ raise SystemExit(int(os.environ.get('FAKE_EXIT', '0')))
             command.extend(["--require-result-format", require_result_format])
         for tag in require_result_tags:
             command.extend(["--require-result-tag", tag])
+        for tag in require_remote_chunks:
+            command.extend(["--require-remote-chunks", tag])
         command.extend([str(path), "--", *(arguments or ["./warehouses/snowflake"])])
         result = subprocess.run(command, cwd=ROOT, env=environment, capture_output=True, text=True)
         self.assertEqual(result.stderr, "")
@@ -443,6 +445,69 @@ raise SystemExit(int(os.environ.get('FAKE_EXIT', '0')))
                                         env=self.environment, capture_output=True, text=True)
                 self.assertEqual(result.returncode, 2)
                 self.assertFalse(path.exists())
+
+    def test_remote_chunks_are_attested_before_redaction(self):
+        tag = "krenalis-transport/record-query"
+        session = SESSION.format(timezone="UTC").rstrip() + " go_query_result_format=ARROW\n"
+        result_format = "Snowflake result format observed tag=" + tag + " format=arrow statement=select\n"
+        chunks = "Snowflake result chunks observed tag=" + tag + " chunks=3 statement=select\n"
+        events = [self.event("output", session), self.event("output", result_format),
+                  self.event("output", chunks.replace("chunks=3", "chunks=1")),
+                  self.event("output", chunks[:45]), self.event("output", chunks[45:]),
+                  self.event("output", chunks.replace("chunks=3 statement=select", "chunks=9 statement=other")),
+                  self.event("pass")]
+        result, path, manifest = self.block(events, values={"ROLE": "record-query"},
+            require_result_format="arrow", require_result_tags=[tag], require_remote_chunks=[tag])
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual(manifest["remote_chunks"], {"required_tags": [tag], "maximum": {tag: 3},
+                                                   "invalid_records": 0, "verified": True})
+        self.assertNotIn(tag, path.read_text())
+
+    def test_remote_chunks_require_a_valid_select_with_two_descriptors(self):
+        tag = "krenalis-transport/record-query"
+        session = SESSION.format(timezone="UTC").rstrip() + " go_query_result_format=ARROW\n"
+        result_format = "Snowflake result format observed tag=" + tag + " format=arrow statement=select\n"
+        marker = "Snowflake result chunks observed tag=" + tag + " chunks=2 statement=select\n"
+        for chunks in ["", marker.replace("chunks=2", "chunks=0"), marker.replace("chunks=2", "chunks=1"),
+                marker.replace("statement=select", "statement=other"), marker.replace(tag, "private" * 1024),
+                marker.replace("chunks=2", "chunks=-1"), marker.replace("chunks=2", "chunks=9223372036854775808"),
+                marker.replace("chunks=2", "chunks=123456789012345678901"),
+                marker.replace("chunks=2", "chunks=2_extra"), marker.replace("statement=select", "statement=private"),
+                "Snowflake result chunks observed\n", marker + "Snowflake result chunks observed\n"]:
+            with self.subTest(marker=chunks):
+                result, _, manifest = self.block([self.event("output", session), self.event("output", result_format),
+                    self.event("output", chunks), self.event("pass")], require_result_format="arrow",
+                    require_result_tags=[tag], require_remote_chunks=[tag])
+                self.assertEqual(result.returncode, 8)
+                self.assertFalse(manifest["remote_chunks"]["verified"])
+                self.assertNotIn("private", json.dumps(manifest))
+
+    def test_remote_chunks_preserve_an_existing_failure(self):
+        tag = "krenalis-transport/record-query"
+        session = SESSION.format(timezone="UTC").rstrip() + " go_query_result_format=ARROW\n"
+        observed = "Snowflake result format observed tag=" + tag + " format=arrow statement=select\n"
+        chunks = "Snowflake result chunks observed tag=" + tag + " chunks=2 statement=select\n"
+        for extra, verified in [("", False), (chunks, True)]:
+            with self.subTest(chunks=extra):
+                result, _, manifest = self.block([self.event("output", session), self.event("output", observed),
+                    self.event("output", extra), self.event("fail")], go_exit=1, require_result_format="arrow",
+                    require_result_tags=[tag], require_remote_chunks=[tag])
+                self.assertEqual(result.returncode, 1)
+                self.assertIs(manifest["remote_chunks"]["verified"], verified)
+
+    def test_remote_chunk_options_require_matching_format_evidence(self):
+        tag = "krenalis-transport/record-query"
+        for options in [["--require-remote-chunks", tag],
+                ["--require-remote-chunks", "unknown"], ["--audit", "--require-remote-chunks", tag],
+                ["--require-result-format", "arrow", "--require-result-tag", tag,
+                 "--require-remote-chunks", "krenalis-transport/record-explanation"]]:
+            with self.subTest(options=options):
+                path = self.directory / "invalid-chunks.jsonl"
+                result = subprocess.run([sys.executable, str(RUNNER), *options, str(path)], cwd=ROOT,
+                                        env=self.environment, capture_output=True, text=True)
+                self.assertEqual(result.returncode, 2)
+                self.assertFalse(path.exists())
+                self.assertFalse(path.with_suffix(".manifest.json").exists())
 
     def test_audit_rejects_absent_or_old_evidence(self):
         directory = self.directory / "audit"

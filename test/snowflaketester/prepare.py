@@ -12,6 +12,7 @@ import subprocess
 import sys
 
 sys.dont_write_bytecode = True
+from chunk_fault import prepare_chunk_fault
 from transport import RESULT_TAGS
 
 
@@ -32,6 +33,7 @@ RESULT_OBSERVER = '''
 			statement = "select"
 		}
 		fmt.Printf("Snowflake result format observed tag=%s format=%s statement=%s\\n", tag, format, statement)
+		fmt.Printf("Snowflake result chunks observed tag=%s chunks=%d statement=%s\\n", tag, len(data.Chunks), statement)
 	default:
 		// Only the closed set of campaign application reads is observed.
 	}
@@ -44,10 +46,13 @@ def main():
     parser.add_argument("--timezone", required=True, choices=["UTC", "America/Los_Angeles"])
     parser.add_argument("--profile", default="standard", choices=["standard", "timeout", "cancellation"])
     parser.add_argument("--result-format", choices=["ARROW", "JSON"])
+    parser.add_argument("--chunk-fault", action="store_true", help="generate driver hooks for -tags krenalis_chunkfault")
     parser.add_argument("--http", action="store_true", help="run the HTTP server inside the isolated test build")
     parser.add_argument("--http-assets", type=Path, help="generated Admin assets outside the checkout")
     options = parser.parse_args()
     root = Path(__file__).resolve().parents[2]
+    if options.chunk_fault and (options.result_format != "ARROW" or options.profile != "standard" or options.http):
+        parser.error("chunk fault verification requires ARROW, the standard session profile and no HTTP overlay")
     if options.http != (options.http_assets is not None):
         parser.error("--http and --http-assets must be provided together")
     assets = options.http_assets.resolve() if options.http else None
@@ -112,6 +117,12 @@ def main():
                 parser.error("expected one overlay anchor in " + name)
             replacements[str(source)] = (directory / name, text.replace(old, new))
 
+    if options.chunk_fault:
+        try:
+            prepare_chunk_fault(root, directory, replacements)
+        except ValueError as error:
+            parser.error(str(error))
+
     if options.http:
         for name, edits in [
             ("test/krenalistester/krenalistester.go", [
@@ -159,7 +170,7 @@ def main():
         json.dump({"Replace": {source: str(target) for source, (target, _) in replacements.items()}}, output)
         output.write("\n")
     print(json.dumps({"overlay": str(overlay), "timezone": options.timezone, "profile": options.profile,
-                      "result_format": options.result_format, "http": options.http,
+                      "result_format": options.result_format, "chunk_fault": options.chunk_fault, "http": options.http,
                       "http_assets": str(assets) if assets is not None else None}))
 
 

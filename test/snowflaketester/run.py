@@ -35,6 +35,10 @@ RESULT_EVENT = re.compile(
     r'Snowflake result format observed\b(?:[ \t]+tag=(' +
     "|".join(re.escape(tag) for tag in RESULT_TAGS) + r')[ \t]+format=(arrow|json|unknown)(?=\s|$)'
     r'(?:[ \t]+statement=(?:(select|other)(?=\s|$)|[^\r\n]*))?)?')
+CHUNK_EVENT = re.compile(
+    r'Snowflake result chunks observed\b(?:[ \t]+tag=(' +
+    "|".join(re.escape(tag) for tag in RESULT_TAGS) + r')[ \t]+chunks=([0-9]{1,19})(?=\s|$)'
+    r'[ \t]+statement=(select|other)(?=\s|$))?')
 
 
 def audit_schemas(directory):
@@ -175,6 +179,8 @@ def main():
                         help="require the session setting and observed format for every requested tag")
     parser.add_argument("--require-result-tag", choices=RESULT_TAGS, action="append", default=[],
                         help="require result format evidence for this fixture read; may be repeated")
+    parser.add_argument("--require-remote-chunks", choices=RESULT_TAGS, action="append", default=[],
+                        help="require at least two remote chunk descriptors for a SELECT with this tag")
     parser.add_argument("path", type=Path)
     parser.add_argument("go_args", nargs=argparse.REMAINDER)
     options = parser.parse_args()
@@ -182,11 +188,13 @@ def main():
     if options.audit:
         if (arguments or options.require_schemas or options.require_session_timezone is not None or
                 options.require_session_profile is not None or options.require_result_format is not None or
-                options.require_result_tag):
+                options.require_result_tag or options.require_remote_chunks):
             parser.error("--audit takes only a manifest directory")
         return audit_schemas(options.path)
     if bool(options.require_result_format) != bool(options.require_result_tag):
         parser.error("--require-result-format and --require-result-tag must be provided together")
+    if not set(options.require_remote_chunks).issubset(options.require_result_tag):
+        parser.error("--require-remote-chunks requires the matching --require-result-tag")
     if arguments[:1] == ["--"]:
         arguments = arguments[1:]
     if not arguments:
@@ -229,6 +237,8 @@ def main():
                                    "required_tags": sorted(set(options.require_result_tag)),
                                    "observed": {}, "statements": {}, "session_requested": {}, "invalid_records": 0,
                                    "verified": None},
+                "remote_chunks": {"required_tags": sorted(set(options.require_remote_chunks)),
+                                  "maximum": {}, "invalid_records": 0, "verified": None},
                 "output_limit_exceeded": False,
                 "redaction": {"case_insensitive": True, "output_only": True,
                               "max_output_bytes": MAX_OUTPUT_BYTES,
@@ -286,7 +296,16 @@ def main():
                             if statement is not None:
                                 statements = formats["statements"].setdefault(tag, {})
                                 statements[statement] = statements.get(statement, 0) + 1
-                    if records or session_records or result_records:
+                    chunk_records = list(CHUNK_EVENT.finditer(output))
+                    for record in chunk_records:
+                        tag, chunks, statement = record.groups()
+                        evidence = manifest["remote_chunks"]
+                        if tag is None or int(chunks) > 9223372036854775807:
+                            evidence["invalid_records"] += 1
+                        elif statement == "select":
+                            maximum = evidence["maximum"]
+                            maximum[tag] = max(maximum.get(tag, 0), int(chunks))
+                    if records or session_records or result_records or chunk_records:
                         write_manifest(manifest_path, manifest)
                     if mask is not None:
                         event["Output"] = mask.sub("<SNOWFLAKE_TEST_VALUE>", output)
@@ -329,6 +348,12 @@ def main():
                 any(set(observed) != expected for observed in formats["observed"].values()))
         if code == 0 and not formats["verified"]:
             code = 7
+    chunks = manifest["remote_chunks"]
+    if chunks["required_tags"]:
+        chunks["verified"] = not (chunks["invalid_records"] or
+                any(chunks["maximum"].get(tag, 0) < 2 for tag in chunks["required_tags"]))
+        if code == 0 and not chunks["verified"]:
+            code = 8
     manifest["exit"] = code
     write_manifest(manifest_path, manifest)
     print(json.dumps({"log": str(log_path), "manifest": str(manifest_path), "exit": manifest["exit"],
