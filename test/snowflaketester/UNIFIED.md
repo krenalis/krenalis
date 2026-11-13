@@ -1245,6 +1245,114 @@ This does not establish a general migration procedure. Merge and identity
 resolution SQL remain outside this correction and need a separate decision
 before activation, as listed below. The production gate stays false.
 
+## Failure and resource supplement
+
+`TestUnifiedResourcesPostgreSQL/Snowflake` shares the physical budget, server
+failure and bounded-load cases. It checks one oversized String, a cumulative
+two-row overflow, exact 1 MiB success, UTF-8 overflow and exact UTF-8 success.
+After each size rejection, a request without the oversized projection must
+succeed on the same pool. A warehouse-owned view with a malformed profile key
+must fail without returning a partial result.
+
+For both membership and explanation, a temporary profile view raises a real
+division-by-zero error. The datastore must preserve its opaque failure and no
+result; the test checks the internal server SQLSTATE 22012. Restoring the view
+must then produce the exact reference result on the same warehouse/pool. This
+tests reuse after a server error, not reuse of one particular physical session.
+
+The load smoke test uses 128 profiles and 16,384 messages with eight rules.
+It checks a final matching page, an empty page with retained totals, all nine
+explanation outcomes and exact Count/Sum/Average metadata. It is not a benchmark.
+
+`TestUnifiedTimestampPrecisionPostgreSQL/Snowflake` checks Count, First and Last
+on both sides of each half-open border and exactly on it, with one stored tick
+of separation. Both warehouses run native precisions 3 and 6; only Snowflake
+runs precision 9 because PostgreSQL cannot store nanosecond timestamps. This
+does not extend the managed Snowflake NTZ schema to LTZ or TZ.
+
+`TestModeTransitions` exercises the local coordinator with synctest: reads stay
+live in inspection, maintenance waits or cancels according to the requested
+policy, new admissions wait for the transition and then fail, and normal-mode
+admission recovers. There is no network I/O in the virtual-time test.
+
+Evidence is in `/private/tmp/krenalis-resources-j2ux3go2/`:
+
+| Run | Result | Scope |
+| --- | --- | --- |
+| `postgresql` | 460 PASS with race detection | Initial resource/precision/mode tests and Identity/Conformance regressions. |
+| `local-final` | 19 PASS with race detection | Final resource metadata checks, native precision 3/6 and four mode transitions. |
+| `utc-final` | 15 PASS with race detection | Final shared Snowflake cases; 15 query and 5 explanation SELECTs, all Arrow. |
+| `la` | 8 PASS with race detection | Cumulative limit, exact UTF-8 budget, server failures/recovery and precision 9; 5 query and 2 explanation SELECTs, all Arrow. |
+| `failure` | 1 PASS with race detection | Private real-driver chunk fault and same-pool recovery, described below. |
+| `inventory/inventory` | 1 PASS | Eight owned schemas created/dropped, none remaining; 23 other test schemas visible. |
+
+UTC/LA each verified four standard sessions; the private fault probe verified
+two UTC sessions. They use NTZ/AUTO, 60-second statement limits and requested
+ARROW. The earlier `utc` also passed 15 nodes before the final scale-metadata
+assertions. Four local mutants are detected: reject the exact byte boundary,
+return success after a backend error, omit mode cancellation, and truncate
+timestamp operands to milliseconds. No production source was changed.
+
+Repeat the permanent tests with fresh logs and standard overlays:
+
+```sh
+KRENALIS_SKIP_SNOWFLAKE_TESTS=true go test ./core/internal/datastore -race \
+  -run '^Test(ModeTransitions|Unified(Resources|TimestampPrecision)PostgreSQL)$' -count=1 -timeout=4m
+
+KRENALIS_SKIP_SNOWFLAKE_TESTS=false python3 test/snowflaketester/run.py --require-schemas \
+  --require-session-timezone UTC --require-session-profile standard --require-result-format arrow \
+  --require-result-tag krenalis-transport/record-query \
+  --require-result-tag krenalis-transport/record-explanation "$campaign_dir/resources-utc.jsonl" -- \
+  -overlay "$campaign_dir/utc-overlay/overlay.json" ./core/internal/datastore -race \
+  -run '^TestUnified(Resources|TimestampPrecision)Snowflake$' -timeout=8m
+```
+
+The reduced LA selector is
+`^TestUnified(Resources|TimestampPrecision)Snowflake$/^(cumulative_oversized|UTF8_exact_budget|server_error_and_recovery|precision-9)$`,
+using the LA overlay and required timezone. The permanent suite does not enable
+driver fault injection. The private observation overlay adds counts only and
+does not change production, vendored sources, result formats or SQL.
+
+### Remote chunks are reachable within the budget
+
+Repetitive payloads at the exact byte budget arrived inline in these runs.
+A separate private probe used 512 profiles with 2,048-byte SHA-256 digest
+payloads each, exactly 1 MiB in total; it verified every byte and profile ID.
+Snowflake returned 48 inline rows and three remote chunks. Their consumed
+HTTP-body bytes before decompression were 309,536, 513,968 and 173,456, with
+EOF observed and no close errors. These are body reads, not total network
+traffic; the inline base64 length and advertised uncompressed sizes are
+recorded separately. No URLs, headers or document content were logged.
+
+The initial `entropy` test passed, but its wrapper exited 7 because that
+query-only probe incorrectly required an explanation tag as well. It is
+retained as diagnostic evidence, not counted as a fully verified run. The
+subsequent `failure` run required only the query tag and exited zero.
+
+The fault probe uses external overlays of the actual vendored driver and an
+external Go test. It waits for the first delivered row, then fails download
+of the second remote chunk. The driver's existing context-cancellation marker
+stops retries; the caller context is not canceled. Only this test request has
+the private context marker. Its counts show 48 delivered rows, three remote
+chunks, one injected fault and a nil datastore result with an opaque error.
+The same pool subsequently returns all 512 profiles and all 1 MiB of exact
+payloads; that recovery used four remote chunks and no inline batch.
+
+This is a driver-level fault with real data, not an actual network outage or
+a caller cancellation. Its error logging is sanitized in the overlay to avoid
+printing a signed chunk URL. The row counter excludes session-verification
+queries and counts driver delivery, not completed application decoding.
+The vendored call chain is `connection.go:446-484` (execution and downloader
+startup), `connection_util.go:373-396` (inline data and chunk descriptors),
+`chunk_downloader.go:82-145,200-234,410-446` (initial batch, prefetch and remote
+body reads), and `rows.go:224-250` (driver delivery), all under
+`vendor/github.com/snowflakedb/gosnowflake/v2/`.
+No fault hook, private driver API or test bypass is compiled into production.
+The probe does not test chunk faults in explanations or HTTP/MCP responses.
+Permanent scan/iteration/Close error tests with controlled cursors remain
+separate evidence. A repeatable repository workflow for the private chunk
+probe is still to be reviewed before it is required as a periodic check.
+
 ## Coverage still required before activation
 
 Passing the commands above is necessary, but is not the complete acceptance
@@ -1260,8 +1368,11 @@ In particular, the following work remains explicit:
   groups now provide remote evidence for Count money,
   Sum/Average where and minimum, covered conflicts, mixed explanations,
   projections and pagination.
-- Further scan/iteration/close failures, malformed/oversized results, additional
-  timestamp precisions, session changes and a small scale/resource smoke test.
+- The failure/resource supplement above covers limits, a malformed identity,
+  real server errors and recovery, a driver-level chunk fault, native timestamp
+  precisions, local mode changes and a bounded load smoke test. Controlled
+  cursors cover scan/iteration/Close failures. Keep their levels of evidence
+  distinct; the private chunk probe still needs a reviewed repeatable workflow.
   Running-query timeout/cancellation evidence is recorded separately below.
 - Decide how managed identity columns retain literal identity in writes and
   attribution under non-binary collation, including existing warehouses.
@@ -1348,9 +1459,10 @@ The vendored Snowflake driver currently sends cancellation synchronously,
 without a separate cleanup deadline. Measured cancellation latency includes
 this step; the test's observation bounds do not establish a production latency
 guarantee. The datastore retains its opaque `UnavailableError`, so cancellation
-is not identifiable through `errors.Is` above that boundary. Download
-interruption after query completion, mode changes and credit/resource controls
-remain outside these fixtures.
+is not identifiable through `errors.Is` above that boundary. The later resource
+supplement covers local mode transitions and a driver-level chunk fault after
+query completion; neither is part of these running-query fixtures. Actual
+network outages and credit/resource controls remain outside these fixtures.
 
 The read-only inventory can be repeated against names from any campaign's
 manifests, including incomplete runs. It bounds files, schema names and server

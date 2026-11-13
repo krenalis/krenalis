@@ -5,9 +5,13 @@
 package datastore
 
 import (
+	"context"
+	"sync"
 	"testing"
+	"testing/synctest"
 
 	"github.com/krenalis/krenalis/core/internal/state"
+	"github.com/krenalis/krenalis/tools/errors"
 )
 
 func TestCompatibleMode(t *testing.T) {
@@ -37,6 +41,118 @@ func TestCompatibleMode(t *testing.T) {
 		if got != test.expected {
 			t.Errorf("containsMode(%v, %v) = %v; expected %v", test.modes, test.mode, got, test.expected)
 		}
+	}
+}
+
+// TestModeTransitions checks Unified read operations during mode changes.
+func TestModeTransitions(t *testing.T) {
+	for _, test := range []struct {
+		name   string
+		next   state.WarehouseMode
+		cancel bool
+	}{
+		{"inspection", state.Inspection, false}, {"inspection cancel", state.Inspection, true},
+		{"maintenance wait", state.Maintenance, false}, {"maintenance cancel", state.Maintenance, true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+
+				mc := newModeCoordinator(state.Normal)
+				ctx, done, err := mc.StartOperation(t.Context(), normalMode|inspectionMode)
+				if err != nil {
+					t.Fatalf("expected initial read admission, got %v", err)
+				}
+				finish := sync.OnceFunc(done)
+				defer finish()
+				changed := make(chan struct{})
+				go func() {
+					mc.ChangeMode(test.next, test.cancel)
+					close(changed)
+				}()
+				synctest.Wait()
+
+				if test.next == state.Inspection {
+					select {
+					case <-changed:
+					default:
+						t.Fatal("expected compatible mode transition, got pending transition")
+					}
+					if ctx.Err() != nil {
+						t.Fatalf("expected live compatible context, got %v", ctx.Err())
+					}
+					_, otherDone, err := mc.StartOperation(t.Context(), normalMode|inspectionMode)
+					if err != nil {
+						t.Fatalf("expected inspection read admission, got %v", err)
+					}
+					otherDone()
+					finish()
+					return
+				}
+				select {
+				case <-changed:
+					t.Fatal("expected transition to await active read, got completed transition")
+				default:
+				}
+				if test.cancel {
+					err := ctx.Err()
+					if err != nil {
+						if !errors.Is(err, context.Canceled) {
+							t.Fatalf("expected context cancellation, got %v", err)
+						}
+					}
+					if err == nil {
+						t.Fatal("expected cancellation of incompatible read, got live context")
+					}
+				} else if ctx.Err() != nil {
+					t.Fatalf("expected live context while transition waits, got %v", ctx.Err())
+				}
+				if mc.Mode() != state.Normal {
+					t.Fatalf("expected previous mode until read finishes, got %v", mc.Mode())
+				}
+				admission := make(chan error, 1)
+				go func() {
+					_, done, err := mc.StartOperation(t.Context(), normalMode|inspectionMode)
+					if err != nil {
+						admission <- err
+						return
+					}
+					done()
+					admission <- nil
+				}()
+				synctest.Wait()
+				select {
+				case err := <-admission:
+					t.Fatalf("expected admission to wait for transition, got %v", err)
+				default:
+				}
+				finish()
+				synctest.Wait()
+				select {
+				case <-changed:
+				default:
+					t.Fatal("expected completed transition, got pending transition")
+				}
+				err = <-admission
+				if err != nil {
+					if !errors.Is(err, ErrMaintenanceMode) {
+						t.Fatalf("expected maintenance rejection, got %v", err)
+					}
+				}
+				if err == nil {
+					t.Fatal("expected maintenance rejection, got success")
+				}
+				if mc.Mode() != state.Maintenance {
+					t.Fatalf("expected maintenance mode, got %v", mc.Mode())
+				}
+				mc.ChangeMode(state.Normal, false)
+				_, done, err = mc.StartOperation(t.Context(), normalMode|inspectionMode)
+				if err != nil {
+					t.Fatalf("expected read admission after recovery, got %v", err)
+				}
+				done()
+
+			})
+		})
 	}
 }
 
