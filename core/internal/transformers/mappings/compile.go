@@ -16,8 +16,6 @@ import (
 	"github.com/krenalis/krenalis/tools/types"
 )
 
-var jsonArrayType = types.Array(types.JSON())
-
 // Expression represents a mapping used to transform data conforming to an input
 // schema into data of a specific output type. An Expression can contain
 // strings, numbers, true, false, null, property paths, and function calls.
@@ -92,9 +90,8 @@ func checkAnd(args [][]part, schema, dt types.Type, nullable bool, attributes ma
 
 // checkArray type checks a call to 'array' with the given arguments.
 func checkArray(args [][]part, schema, dt types.Type, nullable bool, attributes map[string]struct{}) (types.Type, error) {
-	// Ensure that all arguments can be converted to the element type of the destination array.
-	// If the destination type (dt) is not an array, no checks are performed,
-	// and it is left to the caller to fail later.
+	// For array destinations, ensure that all arguments can be converted to the element type.
+	// Otherwise, use JSON elements and let the caller validate the destination type.
 	et := types.JSON()
 	if dt.IsArray() {
 		et = dt.Elem()
@@ -105,7 +102,7 @@ func checkArray(args [][]part, schema, dt types.Type, nullable bool, attributes 
 			return types.Type{}, err
 		}
 	}
-	return jsonArrayType, nil
+	return types.Array(et), nil
 }
 
 // checkCoalesce type checks a call to 'coalesce' with the given arguments.

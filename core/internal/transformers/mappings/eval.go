@@ -31,6 +31,7 @@ var encodeSorted = false
 // unmarshaled values.
 //
 // If a property transformation fails, Eval returns a TransformationError.
+// If a contextual argument conversion fails, Eval returns a ValidationError.
 func (expr *Expression) Eval(attributes map[string]any) (any, types.Type, error) {
 	v, st, err := eval(expr.parts, expr.source, attributes)
 	if err != nil {
@@ -70,8 +71,6 @@ func appendAsString(b []byte, v any, t types.Type) ([]byte, error) {
 		return v.(time.Time).AppendFormat(b, time.DateOnly), nil
 	case types.TimeKind:
 		return v.(time.Time).AppendFormat(b, "15:04:05.999999999"), nil
-	case types.YearKind:
-		return strconv.AppendInt(b, int64(v.(int)), 10), nil
 	case types.JSONKind:
 		v := v.(json.Value)
 		switch v.Kind() {
@@ -114,8 +113,8 @@ func digitCountUint(n uint64) int {
 // source code of the expression, used in error messages, and attributes are the
 // attributes.
 //
-// If an error occurs, it will be either errInvalidConversion or a
-// TransformationError.
+// If an error occurs, it will be errInvalidConversion, a TransformationError,
+// a ValidationError, or an error describing an invalid function argument.
 func eval(expression []part, source string, attributes map[string]any) (any, types.Type, error) {
 
 	// Evaluate the most common cases that does not require a buffer.
@@ -180,8 +179,8 @@ func eval(expression []part, source string, attributes map[string]any) (any, typ
 // type. source is the source code of the expression, used in error messages,
 // and attributes are the attributes.
 //
-// If it returns an error, it is either errInvalidConversion or a
-// TransformationError.
+// If it returns an error, it is errInvalidConversion, a TransformationError,
+// a ValidationError, or an error describing an invalid function argument.
 func evalCall(p part, source string, attributes map[string]any) (any, types.Type, error) {
 	switch name := p.path.elements[0]; name {
 	case "and":
@@ -210,28 +209,20 @@ func evalCall(p part, source string, attributes map[string]any) (any, types.Type
 		}
 		return true, types.Boolean(), nil
 	case "array":
+		et := p.typ.Elem()
 		arr := make([]any, len(p.args))
 		for i, arg := range p.args {
-			v, _, err := eval(arg, source, attributes)
+			v, vt, err := eval(arg, source, attributes)
 			if err != nil {
 				return nil, types.Type{}, err
 			}
-			switch v.(type) {
-			case nil:
-				v = json.Value("null")
-			case json.Value:
-			default:
-				if encodeSorted {
-					var b json.Buffer
-					_ = b.EncodeSorted(v)
-					v, _ = b.Value()
-				} else {
-					v, _ = json.Marshal(v)
-				}
+			arr[i], err = convert(v, vt, et, false, None)
+			if err != nil {
+				msg := fmt.Sprintf("«%s» is not convertible to the «%s» type", code(source, arg...), et)
+				return nil, types.Type{}, ValidationError{msg}
 			}
-			arr[i] = v
 		}
-		return arr, types.Array(types.JSON()), nil
+		return arr, p.typ, nil
 	case "coalesce":
 		for _, arg := range p.args {
 			v, vt, err := eval(arg, source, attributes)

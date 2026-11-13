@@ -66,7 +66,8 @@ var (
 //
 // purpose specifies the reason for the transformation. If Create or Update,
 // then all the properties required for creation or the update must be present
-// in the returned value.
+// in the returned value. For Create and Update, this requirement also applies
+// when the source and destination are equal array, object, or map types.
 //
 // If the value cannot be converted, it returns v and one of the following:
 //   - errMaxBytesConversion
@@ -133,8 +134,6 @@ func convert(v any, st, dt types.Type, nullable bool, purpose Purpose) (any, err
 			s = v.(time.Time).Format(time.DateOnly)
 		case types.TimeKind:
 			s = v.(time.Time).Format("15:04:05.999999999")
-		case types.YearKind:
-			s = strconv.Itoa(v.(int))
 		case types.UUIDKind, types.IPKind:
 			s = v.(string)
 		case types.JSONKind:
@@ -267,8 +266,6 @@ func convert(v any, st, dt types.Type, nullable bool, purpose Purpose) (any, err
 				if err != nil {
 					return v, err
 				}
-			case types.YearKind:
-				n = uint(v.(int))
 			case types.JSONKind:
 				v := v.(json.Value)
 				n, err = v.Uint()
@@ -327,8 +324,6 @@ func convert(v any, st, dt types.Type, nullable bool, purpose Purpose) (any, err
 			if err != nil {
 				return v, err
 			}
-		case types.YearKind:
-			n = v.(int)
 		case types.JSONKind:
 			v := v.(json.Value)
 			n, err = v.Int()
@@ -368,13 +363,21 @@ func convert(v any, st, dt types.Type, nullable bool, purpose Purpose) (any, err
 		case types.IntKind:
 			if st.IsUnsigned() {
 				n = float64(v.(uint))
+				if dt.BitSize() == 32 {
+					n = float64(float32(v.(uint)))
+				}
 			} else {
 				n = float64(v.(int))
+				if dt.BitSize() == 32 {
+					n = float64(float32(v.(int)))
+				}
 			}
 		case types.DecimalKind:
-			n, _ = v.(decimal.Decimal).Float64()
 			if dt.BitSize() == 32 {
-				n = float64(float32(n))
+				f, _ := v.(decimal.Decimal).Float32()
+				n = float64(f)
+			} else {
+				n, _ = v.(decimal.Decimal).Float64()
 			}
 		case types.JSONKind:
 			v := v.(json.Value)
@@ -408,6 +411,10 @@ func convert(v any, st, dt types.Type, nullable bool, purpose Purpose) (any, err
 			n, err = decimal.Parse(v.(string), dt.Precision(), dt.Scale())
 		case types.DecimalKind:
 			n, _ = v.(decimal.Decimal)
+			_, scale := n.PrecisionScale()
+			if scale > dt.Scale() {
+				return v, errInvalidConversion
+			}
 		case types.IntKind:
 			if st.IsUnsigned() {
 				n, err = decimal.Uint(v.(uint), dt.Precision(), dt.Scale())
@@ -537,50 +544,6 @@ func convert(v any, st, dt types.Type, nullable bool, purpose Purpose) (any, err
 			return v, errInvalidConversion
 		}
 		return t, nil
-	case types.YearKind:
-		var err error
-		var n int
-		switch sk {
-		case types.StringKind:
-			s := v.(string)
-			if l := len(s); l == 0 || l > 4 || s[0] == '+' || s[0] == '-' || s[0] == '0' {
-				return v, errParseConversion
-			}
-			n, err = strconv.Atoi(s)
-			if err != nil {
-				if e := err.(*strconv.NumError); e.Err == strconv.ErrRange {
-					return v, errYearRangeConversion
-				}
-				return v, errParseConversion
-			}
-		case types.YearKind:
-			return v.(int), nil
-		case types.IntKind:
-			if st.IsUnsigned() {
-				u := v.(uint)
-				if u > math.MaxInt64 {
-					return v, errYearRangeConversion
-				}
-				n = int(u)
-			} else {
-				n = v.(int)
-			}
-		case types.JSONKind:
-			v := v.(json.Value)
-			n, err = v.Int()
-			if err != nil {
-				if err == json.ErrRange {
-					return v, errYearRangeConversion
-				}
-				return v, errInvalidConversion
-			}
-		default:
-			return v, errInvalidConversion
-		}
-		if n < 1 || n > 9999 {
-			return v, errYearRangeConversion
-		}
-		return n, nil
 	case types.UUIDKind:
 		switch sk {
 		case types.StringKind:
@@ -695,7 +658,7 @@ func convert(v any, st, dt types.Type, nullable bool, purpose Purpose) (any, err
 			it1 := st.Elem()
 			it2 := dt.Elem()
 			sameType := types.Equal(it1, it2)
-			if !sameType {
+			if !sameType || purpose != None && len(s) > 0 && (it2.IsObject() || it2.IsArray() || it2.IsMap()) {
 				d = make([]any, len(s))
 				var err error
 				for i, item := range s {
@@ -721,7 +684,7 @@ func convert(v any, st, dt types.Type, nullable bool, purpose Purpose) (any, err
 		dProperties := dt.Properties()
 		switch sk {
 		case types.ObjectKind:
-			if types.Equal(st, dt) {
+			if types.Equal(st, dt) && purpose == None {
 				return v, nil
 			}
 			s := v.(map[string]any)
@@ -816,7 +779,8 @@ func convert(v any, st, dt types.Type, nullable bool, purpose Purpose) (any, err
 		case types.MapKind:
 			vt1 := st.Elem()
 			vt2 := dt.Elem()
-			if types.Equal(vt1, vt2) {
+			if types.Equal(vt1, vt2) && (purpose == None || len(v.(map[string]any)) == 0 ||
+				!vt2.IsObject() && !vt2.IsArray() && !vt2.IsMap()) {
 				return v, nil
 			}
 			s := v.(map[string]any)
@@ -836,7 +800,7 @@ func convert(v any, st, dt types.Type, nullable bool, purpose Purpose) (any, err
 			var err error
 			for _, p := range st.Properties().All() {
 				if value, ok := s[p.Name]; ok {
-					d[p.Name], err = convert(value, p.Type, vt, true, purpose)
+					d[p.Name], err = convert(value, p.Type, vt, false, purpose)
 					if err != nil {
 						return nil, err
 					}
@@ -1015,9 +979,6 @@ func typeNeedsConversion(st, dt types.Type) bool {
 	if st.Kind() != dt.Kind() {
 		return true
 	}
-	if types.Equal(st, dt) {
-		return false
-	}
 	switch st.Kind() {
 	case types.ObjectKind:
 		sp, dp := st.Properties(), dt.Properties()
@@ -1043,6 +1004,6 @@ func typeNeedsConversion(st, dt types.Type) bool {
 	case types.MapKind:
 		return typeNeedsConversion(st.Elem(), dt.Elem())
 	default:
-		return true
+		return !types.Equal(st, dt)
 	}
 }

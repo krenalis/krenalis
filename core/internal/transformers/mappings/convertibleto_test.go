@@ -33,6 +33,8 @@ func TestConvertibleTo(t *testing.T) {
 		{types.Int(8), types.Int(8), true},
 		// int(16).
 		{types.Int(16), types.Int(16), true},
+		{types.Int(16).AsYear(), types.Float(64), true},
+		{types.Int(16).AsYear(), types.Decimal(4, 0), true},
 		// int(24).
 		{types.Int(24), types.Int(24), true},
 		// int(32).
@@ -42,7 +44,6 @@ func TestConvertibleTo(t *testing.T) {
 		{types.Int(32), types.Int(64).Unsigned(), true},
 		{types.Int(32), types.Float(64), true},
 		{types.Int(32), types.JSON(), true},
-		{types.Int(32), types.Year(), true},
 		{types.Int(32), types.String(), true},
 		{types.Int(32), types.Array(types.Int(32)), false},
 		{types.Int(32), types.Map(types.Int(8)), false},
@@ -56,7 +57,6 @@ func TestConvertibleTo(t *testing.T) {
 		{types.Int(32).Unsigned(), types.Int(32).Unsigned(), true},
 		// unsigned int(64).
 		{types.Int(64).Unsigned(), types.Int(64).Unsigned(), true},
-		{types.Int(64).Unsigned(), types.Year(), true},
 		// float(32).
 		{types.Float(32), types.Float(32), true},
 		// float(64).
@@ -68,12 +68,6 @@ func TestConvertibleTo(t *testing.T) {
 		{types.Date(), types.Array(types.Date()), false},
 		// time.
 		{types.Time(), types.Time(), true},
-		// year.
-		{types.Year(), types.Boolean(), false},
-		{types.Year(), types.Int(32), true},
-		{types.Year(), types.Year(), true},
-		{types.Year(), types.JSON(), true},
-		{types.Year(), types.Array(types.Year()), false},
 		// uuid.
 		{types.UUID(), types.UUID(), true},
 		// json.
@@ -112,11 +106,11 @@ func TestConvertibleTo(t *testing.T) {
 			types.Object([]types.Property{{Name: "x", Type: types.String()}}), true},
 		{types.Object([]types.Property{{Name: "x", Type: types.Int(32)}}),
 			types.Object([]types.Property{{Name: "x", Type: types.String()}}), true},
-		{types.Object([]types.Property{{Name: "x", Type: types.Year()}}),
+		{types.Object([]types.Property{{Name: "x", Type: types.Int(16).AsYear()}}),
 			types.Object([]types.Property{{Name: "x", Type: types.Boolean()}}), false},
-		{types.Object([]types.Property{{Name: "x", Type: types.Year()}}),
-			types.Map(types.Year()), true},
-		{types.Object([]types.Property{{Name: "x", Type: types.Year()}}),
+		{types.Object([]types.Property{{Name: "x", Type: types.Int(16).AsYear()}}),
+			types.Map(types.Int(16).AsYear()), true},
+		{types.Object([]types.Property{{Name: "x", Type: types.Int(16).AsYear()}}),
 			types.Map(types.Boolean()), false},
 		// map.
 		{types.Map(types.String()), types.JSON(), true},
@@ -127,7 +121,7 @@ func TestConvertibleTo(t *testing.T) {
 		{types.Map(types.String()), types.Object([]types.Property{{Name: "s", Type: types.String()}}), true},
 		{types.Map(types.Boolean()), types.Object([]types.Property{{Name: "s", Type: types.Int(32)}}), false},
 		{types.Map(types.String()), types.Map(types.String()), true},
-		{types.Map(types.Year()), types.Map(types.Boolean()), false},
+		{types.Map(types.Int(16).AsYear()), types.Map(types.Boolean()), false},
 	}
 	for _, cas := range cases {
 		t.Run(fmt.Sprintf("%s to %s", cas.from, cas.to), func(t *testing.T) {

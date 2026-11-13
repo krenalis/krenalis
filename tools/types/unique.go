@@ -57,8 +57,6 @@ func FirstDuplicate(values []any, elementType Type) (int, error) {
 	case DecimalKind:
 		representation = reflect.TypeFor[decimal.Decimal]()
 		scale = elementType.Scale()
-	case YearKind:
-		representation = reflect.TypeFor[int]()
 	case DateTimeKind, DateKind, TimeKind:
 		representation = reflect.TypeFor[time.Time]()
 		if len(values) > 0 {

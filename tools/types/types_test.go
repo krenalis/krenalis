@@ -182,7 +182,7 @@ func Test_IsFloat(t *testing.T) {
 		}
 	}
 
-	for _, typ := range []Type{Int(32), Int(64), Year(), String(), {}} {
+	for _, typ := range []Type{Int(32), Int(64), String(), {}} {
 		t.Run(fmt.Sprintf("other/type=%s", typ), func(t *testing.T) {
 			if got := typ.IsFloat(); got {
 				t.Errorf("IsFloat(): expected false, got %t", got)
@@ -234,7 +234,7 @@ func Test_IsInt(t *testing.T) {
 		}
 	}
 
-	for _, typ := range []Type{Float(32), Float(64), Year(), String(), {}} {
+	for _, typ := range []Type{Float(32), Float(64), String(), {}} {
 		t.Run(fmt.Sprintf("other/type=%s", typ), func(t *testing.T) {
 			if got := typ.IsInt(); got {
 				t.Errorf("IsInt(): expected false, got %t", got)
