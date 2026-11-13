@@ -3,6 +3,24 @@
 	margin-top: 0;
 }
 
+.snippet__cmp {
+	display: flex;
+	justify-content: flex-end;
+	align-items: center;
+	gap: 10px;
+	margin-bottom: 10px;
+	font-size: 13px;
+}
+
+.snippet__cmp-note {
+	margin-right: auto;
+	color: #6c6c6c;
+}
+
+.snippet__cmp-select {
+	width: 140px;
+}
+
 .syntax-highlight--install-command + wa-copy-button {
 	position: absolute;
 	width: max-content !important;
