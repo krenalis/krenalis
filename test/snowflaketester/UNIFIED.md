@@ -1467,21 +1467,24 @@ minimum, covered conflicts, mixed explanations, projections and pagination.
 Approving the exception settles this policy choice; it does not open the gate
 or replace the pending live chunk checks and other acceptance work below.
 
-### Enum issue and Array(String) follow-up
+### Enum correction and Array(String) follow-up
 
 The review of the exception identified two existing cases. Array(String) is now
-covered by the approved extension; the enum issue remains separate. The current
-renderers confirm their SQL paths; no new remote verification is claimed.
+covered by the approved extension; the enum issue is corrected separately below.
+No new remote verification is claimed.
 
 - PostgreSQL stores Event `type` as `event_type`, an SQL enum, while the Event
   schema exposes a String with allowed values. Public validation rejects order,
   intervals, prefix and suffix for that schema, but admits `contains` and
-  `does not contain`. The PostgreSQL renderer passes the enum to `POSITION`
-  without a text cast. Claude's disposable-PostgreSQL probe reported SQLSTATE
+  `does not contain`. The PostgreSQL renderer previously passed the enum to
+  `POSITION` without a text cast. Claude's disposable-PostgreSQL probe reported SQLSTATE
   42883; Snowflake uses a text column. This is a pre-existing type-mapping and
-  renderer issue, not a collation rule or a new error classification. Track its
-  correction separately from this exception. Literal technical source selection
-  retains its explicit text cast and is a different path.
+  renderer issue, not a collation rule or a new error classification. The renderer
+  now casts String columns with allowed values to text inside `POSITION` for
+  both operators. Ordinary String and JSON predicates are unchanged, as is public
+  validation: operands on a String with allowed values must still be among those
+  values. Literal technical source selection retains its explicit text cast and
+  is a different path.
 - Membership in native `Array(String)` columns follows the approved extension.
   PostgreSQL renders `literal = ANY(column)`, which follows the
   array column's collation; Snowflake renders a literal JSON element comparison
@@ -1506,6 +1509,27 @@ Sources: `core/internal/schemas/event.go`, `core/filters.go`,
 The review is `filtering/claude/revisione-deroga-testo-nativo.md`.
 The enum issue is not covered by the collation exception. The Array(String)
 extension does not admit other differences in array semantics or change code.
+
+`TestUnifiedRecordEnumPostgreSQL/Snowflake` is the shared regression for the
+enum correction. It initializes the real managed event table, writes events
+through Merge and uses the actual Event column descriptors for `type`,
+`context.browser.name` and `context.os.name`. Both substring operators check
+matching and nonmatching values, Count totals and bounds, every profile's
+explanation and legacy Events queries. Missing browser/OS values remain UNKNOWN
+in both positive and negative Count predicates.
+
+The local PostgreSQL run passed nine test nodes with the race detector. The same
+test before the correction failed with SQLSTATE 42883. Both warehouse renderer
+snapshots cover the allowed-value String case; the existing ordinary String and
+JSON snapshots stay unchanged. The Snowflake fixture is prepared but has not
+been executed remotely. Add it to the next authorized live campaign:
+
+```sh
+python3 test/snowflaketester/run.py --require-schemas \
+  --require-session-timezone "$session_timezone" "$campaign_dir/record-enum.jsonl" -- \
+  -overlay "$campaign_dir/overlay.json" ./core/internal/datastore -race \
+  -run '^TestUnifiedRecordEnumSnowflake$' -timeout=5m
+```
 
 ## Coverage still required before activation
 

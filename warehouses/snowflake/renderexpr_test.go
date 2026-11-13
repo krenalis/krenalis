@@ -85,6 +85,16 @@ func Test_renderExpr(t *testing.T) {
 			query: `NOT CONTAINS("NAME", 'boo')`,
 		},
 		{
+			name:  "enum contains",
+			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "type", Type: types.String().WithValues("alias", "track")}, warehouses.OpContains, "track"),
+			query: `CONTAINS("TYPE", 'track')`,
+		},
+		{
+			name:  "enum does not contain",
+			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "type", Type: types.String().WithValues("alias", "track")}, warehouses.OpDoesNotContain, "track"),
+			query: `NOT CONTAINS("TYPE", 'track')`,
+		},
+		{
 			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "id", Type: types.Float(32)}, warehouses.OpIsOneOf, 3.5, 9.2, 5.0),
 			query: `"ID" IN (3.5,9.2,5)`,
 		},
