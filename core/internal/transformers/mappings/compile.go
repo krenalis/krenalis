@@ -231,12 +231,18 @@ func checkLTrim(args [][]part, schema, dt types.Type, nullable bool, attributes 
 
 // checkMap type checks a call to 'map' with the given arguments.
 func checkMap(args [][]part, schema, dt types.Type, nullable bool, attributes map[string]struct{}) (types.Type, error) {
+
 	if len(args)%2 != 0 {
 		return types.Type{}, errors.New("'map' function requires an even number of arguments")
 	}
 
+	et := types.JSON()
+	if dt.IsMap() {
+		et = dt.Elem()
+	}
 	keys := make(map[string]struct{}, len(args)/2)
 	for i := 0; i < len(args); i += 2 {
+
 		if len(args[i]) != 1 || args[i][0].path.elements != nil {
 			return types.Type{}, errors.New("'map' key is not constant")
 		}
@@ -247,7 +253,8 @@ func checkMap(args [][]part, schema, dt types.Type, nullable bool, attributes ma
 		if err := typeCheck(args[i], schema, types.String(), false, attributes); err != nil {
 			return types.Type{}, err
 		}
-		if err := typeCheck(args[i+1], schema, types.JSON(), false, attributes); err != nil {
+		err := typeCheck(args[i+1], schema, et, false, attributes)
+		if err != nil {
 			return types.Type{}, err
 		}
 
@@ -256,9 +263,10 @@ func checkMap(args [][]part, schema, dt types.Type, nullable bool, attributes ma
 			return types.Type{}, errors.New("duplicate key in 'map' function")
 		}
 		keys[key] = struct{}{}
+
 	}
 
-	return types.Map(types.JSON()), nil
+	return types.Map(et), nil
 }
 
 // checkNe type checks a call to 'ne' with the given arguments.
