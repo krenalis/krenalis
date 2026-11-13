@@ -61,6 +61,9 @@ func TestMonetaryFieldPaths(t *testing.T) {
 		Profile:   warehouses.Column{Name: "kpid", Type: types.UUID()},
 		Identity:  warehouses.Column{Name: "message_id", Type: types.String()},
 		Timestamp: warehouses.Column{Name: "timestamp", Type: types.DateTime()}},
+		EventType:  warehouses.Column{Name: "type", Type: types.String()},
+		Event:      warehouses.Column{Name: "event", Type: types.String()},
+		Name:       warehouses.Column{Name: "name", Type: types.String(), Nullable: true},
 		Properties: warehouses.Column{Name: "payload", Type: types.JSON()},
 		Record: func(*state.Where) (warehouses.Expr, error) {
 			return warehouses.NewBaseExpr(warehouses.Column{Name: "event", Type: types.String()},
@@ -116,6 +119,9 @@ func TestSumInternalValidation(t *testing.T) {
 		Profile:   warehouses.Column{Name: "kpid", Type: types.UUID()},
 		Identity:  warehouses.Column{Name: "message_id", Type: types.String()},
 		Timestamp: warehouses.Column{Name: "timestamp", Type: types.DateTime()}},
+		EventType:  warehouses.Column{Name: "type", Type: types.String()},
+		Event:      warehouses.Column{Name: "event", Type: types.String()},
+		Name:       warehouses.Column{Name: "name", Type: types.String(), Nullable: true},
 		Properties: warehouses.Column{Name: "properties", Type: types.JSON()},
 		Record: func(*state.Where) (warehouses.Expr, error) {
 			return warehouses.NewBaseExpr(warehouses.Column{Name: "event", Type: types.String()},

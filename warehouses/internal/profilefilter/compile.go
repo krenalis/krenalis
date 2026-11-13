@@ -166,6 +166,16 @@ func (c *compiler) qualificationGiven(node, base warehouses.RowQualification) (s
 		return c.dialect.Record(n.Expr)
 	case *warehouses.MoneyQualification:
 		return c.money(n, base)
+	case *warehouses.ExactColumnText:
+		value, err := c.dialect.ExactText(n.Column)
+		if err != nil {
+			return "", err
+		}
+		p, err := c.parameter(types.String(), n.Value)
+		if err != nil {
+			return "", err
+		}
+		return "(" + value + ")=" + p, nil
 	case *warehouses.KnownTextEqual:
 		value, err := c.dialect.KnownText(n.Column, n.Keys)
 		if err != nil {
@@ -247,7 +257,8 @@ func Build(filter warehouses.Filter, request warehouses.ProfileOutcomeRequest, d
 	if err != nil {
 		return Statement{}, err
 	}
-	if dialect.QuoteIdentifier == nil || dialect.Record == nil || dialect.KnownText == nil || dialect.Parameter == nil {
+	if dialect.QuoteIdentifier == nil || dialect.Record == nil || dialect.ExactText == nil ||
+		dialect.KnownText == nil || dialect.Parameter == nil {
 		return Statement{}, fmt.Errorf("warehouses/internal/profilefilter: missing dialect")
 	}
 	c := compiler{dialect: dialect}

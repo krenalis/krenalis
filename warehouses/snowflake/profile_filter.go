@@ -94,9 +94,18 @@ func profileExactDecimal(reading warehouses.DecimalReading) (string, error) {
 		target + "=TO_VARIANT(" + number + ") THEN " + number + " END END", nil
 }
 
+// profileExactText fixes the collation of a native source identity.
+func profileExactText(column warehouses.Column) (string, error) {
+	if !warehouses.IsValidIdentifier(column.Name) || !column.Type.IsString() {
+		return "", fmt.Errorf("warehouses/snowflake: invalid exact text binding")
+	}
+	return "COLLATE(" + quoteIdent(column.Name) + ", 'utf8')", nil
+}
+
 func profileFilterDialect() profilefilter.Dialect {
 	return profilefilter.Dialect{ValueSize: profileValueSize, QuoteIdentifier: quoteIdent, Record: profileRecord,
-		KnownText: profileKnownText, ExactDecimal: profileExactDecimal, Parameter: profileParameter}
+		ExactText: profileExactText, KnownText: profileKnownText, ExactDecimal: profileExactDecimal,
+		Parameter: profileParameter}
 }
 
 // profileKnownText extracts only a JSON String, preserving unknown business

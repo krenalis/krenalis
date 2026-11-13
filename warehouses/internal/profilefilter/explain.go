@@ -35,7 +35,8 @@ func BuildExplanation(filter warehouses.Filter, population warehouses.ProfileSou
 	if id, ok := types.NormalizeUUID(profile); !ok || id != profile {
 		return Statement{}, fmt.Errorf("warehouses/internal/profilefilter: invalid explanation profile")
 	}
-	if dialect.QuoteIdentifier == nil || dialect.Record == nil || dialect.KnownText == nil || dialect.Parameter == nil {
+	if dialect.QuoteIdentifier == nil || dialect.Record == nil || dialect.ExactText == nil ||
+		dialect.KnownText == nil || dialect.Parameter == nil {
 		return Statement{}, fmt.Errorf("warehouses/internal/profilefilter: missing dialect")
 	}
 

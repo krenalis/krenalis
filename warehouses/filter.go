@@ -121,6 +121,15 @@ type RecordQualification struct {
 
 func (*RecordQualification) rowQualification() {}
 
+// ExactColumnText compares a native text column with a literal byte for byte,
+// independently of the column collation. SQL NULL produces NULL.
+type ExactColumnText struct {
+	Column Column
+	Value  string
+}
+
+func (*ExactColumnText) rowQualification() {}
+
 // KnownTextEqual compares a known JSON String verbatim with a literal. Missing,
 // JSON null and non-String values produce NULL. Core resolves its business
 // meaning before constructing it; no normalization or domain inference occurs.

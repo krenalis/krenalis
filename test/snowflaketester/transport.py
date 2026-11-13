@@ -7,4 +7,5 @@
 SERVICE_TAGS = tuple("krenalis-transport/service-" + role for role in ("query", "explanation", "record"))
 RESULT_TAGS = tuple("krenalis-transport/" + path + "-" + role
                     for path in ("warehouse", "connector")
-                    for role in ("values", "reference", "native")) + SERVICE_TAGS
+                    for role in ("values", "reference", "native")) + SERVICE_TAGS + tuple(
+    "krenalis-transport/record-" + role for role in ("query", "explanation", "legacy"))

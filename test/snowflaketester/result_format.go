@@ -15,6 +15,9 @@ const (
 	ServiceQueryTag       = "krenalis-transport/service-query"
 	ServiceExplanationTag = "krenalis-transport/service-explanation"
 	ServiceRecordTag      = "krenalis-transport/service-record"
+	RecordQueryTag        = "krenalis-transport/record-query"
+	RecordExplanationTag  = "krenalis-transport/record-explanation"
+	RecordLegacyTag       = "krenalis-transport/record-legacy"
 )
 
 const requestedResultFormat = ""

@@ -80,6 +80,13 @@ property-reference comparison or a governed current-profile dependency.
   `name` still retains NULL. The internal Scope carries the type; validation
   and preparation reject types outside track/page/screen, and both monetary
   consumers reject non-track sources even when named Order Completed.
+- Source type/name comparisons use `ExactColumnText`, independently of native
+  column collation. `SourceBinding` supplies these identity columns explicitly;
+  the generic warehouse `OccurrenceSource` still binds identity, attribution
+  and time. Count and monetary preparation share the source selector, so Sum,
+  Average and all selected-experience forms use the same literal identity.
+  This changes their source SQL and parameters, not the Record renderer or
+  user-written occurrence predicates.
 - Explicit absolute `[Start,End)` periods with `Start < End <= T`, or elapsed
   periods resolved by core against that same T. Internal `Scope.Elapsed` uses
   `Older=d, Newer=0` for `ElapsedLookback(d)` and `Older=a, Newer=b` for

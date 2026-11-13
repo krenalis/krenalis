@@ -214,7 +214,8 @@ Count is `{"count":{"source":...,"period":...,"where":...,"minimum":...},
   requires `name`, matching the raw Event `event` value. For page/screen, `name`
   is optional and matches the Event `name` value. Omission selects all messages
   of that type. Explicit null or an empty string is invalid for either field.
-  Names are literal and case-sensitive. Grain is mandatory: Count counts registered
+  Names are literal and case-sensitive, independently of column collation.
+  Grain is mandatory: Count counts registered
   occurrence identities, not business orders or identical payloads.
 - Comparisons `is`, `is not`, the four numeric ordered operators, and inclusive
   `is between`. One nonnegative integer JSON operand, or two for between. No

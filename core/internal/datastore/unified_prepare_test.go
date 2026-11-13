@@ -31,6 +31,8 @@ func TestUnifiedPrepare(t *testing.T) {
 		Revision: "1", Path: []string{"properties", "a.b"}, Evidence: unified.IndependentOccurrenceValues}}}
 	calls := 0
 	source := unified.SourceBinding{
+		EventType: eventColumnByProperty["type"], Event: eventColumnByProperty["event"],
+		Name: eventColumnByProperty["name"],
 		Occurrences: warehouses.OccurrenceSource{Table: "krenalis_events", Profile: eventColumnByProperty["kpid"],
 			Identity: eventColumnByProperty["messageId"], Timestamp: eventColumnByProperty["timestamp"]},
 		Properties: eventColumnByProperty["properties"],
@@ -49,12 +51,12 @@ func TestUnifiedPrepare(t *testing.T) {
 		t.Fatalf("expected resolved source and period, got %+v", count)
 	}
 	quals := count.Qualification.(*warehouses.QualificationGroup)
-	selector := quals.Children[0].(*warehouses.RecordQualification).Expr
-	wantSelector := &warehouses.MultiExpr{Operator: warehouses.OpAnd, Operands: []warehouses.Expr{
-		&warehouses.BaseExpr{Column: eventColumnByProperty["event"], Operator: warehouses.OpIs, Values: []any{"Purchase'"}},
-		&warehouses.BaseExpr{Column: eventColumnByProperty["type"], Operator: warehouses.OpIs, Values: []any{"track"}},
+	selector := quals.Children[0].(*warehouses.QualificationGroup)
+	wantSelector := &warehouses.QualificationGroup{Operator: warehouses.OpAnd, Children: []warehouses.RowQualification{
+		&warehouses.ExactColumnText{Column: eventColumnByProperty["event"], Value: "Purchase'"},
+		&warehouses.ExactColumnText{Column: eventColumnByProperty["type"], Value: "track"},
 	}}
-	if !reflect.DeepEqual(selector, wantSelector) || calls != 1 {
+	if !reflect.DeepEqual(selector, wantSelector) || calls != 0 {
 		t.Fatalf("expected exact track name binding, got %+v and %d calls", selector, calls)
 	}
 	currency := quals.Children[1].(*warehouses.KnownTextEqual)
@@ -167,6 +169,8 @@ func TestUnifiedPrepareElapsedPeriods(t *testing.T) {
 			scope := unified.Scope{Event: "Purchase", Grain: "registered-message", Elapsed: &test.period}
 			rule := unified.Rule{Operator: state.OpAnd, Children: []unified.Rule{{Count: &unified.Count{Scope: scope}}}}
 			source := unified.SourceBinding{
+				EventType: eventColumnByProperty["type"], Event: eventColumnByProperty["event"],
+				Name: eventColumnByProperty["name"],
 				Occurrences: warehouses.OccurrenceSource{Table: "krenalis_events",
 					Profile:  eventColumnByProperty["kpid"],
 					Identity: eventColumnByProperty["messageId"], Timestamp: eventColumnByProperty["timestamp"]},
@@ -236,6 +240,8 @@ func TestUnifiedPrepareProfileRecord(t *testing.T) {
 func TestUnifiedPrepareReferencePrecedence(t *testing.T) {
 	at := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
 	source := unified.SourceBinding{
+		EventType: eventColumnByProperty["type"], Event: eventColumnByProperty["event"],
+		Name: eventColumnByProperty["name"],
 		Occurrences: warehouses.OccurrenceSource{Table: "krenalis_events", Profile: eventColumnByProperty["kpid"],
 			Identity: eventColumnByProperty["messageId"], Timestamp: eventColumnByProperty["timestamp"]},
 		Properties: eventColumnByProperty["properties"],
@@ -353,7 +359,7 @@ func TestUnifiedRecordBodyBinding(t *testing.T) {
 		bind := source.Record
 		calls := 0
 		source.Record = func(actual *state.Where) (warehouses.Expr, error) {
-			if calls == 1 && !reflect.DeepEqual(actual, where) {
+			if calls == 0 && !reflect.DeepEqual(actual, where) {
 				t.Fatalf("expected original whole Record group, got %+v", actual)
 			}
 			calls++
@@ -361,7 +367,7 @@ func TestUnifiedRecordBodyBinding(t *testing.T) {
 		}
 		scope := unified.Scope{Event: "Order Completed", Grain: "registered-message", Start: at.Add(-time.Hour), End: at}
 		root := &unified.Rule{Count: &unified.Count{Scope: scope, Where: recordCountWhere(t, where)}}
-		expectedCalls := 2 // Source selector, then the whole where.
+		expectedCalls := 1 // The whole where; source identity has its own binding.
 		if selected {
 			root = &unified.Rule{Experience: &unified.Experience{Scope: scope, Where: where,
 				Verify: &unified.OccurrencePredicate{Record: &state.WhereCondition{Property: []string{"messageId"},

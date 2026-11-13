@@ -118,6 +118,7 @@ type Dialect struct {
 	ValueSize       func(string) string
 	QuoteIdentifier func(string) string
 	Record          func(warehouses.Expr) (string, error)
+	ExactText       func(warehouses.Column) (string, error)
 	KnownText       func(warehouses.Column, []string) (string, error)
 	ExactDecimal    func(warehouses.DecimalReading) (string, error)
 	Parameter       func(int, types.Type) (string, error)

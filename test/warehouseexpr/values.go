@@ -13,7 +13,7 @@ import (
 )
 
 // ValueCase specifies a typed value predicate and its result on a present value.
-// Every predicate returns SQL NULL on absence, or false in the Go evaluator.
+// Every predicate returns SQL NULL on absence.
 type ValueCase struct {
 	Name     string
 	Type     types.Type
@@ -50,6 +50,38 @@ func ValueCases() []ValueCase {
 		{"on or after", types.Date(), warehouses.OpIsOnOrAfter, []any{day}, day, true},
 		{"true", types.Boolean(), warehouses.OpIsTrue, nil, true, true},
 		{"false", types.Boolean(), warehouses.OpIsFalse, nil, false, true},
+		{"false/is", types.Int(32), warehouses.OpIs, []any{100}, 101, false},
+		{"false/is not", types.Int(32), warehouses.OpIsNot, []any{100}, 100, false},
+		{"false/less", types.Int(32), warehouses.OpIsLessThan, []any{100}, 100, false},
+		{"false/less or equal", types.Int(32), warehouses.OpIsLessThanOrEqualTo, []any{100}, 101, false},
+		{"false/greater", types.Int(32), warehouses.OpIsGreaterThan, []any{100}, 100, false},
+		{"false/greater or equal", types.Int(32), warehouses.OpIsGreaterThanOrEqualTo, []any{100}, 99, false},
+		{"false/between", types.Int(32), warehouses.OpIsBetween, []any{100, 200}, 201, false},
+		{"false/not between", types.Int(32), warehouses.OpIsNotBetween, []any{100, 200}, 100, false},
+		{"false/contains", types.String(), warehouses.OpContains, []any{"foo"}, "bar", false},
+		{"false/does not contain", types.String(), warehouses.OpDoesNotContain, []any{"foo"}, "foobar", false},
+		{"false/one of", types.Int(32), warehouses.OpIsOneOf, []any{100, 200}, 101, false},
+		{"false/not one of", types.Int(32), warehouses.OpIsNotOneOf, []any{100, 200}, 100, false},
+		{"false/prefix", types.String(), warehouses.OpStartsWith, []any{"foo"}, "barfoo", false},
+		{"false/suffix", types.String(), warehouses.OpEndsWith, []any{"foo"}, "foobar", false},
+		{"false/before", types.Date(), warehouses.OpIsBefore, []any{day}, day, false},
+		{"false/on or before", types.Date(), warehouses.OpIsOnOrBefore, []any{day}, day.AddDate(0, 0, 1), false},
+		{"false/after", types.Date(), warehouses.OpIsAfter, []any{day}, day, false},
+		{"false/on or after", types.Date(), warehouses.OpIsOnOrAfter, []any{day}, day.AddDate(0, 0, -1), false},
+		{"false/true", types.Boolean(), warehouses.OpIsTrue, nil, false, false},
+		{"false/false", types.Boolean(), warehouses.OpIsFalse, nil, true, false},
+		{"empty contains", types.String(), warehouses.OpContains, []any{""}, "abc", true},
+		{"empty prefix", types.String(), warehouses.OpStartsWith, []any{""}, "abc", true},
+		{"empty suffix", types.String(), warehouses.OpEndsWith, []any{""}, "abc", true},
+		{"int64 limit", types.Int(64), warehouses.OpIs, []any{9223372036854775807}, 9223372036854775807, true},
+		{"uint64 limit", types.Int(64).Unsigned(), warehouses.OpIs,
+			[]any{uint(18446744073709551615)}, uint(18446744073709551615), true},
+		{"decimal scalar", types.Decimal(18, 4), warehouses.OpIs,
+			[]any{decimal.MustParse("1.25")}, decimal.MustParse("1.25"), true},
+		{"time scalar", types.Time(), warehouses.OpIs, []any{clock}, clock, true},
+		{"float64 scalar", types.Float(64), warehouses.OpIs, []any{1.25}, 1.25, true},
+		{"float32 scalar", types.Float(32), warehouses.OpIs,
+			[]any{float64(float32(1.2345678))}, float64(float32(1.2345678)), true},
 		{"datetime offset equality", types.DateTime(), warehouses.OpIs, []any{offset}, instant, true},
 		{"datetime offset order", types.DateTime(), warehouses.OpIsAfter, []any{offset}, instant.Add(time.Minute), true},
 		{"datetime offset interval", types.DateTime(), warehouses.OpIsBetween,

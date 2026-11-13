@@ -45,6 +45,9 @@ func TestMonetarySourceType(t *testing.T) {
 						Profile:   warehouses.Column{Name: "kpid", Type: types.UUID()},
 						Identity:  warehouses.Column{Name: "message_id", Type: types.String()},
 						Timestamp: warehouses.Column{Name: "timestamp", Type: types.DateTime()}},
+						EventType:  warehouses.Column{Name: "type", Type: types.String()},
+						Event:      warehouses.Column{Name: "event", Type: types.String()},
+						Name:       warehouses.Column{Name: "name", Type: types.String(), Nullable: true},
 						Properties: warehouses.Column{Name: "properties", Type: types.JSON()},
 						Record: func(*state.Where) (warehouses.Expr, error) {
 							return warehouses.NewBaseExpr(warehouses.Column{Name: "type", Type: types.String()},
@@ -102,6 +105,9 @@ func TestRecordedSourceAdmission(t *testing.T) {
 					Profile:   warehouses.Column{Name: "kpid", Type: types.UUID()},
 					Identity:  warehouses.Column{Name: "message_id", Type: types.String()},
 					Timestamp: warehouses.Column{Name: "timestamp", Type: types.DateTime()}},
+					EventType: warehouses.Column{Name: "type", Type: types.String()},
+					Event:     warehouses.Column{Name: "event", Type: types.String()},
+					Name:      warehouses.Column{Name: "name", Type: types.String(), Nullable: true},
 					Record: func(*state.Where) (warehouses.Expr, error) {
 						return warehouses.NewBaseExpr(warehouses.Column{Name: "type", Type: types.String()},
 							warehouses.OpIs, "page"), nil
@@ -126,5 +132,46 @@ func TestRecordedSourceAdmission(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+// TestRecordedSourceColumns rejects malformed explicit identity bindings.
+func TestRecordedSourceColumns(t *testing.T) {
+	for _, test := range []struct {
+		name   string
+		change func(*SourceBinding)
+	}{
+		{"type identifier", func(s *SourceBinding) { s.EventType.Name = "bad.name" }},
+		{"type schema", func(s *SourceBinding) { s.EventType.Type = types.JSON() }},
+		{"event identifier", func(s *SourceBinding) { s.Event.Name = "" }},
+		{"event schema", func(s *SourceBinding) { s.Event.Type = types.Int(32) }},
+		{"page identifier", func(s *SourceBinding) { s.Name.Name = "bad.name" }},
+		{"page schema", func(s *SourceBinding) { s.Name.Type = types.JSON() }},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			at := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
+			typ := "track"
+			if test.name == "page identifier" || test.name == "page schema" {
+				typ = "page"
+			}
+			source := SourceBinding{Occurrences: warehouses.OccurrenceSource{Table: "events",
+				Profile:   warehouses.Column{Name: "kpid", Type: types.UUID()},
+				Identity:  warehouses.Column{Name: "message_id", Type: types.String()},
+				Timestamp: warehouses.Column{Name: "timestamp", Type: types.DateTime()}},
+				EventType: warehouses.Column{Name: "type", Type: types.String()},
+				Event:     warehouses.Column{Name: "event", Type: types.String()},
+				Name:      warehouses.Column{Name: "name", Type: types.String()},
+				Record: func(*state.Where) (warehouses.Expr, error) {
+					t.Fatal("expected identity binding independent of Record, got Record call")
+					return nil, nil
+				}}
+			test.change(&source)
+			_, err := Prepare(&Rule{Count: &Count{Scope: Scope{Type: typ, Event: "Purchase",
+				Grain: "registered-message", Start: at.Add(-time.Hour), End: at}}}, Bindings{}, at, source)
+			if err != nil {
+				return
+			}
+			t.Fatal("expected invalid identity binding, got success")
+		})
 	}
 }

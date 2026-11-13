@@ -201,6 +201,11 @@ func validateQualification(node RowQualification, depth int, nodes *int) error {
 			return err
 		}
 		return validateQualification(&n.Currency, depth, nodes)
+	case *ExactColumnText:
+		if n == nil || !IsValidIdentifier(n.Column.Name) || !n.Column.Type.IsString() ||
+			len(n.Value) > 4096 || !utf8.ValidString(n.Value) || strings.ContainsRune(n.Value, 0) {
+			return fmt.Errorf("warehouses: invalid exact-column text qualification")
+		}
 	case *KnownTextEqual:
 		if n == nil || !IsValidIdentifier(n.Column.Name) || !n.Column.Type.IsJSON() || len(n.Keys) > 32 ||
 			len(n.Value) > 4096 || !utf8.ValidString(n.Value) || strings.ContainsRune(n.Value, 0) {

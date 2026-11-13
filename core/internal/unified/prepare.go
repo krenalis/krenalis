@@ -18,12 +18,43 @@ import (
 // It contains no SQL, dialect callback or backend name. Properties is the
 // bound JSON column used by the currently supported NativeCurrency revisions.
 // ProfileRecord binds only columns of Profiles; Record binds Occurrences.
+// EventType, Event and Name bind the native recorded-source identity columns.
 type SourceBinding struct {
 	Profiles      warehouses.ProfileSource
 	ProfileRecord func(*state.Where) (warehouses.Expr, error)
 	Occurrences   warehouses.OccurrenceSource
 	Properties    warehouses.Column
+	EventType     warehouses.Column
+	Event         warehouses.Column
+	Name          warehouses.Column
 	Record        func(*state.Where) (warehouses.Expr, error)
+}
+
+// selection binds the recorded source identity without inheriting collation.
+func (source SourceBinding) selection(scope Scope) (warehouses.RowQualification, error) {
+
+	if !warehouses.IsValidIdentifier(source.EventType.Name) || !source.EventType.Type.IsString() {
+		return nil, fmt.Errorf("core/internal/unified: invalid resolved event type column")
+	}
+	typ := scope.eventType()
+	var children []warehouses.RowQualification
+	if scope.Event != "" {
+		column := source.Event
+		if typ != "track" {
+			column = source.Name
+		}
+		if !warehouses.IsValidIdentifier(column.Name) || !column.Type.IsString() {
+			return nil, fmt.Errorf("core/internal/unified: invalid resolved event name column")
+		}
+		if typ != "track" {
+			children = append(children, &warehouses.RecordQualification{
+				Expr: warehouses.NewBaseExpr(column, warehouses.OpExists)})
+		}
+		children = append(children, &warehouses.ExactColumnText{Column: column, Value: scope.Event})
+	}
+	children = append(children, &warehouses.ExactColumnText{Column: source.EventType, Value: typ})
+
+	return &warehouses.QualificationGroup{Operator: warehouses.OpAnd, Children: children}, nil
 }
 
 // Prepare specializes Record, Count, Sum, Average, First/Last/Nth, LatestN
@@ -160,24 +191,11 @@ func prepareRule(rule Rule, bindings Bindings, at time.Time, source SourceBindin
 		return nil, err
 	}
 	c := rule.Count
-	typ := c.Scope.eventType()
-	var selection []state.WhereRule
-	if c.Scope.Event != "" {
-		property := "event"
-		if typ != "track" {
-			property = "name"
-			selection = append(selection, &state.WhereCondition{Property: []string{property}, Operator: state.OpExists})
-		}
-		selection = append(selection, &state.WhereCondition{Property: []string{property},
-			Operator: state.OpIs, Values: []any{c.Scope.Event}})
-	}
-	selection = append(selection, &state.WhereCondition{Property: []string{"type"},
-		Operator: state.OpIs, Values: []any{typ}})
-	selector, err := source.Record(&state.Where{Operator: state.OpAnd, Rules: selection})
+	selector, err := source.selection(c.Scope)
 	if err != nil {
 		return nil, err
 	}
-	qualifiers := []warehouses.RowQualification{&warehouses.RecordQualification{Expr: selector}}
+	qualifiers := []warehouses.RowQualification{selector}
 	if c.Where != nil {
 		var qualification warehouses.RowQualification
 		if where, recordOnly := c.Where.recordWhere(); recordOnly {

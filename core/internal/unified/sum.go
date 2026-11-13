@@ -89,14 +89,11 @@ func (sum *Sum) prepare(at time.Time, source SourceBinding) (warehouses.FilterCo
 		}
 	}
 
-	selector, err := source.Record(&state.Where{Operator: state.OpAnd, Rules: []state.WhereRule{
-		&state.WhereCondition{Property: []string{"event"}, Operator: state.OpIs, Values: []any{sum.Scope.Event}},
-		&state.WhereCondition{Property: []string{"type"}, Operator: state.OpIs, Values: []any{"track"}},
-	}})
+	selector, err := source.selection(sum.Scope)
 	if err != nil {
 		return nil, err
 	}
-	qualifiers := []warehouses.RowQualification{&warehouses.RecordQualification{Expr: selector}}
+	qualifiers := []warehouses.RowQualification{selector}
 	if sum.Where != nil {
 		expr, err := source.Record(sum.Where)
 		if err != nil {

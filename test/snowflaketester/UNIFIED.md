@@ -957,6 +957,91 @@ The broader Record/collation/Float-NaN and fault/resource checklist below remain
 open; neither this campaign nor the test-only gate overlay enables the
 production Unified gate.
 
+## Record, collation and native Float campaign
+
+The shared fixtures `TestUnifiedRecordConformancePostgreSQL/Snowflake`,
+`TestUnifiedRecordSourcesPostgreSQL/Snowflake` and
+`TestUnifiedRecordCollationPostgreSQL/Snowflake` extend the campaign without
+opening the production gate. Run PostgreSQL first, then the full UTC block and
+a reduced America/Los_Angeles block. Each remote block creates and tears down
+its own test schemas; do not run it against an application or demo schema.
+
+- The full Record matrix uses 117 native cases, including 34 SQL-specific Float
+  cases, and all 118 JSON cases. Native cases share two rows and one column per
+  case. Explanations check each leaf on both the present and absent row; their
+  explicit SQL expectations do not use Go's boolean evaluator. JSON predicates
+  alternate between a scalar column and a path with literal dot, quote and
+  backslash keys, checking all 41 fixture outcomes and all ternary totals.
+- The matrix covers all 26 original operators. Its successful application
+  reads require 161 Unified SELECTs, 46 explanations and 20 legacy queries
+  (two SELECTs each), for 247 SELECTs, excluding initialization and writes.
+  It also checks empty pages and pure Record after dropping the event table.
+- Source fixtures initialize the actual Krenalis tables. On Snowflake they set
+  `DEFAULT_DDL_COLLATION='en-ci'` only on the generated temporary schema before
+  initialization. PostgreSQL keeps its enum `type` and sets non-deterministic
+  ICU collation only on event/name. They verify Count, Sum, Average,
+  First/Last/Nth, Latest N and LastVersusPrevious, named/unnamed page/screen,
+  unknown track names, Unicode spellings and unchanged raw `where` collation.
+  They add 16 successful queries and 15 explanations.
+- Collation fixtures compare explicit binary, English and case-insensitive
+  columns, then the four decisive Record/Count Kleene compositions and invalid
+  Real projections. PostgreSQL 18 supports POSITION with non-deterministic
+  collations; this is not an expected error on the pinned PostgreSQL 18 image.
+  Snowflake alone probes a CONTAINS-incompatible punctuation-insensitive
+  collation as an execution failure, with no partial result.
+
+The three new closed tags `krenalis-transport/record-query`,
+`record-explanation` and `record-legacy` identify **datastore** reads. They do
+not attest an HTTP/MCP or public core call. The overlay observes actual server
+response formats for these tags; do not reuse the public service tags or infer
+the actual format from the requested one.
+
+Prepare fresh `--result-format ARROW` UTC and LA overlays using `prepare.py`,
+then run the blocks below with the established credential environment. Keep
+credentials outside logs and manifests. The runner never sources `.env` files.
+
+```sh
+python3 test/snowflaketester/run.py "$campaign_dir/record-local.jsonl" -- \
+  ./core/internal/datastore -race \
+  -run '^TestUnifiedRecord(Conformance|Sources|Collation)PostgreSQL$' -timeout=5m
+
+python3 test/snowflaketester/run.py --require-schemas \
+  --require-session-timezone UTC --require-session-profile standard \
+  --require-result-format arrow \
+  --require-result-tag krenalis-transport/record-query \
+  --require-result-tag krenalis-transport/record-explanation \
+  --require-result-tag krenalis-transport/record-legacy \
+  "$campaign_dir/record-utc.jsonl" -- \
+  -overlay "$campaign_dir/record-utc-overlay/overlay.json" ./core/internal/datastore -race \
+  -run '^TestUnifiedRecord(Conformance|Sources|Collation)Snowflake$' -timeout=20m
+
+python3 test/snowflaketester/run.py --require-schemas \
+  --require-session-timezone America/Los_Angeles --require-session-profile standard \
+  --require-result-format arrow \
+  --require-result-tag krenalis-transport/record-query \
+  --require-result-tag krenalis-transport/record-explanation \
+  --require-result-tag krenalis-transport/record-legacy \
+  "$campaign_dir/record-la.jsonl" -- \
+  -overlay "$campaign_dir/record-la-overlay/overlay.json" ./core/internal/datastore -race \
+  -run '^TestUnifiedRecord(Conformance|Collation)Snowflake$/(native|false_AND_unknown|true_OR_unknown|unknown_AND_true|unknown_OR_false)$/(0|6|8|9|14|15|16|17)$' \
+  -timeout=10m
+```
+
+The reduced block selects temporal equality, interval, array containment and
+before/after families, plus the four compositions. The fixture still performs
+its bounded setup and final empty-page/event-table-independence checks. Filtered
+subtests are excluded by `-run`, not skipped at runtime.
+
+Before live execution, record the successful local counts and inspect the
+query budget lines. Afterwards record observed formats, schema inventory,
+source/overlay hashes, output audit and any differences. A green campaign does
+not approve a new native-text collation policy: the Record renderer remains
+legacy-compatible, and activation still needs the user's decision on the
+warehouse schema's collation. NaN/infinites in native Float columns retain the
+SQL legacy ordering; pipeline Go evaluation is a separate existing path.
+Neither the JSON numeric contract nor the known native JSON transport failure
+is changed by these tests.
+
 ## Coverage still required before activation
 
 Passing the commands above is necessary, but is not the complete acceptance

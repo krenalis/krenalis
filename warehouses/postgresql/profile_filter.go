@@ -84,9 +84,18 @@ func profileExactDecimal(reading warehouses.DecimalReading) (string, error) {
 		" THEN CAST(" + number + " AS DECIMAL(18,4)) END END", nil
 }
 
+// profileExactText fixes the collation of a native source identity.
+func profileExactText(column warehouses.Column) (string, error) {
+	if !warehouses.IsValidIdentifier(column.Name) || !column.Type.IsString() {
+		return "", fmt.Errorf("warehouses/postgresql: invalid exact text binding")
+	}
+	return "CAST(" + quoteIdent(column.Name) + " AS text) COLLATE \"C\"", nil
+}
+
 func profileFilterDialect() profilefilter.Dialect {
 	return profilefilter.Dialect{ValueSize: profileValueSize, QuoteIdentifier: quoteIdent, Record: profileRecord,
-		KnownText: profileKnownText, ExactDecimal: profileExactDecimal, Parameter: profileParameter}
+		ExactText: profileExactText, KnownText: profileKnownText, ExactDecimal: profileExactDecimal,
+		Parameter: profileParameter}
 }
 
 // profileKnownText extracts only a JSON String, preserving unknown business

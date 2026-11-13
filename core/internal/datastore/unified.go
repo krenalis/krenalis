@@ -103,6 +103,9 @@ func unifiedSourceBinding(columns map[string]warehouses.Column) unified.SourceBi
 		Occurrences: warehouses.OccurrenceSource{Table: "krenalis_events", Profile: eventColumnByProperty["kpid"],
 			Identity: eventColumnByProperty["messageId"], Timestamp: eventColumnByProperty["timestamp"]},
 		Properties: eventColumnByProperty["properties"],
+		EventType:  eventColumnByProperty["type"],
+		Event:      eventColumnByProperty["event"],
+		Name:       eventColumnByProperty["name"],
 		Record:     func(where *state.Where) (warehouses.Expr, error) { return convertWhere(where, eventColumnByProperty) },
 	}
 }
