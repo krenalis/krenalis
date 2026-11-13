@@ -838,6 +838,75 @@ credential-output masking and independent inventory as in the HTTP campaign.
 Remote execution remains pending until the next available Snowflake window.
 The production gate remains closed.
 
+## Recorded event discovery
+
+`TestEventDiscoveryPostgreSQL` and `TestEventDiscoverySnowflake` share stored
+track/page/screen fixtures and dedicated reads from `krenalis_events`, without
+using the customizable `events` view or the Unified gate. The six cases check:
+
+- Literal distinct names under case-insensitive Snowflake column collation:
+  case, composed/decomposed Unicode, null/empty names, `%`, `_` and backslash as
+  data, long-name omission and frequent versus rare sources.
+  Exact inspection also distinguishes both case and Unicode pairs by row count
+  and distinct observed property paths.
+- Exact inspection of unnamed and empty-named pages.
+- Nested object paths, arrays without traversal and an empty sample.
+- SQL NULL, JSON null and all six observed JSON kinds.
+- UTF-8 roots of exactly 64 KiB and 64 KiB + 1, the 8 MiB cumulative prefix,
+  unread roots, the row cap and payload-free control rows.
+- Cancellation after an observer sees an active source `DISTINCT`, no partial
+  sources, server termination and recovery on the same warehouse. A volatile
+  delay function bounds the fixture instead of requiring a large dataset.
+
+The source case also checks the inclusive start, exclusive end and the preceding
+microsecond. `TestEventDiscoveryMCP` checks both real tools, closed arguments,
+text/structured equivalence and key revocation on PostgreSQL. The reduced
+`TestEventDiscoveryMCPSnowflake` checks both tools on the five-message transport
+fixture; it does not repeat the backend-independent authentication cases.
+
+Run the following as one discovery campaign in an authorized window. Prepare
+fresh overlays and assets as in the Profiles MCP section; reuse its
+`mcp_campaign` directories only when their source hashes still match. The
+standard UTC/ARROW HTTP overlay also enables the Unified gate for other tests,
+but discovery does not depend on that change. The production gate stays closed.
+
+```sh
+# Local prerequisite, including the internal-server test on a separate port.
+KRENALIS_SKIP_SNOWFLAKE_TESTS=true KRENALIS_TESTS_ADDR=127.0.0.1:2038 \
+  python3 test/snowflaketester/run.py "$mcp_campaign/discovery-postgresql.jsonl" -- \
+    -overlay "$mcp_campaign/UTC/overlay.json" -p=1 ./core/internal/datastore ./test \
+    -run '^TestEventDiscovery(PostgreSQL|MCP)$' -race -timeout=10m
+
+# Both new Snowflake entry points in the same bounded campaign.
+KRENALIS_SKIP_SNOWFLAKE_TESTS=false KRENALIS_TESTS_ADDR=127.0.0.1:2038 \
+  python3 test/snowflaketester/run.py \
+    --require-schemas --require-session-timezone UTC \
+    "$mcp_campaign/UTC/discovery.jsonl" -- \
+    -overlay "$mcp_campaign/UTC/overlay.json" -p=1 ./core/internal/datastore ./test \
+    -run '^TestEventDiscovery(Snowflake|MCPSnowflake)$' -race -timeout=10m
+```
+
+Expect eight PASS nodes remotely (the datastore parent, its six cases and the
+MCP parent), with zero SKIP. Each fixture uses a disposable schema, ledger and
+cleanup. Require stable source/overlay hashes, session/schema audits,
+credential-output masking and independent inventory as in the transport
+campaign. These reads project only text; this group does not add driver result
+format observation tags. Requested ARROW settings alone do not prove the actual
+format returned for discovery.
+
+The cancellation case reuses the interruption observer. On PostgreSQL it
+requires a sleeping target and its disappearance before the delay can complete;
+on Snowflake it requires the tagged running query and terminal code 604.
+The existing Unified interruption run is not evidence for this new SELECT.
+Local virtual-time tests separately cover the 30-second datastore deadline and
+discarding a result after late cancellation. Remote execution, including this
+new cancellation case, must pass before merging discovery.
+
+Discovery describes recorded values and does not certify equivalent Count
+selection under nondefault collation. Record that comparison in the separate
+collation group; do not alter discovery expectations to match Count. No merge
+or gate-opening decision follows from PostgreSQL-only evidence.
+
 ## Coverage still required before activation
 
 Passing the commands above is necessary, but is not the complete acceptance

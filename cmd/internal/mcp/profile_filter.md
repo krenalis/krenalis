@@ -36,6 +36,91 @@ Declared array elements do not enable traversal or same-element predicates.
 Business-order deduplication and other unsupported constructions must be
 reported as unsupported, without SQL fallback.
 
+## Recorded event discovery
+
+Use `list-observed-event-sources` to find recorded track/page/screen names,
+including custom events outside the catalog. Use `inspect-event-fields` for
+observed paths and JSON types in a recent sample of one exact source. Both
+use the workspace MCP key, rate capacity and main warehouse connection.
+
+```json
+{"type":"track","nameContains":"Purchase","start":"2026-01-01T00:00:00Z","end":"2026-02-01T00:00:00Z","limit":100}
+```
+
+`nameContains` is a case-sensitive literal substring of the stored technical
+name. `%`, `_` and backslash are ordinary characters. Omit it or use an empty
+string to impose no name restriction. Results are ordered literally by type
+and name, with SQL NULL names first; they are not ranked by recency or frequency.
+`recordedName` reads `event` for track and `name` for page/screen.
+
+The source list defaults to 100 entries, at most 500. `truncated` reports limits
+on entries, transported bytes or encoded output. `omittedLongNames` counts only
+names longer than 1024 UTF-8 bytes in the inspected prefix, not all such names
+in the workspace. A truncated result cannot establish that another name is
+absent; narrow the type, literal search or interval. A large `limit` does not
+bound the warehouse scan cost.
+
+Copy the observed selector into the inspection tool, preserving null and empty:
+
+```json
+{"source":{"type":"track","recordedName":"Custom Purchase"},"start":"2026-01-01T00:00:00Z","end":"2026-02-01T00:00:00Z","sampleLimit":200}
+```
+
+This selector is different from Count's source. A nonempty usable name maps
+to Count `source.name`, with its documented kind/type/grain. `recordedName:null`
+and `recordedName:""` inspect those exact stored cases; neither means all
+pages/screens. Do not omit Count's name to imitate either selector. No
+`countSource` template is supplied. Discovery compares stored names literally;
+it does not certify equivalent Count selection under a nondefault Snowflake
+column collation, which is part of the pending backend verification.
+
+Both tools use the event timestamp interval `[start,end)`. Supply both RFC3339
+bounds or omit both for the last 30 elapsed days. Bounds have microsecond
+precision, span at most 365 elapsed days and cannot end in the future. The
+resolved UTC window is returned and can be reused; it anchors the interval,
+not a snapshot of the data. Old timestamps imported later remain outside a
+recent window. Explicit zero limits, null arguments and unknown properties
+are invalid; only `source.recordedName` accepts null.
+
+Inspection defaults to 200 stored rows, at most 1000, ordered by timestamp and
+message ID descending. It is not a random sample or a deduplicated message or
+business-order count. Copies with equal sorting fields can change which rows
+fall at the sample edge. `sample.hasMoreRows` reports either the row cap or a
+prefix shortened by the 8 MiB JSON budget.
+
+The `roots` object describes `traits` and `properties`. For each root, `present`
+counts non-SQL-NULL roots, including roots over 64 KiB that were not read.
+`uninspected` counts those unread roots, and the sum of `kinds` plus
+`uninspected` equals `present`. JSON null is present with kind `null`; SQL NULL
+is absent. Roots can have any JSON kind, not just object.
+
+`fields` contains descendant paths observed in inspected objects. Each field's
+`present` and `kinds` cover the whole retained sample's inspected roots. Its
+known absent rows equal `sample.rows - roots[root].uninspected - field.present`;
+unread roots do not establish absence. Paths retain their exact segments.
+Object keys may themselves be application data, such as identifiers in maps;
+observed keys do not establish a stable schema.
+`property` is supplied only for a path expressible in the current filter
+grammar; it does not certify every operator or a governed reading.
+
+The six kinds are null, boolean, number, string, object and array. Object keys
+are visited in byte order, with at most eight segments below the root, 256
+paths and an encoded-output budget. `sample.fieldsTruncated` reports these
+path limits only, independently of `roots.*.uninspected`. Counts on retained
+paths still cover the retained sample. Arrays are reported as arrays, without
+element paths. No payload values or profile/message identifiers are returned.
+An empty sample has zero root counters and an empty fields array, not NotFound.
+
+Each JSON representation is limited to 128 KiB, excluding the MCP envelope.
+The datastore bounds database work with a 30-second context. Technical read,
+schema, invalid JSON and cancellation failures discard the result. Visible
+limits do not justify partial results after a technical error.
+
+Observed metadata does not establish a schema, required/nullable properties,
+business meaning, units or allowed values. Ask the user for unknown meanings
+or exact categorical values. A numeric path does not create a governed money
+field, enable Sum/Average on custom events, or change raw JSON semantics.
+
 ## Connection and access
 
 A valid workspace-scoped MCP key enables profile queries. The organization must
@@ -442,8 +527,9 @@ reference; Sum through its monetary field, without a separate currency override.
 
 Event names and arbitrary JSON contents are workspace-specific. The catalog
 provides known definitions and schemas, not an inventory of all received events
-or historical conformity. Ask the user about names or fields absent from it;
-do not invent them. There is no SQL discovery or fallback tool. Report any
+or historical conformity. Use the recorded-event discovery tools for names and
+field types absent from the catalog; ask the user about unknown meanings or
+values. There is no SQL discovery or fallback tool. Report any
 Unified capability that cannot execute instead of approximating the request.
 
 ## Monetary Average

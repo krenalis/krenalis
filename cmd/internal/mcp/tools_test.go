@@ -73,7 +73,7 @@ func TestToolsList(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	const expectedToolCount = 11
+	const expectedToolCount = 13
 	if len(got.Result.Tools) != expectedToolCount {
 		t.Fatalf("expected %d tools, got %d", expectedToolCount, len(got.Result.Tools))
 	}

@@ -25,7 +25,9 @@ const serverInstructions = "Krenalis MCP tools must be used only through this MC
 	" Discover business events with list-event-definitions." +
 	" Inspect get-event-definition before choosing a track event." +
 	" Catalog schemas do not prove historical conformity or enable unsupported filtering capabilities." +
-	" SQL execution is not available. Ask the user about event names or fields absent from the catalog." +
+	" Discover stored names with list-observed-event-sources and sampled field types with inspect-event-fields." +
+	" Observations do not establish business meaning or allowed values; ask the user when these are unknown." +
+	" SQL execution is not available." +
 	" Never use SQL to emulate an unsupported Unified capability." +
 	" Report unsupported capabilities explicitly and do not reinterpret them as empty results or UNKNOWN." +
 	" Profile tools require a valid workspace-scoped MCP key and use the main Krenalis warehouse connection." +

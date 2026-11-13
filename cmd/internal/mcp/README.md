@@ -74,10 +74,21 @@ existing Record path. Behavioral queries and explanations retain the unverified
 backend gate and return an actionable capability error. Local tests do not
 establish Snowflake runtime conformance.
 
-The event catalog describes known definitions, not all event names or JSON values
-actually recorded in a workspace. Ask the user about custom names and fields
-absent from the catalog. A dedicated discovery tool is a separate pre-release
-planning item, not a capability provided by SQL or inferred from schema metadata.
+The event catalog describes known definitions. `list-observed-event-sources`
+lists stored track/page/screen names in a bounded interval, with optional literal
+case-sensitive `nameContains`. `inspect-event-fields` describes a recent bounded
+sample's paths, JSON kinds and presence, including events outside the catalog.
+Both use the main connection and the workspace MCP key. They have no dependency
+on the Unified profile-filter gate and do not open it on Snowflake.
+
+Observed `recordedName` is an exact nullable name, not a Count source. SQL NULL,
+empty and named pages remain distinct. Root `uninspected` counters distinguish
+unread oversized JSON from absent fields; `fieldsTruncated` concerns path limits
+only. No values, payloads or identifiers are returned, and arrays are not
+traversed. Limits visibly shorten results; technical errors discard them.
+See the discovery section of `profile_filter.md` for arguments, limits and the
+presence-count formulas. Ask the user for unknown business meaning or exact
+categorical values; observations are not a guaranteed schema or a capability.
 
 ## Transport and limits
 

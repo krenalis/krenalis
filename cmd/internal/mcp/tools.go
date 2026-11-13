@@ -65,6 +65,8 @@ var tools = []server.ServerTool{
 	profileFilterDocumentationTool,
 	listEventDefinitionsTool,
 	getEventDefinitionTool,
+	listObservedEventSourcesTool,
+	inspectEventFieldsTool,
 
 	// Tool that exposes the profile schema.
 	{
