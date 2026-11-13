@@ -1310,7 +1310,7 @@ test(`Add "Import events" pipeline on JavaScript`, async ({ page }) => {
 	await filters.nth(0).locator('.pipeline__filters-property sl-input').click();
 	await filters
 		.nth(0)
-		.locator('sl-menu-item .schema-combobox-item__name', { hasText: /^type$/ })
+		.locator('sl-menu-item .schema-combobox-item__name', { hasText: /^Type$/ })
 		.click();
 	await filters.nth(0).locator('.pipeline__filters-operator sl-option[value="0"]').click(); // option is "is".
 
@@ -1319,7 +1319,7 @@ test(`Add "Import events" pipeline on JavaScript`, async ({ page }) => {
 	const jsonCondition = filters.nth(1);
 	const jsonPropertyInput = jsonCondition.locator('.pipeline__filters-property sl-input');
 	await jsonPropertyInput.click();
-	await jsonCondition.locator('sl-menu-item .schema-combobox-item__name', { hasText: /^traits$/ }).click();
+	await jsonCondition.locator('sl-menu-item .schema-combobox-item__name', { hasText: /^Traits$/ }).click();
 	const jsonPathInput = jsonCondition.locator('.pipeline__filters-path >> input');
 	await jsonPathInput.fill('email');
 	const jsonOperatorSelect = jsonCondition.locator('.pipeline__filters-operator');
@@ -1328,14 +1328,14 @@ test(`Add "Import events" pipeline on JavaScript`, async ({ page }) => {
 	await jsonValueInput.locator('input').fill('a@example.com');
 
 	await jsonPropertyInput.click();
-	await jsonCondition.locator('sl-menu-item .schema-combobox-item__name', { hasText: /^properties$/ }).click();
-	await expect(jsonPropertyInput).toHaveJSProperty('value', 'properties');
+	await jsonCondition.locator('sl-menu-item .schema-combobox-item__name', { hasText: /^Properties$/ }).click();
+	await expect(jsonPropertyInput).toHaveJSProperty('value', 'Properties');
 	await expect(jsonPathInput).toHaveValue('email');
 	await expect(jsonOperatorSelect).toHaveJSProperty('value', '0');
 	await expect(jsonValueInput).toHaveJSProperty('value', 'a@example.com');
 
 	await jsonPropertyInput.click();
-	await jsonCondition.locator('sl-menu-item .schema-combobox-item__name', { hasText: /^traits$/ }).click();
+	await jsonCondition.locator('sl-menu-item .schema-combobox-item__name', { hasText: /^Traits$/ }).click();
 
 	for (const operator of [
 		{ name: 'exists', index: 24 },
@@ -1343,7 +1343,7 @@ test(`Add "Import events" pipeline on JavaScript`, async ({ page }) => {
 	]) {
 		const condition = filters.nth(1);
 		await condition.locator('.pipeline__filters-property sl-input').click();
-		await condition.locator('sl-menu-item .schema-combobox-item__name', { hasText: /^traits$/ }).click();
+		await condition.locator('sl-menu-item .schema-combobox-item__name', { hasText: /^Traits$/ }).click();
 		const pathInput = condition.locator('.pipeline__filters-path >> input');
 		await pathInput.fill('email');
 		const operatorSelect = condition.locator('.pipeline__filters-operator');

@@ -492,7 +492,7 @@ const FilterEditor = ({
 				size='small'
 				name={`operator-${id}`}
 				className='pipeline__filters-operator'
-				value={String(FILTER_OPERATORS.findIndex((operator) => operator === condition.operator))}
+				value={condition.operator === '' ? '' : String(FILTER_OPERATORS.indexOf(condition.operator))}
 				onSlChange={(event: any) => changeOperator(path, FILTER_OPERATORS[event.target.value])}
 				onSlAfterHide={onOperatorSelectClose}
 				placeholder='Operator'

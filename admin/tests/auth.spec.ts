@@ -6,11 +6,13 @@ const LOGOUT_BUTTON_CLASS = '#logout-button';
 
 test('Passwordless login', async ({ page }) => {
 	await page.goto(`${adminURL}/`);
+	await page.getByText('Test workspace', { exact: true }).click();
 	await expect(page.locator('#central-logo')).toBeAttached();
 });
 
 test('Update the member email to disable passwordless login', async ({ page }) => {
 	await page.goto(`${adminURL}/`);
+	await page.getByText('Test workspace', { exact: true }).click();
 	await page.click('.header__account-menu-item--profile'); // Account menu is automatically opened after passwordless login.
 	await page.getByRole('textbox', { name: 'email' }).fill('test@krenalis.com');
 	await page.click('.member__save-button');
@@ -35,6 +37,7 @@ test('Login', async ({ page }) => {
 	await page.getByRole('textbox', { name: 'email' }).fill('test@krenalis.com');
 	await page.getByRole('textbox', { name: 'password' }).fill('krenalis-password');
 	await page.click('sl-button');
+	await page.getByText('Test workspace', { exact: true }).click();
 	await expect(page.locator(LOGOUT_BUTTON_CLASS)).toBeAttached();
 	await logout(page);
 });
