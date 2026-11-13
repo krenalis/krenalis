@@ -20,7 +20,7 @@ func TestSimulatedSystemM2USDCandidateIsolation(t *testing.T) {
 	data := simulatedSystemTestData(t)
 	for _, name := range []string{"valid-usd-employee.json", "diagnostic-employee.json"} {
 		t.Run(name, func(t *testing.T) {
-			path := "../synthetic-world-usa-m2-usd-schema-and-photo-rights-decision-v1-CANDIDATE/tests/" + name
+			path := "testdata/simulated-us/" + name
 			encoded, err := os.ReadFile(path)
 			if err != nil {
 				t.Fatalf("expected complete USD boundary fixture, got %v", err)

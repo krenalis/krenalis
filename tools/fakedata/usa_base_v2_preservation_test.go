@@ -19,10 +19,7 @@ import (
 // Uppercasing names only in the hash preserves the selected name identity.
 func TestUSABaseV2Preservation(t *testing.T) {
 
-	data, err := LoadUSAWorldData(t.Context(), "../..")
-	if err != nil {
-		t.Fatalf("expected loaded demo, got %v", err)
-	}
+	data := publishedUSATestData(t)
 	result := map[string][2]string{}
 	for _, seed := range []uint64{0, 2026, ^uint64(0)} {
 

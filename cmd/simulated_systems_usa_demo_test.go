@@ -26,7 +26,6 @@ import (
 
 	"github.com/krenalis/krenalis/core"
 	"github.com/krenalis/krenalis/test/krenalistester"
-	"github.com/krenalis/krenalis/test/syntheticworldtest"
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
@@ -45,12 +44,8 @@ func TestSimulatedSystemUSAGeneration(t *testing.T) {
 		t.Fatalf("expected repository directory, got %v", err)
 	}
 	k := krenalistester.NewKrenalisInstance(t)
-	dataRoot := os.Getenv("KRENALIS_TEST_USA_RELEASE_DIR")
-	if dataRoot == "" {
-		dataRoot = root
-	}
-	k.SetUSADemoDirectory(dataRoot)
-	origin := httptest.NewServer(syntheticworldtest.Handler(t, syntheticworldtest.Assets(t), ""))
+	assetRoot := filepath.Join(root, "tools/fakedata/testdata/published")
+	origin := httptest.NewServer(http.FileServer(http.Dir(assetRoot)))
 	defer origin.Close()
 	k.SetExternalAssetsURLs([]string{origin.URL})
 	k.Start()
@@ -270,10 +265,7 @@ func TestSimulatedSystemUSAGeneration(t *testing.T) {
 		t.Fatalf("expected private authenticated WebP, got %d %v", response.StatusCode, response.Header)
 	}
 	id := strings.TrimSuffix(filepath.Base(photo), ".webp")
-	imagePath := filepath.Join(root, "tools/fakefacegen/output/faces-v1/derived/256", id+".webp")
-	if dataRoot != root {
-		imagePath = filepath.Join(dataRoot, "synthetic-world/photos/v1/256", id+".webp")
-	}
+	imagePath := filepath.Join(assetRoot, "synthetic-world/photos/v1/256", id+".webp")
 	original, err := os.ReadFile(imagePath)
 	if err != nil {
 		t.Fatalf("expected original rendition, got %v", err)

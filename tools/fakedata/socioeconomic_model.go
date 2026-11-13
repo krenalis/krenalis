@@ -9,12 +9,8 @@ import (
 	"fmt"
 )
 
-// D2-A bounds encoded numerical input, decoded work, and retained data
-// separately at 8 MiB. The canonical JSON currently occupies 685,312 bytes.
-const (
-	maxSocioeconomicModelBytes    = 8 << 20
-	maxSocioeconomicRetainedBytes = 8 << 20
-)
+// D2-A bounds retained numerical data at 8 MiB.
+const maxSocioeconomicRetainedBytes = 8 << 20
 
 const (
 	socioeconomicItalyRegions socioeconomicTerritoryDomain = 20

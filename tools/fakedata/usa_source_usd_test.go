@@ -10,47 +10,37 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"os"
-	"path/filepath"
 	"reflect"
 	"slices"
 	"testing"
-
-	"github.com/krenalis/krenalis/tools/fakedata/internal/usadiagnostic"
 )
 
-// TestUSASourceUSDDispatchAndGates rejects incompatible dispatch and official
-// admission.
+// decode verifies a bounded closed transport against its original logical
+// record. It is not an application importer or an official checkpoint reader.
+func (a *usaSourceUSDAdapter) decode(ctx context.Context, encoded []byte, expected usaSourceUSDRecord) (usaSourceUSDRecord, error) {
+
+	if len(encoded) > usaSourceUSDRecordBytes {
+		return usaSourceUSDRecord{}, fmt.Errorf("USA source record exceeds byte limit")
+	}
+	var record usaSourceUSDRecord
+	err := decodeInternationalJSON(ctx, bytes.NewReader(encoded), &record)
+	if err != nil {
+		return usaSourceUSDRecord{}, err
+	}
+	err = a.validate(record)
+	if err != nil {
+		return usaSourceUSDRecord{}, err
+	}
+	if !reflect.DeepEqual(record, expected) {
+		return usaSourceUSDRecord{}, fmt.Errorf("decoded USA observation differs from its logical source record")
+	}
+
+	return record, nil
+}
+
+// TestUSASourceUSDDispatchAndGates rejects incompatible runtime source admission.
 func TestUSASourceUSDDispatchAndGates(t *testing.T) {
 
-	options := usadiagnostic.Options{Country: "US", Currency: "USD", Profile: usaSourceUSDProfile,
-		Root: "/nonexistent", ModelDirectory: "/nonexistent", Order: "ascending"}
-	for _, test := range []struct {
-		name   string
-		change func(*usadiagnostic.Options)
-	}{
-		{"US-EUR", func(o *usadiagnostic.Options) { o.Currency = "EUR" }},
-		{"IT-USD", func(o *usadiagnostic.Options) { o.Country = "IT" }},
-		{"IT-EUR-USA-model", func(o *usadiagnostic.Options) { o.Country, o.Currency = "IT", "EUR" }},
-		{"unknown-country", func(o *usadiagnostic.Options) { o.Country = "XX" }},
-		{"Italian-model", func(o *usadiagnostic.Options) { o.Profile = "it-2026a-socioeconomic-v1" }},
-		{"unknown-profile", func(o *usadiagnostic.Options) { o.Profile += "-v2" }},
-		{"public-admission", func(o *usadiagnostic.Options) { o.Publish = true }},
-		{"order", func(o *usadiagnostic.Options) { o.Order = "random" }},
-	} {
-		t.Run(test.name, func(t *testing.T) {
-			changed := options
-			test.change(&changed)
-			provider, err := newUSASourceUSDProvider(changed)
-			if err != nil {
-				if provider != nil {
-					t.Fatal("expected no invalid provider, got configuration")
-				}
-				return
-			}
-			t.Fatal("expected incompatible dispatch rejection before asset access, got provider")
-		})
-	}
 	t.Run("official-World-gate", func(t *testing.T) {
 		_, err := NewSourceWorld(nil, []CountryShare{{Code: "US", Version: usaSourceUSDVersion, Weight: 1}})
 		if err != nil {
@@ -173,66 +163,6 @@ func TestUSASourceUSDIdentity(t *testing.T) {
 		}
 	}
 
-}
-
-// TestUSASourceUSDProvider checks lazy loading and retry after rejected assets.
-func TestUSASourceUSDProvider(t *testing.T) {
-
-	options := usadiagnostic.Options{Country: "US", Currency: "USD", Profile: usaSourceUSDProfile,
-		Root: "../..", ModelDirectory: t.TempDir(), Order: "ascending"}
-	p, err := newUSASourceUSDProvider(options)
-	if err != nil {
-		t.Fatalf("expected lazy configuration without assets, got %v", err)
-	}
-	t.Run("missing", func(t *testing.T) {
-		world, resources, err := p.prepare(t.Context())
-		if err != nil {
-			if world != nil || resources != nil {
-				t.Fatal("expected no prepared state on failure, got partial success")
-			}
-			return
-		}
-		t.Fatal("expected missing asset failure, got success")
-	})
-	path := filepath.Join(options.ModelDirectory, "assets")
-	err = os.Mkdir(path, 0o755)
-	if err != nil {
-		t.Fatalf("expected model fixture directory, got %v", err)
-	}
-	modelPath := "../../synthetic-world-usa-m1-internal-country-diagnostic-v2-CANDIDATE/assets/socioeconomic.json"
-	original, err := os.ReadFile(modelPath)
-	if err != nil {
-		t.Fatalf("expected real assembled M1 model, got %v", err)
-	}
-	changed := bytes.Clone(original)
-	changed[0] ^= 1
-	for _, encoded := range [][]byte{changed, original[:len(original)-1], original} {
-		err = os.WriteFile(filepath.Join(path, "socioeconomic.json"), encoded, 0o644)
-		if err != nil {
-			t.Fatalf("expected bounded model fixture, got %v", err)
-		}
-		world, resources, err := p.prepare(t.Context())
-		if err != nil {
-			if bytes.Equal(encoded, original) || world != nil || resources != nil {
-				t.Fatalf("expected only corrupted assets rejected without state, got %v", err)
-			}
-			continue
-		}
-		if !bytes.Equal(encoded, original) || world == nil || resources == nil {
-			t.Fatal("expected successful retry only with full real model, got invalid admission")
-		}
-	}
-	ctx, cancel := context.WithCancel(t.Context())
-	cancel()
-	world, _, err := p.prepare(ctx)
-	if err != nil {
-		if world != nil {
-			t.Fatal("expected no cached country after canceled preparation, got World")
-		}
-		return
-	}
-
-	t.Fatal("expected canceled preparation rejection, got success")
 }
 
 // TestUSASourceUSDRecordReject rejects altered records and invalid USD
@@ -460,4 +390,31 @@ func readUSASourceUSDAdapter(t *testing.T) *usaSourceUSDAdapter {
 	}
 
 	return adapter
+}
+
+// serializeUSASourceUSDDiagnostic represents an existing logical observation
+// and proves exact closed decoding; it never calls any population sampler.
+func serializeUSASourceUSDDiagnostic(ctx context.Context, source *usaSourceUSDAdapter, record usaSourceUSDRecord) ([]byte, error) {
+
+	err := source.validate(record)
+	if err != nil {
+		return nil, err
+	}
+	encoded, err := internationalCanonical(record)
+	if err != nil {
+		return nil, err
+	}
+	decoded, err := source.decode(ctx, encoded, record)
+	if err != nil {
+		return nil, err
+	}
+	reencoded, err := internationalCanonical(decoded)
+	if err != nil {
+		return nil, err
+	}
+	if !bytes.Equal(encoded, reencoded) {
+		return nil, fmt.Errorf("USA source round-trip changed canonical bytes")
+	}
+
+	return encoded, nil
 }

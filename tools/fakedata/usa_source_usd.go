@@ -5,12 +5,9 @@
 package fakedata
 
 import (
-	"bytes"
-	"context"
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
-	"reflect"
 	"slices"
 	"strings"
 )
@@ -178,29 +175,6 @@ func (a *usaSourceUSDAdapter) bind(person usaCountryPerson) ([]usaSourceUSDRecor
 	}
 
 	return records, oracle, nil
-}
-
-// decode verifies a bounded closed transport against its original logical
-// record. It is not an application importer or an official checkpoint reader.
-func (a *usaSourceUSDAdapter) decode(ctx context.Context, encoded []byte, expected usaSourceUSDRecord) (usaSourceUSDRecord, error) {
-
-	if len(encoded) > usaSourceUSDRecordBytes {
-		return usaSourceUSDRecord{}, fmt.Errorf("USA source record exceeds byte limit")
-	}
-	var record usaSourceUSDRecord
-	err := decodeInternationalJSON(ctx, bytes.NewReader(encoded), &record)
-	if err != nil {
-		return usaSourceUSDRecord{}, err
-	}
-	err = a.validate(record)
-	if err != nil {
-		return usaSourceUSDRecord{}, err
-	}
-	if !reflect.DeepEqual(record, expected) {
-		return usaSourceUSDRecord{}, fmt.Errorf("decoded USA observation differs from its logical source record")
-	}
-
-	return record, nil
 }
 
 func (a *usaSourceUSDAdapter) validate(record usaSourceUSDRecord) error {

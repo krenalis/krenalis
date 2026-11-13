@@ -8,9 +8,18 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
-	"os"
 	"sync"
 	"testing"
+)
+
+// Historical CSV fingerprints are retained only for the unchanged test vectors.
+const (
+	ageWeightsSHA256  = "5abdc04bb817e5fc300ce71920c1dedf269551d3cc0065148264d26a39c84555"
+	firstNamesSHA256  = "ed249d8095d3133d90a662bb3dc4d592941d9aa1de1d476a8000b392761ed8db"
+	lastNamesSHA256   = "d44f1859847b5c94066d20c0846fb16859827802bdf878d59e17dc26a046f96b"
+	placesSHA256      = "27539c5025412c2f03b199cbd6fdea7b9bda8fb57f6d8665883c70eeaa7b05b6"
+	postalCodesSHA256 = "0fed3e2822c13a54c4255d2b83fe0fd63aea27b432d63a682b28f64f4981426c"
+	streetNamesSHA256 = "13a757c70266ad96f0c1f9d76ff32597995090009e860eec86a1dded5b5095ec"
 )
 
 var frozenData struct {
@@ -19,15 +28,14 @@ var frozenData struct {
 	err  error
 }
 
-// frozenLayer1Data projects the offline CSV conversion through the JSON
-// preparation, then restores only the historical dependency identities for
-// frozen vectors. No historical loader or generator is linked into runtime.
+// frozenLayer1Data prepares the published JSON and restores only the
+// historical dependency identities used by the unchanged frozen vectors.
 func frozenLayer1Data(t *testing.T) (*italyData, error) {
 
 	t.Helper()
 	frozenData.Do(func() {
 
-		base, err := ConvertItalianBaseData(t.Context(), os.DirFS("data/it-2026a"))
+		base, err := readItalianBaseFixture(t)
 		if err != nil {
 			frozenData.err = err
 			return

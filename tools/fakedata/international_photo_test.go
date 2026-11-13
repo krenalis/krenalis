@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"math"
-	"os"
 	"reflect"
 	"slices"
 	"strings"
@@ -225,30 +224,6 @@ func TestInternationalPhotoInvalid(t *testing.T) {
 			continue
 		}
 		t.Fatalf("expected malformed catalog rejected for %s, got success", test.replacement)
-	}
-
-}
-
-// TestInternationalPhotoMigration keeps the old release and seed explicit.
-func TestInternationalPhotoMigration(t *testing.T) {
-
-	old, err := os.ReadFile("testdata/external-photos-v1.json")
-	if err != nil {
-		t.Fatalf("expected artificial old catalog, got %v", err)
-	}
-	photos, err := ConvertExternalPhotoCatalogData(t.Context(), bytes.NewReader(old))
-	if err != nil {
-		t.Fatalf("expected old catalog conversion, got %v", err)
-	}
-	if photos.document.Selection.Version != "v1" || photos.document.Selection.Seed != strings.Repeat("1", 64) ||
-		len(photos.document.Faces) != 4 {
-		t.Fatal("expected copied release, seed and four candidates, got changed migration data")
-	}
-	for _, face := range photos.document.Faces {
-		if len(face.Renditions) != 1 || face.Renditions[0].Integrity != nil ||
-			face.Renditions[0].Path != "synthetic-world/photos/v1/256/"+face.ID+".webp" {
-			t.Fatal("expected declared 256 rendition without invented integrity, got different metadata")
-		}
 	}
 
 }

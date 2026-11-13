@@ -71,3 +71,15 @@ func TestSyntheticPhotosConfiguration(t *testing.T) {
 	t.Fatal("expected startup error for invalid catalog, got nil")
 
 }
+
+func TestUSARepositoryOverrideRejected(t *testing.T) {
+	t.Setenv("KRENALIS_USA_INTERNAL_DEMO_DIR", t.TempDir())
+	_, err := loadConfig(t.Context(), "env:")
+	if err != nil {
+		if !strings.Contains(err.Error(), "KRENALIS_USA_INTERNAL_DEMO_DIR is no longer supported") {
+			t.Fatalf("expected explicit legacy configuration error, got %v", err)
+		}
+		return
+	}
+	t.Fatal("expected legacy repository override rejected during configuration, got success")
+}

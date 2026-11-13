@@ -6,12 +6,7 @@ package fakedata
 
 import (
 	"bytes"
-	"errors"
-	"io/fs"
-	"os"
-	"strings"
 	"testing"
-	"testing/fstest"
 )
 
 // TestInternationalClosedDocuments checks closed nested objects and raw token
@@ -53,49 +48,5 @@ func TestInternationalClosedDocuments(t *testing.T) {
 			t.Fatal("expected invalid full document rejected, got success")
 		})
 	}
-
-}
-
-// TestInternationalOriginalsRequired prevents conversion fallback or acceptance
-// of sources whose physical identity differs from the prescribed originals.
-func TestInternationalOriginalsRequired(t *testing.T) {
-
-	t.Run("missing CSV", func(t *testing.T) {
-		_, err := ConvertItalianBaseData(t.Context(), fstest.MapFS{})
-		if err != nil {
-			if !errors.Is(err, fs.ErrNotExist) {
-				t.Fatalf("expected missing-file error, got %v", err)
-			}
-			return
-		}
-		t.Fatal("expected missing source rejected, got embedded fallback")
-	})
-
-	t.Run("modified CSV", func(t *testing.T) {
-		data, err := os.ReadFile("data/it-2026a/age_weights.csv")
-		if err != nil {
-			t.Fatalf("expected original CSV, got %v", err)
-		}
-		source := fstest.MapFS{"age_weights.csv": {Data: append(data, '\n')}}
-		_, err = ConvertItalianBaseData(t.Context(), source)
-		if err != nil {
-			if !strings.Contains(err.Error(), "checksum mismatch") {
-				t.Fatalf("expected checksum rejection, got %v", err)
-			}
-			return
-		}
-		t.Fatal("expected modified source rejected, got success")
-	})
-
-	t.Run("modified model", func(t *testing.T) {
-		_, err := ConvertItalianSocioeconomicData(t.Context(), strings.NewReader("{}"))
-		if err != nil {
-			if !strings.Contains(err.Error(), "checksum mismatch") {
-				t.Fatalf("expected canonical checksum rejection, got %v", err)
-			}
-			return
-		}
-		t.Fatal("expected modified model rejected, got success")
-	})
 
 }

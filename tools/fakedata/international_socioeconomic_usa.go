@@ -24,13 +24,6 @@ type usaSocioeconomicData struct {
 	model    *usaSocioeconomicModel
 }
 
-func (d *usaSocioeconomicData) canonicalJSON() ([]byte, error) {
-	if d == nil || d.model == nil || !d.model.initialized {
-		return nil, fmt.Errorf("uninitialized USA socioeconomic document")
-	}
-	return internationalCanonical(d.document)
-}
-
 func (d *usaSocioeconomicData) logicalDigest() ([32]byte, error) {
 	if d == nil || d.model == nil || !d.model.initialized {
 		return [32]byte{}, fmt.Errorf("uninitialized USA socioeconomic document")

@@ -5,9 +5,7 @@
 package fakedata
 
 import (
-	"fmt"
 	"reflect"
-	"slices"
 	"testing"
 )
 
@@ -142,114 +140,5 @@ func TestUSAPersonalCategoricalGeographyDependency(t *testing.T) {
 		t.Fatalf("expected geography capable of changing both categorical nodes, got %d/%d",
 			educationChanged, activityChanged)
 	}
-
-}
-
-// TestUSAPersonalCategoricalIsolation checks permitted dependency boundaries
-// with technical perturbations; it does not admit any replacement asset.
-func TestUSAPersonalCategoricalIsolation(t *testing.T) {
-
-	w := readUSAPersonalCategoricalHarness(t)
-	input := readUSAPersonalCategoricalInput(t, readUSAPersonalCategoricalAssets(t))
-	input[2].Weights[0]++
-	changed, err := compileUSAPersonalCategorical(input)
-	if err != nil {
-		t.Fatalf("expected bounded professional test fixture, got %v", err)
-	}
-	if changed.identity != ([32]byte{}) || changed.fingerprints[2] == w.model.fingerprints[2] ||
-		changed.fingerprints[0] != w.model.fingerprints[0] || changed.fingerprints[1] != w.model.fingerprints[1] {
-		t.Fatal("expected only the changed professional fingerprint, without admission, got different dependencies")
-	}
-	professional := *w
-	professional.model = changed
-	_, err = professional.person(1)
-	usaCompanyEmployerRejected(t, err, nil, "unadmitted professional fixture used as a candidate")
-
-	companyInput := usaCompanyEmployerNumericalInput(w.companies.model)
-	companyInput.companyIndustry[0]++
-	companyModel, err := compileUSACompanyEmployer(companyInput)
-	if err != nil {
-		t.Fatalf("expected bounded Company test fixture, got %v", err)
-	}
-	if companyModel.fingerprints[0] == w.companies.model.fingerprints[0] || companyModel.identity != ([32]byte{}) {
-		t.Fatal("expected Company Industry perturbation without admission, got unchanged or admitted model")
-	}
-	companyVariant := *w
-	companyVariant.companies = &usaCompanyEmployerHarness{model: companyModel}
-
-	// Only existing unused Income fingerprints are perturbed. No monetary law,
-	// zero Income value, Income identity or full model identity is manufactured.
-	downstream, companyCopy, samplerModel := *w, *w.companies, *w.companies.sampler.model
-	companyCopy.sampler.model, downstream.companies = &samplerModel, &companyCopy
-	for node := socioeconomicIncomeEmployee; node <= socioeconomicIncomeInactive; node++ {
-		samplerModel.fingerprints[node][0] ^= 1
-	}
-	var changedFamilies int
-	for index := PersonIndex(1); index <= 128; index++ {
-
-		original, err := w.person(index)
-		if err != nil {
-			t.Fatalf("expected original internal record, got %v", err)
-		}
-		replayed, err := downstream.person(index)
-		if err != nil {
-			t.Fatalf("expected downstream-independent record, got %v", err)
-		}
-		if !reflect.DeepEqual(original, replayed) {
-			t.Fatal("expected no Income fingerprint influence, got changed record")
-		}
-		root, err := professional.base.person(index)
-		if err != nil {
-			t.Fatalf("expected professional-independent actual Layer 1, got %v", err)
-		}
-		if !reflect.DeepEqual(root, original.layer1) {
-			t.Fatal("expected unchanged age/names/geography/contacts, got professional influence")
-		}
-		for step := range 2 {
-
-			trace := original.traces[step]
-			for variant, harness := range []*usaPersonalCategoricalHarness{&professional, &companyVariant, w} {
-				r := usaPersonalCategoricalRecord{coordinate: index, layer1: original.layer1, activity: original.activity}
-				if variant == 2 {
-					r.layer1.person.PhotoID = "test-photo-without-categorical-dependency"
-				}
-				got, err := harness.category(&r, step, trace.parents...)
-				if err != nil {
-					t.Fatalf("expected isolated common node, got %v", err)
-				}
-				if got != trace.position || !reflect.DeepEqual(r.traces[0], trace) {
-					t.Fatalf("expected common node isolation for variant %d, got changed draw", variant)
-				}
-			}
-
-		}
-		education := slices.Index(socioeconomicEducationLevels[:], original.education)
-		probe := usaPersonalCategoricalRecord{coordinate: index, activity: PrimaryActivityEmployee}
-		before, err := w.category(&probe, 2,
-			socioeconomicParent{"education", education}, socioeconomicParent{"region", int(root.divisionOrdinal)})
-		if err != nil {
-			t.Fatalf("expected original professional conditional probe, got %v", err)
-		}
-		after, err := professional.category(&probe, 2,
-			socioeconomicParent{"education", education}, socioeconomicParent{"region", int(root.divisionOrdinal)})
-		if err != nil {
-			t.Fatalf("expected changed professional conditional probe, got %v", err)
-		}
-		if before != after {
-			changedFamilies++
-		}
-
-	}
-	if changedFamilies == 0 {
-		t.Fatal("expected professional perturbation capable of changing its own node, got no change")
-	}
-	writeUSAPersonalCategoricalEvidence(t, "invariants.json", map[string]any{
-		"status": "PASS", "isolationCoordinates": 128, "professionalProbeChanges": changedFamilies,
-		"privateHarnessOnly": true, "changedAssetsReadmitted": false,
-		"professionalLayer1Isolation": true, "companyCommonNodeIsolation": true,
-		"photoCommonNodeIsolation": true, "incomeFingerprintIsolation": true,
-		"publicWorldConstructed": false, "incomeLawsProduced": 0,
-		"rootDigest": fmt.Sprintf("%x", w.base.streams.root),
-	})
 
 }

@@ -6,6 +6,8 @@ package core
 
 import (
 	"bytes"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 
@@ -19,7 +21,7 @@ import (
 // TestSimulatedSystemUSA checks candidate persistence, photos and isolated resume.
 func TestSimulatedSystemUSA(t *testing.T) {
 
-	data, err := fakedata.LoadUSAWorldData(t.Context(), "..")
+	data, err := simulatedUSATestData(t)
 	if err != nil {
 		t.Fatalf("expected verified USA demo data, got %v", err)
 	}
@@ -132,7 +134,7 @@ func TestSimulatedSystemUSA(t *testing.T) {
 // source scope, generation configuration and durable cursor.
 func TestSimulatedSystemUSACheckpoint(t *testing.T) {
 
-	data, err := fakedata.LoadUSAWorldData(t.Context(), "..")
+	data, err := simulatedUSATestData(t)
 	if err != nil {
 		t.Fatalf("expected verified USA data, got %v", err)
 	}
@@ -242,4 +244,15 @@ func TestSimulatedSystemUSACheckpoint(t *testing.T) {
 		})
 	}
 
+}
+
+func simulatedUSATestData(t *testing.T) (*fakedata.USAWorldData, error) {
+	t.Helper()
+	origin := httptest.NewServer(http.FileServer(http.Dir("../tools/fakedata/testdata/published")))
+	t.Cleanup(origin.Close)
+	source, err := fakedata.NewUSAWorldSource([]string{origin.URL + "/"})
+	if err != nil {
+		return nil, err
+	}
+	return source.Load(t.Context())
 }

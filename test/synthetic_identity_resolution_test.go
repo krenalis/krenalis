@@ -13,7 +13,6 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"testing"
 
 	"github.com/krenalis/krenalis/test/krenalistester"
@@ -33,15 +32,12 @@ func TestSyntheticABIdentityResolution(t *testing.T) {
 
 	photoDirectory := syntheticCatalogFixture(t)
 	canonicalizeSyntheticCatalogFixture(t, photoDirectory)
-	photos, err := fakedata.ConvertLocalPhotoCatalogData(t.Context(), photoDirectory, strings.Repeat("1", 64))
+	photos, err := os.ReadFile("../tools/fakedata/testdata/synthetic-ir-photos-v1.json")
 	if err != nil {
-		t.Fatalf("expected offline photo conversion, got %v", err)
+		t.Fatalf("expected frozen photo fixture, got %v", err)
 	}
 	assets := syntheticworldtest.Assets(t)
-	assets["photos.json"], err = photos.CanonicalJSON()
-	if err != nil {
-		t.Fatalf("expected international photo fixture, got %v", err)
-	}
+	assets["photos.json"] = photos
 	syntheticworldtest.SetModel(t, assets, assets["socioeconomic.json"])
 	data := syntheticworldtest.Load(t, assets)
 	// Keep exercising the local photo service used by historical records.

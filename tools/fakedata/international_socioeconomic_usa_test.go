@@ -16,6 +16,13 @@ import (
 	"testing"
 )
 
+func (d *usaSocioeconomicData) canonicalJSON() ([]byte, error) {
+	if d == nil || d.model == nil || !d.model.initialized {
+		return nil, fmt.Errorf("uninitialized USA socioeconomic document")
+	}
+	return internationalCanonical(d.document)
+}
+
 // TestUSASocioeconomicAdmission preserves every technical mass, age and tuple
 // through the nine-Division typed entry and interprets supports only as USD.
 func TestUSASocioeconomicAdmission(t *testing.T) {

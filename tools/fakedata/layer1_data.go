@@ -94,27 +94,6 @@ func buildPlaceWeightBuckets(places []placeRow) ([]weightedBucket, []uint64) {
 	return buckets, totals
 }
 
-func validASCIIAtom(value string) bool {
-	if value == "" || value[0] == '-' || value[len(value)-1] == '-' {
-		return false
-	}
-	for _, c := range []byte(value) {
-		if (c < 'a' || c > 'z') && c != '-' {
-			return false
-		}
-	}
-	return true
-}
-
-func validCohort(value string) bool {
-	switch value {
-	case "1950-1964", "1965-1979", "1980-1989", "1990-1999", "2000-2005":
-		return true
-	default:
-		return false
-	}
-}
-
 func validDisplayName(value string) bool {
 	return value != "" && utf8.ValidString(value) && strings.TrimSpace(value) == value
 }

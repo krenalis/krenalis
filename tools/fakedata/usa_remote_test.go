@@ -58,7 +58,7 @@ func TestUSAWorldSource(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected remote retry, got %v", err)
 	}
-	if data.root != "" || data.resolver == nil ||
+	if data.resolver == nil ||
 		fmt.Sprintf("%x", data.digest) != "6cb56637d9d41f59e1f764f568dbb6a1f2873aa7e12503bf8a184f126cecd8f1" {
 		t.Fatal("expected repository-independent published binding, got different data")
 	}
@@ -118,55 +118,39 @@ func TestUSAWorldSource(t *testing.T) {
 	t.Fatal("expected corrupt remote photo rejection, got admission")
 }
 
-func usaRemoteAssetFixture(t *testing.T) map[string][]byte {
+func publishedUSATestData(t *testing.T) *USAWorldData {
+	t.Helper()
+	origin := httptest.NewServer(http.FileServer(http.Dir("testdata/published")))
+	t.Cleanup(origin.Close)
+	source, err := NewUSAWorldSource([]string{origin.URL + "/"})
+	if err != nil {
+		t.Fatalf("expected configured USA source, got %v", err)
+	}
+	data, err := source.Load(t.Context())
+	if err != nil {
+		t.Fatalf("expected prepared USA data, got %v", err)
+	}
+	return data
+}
 
+func readUSACountryData(t *testing.T) *usaCountryData {
+	t.Helper()
+	return publishedUSATestData(t).country
+}
+
+func usaRemoteAssetFixture(t *testing.T) map[string][]byte {
 	t.Helper()
 	assets := map[string][]byte{}
-	for path, source := range map[string]string{
-		usaReleaseDirectory + "base.json":                usaCountryBaseDirectory + "assets/base.json",
-		usaReleaseDirectory + "npas.json":                usaCountryBaseDirectory + "assets/npas.json",
-		usaReleaseDirectory + "socioeconomic.json":       "synthetic-world-usa-m1-internal-country-diagnostic-v2-CANDIDATE/assets/socioeconomic.json",
-		"synthetic-world/photos/v1/256/face-000001.webp": "tools/fakefacegen/output/faces-v1/derived/256/face-000001.webp",
+	for _, path := range []string{
+		usaReleasePath, usaReleaseDirectory + "base.json", usaReleaseDirectory + "npas.json",
+		usaReleaseDirectory + "socioeconomic.json", "synthetic-world/photos/v1-json1/catalog.json",
+		"synthetic-world/photos/v1/256/face-000001.webp",
 	} {
-		encoded, err := os.ReadFile("../../" + source)
+		encoded, err := os.ReadFile("testdata/published/" + path)
 		if err != nil {
 			t.Fatalf("expected approved fixture %s, got %v", path, err)
 		}
 		assets[path] = encoded
 	}
-	encoded, err := os.ReadFile("../../synthetic-world-staging-ii-20261013/photos.json")
-	if err != nil {
-		t.Fatalf("expected existing catalog fixture, got %v", err)
-	}
-	photos, err := decodePhotoCatalogData(t.Context(), bytes.NewReader(encoded))
-	if err != nil {
-		t.Fatalf("expected catalog fixture, got %v", err)
-	}
-	for i := range photos.document.Faces {
-		face := &photos.document.Faces[i]
-		for _, rendition := range face.Renditions {
-			if rendition.Width == 256 && rendition.Height == 256 {
-				face.Renditions = []internationalRendition{rendition}
-				break
-			}
-		}
-	}
-	assets["synthetic-world/photos/v1-json1/catalog.json"], err = internationalCanonical(photos.document)
-	if err != nil {
-		t.Fatalf("expected shared catalog bytes, got %v", err)
-	}
-	assets[usaReleasePath], err = internationalCanonical(internationalRelease{
-		Schema: "sw-country-release-v1", Release: usaBaseRelease, Country: "US",
-		Base: internationalAssetReference{usaReleaseDirectory + "base.json",
-			"a21b1f2fcc73d7e34bc7845474fe8350f7aa5d6420e1ae4765c7aa51f2108771"},
-		Socioeconomic: internationalAssetReference{usaReleaseDirectory + "socioeconomic.json",
-			"1738e17d752bd1c7a34d93d9e56395ff53f3b4fe2fd02201338e62d70fa91a37"},
-		Photos: internationalAssetReference{"synthetic-world/photos/v1-json1/catalog.json",
-			"ad25e8e8d9a8151326525ccb4f2fa302591c63256ccc34a1f74384489be870f2"},
-	})
-	if err != nil {
-		t.Fatalf("expected published release fixture, got %v", err)
-	}
-
 	return assets
 }

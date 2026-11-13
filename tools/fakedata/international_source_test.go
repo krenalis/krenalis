@@ -507,9 +507,8 @@ func TestItalianWorldSourceRetryConcurrent(t *testing.T) {
 func internationalAssetFixture(t *testing.T) map[string][]byte {
 
 	t.Helper()
-	// Only offline fixture preparation reads original CSVs; no fixture is a
-	// distributable release.
-	base, err := ConvertItalianBaseData(t.Context(), os.DirFS("data/it-2026a"))
+	// The base is an exact published document; the other fixtures are artificial.
+	base, err := readItalianBaseFixture(t)
 	if err != nil {
 		t.Fatalf("expected base fixture, got %v", err)
 	}
@@ -553,4 +552,13 @@ func mustItalianWorldSource(t *testing.T, origins ...string) *ItalianWorldSource
 		t.Fatalf("expected configured Italian source, got %v", err)
 	}
 	return source
+}
+
+func readItalianBaseFixture(t *testing.T) (*ItalianBaseData, error) {
+	t.Helper()
+	encoded, err := os.ReadFile("testdata/published/synthetic-world/countries/IT/it-2026a-json1/base.json")
+	if err != nil {
+		return nil, err
+	}
+	return DecodeItalianBaseData(t.Context(), bytes.NewReader(encoded))
 }

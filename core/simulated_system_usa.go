@@ -24,9 +24,6 @@ import (
 )
 
 func (core *Core) usaData(ctx context.Context) (*fakedata.USAWorldData, error) {
-	if core.usaWorldData != nil {
-		return core.usaWorldData, nil
-	}
 	if core.usaWorldSource == nil {
 		return nil, fmt.Errorf("USA World source is unavailable")
 	}

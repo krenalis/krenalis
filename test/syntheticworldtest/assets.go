@@ -20,8 +20,7 @@ import (
 	"github.com/krenalis/krenalis/tools/json"
 )
 
-// Assets converts the frozen base offline and adds artificial L2/photo data.
-// The fixtures contain no published model or image bytes.
+// Assets combines the published base with artificial L2 and photo test data.
 func Assets(t *testing.T) map[string][]byte {
 
 	t.Helper()
@@ -30,11 +29,8 @@ func Assets(t *testing.T) map[string][]byte {
 		t.Fatal("expected fixture source location, got none")
 	}
 	root := filepath.Join(filepath.Dir(file), "..", "..", "tools", "fakedata")
-	base, err := fakedata.ConvertItalianBaseData(t.Context(), os.DirFS(filepath.Join(root, "data", "it-2026a")))
-	if err != nil {
-		t.Fatalf("expected offline base conversion, got %v", err)
-	}
-	baseJSON, err := base.CanonicalJSON()
+	baseJSON, err := os.ReadFile(filepath.Join(root, "testdata", "published", "synthetic-world", "countries",
+		"IT", "it-2026a-json1", "base.json"))
 	if err != nil {
 		t.Fatalf("expected base JSON, got %v", err)
 	}

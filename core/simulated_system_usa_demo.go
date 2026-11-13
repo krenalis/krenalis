@@ -35,7 +35,7 @@ type USADemoPreview struct {
 // USADemoEnabled reports whether a USA World data source is configured.
 func (core *Core) USADemoEnabled() bool {
 	core.mustBeOpen()
-	return core.usaWorldData != nil || core.usaWorldSource != nil
+	return core.usaWorldSource != nil
 }
 
 // SimulatedSystemUSAPhoto returns a verified internal demo image.
@@ -46,7 +46,7 @@ func (this *Workspace) SimulatedSystemUSAPhoto(ctx context.Context, id string) (
 	this.core.mustBeOpen()
 
 	if this.workspace.Environment != state.Development ||
-		(this.core.usaWorldData == nil && this.core.usaWorldSource == nil) {
+		this.core.usaWorldSource == nil {
 		return nil, errors.NotFound("USA demo photo is unavailable")
 	}
 	if len(id) != len("face-000001") || !strings.HasPrefix(id, "face-") {
@@ -83,7 +83,7 @@ func (this *Workspace) SimulatedSystemUSAPreview(ctx context.Context, id string)
 	if !exists || this.workspace.Environment != state.Development ||
 		(account.GenerationPolicyVersion != simulatedSystemUSADemoPolicyVersion &&
 			account.GenerationPolicyVersion != simulated.USAGenerationPolicy) ||
-		(this.core.usaWorldData == nil && this.core.usaWorldSource == nil) {
+		this.core.usaWorldSource == nil {
 		return nil, errors.NotFound("USA demo system is unavailable")
 	}
 	data, err := this.core.usaData(ctx)

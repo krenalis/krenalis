@@ -76,7 +76,6 @@ type Krenalis struct {
 	externalAssetsURLs    []string
 	fileSystemRoot        string
 	syntheticPhotosDir    string
-	usaDemoDirectory      string
 	natsAckWait           string
 	populateProfileSchema bool
 }
@@ -188,11 +187,6 @@ func (k *Krenalis) SetFileSystemRoot(root string) {
 // SetSyntheticPhotosDir sets the verified photo catalog directory before Start.
 func (k *Krenalis) SetSyntheticPhotosDir(directory string) {
 	k.syntheticPhotosDir = directory
-}
-
-// SetUSADemoDirectory enables the verified local USA demo before Start.
-func (k *Krenalis) SetUSADemoDirectory(directory string) {
-	k.usaDemoDirectory = directory
 }
 
 // SetNATSAckWait sets the NATS ack wait duration.
@@ -384,7 +378,6 @@ func (k *Krenalis) Start() {
 			"KRENALIS_TRANSFORMERS_LOCAL_FUNCTIONS_DIR=" + k.transformationsTempDir,
 			"KRENALIS_CONNECTOR_FILESYSTEM_ROOT=" + k.fileSystemRoot,
 			"KRENALIS_SYNTHETIC_PHOTOS_DIR=" + k.syntheticPhotosDir,
-			"KRENALIS_USA_INTERNAL_DEMO_DIR=" + k.usaDemoDirectory,
 			fmt.Sprintf("KRENALIS_NATS_URL=nats://%s:%d", testsSettings.NATS.URL, testsSettings.NATS.Port),
 			"KRENALIS_NATS_USER=" + testsSettings.NATS.User,
 			"KRENALIS_NATS_PASSWORD=" + testsSettings.NATS.Password,
@@ -437,7 +430,6 @@ func (k *Krenalis) Start() {
 		setts.Transformers.Local.FunctionsDir = k.transformationsTempDir
 		setts.MaxQueuedEventsPerDestination = 50_000
 		setts.SyntheticPhotosDir = k.syntheticPhotosDir
-		setts.USADemoDirectory = k.usaDemoDirectory
 		err := os.Setenv("KRENALIS_CONNECTOR_FILESYSTEM_ROOT", k.fileSystemRoot)
 		if err != nil {
 			k.t.Fatal(err)

@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"reflect"
 	"strings"
 	"sync"
@@ -157,30 +156,15 @@ func TestItalianJSONPhotoSelection(t *testing.T) {
 
 }
 
-// TestItalianJSONStagedAssets qualifies real local documents when present;
-// portable tests use the explicitly artificial fixtures above.
-func TestItalianJSONStagedAssets(t *testing.T) {
-
-	const stageI = "../../synthetic-world-staging-i-20261013/"
-	const stageII = "../../synthetic-world-staging-ii-20261013/"
-	paths := map[string]string{
-		ItalianReleasePath: stageII + "release.json",
-		"synthetic-world/countries/IT/it-2026a-json1/base.json":          stageI + "base.json",
-		"synthetic-world/countries/IT/it-2026a-json1/socioeconomic.json": stageI + "socioeconomic.json",
-		"synthetic-world/photos/v1-json1/catalog.json":                   stageII + "photos.json",
+// TestItalianJSONPublishedAssets exercises the complete real IT release.
+func TestItalianJSONPublishedAssets(t *testing.T) {
+	origin := httptest.NewServer(http.FileServer(http.Dir("testdata/published")))
+	defer origin.Close()
+	sourceOwner := mustItalianWorldSource(t, origin.URL)
+	data, err := sourceOwner.Load(t.Context())
+	if err != nil {
+		t.Fatalf("expected compatible published IT release, got %v", err)
 	}
-	assets := map[string][]byte{}
-	for path, file := range paths {
-		data, err := os.ReadFile(file)
-		if err != nil {
-			if errors.Is(err, os.ErrNotExist) {
-				t.Skip("real local staging assets are not part of the portable test fixtures")
-			}
-			t.Fatalf("expected readable staging document, got %v", err)
-		}
-		assets[path] = data
-	}
-	data := loadInternationalTestAssets(t, assets)
 	world := mustItalianJSONWorld(t, data)
 	layer2 := mustSocioeconomicWorld(t, world, data.socioeconomic.model)
 	if len(data.photos.document.Faces) != 1250 || fmt.Sprintf("%x", layer2.model.digest) != italianSourceModelSHA256 {
@@ -198,7 +182,6 @@ func TestItalianJSONStagedAssets(t *testing.T) {
 		facts := socioeconomicFactsAt(t, layer2, index)
 		t.Logf("index=%d photo=%s activity=%s", index, person.Person.PhotoID, facts.PrimaryActivity)
 	}
-
 }
 
 // TestItalianJSONTransportOrder keeps all meaningful array order while

@@ -1,0 +1,60 @@
+Krenalis USA — Demo Plausible
+
+This is synthetic demonstration data, not a representative population,
+statistical certification, empirical validation or prediction of actual people.
+Names, employers, identities, addresses, observations and economic facts are
+synthetic. Company/Employer relationships belong to the synthetic company roster.
+
+Income is gross personal monetary annualized income in USD, integer dollars
+(decimalPlaces 0), period year, anchor 2026-01-01, ages 21–75. It is not EUR,
+monthly income, household income or inflation-adjusted individual evidence.
+Qualification: Demo Plausible. External admission remains pending the documented
+publication decisions and reviews. EMPIRICAL TOTAL INCOME VALIDATION = REVIEW. The six income laws are synthetic editorial assumptions,
+not official statistics or complete empirical validation; they make no claim of
+observed conditional independence or empirically observed zero rates. Economic
+parameters, supports, weights, seeds and streams are unchanged.
+
+The photographs are AI-generated synthetic images. The owner states that they
+personally generated the photographs using OpenAI APIs and hold the corresponding
+rights, and authorized preparation of this corpus for manual publication. This
+records the owner's declaration; it is not independent legal certification or an
+attestation about third-party rights. No agency or service endorsement is claimed.
+
+GeoNames Postal Code Data — USA, historical archive dated 2015-06-15.
+Author/provider: GeoNames, https://www.geonames.org/
+Source: https://www.geonames.org/export/zip/US.zip
+Original notice: https://www.geonames.org/export/zip/readme.txt
+License: Creative Commons Attribution 3.0 Unported (CC BY 3.0),
+https://creativecommons.org/licenses/by/3.0/
+Changes: selected 127 localities; verified states; removed unresolved ZIP aliases
+and unqualified entries; deduplicated and ordered associations; assigned synthetic
+locality identifiers and editorial weights proportional to state populations,
+using municipal observations and four declared editorial coverage floors.
+GeoNames does not warrant accuracy, timeliness or completeness. Neither GeoNames
+nor USPS endorses this data. Retain attribution, source/license links and the
+changes notice when redistributing the postal data or adaptations. No additional
+Elastic License restrictions are imposed on the GeoNames material.
+
+U.S. Census Bureau — 2020 Census Frequently Occurring Names (April 2026),
+Population Estimates Vintage 2025, Census Regions/Divisions, 2024 ACS and
+2022 Statistics of U.S. Businesses.
+https://www.census.gov/topics/population/genealogy/data/2020_names.html
+https://www.census.gov/programs-surveys/acs/microdata/documentation/2024.html
+https://www.census.gov/data/datasets/2022/econ/susb/2022-susb.html
+The name catalogs use public edited aggregate counts, not individual records.
+The selected support is 50,000 surnames and 1,000 first names per gender/cohort;
+BASE-v2 applies editorial natural capitalization while preserving sampling inputs.
+No SSA archive is distributed. No CPS/ACS microdata is distributed in this package.
+Government-employee works generally lack copyright protection within the US;
+no worldwide CC0 claim or Census/SSA endorsement is asserted.
+https://www2.census.gov/foia/ds_policies/ds027.pdf
+https://www.census.gov/about/policies/citation.html
+
+Numbering-plan rule: 368 adopted geographic NPAs; synthetic telephone numbers use
+the reserved 555-0100 through 555-0199 interval. The geographic assignment and
+historical policy are the frozen inputs of this USA demonstration.
+https://reports.nanpa.com/public/npa_report.csv
+
+Unicode data © Unicode, Inc.; Unicode 16.0.0.
+https://www.unicode.org/license.txt
+Source-data notices are separate from the license governing Krenalis code.

@@ -76,7 +76,6 @@ type Core struct {
 	pipelineScheduler     *pipelineScheduler
 	simulatedWorldSource  *fakedata.ItalianWorldSource
 	simulatedPhotoBaseURL string
-	usaWorldData          *fakedata.USAWorldData
 	usaWorldSource        *fakedata.USAWorldSource
 	usaPhotoBaseURL       string
 	simulatedWorker       *simulatedSystemWorker
@@ -117,7 +116,6 @@ type Config struct {
 	PrometheusMetricsEnabled      bool
 	SimulatedWorldSource          *fakedata.ItalianWorldSource
 	SimulatedPhotoBaseURL         string
-	USAWorldData                  *fakedata.USAWorldData
 	USAWorldSource                *fakedata.USAWorldSource
 	USAPhotoBaseURL               string
 	DatabaseInitialization        struct {
@@ -396,7 +394,6 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 	core.close.ctx, core.close.cancelCtx = context.WithCancel(context.Background())
 	core.simulatedWorldSource = conf.SimulatedWorldSource
 	core.simulatedPhotoBaseURL = conf.SimulatedPhotoBaseURL
-	core.usaWorldData = conf.USAWorldData
 	core.usaWorldSource = conf.USAWorldSource
 	core.usaPhotoBaseURL = conf.USAPhotoBaseURL
 	core.simulatedWorker = newSimulatedSystemWorker(core)

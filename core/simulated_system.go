@@ -75,7 +75,7 @@ func (this *Workspace) CreateSimulatedSystem(ctx context.Context, name string, u
 		policy = simulatedSystemPolicyVersion
 	}
 	if _, hasUS := countriesValue.Get([]string{"US"}); hasUS {
-		if this.core.usaWorldData == nil && this.core.usaWorldSource == nil {
+		if this.core.usaWorldSource == nil {
 			return "", errors.BadRequest("USA country data is not configured")
 		}
 		status = state.SimulatedSystemPreparing

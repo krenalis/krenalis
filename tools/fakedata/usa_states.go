@@ -4,8 +4,6 @@
 
 package fakedata
 
-import "fmt"
-
 // usaState binds Census FIPS/GNIS and USPS identity to the existing L2 ordinal.
 type usaState struct {
 	FIPS            string `json:"fips"`
@@ -14,15 +12,6 @@ type usaState struct {
 	GNIS            string `json:"gnis"`
 	Division        string `json:"division"`
 	DivisionOrdinal uint32 `json:"divisionOrdinal"`
-}
-
-func resolveUSAState(usps, fips string) (usaState, error) {
-	for _, state := range usaStates() {
-		if state.USPS == usps && state.FIPS == fips {
-			return state, nil
-		}
-	}
-	return usaState{}, fmt.Errorf("unknown or incompatible USA state identifiers")
 }
 
 // usaStates follows Spec-USA E.1 and Census state.txt/us_regdiv.pdf; originals

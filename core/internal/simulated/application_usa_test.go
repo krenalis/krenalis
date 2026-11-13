@@ -6,6 +6,8 @@ package simulated
 
 import (
 	"bytes"
+	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"reflect"
 	"testing"
@@ -19,7 +21,13 @@ import (
 // boundary, preserving canonical facts through writable observation changes.
 func TestUSADocuments(t *testing.T) {
 
-	data, err := fakedata.LoadUSAWorldData(t.Context(), "../../..")
+	origin := httptest.NewServer(http.FileServer(http.Dir("../../../tools/fakedata/testdata/published")))
+	t.Cleanup(origin.Close)
+	source, err := fakedata.NewUSAWorldSource([]string{origin.URL + "/"})
+	if err != nil {
+		t.Fatalf("expected configured USA source, got %v", err)
+	}
+	data, err := source.Load(t.Context())
 	if err != nil {
 		t.Fatalf("expected verified USA data, got %v", err)
 	}

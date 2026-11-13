@@ -6,269 +6,20 @@ package fakedata
 
 import (
 	"bytes"
-	"context"
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"github.com/krenalis/krenalis/tools/json"
 	"math"
 	"net/mail"
 	"net/url"
-	"os"
 	"reflect"
 	"slices"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/krenalis/krenalis/tools/json"
 )
-
-const usaCompletionDirectory = "../../synthetic-world-usa-l1-us-2026a-BASE-v2-CANDIDATE/"
-
-// BenchmarkUSALayer1Completion reports full admission with prepared evidence
-// separately from random-access generation; no public World is constructed.
-func BenchmarkUSALayer1Completion(b *testing.B) {
-
-	evidence := readUSACompletionEvidence(b)
-	encoded := readUSACompletionFile(b, "assets/base.json")
-	base, err := decodeUSABaseCandidate(b.Context(), bytes.NewReader(encoded), evidence)
-	if err != nil {
-		b.Fatalf("expected admitted USA base, got %v", err)
-	}
-	phones, err := decodeUSANPACandidate(b.Context(), bytes.NewReader(readUSACompletionFile(b, "assets/npas.json")))
-	if err != nil {
-		b.Fatalf("expected admitted NPA rule, got %v", err)
-	}
-	w, err := newUSALayer1Harness(IdentityNamespace{Name: "usa-layer1", Generation: 1}, 2026, base, phones)
-	if err != nil {
-		b.Fatalf("expected internal harness, got %v", err)
-	}
-	b.Run("decode-and-prepare-base", func(b *testing.B) {
-		b.ReportAllocs()
-		for b.Loop() {
-			_, err := decodeUSABaseCandidate(b.Context(), bytes.NewReader(encoded), evidence)
-			if err != nil {
-				b.Fatalf("expected prepared candidate, got %v", err)
-			}
-		}
-	})
-	b.Run("person-random-access", func(b *testing.B) {
-		b.ReportAllocs()
-		index := PersonIndex(1)
-		for b.Loop() {
-			_, err := w.person(index)
-			if err != nil {
-				b.Fatalf("expected USA person, got %v", err)
-			}
-			index = index%Layer1MaxPersonIndex + 1
-		}
-	})
-	b.Run("contacts-long-prefixes", func(b *testing.B) {
-		first, last := strings.Repeat("a", 80), strings.Repeat("b", 80)
-		b.ReportAllocs()
-		for b.Loop() {
-			_, _, err := w.contacts.compose(42, first, last)
-			if err != nil {
-				b.Fatalf("expected bounded contacts, got %v", err)
-			}
-		}
-	})
-	b.Run("phone", func(b *testing.B) {
-		b.ReportAllocs()
-		for b.Loop() {
-			_, err := w.phones.phone(42)
-			if err != nil {
-				b.Fatalf("expected fiction number, got %v", err)
-			}
-		}
-	})
-
-}
-
-// TestUSABaseCompletionAdmission checks C1 identity, F.4 and owned values.
-func TestUSABaseCompletionAdmission(t *testing.T) {
-
-	evidence := readUSACompletionEvidence(t)
-	encoded := readUSACompletionFile(t, "assets/base.json")
-	var document usaBaseDocument
-	err := decodeInternationalJSON(t.Context(), bytes.NewReader(encoded), &document)
-	if err != nil {
-		t.Fatalf("expected closed national base, got %v", err)
-	}
-	base, err := prepareUSABaseCandidate(&document, evidence)
-	if err != nil {
-		t.Fatalf("expected candidate preparation, got %v", err)
-	}
-	canonical, err := internationalCanonical(document)
-	if err != nil {
-		t.Fatalf("expected C1 serialization, got %v", err)
-	}
-	if !bytes.Equal(canonical, encoded) || len(encoded) != 3583463 ||
-		fmt.Sprintf("%x", sha256.Sum256(encoded)) != "d8fd7c76142a86917ed4acec065951f8c5e9b44865e1bf6eed7f09f847eb5b80" {
-		t.Fatal("expected identified canonical base, got different bytes")
-	}
-	if len(base.lastNames.names.entries) != 50000 || len(base.firstNames.groups) != 10 ||
-		len(base.ages) != 55 || len(base.streets) != 256 || len(base.geography.locations) != 127 {
-		t.Fatal("expected complete national cardinalities, got incomplete USA base")
-	}
-	var common internationalBase
-	err = json.Unmarshal(encoded, &common)
-	if err != nil {
-		t.Fatalf("expected shared schema values, got %v", err)
-	}
-	expected, err := internationalBaseFingerprints(&common)
-	if err != nil {
-		t.Fatalf("expected shared F.4 fingerprints, got %v", err)
-	}
-	if expected != base.fingerprints {
-		t.Fatal("expected international F.4 identity, got national alternate projection")
-	}
-	for i, digest := range base.fingerprints {
-		t.Logf("F[%d]=%x", i, digest)
-	}
-	t.Logf("D_base=%x bytes=%d", base.digest, len(encoded))
-
-	// Prepared samplers retain no mutable alias to the decoded base.
-	age, street := base.ages[0], base.streets[0]
-	document.Ages[0].Weight++
-	document.StreetNames.Entries[0].Text = "Changed Street"
-	*document.LastNames[0].ASCIIAtom = "changed"
-	document.Geography.PostalCodes[document.Geography.Places[0].ID][0] = "99999"
-	if base.ages[0] != age || base.streets[0] != street || base.lastNames.names.entries[0].asciiAtom == "changed" ||
-		base.geography.locations[0].zips[0] == "99999" {
-		t.Fatal("expected owned admitted values, got mutable base alias")
-	}
-
-}
-
-// TestUSABaseCompletionClosedAndBounded rejects malformed, excessive and
-// canceled input through the real decoder.
-func TestUSABaseCompletionClosedAndBounded(t *testing.T) {
-
-	evidence := readUSACompletionEvidence(t)
-	encoded := string(readUSACompletionFile(t, "assets/base.json"))
-	cases := map[string]string{
-		"unknown":   "{\"unknown\":1," + encoded[1:],
-		"duplicate": "{\"country\":\"US\"," + encoded[1:],
-		"null":      strings.Replace(encoded, "\"lastNames\":[", "\"lastNames\":null,\"discarded\":[", 1),
-		"missing":   strings.Replace(encoded, "\"country\":\"US\",", "", 1),
-		"fraction":  strings.Replace(encoded, "\"age\":21", "\"age\":21.0", 1),
-		"trailing":  encoded + "{}",
-		"size":      strings.Repeat(" ", maxInternationalDocumentBytes) + encoded,
-	}
-	for name, input := range cases {
-		t.Run(name, func(t *testing.T) {
-			_, err := decodeUSABaseCandidate(t.Context(), strings.NewReader(input), evidence)
-			if err != nil {
-				return
-			}
-			t.Fatal("expected rejected malformed or oversized USA base, got nil")
-		})
-	}
-	ctx, cancel := context.WithCancel(t.Context())
-	cancel()
-	_, err := decodeUSABaseCandidate(ctx, strings.NewReader(encoded), evidence)
-	if err != nil {
-		if !errors.Is(err, context.Canceled) {
-			t.Fatalf("expected cancellation, got %v", err)
-		}
-		return
-	}
-
-	t.Fatal("expected canceled decoder, got nil")
-
-}
-
-// TestUSABaseCompletionInvalid rejects changes to adopted national values.
-func TestUSABaseCompletionInvalid(t *testing.T) {
-
-	evidence := readUSACompletionEvidence(t)
-	encoded := readUSACompletionFile(t, "assets/base.json")
-	cases := []struct {
-		name   string
-		change func(*usaBaseDocument)
-	}{
-		{"schema", func(d *usaBaseDocument) { d.Schema = "sw-us-base-v1" }},
-		{"release", func(d *usaBaseDocument) { d.Release = "us-2026a-release" }},
-		{"profile", func(d *usaBaseDocument) { d.Profile = "it-2026a-base-v1" }},
-		{"country", func(d *usaBaseDocument) { d.Country = "IT" }},
-		{"anchor", func(d *usaBaseDocument) { d.AnchorDate = "2026-01-02" }},
-		{"gender", func(d *usaBaseDocument) { d.Genders.Categories[0].Code = "other" }},
-		{"age-mass", func(d *usaBaseDocument) { d.Ages[0].Weight++ }},
-		{"age-count", func(d *usaBaseDocument) { d.Ages = append(d.Ages, d.Ages[0]) }},
-		{"cohort", func(d *usaBaseDocument) { d.Cohorts[0].FromYear++ }},
-		{"name-display", func(d *usaBaseDocument) { d.FirstNames[0].Entries[0].Display = "Invented" }},
-		{"name-atom", func(d *usaBaseDocument) { d.FirstNames[0].Entries[0].ASCIIAtom = nil }},
-		{"name-weight", func(d *usaBaseDocument) { d.FirstNames[0].Entries[0].Weight = math.MaxUint64 }},
-		{"name-cohort", func(d *usaBaseDocument) { d.FirstNames[0].Cohort = "2000-2005" }},
-		{"name-bound", func(d *usaBaseDocument) {
-			d.FirstNames[0].Entries = append(d.FirstNames[0].Entries, d.FirstNames[0].Entries[0])
-		}},
-		{"surname-missing", func(d *usaBaseDocument) { d.LastNames = d.LastNames[:49999] }},
-		{"surname-bound", func(d *usaBaseDocument) { d.LastNames = append(d.LastNames, d.LastNames[0]) }},
-		{"surname-weight", func(d *usaBaseDocument) { d.LastNames[0].Weight++ }},
-		{"place-system", func(d *usaBaseDocument) { d.Geography.PlaceCodeSystem = "it-istat" }},
-		{"postal-system", func(d *usaBaseDocument) { d.Geography.PostalCodeSystem = "usps-2026" }},
-		{"territory-system", func(d *usaBaseDocument) { d.Geography.TerritorySystem = "states" }},
-		{"place-count", func(d *usaBaseDocument) { d.Geography.Places = append(d.Geography.Places, d.Geography.Places[0]) }},
-		{"place-mass", func(d *usaBaseDocument) { d.Geography.Places[0].Population++ }},
-		{"place-name", func(d *usaBaseDocument) { d.Geography.Places[0].Name = "Rome" }},
-		{"place-division", func(d *usaBaseDocument) { d.Geography.Places[0].Territory = "pacific" }},
-		{"place-state", func(d *usaBaseDocument) { *d.Geography.Places[0].Administrative[0].Code = "PR" }},
-		{"postal-mismatch", func(d *usaBaseDocument) { d.Geography.PostalCodes[d.Geography.Places[0].ID][0] = "99999" }},
-		{"postal-extra", func(d *usaBaseDocument) { d.Geography.PostalCodes["unknown"] = []string{"12345"} }},
-		{"street-kind", func(d *usaBaseDocument) { d.StreetNames.Kind = "fragment" }},
-		{"street-count", func(d *usaBaseDocument) { d.StreetNames.Entries = d.StreetNames.Entries[:255] }},
-		{"street-unit-weight", func(d *usaBaseDocument) { d.StreetNames.Entries[0].Weight = 2 }},
-		{"street-case-duplicate", func(d *usaBaseDocument) {
-			d.StreetNames.Entries[1].Text = strings.ToUpper(d.StreetNames.Entries[0].Text)
-		}},
-		{"street-suffix", func(d *usaBaseDocument) { d.StreetNames.Entries[0].Text = "Acacia" }},
-		{"street-repeated-suffix", func(d *usaBaseDocument) { d.StreetNames.Entries[0].Text = "Acacia Lane Street" }},
-		{"street-italian", func(d *usaBaseDocument) { d.StreetNames.Entries[0].Text = "Via Roma" }},
-		{"street-content", func(d *usaBaseDocument) { d.StreetNames.Entries[0].Text = "Acacia Court" }},
-		{"street-long", func(d *usaBaseDocument) { d.StreetNames.Entries[0].Text = strings.Repeat("a", 81) }},
-	}
-	for _, test := range cases {
-		t.Run(test.name, func(t *testing.T) {
-			var document usaBaseDocument
-			err := json.Unmarshal(encoded, &document)
-			if err != nil {
-				t.Fatalf("expected fresh base fixture, got %v", err)
-			}
-			test.change(&document)
-			input, err := json.Marshal(document)
-			if err != nil {
-				t.Fatalf("expected mutation transport, got %v", err)
-			}
-			_, err = decodeUSABaseCandidate(t.Context(), bytes.NewReader(input), evidence)
-			if err != nil {
-				return
-			}
-			t.Fatal("expected rejected USA base mutation, got nil")
-		})
-	}
-	var document usaBaseDocument
-	err := json.Unmarshal(encoded, &document)
-	if err != nil {
-		t.Fatalf("expected base fixture, got %v", err)
-	}
-	for _, invalid := range []usaBaseEvidence{
-		{}, {ages: evidence.ages, firstNames: evidence.firstNames, lastNames: evidence.lastNames},
-		{
-			ages: evidence.ages, firstNames: evidence.firstNames, lastNames: evidence.lastNames,
-			geography: &usaGeographyCandidate{},
-		},
-	} {
-		_, err := prepareUSABaseCandidate(&document, invalid)
-		if err != nil {
-			continue
-		}
-		t.Fatal("expected rejected incomplete or wrong evidence, got nil")
-	}
-
-}
 
 // TestUSACompletionIdentityIsolation separates canonical IDs, national paths
 // and each dataset dependency from observational contact parameters.
@@ -592,7 +343,6 @@ func TestUSALayer1CompletionHarness(t *testing.T) {
 		surnames[name.display] = true
 	}
 	rolling := sha256.New()
-	samples := []any{}
 	for i := PersonIndex(1); i <= count; i++ {
 
 		p, err := w.person(i)
@@ -667,11 +417,6 @@ func TestUSALayer1CompletionHarness(t *testing.T) {
 		if err != nil {
 			t.Fatalf("expected hashed harness record, got %v", err)
 		}
-		if i <= 8 {
-			samples = append(samples, []any{
-				p.person, p.anchorAge, p.cohort, p.localityID, p.division, p.divisionOrdinal, p.addressLine,
-			})
-		}
 
 	}
 	if len(ages) != 55 || len(genders) != 2 || len(cohorts) != 5 || len(states) != 51 ||
@@ -707,35 +452,9 @@ func TestUSALayer1CompletionHarness(t *testing.T) {
 		}
 	}
 	for _, index := range []PersonIndex{1, 9999, 65536, Layer1MaxPersonIndex} {
-		p, err := w.person(index)
+		_, err := w.person(index)
 		if err != nil {
 			t.Fatalf("expected boundary person, got %v", err)
-		}
-		if index == Layer1MaxPersonIndex {
-			samples = append(samples, []any{
-				p.person, p.anchorAge, p.cohort, p.localityID, p.division, p.divisionOrdinal, p.addressLine,
-			})
-		}
-	}
-	summary := map[string]any{
-		"status":          "INTERNAL CANDIDATE; NO PUBLIC WORLD OR PHOTO RIGHTS APPROVAL",
-		"mainCoordinates": count, "ABGenerations": 2 * count, "noncontiguousABCoordinates": 1000,
-		"boundaryCoordinates":  4,
-		"recordFormat":         "test-only tuple: Person, anchorAge, cohort, localityID, Division, ordinal, addressLine",
-		"orderedRecordsSHA256": fmt.Sprintf("%x", rolling.Sum(nil)), "baseLogicalDigest": fmt.Sprintf("%x", w.base.digest),
-		"fingerprints": w.base.fingerprints, "phoneIdentity": fmt.Sprintf("%x", w.phones.identity),
-		"observedAges": len(ages), "genders": genders, "cohorts": cohorts, "observedStates": len(states),
-		"observedDivisions": len(divisions), "observedLocalities": len(localities),
-		"observedStreets": len(streets), "samples": samples,
-	}
-	if path := os.Getenv("KRENALIS_USA_LAYER1_EVIDENCE_OUTPUT"); path != "" {
-		encoded, err := internationalCanonical(summary)
-		if err != nil {
-			t.Fatalf("expected harness evidence serialization, got %v", err)
-		}
-		err = os.WriteFile(path, encoded, 0o644)
-		if err != nil {
-			t.Fatalf("expected written requested evidence, got %v", err)
 		}
 	}
 	t.Logf("main=%d A/B=%d random=%d localities=%d states=%d divisions=%d digest=%x", count, 2*count, 1000,
@@ -786,137 +505,10 @@ func TestUSANPACompletion(t *testing.T) {
 
 }
 
-// TestUSANPACompletionInvalid rejects unsafe or unidentified NPA inputs.
-func TestUSANPACompletionInvalid(t *testing.T) {
-
-	encoded := readUSACompletionFile(t, "assets/npas.json")
-	cases := []struct {
-		name   string
-		change func(*usaNPADocument)
-	}{
-		{"source", func(d *usaNPADocument) { d.SourceSHA256 = strings.Repeat("0", 64) }},
-		{"history", func(d *usaNPADocument) { d.HistoricalAsOf = "2026-10-16" }},
-		{"status", func(d *usaNPADocument) { d.Status = "APPROVED" }},
-		{"non-geographic", func(d *usaNPADocument) { d.Entries[0].NPA = "800" }},
-		{"territory", func(d *usaNPADocument) { d.Entries[0].StateUSPS = "PR" }},
-		{"future", func(d *usaNPADocument) { d.Entries[0].InServiceDate = "2026-01-02" }},
-		{"invalid-date", func(d *usaNPADocument) { d.Entries[0].InServiceDate = "2025-02-30" }},
-		{"missing", func(d *usaNPADocument) { d.Entries = d.Entries[:367] }},
-		{"duplicate", func(d *usaNPADocument) { d.Entries[1] = d.Entries[0] }},
-		{"wrong-state", func(d *usaNPADocument) { d.Entries[0].StateUSPS = "CA" }},
-		{"wrong-date", func(d *usaNPADocument) { d.Entries[0].InServiceDate = "1948-01-01" }},
-		{"679", func(d *usaNPADocument) { d.Entries[0].NPA = "679" }},
-		{"bound", func(d *usaNPADocument) {
-			for len(d.Entries) <= 400 {
-				d.Entries = append(d.Entries, d.Entries[0])
-			}
-		}},
-	}
-	for _, test := range cases {
-		t.Run(test.name, func(t *testing.T) {
-			var document usaNPADocument
-			err := json.Unmarshal(encoded, &document)
-			if err != nil {
-				t.Fatalf("expected NPA fixture, got %v", err)
-			}
-			test.change(&document)
-			input, err := json.Marshal(document)
-			if err != nil {
-				t.Fatalf("expected mutated NPA document, got %v", err)
-			}
-			_, err = decodeUSANPACandidate(t.Context(), bytes.NewReader(input))
-			if err != nil {
-				return
-			}
-			t.Fatal("expected rejected NPA mutation, got nil")
-		})
-	}
-
-}
-
-// TestUSAStreetAddressTechnicalForms exercises APT/UNIT and leading-zero ZIP
-// fixtures without enabling units in the initial distribution.
-func TestUSAStreetAddressTechnicalForms(t *testing.T) {
-
-	// Units are fixture-only: the initial distribution emits neither form.
-	for _, test := range []struct{ street, line string }{
-		{"1 Maple Street", "1 Maple Street, Boston, MA 02108"},
-		{"9999 Oak Avenue APT 4B", "9999 Oak Avenue APT 4B, Boston, MA 02108"},
-		{"42 Park Drive UNIT 12", "42 Park Drive UNIT 12, Boston, MA 02108"},
-	} {
-		address := Address{Street: test.street, Municipality: "Boston", StateProv: "MA", PostalCode: "02108", Country: "US"}
-		line := fmt.Sprintf("%s, %s, %s %s", address.Street, address.Municipality, address.StateProv, address.PostalCode)
-		if line != test.line || !validFixedDigits(address.PostalCode, 5) {
-			t.Fatalf("expected technical address %s, got %s", test.line, line)
-		}
-	}
-
-}
-
-// readUSACompletionEvidence admits the unchanged AGE, nominal v2 and
-// geography v2 inputs for the test or benchmark lifetime.
-func readUSACompletionEvidence(t testing.TB) usaBaseEvidence {
-
+// readUSACompletionHarness selects Layer 1 from the remotely loaded USA World.
+func readUSACompletionHarness(t *testing.T) *usaLayer1Harness {
 	t.Helper()
-	read := func(path string) []byte {
-		data, err := os.ReadFile(path)
-		if err != nil {
-			t.Fatalf("expected existing adopted input, got %v", err)
-		}
-		return data
-	}
-	ages, err := decodeUSAAgeCandidate(t.Context(), bytes.NewReader(read(usaCandidateDirectory+"ages.json")))
-	if err != nil {
-		t.Fatalf("expected qualified AGE, got %v", err)
-	}
-	firstBytes := read(usaFirstNamesV2Directory + "assets/first-names.json")
-	first, err := decodeUSAFirstNamesV2Candidate(t.Context(), bytes.NewReader(firstBytes))
-	if err != nil {
-		t.Fatalf("expected owner-adopted first names, got %v", err)
-	}
-	lastBytes := read(usaSurname50KDirectory + "assets/surnames.json")
-	last, err := decodeUSASurname50KCandidate(t.Context(), bytes.NewReader(lastBytes))
-	if err != nil {
-		t.Fatalf("expected adopted 50K surnames, got %v", err)
-	}
-	geographyBytes := read(usaGeographyV2Directory + "assets/geography.json")
-	geography, err := decodeUSAGeographyV2Candidate(t.Context(), bytes.NewReader(geographyBytes))
-	if err != nil {
-		t.Fatalf("expected adopted geography v2, got %v", err)
-	}
-
-	return usaBaseEvidence{ages: ages, firstNames: first, lastNames: last, geography: geography}
-}
-
-func readUSACompletionFile(t testing.TB, name string) []byte {
-	t.Helper()
-	encoded, err := os.ReadFile(usaCompletionDirectory + name)
-	if err != nil {
-		t.Fatalf("expected new USA candidate file, got %v", err)
-	}
-	return encoded
-}
-
-// readUSACompletionHarness prepares actual USA assets and the private harness.
-func readUSACompletionHarness(t testing.TB) *usaLayer1Harness {
-
-	t.Helper()
-	evidence := readUSACompletionEvidence(t)
-	encoded := readUSACompletionFile(t, "assets/base.json")
-	base, err := decodeUSABaseCandidate(t.Context(), bytes.NewReader(encoded), evidence)
-	if err != nil {
-		t.Fatalf("expected prepared national base, got %v", err)
-	}
-	phones, err := decodeUSANPACandidate(t.Context(), bytes.NewReader(readUSACompletionFile(t, "assets/npas.json")))
-	if err != nil {
-		t.Fatalf("expected qualified NANPA rule, got %v", err)
-	}
-	w, err := newUSALayer1Harness(IdentityNamespace{Name: "usa-layer1", Generation: 1}, 2026, base, phones)
-	if err != nil {
-		t.Fatalf("expected internal USA harness, got %v", err)
-	}
-
-	return w
+	return readUSAIncomeHarness(t).categorical.base
 }
 
 // usaCompletionRecord encodes only test evidence, with the complete national

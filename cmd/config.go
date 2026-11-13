@@ -57,7 +57,6 @@ type Config struct {
 	NATS               core.NATSConfig
 	MaxMindDBPath      string
 	SyntheticPhotosDir string
-	USADemoDirectory   string
 	MemberEmailFrom    string
 	SMTP               struct {
 		Host     string
@@ -131,7 +130,9 @@ func loadConfig(ctx context.Context, source string) (*Config, error) {
 
 	settings := &Config{}
 	settings.SyntheticPhotosDir = conf.Get("KRENALIS_SYNTHETIC_PHOTOS_DIR")
-	settings.USADemoDirectory = conf.Get("KRENALIS_USA_INTERNAL_DEMO_DIR")
+	if conf.Get("KRENALIS_USA_INTERNAL_DEMO_DIR") != "" {
+		return nil, errors.New("KRENALIS_USA_INTERNAL_DEMO_DIR is no longer supported; use KRENALIS_EXTERNAL_ASSETS_URLS")
+	}
 
 	if kms, ok := conf.Lookup("KRENALIS_KMS"); ok {
 		backend, options, found := strings.Cut(kms, ":")

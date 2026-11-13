@@ -7,14 +7,13 @@ package fakedata
 import (
 	"bytes"
 	"math"
-	"os"
 	"strings"
 	"testing"
 )
 
 // TestInternationalBaseInvalid exercises semantic constraints on the real base.
 func TestInternationalBaseInvalid(t *testing.T) {
-	base, err := ConvertItalianBaseData(t.Context(), os.DirFS("data/it-2026a"))
+	base, err := readItalianBaseFixture(t)
 	if err != nil {
 		t.Fatalf("expected base conversion, got %v", err)
 	}

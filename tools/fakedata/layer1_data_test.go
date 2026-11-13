@@ -269,3 +269,15 @@ func layer1WorldWithDependency(t *testing.T, world *World, name string, set func
 	clone.data = &data
 	return &clone
 }
+
+func validASCIIAtom(value string) bool {
+	if value == "" || value[0] == '-' || value[len(value)-1] == '-' {
+		return false
+	}
+	for _, c := range []byte(value) {
+		if (c < 'a' || c > 'z') && c != '-' {
+			return false
+		}
+	}
+	return true
+}
