@@ -976,6 +976,13 @@ its own test schemas; do not run it against an application or demo schema.
   reads require 161 Unified SELECTs, 46 explanations and 20 legacy queries
   (two SELECTs each), for 247 SELECTs, excluding initialization and writes.
   It also checks empty pages and pure Record after dropping the event table.
+- `TestUnifiedRecordStatesPostgreSQL/Snowflake` separately checks the six
+  native state operators on SQL NULL, empty and populated String/Array values.
+  Each query and all three explanations assert both leaves and their group:
+  six queries and eighteen explanations, or 24 extra SELECTs. Native `is null`
+  is exercised at the prepared physical boundary; public admission still
+  requires a nullable property and is unchanged. JSON state coverage alone is
+  not evidence for these native renderer branches.
 - Source fixtures initialize the actual Krenalis tables. On Snowflake they set
   `DEFAULT_DDL_COLLATION='en-ci'` only on the generated temporary schema before
   initialization. PostgreSQL keeps its enum `type` and sets non-deterministic
@@ -1003,7 +1010,7 @@ credentials outside logs and manifests. The runner never sources `.env` files.
 ```sh
 python3 test/snowflaketester/run.py "$campaign_dir/record-local.jsonl" -- \
   ./core/internal/datastore -race \
-  -run '^TestUnifiedRecord(Conformance|Sources|Collation)PostgreSQL$' -timeout=5m
+  -run '^TestUnifiedRecord(Conformance|Sources|Collation|States)PostgreSQL$' -timeout=5m
 
 python3 test/snowflaketester/run.py --require-schemas \
   --require-session-timezone UTC --require-session-profile standard \
@@ -1013,7 +1020,7 @@ python3 test/snowflaketester/run.py --require-schemas \
   --require-result-tag krenalis-transport/record-legacy \
   "$campaign_dir/record-utc.jsonl" -- \
   -overlay "$campaign_dir/record-utc-overlay/overlay.json" ./core/internal/datastore -race \
-  -run '^TestUnifiedRecord(Conformance|Sources|Collation)Snowflake$' -timeout=20m
+  -run '^TestUnifiedRecord(Conformance|Sources|Collation|States)Snowflake$' -timeout=20m
 
 python3 test/snowflaketester/run.py --require-schemas \
   --require-session-timezone America/Los_Angeles --require-session-profile standard \
@@ -1023,7 +1030,7 @@ python3 test/snowflaketester/run.py --require-schemas \
   --require-result-tag krenalis-transport/record-legacy \
   "$campaign_dir/record-la.jsonl" -- \
   -overlay "$campaign_dir/record-la-overlay/overlay.json" ./core/internal/datastore -race \
-  -run '^TestUnifiedRecord(Conformance|Collation)Snowflake$/(native|false_AND_unknown|true_OR_unknown|unknown_AND_true|unknown_OR_false)$/^(0|6|8|9|10|14|15|16|17|18|19)$' \
+  -run '^TestUnifiedRecord(Conformance|Collation)Snowflake$/^(native|false_AND_unknown|true_OR_unknown|unknown_AND_true|unknown_OR_false)$/^(0|6|8|9|10|14|15|16|17|18|19)$' \
   -timeout=10m
 ```
 
@@ -1119,6 +1126,12 @@ In particular, the following work remains explicit:
 - Further scan/iteration/close failures, malformed/oversized results, additional
   timestamp precisions, session changes and a small scale/resource smoke test.
   Running-query timeout/cancellation evidence is recorded separately below.
+- Resolve non-binary message-identity collation (review N1): source type/name
+  selectors are now literal, but DISTINCT, IN and GROUP BY still inherit the
+  `message_id` column collation. Distinct spellings can collapse or produce a
+  spurious copy conflict. A detected copy conflict is a technical failure,
+  not semantic UNKNOWN. This belongs to the identity/fault block and is not
+  corrected by the Record state tests.
 - Timestamp input formats beyond AUTO and environment-level resource controls.
   UTC and America/Los_Angeles with NTZ/AUTO and per-session 60-second statement
   limits are covered above; these runs do not verify resource-monitor policies

@@ -188,6 +188,11 @@ UPDATE "PROFILES" SET "UNSUPPORTED"='abc'`)
 				known.Where = nil
 				occurrences.Count, countTruth = &known, m
 			}
+			if test.name == "unknown OR false" {
+				excluded := *count.Count
+				excluded.Scope.Event = "Missing"
+				occurrences.Count, countTruth = &excluded, f
+			}
 			root := &unified.Rule{Operator: test.operator,
 				Children: []unified.Rule{{Record: &test.record}, occurrences}}
 			assertUnifiedTruths(t, fixture.query(t, root, unified.Page{Limit: 10}), test.want)

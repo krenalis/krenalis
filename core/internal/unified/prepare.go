@@ -32,7 +32,6 @@ type SourceBinding struct {
 
 // selection binds the recorded source identity without inheriting collation.
 func (source SourceBinding) selection(scope Scope) (warehouses.RowQualification, error) {
-
 	if !warehouses.IsValidIdentifier(source.EventType.Name) || !source.EventType.Type.IsString() {
 		return nil, fmt.Errorf("core/internal/unified: invalid resolved event type column")
 	}
@@ -53,7 +52,6 @@ func (source SourceBinding) selection(scope Scope) (warehouses.RowQualification,
 		children = append(children, &warehouses.ExactColumnText{Column: column, Value: scope.Event})
 	}
 	children = append(children, &warehouses.ExactColumnText{Column: source.EventType, Value: typ})
-
 	return &warehouses.QualificationGroup{Operator: warehouses.OpAnd, Children: children}, nil
 }
 
