@@ -1319,9 +1319,10 @@ Repetitive payloads at the exact byte budget arrived inline in these runs.
 A separate private probe used 512 profiles with 2,048-byte SHA-256 digest
 payloads each, exactly 1 MiB in total; it verified every byte and profile ID.
 Snowflake returned 48 inline rows and three remote chunks. Their consumed
-HTTP-body bytes before decompression were 309,536, 513,968 and 173,456, with
-EOF observed and no close errors. These are body reads, not total network
-traffic; the inline base64 length and advertised uncompressed sizes are
+response-body bytes before the driver's chunk decompression were 309,536,
+513,968 and 173,456, with EOF observed and no close errors. These are body
+reads after the HTTP transport, not total or compressed network traffic;
+the inline base64 length and advertised uncompressed sizes are
 recorded separately. No URLs, headers or document content were logged.
 
 The initial `entropy` test passed, but its wrapper exited 7 because that
