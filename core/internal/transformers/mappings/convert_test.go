@@ -146,6 +146,8 @@ func TestConvert(t *testing.T) {
 		{types.Int(16).AsYear(), types.Float(64), 2024, 2024.0, true, nil},
 		{types.Int(8).Unsigned(), types.Float(32), uint(256), float64(float32(256)), true, nil},
 		{types.Decimal(20, 10), types.Float(64), decimal.MustParse("767.5018382257"), 767.5018382257, true, nil},
+		{types.Decimal(41, 0), types.Float(32), decimal.MustParse("1e40"), math.Inf(1), true, nil},
+		{types.Decimal(41, 0), types.Float(32).Real(), decimal.MustParse("1e40"), nil, true, errMaxConversion},
 		{types.String(), types.Float(64), "767.5018382257", 767.5018382257, true, nil},
 		{types.JSON(), types.Float(64), json.Value("767.5018382257"), 767.5018382257, true, nil},
 		{types.String(), types.Float(32).Real(), "1.5", 1.5, true, nil},

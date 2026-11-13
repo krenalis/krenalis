@@ -179,6 +179,9 @@ func (mapping *Mapping) Transform(attributes map[string]any, purpose Purpose) (m
 		if v != nil && e.convert {
 			v, err = convert(v, vt, e.dt, true, purpose)
 			if err != nil {
+				if e.dt.IsArray() || e.dt.IsMap() || e.dt.IsObject() {
+					err = errInvalidConversion
+				}
 				var msg string
 				switch err {
 				case errRangeConversion:
