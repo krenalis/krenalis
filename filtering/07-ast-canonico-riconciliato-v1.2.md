@@ -7,6 +7,8 @@
 
 **Ambito:** rappresentazione semantica canonica, tipi, ownership lessicale, riferimenti ai contratti, invarianti statiche e normalizzazione. Non sono definiti wire format, nomi pubblici di campi, JSON Schema, API, protocollo di compatibilità o piano di esecuzione. La notazione è un ADT ML-like: i nomi sono tecnici e provvisori.
 
+**Emendamento approvato dall’utente il 13 novembre 2026:** la deroga di §14.4.1 conserva le regole di confronto del warehouse per i predicati Record ordinari su testo nativo. È un’eccezione esplicita all’invarianza rispetto all’executor, non una nuova garanzia sulle collation né una modifica dei costruttori AST.
+
 **Decisione centrale:** il modello canonico per Unified è un’algebra di risultati di profilo con cinque sole primitive `V | E | K | P | T`. I predicati del record filtering sono **forme del confronto V o foglie autorizzate nei body**, non una sesta primitiva. L’input pubblico resta `core.Filter` condiviso con il filtraggio di singoli record. I valori atomici, gli scope, i quantificatori, i contratti, le guardie e i recognizer interni sono helper tecnici; nessuno restituisce una query, formula o testimone per una rule sorella.
 
 ---
@@ -1790,6 +1792,18 @@ Un contratto può dichiarare una capacità di certificazione senza garantirla pe
 
 Ogni combinazione fonte/schema/predicato ammessa nello **unified profile filtering** MUST avere significato osservabile e requisiti informativi definiti, invarianti rispetto all’executor. L’incertezza decisiva di dati esistenti o di garanzie contrattuali segue 06 §§19.3–19.7. La sola assenza di occurrence nel dominio registrato, anche dopo retention o senza utente corrispondente in una sorgente, non è UNKNOWN. Una capacità strutturale indispensabile assente rende la capability non disponibile, non un insieme vuoto né UNKNOWN per tutti. Non si aggiungono registry ai normali filtri Record o correzioni retroattive agli executor.
 
+#### 14.4.1 Deroga approvata per il testo nativo
+
+**Approvata dall’utente il 13 novembre 2026.** In deroga al requisito di invarianza rispetto all’executor di §14.4, i predicati Record ordinari su colonne native String conservano le regole di confronto del percorso SQL Record esistente. Uguaglianza, diversità, appartenenza, ordine, intervalli, contenimento, prefisso e suffisso seguono le regole della colonna fisica nel warehouse del workspace, anche nei body che ammettono tali predicati Record.
+
+Lo stesso filtro può dare esiti diversi su warehouse differenti o dopo una modifica delle regole di confronto della colonna, anche con lo stesso tipo Krenalis. Krenalis non rileva, registra, verifica o versiona queste regole. La deroga non introduce registry, nuovi tipi, revisioni semantiche o rilevamenti delle collation.
+
+Un errore del warehouse dovuto alle regole di confronto resta un fallimento tecnico dell’operazione, non NO_MATCH, UNKNOWN o un risultato parziale.
+
+Restano fuori dalla deroga i confronti letterali previsti per i selettori tecnici delle sorgenti, il confronto interno delle identità dei messaggi per deduplica e selezione, i confronti sulle stringhe JSON e le valute governate. Un normale predicato Record su una colonna String come `messageId`, `type`, `event` o `name` segue invece le regole della colonna: il nome del campo non lo trasforma in un selettore tecnico o in un confronto interno d’identità.
+
+La deroga non modifica il codice degli executor, le regole di assenza/null, la composizione ternaria o gli altri contesti Record esistenti. Un’eventuale futura politica uniforme per il testo nativo richiederà una decisione di compatibilità separata.
+
 ### 14.5 Livelli di stato tecnico
 
 ```ml
@@ -2038,6 +2052,9 @@ Il registro semantico con `meaningRevision` si applica ai nuovi riferimenti gove
 **Limite dell'attestazione:** la rappresentabilità del catalogo è requisito del Canonical AST revisionato; la prova di una conversione **wire e persistita** lossless dei dati installati è distinta, ed è rimandata alla Fase 4B. La migrazione dei filtri antecedenti a `typed-filter-values` è un tema di rilascio separato, già indicato in `RELEASE-UPGRADE.md`. Non si dichiara eseguita una prova di compatibilità su filtri reali né si aggiunge una modalità `legacyMode` o `unknownPolicy`.
 
 **Divergenze tecniche rimaste fuori da questo raccordo:** presenza/null di proprietà ordinary nullable non-Profile e Object appiattiti, collazioni del testo ordinary, Float/NaN e precisione temporale residua; Snowflake remoto non verificato. Vanno documentate e affrontate indipendentemente; la presente revisione non approva automaticamente modifiche a questi comportamenti. Per le combinazioni ammesse in Unified resta vincolante §14.4: le questioni aperte non autorizzano significati diversi in funzione dell’executor.
+
+**Emendamento successivo sul testo nativo:** per i soli confronti Record ordinari su colonne native String si applica la deroga esplicita approvata in §14.4.1. Le altre questioni tecniche non acquistano per questo una deroga all’invarianza.
+
 ---
 
 ## 19. Evolution model

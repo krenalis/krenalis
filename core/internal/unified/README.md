@@ -42,6 +42,30 @@ language. `RecordFilter` reads only the profile population row;
 `RecordQualification` reads only an occurrence row. Neither can express a
 property-reference comparison or a governed current-profile dependency.
 
+## Approved native-text comparison exception
+
+On 2026-11-13 the user approved an explicit exception to executor invariance
+for ordinary Record value predicates on native String columns. The normative
+scope is [07 §14.4.1](../../../filtering/07-ast-canonico-riconciliato-v1.2.md#1441-deroga-approvata-per-il-testo-nativo),
+also referenced by 06 and 08. The existing SQL Record comparison rules remain
+in use for profile and occurrence predicates: equality, inequality, membership,
+ordering, intervals, containment, prefix and suffix follow the physical column's
+comparison rules. Case, accents and ordering can therefore differ between
+warehouses or after a column configuration change, with the same Krenalis type.
+Krenalis does not detect, store, verify or version these rules.
+
+Literal technical source selectors, internal message-identity comparisons for
+deduplication and selection, JSON string comparisons and governed currencies
+retain their respective contracts. A user-written Record on a native String
+column such as `messageId`, `type`, `event` or `name` follows the column's rules;
+the field name does not turn it into a technical selector or internal identity
+comparison. A warehouse comparison error remains a technical operation failure,
+not NO_MATCH, UNKNOWN or partial success.
+
+The exception changes the declared contract, not renderer behavior, null/missing
+rules, Kleene composition or other existing Record contexts. A future uniform
+native-text policy requires a separate compatibility decision.
+
 ## Admitted subset and evidence contract
 
 - Profile Record conditions and Count share the root AND/OR tree: at most four
@@ -651,8 +675,8 @@ an explicit **inactive Unified gate**. The bounded live campaign below now
 verifies numeric storage/readings, real writer round-trips and shared runtime
 fixtures. It does not establish conformance for the complete implemented
 subset; the remaining acceptance checks must pass before changing the gate.
-Snowflake activation also requires resolving the ordinary-text collation policy
-and the remaining acceptance checks in the runbook below.
+The native-text policy follows the approved exception above. The remaining
+activation checks are listed in the runbook below.
 
 ### Consolidated Snowflake verification campaign
 

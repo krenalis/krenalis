@@ -1041,10 +1041,10 @@ subtests are excluded by `-run`, not skipped at runtime.
 
 Before live execution, record the successful local counts and inspect the
 query budget lines. Afterwards record observed formats, schema inventory,
-source/overlay hashes, output audit and any differences. A green campaign does
-not approve a new native-text collation policy: the Record renderer remains
-legacy-compatible, and activation still needs the user's decision on the
-warehouse schema's collation. NaN/infinites in native Float columns retain the
+source/overlay hashes, output audit and any differences. A green campaign alone
+does not approve a native-text policy. The user's subsequent explicit exception
+is recorded below; the Record renderer remains legacy-compatible.
+NaN/infinites in native Float columns retain the
 SQL legacy ordering; pipeline Go evaluation is a separate existing path.
 Neither the JSON numeric contract nor the known native JSON transport failure
 is changed by these tests.
@@ -1104,9 +1104,10 @@ were detected: removal of exact collation, removal of page/screen name
 presence, a negative predicate accepting NULL, and native NaN replaced by NULL.
 The Record renderer is unchanged, including native collation and SQL NaN
 semantics. Source type/name selectors are now literal under inherited `en-ci` and the
-PostgreSQL enum/ICU setup. Native-text collation still needs the user's policy
-decision before activation; fault/resource coverage and the known native JSON
-transport issue remain separate. The production gate is still false.
+PostgreSQL enum/ICU setup. Native-text policy was pending at the time of this
+run; the approved exception is recorded below. The remaining activation checks
+and the known native JSON transport issue remain separate. The production gate
+is still false.
 
 ### Native state coverage follow-up (2026-11-13)
 
@@ -1434,6 +1435,29 @@ remain pending until the next authorized live window; the fault command was
 not attempted. The earlier private probe's remote success does not certify
 the new retry-exhaustion path.
 
+## Approved native-text policy (2026-11-13)
+
+The user approved an explicit exception to executor invariance for ordinary
+Record value comparisons on native String columns:
+[07 §14.4.1](../../filtering/07-ast-canonico-riconciliato-v1.2.md#1441-deroga-approvata-per-il-testo-nativo).
+The existing column comparison rules remain in use. Outcomes can differ between
+warehouses or after those rules change, with the same Krenalis type; Krenalis
+does not detect, store, verify or version the rules. This is a declared exception,
+not evidence of invariant native-text results across warehouses.
+
+Technical source selectors, internal message identity, JSON string comparisons
+and governed currencies keep their literal contracts. Ordinary Record predicates
+on native String identity/name columns still follow the column's rules. A
+warehouse comparison error remains a technical failure. Renderer behavior,
+null/missing semantics and Kleene composition are unchanged.
+
+The bounded Record/collation/Float-NaN campaign above passed on both warehouses.
+Source cases beyond the shared fixtures are not certified by that result. The
+added groups provide remote evidence for Count money, Sum/Average where and
+minimum, covered conflicts, mixed explanations, projections and pagination.
+Approving the exception settles this policy choice; it does not open the gate
+or replace the pending live chunk checks and other acceptance work below.
+
 ## Coverage still required before activation
 
 Passing the commands above is necessary, but is not the complete acceptance
@@ -1443,12 +1467,6 @@ In particular, the following work remains explicit:
 - Decide how native FLOAT/BOOLEAN compatibility with JSON results affects the
   supported transport contract. Nested numeric fixtures and the Arrow native
   path passed above; the failed JSON native probe does not certify equivalence.
-- Decide the native-text collation policy before activation; the bounded
-  Record/collation/Float-NaN campaign above passed on both warehouses. Source
-  cases beyond the shared fixtures are not certified by that result. The added
-  groups now provide remote evidence for Count money,
-  Sum/Average where and minimum, covered conflicts, mixed explanations,
-  projections and pagination.
 - The failure/resource supplement above covers limits, a malformed identity,
   real server errors and recovery, a driver-level chunk fault, native timestamp
   precisions, local mode changes and a bounded load smoke test. Controlled

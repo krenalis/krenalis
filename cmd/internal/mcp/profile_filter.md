@@ -204,6 +204,25 @@ The Record operators are: `is`, `is not`, `is less than`, `is less than or equal
 `does not exist`. The property's type determines which operators and operands
 are admissible. Data-state operators have no comparison operands.
 
+Record value comparisons on native String columns follow the warehouse's text
+comparison rules, as in the existing SQL Record filters. Equality, inequality,
+membership, ordering, intervals, containment, prefix and suffix can depend on
+those rules. Case, accents and ordering may differ between warehouses or after
+a column configuration change, even with the same Krenalis type. Krenalis does
+not track or verify the column's collation.
+
+Treat case sensitivity on native String properties as warehouse-dependent. If
+the request requires a literal comparison independent of those rules, explain
+that this is not guaranteed for native text; trying case variants does not
+establish that guarantee. This applies to profile predicates and occurrence
+where/verify bodies. A comparison error is a technical operation failure,
+not an empty result or UNKNOWN.
+
+Technical source selectors, internal message-identity comparisons used for
+deduplication and selection, JSON string comparisons and governed currencies
+retain their literal contracts. An ordinary Record on a native String column
+such as `messageId`, `type`, `event` or `name` still follows the column's rules.
+
 Count is `{"count":{"source":...,"period":...,"where":...,"minimum":...},
 "operator":"...","values":[...]}`. It supports only:
 
@@ -256,9 +275,10 @@ other or generalize source selection to all optional properties.
 
 Use `context.page.path` or `context.page.url` when those fields contain the
 required information, or `properties.url` for the distinct raw JSON field.
-There is no fallback between these paths. Comparisons are literal: `/pricing`,
-`/pricing/` and `/PRICING` are different. The filter does not normalize URLs,
-decode percent escapes, strip query strings or perform prefix matching for `is`.
+There is no fallback between these paths. Native String comparisons use the
+warehouse rules described above, so `/pricing` and `/PRICING` need not be
+distinct; JSON string comparisons are literal. The filter does not normalize
+URLs, decode percent escapes, strip query strings or perform prefix matching for `is`.
 Use an explicit supported operator such as `starts with` when that is the request.
 Missing decisive path/URL values retain Record UNKNOWN. A screen can likewise
 use its recorded name or an appropriate Record qualification on its properties.
