@@ -944,6 +944,9 @@ inventory finds zero remaining campaign schemas. Other test schemas were left
 alone. Credential-output audits for literal, JSON, HTML-escaped and account-dash
 forms report zero matches in the selected logs, manifests and runner output.
 
+The schema audit covers the five application test manifests at the campaign root;
+the two read-only inventories have manifests in separate subdirectories.
+
 Evidence: `/private/tmp/krenalis-discovery-snowflake-j78h_lan/`, including
 `live.jsonl`, `mcp-utc.jsonl`, `mcp-la.jsonl`, their manifests, `summary.json`,
 `schema-audit.json`, `inventory-final/inventory.jsonl` and per-run output audits.
