@@ -835,7 +835,7 @@ catalog reads and fixture writes have no service tag. Inspect exact counts in
 the manifest in addition to the runner's format/presence checks. Require stable
 source/overlay hashes, the requested session parameters, schema-ledger audit,
 credential-output masking and independent inventory as in the HTTP campaign.
-Remote execution remains pending until the next available Snowflake window.
+Both session runs passed on 2026-11-13, as recorded in the live results below.
 The production gate remains closed.
 
 ## Recorded event discovery
@@ -907,6 +907,53 @@ selection under nondefault collation. Record that comparison in the separate
 collation group; do not alter discovery expectations to match Count. No merge
 or gate-opening decision follows from PostgreSQL-only evidence.
 
+### Live discovery and MCP results on 2026-11-13
+
+Commit `2e74bfb81` passed the recorded-event discovery campaign and the pending
+Profiles MCP group. No production code or expected values changed during these
+runs. Fresh overlays and generated assets were kept outside the checkout.
+
+| Group | Session | PASS | FAIL / SKIP |
+| --- | --- | ---: | --- |
+| Discovery datastore + MCP, PostgreSQL prerequisite | local | 14 | 0 / 0 |
+| Profiles MCP, PostgreSQL prerequisite | local | 6 | 0 / 0 |
+| Discovery datastore + MCP, Snowflake | UTC | 8 | 0 / 0 |
+| Profiles MCP, Snowflake | UTC | 6 | 0 / 0 |
+| Profiles MCP, Snowflake | America/Los_Angeles | 6 | 0 / 0 |
+
+The discovery run verifies exact inspection of case and composed/decomposed
+Unicode pairs under `en-ci`, distinct null/empty names, literal substring
+searches, JSON kinds, multibyte and cumulative byte limits. Its running-query
+cancellation ended with server code 604 after 4,916 ms, before the fixture's
+30-second delay could finish, and the recovery read passed.
+
+Both Profiles MCP runs compare exact page, explanation and projection JSON.
+Count includes UNKNOWN; Sum preserves `170.1253`; projection preserves the
+Decimal(38,10), JSON null, omitted SQL NULL and array empty-string cases.
+Catalog/detail/guide checks remain selected metadata checks, not full JSON
+comparisons. Each session observes exactly 3/2/2 SELECT responses for
+service-query/service-explanation/service-record, all ARROW. Discovery has no
+result observation tags, so its requested ARROW setting is not an attestation
+of the actual result format for those reads.
+
+All seven runs, including the two read-only inventories, report stable
+source/overlay hashes. Session records verify UTC or America/Los_Angeles as
+requested, NTZ/AUTO, the standard profile and its 60-second statement timeout.
+The schema audit balances four creations and four drops; the independent final
+inventory finds zero remaining campaign schemas. Other test schemas were left
+alone. Credential-output audits for literal, JSON, HTML-escaped and account-dash
+forms report zero matches in the selected logs, manifests and runner output.
+
+Evidence: `/private/tmp/krenalis-discovery-snowflake-j78h_lan/`, including
+`live.jsonl`, `mcp-utc.jsonl`, `mcp-la.jsonl`, their manifests, `summary.json`,
+`schema-audit.json`, `inventory-final/inventory.jsonl` and per-run output audits.
+The runtime was Go 1.27.3 with the vendored Krenalis-patched gosnowflake v2.3.0.
+
+The pre-merge live condition for discovery is satisfied for this commit.
+The broader Record/collation/Float-NaN and fault/resource checklist below remains
+open; neither this campaign nor the test-only gate overlay enables the
+production Unified gate.
+
 ## Coverage still required before activation
 
 Passing the commands above is necessary, but is not the complete acceptance
@@ -920,9 +967,6 @@ In particular, the following work remains explicit:
   shared fixtures. The added groups now provide remote evidence for Count money,
   Sum/Average where and minimum, covered conflicts, mixed explanations,
   projections and pagination. Not every Record case has a Snowflake setup yet.
-- Run the bounded MCP group on Snowflake in the next window. The public-service
-  and real HTTP groups passed as recorded above. Running PostgreSQL groups does
-  not verify the Snowflake transport; no separate MCP credentials are required.
 - Further scan/iteration/close failures, malformed/oversized results, additional
   timestamp precisions, session changes and a small scale/resource smoke test.
   Running-query timeout/cancellation evidence is recorded separately below.
