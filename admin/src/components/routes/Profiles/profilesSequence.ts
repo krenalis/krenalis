@@ -27,6 +27,7 @@ interface ProfilesSequenceState {
 	isInitialLoading: boolean;
 	pendingFirst?: number;
 	schemaNotAligned: boolean;
+	schemaNotAlignedMessage?: string;
 }
 
 type ProfilesSequenceAction =
@@ -52,7 +53,7 @@ type ProfilesSequenceAction =
 	  }
 	| { type: 'commitPage'; first: number; activeProfileID: string }
 	| { type: 'initialFailed'; executionID: number }
-	| { type: 'markSchemaNotAligned'; executionID?: number }
+	| { type: 'markSchemaNotAligned'; executionID?: number; message?: string }
 	| { type: 'reset'; queryKey: string; executionID: number; pageSize: number; projection: string[] }
 	| { type: 'setActiveProfile'; profileID: string }
 	| { type: 'startBoundary'; first: number }
@@ -123,7 +124,7 @@ const profilesSequenceReducer = (
 			return action.executionID === state.executionID ? { ...state, isInitialLoading: false } : state;
 		case 'markSchemaNotAligned':
 			return action.executionID == null || action.executionID === state.executionID
-				? { ...state, schemaNotAligned: true, isInitialLoading: false }
+				? { ...state, schemaNotAligned: true, schemaNotAlignedMessage: action.message, isInitialLoading: false }
 				: state;
 		case 'reset':
 			return createProfilesSequenceState(action.queryKey, action.executionID, action.pageSize, action.projection);

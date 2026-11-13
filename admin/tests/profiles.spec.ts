@@ -775,7 +775,7 @@ test(`Apply a completed filter explicitly`, async ({ page }) => {
 	expect(gridRequests).toHaveLength(requestsBeforeCollapse);
 });
 
-test(`Enable Apply filters only for a complete filter that differs from the grid`, async ({ page }) => {
+test(`Enable Apply filters when there are unapplied changes`, async ({ page }) => {
 	const profileRequests: URL[] = [];
 	page.on('request', (request) => {
 		const url = new URL(request.url());
@@ -796,7 +796,7 @@ test(`Enable Apply filters only for a complete filter that differs from the grid
 	await expect(updateResults).toBeEnabled();
 
 	await valueInput.fill('');
-	await expect(updateResults).toBeDisabled();
+	await expect(updateResults).toBeEnabled();
 
 	await valueInput.fill('Grace');
 	await expect(updateResults).toBeEnabled();
@@ -1036,10 +1036,8 @@ test(`Keep the displayed grid intact when applying filters fails`, async ({ page
 	await expect(page.locator('.profile-drawer')).toBeVisible();
 	await page.getByRole('button', { name: 'Apply filters', exact: true }).press('Enter');
 
-	await expect(editor.locator('.profiles-list__filter-grid-error')).toContainText('Unable to apply filters.');
-	await expect(
-		editor.locator('.profiles-list__filter-grid-error').getByRole('button', { name: 'Retry' }),
-	).toBeVisible();
+	await expect(editor.locator('.profiles-list__filter-grid-error')).toContainText('Unable to apply filters');
+	await expect(page.getByRole('button', { name: 'Retry', exact: true })).toHaveCount(0);
 	await expect(filters.locator('.profiles-list__filter-summary-value')).not.toBeVisible();
 	await expect(page.locator('.profiles-list__grid-summary')).toContainText('4 profiles');
 	await expect(rows).toHaveCount(4);
@@ -1227,12 +1225,10 @@ test(`Keep failed grid updates accessible after collapsing and discard the error
 	await filters.getByRole('button', { name: 'Collapse', exact: true }).click();
 
 	await expect(filters.getByRole('region', { name: 'Profile filters' })).toHaveCount(0);
-	await expect(page.locator('.profiles-list__filter-grid-error')).toContainText('Unable to apply filters.');
+	await expect(page.locator('.profiles-list__filter-grid-error')).toContainText('Unable to apply filters');
 	await expect(filters.locator('.profiles-list__filter-summary-value')).toHaveText('No filters applied');
 	await expect(filters.getByRole('region', { name: 'Profile filters' })).toHaveCount(0);
-	await expect(
-		page.locator('.profiles-list__filter-grid-action').getByRole('button', { name: 'Retry' }),
-	).toBeVisible();
+	await expect(page.getByRole('button', { name: 'Retry', exact: true })).toHaveCount(0);
 	await expect(page.locator('.profiles-list__grid-summary')).toContainText('4 profiles');
 	await expect(page.locator('.profiles-list .grid__row--clickable')).toHaveCount(4);
 
@@ -1355,7 +1351,7 @@ test(`Keep incomplete filters open when attempting to collapse the editor`, asyn
 	await page.keyboard.press('Escape');
 
 	await expect(editor).toBeVisible();
-	await expect(editor.getByRole('button', { name: 'Apply filters', exact: true })).toBeDisabled();
+	await expect(editor.getByRole('button', { name: 'Apply filters', exact: true })).toBeEnabled();
 	await filters.getByRole('button', { name: 'Collapse', exact: true }).click();
 	await expect(editor).toBeVisible();
 	await expect(editor.locator('.filter-editor__property input')).toHaveValue('First name');
@@ -1470,7 +1466,7 @@ test(`Keep an explicit grid request independent from newer filter edits`, async 
 	await expect(pageSize).toBeEnabled();
 });
 
-test(`Collapse with Escape while the current filter is being materialized`, async ({ page }) => {
+test(`Keep unapplied filters open with Escape while the current filter is being materialized`, async ({ page }) => {
 	let markGridStarted = () => {};
 	let releaseGrid = () => {};
 	let filteredGridRequests = 0;
@@ -1508,13 +1504,14 @@ test(`Collapse with Escape while the current filter is being materialized`, asyn
 
 	await valueInput.focus();
 	await valueInput.press('Escape');
-	await expect(editor).toHaveCount(0);
+	await expect(editor).toBeVisible();
 	await expect(page.locator('.profiles-list__filter-grid-action .profiles-list__filter-status')).toHaveText(
 		'Updating profiles…',
 	);
 	releaseGrid();
 
 	await expect(page.locator('.profiles-list .grid__row--clickable')).toContainText(['Grace Hopper']);
+	await valueInput.press('Escape');
 	await expect(editor).toHaveCount(0);
 	expect(filteredGridRequests).toBe(1);
 });
@@ -2426,7 +2423,7 @@ test('Reuse adjacent cached pages but refetch an evicted page against live data'
 	await expect(page.locator('.profiles-list .grid__row--clickable').first()).toContainText('observation-2');
 });
 
-test('Refresh keeps filter arguments and reloads the schema only after reset confirmation', async ({ page }) => {
+test('Refresh keeps filter arguments until Clear all filters reloads the schema', async ({ page }) => {
 	await mockProfiles(page, {
 		profilesForRequest: (request) => (request.postDataJSON().filter != null ? [profiles[1]] : profiles),
 	});
@@ -2479,14 +2476,7 @@ test('Refresh keeps filter arguments and reloads the schema only after reset con
 	expect(requests.at(-1)!.postDataJSON().schema).toEqual(profileSchema);
 	expect(schemaReads).toBe(1);
 	await expect(valueInput).toHaveValue('Uncommitted draft');
-	await page.locator('.profiles-list__stale-notice').getByRole('button', { name: 'Reset view' }).click();
-	const dialog = page.locator('wa-dialog', { hasText: 'Reset profile view?' });
-	await expect(dialog.getByRole('dialog')).toBeVisible();
-	await dialog.getByRole('button', { name: 'Cancel' }).click();
-	await expect(valueInput).toHaveValue('Uncommitted draft');
-	expect(schemaReads).toBe(1);
-	await page.locator('.profiles-list__stale-notice').getByRole('button', { name: 'Reset view' }).click();
-	await dialog.getByRole('button', { name: 'Reset view' }).click();
+	await page.locator('.profiles-list__stale-notice').getByRole('button', { name: 'Clear all filters' }).click();
 	await expect.poll(() => schemaReads).toBe(2);
 	await expect(filters).toContainText('No filters applied');
 	await expect(page.locator('.profiles-list .grid__row--clickable')).toHaveCount(4);

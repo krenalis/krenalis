@@ -260,6 +260,18 @@ wa-button.filter-editor__remove-rule[appearance='plain']:not([disabled]):active 
 	width: max-content;
 }
 
+.filter-editor__condition [aria-invalid='true']::part(base),
+.filter-editor__condition [aria-invalid='true']::part(combobox) {
+	border-color: var(--wa-color-danger-50);
+}
+
+.filter-editor__condition [aria-invalid='true']::part(hint) {
+	color: var(--wa-color-danger-50);
+	font-family: var(--system-fonts);
+	font-size: 12px;
+	margin-block-start: calc(0.5em + 2px);
+}
+
 .filter-editor__condition--is-one-of {
 	flex-flow: row nowrap;
 }

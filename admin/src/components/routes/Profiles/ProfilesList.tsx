@@ -1,6 +1,7 @@
 import React, { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import ProfilesContext from '../../../context/ProfilesContext';
 import AlertDialog from '../../base/AlertDialog/AlertDialog';
+import { ErrorNotice } from '../../base/ErrorNotice/ErrorNotice';
 import Grid from '../../base/Grid/Grid';
 import { GridRef } from '../../base/Grid/Grid.types';
 import { GridKeyboardHints } from '../../base/Grid/GridKeyboardHints';
@@ -19,6 +20,7 @@ import { RelativeTime } from '../../base/RelativeTime/RelativeTime';
 import { formatNumber } from '../../../utils/formatNumber';
 import { ProfilesPagination } from './ProfilesPagination';
 import { ProfilesFilters } from './ProfilesFilters';
+import { getPropertyPathDisplayValue } from '../../helpers/getPropertyPathDisplayValue';
 
 const ProfilesList = () => {
 	const [isLoadingIdentityResolution, setIsLoadingIdentityResolution] = useState<boolean>(false);
@@ -26,7 +28,6 @@ const ProfilesList = () => {
 	const [secondsSinceIRStart, setSecondsSinceIRStart] = useState<number>();
 	const [latestIRExecutionEnd, setLastIRExecutionEnd] = useState<string>();
 	const [columnSearch, setColumnSearch] = useState('');
-	const [askSchemaResetConfirmation, setAskSchemaResetConfirmation] = useState(false);
 
 	const { api, handleError, workspaces, selectedWorkspace } = useContext(AppContext);
 	const {
@@ -48,6 +49,7 @@ const ProfilesList = () => {
 		hasNextPage,
 		activeProfileID,
 		isProfileSchemaNotAligned,
+		profileSchemaErrorMessage,
 		goToProfilesPage,
 		navigateProfile,
 		refreshProfiles,
@@ -77,6 +79,8 @@ const ProfilesList = () => {
 	const isGridKeyboardNavigationEnabled = !isLoading && profilesRows.length > 0;
 	const isIdentityResolutionRunning = secondsSinceIRStart != null;
 	const gridResultsLabel = `${formatNumber(profilesTotal)} ${profilesTotal === 1 ? 'profile' : 'profiles'}`;
+	const schemaErrorMessage = profileSchemaErrorMessage?.trim();
+	const missingProperty = schemaErrorMessage?.match(/^«(.+)» property no longer exists$/)?.[1];
 
 	const inspectProfiles = useCallback(() => {
 		requestAnimationFrame(() => gridRef.current?.focus());
@@ -199,12 +203,33 @@ const ProfilesList = () => {
 	return (
 		<div className='profiles-list'>
 			{isProfileSchemaNotAligned && (
-				<div className='profiles-list__stale-notice' role='status'>
-					<span>The profile schema is no longer compatible with this view.</span>
-					<WaButton appearance='outlined' size='s' onClick={() => setAskSchemaResetConfirmation(true)}>
-						Reset view
-					</WaButton>
-				</div>
+				<ErrorNotice
+					className='profiles-list__stale-notice'
+					title='The profile schema has changed.'
+					description={
+						missingProperty != null ? (
+							<>
+								The property{' '}
+								<strong>
+									{getPropertyPathDisplayValue(
+										missingProperty,
+										(path) => profileSchemaProperties[path],
+									)}
+								</strong>{' '}
+								no longer exists. Your filters need to be cleared to continue.
+							</>
+						) : schemaErrorMessage != null && schemaErrorMessage !== '' ? (
+							`${schemaErrorMessage}${schemaErrorMessage.endsWith('.') ? '' : '.'} Your filters need to be cleared to continue.`
+						) : (
+							'Your current filters are no longer compatible. Clear them to continue.'
+						)
+					}
+					action={
+						<WaButton appearance='outlined' size='m' onClick={resetProfilesSchema}>
+							Clear all filters
+						</WaButton>
+					}
+				/>
 			)}
 			<div className='profiles-list__page-header'>
 				<div>
@@ -377,34 +402,6 @@ const ProfilesList = () => {
 					)}
 				</div>
 			</div>
-			{askSchemaResetConfirmation && (
-				<AlertDialog
-					isOpen={askSchemaResetConfirmation}
-					onClose={() => setAskSchemaResetConfirmation(false)}
-					title='Reset profile view?'
-					actions={
-						<>
-							<WaButton appearance='outlined' onClick={() => setAskSchemaResetConfirmation(false)}>
-								Cancel
-							</WaButton>
-							<WaButton
-								variant='brand'
-								onClick={() => {
-									setAskSchemaResetConfirmation(false);
-									resetProfilesSchema();
-								}}
-							>
-								Reset view
-							</WaButton>
-						</>
-					}
-				>
-					<p>
-						This reloads the profile schema and clears the applied filter, draft, filter history, and
-						selection.
-					</p>
-				</AlertDialog>
-			)}
 			<AlertDialog
 				isOpen={askRunIRConfirmation}
 				onClose={() => setAskResolveIdentitiesConfirmation(false)}

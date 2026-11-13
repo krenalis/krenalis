@@ -1,9 +1,11 @@
 import React, { ReactNode, RefObject, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import './FilterEditor.css';
 import { checkIfPropertyExists } from '../../helpers/checkIfPropertyExists';
+import { getPropertyPathDisplayValue } from '../../helpers/getPropertyPathDisplayValue';
 import { getFilterPropertyComboboxItems } from '../../helpers/getSchemaComboboxItems';
 import WaOption from '@awesome.me/webawesome/dist/react/option/index.js';
 import WaSelect from '@awesome.me/webawesome/dist/react/select/index.js';
+import type WaSelectElement from '@awesome.me/webawesome/dist/components/select/select.js';
 import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import type WaButtonElement from '@awesome.me/webawesome/dist/components/button/button.js';
 import WaInput from '@awesome.me/webawesome/dist/react/input/index.js';
@@ -78,6 +80,7 @@ const EMPTY_FILTER_WITH_CONDITION: Filter = { operator: 'and', rules: [newFilter
 interface FilterEditorProps {
 	disabled?: boolean;
 	emptyFilterFocusRef?: RefObject<HTMLElement>;
+	errors?: Record<string, string>;
 	filter: Filter | null;
 	hoistMenus?: boolean;
 	onChange: (filter: Filter | null) => void;
@@ -89,11 +92,13 @@ interface FilterEditorProps {
 	showEmptyFilterAsCondition?: boolean;
 	subject: string;
 	target: PipelineTarget;
+	validationAttempt?: number;
 }
 
 const FilterEditor = ({
 	disabled = false,
 	emptyFilterFocusRef,
+	errors,
 	filter,
 	hoistMenus = false,
 	onChange,
@@ -105,6 +110,7 @@ const FilterEditor = ({
 	showEmptyFilterAsCondition = false,
 	subject,
 	target,
+	validationAttempt,
 }: FilterEditorProps) => {
 	const editorID = useId();
 	const [conditionRemovalAnnouncement, setConditionRemovalAnnouncement] = useState('');
@@ -127,6 +133,25 @@ const FilterEditor = ({
 		},
 		[],
 	);
+
+	useLayoutEffect(() => {
+		if (validationAttempt == null || validationAttempt === 0) {
+			return;
+		}
+		const input = rootRef.current?.querySelector<WaInputElement | WaSelectElement>('[aria-invalid="true"]');
+		if (input == null) {
+			return;
+		}
+		let canceled = false;
+		void input.updateComplete.then(() => {
+			if (!canceled && input.isConnected) {
+				input.focus();
+			}
+		});
+		return () => {
+			canceled = true;
+		};
+	}, [validationAttempt]);
 
 	useLayoutEffect(() => {
 		const pendingFocus = pendingConditionFocusRef.current;
@@ -424,6 +449,27 @@ const FilterEditor = ({
 		const values = condition.values ?? [];
 		const propertyName = isJSON ? base : condition.property;
 		const propertyDisplayValue = propertyItems.find((item) => item.term === propertyName)?.displayValue;
+		const formatError = (error: string | undefined): ReactNode => {
+			if (error == null) {
+				return undefined;
+			}
+			const message = error.endsWith('.') ? error : `${error}.`;
+			const quotedProperty = `"${condition.property.trim()}"`;
+			const position = message.indexOf(quotedProperty);
+			const prefix = message.slice(0, position);
+			if (position < 0 || (prefix !== 'Property ' && prefix !== 'The filter value on the property ')) {
+				return message;
+			}
+			return (
+				<>
+					{prefix}
+					<strong>
+						{getPropertyPathDisplayValue(condition.property.trim(), (path) => flatInputSchema[path]?.full)}
+					</strong>
+					{message.slice(position + quotedProperty.length)}
+				</>
+			);
+		};
 
 		const propertyInput = (
 			<Combobox
@@ -443,10 +489,18 @@ const FilterEditor = ({
 				autoResize={true}
 				hoist={hoistMenus}
 				error={
+					errors == null &&
 					condition.property !== '' &&
 					checkIfPropertyExists(isJSON ? base : condition.property, flatInputSchema, propertiesToHide)
 				}
-			/>
+				aria-invalid={errors?.[`property-${id}`] != null ? 'true' : undefined}
+			>
+				{errors?.[`property-${id}`] != null && (
+					<span slot='hint' role='alert'>
+						{formatError(errors[`property-${id}`])}
+					</span>
+				)}
+			</Combobox>
 		);
 		const pathInput = isJSON ? (
 			<WaInput
@@ -458,7 +512,14 @@ const FilterEditor = ({
 				name={`path-${id}`}
 				disabled={disabled}
 				placeholder='Path (optional)'
-			/>
+				aria-invalid={errors?.[`path-${id}`] != null ? 'true' : undefined}
+			>
+				{errors?.[`path-${id}`] != null && (
+					<span slot='hint' role='alert'>
+						{formatError(errors[`path-${id}`])}
+					</span>
+				)}
+			</WaInput>
 		) : null;
 		const operatorSelect = (
 			<WaSelect
@@ -470,6 +531,7 @@ const FilterEditor = ({
 				onWaAfterHide={onOperatorSelectClose}
 				placeholder='Operator'
 				disabled={isInvalidProperty || disabled}
+				aria-invalid={errors?.[`operator-${id}`] != null ? 'true' : undefined}
 			>
 				{property != null
 					? getCompatibleFilterOperators(property, propertyPath !== '').map((index) => (
@@ -482,6 +544,11 @@ const FilterEditor = ({
 								{operator}
 							</WaOption>
 						))}
+				{errors?.[`operator-${id}`] != null && (
+					<span slot='hint' role='alert'>
+						{formatError(errors[`operator-${id}`])}
+					</span>
+				)}
 			</WaSelect>
 		);
 
@@ -491,6 +558,7 @@ const FilterEditor = ({
 				<FilterValueControl
 					key={`value-${id}-0`}
 					name={`value-${id}-0`}
+					error={formatError(errors?.[`value-${id}-0`])}
 					value={values[0] ?? ''}
 					options={propertyValues}
 					disabled={isInvalidProperty || disabled}
@@ -506,6 +574,7 @@ const FilterEditor = ({
 					<FilterValueControl
 						key={`value-${id}-1`}
 						name={`value-${id}-1`}
+						error={formatError(errors?.[`value-${id}-1`])}
 						value={values[1] ?? ''}
 						options={propertyValues}
 						disabled={isInvalidProperty || disabled}
@@ -520,6 +589,7 @@ const FilterEditor = ({
 						<div className='filter-editor__value' key={`value-${id}-${valuePosition}`}>
 							<FilterValueControl
 								name={`value-${id}-${valuePosition}`}
+								error={formatError(errors?.[`value-${id}-${valuePosition}`])}
 								value={value}
 								options={propertyValues}
 								disabled={isInvalidProperty || disabled}
@@ -699,6 +769,7 @@ const FilterEditor = ({
 };
 
 interface FilterValueControlProps {
+	error?: ReactNode;
 	name: string;
 	value: string;
 	options: string[];
@@ -710,6 +781,7 @@ interface FilterValueControlProps {
 }
 
 const FilterValueControl = ({
+	error,
 	name,
 	value,
 	options,
@@ -764,6 +836,7 @@ const FilterValueControl = ({
 					value={value ?? ''}
 					onChange={handleSelect}
 					disabled={disabled}
+					aria-invalid={error != null ? 'true' : undefined}
 				>
 					{options.map((option, index) => (
 						<WaOption key={`${index}-${option}`} value={option}>
@@ -771,6 +844,11 @@ const FilterValueControl = ({
 						</WaOption>
 					))}
 					{removeButton}
+					{error != null && (
+						<span slot='hint' role='alert'>
+							{error}
+						</span>
+					)}
 				</WaSelect>
 			</div>
 		);
@@ -786,8 +864,14 @@ const FilterValueControl = ({
 			onKeyDown={handleKeyDown}
 			name={name}
 			disabled={disabled}
+			aria-invalid={error != null ? 'true' : undefined}
 		>
 			{removeButton}
+			{error != null && (
+				<span slot='hint' role='alert'>
+					{error}
+				</span>
+			)}
 		</WaInput>
 	);
 };

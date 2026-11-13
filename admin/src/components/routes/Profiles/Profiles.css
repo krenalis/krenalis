@@ -13,16 +13,7 @@
 }
 
 .profiles-list__stale-notice {
-	align-items: center;
-	background: var(--wa-color-brand-95);
-	border: 1px solid var(--wa-color-brand-80);
-	border-radius: var(--radius);
-	display: flex;
-	font-size: 13px;
-	gap: var(--wa-space-m);
-	justify-content: space-between;
 	margin-bottom: 10px;
-	padding: 8px 12px;
 	position: relative;
 	z-index: 1;
 }
@@ -534,10 +525,16 @@ html.profiles-columns-transition::view-transition-new(*):only-child {
 
 .profiles-list__filter-options {
 	align-items: center;
+	column-gap: var(--wa-space-m);
 	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
 	justify-content: flex-end;
 	margin: var(--wa-space-l) 11px 0 0;
 	position: relative;
+}
+
+.profiles-list__filter-apply {
+	grid-area: 1 / 2;
 }
 
 .profiles-list__filter-apply::part(label) {
@@ -547,7 +544,7 @@ html.profiles-columns-transition::view-transition-new(*):only-child {
 .profiles-list__filter-shortcut {
 	color: var(--text-light);
 	font-size: 12px;
-	grid-area: 1 / 1;
+	grid-area: 1 / 2;
 	justify-self: center;
 	position: absolute;
 	top: calc(100% + var(--wa-space-2xs) + 4px);
@@ -587,13 +584,15 @@ html.profiles-columns-transition::view-transition-new(*):only-child {
 }
 
 .profiles-list__filter-grid-error {
-	align-items: center;
-	display: flex;
+	color: var(--wa-color-danger-40);
 	font-size: 13px;
-	flex-wrap: wrap;
-	gap: var(--wa-space-s);
-	margin-top: var(--wa-space-l);
+	grid-area: 1 / 1;
+	justify-self: end;
 	min-width: 0;
+}
+
+.profiles-list__filter-options .profiles-list__filter-grid-error {
+	transform: translateY(1px);
 }
 
 .profiles-list__filter-preview-context {
@@ -702,16 +701,6 @@ wa-button.profiles-list__filter-history-action:not([disabled]):active::part(butt
 
 .profiles-list__filters wa-tooltip::part(body) {
 	font-weight: var(--wa-font-weight-light);
-}
-
-.profiles-list__filter-grid-error {
-	color: var(--wa-color-danger-40);
-	justify-content: flex-start;
-	margin-top: var(--wa-space-s);
-}
-
-.profiles-list__filter-grid-action .profiles-list__filter-grid-error {
-	margin-top: 0;
 }
 
 .profiles-list__filters--expanded + .profiles-list__layout {

@@ -165,7 +165,7 @@ const useProfiles = () => {
 						return false;
 					}
 					if (error instanceof UnprocessableError && error.code === 'SchemaNotAligned') {
-						applySequenceAction({ type: 'markSchemaNotAligned', executionID });
+						applySequenceAction({ type: 'markSchemaNotAligned', executionID, message: error.message });
 						return false;
 					}
 					throw error;
@@ -512,7 +512,11 @@ const useProfiles = () => {
 					return false;
 				}
 				if (error instanceof UnprocessableError && error.code === 'SchemaNotAligned') {
-					applySequenceAction({ type: 'markSchemaNotAligned', executionID: sequenceRef.current.executionID });
+					applySequenceAction({
+						type: 'markSchemaNotAligned',
+						executionID: sequenceRef.current.executionID,
+						message: error.message,
+					});
 				}
 				throw error;
 			} finally {
@@ -666,7 +670,12 @@ const useProfiles = () => {
 	);
 
 	const markProfileSchemaNotAligned = useCallback(
-		() => applySequenceAction({ type: 'markSchemaNotAligned', executionID: sequenceRef.current.executionID }),
+		(message?: string) =>
+			applySequenceAction({
+				type: 'markSchemaNotAligned',
+				executionID: sequenceRef.current.executionID,
+				message,
+			}),
 		[applySequenceAction],
 	);
 
@@ -700,6 +709,7 @@ const useProfiles = () => {
 		canNavigateNextProfile,
 		canNavigatePreviousProfile,
 		isProfileSchemaNotAligned: sequence.schemaNotAligned,
+		profileSchemaErrorMessage: sequence.schemaNotAlignedMessage,
 		goToProfilesPage,
 		markProfileSchemaNotAligned,
 		navigateProfile,

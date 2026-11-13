@@ -82,7 +82,11 @@ test.beforeEach(async ({ page }) => {
 
 for (const failure of [
 	{ status: 503, code: 'ServiceUnavailable', message: 'Data warehouse unavailable' },
-	{ status: 422, code: 'SchemaNotAligned', message: 'Profile schema has changed' },
+	{
+		status: 422,
+		code: 'SchemaNotAligned',
+		message: "«name» property's type has changed from «string» to «int»",
+	},
 ]) {
 	test(`Preserve the profile view after Refresh fails with ${failure.code} and allow a retry`, async ({ page }) => {
 		let refreshReads = 0;
@@ -136,8 +140,15 @@ for (const failure of [
 		releaseRefresh();
 
 		if (failure.code === 'SchemaNotAligned') {
-			await expect(page.locator('.profiles-list__stale-notice')).toBeVisible();
-			await expect(page.getByRole('alert')).toBeEmpty();
+			const notice = page.locator('.profiles-list__stale-notice');
+			await expect(notice).toBeVisible();
+			await expect(notice).toContainText(
+				"name property's type has changed from string to int. Your filters need to be cleared to continue.",
+			);
+			await expect(notice.locator('strong')).toHaveText(['name', 'string', 'int']);
+			await expect(notice).not.toContainText('«');
+			await expect(notice).not.toContainText('»');
+			await expect(page.locator('p[role="alert"]')).toBeEmpty();
 		} else {
 			await expect(page.getByRole('alert')).toContainText(failure.message);
 		}

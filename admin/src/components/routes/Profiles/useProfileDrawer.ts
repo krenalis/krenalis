@@ -16,7 +16,7 @@ const useProfileDrawer = (
 	selectedTab: ProfileTab,
 	schema: ObjectType | undefined,
 	profilesQueryKey: string,
-	onSchemaNotAligned: () => void,
+	onSchemaNotAligned: (message: string) => void,
 ) => {
 	const [attributesResource, setAttributesResource] = useState<ProfileResource<ProfileAttributes>>();
 	const [eventsResource, setEventsResource] = useState<ProfileResource<ProfileEvent[]>>();
@@ -59,7 +59,7 @@ const useProfileDrawer = (
 					return;
 				}
 				if (error instanceof UnprocessableError && error.code === 'SchemaNotAligned') {
-					onSchemaNotAligned();
+					onSchemaNotAligned(error.message);
 					return;
 				}
 				if (error instanceof NotFoundError) {

@@ -27,8 +27,9 @@ interface ProfilesContext {
 	canNavigateNextProfile: boolean;
 	canNavigatePreviousProfile: boolean;
 	isProfileSchemaNotAligned: boolean;
+	profileSchemaErrorMessage?: string;
 	goToProfilesPage: (first: number) => void;
-	markProfileSchemaNotAligned: () => void;
+	markProfileSchemaNotAligned: (message?: string) => void;
 	navigateProfile: (direction: 'previous' | 'next') => void;
 	refreshProfiles: () => void;
 	reorderProfilesProperties: (properties: ProfileProperty[]) => void;

@@ -23,6 +23,7 @@ import {
 	profileFilterFingerprint,
 	profileFilterResultsFingerprint,
 } from '../src/components/routes/Profiles/profilesFilterSession';
+import { getProfilesFilterErrors } from '../src/components/routes/Profiles/profilesFilterValidation';
 
 const profile = (index: number): ResponseProfile => ({
 	kpid: `profile-${index}`,
@@ -107,9 +108,14 @@ test(`Do not let an obsolete mismatch mark the current execution stale`, () => {
 		total: 1,
 		hasNext: false,
 	});
-	state = profilesSequenceReducer(state, { type: 'markSchemaNotAligned', executionID: 1 });
+	state = profilesSequenceReducer(state, {
+		type: 'markSchemaNotAligned',
+		executionID: 1,
+		message: '«email» property no longer exists',
+	});
 
 	expect(state.schemaNotAligned).toBe(false);
+	expect(state.schemaNotAlignedMessage).toBeUndefined();
 });
 
 test(`Retain useful adjacent pages and evict distant profile windows`, () => {
@@ -158,6 +164,11 @@ test(`Replace a sequence atomically after a candidate query succeeds`, () => {
 	});
 	state = profilesSequenceReducer(state, { type: 'setActiveProfile', profileID: 'profile-2' });
 
+	const message = '«email» property no longer exists';
+	state = profilesSequenceReducer(state, { type: 'markSchemaNotAligned', executionID: 1, message });
+	expect(state.schemaNotAligned).toBe(true);
+	expect(state.schemaNotAlignedMessage).toBe(message);
+
 	state = profilesSequenceReducer(state, {
 		type: 'replaceExecution',
 		queryKey: 'filtered-query',
@@ -178,6 +189,8 @@ test(`Replace a sequence atomically after a candidate query succeeds`, () => {
 	expect(state.activeProfileID).toBe('profile-4');
 	expect(state.total).toBe(3);
 	expect(state.isInitialLoading).toBe(false);
+	expect(state.schemaNotAligned).toBe(false);
+	expect(state.schemaNotAlignedMessage).toBeUndefined();
 	expect(getVisibleProfiles(state).map(({ kpid }) => kpid)).toEqual(['profile-3', 'profile-4']);
 	expect(getProfilesPage(state, 4)?.profiles.map(({ kpid }) => kpid)).toEqual(['profile-5']);
 });
@@ -315,6 +328,47 @@ test(`Normalize filter drafts without silently accepting partial conditions`, ()
 			}
 		}
 	}
+});
+
+test(`Associate all invalid filter fields with their editor paths`, () => {
+	const schema: ObjectType = {
+		...filterSchema,
+		properties: [
+			...filterSchema.properties,
+			{ ...filterSchema.properties[0], name: 'birth_date', type: { kind: 'date' } },
+			{ ...filterSchema.properties[0], name: 'metadata', type: { kind: 'json' } },
+		],
+	};
+	const errors = getProfilesFilterErrors(
+		{
+			operator: 'and',
+			rules: [
+				{ property: 'birth_date', operator: 'is between', values: ['2026-02-30', 'bad date'] },
+				{
+					operator: 'or',
+					rules: [
+						{ property: '', operator: '', values: [''] },
+						{ property: 'removed', operator: 'is', values: ['value'] },
+						{ property: 'metadata..name', operator: 'is', values: ['value'] },
+						{ property: 'birth_date', operator: 'contains', values: ['2026-11-13'] },
+						{ property: 'email', operator: '', values: ['value'] },
+						{ property: 'email', operator: 'is one of', values: ['Ada', ''] },
+					],
+				},
+			],
+		},
+		schema,
+	);
+	expect(errors).toEqual({
+		'value-0-0': expect.stringContaining('not a valid date'),
+		'value-0-1': expect.stringContaining('not a valid date'),
+		'property-1-0': 'Choose a property',
+		'property-1-1': expect.stringContaining('does not exist'),
+		'path-1-2': expect.stringContaining('not valid'),
+		'operator-1-3': 'Choose a compatible operator',
+		'operator-1-4': expect.stringContaining('required'),
+		'value-1-5-1': expect.stringContaining('cannot be empty'),
+	});
 });
 
 test(`Initialize filter history from the displayed filter`, () => {

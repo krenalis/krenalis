@@ -12,6 +12,7 @@ import { serializeFilter } from '../../../utils/filters';
 import { sleep } from '../../../utils/sleep';
 import { getPropertyPathDisplayValue } from '../../helpers/getPropertyPathDisplayValue';
 import { ProfileSchemaProperties } from './Profiles.types';
+import { getProfilesFilterErrors } from './profilesFilterValidation';
 import {
 	cloneProfileFilter,
 	commitProfilesFilter,
@@ -29,12 +30,6 @@ const MIN_PROFILES_LOADING_DURATION_MS = 400;
 interface ValidatedDraft {
 	filter?: Filter | null;
 	error?: string;
-}
-
-interface FailedGridRequest {
-	entry: FilterHistoryEntry;
-	shouldInspect: boolean;
-	message: string;
 }
 
 interface CollapsedFilterItem {
@@ -305,8 +300,9 @@ const ProfilesFilters = ({
 	const [isOpen, setIsOpen] = useState(false);
 	const [isShortcutActive, setIsShortcutActive] = useState(true);
 	const [pendingGridContext, setPendingGridContext] = useState<string>();
-	const [gridFailure, setGridFailure] = useState<FailedGridRequest>();
+	const [hasGridFailure, setHasGridFailure] = useState(false);
 	const [resultsUpdatedContext, setResultsUpdatedContext] = useState<string>();
+	const [validationAttempt, setValidationAttempt] = useState(0);
 	const sessionRef = useRef(session);
 	const gridRequestGenerationRef = useRef(0);
 	const draftRevisionRef = useRef(0);
@@ -377,6 +373,19 @@ const ProfilesFilters = ({
 			return { error: error instanceof Error ? error.message : String(error) };
 		}
 	}, [normalizeFilter, session.draft]);
+	const validationErrors = useMemo(
+		() =>
+			validationAttempt > 0 && validatedDraft.error != null ? getProfilesFilterErrors(session.draft, schema) : {},
+		[schema, session.draft, validatedDraft.error, validationAttempt],
+	);
+	const validateDraft = useCallback((): Filter | null | undefined => {
+		try {
+			return normalizeFilter(sessionRef.current.draft);
+		} catch {
+			setValidationAttempt((attempt) => attempt + 1);
+			return undefined;
+		}
+	}, [normalizeFilter]);
 
 	const historyEntry = currentProfilesFilterHistoryEntry(session);
 	const hasFilters = validatedDraft.filter != null || validatedDraft.error != null;
@@ -390,7 +399,7 @@ const ProfilesFilters = ({
 		profileFilterResultsFingerprint(validatedDraft.filter ?? null) !==
 			profileFilterResultsFingerprint(appliedFilter);
 	const isUpdatingGridResults = pendingGridContext != null;
-	const canApplyFilters = validatedDraft.error == null && hasUnappliedChanges && !isUpdatingGridResults;
+	const canApplyFilters = hasUnappliedChanges && !isUpdatingGridResults;
 	const canApplyWithShortcut = canApplyFilters && isShortcutActive;
 	const propertyLabel = useCallback(
 		(property: string) => getPropertyPathDisplayValue(property, (path) => schemaProperties[path]),
@@ -408,7 +417,7 @@ const ProfilesFilters = ({
 			}
 			draftRevisionRef.current++;
 			updateSession((state) => ({ ...state, draft }));
-			setGridFailure(undefined);
+			setHasGridFailure(false);
 		},
 		[updateSession],
 	);
@@ -429,7 +438,7 @@ const ProfilesFilters = ({
 	const selectHistoryEntry = (historyIndex: number) => {
 		const target = sessionRef.current.history[historyIndex];
 		draftRevisionRef.current++;
-		setGridFailure(undefined);
+		setHasGridFailure(false);
 		updateSessionWithHistoryTransition((state) => ({
 			...state,
 			draft: cloneProfileFilter(target.draft),
@@ -466,6 +475,7 @@ const ProfilesFilters = ({
 		(open: boolean) => {
 			setIsOpen(open);
 			if (open) {
+				setValidationAttempt(0);
 				setIsShortcutActive(true);
 				triggerRef.current?.blur();
 				return;
@@ -483,7 +493,7 @@ const ProfilesFilters = ({
 			const draftRevision = draftRevisionRef.current;
 			expectedDisplayedContextRef.current = snapshotContext;
 			setPendingGridContext(snapshotContext);
-			setGridFailure(undefined);
+			setHasGridFailure(false);
 			setResultsUpdatedContext(undefined);
 			const minimumLoading = sleep(MIN_PROFILES_LOADING_DURATION_MS);
 			try {
@@ -516,7 +526,7 @@ const ProfilesFilters = ({
 				if (gridRequestGenerationRef.current === generation) {
 					expectedDisplayedContextRef.current = undefined;
 					setPendingGridContext(undefined);
-					setGridFailure({ entry, shouldInspect, message: 'Unable to apply filters.' });
+					setHasGridFailure(true);
 				}
 			}
 		},
@@ -545,10 +555,8 @@ const ProfilesFilters = ({
 
 	const collapseFilters = useCallback(() => {
 		const draft = sessionRef.current.draft;
-		let filter: Filter | null;
-		try {
-			filter = normalizeFilter(draft);
-		} catch {
+		const filter = validateDraft();
+		if (filter === undefined) {
 			return;
 		}
 		draftRevisionRef.current++;
@@ -565,7 +573,7 @@ const ProfilesFilters = ({
 			return;
 		}
 		void materializeProfiles(entry, false);
-	}, [appliedFilter, materializeProfiles, normalizeFilter, pendingGridContext, setEditorOpen, updateSession]);
+	}, [appliedFilter, materializeProfiles, pendingGridContext, setEditorOpen, updateSession, validateDraft]);
 
 	const displayedContext = appliedFilterFingerprint;
 	useEffect(() => {
@@ -613,26 +621,26 @@ const ProfilesFilters = ({
 				return;
 			}
 			event.preventDefault();
-			collapseFilters();
+			if (!hasUnappliedChanges) {
+				setEditorOpen(false);
+			}
 		};
 		document.addEventListener('keydown', onKeyDown, true);
 		return () => document.removeEventListener('keydown', onKeyDown, true);
-	}, [collapseFilters, isOpen]);
+	}, [hasUnappliedChanges, isOpen, setEditorOpen]);
 
 	const applyFilters = useCallback(() => {
 		if (!canApplyFilters) {
 			return;
 		}
 		const draft = sessionRef.current.draft;
-		let filter: Filter | null;
-		try {
-			filter = normalizeFilter(draft);
-		} catch {
+		const filter = validateDraft();
+		if (filter === undefined) {
 			return;
 		}
 		updateSession((state) => commitProfilesFilter(state, filter, draft));
 		void materializeProfiles(currentProfilesFilterHistoryEntry(sessionRef.current));
-	}, [canApplyFilters, materializeProfiles, normalizeFilter, updateSession]);
+	}, [canApplyFilters, materializeProfiles, updateSession, validateDraft]);
 
 	useEffect(() => {
 		const editor = editorRef.current;
@@ -687,18 +695,10 @@ const ProfilesFilters = ({
 		};
 	}, [applyFilters, isMac, isOpen, isShortcutActive]);
 
-	const gridErrorMessage = gridFailure != null && (
-		<div className='profiles-list__filter-grid-error' role='alert'>
-			<span>{gridFailure.message}</span>
-			<WaButton
-				size='s'
-				variant='brand'
-				appearance='plain'
-				onClick={() => void materializeProfiles(gridFailure.entry, gridFailure.shouldInspect)}
-			>
-				Retry
-			</WaButton>
-		</div>
+	const gridErrorMessage = hasGridFailure && (
+		<span className='profiles-list__filter-grid-error' role='alert'>
+			Unable to apply filters
+		</span>
 	);
 
 	// History actions discard the focused draft instead of confirming it on blur.
@@ -799,6 +799,7 @@ const ProfilesFilters = ({
 						>
 							<div className='profiles-list__filter-editor-body'>
 								<FilterEditor
+									errors={validationErrors}
 									filter={session.draft}
 									hoistMenus={true}
 									onChange={onDraftChange}
@@ -809,10 +810,11 @@ const ProfilesFilters = ({
 									showEmptyFilterAsCondition={true}
 									subject='Profiles'
 									target='User'
+									validationAttempt={validationAttempt}
 								/>
-								{isOpen && gridErrorMessage}
 							</div>
 							<div className='profiles-list__filter-options'>
+								{isOpen && gridErrorMessage}
 								<WaButton
 									className='profiles-list__filter-apply'
 									variant={canApplyFilters || isUpdatingGridResults ? 'brand' : 'neutral'}
@@ -863,7 +865,7 @@ const ProfilesFilters = ({
 							<span className='profiles-list__filter-status' role='status'>
 								Updating profiles…
 							</span>
-						) : !isOpen && gridFailure == null && hasUnappliedChanges ? (
+						) : !isOpen && !hasGridFailure && hasUnappliedChanges ? (
 							<span className='profiles-list__filter-status' role='status'>
 								Unapplied changes · Showing previous results
 							</span>

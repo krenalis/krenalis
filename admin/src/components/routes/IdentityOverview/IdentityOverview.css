@@ -820,13 +820,8 @@
 	border-radius: var(--radius);
 }
 
-.identity-dashboard__section > .identity-dashboard__state--compact {
-	min-height: auto;
-	justify-content: flex-start;
-	margin: 0 0 10px;
-	padding: 10px 13px;
-	border: 1px solid var(--wa-color-danger-80);
-	background: var(--wa-color-danger-95);
+.identity-dashboard__error-notice {
+	margin-bottom: 10px;
 }
 
 .identity-dashboard__period-empty-card .identity-dashboard__state,
