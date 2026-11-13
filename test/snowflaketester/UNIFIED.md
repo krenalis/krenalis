@@ -1023,13 +1023,13 @@ python3 test/snowflaketester/run.py --require-schemas \
   --require-result-tag krenalis-transport/record-legacy \
   "$campaign_dir/record-la.jsonl" -- \
   -overlay "$campaign_dir/record-la-overlay/overlay.json" ./core/internal/datastore -race \
-  -run '^TestUnifiedRecord(Conformance|Collation)Snowflake$/(native|false_AND_unknown|true_OR_unknown|unknown_AND_true|unknown_OR_false)$/(0|6|8|9|14|15|16|17)$' \
+  -run '^TestUnifiedRecord(Conformance|Collation)Snowflake$/(native|false_AND_unknown|true_OR_unknown|unknown_AND_true|unknown_OR_false)$/^(0|6|8|9|10|14|15|16|17|18|19)$' \
   -timeout=10m
 ```
 
 The reduced block selects temporal equality, interval, array containment and
-before/after families, plus the four compositions. The fixture still performs
-its bounded setup and final empty-page/event-table-independence checks. Filtered
+before/after families, plus prefix/Boolean families and the four compositions.
+The fixture still performs its bounded setup and final empty-page/event-table-independence checks. Filtered
 subtests are excluded by `-run`, not skipped at runtime.
 
 Before live execution, record the successful local counts and inspect the
@@ -1042,6 +1042,65 @@ SQL legacy ordering; pipeline Go evaluation is a separate existing path.
 Neither the JSON numeric contract nor the known native JSON transport failure
 is changed by these tests.
 
+### Live Record results (2026-11-13)
+
+Code and fixture commit: `025a4347f7711ddf8025c52bc6088de4dd9f03f6`.
+Evidence directory: `/private/tmp/krenalis-record-snowflake-h3l2qrte/`.
+
+| Run | PASS | Result |
+| --- | ---: | --- |
+| `record-local` | 177 | complete PostgreSQL matrix, source and collation fixtures, with race detector |
+| `record-la-local` | 17 | local check of the reduced selector |
+| `record-utc` | 178 | complete Snowflake group, with the additional unsupported-collation failure case |
+| `record-la` | 17 | reduced Snowflake group |
+| `inventory-after/inventory-verified` | 1 | independent read-only inventory, five campaign schemas absent |
+
+There were no FAIL or SKIP events in these five accepted runs. Each records
+`source_stable=true`, the code commit above, and unchanged source/overlay hashes.
+All 385 tracked source hashes match that commit. The foreign untracked root
+`connectors.go` is unchanged and not part of the tested package dependency tree.
+
+Actual SELECT response formats are ARROW throughout:
+
+| Tag suffix | UTC SELECTs | America/Los_Angeles SELECTs |
+| --- | ---: | ---: |
+| `record-query` | 198 | 29 |
+| `record-explanation` | 65 | 26 |
+| `record-legacy` | 40 | 22 |
+
+The UTC run therefore records 303 successful tagged application SELECTs, plus
+two expected untagged execution failures (unsupported CONTAINS collation and
+non-finite Real projection). The reduced run records 77 tagged SELECTs and the
+Real projection failure. These are datastore/warehouse results; no new public
+HTTP/MCP execution is claimed. The successful query/explanation formats and
+requested ARROW session settings are independently observed, with no invalid
+records. UTC opened six verified standard sessions, LA four.
+
+The reduced command used a suffix expression that also matched native families
+10, 18 and 19. They are prefix and Boolean families; all passed. The command
+above now names the same eleven families explicitly with anchors, so future
+runs repeat the actual covered set without relying on suffix matching.
+
+The schema ledger has five creates and five drops (three UTC, two LA), no
+orphans and no audit issues. A preliminary read-only baseline counted 23
+pre-existing test schemas; the final independent inventory found those same
+23 visible test schemas and zero remaining campaign schemas. Foreign schemas
+were not altered. The baseline and first final-inventory wrapper incorrectly
+set `KRENALIS_SKIP_SNOWFLAKE_TESTS=false`, making the runner demand schema
+creation from read-only tests: their Go tests passed, but their manifests have
+exit 4. The corrected final run leaves that variable unset and passes the
+runner too. The failed wrappers are retained in the evidence subdirectories;
+they are not accepted application runs or hidden failures.
+
+All credential-value/form output audits are zero. Four isolated local mutants
+were detected: removal of exact collation, removal of page/screen name
+presence, a negative predicate accepting NULL, and native NaN replaced by NULL.
+The Record renderer is unchanged, including native collation and SQL NaN
+semantics. Source type/name selectors are now literal under inherited `en-ci` and the
+PostgreSQL enum/ICU setup. Native-text collation still needs the user's policy
+decision before activation; fault/resource coverage and the known native JSON
+transport issue remain separate. The production gate is still false.
+
 ## Coverage still required before activation
 
 Passing the commands above is necessary, but is not the complete acceptance
@@ -1051,10 +1110,12 @@ In particular, the following work remains explicit:
 - Decide how native FLOAT/BOOLEAN compatibility with JSON results affects the
   supported transport contract. Nested numeric fixtures and the Arrow native
   path passed above; the failed JSON native probe does not certify equivalence.
-- Remaining Record operator/collation/Float-NaN cases and source cases beyond the
-  shared fixtures. The added groups now provide remote evidence for Count money,
+- Decide the native-text collation policy before activation; the bounded
+  Record/collation/Float-NaN campaign above passed on both warehouses. Source
+  cases beyond the shared fixtures are not certified by that result. The added
+  groups now provide remote evidence for Count money,
   Sum/Average where and minimum, covered conflicts, mixed explanations,
-  projections and pagination. Not every Record case has a Snowflake setup yet.
+  projections and pagination.
 - Further scan/iteration/close failures, malformed/oversized results, additional
   timestamp precisions, session changes and a small scale/resource smoke test.
   Running-query timeout/cancellation evidence is recorded separately below.
