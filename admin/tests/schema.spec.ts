@@ -1,5 +1,5 @@
-import { test, expect, type Locator } from '@playwright/test';
-import { login, logout, adminURL, logValidationErrors } from './utils';
+import { test, expect, type Locator, type Page } from '@playwright/test';
+import { login, logout, adminURL, logValidationErrors, loadSyncToken, syncTokenHeaders } from './utils';
 import Type, { ObjectType, Property } from '../src/lib/api/types/types';
 import { ConsentPurpose, PrimarySources, ProfilePropertyRoles, ProfileSchema } from '../src/lib/api/types/workspace';
 
@@ -21,6 +21,37 @@ const createSchemaProperty = (name: string, type: Property['type']): Property =>
 	displayName: '',
 	description: '',
 });
+
+// Delay body decoding while allowing the API queue to receive response headers
+// and send the polling requests used to observe concurrent schema changes.
+const delayResponseBody = async (page: Page, pathname: string, method: string) => {
+	const release = await page.evaluateHandle(
+		({ pathname, method }) => {
+			let releaseBody: () => void;
+			const bodyGate = new Promise<void>((resolve) => {
+				releaseBody = resolve;
+			});
+			const originalFetch = window.fetch.bind(window);
+			window.fetch = async (input, request) => {
+				const response = await originalFetch(input, request);
+				if (new URL(response.url).pathname === pathname && request?.method === method) {
+					const readBody = response.text.bind(response);
+					response.text = async () => {
+						await bodyGate;
+						return readBody();
+					};
+				}
+				return response;
+			};
+			return () => releaseBody();
+		},
+		{ pathname, method },
+	);
+	return async () => {
+		await release.evaluate((releaseBody) => releaseBody());
+		await release.dispose();
+	};
+};
 
 const selectPropertyType = async (page, option: string) => {
 	const panel = page.locator('.property-panel');
@@ -57,7 +88,7 @@ const mockProfilePropertyRoles = async (page, propertyRoles: ProfilePropertyRole
 	});
 	await page.route('**/v1/profiles/schema', async (route) => {
 		if (route.request().method() === 'PUT') {
-			await route.fulfill({ json: {} });
+			await route.fulfill({ json: {}, headers: syncTokenHeaders() });
 			return;
 		}
 		const response = await route.fetch();
@@ -138,6 +169,7 @@ const getVerticalCenter = async (locator: Locator): Promise<number> => {
 
 test.beforeEach(async ({ page }) => {
 	await login(page);
+	await loadSyncToken(page);
 });
 
 test.afterEach(async ({ page }) => {
@@ -461,17 +493,14 @@ for (const { scenario, shouldObserveAltering, shouldDelayPreview, initialStartTi
 		let hasExternalChanges = false;
 		let schemaRequestCount = 0;
 		let alterationRequestCount = 0;
-		let releasePreview = () => {};
-		const previewGate = new Promise<void>((resolve) => {
-			releasePreview = resolve;
-		});
+		let releasePreview = async () => {};
 		await page.route('**/v1/profiles/schema/latest-alter', async (route) => {
 			await route.fulfill({ json: latestAlter });
 		});
 		await page.route('**/v1/profiles/schema', async (route) => {
 			if (route.request().method() === 'PUT') {
 				alterationRequestCount++;
-				await route.fulfill({ json: {} });
+				await route.fulfill({ json: {}, headers: syncTokenHeaders() });
 				return;
 			}
 			schemaRequestCount++;
@@ -493,13 +522,13 @@ for (const { scenario, shouldObserveAltering, shouldDelayPreview, initialStartTi
 			});
 		});
 		await page.route('**/v1/profiles/schema/preview', async (route) => {
-			if (shouldDelayPreview) {
-				await previewGate;
-			}
 			await route.fulfill({ json: { queries: [] } });
 		});
 
 		await page.goto(`${adminURL}/profile-unification/schema`);
+		if (shouldDelayPreview) {
+			releasePreview = await delayResponseBody(page, '/v1/profiles/schema/preview', 'PUT');
+		}
 		await editSchema(page);
 		await openProperty(page, 'first_name');
 		const panel = page.locator('.property-panel');
@@ -524,15 +553,11 @@ for (const { scenario, shouldObserveAltering, shouldDelayPreview, initialStartTi
 		};
 		hasExternalChanges = !shouldObserveAltering;
 		const warning = page.locator('.schema-edit__outdated-warning');
-		const previewResponse = shouldDelayPreview ? page.waitForResponse('**/v1/profiles/schema/preview') : null;
 		try {
 			await expect(warning).toContainText('The schema was changed in another session', { timeout: 10000 });
 			await expect(page.locator('.schema-edit__queries')).toHaveJSProperty('open', false);
 		} finally {
-			releasePreview();
-		}
-		if (previewResponse != null) {
-			await previewResponse;
+			await releasePreview();
 		}
 		await expect(page.locator('.schema-edit__header-apply-button')).toHaveAttribute('disabled');
 		await expect(page.locator('.schema-edit__change-count')).toHaveText('1 pending change');
@@ -581,15 +606,15 @@ for (const shouldFailSave of [false, true]) {
 		await page.clock.install();
 		let submittedSchema: ObjectType;
 		let isAlterComplete = false;
-		let releaseSave = () => {};
-		const saveGate = new Promise<void>((resolve) => {
-			releaseSave = resolve;
-		});
 		await page.route('**/v1/profiles/schema', async (route) => {
 			if (route.request().method() === 'PUT') {
 				submittedSchema = route.request().postDataJSON().schema;
-				await saveGate;
-				await route.fulfill({ status: shouldFailSave ? 500 : 200, json: {} });
+				// Fail after the delayed body is read, rather than when headers arrive.
+				await route.fulfill({
+					contentType: 'application/json',
+					headers: syncTokenHeaders(),
+					body: shouldFailSave ? '{' : '{}',
+				});
 				return;
 			}
 			if (isAlterComplete) {
@@ -618,6 +643,7 @@ for (const shouldFailSave of [false, true]) {
 		});
 
 		await page.goto(`${adminURL}/profile-unification/schema`);
+		const releaseSave = await delayResponseBody(page, '/v1/profiles/schema', 'PUT');
 		await editSchema(page);
 		await openProperty(page, 'first_name');
 		const description = page.locator('.property-panel wa-textarea textarea[name="description"]');
@@ -647,7 +673,7 @@ for (const shouldFailSave of [false, true]) {
 			await expect(description).toHaveValue('Local schema change');
 			await expect(page.locator('.schema-edit__change-count')).toHaveText('1 pending change');
 		} finally {
-			releaseSave();
+			await releaseSave();
 		}
 		if (shouldFailSave) {
 			await expect(warning).toBeVisible();
@@ -767,7 +793,7 @@ for (const {
 			if (route.request().method() === 'PUT') {
 				submittedSources.push(route.request().postDataJSON().primarySources);
 				submittedSchemas.push(route.request().postDataJSON().schema);
-				await route.fulfill({ json: {} });
+				await route.fulfill({ json: {}, headers: syncTokenHeaders() });
 				return;
 			}
 			schemaRequestCount++;
@@ -1890,7 +1916,7 @@ test(`Keep the schema review open while applying changes`, async ({ page }) => {
 			return;
 		}
 		await alterResponse;
-		await route.fulfill({ json: {} });
+		await route.fulfill({ json: {}, headers: syncTokenHeaders() });
 	});
 
 	await page.goto(`${adminURL}/profile-unification/schema`);
@@ -2058,8 +2084,8 @@ test(`Create profile schema properties with default semantics and options`, asyn
 		'url',
 		'string',
 		'boolean',
-		'duration',
 		'int',
+		'duration',
 		'float',
 		'money',
 		'percentage',
@@ -2083,7 +2109,7 @@ test(`Create profile schema properties with default semantics and options`, asyn
 		),
 	).toHaveText([
 		'country · string',
-		'duration · int',
+		'duration · float',
 		'money · decimal(18,4)',
 		'percentage · decimal(18,4)',
 		'measurement · decimal(18,4)',
@@ -2163,6 +2189,7 @@ test(`Create profile schema properties with default semantics and options`, asyn
 	const emptyMeasurementUnit = measurementUnit.locator('wa-option[value=""]');
 	await expect(emptyMeasurementUnit).toBeHidden();
 	await expect(measurementUnit.locator('wa-option[value="g"]')).toHaveJSProperty('current', false);
+	await expect(measurementUnit.locator('wa-option[value="second"]')).toHaveText('Second · s');
 	await measurementUnit.locator('wa-option[value="kg"]').click();
 	await expect(measurementUnit).toHaveJSProperty('value', 'kg');
 	await expect(measurementUnit.locator('[part="display-input"]')).toHaveValue('Kilogram · kg');
@@ -2188,15 +2215,17 @@ test(`Create profile schema properties with default semantics and options`, asyn
 	const emptyDurationUnit = durationUnit.locator('wa-option[value=""]');
 	await expect(emptyDurationUnit).toBeHidden();
 	await expect(durationUnit.locator('wa-option[value="millisecond"]')).toHaveJSProperty('current', false);
+	await expect(durationUnit.locator('wa-option[value="year"]')).toHaveText('Year · yr');
+	await expect(durationUnit.locator('wa-option[value="kg"]')).toHaveCount(0);
 	await durationUnit.locator('wa-option[value="second"]').click();
-	await expect(durationUnit.locator('[part="display-input"]')).toHaveValue('Seconds · s');
+	await expect(durationUnit.locator('[part="display-input"]')).toHaveValue('Second · s');
 	await expect(emptyDurationUnit).toHaveCount(0);
 	await expect(propertyPanel.locator('[data-error-on="duration-unit"]')).toHaveCount(0);
 	await expect(propertyPanel.locator('.property-panel__save')).not.toHaveAttribute('disabled');
 	await propertyPanel.locator('.property-panel__save').click();
 	await expect(
 		page.locator('.schema-edit .grid__row[data-id="semantics_duration"] .schema-property-grid__type'),
-	).toHaveText('duration — s · int(64)');
+	).toHaveText('duration — s · float(64) · real');
 
 	const previewRequestPromise = page.waitForRequest(
 		(request) => request.url().endsWith('/profiles/schema/preview') && request.method() === 'PUT',
@@ -2239,11 +2268,11 @@ test(`Create profile schema properties with default semantics and options`, asyn
 	});
 	const duration = schema.properties.find((property) => property.name === 'semantics_duration');
 	expect(duration?.type).toEqual({
-		kind: 'int',
+		kind: 'float',
 		semantics: 'duration',
 		unit: 'second',
 		bitSize: 64,
-		unsigned: false,
+		real: true,
 	});
 	const previewResponse = await previewResponsePromise;
 	expect(previewResponse.status()).toBe(200);
@@ -2255,7 +2284,7 @@ for (const [semantics, kind, structure] of [
 	['phone', 'string', 'array'],
 	['url', 'string', 'map'],
 	['country', 'string', 'one'],
-	['duration', 'int', 'array'],
+	['duration', 'float', 'array'],
 	['money', 'decimal', 'one'],
 	['percentage', 'decimal', 'array'],
 	['measurement', 'decimal', 'map'],
@@ -2266,7 +2295,7 @@ for (const [semantics, kind, structure] of [
 		});
 		await page.route('**/v1/profiles/schema', async (route) => {
 			if (route.request().method() === 'PUT') {
-				await route.fulfill({ status: 200 });
+				await route.fulfill({ status: 200, headers: syncTokenHeaders() });
 				return;
 			}
 			await route.continue();
@@ -2311,9 +2340,12 @@ for (const [semantics, kind, structure] of [
 			await expect(propertyPanel.locator('.property-form__scale input')).toHaveValue('4');
 			await expect(propertyPanel.locator('.property-form__minimum input')).toHaveValue('-10.5');
 			await expect(propertyPanel.locator('.property-form__maximum input')).toHaveValue('10.5');
-		} else if (kind === 'int') {
+		} else if (kind === 'float') {
 			await expect(propertyPanel.locator('.property-form__bit-size')).toHaveJSProperty('value', '64');
-			await expect(propertyPanel.locator('.property-form__integer-sign')).toHaveJSProperty('value', 'signed');
+			await expect(propertyPanel.locator('.property-form__float-special-values wa-checkbox')).toHaveJSProperty(
+				'checked',
+				false,
+			);
 		} else {
 			await expect(propertyPanel.locator('.property-form__constraints--length')).toBeVisible();
 		}
@@ -2333,8 +2365,8 @@ for (const [semantics, kind, structure] of [
 		const valueType: Type =
 			kind === 'decimal'
 				? { kind, precision: 18, scale: 4, minimum: -10.5, maximum: 10.5 }
-				: kind === 'int'
-					? { kind, bitSize: 64, unsigned: false }
+				: kind === 'float'
+					? { kind, bitSize: 64, real: true }
 					: { kind };
 		for (const request of [previewRequest, alterRequest]) {
 			const schema = request.postDataJSON().schema as ObjectType;
@@ -2713,7 +2745,7 @@ test(`Keep applied property types read-only and preserve their configuration`, a
 		},
 		materialized_money_without_currency: { kind: 'decimal', semantics: 'money', precision: 18, scale: 4 },
 		materialized_measurement: { kind: 'decimal', semantics: 'measurement', unit: 'kg', precision: 18, scale: 4 },
-		materialized_duration: { kind: 'int', semantics: 'duration', unit: 'second', bitSize: 64, unsigned: false },
+		materialized_duration: { kind: 'float', semantics: 'duration', unit: 'second', bitSize: 64, real: true },
 		materialized_country: { kind: 'string', semantics: 'country', format: 'alpha-3' },
 		materialized_percentage: { kind: 'decimal', semantics: 'percentage', precision: 18, scale: 4 },
 		materialized_integer: { kind: 'int', bitSize: 32, unsigned: true, minimum: 0, maximum: 100 },
@@ -2759,7 +2791,7 @@ test(`Keep applied property types read-only and preserve their configuration`, a
 		materialized_money: 'EUR · Euro',
 		materialized_money_without_currency: 'No currency specified',
 		materialized_measurement: 'Kilogram · kg',
-		materialized_duration: 'Seconds · s',
+		materialized_duration: 'Second · s',
 		materialized_country: '3-letter ISO code',
 	};
 	for (const name of Object.keys(appliedTypes)) {
@@ -2849,7 +2881,7 @@ test(`Render array and map property types and preserve their semantics`, async (
 			return;
 		}
 		if (request.method() === 'PUT') {
-			await route.fulfill({ status: 200 });
+			await route.fulfill({ status: 200, headers: syncTokenHeaders() });
 			return;
 		}
 		await route.continue();
@@ -3011,7 +3043,7 @@ test(`Clear the primary source when changing a new property to an array`, async 
 	});
 	await page.route('**/v1/profiles/schema', async (route) => {
 		if (route.request().method() === 'PUT') {
-			await route.fulfill({ json: {} });
+			await route.fulfill({ json: {}, headers: syncTokenHeaders() });
 			return;
 		}
 		await route.continue();
@@ -3416,7 +3448,7 @@ test(`Remove a renamed property without sending its stale RePath`, async ({ page
 test(`Remove a replacement property without sending its stale RePath`, async ({ page }) => {
 	await page.route('**/v1/profiles/schema', async (route) => {
 		if (route.request().method() === 'PUT') {
-			await route.fulfill({ json: {} });
+			await route.fulfill({ json: {}, headers: syncTokenHeaders() });
 			return;
 		}
 		const response = await route.fetch();

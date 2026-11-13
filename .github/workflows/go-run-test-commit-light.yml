@@ -7,9 +7,14 @@ permissions: {}
 
 jobs:
   tests:
-    # Note that 'ubuntu-latest' includes the Docker server, which is required to
+    # Note that 'ubuntu-24.04' includes the Docker server, which is required to
     # run './test/commit'.
-    runs-on: ubuntu-latest
+    #
+    # TODO(Gianluca): `ubuntu-latest` causes issues with the
+    # current version of Playwright ("Failed to install browsers; ERROR:
+    # Playwright does not support chromium on ubuntu26.04-x64"), so for now,
+    # let's pin it to version 24.04, which works.
+    runs-on: ubuntu-24.04
 
     timeout-minutes: 60
 
@@ -22,20 +27,20 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: actions/setup-go@v6
+      - uses: actions/setup-go@v7
         with:
           # Keep in sync with the version within ".github/workflows/*.yml".
           # Keep in sync with the version within "Dockerfile".
           # Keep in sync with the version within "go.mod".
           go-version: "1.27"
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: 24
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
-          python-version: "3.14"
+          python-version: "3.15"
 
       - name: Install Python dependencies
         run: |

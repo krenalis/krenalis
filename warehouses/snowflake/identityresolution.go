@@ -338,8 +338,13 @@ func (warehouse *Snowflake) finalizeIdentityResolution(ctx context.Context, conn
 	if operationErr == nil {
 		return counts, nil
 	}
+	if ctx.Err() != nil {
+		operationErr = fmt.Errorf("operation interrupted: %w", context.Cause(ctx))
+	}
 	operationError := warehouses.NewOperationError(operationErr)
 
+	ctx, cancel := withDelayedCancellation(ctx, finalizationGracePeriod)
+	defer cancel()
 	bo := backoff.New(200)
 	bo.SetCap(30 * time.Second)
 	for bo.Next(ctx) {

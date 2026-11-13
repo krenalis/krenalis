@@ -40,11 +40,10 @@ window.fetch = async (input) => {
 	const url = String(input);
 	const revision = window.identityOverviewRevision ?? 0;
 	const failure = window.identityOverviewFailure;
+	const shouldFail = failure != null && url.includes(failure);
+	const shouldHold = window.identityOverviewHold != null && url.includes(window.identityOverviewHold);
 	window.identityOverviewRequests.push(url);
-	if (window.identityOverviewHold != null && url.includes(window.identityOverviewHold)) {
-		await new Promise<void>((release) => window.identityOverviewPending.push(release));
-	}
-	if (failure != null && url.includes(failure)) return new Response(null, { status: 500 });
+	if (shouldFail && !shouldHold) return new Response(null, { status: 500 });
 	const hasLegendFilters = window.identityOverviewScenario === 'legendFilters';
 	if (window.identityOverviewScenario === 'atomic' || hasLegendFilters) {
 		const day = revision === 0 ? '2026-08-02' : '2026-08-03';
@@ -109,7 +108,18 @@ window.fetch = async (input) => {
 		} else {
 			data = [{ day: '2026-07-31', total: total - 2, anonymous, recognized: recognized - 2 }];
 		}
-		return new Response(JSON.stringify(data), { headers: { 'Content-Type': 'application/json' } });
+		const response = new Response(JSON.stringify(data), { headers: { 'Content-Type': 'application/json' } });
+		if (shouldHold) {
+			// Hold the body so newer requests can run after the API queue receives headers.
+			const bodyGate = new Promise<void>((release) => window.identityOverviewPending.push(release));
+			const readBody = response.text.bind(response);
+			response.text = async () => {
+				await bodyGate;
+				if (shouldFail) throw new Error('Simulated response body failure');
+				return readBody();
+			};
+		}
+		return response;
 	}
 	if (url.includes('/metrics/identity-resolution/latest')) {
 		if (window.identityOverviewScenario === 'resolutionUnauthorized') {

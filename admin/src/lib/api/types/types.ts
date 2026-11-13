@@ -21,7 +21,7 @@ type FloatBitSize = 32 | 64;
 
 type CountryFormat = 'alpha-2' | 'alpha-3';
 
-type UnitOfMeasure =
+type Unit =
 	| 'g'
 	| 'kg'
 	| 'mm'
@@ -41,9 +41,15 @@ type UnitOfMeasure =
 	| 'in'
 	| 'ft'
 	| 'yd'
-	| 'mi';
-
-type DurationUnit = 'millisecond' | 'second' | 'minute' | 'hour' | 'day' | 'week';
+	| 'mi'
+	| 'millisecond'
+	| 'second'
+	| 'minute'
+	| 'hour'
+	| 'day'
+	| 'week'
+	| 'month'
+	| 'year';
 
 type Semantics = 'email' | 'phone' | 'url' | 'country' | 'money' | 'percentage' | 'measurement' | 'duration';
 
@@ -93,7 +99,7 @@ interface BooleanType {
 interface IntType {
 	kind: 'int';
 	semantics?: 'measurement' | 'duration';
-	unit?: UnitOfMeasure | DurationUnit;
+	unit?: Unit;
 	bitSize: IntBitSize;
 	unsigned: boolean;
 	minimum?: number;
@@ -103,7 +109,7 @@ interface IntType {
 interface FloatType {
 	kind: 'float';
 	semantics?: 'measurement' | 'duration';
-	unit?: UnitOfMeasure | DurationUnit;
+	unit?: Unit;
 	bitSize: FloatBitSize;
 	real?: boolean;
 	minimum?: number;
@@ -114,7 +120,7 @@ interface DecimalType {
 	kind: 'decimal';
 	semantics?: 'money' | 'percentage' | 'measurement' | 'duration';
 	currency?: string;
-	unit?: UnitOfMeasure | DurationUnit;
+	unit?: Unit;
 	minimum?: number;
 	maximum?: number;
 	precision?: number;
@@ -182,6 +188,5 @@ export type {
 	MapType,
 	Semantics,
 	CountryFormat,
-	UnitOfMeasure,
-	DurationUnit,
+	Unit,
 };

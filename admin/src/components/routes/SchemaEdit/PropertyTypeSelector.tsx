@@ -4,7 +4,7 @@ import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import WaDropdown, { WaAfterHideEvent, WaShowEvent } from '@awesome.me/webawesome/dist/react/dropdown/index.js';
 import WaDropdownItem from '@awesome.me/webawesome/dist/react/dropdown-item/index.js';
 import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
-import Type, { DurationUnit, TypeKind, UnitOfMeasure } from '../../../lib/api/types/types';
+import Type, { TypeKind, Unit } from '../../../lib/api/types/types';
 import {
 	getPropertyValueType,
 	getTypeSemantics,
@@ -49,8 +49,7 @@ interface PropertyTypeSelectorProps {
 }
 
 // The empty value exists only while editing and cannot pass form validation.
-const EMPTY_DURATION_UNIT = '' as DurationUnit;
-const EMPTY_UNIT_OF_MEASURE = '' as UnitOfMeasure;
+const EMPTY_UNIT = '' as Unit;
 const PROFILE_SEMANTICS_DECIMAL_TYPE = { kind: 'decimal', precision: 18, scale: 4 } as const;
 
 const PROPERTY_STRUCTURE_OPTIONS: PropertyStructureOption[] = [
@@ -119,22 +118,22 @@ const PROPERTY_TYPE_OPTIONS: PropertyTypeOption[] = [
 		create: () => ({ kind: 'boolean' }),
 	},
 	{
-		id: 'duration',
-		kind: 'int',
-		separated: true,
-		create: () => ({ kind: 'int', bitSize: 64, unsigned: false, semantics: 'duration', unit: EMPTY_DURATION_UNIT }),
-	},
-	{
 		id: 'int',
 		kind: 'int',
 		description: 'Number with no decimal places',
+		separated: true,
 		create: () => ({ kind: 'int', bitSize: 32, unsigned: false }),
+	},
+	{
+		id: 'duration',
+		kind: 'float',
+		separated: true,
+		create: () => ({ kind: 'float', bitSize: 64, real: true, semantics: 'duration', unit: EMPTY_UNIT }),
 	},
 	{
 		id: 'float',
 		kind: 'float',
 		description: 'Number with approximate precision',
-		separated: true,
 		create: () => ({ kind: 'float', bitSize: 64, real: false }),
 	},
 	{
@@ -154,7 +153,7 @@ const PROPERTY_TYPE_OPTIONS: PropertyTypeOption[] = [
 		create: () => ({
 			...PROFILE_SEMANTICS_DECIMAL_TYPE,
 			semantics: 'measurement',
-			unit: EMPTY_UNIT_OF_MEASURE,
+			unit: EMPTY_UNIT,
 		}),
 	},
 	{
