@@ -651,8 +651,8 @@ an explicit **inactive Unified gate**. The bounded live campaign below now
 verifies numeric storage/readings, real writer round-trips and shared runtime
 fixtures. It does not establish conformance for the complete implemented
 subset; the remaining acceptance checks must pass before changing the gate.
-Snowflake activation also requires
-resolving the declared ordinary-text collation and Float/NaN questions.
+Snowflake activation also requires resolving the ordinary-text collation policy
+and the remaining acceptance checks in the runbook below.
 
 ### Consolidated Snowflake verification campaign
 

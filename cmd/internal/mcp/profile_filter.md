@@ -70,9 +70,8 @@ This selector is different from Count's source. A nonempty usable name maps
 to Count `source.name`, with its documented kind/type/grain. `recordedName:null`
 and `recordedName:""` inspect those exact stored cases; neither means all
 pages/screens. Do not omit Count's name to imitate either selector. No
-`countSource` template is supplied. Discovery compares stored names literally;
-it does not certify equivalent Count selection under a nondefault Snowflake
-column collation, which is part of the pending backend verification.
+`countSource` template is supplied. Discovery and Count compare technical source
+names literally, independently of column collation.
 
 Both tools use the event timestamp interval `[start,end)`. Supply both RFC3339
 bounds or omit both for the last 30 elapsed days. Bounds have microsecond
