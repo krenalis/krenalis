@@ -1,12 +1,6 @@
-# HTTP (env.HTTPClient + BodyBuffer)
+# HTTP behavior, retries, and errors
 
-## Use env.HTTPClient
-
-All HTTP calls must go through:
-
-```go
-res, err := c.env.HTTPClient.Do(req)
-```
+Use `ApplicationEnv.HTTPClient` for every provider request. It supplies endpoint-group rate limiting, OAuth injection, request capture, replay, and retry behavior.
 
 Do not use `http.DefaultClient` for connector calls, and do not build your own
 `http.Client`, `http.Transport`, `net.Dialer`, or any other custom dialing path.
@@ -21,71 +15,43 @@ Unlike database, file-storage, and message-broker connectors, an Application
 connector receives no `Dial` or `DialWith` function in its env: `env.HTTPClient`
 is its only outbound network path.
 
-Always close response bodies (`defer res.Body.Close()` or `_ = res.Body.Close()`), including on non-2xx responses, to avoid resource leaks.
-Do not manually drain response bodies.
+## Build and close requests
 
-Krenalis's connector HTTP client does **not** follow redirects automatically. If the API returns redirects that must be followed, handle them explicitly (read `Location`, rebuild the request, and call `Do` again). Follow at most 2 redirects (max two hops). If more redirects are returned, stop and return an error.
+Use `HTTPClient.GetBodyBuffer` for a request body and `BodyBuffer.NewRequest` to finalize it. For a bodyless request, use `http.NewRequestWithContext`. Always propagate the caller's context.
 
-## Build request bodies with BodyBuffer
+Set provider-required content type, version, conditional, and idempotency headers explicitly. `BodyBuffer.NewRequest` defaults to JSON headers and supplies `GetBody`; override `Content-Type` when the encoded format is not JSON.
 
-Use:
+Call `HTTPClient.Do`, check every expected success status, decode bounded responses, and `defer res.Body.Close()`. The transport drains unread response bodies after closure, so no separate manual drain is required. The client does not follow redirects.
 
-```go
-bb := c.env.HTTPClient.GetBodyBuffer(connectors.NoEncoding) // or connectors.Gzip
-defer bb.Close()
+## Model rate-limit buckets with endpoint groups
 
-// Write JSON manually (WriteString/WriteByte) and/or use Encode/EncodeKeyValue.
-// Call bb.Flush() at safe points.
+`EndpointGroup.Patterns` use `http.ServeMux` syntax and are matched against the actual method, host, and path. A nil `Patterns` value is the catch-all `/`. Verify that every request matches exactly one intended group. Configure patterns only for endpoints the connector can actually call; do not retain rejected discovery candidates in the spec merely to document their quotas.
 
-req, err := bb.NewRequest(ctx, method, url)
-```
+If `ApplicationSpec.EndpointGroups` itself is nil, the runtime supplies a catch-all limiter of one request per second with burst one. Do not set a non-nil empty slice: it matches no requests. Every explicit group needs positive `RequestsPerSecond` and `Burst`; `MaxConcurrentRequests` may be zero for unlimited concurrency.
 
-BodyBuffer advantages:
+One endpoint group represents one shared limiter and retry policy. Combine patterns only when provider evidence says they share a quota bucket. Keep separate groups—even with identical numeric configuration—when the provider gives independent buckets. Never merge groups merely because their values happen to match.
 
-- pooled buffers (performance)
-- optional gzip encoding
-- `NewRequest` sets `GetBody`, enabling safe retries for idempotent requests
-- prevents writes after `NewRequest` (correctness)
+Endpoint-group limiters are created per HTTP client/connection. They do not coordinate an account-wide provider quota across separate Krenalis connections that reuse the same credentials. Surface such a quota as a framework limitation instead of claiming the configured limits enforce it globally.
 
-### Performance policy (hard requirement): no intermediate payload objects
+## Configure retries deliberately
 
-When building JSON request bodies in `Upsert`, `SendEvents`, and `PreviewSendEvents`, stream JSON directly into the `BodyBuffer`.
+With a nil `RetryPolicy`, the runtime uses `Retry-After` with exponential fallback for 429 and exponential backoff for 500, 502, 503, and 504. A non-nil policy replaces those defaults; an unmatched status is permanent except for the runtime's OAuth-aware 401 handling.
 
-- MUST stream JSON directly into `BodyBuffer` in `Upsert`, `SendEvents`, and `PreviewSendEvents`.
-- MUST NOT allocate "payload objects" (for example `map[string]any`, `[]any`, or ad-hoc structs) just to `json.Marshal` / `bb.Encode` them.
-- Prefer manual JSON framing (`{`, `}`, `[`, `]`) + `bb.EncodeKeyValue(...)` for object key/value pairs.
-- Comma rule for object fields:
-  - do not write commas manually between consecutive `bb.EncodeKeyValue(...)` calls
-  - write commas manually only when you interrupt that sequence with other writes
-- If you must allocate an intermediate structure (for example because the API requires a dynamic object you must compute and you cannot stream it safely), it must be a deliberate exception:
-  - add a short code comment explaining why the allocation is necessary and why streaming is not feasible there
-  - mention the same exception in the connector design summary under a "Skill deviations" note
+The client retries network and policy failures only when the body is replayable and the request is idempotent. Safe methods are idempotent; mutating methods require the presence of `Idempotency-Key` or `X-Idempotency-Key`. When the provider implements an idempotency header, send a stable key for the logical operation. When the operation is independently proven safe to retry but the marker must not be transmitted, `req.Header["Idempotency-Key"] = nil` marks it only for the framework. Never use either form merely to obtain retries without provider evidence.
 
-Do not do this:
+Use `connectors.RetryAfterStrategy`, `HeaderStrategy`, `ExponentialStrategy`, or `ConstantStrategy` to encode documented behavior. Do not add a second generic retry loop inside the connector. Bounded asynchronous-job polling is a separate provider workflow and must still honor context and endpoint groups.
 
-```go
-payload := map[string]any{
-	"event_name": eventName,
-	"properties": eventProps,
-}
-_ = bb.Encode(payload)
-```
+## Map responses without leaking data
 
-Do this instead:
+Distinguish:
 
-```go
-bb.WriteByte('{')
-_ = bb.EncodeKeyValue("event_name", eventName)
-_ = bb.EncodeKeyValue("properties", eventProps)
-bb.WriteByte('}')
-```
+- transport or request-wide failures, returned as a normal error;
+- per-record validation failures, returned as `connectors.RecordsError`;
+- per-event validation failures, returned as `connectors.EventsError`;
+- locally invalid items, handled with iterator `Discard` when possible.
 
-## Flush/Truncate usage
+As an intentional privacy policy, connector-authored errors must not include credentials, request bodies, user attributes, event properties, email addresses, IP addresses, or other payload data. Quote safe dynamic field/setting names with `connectors.QuoteErrorTerm`. Map status, documented error codes, and reviewed safe messages; do not blindly return a raw provider response body.
 
-Use `bb.Flush()` when you finish writing a chunk you won't later modify. For large batch bodies:
+When one provider validation response definitively rejects every item in a consumed batch, a `RecordsError` or `EventsError` may map every consumed index to the safe error. If acceptance is ambiguous, return a request-level error instead of guessing per-item outcomes.
 
-- track size checkpoints with `size := bb.Len()`
-- if you exceed a limit, do:
-  - `bb.Truncate(size)` (or a computed safe point)
-  - `records.Postpone()` or `events.Postpone()`
-  - `break`
+Test endpoint pattern selection, independent/shared buckets when relevant, default versus explicit retry policy, idempotent replay, cancellation, all success statuses, malformed and oversized error bodies, response closure, and error privacy.

@@ -1,55 +1,38 @@
-# Schemas and data types
+# Schemas and types
 
-Krenalis uses `github.com/krenalis/krenalis/tools/types` to represent schemas.
+Build schemas from provider evidence and the selected role. Do not expose response fields as writable merely because the provider returns them.
 
-You will define:
+## Model properties accurately
 
-- **Record schema** (users) via `RecordSchema(...) (types.Type, error)`
-- **Event type schema** (extra per-event values) via `EventTypeSchema(...) (types.Type, error)`
+Use `tools/types.Type` and `types.Property`. The property fields with framework meaning are:
 
-Guidelines:
+- `CreateRequired` and `UpdateRequired` for destination writes;
+- `ReadOptional` for source reads that may omit the property;
+- `Nullable` only when null is a valid value;
+- `Prefilled` for an event mapping expression, not a provider default;
+- `DisplayName` for the human-readable label;
+- `Description` for useful mapping context beyond that label.
 
-- Use `types.Object([]types.Property{...})`, `types.String()`, `types.Boolean()`, `types.Int(32)`, `types.Decimal(p,s)`, `types.DateTime()`, `types.Map(types.JSON())`, etc.
-- The connector will run only on 64-bit architectures, so `int`/`uint` are 64-bit in practice. Prefer `int`/`uint` over `int64`/`uint64` in connector code (IDs, counters, array indices, pagination, etc.) unless you have a strong reason to require a fixed-width type (for example: the API/library type is explicitly `int64`, you are manipulating unix timestamps as `int64`, or you need to document fixed-width semantics in the code).
-- Mark optionality correctly:
-  - **Read path:** `ReadOptional` (the property value may be omitted)
-  - **Create:** `CreateRequired` (the property value is required when creating the record)
-  - **Update:** `UpdateRequired` (the property value is required when updating the record)
-  - Use `Nullable` if the property value may be **JSON null** (`nil` in Go).
-- These are role-dependent flags. Krenalis applies the correct role semantics so the flags that do not matter for the chosen role are ignored.
-- `ReadOptional` describes the read path, not the fact that a property may be used for destination matching.
-- A shared schema is appropriate only when source and destination differ by role-dependent flags alone.
-- If some fields are read-only or otherwise not writable, the destination schema must exclude them even if the source schema includes them.
-- If you keep separate source and destination schemas in code, keep them role-coherent for readability: avoid `ReadOptional: true` in a destination-only schema, and avoid `CreateRequired` / `UpdateRequired` in a source-only schema unless there is a specific, documented reason.
-- Concretely: if you build a schema inside a `role == connectors.Source` branch, do not use destination-only flags unless there is a specific, documented reason. If you build a schema inside a `role == connectors.Destination` branch, do not use source/read-only flags unless there is a specific, documented reason.
-- Use `DisplayName` for the human-readable label of the property, and `Description` only when it adds information beyond that label. Do not copy the label into `Description`; if you have nothing more useful to say, leave it empty.
-- When the application exposes its own label or description for a field, map them to `DisplayName` and `Description` instead of deriving them.
-- Determine field types from official specifications and/or officially documented or observed payload shapes, not from field names. If a field's type remains ambiguous, treat that as an explicit assumption to verify rather than silently fixing the type by inference from the name.
-- Do not default to a single check when mapping an external field name to a Krenalis property name; the right approach (verify against the application's own syntax, convert bidirectionally, or validate and drop) depends on the relationship between the application's naming syntax and Krenalis's. See [Property name syntax](#property-name-syntax) below.
-- When building schemas from vendor-provided field lists (dynamic/custom fields), prefer `types.ObjectOf(...)` over `types.Object(...)` so in-flight schema expansions don't require a code release. See [Static vs. dynamic values in panicking `types` calls](#static-vs-dynamic-values-in-panicking-types-calls) below for the general rule.
+When the provider supplies field labels or descriptions, map them to `DisplayName` and `Description` instead of deriving them. Leave `Description` empty when it would only repeat the label.
 
-## Schema formatting (readability rule)
+`types.AsRole` removes create/update requirements for a source and removes `ReadOptional` for a destination. It does not remove provider read-only properties. Use distinct source and destination schemas, or explicitly filter the shared base, when writability differs.
 
-Do not condense schema composite literals into one-liners. For schema definitions, use multi-line composite literals in an idiomatic Go style so diffs and reviews are easy.
+Return an object schema for records. Use `types.Object` only when locally defined properties are known valid; use `types.ObjectOf` when provider-derived names can fail validation. Follow [Property name syntax](#property-name-syntax) to validate or map external names, and test the resulting data behavior. Return a schema error for collisions or invalid metadata outside the documented name-syntax exception.
 
-Example (preferred):
+Use the narrowest accurate type and provider-documented bounds. Preserve decimal and timestamp precision instead of converting through `float64` or inventing `time.Now`. Configure `ApplicationSpec.TimeLayouts` only when the provider format differs from the framework defaults.
 
-```go
-return types.Object([]types.Property{
-	{
-		Name:         "event_name",
-		Type:         types.String().WithPattern(eventNameRE),
-		CreateRequired: true,
-	},
-	{
-		Name:         "value",
-		Type:         types.Decimal(10, 2),
-		ReadOptional: true,
-	},
-}), nil
-```
+## Choose static or dynamic schemas
 
-That example illustrates read-side optionality. If you reuse the same static schema for both roles, do so only when source and destination differ by role-dependent flags alone. If the API distinguishes readable fields from writable ones, `RecordSchema(..., role)` must reflect that distinction for the requested role. If you keep a separate destination-only schema, omit `ReadOptional: true` unless there is a specific, documented reason to keep it. Symmetrically, if you keep a separate source-only schema, omit `CreateRequired` / `UpdateRequired` unless there is a specific, documented reason to keep them. Destination matching through `Records()` does not change this readability rule.
+Use a static schema when fields are fixed. Fetch metadata dynamically only when tenant-specific fields are needed for the selected capability. Define how unsupported provider types, duplicates, invalid names, pagination, and metadata failures behave.
+
+The core caches recent record schemas per application instance and role. Do not add a connector-local TTL cache solely to duplicate that ordinary runtime behavior; an inner TTL also cannot refresh through an outer cache. Surface any requirement for mid-instance metadata refresh as a framework concern. Add separate caching only for an evidenced caller or performance requirement, and make it concurrency-safe.
+
+For event destinations:
+
+- `EventTypes` returns the supported type IDs and mapping metadata;
+- `EventTypeSchema` returns the values required for that type;
+- return an invalid `types.Type{}` when the type needs no extra values;
+- return `connectors.ErrEventTypeNotExist` for an unknown type.
 
 ## Static vs. dynamic values in panicking `types` calls
 
@@ -111,56 +94,8 @@ For dynamic fields, validate metadata before constructing types and compile prov
 
 Test the schemas returned by `RecordSchema` / `EventTypeSchema` with accepted and rejected values, including length boundaries. Also test any requirements enforced separately in the connector. If metadata controls constraints, cover valid combinations and verify that invalid metadata returns an error rather than panicking.
 
-## Record attribute values (import/export)
+## Encode values at the boundary
 
-Krenalis supports a canonical set of value types for each schema property type. Your connector must map between:
+Return Go values that conform to the requested record schema. When encoding schema-governed values, use `types.Marshal` where it removes ambiguity; otherwise encode the natural provider payload directly with `BodyBuffer`. Do not build a second generic map solely to satisfy a stylistic rule.
 
-- API payload values (mostly strings / numbers / timestamps)
-- `connectors.Record.Attributes` and `connectors.Event.Type.Values`
-
-When in doubt, follow patterns in existing connectors.
-
-### Import (connectors producing values, e.g. Records)
-
-When filling `Record.Attributes` from API responses:
-
-- For `string`/`text` you should return a Go `string` or `[]byte`.
-- For `bool` return `bool`.
-- For numeric types return `int`, `uint`, `float64`, or `decimal.Decimal` depending on the schema.
-- For `datetime`/`date`/`time` fields you may return:
-  - `time.Time`, or
-  - a `string`/`[]byte` exactly as returned by the API; Krenalis will parse it (ISO 8601 by default, or using `ApplicationSpec.TimeLayouts` if you set it at registration), or
-  - for `datetime`, a Unix-epoch value (string or float64) if `TimeLayouts.DateTime` uses `"unix"`, `"unixmilli"`, `"unixmicro"`, or `"unixnano"`.
-- For `uuid` you may return a UUID string or a 16-byte slice (vendor dependent).
-- For `ip` you may return a string, `net.IP`, or `netip.Addr`.
-- Missing vs null:
-  - **missing** means omit the key from `Attributes`
-  - **null** means present the key with `nil` value and the schema property must be `Nullable`
-  - note: for some nullable types, an empty string is interpreted as `nil` (see `create-integration/data-values.md`); do not rely on this unless your API actually returns empty strings for missing values.
-
-Practical rule: for time-typed *attributes* (`datetime`/`date`/`time` in your schema), prefer returning the upstream string and configuring `ApplicationSpec.TimeLayouts` when needed, instead of writing custom parsing code in the connector for each attribute.
-
-### Export (connectors receiving values, e.g. Upsert, SendEvents)
-
-Krenalis passes canonical types to connectors:
-
-- `string`, `bool`, `int`, `uint`, `float64`, `decimal.Decimal`, `time.Time` (UTC)
-- `uuid`: `string`
-- `json`: `json.Value` (note: missing key vs `json.Value("null")` are distinct)
-- `ip`: `string`
-- `array(T)`: `[]any`
-- `object` and `map(T)`: `map[string]any`
-
-When encoding `EventType.Values` with a known schema, prefer schema-aware marshaling:
-
-```go
-params, err := types.Marshal(event.Type.Values, event.Type.Schema)
-```
-
-This encodes values according to schema expectations.
-
-Krenalis guarantees that the values you receive in `event.Type.Values` (in `SendEvents` / `PreviewSendEvents`) conform to `event.Type.Schema` (including required fields for event sending, i.e. `CreateRequired`).
-
-For `Upsert`, values in `Record.Attributes` follow the canonical Go types described above for the given schema; do not add defensive type-checks for basic types. Only validate additional API-specific rules that cannot be expressed in the schema.
-
-Note: `types.Marshal` does not validate; its behavior is undefined if you pass values that do not match the schema (for example, if the connector mutates values to incompatible types).
+Test schemas in every exposed role, including required/read-optional flags, provider read-only exclusions, invalid dynamic names, nullability, precision, and event prefilled expressions.
