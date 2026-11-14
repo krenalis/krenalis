@@ -371,8 +371,6 @@ func unmarshalConditionValue(v json.Value, t types.Type) (any, error) {
 			return nil, err
 		}
 		return time.Date(1970, 1, 1, t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), time.UTC), nil
-	case types.YearKind:
-		return v.Int()
 	case types.JSONKind:
 		if !v.IsString() {
 			return nil, errors.New("where condition value must be a string")

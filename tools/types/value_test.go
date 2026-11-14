@@ -59,6 +59,10 @@ func Test_Decode(t *testing.T) {
 			Type: Int(16),
 		},
 		{
+			Name: "Int16_Year",
+			Type: Int(16).AsYear(),
+		},
+		{
 			Name: "Int24",
 			Type: Int(24),
 		},
@@ -115,10 +119,6 @@ func Test_Decode(t *testing.T) {
 			Type: Time(),
 		},
 		{
-			Name: "Year",
-			Type: Year(),
-		},
-		{
 			Name: "UUID",
 			Type: UUID(),
 		},
@@ -163,7 +163,7 @@ func Test_Decode(t *testing.T) {
 		},
 	})
 
-	data := `{"String":"some text","Text_values":"c","Text_regexp":"foo","Text_nil":null,"Boolean":true,"Int8":-12,"Int16":8023,"Int24":-2880217,"Int32":1307298102,"Int64":"927041163082605","Uint8":12,"Uint16":8023,"Uint24":2880217,"Uint32":1307298102,"Uint64":"927041163082605","Float32":57.16038,"Float64":18372.36240184391,"Decimal":1752.064,"DateTime":"2023-10-17T09:34:25.836540129Z","Date":"2023-10-17","Time":"09:34:25.836540129","Year":2023,"UUID":"550E8400-E29B-41D4-A716-446655440000","JSON":{"foo": 5,"boo": true},"JSON_null":null,"IP":"192.158.1.38","Array":["foo","boo"],"Object":{"a":9,"b":null},"Map":{"a":1,"b":2,"c":3}}`
+	data := `{"String":"some text","Text_values":"c","Text_regexp":"foo","Text_nil":null,"Boolean":true,"Int8":-12,"Int16":8023,"Int16_Year":2023,"Int24":-2880217,"Int32":1307298102,"Int64":"927041163082605","Uint8":12,"Uint16":8023,"Uint24":2880217,"Uint32":1307298102,"Uint64":"927041163082605","Float32":57.16038,"Float64":18372.36240184391,"Decimal":1752.064,"DateTime":"2023-10-17T09:34:25.836540129Z","Date":"2023-10-17","Time":"09:34:25.836540129","UUID":"550E8400-E29B-41D4-A716-446655440000","JSON":{"foo": 5,"boo": true},"JSON_null":null,"IP":"192.158.1.38","Array":["foo","boo"],"Object":{"a":9,"b":null},"Map":{"a":1,"b":2,"c":3}}`
 	expected := map[string]any{
 		"String":      "some text",
 		"Text_values": "c",
@@ -172,6 +172,7 @@ func Test_Decode(t *testing.T) {
 		"Boolean":     true,
 		"Int8":        -12,
 		"Int16":       8023,
+		"Int16_Year":  2023,
 		"Int24":       -2880217,
 		"Int32":       1307298102,
 		"Int64":       927041163082605,
@@ -186,7 +187,6 @@ func Test_Decode(t *testing.T) {
 		"DateTime":    time.Date(2023, 10, 17, 9, 34, 25, 836540129, time.UTC),
 		"Date":        time.Date(2023, 10, 17, 0, 0, 0, 0, time.UTC),
 		"Time":        time.Date(1970, 01, 01, 9, 34, 25, 836540129, time.UTC),
-		"Year":        2023,
 		"UUID":        "550e8400-e29b-41d4-a716-446655440000",
 		"JSON":        json.Value(`{"foo": 5,"boo": true}`),
 		"JSON_null":   json.Value(`null`),
@@ -272,6 +272,15 @@ func Test_Decode(t *testing.T) {
 		{
 			data: `{"Int8":-25}`,
 			err:  newErrInvalidValue(`is out of range [-20, 20]: -25`, "Int8"),
+		},
+		{
+			data: `{"Int16_Year":32768}`,
+			err:  newErrInvalidValue(`is out of range [-32768, 32767]: 32768`, "Int16_Year"),
+		},
+		{
+			typ:  Object([]Property{{Name: "Uint64", Type: Int(64).Unsigned().WithUnsignedRange(1, 9999).AsYear()}}),
+			data: `{"Uint64":"10000"}`,
+			err:  newErrInvalidValue(`is out of range [1, 9999]: 10000`, "Uint64"),
 		},
 		{
 			data: `{"Boolean":"a \" \\ b"}`,
@@ -514,7 +523,7 @@ func Test_Marshal(t *testing.T) {
 			name:   "Types",
 			schema: schema,
 			value:  value,
-			result: []byte(`{"String":"some text","Boolean":true,"Int8":-12,"Int16":8023,"Int24":-2880217,"Int32":1307298102,"Int64":"927041163082605","Uint8":12,"Uint16":8023,"Uint24":2880217,"Uint32":1307298102,"Uint64":"927041163082605","Float32":57.16038,"Float64":18372.36240184391,"Float64_NaN":"NaN","Float64_Positive_Infinity":"Infinity","Float64_Negative_Infinity":"-Infinity","Decimal":1752.064,"DateTime":"2023-10-17T09:34:25.836042841Z","Date":"2023-10-17","Time":"09:34:25.836042841","Year":2023,"UUID":"550e8400-e29b-41d4-a716-446655440000","JSON":{"foo":5,"boo":true},"JSON_null":null,"IP":"192.158.1.38","Array":["foo","boo"],"Object":{"a":9,"b":false},"Map":{"a":1,"b":2,"c":3}}`),
+			result: []byte(`{"String":"some text","Boolean":true,"Int8":-12,"Int16":8023,"Int16_Year":2023,"Int24":-2880217,"Int32":1307298102,"Int64":"927041163082605","Uint8":12,"Uint16":8023,"Uint24":2880217,"Uint32":1307298102,"Uint64":"927041163082605","Float32":57.16038,"Float64":18372.36240184391,"Float64_NaN":"NaN","Float64_Positive_Infinity":"Infinity","Float64_Negative_Infinity":"-Infinity","Decimal":1752.064,"DateTime":"2023-10-17T09:34:25.836042841Z","Date":"2023-10-17","Time":"09:34:25.836042841","UUID":"550e8400-e29b-41d4-a716-446655440000","JSON":{"foo":5,"boo":true},"JSON_null":null,"IP":"192.158.1.38","Array":["foo","boo"],"Object":{"a":9,"b":false},"Map":{"a":1,"b":2,"c":3}}`),
 		},
 		{
 			name:   "Empty",
@@ -742,6 +751,10 @@ var schema = Object([]Property{
 		Type: Int(16),
 	},
 	{
+		Name: "Int16_Year",
+		Type: Int(16).AsYear(),
+	},
+	{
 		Name: "Int24",
 		Type: Int(24),
 	},
@@ -810,10 +823,6 @@ var schema = Object([]Property{
 		Type: Time(),
 	},
 	{
-		Name: "Year",
-		Type: Year(),
-	},
-	{
 		Name: "UUID",
 		Type: UUID(),
 	},
@@ -857,6 +866,7 @@ var value = map[string]any{
 	"Boolean":                   true,
 	"Int8":                      -12,
 	"Int16":                     8023,
+	"Int16_Year":                2023,
 	"Int24":                     -2880217,
 	"Int32":                     1307298102,
 	"Int64":                     927041163082605,
@@ -874,7 +884,6 @@ var value = map[string]any{
 	"DateTime":                  time.Date(2023, 10, 17, 9, 34, 25, 836042841, time.UTC),
 	"Date":                      time.Date(2023, 10, 17, 0, 0, 0, 0, time.UTC),
 	"Time":                      time.Date(1970, 01, 01, 9, 34, 25, 836042841, time.UTC),
-	"Year":                      2023,
 	"UUID":                      "550e8400-e29b-41d4-a716-446655440000",
 	"JSON":                      json.Value(`{"foo":5,"boo":true}`),
 	"JSON_null":                 json.Value(`null`),
@@ -921,7 +930,6 @@ func TestDecodeArrayUnique(t *testing.T) {
 		},
 		{"dates", Date(), `["2026-09-08","2026-09-08"]`, 1},
 		{"times", Time(), `["10:00:00.1","10:00:00.100"]`, 1},
-		{"years", Year(), `[2025,2026,2025]`, 2},
 		{
 			"UUID case", UUID(),
 			`["550e8400-e29b-41d4-a716-446655440000","550E8400-E29B-41D4-A716-446655440000"]`, 1,

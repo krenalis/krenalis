@@ -482,7 +482,7 @@ func Test_convertFilterToWhere(t *testing.T) {
 		{Name: "g", Type: types.DateTime()},
 		{Name: "h", Type: types.Date()},
 		{Name: "i", Type: types.Time()},
-		{Name: "j", Type: types.Year()},
+		{Name: "j", Type: types.Int(16).AsYear()},
 		{Name: "k", Type: types.UUID()},
 		{Name: "l", Type: types.JSON()},
 		{Name: "m", Type: types.IP()},
@@ -519,7 +519,7 @@ func Test_convertFilterToWhere(t *testing.T) {
 					&FilterCondition{Property: "g", Operator: OpIsAfter, Values: []string{"2024-09-19T14:36:57.264699103"}},
 					&FilterCondition{Property: "h", Operator: OpIsBetween, Values: []string{"2024-09-19", "2025-09-19"}},
 					&FilterCondition{Property: "i", Operator: OpIsBefore, Values: []string{"14:36:57.264699103"}},
-					&FilterCondition{Property: "j", Operator: OpIsOnOrAfter, Values: []string{"2024"}},
+					&FilterCondition{Property: "j", Operator: OpIsGreaterThanOrEqualTo, Values: []string{"2024"}},
 					&FilterCondition{Property: "k", Operator: OpIs, Values: []string{"38d065ab-ca46-4812-a83c-a9712e09c153"}},
 					&FilterCondition{Property: "l", Operator: OpIs, Values: []string{"foo"}},
 					&FilterCondition{Property: "l.a", Operator: OpIsOneOf, Values: []string{"1e75", "1e76"}},
@@ -551,7 +551,7 @@ func Test_convertFilterToWhere(t *testing.T) {
 					&state.WhereCondition{Property: []string{"g"}, Operator: state.OpIsAfter, Values: []any{time.Date(2024, 9, 19, 14, 36, 57, 264699103, time.UTC)}},
 					&state.WhereCondition{Property: []string{"h"}, Operator: state.OpIsBetween, Values: []any{time.Date(2024, 9, 19, 0, 0, 0, 0, time.UTC), time.Date(2025, 9, 19, 0, 0, 0, 0, time.UTC)}},
 					&state.WhereCondition{Property: []string{"i"}, Operator: state.OpIsBefore, Values: []any{time.Date(1970, 1, 1, 14, 36, 57, 264699103, time.UTC)}},
-					&state.WhereCondition{Property: []string{"j"}, Operator: state.OpIsOnOrAfter, Values: []any{2024}},
+					&state.WhereCondition{Property: []string{"j"}, Operator: state.OpIsGreaterThanOrEqualTo, Values: []any{2024}},
 					&state.WhereCondition{Property: []string{"k"}, Operator: state.OpIs, Values: []any{"38d065ab-ca46-4812-a83c-a9712e09c153"}},
 					&state.WhereCondition{Property: []string{"l"}, Operator: state.OpIs, Values: []any{state.JSONConditionValue{String: "foo"}}},
 					&state.WhereCondition{Property: []string{"l", "a"}, Operator: state.OpIsOneOf, Values: []any{
@@ -666,7 +666,7 @@ func Test_convertWhereToFilter(t *testing.T) {
 		{Name: "g", Type: types.DateTime()},
 		{Name: "h", Type: types.Date()},
 		{Name: "i", Type: types.Time()},
-		{Name: "j", Type: types.Year()},
+		{Name: "j", Type: types.Int(16).AsYear()},
 		{Name: "k", Type: types.UUID()},
 		{Name: "l", Type: types.JSON()},
 		{Name: "m", Type: types.IP()},
@@ -700,7 +700,7 @@ func Test_convertWhereToFilter(t *testing.T) {
 					&state.WhereCondition{Property: []string{"g"}, Operator: state.OpIsAfter, Values: []any{time.Date(2024, 9, 19, 14, 36, 57, 264699103, time.UTC)}},
 					&state.WhereCondition{Property: []string{"h"}, Operator: state.OpIsBetween, Values: []any{time.Date(2024, 9, 19, 0, 0, 0, 0, time.UTC), time.Date(2025, 9, 19, 0, 0, 0, 0, time.UTC)}},
 					&state.WhereCondition{Property: []string{"i"}, Operator: state.OpIsBefore, Values: []any{time.Date(1970, 1, 1, 14, 36, 57, 264699103, time.UTC)}},
-					&state.WhereCondition{Property: []string{"j"}, Operator: state.OpIsOnOrAfter, Values: []any{2024}},
+					&state.WhereCondition{Property: []string{"j"}, Operator: state.OpIsGreaterThanOrEqualTo, Values: []any{2024}},
 					&state.WhereCondition{Property: []string{"k"}, Operator: state.OpIs, Values: []any{"38d065ab-ca46-4812-a83c-a9712e09c153"}},
 					&state.WhereCondition{Property: []string{"l"}, Operator: state.OpIs, Values: []any{state.JSONConditionValue{String: "foo"}}},
 					&state.WhereCondition{Property: []string{"l"}, Operator: state.OpIs, Values: []any{state.JSONConditionValue{String: "1.2300", Number: new(decimal.MustParse("1.23"))}}},
@@ -735,7 +735,7 @@ func Test_convertWhereToFilter(t *testing.T) {
 					&FilterCondition{Property: "g", Operator: OpIsAfter, Values: []string{"2024-09-19T14:36:57.264699103"}},
 					&FilterCondition{Property: "h", Operator: OpIsBetween, Values: []string{"2024-09-19", "2025-09-19"}},
 					&FilterCondition{Property: "i", Operator: OpIsBefore, Values: []string{"14:36:57.264699103"}},
-					&FilterCondition{Property: "j", Operator: OpIsOnOrAfter, Values: []string{"2024"}},
+					&FilterCondition{Property: "j", Operator: OpIsGreaterThanOrEqualTo, Values: []string{"2024"}},
 					&FilterCondition{Property: "k", Operator: OpIs, Values: []string{"38d065ab-ca46-4812-a83c-a9712e09c153"}},
 					&FilterCondition{Property: "l", Operator: OpIs, Values: []string{"foo"}},
 					&FilterCondition{Property: "l", Operator: OpIs, Values: []string{"1.2300"}},
@@ -1030,48 +1030,6 @@ func Test_parseInt(t *testing.T) {
 	}
 }
 
-// Test_parseYear verifies parsing year filter values.
-func Test_parseYear(t *testing.T) {
-	tests := []struct {
-		year     string
-		expected int
-		valid    bool
-	}{
-		{"2023", 2023, true},
-		{"1999", 1999, true},
-		{"99", 99, true},
-		{"0", 0, false},               // below the minimum year.
-		{"1", types.MinYear, true},    // minimum year.
-		{"9999", types.MaxYear, true}, // maximum year.
-		{"10000", 0, false},           // above the maximum year.
-		{"0000", 0, false},
-		{"12345", 0, false},
-		{"12a4", 0, false},
-		{"-100", 0, false},
-		{"+100", 0, false},
-		{"123", 123, true},
-		{"", 0, false},
-	}
-
-	for _, test := range tests {
-		t.Run(test.year, func(t *testing.T) {
-			got, valid := parseYear(test.year)
-			if !valid {
-				if test.valid {
-					t.Fatalf("expected valid, got invalid")
-				}
-				return
-			}
-			if !test.valid {
-				t.Fatalf("expected invalid, got valid")
-			}
-			if test.expected != got {
-				t.Fatalf("expected %d, got %d", test.expected, got)
-			}
-		})
-	}
-}
-
 // Test_parseUnsigned verifies parsing unsigned integer filter values.
 func Test_parseUnsigned(t *testing.T) {
 	tests := []struct {
@@ -1247,7 +1205,7 @@ func Test_validateFilter(t *testing.T) {
 		{Name: "f", Type: types.Date()},
 		{Name: "g", Type: types.Time()},
 		{Name: "h", Type: types.UUID(), ReadOptional: true},
-		{Name: "i", Type: types.Year()},
+		{Name: "i", Type: types.Int(16).AsYear()},
 		{Name: "j", Type: types.IP()},
 		{Name: "k", Type: types.Array(types.String()), Nullable: true},
 		{Name: "l", Type: types.Array(types.Map(types.String()))},
@@ -1718,6 +1676,23 @@ func Test_validateFilter(t *testing.T) {
 			expected: []string{"d"},
 		},
 		{
+			name: "numeric comparisons on year semantics",
+			filter: Filter{Operator: OpAnd, Rules: []FilterRule{
+				&FilterCondition{Property: "i", Operator: OpIsLessThan, Values: []string{"10000"}},
+				&FilterCondition{Property: "i", Operator: OpIsLessThanOrEqualTo, Values: []string{"2024"}},
+				&FilterCondition{Property: "i", Operator: OpIsGreaterThan, Values: []string{"0"}},
+				&FilterCondition{Property: "i", Operator: OpIsGreaterThanOrEqualTo, Values: []string{"2024"}},
+			}},
+			expected: []string{"i"},
+		},
+		{
+			name: "temporal comparison on year semantics",
+			filter: Filter{Operator: OpAnd, Rules: []FilterRule{
+				&FilterCondition{Property: "i", Operator: OpIsBefore, Values: []string{"2024"}},
+			}},
+			err: errors.New(`operator "is before" cannot be used with int properties`),
+		},
+		{
 			name: "all valid operators",
 			filter: Filter{
 				Operator: OpOr,
@@ -1743,7 +1718,7 @@ func Test_validateFilter(t *testing.T) {
 					&FilterCondition{Property: "h", Operator: OpIs, Values: []string{"dbfa8339-0d12-4c94-a3fb-569199ae5c8e"}},
 					&FilterCondition{Property: "h", Operator: OpExists},
 					&FilterCondition{Property: "h", Operator: OpDoesNotExist},
-					&FilterCondition{Property: "i", Operator: OpIsBefore, Values: []string{"2024"}},
+					&FilterCondition{Property: "i", Operator: OpIsLessThan, Values: []string{"2024"}},
 					&FilterCondition{Property: "j", Operator: OpIs, Values: []string{"192.168.1.1"}},
 					&FilterCondition{Property: "d", Operator: OpIsNotEmpty},
 					&FilterCondition{Property: "e", Operator: OpIsOnOrAfter, Values: []string{"2024-09-10T15:34:31"}},

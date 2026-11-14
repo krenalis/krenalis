@@ -119,10 +119,6 @@ func (s *scanner) normalize(name string, typ types.Type, v any) (any, error) {
 		if v, ok := v.(time.Time); ok {
 			return warehouses.ValidateTime(v)
 		}
-	case types.YearKind:
-		if v, ok := v.(string); ok {
-			return warehouses.ValidateYearString(name, v)
-		}
 	case types.UUIDKind:
 		if v, ok := v.(string); ok {
 			return warehouses.ValidateUUID(name, v)

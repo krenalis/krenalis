@@ -10,3 +10,4 @@
 | `percentage`  | `decimal`                                                                             |
 | `phone`       | `string` without `maxBytes`, `maxLength`, `pattern` or `values`                       |
 | `url`         | `string`                                                                              |
+| `year`        | `int`                                                                                 |

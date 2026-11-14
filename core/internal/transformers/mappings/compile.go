@@ -16,8 +16,6 @@ import (
 	"github.com/krenalis/krenalis/tools/types"
 )
 
-var jsonArrayType = types.Array(types.JSON())
-
 // Expression represents a mapping used to transform data conforming to an input
 // schema into data of a specific output type. An Expression can contain
 // strings, numbers, true, false, null, property paths, and function calls.
@@ -92,9 +90,8 @@ func checkAnd(args [][]part, schema, dt types.Type, nullable bool, attributes ma
 
 // checkArray type checks a call to 'array' with the given arguments.
 func checkArray(args [][]part, schema, dt types.Type, nullable bool, attributes map[string]struct{}) (types.Type, error) {
-	// Ensure that all arguments can be converted to the element type of the destination array.
-	// If the destination type (dt) is not an array, no checks are performed,
-	// and it is left to the caller to fail later.
+	// For array destinations, ensure that all arguments can be converted to the element type.
+	// Otherwise, use JSON elements and let the caller validate the destination type.
 	et := types.JSON()
 	if dt.IsArray() {
 		et = dt.Elem()
@@ -105,7 +102,7 @@ func checkArray(args [][]part, schema, dt types.Type, nullable bool, attributes 
 			return types.Type{}, err
 		}
 	}
-	return jsonArrayType, nil
+	return types.Array(et), nil
 }
 
 // checkCoalesce type checks a call to 'coalesce' with the given arguments.
@@ -234,12 +231,18 @@ func checkLTrim(args [][]part, schema, dt types.Type, nullable bool, attributes 
 
 // checkMap type checks a call to 'map' with the given arguments.
 func checkMap(args [][]part, schema, dt types.Type, nullable bool, attributes map[string]struct{}) (types.Type, error) {
+
 	if len(args)%2 != 0 {
 		return types.Type{}, errors.New("'map' function requires an even number of arguments")
 	}
 
+	et := types.JSON()
+	if dt.IsMap() {
+		et = dt.Elem()
+	}
 	keys := make(map[string]struct{}, len(args)/2)
 	for i := 0; i < len(args); i += 2 {
+
 		if len(args[i]) != 1 || args[i][0].path.elements != nil {
 			return types.Type{}, errors.New("'map' key is not constant")
 		}
@@ -250,7 +253,8 @@ func checkMap(args [][]part, schema, dt types.Type, nullable bool, attributes ma
 		if err := typeCheck(args[i], schema, types.String(), false, attributes); err != nil {
 			return types.Type{}, err
 		}
-		if err := typeCheck(args[i+1], schema, types.JSON(), false, attributes); err != nil {
+		err := typeCheck(args[i+1], schema, et, false, attributes)
+		if err != nil {
 			return types.Type{}, err
 		}
 
@@ -259,9 +263,10 @@ func checkMap(args [][]part, schema, dt types.Type, nullable bool, attributes ma
 			return types.Type{}, errors.New("duplicate key in 'map' function")
 		}
 		keys[key] = struct{}{}
+
 	}
 
-	return types.Map(types.JSON()), nil
+	return types.Map(et), nil
 }
 
 // checkNe type checks a call to 'ne' with the given arguments.

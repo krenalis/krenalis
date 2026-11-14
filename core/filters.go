@@ -236,8 +236,6 @@ func convertFilterToWhere(filter *Filter, schema types.Type) *state.Where {
 				v, _ = time.Parse(time.DateOnly, value)
 			case types.TimeKind:
 				v, _ = util.ParseTime(value)
-			case types.YearKind:
-				v, _ = parseYear(value)
 			case types.UUIDKind:
 				v, _ = types.NormalizeUUID(value)
 			case types.JSONKind:
@@ -541,29 +539,6 @@ func parseUnsigned(s string) (uint, bool) {
 	return n, true
 }
 
-// parseYear parses a year from s and returns the year and true.
-// If s is not a valid year, it returns 0 and false.
-func parseYear(s string) (int, bool) {
-	if l := len(s); l == 0 || l > 4 {
-		return 0, false
-	}
-	var year int
-	for i := range len(s) {
-		c := s[i]
-		if c < '0' || c > '9' {
-			return 0, false
-		}
-		year = year*10 + int(c-'0')
-		if year > types.MaxYear {
-			return 0, false
-		}
-	}
-	if year < types.MinYear {
-		return 0, false
-	}
-	return year, true
-}
-
 // resolveFilterProperty resolves path against properties.
 //
 // It returns the property at path and its schema path or, if path extends into
@@ -753,24 +728,24 @@ func validateFilterCondition(cond *FilterCondition, validation *filterValidation
 
 	// Validate the operator for the property kind.
 	//
-	// is                          : int, float, decimal, datetime, date, time, year, uuid, json, ip, string
-	// is not                      : int, float, decimal, datetime, date, time, year, uuid, json, ip, string
+	// is                          : int, float, decimal, datetime, date, time, uuid, json, ip, string
+	// is not                      : int, float, decimal, datetime, date, time, uuid, json, ip, string
 	// is less than                : int, float, decimal, json, string [^1]
 	// is less than or equal to    : int, float, decimal, json, string [^1]
 	// is greater than             : int, float, decimal, json, string [^1]
 	// is greater than or equal to : int, float, decimal, json, string [^1]
-	// is between                  : int, float, decimal, year, datetime, date, time, json, string [^1]
-	// is not between              : int, float, decimal, year, datetime, date, time, json, string [^1]
+	// is between                  : int, float, decimal, datetime, date, time, json, string [^1]
+	// is not between              : int, float, decimal, datetime, date, time, json, string [^1]
 	// contains                    : json, string, array [^2]
 	// does not contain            : json, string, array [^2]
-	// is one of                   : int, float, decimal, year, datetime, date, time, json, string
-	// is not one of               : int, float, decimal, year, datetime, date, time, json, string
+	// is one of                   : int, float, decimal, datetime, date, time, json, string
+	// is not one of               : int, float, decimal, datetime, date, time, json, string
 	// starts with                 : json, string [^1]
 	// ends with                   : json, string [^1]
-	// is before                   : datetime, date, time, year
-	// is on or before             : datetime, date, time, year
-	// is after                    : datetime, date, time, year
-	// is on or after              : datetime, date, time, year
+	// is before                   : datetime, date, time
+	// is on or before             : datetime, date, time
+	// is after                    : datetime, date, time
+	// is on or after              : datetime, date, time
 	// is true                     : boolean, json
 	// is false                    : boolean, json
 	// is empty                    : json, string, array, map
@@ -840,7 +815,6 @@ func validateFilterCondition(cond *FilterCondition, validation *filterValidation
 	case OpIsBefore, OpIsAfter, OpIsOnOrBefore, OpIsOnOrAfter:
 		switch kind {
 		case types.DateTimeKind, types.DateKind, types.TimeKind:
-		case types.YearKind:
 		default:
 			return "", fmt.Errorf("operator %q cannot be used with %s properties", op, kind)
 		}
@@ -940,8 +914,6 @@ func validateFilterCondition(cond *FilterCondition, validation *filterValidation
 			}
 		case types.TimeKind:
 			_, valid = util.ParseTime(value)
-		case types.YearKind:
-			_, valid = parseYear(value)
 		case types.UUIDKind:
 			_, valid = types.NormalizeUUID(value)
 		case types.IPKind:

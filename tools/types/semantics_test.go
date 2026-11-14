@@ -52,6 +52,7 @@ func Test_Semantics(t *testing.T) {
 		{PercentageSemantics, "percentage"},
 		{MeasurementSemantics, "measurement"},
 		{DurationSemantics, "duration"},
+		{YearSemantics, "year"},
 	}
 	for _, test := range tests {
 		if got := test.semantics.String(); got != test.name {
@@ -80,7 +81,7 @@ func Test_SemanticsInvalidStrings(t *testing.T) {
 	}{
 		{Semantics(-128), "%!Semantics(-128)"},
 		{Semantics(-1), "%!Semantics(-1)"},
-		{Semantics(9), "%!Semantics(9)"},
+		{Semantics(10), "%!Semantics(10)"},
 		{Semantics(20), "%!Semantics(20)"},
 		{Semantics(127), "%!Semantics(127)"},
 		{CountryFormat(-128), "%!CountryFormat(-128)"},
@@ -118,6 +119,8 @@ func Test_TypeSemanticsConfiguration(t *testing.T) {
 		{"measurement int", Int(64).AsMeasurement(Kilogram), MeasurementSemantics},
 		{"measurement decimal", Decimal(10, 2).AsMeasurement(Kilogram), MeasurementSemantics},
 		{"measurement real float", Float(64).Real().AsMeasurement(Kilogram), MeasurementSemantics},
+		{"year int", Int(16).AsYear(), YearSemantics},
+		{"year unsigned int", Int(16).Unsigned().AsYear(), YearSemantics},
 		{"duration int", Int(32).AsDuration(Second), DurationSemantics},
 		{"duration decimal", Decimal(10, 3).AsDuration(Millisecond), DurationSemantics},
 		{"duration real float", Float(32).Real().AsDuration(Hour), DurationSemantics},
@@ -169,6 +172,9 @@ func Test_TypeSemanticsConfigurationPanics(t *testing.T) {
 		name string
 		f    func()
 	}{
+		{"year on string", func() { String().AsYear() }},
+		{"year on float", func() { Float(64).Real().AsYear() }},
+		{"year already has semantics", func() { Int(16).AsYear().AsYear() }},
 		{"email on boolean", func() { Boolean().AsEmail() }},
 		{"phone on boolean", func() { Boolean().AsPhone() }},
 		{"URL on boolean", func() { Boolean().AsURL() }},
@@ -335,6 +341,18 @@ func Test_TypeSemanticsEquality(t *testing.T) {
 		},
 		{"equal unit", Decimal(10, 2).AsMeasurement(Kilogram), Decimal(10, 2).AsMeasurement(Kilogram), true},
 		{"different unit", Decimal(10, 2).AsMeasurement(Kilogram), Decimal(10, 2).AsMeasurement(Gram), false},
+		{
+			"year lower bound preserved", Int(16).WithIntRange(-100, 2100).AsYear(),
+			Int(16).AsYear().WithIntRange(-100, 2100), true,
+		},
+		{
+			"year upper bound preserved", Int(64).WithIntRange(1900, 20000).AsYear(),
+			Int(64).AsYear().WithIntRange(1900, 20000), true,
+		},
+		{
+			"unsigned year bounds preserved", Int(64).Unsigned().WithUnsignedRange(0, 20000).AsYear(),
+			Int(64).Unsigned().AsYear().WithUnsignedRange(0, 20000), true,
+		},
 		{"nested semantics", Array(Map(String().AsEmail())), Array(Map(String().AsEmail())), true},
 		{"different nested semantics", Array(Map(String().AsEmail())), Array(Map(String().AsPhone())), false},
 	}
@@ -358,6 +376,11 @@ func Test_TypeSemanticsJSONErrors(t *testing.T) {
 		data string
 		err  string
 	}{
+		{"year on string", `{"kind":"string","semantics":"year"}`, "year semantics require an int type"},
+		{
+			"year with unit", `{"kind":"int","bitSize":16,"semantics":"year","unit":"year"}`,
+			"unexpected 'unit' key for year semantics",
+		},
 		{"semantics with wrong type", `{"kind":"string","semantics":1}`, "invalid semantics"},
 		{"repeated semantics", `{"kind":"string","semantics":"email","semantics":"phone"}`, "repeated 'semantics' key"},
 		{"no semantics specified", `{"kind":"string","semantics":"none"}`, `invalid semantics "none"`},
@@ -536,6 +559,42 @@ func Test_TypeSemanticsJSONRoundTrip(t *testing.T) {
 		type_ Type
 		data  string
 	}{
+		{
+			"year", Int(16).AsYear(),
+			`{"kind":"int","semantics":"year","bitSize":16}`,
+		},
+		{
+			"unsigned year", Int(64).Unsigned().AsYear(),
+			`{"kind":"int","semantics":"year","bitSize":64,"unsigned":true}`,
+		},
+		{
+			"unsigned 32-bit year", Int(32).Unsigned().AsYear(),
+			`{"kind":"int","semantics":"year","bitSize":32,"unsigned":true}`,
+		},
+		{
+			"year minimum", Int(16).AsYear().WithIntRange(1900, 9999),
+			`{"kind":"int","semantics":"year","bitSize":16,"minimum":1900,"maximum":9999}`,
+		},
+		{
+			"year maximum", Int(64).AsYear().WithIntRange(1, 2100),
+			`{"kind":"int","semantics":"year","bitSize":64,"minimum":1,"maximum":2100}`,
+		},
+		{
+			"unsigned year minimum", Int(64).Unsigned().AsYear().WithUnsignedRange(1900, 9999),
+			`{"kind":"int","semantics":"year","bitSize":64,"unsigned":true,"minimum":1900,"maximum":9999}`,
+		},
+		{
+			"unsigned year maximum", Int(32).Unsigned().AsYear().WithUnsignedRange(1, 2100),
+			`{"kind":"int","semantics":"year","bitSize":32,"unsigned":true,"minimum":1,"maximum":2100}`,
+		},
+		{
+			"year range", Int(32).WithIntRange(1900, 2100).AsYear(),
+			`{"kind":"int","semantics":"year","bitSize":32,"minimum":1900,"maximum":2100}`,
+		},
+		{
+			"year range outside [1,9999]", Int(16).WithIntRange(-100, 20000).AsYear(),
+			`{"kind":"int","semantics":"year","bitSize":16,"minimum":-100,"maximum":20000}`,
+		},
 		{"no semantics", String(), `{"kind":"string"}`},
 		{"email", String().AsEmail(), `{"kind":"string","semantics":"email"}`},
 		{"phone", String().AsPhone(), `{"kind":"string","semantics":"phone"}`},
@@ -567,7 +626,7 @@ func Test_TypeSemanticsJSONRoundTrip(t *testing.T) {
 			`{"kind":"int","semantics":"duration","unit":"millisecond","bitSize":64}`,
 		},
 		{
-			"duration year", Float(64).Real().AsDuration(YearUnit),
+			"duration year", Float(64).Real().AsDuration(Year),
 			`{"kind":"float","semantics":"duration","unit":"year","bitSize":64,"real":true}`,
 		},
 		{"array email", Array(String().AsEmail()), `{"kind":"array","elementType":{"kind":"string","semantics":"email"}}`},
@@ -632,7 +691,7 @@ func Test_Unit(t *testing.T) {
 		{Day, "day", true},
 		{Week, "week", true},
 		{Month, "month", true},
-		{YearUnit, "year", true},
+		{Year, "year", true},
 	}
 	for _, test := range tests {
 		if got := test.unit.String(); got != test.name {

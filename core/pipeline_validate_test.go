@@ -2287,6 +2287,30 @@ func Test_validatePipeline(t *testing.T) {
 			err:                     "type array(string) cannot be used as table key",
 		},
 		{
+			name: "GOOD: Destination/Database/User - table key has year semantics",
+			pipeline: PipelineToSet{
+				Name: "Export users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.String(), ReadOptional: true},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.String()},
+					{Name: "year", Type: types.Int(16).AsYear(), CreateRequired: true},
+				}),
+				Transformation: &Transformation{
+					Mapping: map[string]string{
+						"email_out": "email_in",
+						"year":      "2024",
+					},
+				},
+				TableName: "my_users_table",
+				TableKey:  "year",
+			},
+			target:                  state.TargetUser,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.Database,
+		},
+		{
 			name: "BAD: Destination/Database/User - unmapped property in input schema",
 			pipeline: PipelineToSet{
 				Name: "Export users",
@@ -3812,6 +3836,9 @@ func TestMatchingPropertySemantics(t *testing.T) {
 		{"output duration only", types.Int(64), types.Int(64).AsDuration(types.Second), CreateOrUpdate, ""},
 		{"input measurement only", types.Int(64).AsMeasurement(types.Meter), types.String(), CreateOrUpdate, ""},
 		{"output measurement only", types.String(), types.Int(64).AsMeasurement(types.Meter), CreateOrUpdate, ""},
+		{"input year", types.Int(16).AsYear(), types.String(), CreateOrUpdate, ""},
+		{"output year", types.String(), types.Int(16).AsYear(), CreateOrUpdate, ""},
+		{"unsigned year", types.Int(64).Unsigned().AsYear(), types.String(), CreateOrUpdate, ""},
 
 		// Both properties have semantics, but not the same semantics and options.
 		{
