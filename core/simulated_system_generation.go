@@ -15,7 +15,6 @@ import (
 	"math/big"
 	"net/url"
 	"slices"
-	"sync"
 	"time"
 
 	"github.com/krenalis/krenalis/core/internal/datastore"
@@ -66,24 +65,22 @@ type simulatedSystemPlan struct {
 }
 
 type simulatedSystemWorker struct {
-	core   *Core
-	wake   chan struct{}
-	mu     sync.Mutex
-	cancel context.CancelFunc // protected by mu
-	wg     sync.WaitGroup
+	core        *Core
+	coordinator *simulatedSystemCoordinator
 }
 
 func newSimulatedSystemWorker(core *Core) *simulatedSystemWorker {
-	return &simulatedSystemWorker{core: core, wake: make(chan struct{}, 1)}
+	worker := &simulatedSystemWorker{core: core}
+	worker.coordinator = newSimulatedSystemCoordinator(core.close.ctx, worker.process)
+	return worker
 }
 
 func (worker *simulatedSystemWorker) Close() {
-	worker.wg.Wait()
+	worker.coordinator.close()
 }
 
 func (worker *simulatedSystemWorker) Start() {
-	worker.wg.Add(1)
-	go worker.run()
+	worker.leaderChanged()
 }
 
 func (worker *simulatedSystemWorker) accountsToProcess() []*state.SimulatedSystem {
@@ -168,14 +165,17 @@ func (worker *simulatedSystemWorker) fail(ctx context.Context, account *state.Si
 }
 
 func (worker *simulatedSystemWorker) leaderChanged() {
-	if !worker.core.state.IsLeader() {
-		worker.mu.Lock()
-		if worker.cancel != nil {
-			worker.cancel()
-		}
-		worker.mu.Unlock()
+	worker.coordinator.setLeader(worker.core.state.IsLeader())
+}
+
+func (worker *simulatedSystemWorker) onCreateSimulatedSystem(n state.CreateSimulatedSystem) {
+	if n.Status == state.SimulatedSystemPreparing {
+		worker.coordinator.wakeUp()
 	}
-	worker.wakeUp()
+}
+
+func (worker *simulatedSystemWorker) onMarkSimulatedSystemDeleting(_ state.MarkSimulatedSystemDeleting) {
+	worker.coordinator.wakeUp()
 }
 
 func (worker *simulatedSystemWorker) prepare(ctx context.Context, account *state.SimulatedSystem) error {
@@ -305,6 +305,50 @@ func (worker *simulatedSystemWorker) prepare(ctx context.Context, account *state
 	return worker.save(ctx, account, checkpoint, count, state.SimulatedSystemAvailable, "")
 }
 
+// process handles pending systems and reports whether a retry is needed.
+func (worker *simulatedSystemWorker) process(ctx context.Context) bool {
+
+	retry := false
+	accounts := worker.accountsToProcess()
+	for _, account := range accounts {
+		if ctx.Err() != nil || !worker.core.state.IsLeader() {
+			break
+		}
+		current, ok := account.Workspace().SimulatedSystem(account.ID)
+		if !ok || current.Status != state.SimulatedSystemPreparing && current.Status != state.SimulatedSystemDeleting {
+			continue
+		}
+		persisted, err := worker.readPersistentAccount(ctx, current)
+		if err != nil {
+			if ctx.Err() != nil {
+				return false
+			}
+			if err != sql.ErrNoRows {
+				retry = true
+				slog.Warn("cannot read simulated system progress", "account", account.ID, "error", err)
+			}
+			continue
+		}
+		if persisted.Status != state.SimulatedSystemPreparing && persisted.Status != state.SimulatedSystemDeleting {
+			continue
+		}
+		if persisted.Status == state.SimulatedSystemDeleting {
+			err = worker.delete(ctx, persisted)
+		} else {
+			err = worker.prepare(ctx, persisted)
+		}
+		if err != nil {
+			if ctx.Err() != nil {
+				return false
+			}
+			retry = true
+			slog.Warn("cannot process simulated system; will retry", "account", account.ID)
+		}
+	}
+
+	return retry
+}
+
 func (worker *simulatedSystemWorker) readPersistentAccount(ctx context.Context, account *state.SimulatedSystem) (*state.SimulatedSystem, error) {
 	copy := *account
 	var checkpoint []byte
@@ -317,64 +361,6 @@ func (worker *simulatedSystemWorker) readPersistentAccount(ctx context.Context, 
 	}
 	copy.GenerationCheckpoint = json.Value(checkpoint)
 	return &copy, nil
-}
-
-func (worker *simulatedSystemWorker) run() {
-	defer worker.wg.Done()
-	ticker := time.NewTicker(5 * time.Second)
-	defer ticker.Stop()
-	worker.wakeUp()
-	for {
-		select {
-		case <-worker.core.close.ctx.Done():
-			return
-		case <-worker.wake:
-		case <-ticker.C:
-		}
-		if !worker.core.state.IsLeader() {
-			continue
-		}
-		accounts := worker.accountsToProcess()
-		for _, account := range accounts {
-			if worker.core.close.ctx.Err() != nil || !worker.core.state.IsLeader() {
-				break
-			}
-			ctx, cancel := context.WithCancel(worker.core.close.ctx)
-			current, ok := account.Workspace().SimulatedSystem(account.ID)
-			if !ok || current.Status != state.SimulatedSystemPreparing && current.Status != state.SimulatedSystemDeleting {
-				cancel()
-				continue
-			}
-			persisted, err := worker.readPersistentAccount(ctx, current)
-			if err != nil {
-				cancel()
-				if err != sql.ErrNoRows {
-					slog.Warn("cannot read simulated system progress", "account", account.ID, "error", err)
-				}
-				continue
-			}
-			if persisted.Status != state.SimulatedSystemPreparing && persisted.Status != state.SimulatedSystemDeleting {
-				cancel()
-				continue
-			}
-			worker.mu.Lock()
-			worker.cancel = cancel
-			worker.mu.Unlock()
-			if persisted.Status == state.SimulatedSystemDeleting {
-				err = worker.delete(ctx, persisted)
-			} else {
-				err = worker.prepare(ctx, persisted)
-			}
-			worker.mu.Lock()
-			worker.cancel = nil
-			worker.mu.Unlock()
-			interrupted := ctx.Err() != nil
-			cancel()
-			if err != nil && !interrupted {
-				slog.Warn("cannot process simulated system; will retry", "account", account.ID)
-			}
-		}
-	}
 }
 
 func (worker *simulatedSystemWorker) save(ctx context.Context, account *state.SimulatedSystem, checkpoint simulatedSystemCheckpoint, count int, status state.SimulatedSystemStatus, message string) error {
@@ -462,19 +448,6 @@ func (worker *simulatedSystemWorker) saveCheckpoint(ctx context.Context, account
 	}
 
 	return err
-}
-
-func (worker *simulatedSystemWorker) wakeUp() {
-	select {
-	case worker.wake <- struct{}{}:
-	default:
-	}
-}
-
-func (core *Core) wakeSimulatedSystemWorker() {
-	if core.simulatedWorker != nil {
-		core.simulatedWorker.wakeUp()
-	}
 }
 
 func initialSimulatedSystemCheckpoint(data *fakedata.ItalianWorldData, photoBaseURL string) (json.Value, error) {

@@ -421,6 +421,7 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 
 	// Listen to state changes.
 	core.state.Freeze()
+	core.state.AddListener(core.simulatedWorker.onCreateSimulatedSystem)
 	core.state.AddListener(core.onCreateWorkspace)
 	core.state.AddListener(core.onDeleteConnection)
 	core.state.AddListener(core.onDeleteOrganization)
@@ -428,13 +429,14 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 	core.state.AddListener(core.onDeleteWorkspace)
 	core.state.AddListener(core.onElectLeader)
 	core.state.AddListener(core.onEndPipelineRun)
+	core.state.AddListener(core.simulatedWorker.onMarkSimulatedSystemDeleting)
 	core.state.AddListener(core.onRunPipeline)
 	core.state.AddListener(core.onSetOrganizationStatus)
 	core.state.AddListener(core.onStartAlterProfileSchema)
 	core.state.AddListener(core.onStartIdentityResolution)
 	core.state.AddListener(core.onUpdateWarehouse)
-	core.state.Unfreeze()
 	core.simulatedWorker.Start()
+	core.state.Unfreeze()
 
 	// Try to start live runs that have not started yet.
 	for _, run := range core.state.LiveRuns() {

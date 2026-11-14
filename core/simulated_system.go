@@ -117,9 +117,6 @@ func (this *Workspace) CreateSimulatedSystem(ctx context.Context, name string, u
 			}
 			return "", err
 		}
-		if status == state.SimulatedSystemPreparing {
-			this.core.wakeSimulatedSystemWorker()
-		}
 		return n.ID, nil
 	}
 
@@ -181,9 +178,6 @@ func (this *Workspace) DeleteSimulatedSystem(ctx context.Context, id string) err
 			UpdatedAt: now,
 		}, nil
 	})
-	if err == nil {
-		this.core.wakeSimulatedSystemWorker()
-	}
 	return err
 }
 
