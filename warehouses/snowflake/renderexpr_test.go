@@ -5,6 +5,9 @@
 package snowflake
 
 import (
+	"database/sql"
+	"fmt"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -15,77 +18,156 @@ import (
 	"github.com/krenalis/krenalis/warehouses"
 )
 
-// Test_renderCountQuery verifies counts with optional joins and filters.
-func Test_renderCountQuery(t *testing.T) {
-
-	id := warehouses.Column{Name: "id", Type: types.Int(32)}
-	joins := []warehouses.Join{{
-		Type:      warehouses.InnerJoin,
-		Table:     "identities",
-		Condition: warehouses.NewBaseExpr(id, warehouses.OpIs, warehouses.Column{Name: "fk", Type: types.Int(32)}),
-	}}
-	where := warehouses.NewBaseExpr(id, warehouses.OpIs, 1)
-
-	for _, tc := range []struct {
+// TestArrayContains checks queries and counts for arrays containing or missing
+// a given value, including null and empty arrays.
+func TestArrayContains(t *testing.T) {
+	warehouse, db := newTestSnowflakeWarehouse(t)
+	instant := time.Date(2026, 10, 20, 10, 0, 0, 0, time.UTC)
+	clock := time.Date(1970, 1, 1, 10, 30, 0, 123456000, time.UTC)
+	offsetInstant := time.Date(2026, 10, 20, 23, 30, 45, 123456000, time.UTC)
+	// Use fixed-point JSON so Snowflake stores this value as an exact INTEGER.
+	integerBytes, err := decimal.MustParse("123456789012345678901234567890123456790").Binary(0)
+	if err != nil {
+		t.Fatalf("expected integer fixture encoding, got %v", err)
+	}
+	integer39, err := decimal.Binary(integerBytes, 76, 0)
+	if err != nil {
+		t.Fatalf("expected fixed-point integer fixture, got %v", err)
+	}
+	for i, test := range []struct {
 		name  string
-		joins []warehouses.Join
-		where warehouses.Expr
-		want  string
+		typ   types.Type
+		value any
+		other any
 	}{
-		{name: "all rows", want: `SELECT COUNT(*) FROM "PROFILES"`},
-		{name: "filtered rows", where: where, want: `SELECT COUNT(*) FROM "PROFILES" WHERE "ID" = 1`},
-		{
-			name:  "joined rows",
-			joins: joins,
-			want:  `SELECT COUNT(*) FROM "PROFILES" JOIN "IDENTITIES" ON "ID" = "FK"`,
-		},
-		{
-			name:  "filtered joined rows",
-			joins: joins,
-			where: where,
-			want:  `SELECT COUNT(*) FROM "PROFILES" JOIN "IDENTITIES" ON "ID" = "FK" WHERE "ID" = 1`,
-		},
+		{"string", types.String(), "f'o\\o", "bar"},
+		{"int32", types.Int(32), -2147483648, 2147483647},
+		{"int64", types.Int(64), 9223372036854775807, -9223372036854775808},
+		{"uint64", types.Int(64).Unsigned(), uint(18446744073709551615), uint(1)},
+		{"decimal", types.Decimal(18, 4), decimal.MustParse("1.25"), decimal.MustParse("1")},
+		{"decimal-small", types.Decimal(18, 8), decimal.MustParse("0.00000001"), decimal.MustParse("0.00000002")},
+		{"decimal38", types.Decimal(38, 0), decimal.MustParse("12345678901234567890123456789012345678"), decimal.MustParse("1")},
+		{"decimal39", types.Decimal(76, 0), decimal.MustParse("123456789012345678901234567890123456789"), integer39},
+		{"decimal39-swapped", types.Decimal(76, 0), integer39, decimal.MustParse("123456789012345678901234567890123456789")},
+		{"decimal-negative-zero", types.Decimal(76, 0), decimal.MustParse("-0"), decimal.MustParse("1")},
+		{"float32", types.Float(32), float64(float32(1.2345678)), 1.5},
+		{"float64", types.Float(64), 0.1, 1.5},
+		{"datetime", types.DateTime(), instant, instant.Add(time.Hour)},
+		// The same local date and time with different offsets must not match.
+		{"datetime-positive", types.DateTime(), offsetInstant.In(time.FixedZone("", 7200)), offsetInstant.Add(2 * time.Hour)},
+		{"datetime-negative", types.DateTime(), offsetInstant.In(time.FixedZone("", -18000)), offsetInstant.Add(-5 * time.Hour)},
+		{"date", types.Date(), instant, instant.AddDate(0, 0, 1)},
+		{"time", types.Time(), clock, clock.Add(time.Hour)},
+		{"year", types.Int(16).AsYear(), 2026, 2025},
+		{"uuid", types.UUID(), "550e8400-e29b-41d4-a716-446655440000", "550e8400-e29b-41d4-a716-446655440001"},
+		{"ip", types.IP(), "192.0.2.1", "192.0.2.2"},
 	} {
-		t.Run(tc.name, func(t *testing.T) {
-			statement, err := renderCountQuery("profiles", tc.joins, tc.where)
+		t.Run(test.name, func(t *testing.T) {
+
+			idColumn := warehouses.Column{Name: "id", Type: types.Int(32)}
+			column := warehouses.Column{Name: "value", Type: types.Array(test.typ), Nullable: true}
+			table := warehouses.Table{
+				Name:    fmt.Sprintf("array_contains_%d", i),
+				Columns: []warehouses.Column{idColumn, column},
+				Keys:    []string{"id"},
+			}
+			mustExecSQL(t, db, "CREATE TABLE "+quoteIdent(table.Name)+" ("+quoteIdent(idColumn.Name)+
+				" INTEGER PRIMARY KEY, "+quoteIdent(column.Name)+" "+typeToSnowflakeType(column.Type)+")")
+			err := warehouse.Merge(t.Context(), table, [][]any{
+				{0, nil},
+				{1, []any{}},
+				{2, []any{test.value}},
+				{3, []any{test.other}},
+				{4, []any{test.other, test.value, test.value}},
+			}, nil)
 			if err != nil {
-				t.Fatal(err)
+				t.Fatalf("expected array fixture merge, got %v", err)
 			}
-			if statement != tc.want {
-				t.Fatalf("expected %q, got %q", tc.want, statement)
+
+			for _, op := range []warehouses.Operator{warehouses.OpContains, warehouses.OpDoesNotContain} {
+				name := "contains"
+				if op == warehouses.OpDoesNotContain {
+					name = "does_not_contain"
+				}
+				t.Run(name, func(t *testing.T) {
+
+					expr := warehouses.NewBaseExpr(column, op, test.value)
+					want := []int{2, 4}
+					if op == warehouses.OpDoesNotContain {
+						want = []int{1, 3}
+					}
+					query := warehouses.RowQuery{
+						Table: table.Name, Columns: []warehouses.Column{idColumn},
+						Where: expr, OrderBy: []warehouses.Column{idColumn},
+					}
+					rows, total, err := warehouse.Query(t.Context(), query, true)
+					if err != nil {
+						t.Fatalf("expected array query, got %v", err)
+					}
+					defer rows.Close()
+					var got []int
+					row := make([]any, 1)
+					for rows.Next() {
+						err = rows.Scan(row...)
+						if err != nil {
+							t.Fatalf("expected array query row, got %v", err)
+						}
+						got = append(got, row[0].(int))
+					}
+					err = rows.Err()
+					if err != nil {
+						t.Fatalf("expected complete array query, got %v", err)
+					}
+					if !slices.Equal(got, want) || total != len(want) {
+						t.Errorf("expected ids %v and total %d, got %v and %d", want, len(want), got, total)
+					}
+
+					counts, err := warehouse.Counts(t.Context(), table.Name, []warehouses.Expr{expr})
+					if err != nil {
+						t.Fatalf("expected array counts, got %v", err)
+					}
+					if !slices.Equal(counts, []int{len(want)}) {
+						t.Errorf("expected counts [%d], got %v", len(want), counts)
+					}
+
+					var b strings.Builder
+					err = renderExpr(&b, expr)
+					if err != nil {
+						t.Fatalf("expected array expression, got %v", err)
+					}
+					statement := "SELECT " + quoteIdent(idColumn.Name) + ", (" + b.String() + ") FROM " +
+						quoteIdent(table.Name) + " ORDER BY " + quoteIdent(idColumn.Name)
+					truthRows, err := db.QueryContext(t.Context(), statement)
+					if err != nil {
+						t.Fatalf("expected array truth query, got %v", err)
+					}
+					defer truthRows.Close()
+					count := 0
+					for truthRows.Next() {
+						var id int
+						var truth sql.NullBool
+						if err := truthRows.Scan(&id, &truth); err != nil {
+							t.Fatalf("expected array truth row, got %v", err)
+						}
+						wantTruth := sql.NullBool{Bool: slices.Contains(want, id), Valid: id != 0}
+						if truth != wantTruth {
+							t.Errorf("expected id %d truth %v, got %v", id, wantTruth, truth)
+						}
+						count++
+					}
+					err = truthRows.Err()
+					if err != nil {
+						t.Fatalf("expected complete array truth query, got %v", err)
+					}
+					if count != 5 {
+						t.Errorf("expected 5 array truth rows, got %d", count)
+					}
+
+				})
 			}
+
 		})
 	}
-
-}
-
-// TestQueryOrderDirection verifies that the common direction applies to every sort column.
-func TestQueryOrderDirection(t *testing.T) {
-
-	db, _ := newCheckReadOnlyTestDB(t, []checkReadOnlyQuery{{
-		match: `ORDER BY "_UPDATED_AT" DESC, "_KPID" DESC`,
-		cols:  []string{"_KPID"},
-	}})
-	defer db.Close()
-	warehouse := &Snowflake{db: db}
-	rows, _, err := warehouse.Query(t.Context(), warehouses.RowQuery{
-		Table:   "profiles",
-		Columns: []warehouses.Column{{Name: "_kpid", Type: types.UUID()}},
-		OrderBy: []warehouses.Column{
-			{Name: "_updated_at", Type: types.DateTime()},
-			{Name: "_kpid", Type: types.UUID()},
-		},
-		OrderDesc: true,
-		Limit:     2,
-	}, false)
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = rows.Close()
-	if err != nil {
-		t.Fatal(err)
-	}
-
 }
 
 func Test_renderExpr(t *testing.T) {
@@ -155,6 +237,34 @@ func Test_renderExpr(t *testing.T) {
 			query: `NOT CONTAINS("NAME", 'boo')`,
 		},
 		{
+			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.Array(types.Int(32))}, warehouses.OpContains, 5),
+			query: `ARRAY_CONTAINS(PARSE_JSON('5'), "VALUES")`,
+		},
+		{
+			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.Array(types.Int(32))}, warehouses.OpDoesNotContain, 7),
+			query: `NOT ARRAY_CONTAINS(PARSE_JSON('7'), "VALUES")`,
+		},
+		{
+			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.Array(types.String())}, warehouses.OpContains, "foo"),
+			query: `ARRAY_CONTAINS(PARSE_JSON('"foo"'), "VALUES")`,
+		},
+		{
+			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.Array(types.String())}, warehouses.OpDoesNotContain, "boo"),
+			query: `NOT ARRAY_CONTAINS(PARSE_JSON('"boo"'), "VALUES")`,
+		},
+		{
+			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.Array(types.Decimal(76, 0))}, warehouses.OpContains, decimal.MustParse("123456789012345678901234567890123456789")),
+			query: `(ARRAY_SIZE(FILTER("VALUES", krenalis_element -> IFF(TYPEOF(krenalis_element) = 'INTEGER', TO_JSON(krenalis_element) = '123456789012345678901234567890123456789', FALSE))) > 0)`,
+		},
+		{
+			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.Array(types.Decimal(18, 4))}, warehouses.OpContains, decimal.MustParse("1.25")),
+			query: `(ARRAY_SIZE(FILTER("VALUES", krenalis_element -> IFF(TYPEOF(krenalis_element) = 'INTEGER', FALSE, TRY_TO_DECFLOAT(TO_JSON(krenalis_element)) = TO_DECFLOAT('1.25')))) > 0)`,
+		},
+		{
+			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.Array(types.Decimal(76, 0))}, warehouses.OpContains, decimal.MustParse("1e2")),
+			query: `(ARRAY_SIZE(FILTER("VALUES", krenalis_element -> IFF(TYPEOF(krenalis_element) = 'INTEGER', TO_JSON(krenalis_element) = '100', TRY_TO_DECFLOAT(TO_JSON(krenalis_element)) = TO_DECFLOAT('1e2')))) > 0)`,
+		},
+		{
 			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "id", Type: types.Float(32)}, warehouses.OpIsOneOf, 3.5, 9.2, 5.0),
 			query: `"ID" IN (3.5,9.2,5)`,
 		},
@@ -177,6 +287,62 @@ func Test_renderExpr(t *testing.T) {
 		{
 			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "active", Type: types.Boolean()}, warehouses.OpIsFalse),
 			query: `NOT "ACTIVE"`,
+		},
+		{
+			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "properties", Type: types.JSON()}, warehouses.OpIsTrue),
+			query: `AS_BOOLEAN("PROPERTIES") IS NOT DISTINCT FROM TRUE`,
+		},
+		{
+			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "properties", Type: types.JSON()}, warehouses.OpIsFalse),
+			query: `AS_BOOLEAN("PROPERTIES") IS NOT DISTINCT FROM FALSE`,
+		},
+		{
+			expr: &warehouses.BaseExpr{
+				Column:   warehouses.Column{Name: "properties", Type: types.JSON()},
+				Keys:     []string{"enabled"},
+				Operator: warehouses.OpIsTrue,
+			},
+			query: `AS_BOOLEAN(GET("PROPERTIES", 'enabled')) IS NOT DISTINCT FROM TRUE`,
+		},
+		{
+			expr: &warehouses.BaseExpr{
+				Column:   warehouses.Column{Name: "properties", Type: types.JSON()},
+				Keys:     []string{"archived"},
+				Operator: warehouses.OpIsFalse,
+			},
+			query: `AS_BOOLEAN(GET("PROPERTIES", 'archived')) IS NOT DISTINCT FROM FALSE`,
+		},
+		{
+			expr: &warehouses.BaseExpr{
+				Column:   warehouses.Column{Name: "properties", Type: types.JSON()},
+				Keys:     []string{"a", "b"},
+				Operator: warehouses.OpIsTrue,
+			},
+			query: `AS_BOOLEAN(GET(GET("PROPERTIES", 'a'), 'b')) IS NOT DISTINCT FROM TRUE`,
+		},
+		{
+			expr: &warehouses.BaseExpr{
+				Column:   warehouses.Column{Name: "properties", Type: types.JSON()},
+				Keys:     []string{"a", "b"},
+				Operator: warehouses.OpIsFalse,
+			},
+			query: `AS_BOOLEAN(GET(GET("PROPERTIES", 'a'), 'b')) IS NOT DISTINCT FROM FALSE`,
+		},
+		{
+			expr: &warehouses.BaseExpr{
+				Column:   warehouses.Column{Name: "properties", Type: types.JSON()},
+				Keys:     []string{"a.b"},
+				Operator: warehouses.OpIsTrue,
+			},
+			query: `AS_BOOLEAN(GET("PROPERTIES", 'a.b')) IS NOT DISTINCT FROM TRUE`,
+		},
+		{
+			expr: &warehouses.BaseExpr{
+				Column:   warehouses.Column{Name: "properties", Type: types.JSON()},
+				Keys:     []string{"a'b", "c'd"},
+				Operator: warehouses.OpIsFalse,
+			},
+			query: `AS_BOOLEAN(GET(GET("PROPERTIES", 'a\'b'), 'c\'d')) IS NOT DISTINCT FROM FALSE`,
 		},
 		{
 			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "id", Type: types.String()}, warehouses.OpIsNull),

@@ -132,13 +132,13 @@ func TestSourceRecordSchema(t *testing.T) {
 			t.Fatalf("expected %s values %v, got %v", name, values, property.Type.Values())
 		}
 	}
-	for name, semantic := range map[string]types.Semantic{
-		"email": types.EmailSemantic, "phone": types.PhoneSemantic, "site_url": types.URLSemantic,
-		"photo": types.URLSemantic,
+	for name, semantic := range map[string]types.Semantics{
+		"email": types.EmailSemantics, "phone": types.PhoneSemantics, "site_url": types.URLSemantics,
+		"photo": types.URLSemantics,
 	} {
 		property, ok := schema.Properties().ByName(name)
-		if !ok || property.Type.Semantic() != semantic {
-			t.Fatalf("expected %s semantic %s, got %v", name, semantic, property.Type.Semantic())
+		if !ok || property.Type.Semantics() != semantic {
+			t.Fatalf("expected %s semantic %s, got %v", name, semantic, property.Type.Semantics())
 		}
 	}
 	property, ok = schema.Properties().ByName("address")
@@ -159,7 +159,7 @@ func TestSourceRecordSchema(t *testing.T) {
 		t.Fatalf("expected address properties %v, got %v", wantAddressNames, gotAddressNames)
 	}
 	country, ok := property.Type.Properties().ByName("country")
-	if !ok || country.Type.Semantic() != types.CountrySemantic || country.Type.CountryFormat() != types.ISO3166Alpha2 {
+	if !ok || country.Type.Semantics() != types.CountrySemantics || country.Type.CountryFormat() != types.ISO3166Alpha2 {
 		t.Fatalf("expected address.country to use ISO alpha-2, got %+v", country)
 	}
 	destination, err := application.RecordSchema(t.Context(), connectors.TargetUser, connectors.Destination)

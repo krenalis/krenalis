@@ -466,7 +466,7 @@ func withDialer(o *lambda.Options) {
 		// dialed, so a pooled connection would attribute the bytes of every
 		// request it later serves to the organization that dialed it.
 		// Keep-alives are disabled, so that each request is counted for its own
-		// organization.
+		// organization. See https://github.com/krenalis/krenalis/issues/2610.
 		t.DisableKeepAlives = true
 	})
 }

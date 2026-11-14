@@ -1,8 +1,14 @@
 import { expect, test } from '@playwright/test';
 import { ResponseProfile } from '../src/lib/api/types/responses';
-import { Filter } from '../src/lib/api/types/pipeline';
+import { Filter, FilterCondition, FilterOperator } from '../src/lib/api/types/pipeline';
 import { ObjectType } from '../src/lib/api/types/types';
-import { validateAndNormalizeFilter } from '../src/lib/core/pipeline';
+import {
+	FILTER_OPERATORS,
+	flattenSchema,
+	getCompatibleFilterOperators,
+	isUnaryOperator,
+	validateAndNormalizeFilter,
+} from '../src/lib/core/pipeline';
 import {
 	createProfilesQueryKey,
 	createProfilesSequenceState,
@@ -11,16 +17,13 @@ import {
 	profilesSequenceReducer,
 } from '../src/components/routes/Profiles/profilesSequence';
 import {
-	commitProfilesFilterPreview,
+	commitProfilesFilter,
 	createProfilesFilterSession,
 	currentProfilesFilterHistoryEntry,
 	profileFilterFingerprint,
 	profileFilterResultsFingerprint,
 } from '../src/components/routes/Profiles/profilesFilterSession';
-import {
-	createProfilesPreviewTiming,
-	recordProfilesPreviewLatency,
-} from '../src/components/routes/Profiles/profilesPreviewTiming';
+import { getProfilesFilterErrors } from '../src/components/routes/Profiles/profilesFilterValidation';
 
 const profile = (index: number): ResponseProfile => ({
 	kpid: `profile-${index}`,
@@ -33,8 +36,8 @@ const filterSchema: ObjectType = {
 	properties: [
 		{
 			name: 'email',
+			displayName: '',
 			prefilled: '',
-			role: 'Both',
 			type: { kind: 'string' },
 			createRequired: false,
 			updateRequired: false,
@@ -105,9 +108,14 @@ test(`Do not let an obsolete mismatch mark the current execution stale`, () => {
 		total: 1,
 		hasNext: false,
 	});
-	state = profilesSequenceReducer(state, { type: 'markSchemaNotAligned', executionID: 1 });
+	state = profilesSequenceReducer(state, {
+		type: 'markSchemaNotAligned',
+		executionID: 1,
+		message: '«email» property no longer exists',
+	});
 
 	expect(state.schemaNotAligned).toBe(false);
+	expect(state.schemaNotAlignedMessage).toBeUndefined();
 });
 
 test(`Retain useful adjacent pages and evict distant profile windows`, () => {
@@ -156,6 +164,11 @@ test(`Replace a sequence atomically after a candidate query succeeds`, () => {
 	});
 	state = profilesSequenceReducer(state, { type: 'setActiveProfile', profileID: 'profile-2' });
 
+	const message = '«email» property no longer exists';
+	state = profilesSequenceReducer(state, { type: 'markSchemaNotAligned', executionID: 1, message });
+	expect(state.schemaNotAligned).toBe(true);
+	expect(state.schemaNotAlignedMessage).toBe(message);
+
 	state = profilesSequenceReducer(state, {
 		type: 'replaceExecution',
 		queryKey: 'filtered-query',
@@ -176,6 +189,8 @@ test(`Replace a sequence atomically after a candidate query succeeds`, () => {
 	expect(state.activeProfileID).toBe('profile-4');
 	expect(state.total).toBe(3);
 	expect(state.isInitialLoading).toBe(false);
+	expect(state.schemaNotAligned).toBe(false);
+	expect(state.schemaNotAlignedMessage).toBeUndefined();
 	expect(getVisibleProfiles(state).map(({ kpid }) => kpid)).toEqual(['profile-3', 'profile-4']);
 	expect(getProfilesPage(state, 4)?.profiles.map(({ kpid }) => kpid)).toEqual(['profile-5']);
 });
@@ -242,7 +257,7 @@ test(`Normalize filter drafts without silently accepting partial conditions`, ()
 			{ property: 'email', operator: 'contains', values: ['example.com'] },
 		],
 	};
-	expect(validateAndNormalizeFilter(filter, filterSchema, 'Destination', 'User')).toEqual({
+	expect(validateAndNormalizeFilter(filter, filterSchema)).toEqual({
 		operator: 'and',
 		rules: [{ property: 'email', operator: 'contains', values: ['example.com'] }],
 	});
@@ -250,32 +265,124 @@ test(`Normalize filter drafts without silently accepting partial conditions`, ()
 		validateAndNormalizeFilter(
 			{ operator: 'and', rules: [{ property: 'email', operator: 'contains', values: [''] }] },
 			filterSchema,
-			'Destination',
-			'User',
 		),
 	).toThrow('cannot be empty');
+	for (const [condition, message] of [
+		[{ property: '', operator: 'is', values: ['Ada'] }, 'Property of filter condition is required'],
+		[{ property: '', operator: '', values: ['Ada'] }, 'Property of filter condition is required'],
+		[{ property: 'email', operator: 'is between', values: ['a'] }, 'is required'],
+		[{ property: 'email', operator: 'is true', values: [] }, 'cannot be used with property'],
+	] satisfies [FilterCondition, string][]) {
+		expect(() => validateAndNormalizeFilter({ operator: 'and', rules: [condition] }, filterSchema)).toThrow(
+			message,
+		);
+	}
 	expect(
 		validateAndNormalizeFilter(
 			{ operator: 'and', rules: [{ property: 'email', operator: 'does not exist', values: [] }] },
 			filterSchema,
-			'Destination',
-			'User',
 		),
 	).toEqual({ operator: 'and', rules: [{ property: 'email', operator: 'does not exist' }] });
+
+	for (const { values, nullable, readOptional, unaryOperators } of [
+		{ values: ['', 'active'], nullable: false, readOptional: false, unaryOperators: ['is empty', 'is not empty'] },
+		{ values: ['active'], nullable: true, readOptional: false, unaryOperators: ['is null', 'is not null'] },
+		{ values: ['active'], nullable: false, readOptional: true, unaryOperators: ['exists', 'does not exist'] },
+		{ values: ['active'], nullable: false, readOptional: false, unaryOperators: [] },
+	] satisfies { values: string[]; nullable: boolean; readOptional: boolean; unaryOperators: FilterOperator[] }[]) {
+		const schema: ObjectType = {
+			kind: 'object',
+			properties: [{ ...filterSchema.properties[0], type: { kind: 'string', values }, nullable, readOptional }],
+		};
+		const expectedOperators: FilterOperator[] = [
+			'is',
+			'is not',
+			'contains',
+			'does not contain',
+			'is one of',
+			'is not one of',
+			...unaryOperators,
+		];
+		expect(
+			getCompatibleFilterOperators(flattenSchema(schema).email, false).map((index) => FILTER_OPERATORS[index]),
+		).toEqual(expectedOperators);
+		for (const operator of [
+			'contains',
+			'does not contain',
+			'is empty',
+			'is not empty',
+			'is null',
+			'is not null',
+			'exists',
+			'does not exist',
+		] satisfies FilterOperator[]) {
+			const condition: FilterCondition = { property: 'email', operator };
+			if (!isUnaryOperator(operator)) {
+				condition.values = ['active'];
+			}
+			const filter: Filter = { operator: 'and', rules: [condition] };
+			if (expectedOperators.includes(operator)) {
+				expect(validateAndNormalizeFilter(filter, schema)).toEqual(filter);
+			} else {
+				expect(() => validateAndNormalizeFilter(filter, schema)).toThrow('cannot be used with property');
+			}
+		}
+	}
 });
 
-test(`Initialize filter history from the displayed filter and last observed total`, () => {
+test(`Associate all invalid filter fields with their editor paths`, () => {
+	const schema: ObjectType = {
+		...filterSchema,
+		properties: [
+			...filterSchema.properties,
+			{ ...filterSchema.properties[0], name: 'birth_date', type: { kind: 'date' } },
+			{ ...filterSchema.properties[0], name: 'metadata', type: { kind: 'json' } },
+		],
+	};
+	const errors = getProfilesFilterErrors(
+		{
+			operator: 'and',
+			rules: [
+				{ property: 'birth_date', operator: 'is between', values: ['2026-02-30', 'bad date'] },
+				{
+					operator: 'or',
+					rules: [
+						{ property: '', operator: '', values: [''] },
+						{ property: 'removed', operator: 'is', values: ['value'] },
+						{ property: 'metadata..name', operator: 'is', values: ['value'] },
+						{ property: 'birth_date', operator: 'contains', values: ['2026-11-13'] },
+						{ property: 'email', operator: '', values: ['value'] },
+						{ property: 'email', operator: 'is one of', values: ['Ada', ''] },
+					],
+				},
+			],
+		},
+		schema,
+	);
+	expect(errors).toEqual({
+		'value-0-0': expect.stringContaining('not a valid date'),
+		'value-0-1': expect.stringContaining('not a valid date'),
+		'property-1-0': 'Choose a property',
+		'property-1-1': expect.stringContaining('does not exist'),
+		'path-1-2': expect.stringContaining('not valid'),
+		'operator-1-3': 'Choose a compatible operator',
+		'operator-1-4': expect.stringContaining('required'),
+		'value-1-5-1': expect.stringContaining('cannot be empty'),
+	});
+});
+
+test(`Initialize filter history from the displayed filter`, () => {
 	const filter: Filter = {
 		operator: 'and',
 		rules: [{ property: 'email', operator: 'contains', values: ['example.com'] }],
 	};
-	const session = createProfilesFilterSession(filter, 12);
+	const session = createProfilesFilterSession(filter);
 
 	expect(session.history).toHaveLength(1);
 	expect(currentProfilesFilterHistoryEntry(session)).toEqual({
 		filter,
+		draft: filter,
 		fingerprint: profileFilterFingerprint(filter),
-		total: 12,
 	});
 	expect(session.draft).not.toBe(filter);
 });
@@ -294,7 +401,7 @@ test(`Ignore logical operators in groups that contain fewer than two rules when 
 	expect(profileFilterResultsFingerprint(twoRulesAnd)).not.toBe(profileFilterResultsFingerprint(twoRulesOr));
 });
 
-test(`Add only successful previews to filter history and truncate a redo branch`, () => {
+test(`Commit filter history without match counts and truncate a redo branch`, () => {
 	const filterB: Filter = {
 		operator: 'and',
 		rules: [{ property: 'email', operator: 'contains', values: ['example.com'] }],
@@ -307,101 +414,92 @@ test(`Add only successful previews to filter history and truncate a redo branch`
 		operator: 'and',
 		rules: [{ property: 'email', operator: 'contains', values: ['example.net'] }],
 	};
-	let session = createProfilesFilterSession(null, 20);
-	session = commitProfilesFilterPreview(
-		session,
-		{ filter: filterB, fingerprint: profileFilterFingerprint(filterB) },
-		{ total: 10 },
-	);
-	session = commitProfilesFilterPreview(
-		session,
-		{ filter: filterC, fingerprint: profileFilterFingerprint(filterC) },
-		{ total: 5 },
-	);
+	let session = createProfilesFilterSession(null);
+	session = commitProfilesFilter(session, filterB);
+	session = commitProfilesFilter(session, filterC);
 
 	session = { ...session, draft: filterB, historyIndex: 1 };
-	session = commitProfilesFilterPreview(
-		session,
-		{ filter: filterD, fingerprint: profileFilterFingerprint(filterD) },
-		{ total: 0 },
-	);
+	session = commitProfilesFilter(session, filterD);
 
 	expect(session.history.map(({ filter }) => filter)).toEqual([null, filterB, filterD]);
 	expect(session.historyIndex).toBe(2);
-	expect(currentProfilesFilterHistoryEntry(session).total).toBe(0);
+	expect(session.draft).toEqual(filterD);
 });
 
-test(`Refresh history counts when data changes`, () => {
+test(`Confirm an unchanged filter without adding history or discarding Redo`, () => {
 	const filter: Filter = {
 		operator: 'and',
 		rules: [{ property: 'email', operator: 'contains', values: ['example.com'] }],
 	};
-	let session = createProfilesFilterSession(filter, 12);
-	session = commitProfilesFilterPreview(
-		session,
-		{ filter, fingerprint: profileFilterFingerprint(filter), historyIndex: 0 },
-		{ total: 14 },
-	);
-	expect(currentProfilesFilterHistoryEntry(session).total).toBe(14);
-});
+	let session = createProfilesFilterSession(filter);
+	session = commitProfilesFilter(session, null);
+	session = { ...session, draft: filter, historyIndex: 0 };
+	expect(commitProfilesFilter(session, structuredClone(filter))).toBe(session);
+	expect(session.history).toHaveLength(2);
+	expect(session.historyIndex).toBe(0);
 
-test(`Adapt the text preview delay only after enough stable latency measurements`, () => {
-	let timing = createProfilesPreviewTiming();
-	timing = recordProfilesPreviewLatency(timing, 2000);
-	timing = recordProfilesPreviewLatency(timing, 2000);
-	expect(timing.delayMs).toBe(1000);
-
-	timing = recordProfilesPreviewLatency(timing, 2000);
-	expect(timing.delayMs).toBe(1000);
-	timing = recordProfilesPreviewLatency(timing, 2000);
-	expect(timing.delayMs).toBe(1500);
-
-	timing = recordProfilesPreviewLatency(timing, 5000);
-	timing = recordProfilesPreviewLatency(timing, 5000);
-	timing = recordProfilesPreviewLatency(timing, 5000);
-	expect(timing.delayMs).toBe(1500);
-	timing = recordProfilesPreviewLatency(timing, 5000);
-	expect(timing.delayMs).toBe(2500);
-	expect(timing.latencySamples).toHaveLength(5);
-});
-
-test(`Use the true median when adapting from an even number of latency measurements`, () => {
-	let timing = createProfilesPreviewTiming();
-	timing = recordProfilesPreviewLatency(timing, 1000);
-	timing = recordProfilesPreviewLatency(timing, 5000);
-	timing = recordProfilesPreviewLatency(timing, 5000);
-	timing = recordProfilesPreviewLatency(timing, 1000);
-
-	expect(timing.delayMs).toBe(1000);
-	expect(timing.delayCandidate).toBe(1500);
-});
-
-test(`Suspend and conservatively restore automatic text previews`, () => {
-	let timing = createProfilesPreviewTiming();
-	timing = recordProfilesPreviewLatency(timing, 9000);
-	timing = recordProfilesPreviewLatency(timing, 9000);
-	timing = recordProfilesPreviewLatency(timing, 9000);
-	expect(timing.suspended).toBe(true);
-
-	timing = recordProfilesPreviewLatency(timing, 3000);
-	expect(timing.suspended).toBe(true);
-	timing = recordProfilesPreviewLatency(timing, 3000);
-	expect(timing.suspended).toBe(false);
-	expect(timing.delayMs).toBe(2500);
-});
-
-test('A successful preview preserves placeholders in the editable draft', () => {
-	const filter: Filter = {
-		operator: 'and',
-		rules: [{ property: 'email', operator: 'contains', values: ['example'] }],
+	const draft: Filter = {
+		...filter,
+		rules: [{ property: 'email', operator: 'contains', values: ['"example.com"'] }],
 	};
-	const draft: Filter = { ...filter, rules: [...filter.rules, { property: '', operator: 'is', values: [] }] };
-	const session = { ...createProfilesFilterSession(null, 10), draft };
-	const next = commitProfilesFilterPreview(
-		session,
-		{ filter, fingerprint: profileFilterFingerprint(filter) },
-		{ total: 3 },
-	);
-	expect(next.draft).toEqual(draft);
-	expect(currentProfilesFilterHistoryEntry(next).filter).toEqual(filter);
+	session = commitProfilesFilter(session, filter, draft);
+	expect(session.history).toHaveLength(2);
+	expect(session.historyIndex).toBe(0);
+	expect(session.draft).toEqual(draft);
+	expect(currentProfilesFilterHistoryEntry(session).draft).toEqual(draft);
+	session = { ...session, draft: null };
+	session = commitProfilesFilter(session, filter, draft);
+	expect(session.draft).toEqual(draft);
+	expect(session.history).toHaveLength(2);
+});
+
+test('Keep only the latest fifty confirmed filter versions', () => {
+	let session = createProfilesFilterSession(null);
+	for (let index = 0; index < 55; index++) {
+		session = commitProfilesFilter(session, {
+			operator: 'and',
+			rules: [{ property: 'email', operator: 'contains', values: [String(index)] }],
+		});
+	}
+	expect(session.history).toHaveLength(50);
+	expect(session.historyIndex).toBe(49);
+	expect((session.history[0].filter!.rules[0] as FilterCondition).values).toEqual(['5']);
+	expect((currentProfilesFilterHistoryEntry(session).filter!.rules[0] as FilterCondition).values).toEqual(['54']);
+});
+
+test('Initialize a quoted profile filter draft without changing its values', () => {
+	const filter: Filter = {
+		operator: 'or',
+		rules: [
+			{
+				operator: 'and',
+				rules: [
+					{
+						property: 'email',
+						operator: 'is one of',
+						values: ['  Ada  ', '"Ada"', "'Ada'", '"Ada\\Lovelace"'],
+					},
+				],
+			},
+		],
+	};
+	const session = createProfilesFilterSession(filter);
+	expect(validateAndNormalizeFilter(session.draft!, filterSchema)).toEqual(filter);
+	expect(currentProfilesFilterHistoryEntry(session).filter).toEqual(filter);
+});
+
+test('Keep the exact quoted draft in confirmed filter history', () => {
+	const draft: Filter = {
+		operator: 'and',
+		rules: [{ property: 'email', operator: 'is one of', values: ['"  Ada  "', '\'"Ada"\''] }],
+	};
+	const filter = validateAndNormalizeFilter(draft, filterSchema)!;
+	let session = createProfilesFilterSession(null);
+	session = commitProfilesFilter(session, filter, draft);
+	expect(session.draft).toEqual(draft);
+	expect(session.draft).not.toBe(draft);
+	expect(validateAndNormalizeFilter(session.draft!, filterSchema)).toEqual(filter);
+	session = commitProfilesFilter(session, null);
+	expect(session.history[1].draft).toEqual(draft);
+	expect(session.history[1].draft).not.toBe(draft);
 });

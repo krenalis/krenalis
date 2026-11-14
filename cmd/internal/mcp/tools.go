@@ -130,7 +130,7 @@ var tools = []server.ServerTool{
 			if err != nil {
 				return nil, err
 			}
-			schemaInfo := profileSchemaInfoForMCPClient(ws.ProfileSchema, ws.ColumnTypeDescription)
+			schemaInfo := profileSchemaInfoForMCPClient(ws.ProfileSchema.Schema, ws.ColumnTypeDescription)
 			encoded, err := json.Marshal(schemaInfo)
 			if err != nil {
 				return nil, err
@@ -268,7 +268,7 @@ var tools = []server.ServerTool{
 			if err != nil {
 				return nil, err
 			}
-			var info []any
+			info := []any{}
 			for _, c := range ws.Connections() {
 				info = append(info, map[string]any{
 					"id":             c.ID,

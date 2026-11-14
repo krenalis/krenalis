@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	"github.com/krenalis/krenalis/core/internal/connections"
 	"github.com/krenalis/krenalis/tools/types"
@@ -57,6 +58,178 @@ func TestConvertToExternal(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestConvertToExternalSemantics checks that values are validated against the
+// semantics of the external type, whether or not the internal type has the
+// same semantics.
+func TestConvertToExternalSemantics(t *testing.T) {
+
+	countryAlpha2 := types.String().AsCountry(types.ISO3166Alpha2)
+	countryAlpha3 := types.String().AsCountry(types.ISO3166Alpha3)
+	email := types.String().AsEmail()
+	phone := types.String().AsPhone()
+
+	tests := []struct {
+		name    string
+		in, ex  types.Type
+		value   string
+		wantErr bool
+	}{
+		// Both types have the same semantics.
+		{"current alpha-2 country", countryAlpha2, countryAlpha2, "IT", false},
+		{"former alpha-2 country", countryAlpha2, countryAlpha2, "AN", false},
+		{"unassigned alpha-2 country", countryAlpha2, countryAlpha2, "ZZ", true},
+		{"alpha-3 country", countryAlpha3, countryAlpha3, "ITA", false},
+		{"alpha-3 country with alpha-2 code", countryAlpha3, countryAlpha3, "IT", true},
+		{"phone in canonical form", phone, phone, "+390236618300", false},
+		{"phone not in canonical form", phone, phone, "+39 02 3661 8300", true},
+		{"email is not validated", email, email, "not an email", false},
+
+		// Only the external type has semantics.
+		{"string to alpha-2 country", types.String(), countryAlpha2, "IT", false},
+		{"string to alpha-2 country with alpha-3 code", types.String(), countryAlpha2, "ITA", true},
+		{"string to alpha-2 country with unassigned code", types.String(), countryAlpha2, "ZZ", true},
+		{"string to alpha-3 country", types.String(), countryAlpha3, "ITA", false},
+		{"string to alpha-3 country with alpha-2 code", types.String(), countryAlpha3, "IT", true},
+		{"string to phone in canonical form", types.String(), phone, "+390236618300", false},
+		{"string to phone not in canonical form", types.String(), phone, "+39 02 3661 8300", true},
+		{"string to phone with invalid number", types.String(), phone, "not a phone", true},
+		{"string to email is not validated", types.String(), email, "not an email", false},
+
+		// Only the internal type has semantics.
+		{"alpha-2 country to string", countryAlpha2, types.String(), "IT", false},
+		{"phone to string", phone, types.String(), "+390236618300", false},
+		{"email to string", email, types.String(), "bob@example.com", false},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, err := convertToExternal(test.value, test.in, test.ex, "in", "ex")
+			if err != nil {
+				if !test.wantErr {
+					t.Fatalf("expected no error, got %v", err)
+				}
+				wantErr := errMatchingPropertyConversion("in", "ex")
+				if !reflect.DeepEqual(wantErr, err) {
+					t.Fatalf("expected error %#v, got %#v", wantErr, err)
+				}
+				return
+			}
+			if test.wantErr {
+				wantErr := errMatchingPropertyConversion("in", "ex")
+				t.Fatalf("expected error %#v, got nil", wantErr)
+			}
+			if got != test.value {
+				t.Fatalf("expected %#v, got %#v", test.value, got)
+			}
+		})
+	}
+
+}
+
+// TestConvertToExternalStringConstraintsWithSemantics verifies that semantics,
+// on one or both types, do not bypass the string constraints of the external
+// type.
+func TestConvertToExternalStringConstraintsWithSemantics(t *testing.T) {
+
+	const (
+		value        = "bob@example.com"
+		unicodeValue = "é@example.com"
+		phoneValue   = "+390236618300"
+	)
+
+	var (
+		country            = types.String().AsCountry(types.ISO3166Alpha2)
+		email              = types.String().AsEmail()
+		phone              = types.String().AsPhone()
+		valueBytes         = len(value)
+		valueLength        = utf8.RuneCountInString(value)
+		unicodeValueBytes  = len(unicodeValue)
+		unicodeValueLength = utf8.RuneCountInString(unicodeValue)
+	)
+
+	tests := []struct {
+		name    string
+		value   string
+		in      types.Type
+		ex      types.Type
+		wantErr bool
+	}{
+		// Both types have the same semantics.
+		{"max bytes at limit", value, email, email.WithMaxBytes(valueBytes), false},
+		{"max bytes exceeded", value, email, email.WithMaxBytes(valueBytes - 1), true},
+		{"max length at limit", value, email, email.WithMaxLength(valueLength), false},
+		{"max length exceeded", value, email, email.WithMaxLength(valueLength - 1), true},
+		{"Unicode constraints at limits", unicodeValue, email, email.WithMaxBytes(unicodeValueBytes).WithMaxLength(unicodeValueLength), false},
+		{"Unicode max bytes exceeded", unicodeValue, email, email.WithMaxBytes(unicodeValueBytes - 1).WithMaxLength(unicodeValueLength), true},
+		{"Unicode max length exceeded", unicodeValue, email, email.WithMaxBytes(unicodeValueBytes).WithMaxLength(unicodeValueLength - 1), true},
+		{"values match", value, email, email.WithValues(value), false},
+		{"values mismatch", value, email, email.WithValues("other@example.com"), true},
+		{"pattern matches", value, email, email.WithPattern(regexp.MustCompile(`^bob@`)), false},
+		{"pattern mismatch", value, email, email.WithPattern(regexp.MustCompile(`^other@`)), true},
+
+		// Only the internal type has semantics.
+		{"country to string max length exceeded", "IT", country, types.String().WithMaxLength(1), true},
+		{"phone to string max length at limit", phoneValue, phone, types.String().WithMaxLength(len(phoneValue)), false},
+		{"phone to string max length exceeded", phoneValue, phone, types.String().WithMaxLength(len(phoneValue) - 1), true},
+		{"phone to string pattern matches", phoneValue, phone, types.String().WithPattern(regexp.MustCompile(`^\+39`)), false},
+		{"phone to string pattern mismatch", phoneValue, phone, types.String().WithPattern(regexp.MustCompile(`^\+1`)), true},
+		{"email to string values mismatch", value, email, types.String().WithValues("other@example.com"), true},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, err := convertToExternal(test.value, test.in, test.ex, "in", "ex")
+			if err != nil {
+				if !test.wantErr {
+					t.Fatalf("expected no error, got %v", err)
+				}
+				wantErr := errMatchingPropertyConversion("in", "ex")
+				if !reflect.DeepEqual(wantErr, err) {
+					t.Fatalf("expected error %#v, got %#v", wantErr, err)
+				}
+				return
+			}
+			if test.wantErr {
+				wantErr := errMatchingPropertyConversion("in", "ex")
+				t.Fatalf("expected error %#v, got nil", wantErr)
+			}
+			if got != test.value {
+				t.Fatalf("expected %#v, got %#v", test.value, got)
+			}
+		})
+	}
+
+}
+
+// TestConvertToExternalPanics checks that convertToExternal panics when its
+// preconditions are violated.
+func TestConvertToExternalPanics(t *testing.T) {
+
+	tests := []struct {
+		name      string
+		v         any
+		in, ex    types.Type
+		wantPanic string
+	}{
+		{"nil value", nil, types.String(), types.String(), "core: unexpected value nil for internal kind string"},
+		{"different semantics", "bob@example.com", types.String().AsEmail(), types.String().AsPhone(), "core: unexpected mismatch in semantics or options: internal email semantics (options none), external phone semantics (options none)"},
+		{"different semantics options", "IT", types.String().AsCountry(types.ISO3166Alpha2), types.String().AsCountry(types.ISO3166Alpha3), "core: unexpected mismatch in semantics or options: internal country semantics (options alpha-2), external country semantics (options alpha-3)"},
+		{"unsupported external kind", "true", types.String(), types.Boolean(), "core: unexpected external kind boolean"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			defer func() {
+				if got := recover(); got != test.wantPanic {
+					t.Fatalf("expected panic %q, got %#v", test.wantPanic, got)
+				}
+			}()
+			_, _ = convertToExternal(test.v, test.in, test.ex, "in", "ex")
+		})
+	}
+
 }
 
 func TestGetAttribute(t *testing.T) {

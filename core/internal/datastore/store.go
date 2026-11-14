@@ -45,32 +45,6 @@ var ErrMaintenanceMode = errors.New("the data warehouse is in maintenance mode")
 // longer exists.
 var ErrWorkspaceNotExist = errors.New("workspace does not exist anymore")
 
-// UnavailableError represents an error with the data warehouse.
-type UnavailableError struct {
-	Err error
-}
-
-func (err *UnavailableError) Error() string {
-	return fmt.Sprintf("data warehouse: %s", err.Err)
-}
-
-// unavailableError wraps err in *UnavailableError if it is an internal error.
-func unavailableError(err error) error {
-	if err == nil {
-		return nil
-	}
-	switch err.(type) {
-	case
-		*warehouses.RejectedReadOnlyQueryError,
-		*warehouses.NonInitializableError,
-		*warehouses.OperationError,
-		*warehouses.SettingsError,
-		*warehouses.SettingsNotReadOnly:
-		return err
-	}
-	return &UnavailableError{Err: err}
-}
-
 // destinationsProfilesTable represents the krenalis_destination_profiles table.
 var destinationsProfilesTable = warehouses.Table{
 	Name: "krenalis_destination_profiles",
@@ -99,6 +73,12 @@ type SimulatedSystemRecord struct {
 	Data json.Value
 }
 
+// PipelineMetrics contains the pipeline metric operations used by datastore
+// writers.
+type PipelineMetrics interface {
+	FinalizePassed(pipeline string, count int)
+}
+
 type Store struct {
 	ds               *Datastore
 	wh               atomic.Value // warehouse
@@ -123,7 +103,7 @@ func newStore(ds *Datastore, ws *state.Workspace) *Store {
 		eventIdentityWriters: map[string]*EventIdentityWriter{},
 	}
 	store.mc = newModeCoordinator(ws.Warehouse.Mode)
-	dw := warehouses.Registered(ws.Warehouse.Platform).New(newStateSettingsLoader(ws), dialer.DialWith(ws.Organization().ID))
+	dw := newWarehouse(ws.Warehouse.Platform, newStateSettingsLoader(ws), dialer.DialWith(ws.Organization().ID))
 	store.wh.Store(dw)
 	store.columnByProperty.user = profileColumnByProperty(ws.ProfileSchema)
 	store.columnByProperty.user["_kpid"] = warehouses.Column{Name: "_kpid", Type: types.UUID()}
@@ -153,9 +133,8 @@ func (loader *stateSettingsLoader) Load(ctx context.Context, settings any) error
 // AlterProfileSchema alters the profile schema.
 //
 // opID is an identifier that uniquely identifies a specific alter columns
-// operation; if the method is called again passing the same identifier, whether
-// the operation ended successfully or with a *warehouses.OperationError error,
-// that result is returned again.
+// operation. If the operation succeeds, subsequent calls with the same
+// identifier return nil.
 //
 // schema is the profile schema without meta properties (this parameter is
 // useful for obtaining type information and for creating views), while
@@ -167,19 +146,14 @@ func (loader *stateSettingsLoader) Load(ctx context.Context, settings any) error
 // are columns, so there is a mix of different levels of abstraction. This is
 // discussed in the issue https://github.com/krenalis/krenalis/issues/862.
 //
-// This method, once called, can then return in four distinct cases:
+// If the context is canceled, the operation stops. Failures without a recorded
+// outcome can be retried with the same opID.
 //
-// (1) the operation was successful and no error was returned;
-//
-// (2) the context was canceled;
-//
-// (3) the operation ended with an error of type *warehouses.OperationError, and
-// this means that even if the method is called again with the same ID, this
-// error is still returned;
-//
-// (4) the operation ended with an unexpected and unknown error, and it is
-// therefore up to the caller to try calling this method again by providing the
-// same ID.
+// If a data warehouse error occurs, it returns a *WarehouseError wrapping the
+// cause, which may be:
+//   - *warehouses.SettingsError if the settings are invalid
+//   - *warehouses.OperationError if the operation failed and the failure was
+//     recorded; subsequent calls with the same opID return that failure again
 func (store *Store) AlterProfileSchema(ctx context.Context, opID string, schema types.Type, operations []warehouses.AlterOperation) error {
 	store.mustBeOpen()
 	columns := util.PropertiesToColumns(schema.Properties())
@@ -191,30 +165,37 @@ func (store *Store) AlterProfileSchema(ctx context.Context, opID string, schema 
 // The description is not required to be a syntactically valid warehouse type,
 // and may therefore include additional human-readable details (such as type
 // information, maximum character count, enum values, etc...).
+//
+// If a data warehouse error occurs, it returns a *WarehouseError.
 func (store *Store) ColumnTypeDescription(t types.Type) (string, error) {
 	store.mustBeOpen()
 	return store.warehouse().ColumnTypeDescription(t)
 }
 
-// CountProfiles returns the exact number of profiles in the workspace's data
-// warehouse. If the warehouse is in maintenance mode, it returns
-// ErrMaintenanceMode. Warehouse errors are returned as *UnavailableError.
-func (store *Store) CountProfiles(ctx context.Context) (int, error) {
+// CountIdentities returns counts of anonymous and recognized identities, and
+// identities without a profile, from the provided pipelines, grouped by
+// connection.
+//
+// If the data warehouse is in maintenance mode, it returns the
+// ErrMaintenanceMode error.
+//
+// If a data warehouse error occurs, it returns a *WarehouseError wrapping the
+// cause, which may be *warehouses.SettingsError if the settings are invalid.
+func (store *Store) CountIdentities(ctx context.Context, pipelines []string) (*warehouses.IdentityCounts, error) {
 	store.mustBeOpen()
 	ctx, done, err := store.mc.StartOperation(ctx, normalMode|inspectionMode)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 	defer done()
-	count, err := store.warehouse().Count(ctx, "profiles", nil, nil)
-	if err != nil {
-		return 0, unavailableError(err)
+	if len(pipelines) == 0 {
+		return &warehouses.IdentityCounts{
+			Anonymous:      map[string]int{},
+			Recognized:     map[string]int{},
+			WithoutProfile: map[string]int{},
+		}, nil
 	}
-	if count < 0 || count > math.MaxInt32 {
-		return 0, unavailableError(fmt.Errorf("warehouse returned profile count outside the supported range: %d", count))
-	}
-
-	return count, nil
+	return store.warehouse().CountIdentities(ctx, pipelines)
 }
 
 // DeleteDestinationProfiles deletes the destination profiles of the provided
@@ -222,8 +203,9 @@ func (store *Store) CountProfiles(ctx context.Context) (int, error) {
 //
 // If the data warehouse is in inspection mode, it returns the ErrInspectionMode
 // error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
-// If an error occurs with the data warehouse, it returns an *UnavailableError
-// error.
+//
+// If a data warehouse error occurs, it returns a *WarehouseError wrapping the
+// cause, which may be *warehouses.SettingsError if the settings are invalid.
 func (store *Store) DeleteDestinationProfiles(ctx context.Context, pipeline string) error {
 	store.mustBeOpen()
 	ctx, done, err := store.mc.StartOperation(ctx, normalMode)
@@ -241,7 +223,7 @@ func (store *Store) DeleteDestinationProfiles(ctx context.Context, pipeline stri
 //
 // If the data warehouse is in inspection mode, it returns the ErrInspectionMode
 // error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
-// If an error occurs with the data warehouse, it returns an *UnavailableError
+// If an error occurs with the data warehouse, it returns an *WarehouseError
 // error.
 func (store *Store) DeleteSimulatedSystemRecords(ctx context.Context, account string) error {
 	store.mustBeOpen()
@@ -256,10 +238,10 @@ func (store *Store) DeleteSimulatedSystemRecords(ctx context.Context, account st
 	}
 	warehouse, ok := store.warehouse().(simulatedSystemWarehouse)
 	if !ok {
-		return unavailableError(errors.New("warehouse does not support simulated system writer fencing"))
+		return wrapWarehouseError(errors.New("warehouse does not support simulated system writer fencing"))
 	}
 	err = warehouse.DeleteSimulatedSystemRecords(ctx, account, writer.generation)
-	return unavailableError(err)
+	return err
 }
 
 // CountSimulatedSystemRecords counts records belonging to one account.
@@ -272,14 +254,14 @@ func (store *Store) CountSimulatedSystemRecords(ctx context.Context, account str
 	defer done()
 	where := warehouses.NewBaseExpr(
 		warehouses.Column{Name: "simulated_system", Type: types.String()}, warehouses.OpIs, account)
-	count, err := store.warehouse().Count(ctx, simulatedSystemRecordsTable.Name, nil, where)
+	counts, err := store.warehouse().Counts(ctx, simulatedSystemRecordsTable.Name, []warehouses.Expr{where})
 	if err != nil {
-		return 0, unavailableError(err)
+		return 0, err
 	}
-	if count < 0 || count > math.MaxInt32 {
-		return 0, unavailableError(fmt.Errorf("warehouse returned simulated system count outside the supported range"))
+	if len(counts) != 1 || counts[0] < 0 || counts[0] > math.MaxInt32 {
+		return 0, wrapWarehouseError(fmt.Errorf("warehouse returned simulated system count outside the supported range"))
 	}
-	return count, nil
+	return counts[0], nil
 }
 
 // MergeSimulatedSystemRecords writes an idempotent batch for one account.
@@ -297,14 +279,14 @@ func (store *Store) MergeSimulatedSystemRecords(ctx context.Context, account str
 	}
 	warehouse, ok := store.warehouse().(simulatedSystemWarehouse)
 	if !ok {
-		return unavailableError(errors.New("warehouse does not support simulated system writer fencing"))
+		return wrapWarehouseError(errors.New("warehouse does not support simulated system writer fencing"))
 	}
 	err = warehouse.FenceSimulatedSystem(ctx, account, 0)
 	if err != nil {
-		return unavailableError(err)
+		return err
 	}
 	err = warehouse.MergeSimulatedSystemRecords(ctx, account, 0, simulatedSystemRecordsTable, rows)
-	return unavailableError(err)
+	return err
 }
 
 // Events returns the events according to the provided query. The returned
@@ -312,8 +294,10 @@ func (store *Store) MergeSimulatedSystemRecords(ctx context.Context, account str
 // one property from the event schema, excluding the originalTimestamp property.
 //
 // If the data warehouse is in maintenance mode, it returns the
-// ErrMaintenanceMode error. If an error occurs with the data warehouse, it
-// returns an *UnavailableError error.
+// ErrMaintenanceMode error.
+//
+// If a data warehouse error occurs, it returns a *WarehouseError wrapping the
+// cause, which may be *warehouses.SettingsError if the settings are invalid.
 func (store *Store) Events(ctx context.Context, query Query) ([]map[string]any, error) {
 	store.mustBeOpen()
 	ctx, done, err := store.mc.StartOperation(ctx, normalMode|inspectionMode)
@@ -368,8 +352,10 @@ func (store *Store) Events(ctx context.Context, query Query) ([]map[string]any, 
 // Identities returns the identities according to the provided query.
 //
 // If the data warehouse is in maintenance mode, it returns the
-// ErrMaintenanceMode error. If an error occurs with the data warehouse, it
-// returns an *UnavailableError error.
+// ErrMaintenanceMode error.
+//
+// If a data warehouse error occurs, it returns a *WarehouseError wrapping the
+// cause, which may be *warehouses.SettingsError if the settings are invalid.
 func (store *Store) Identities(ctx context.Context, query Query) ([]map[string]any, int, error) {
 	store.mustBeOpen()
 	ctx, done, err := store.mc.StartOperation(ctx, normalMode|inspectionMode)
@@ -394,8 +380,9 @@ type DestinationProfile struct {
 //
 // If the data warehouse is in inspection mode, it returns the ErrInspectionMode
 // error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
-// If an error occurs with the data warehouse, it returns an *UnavailableError
-// error.
+//
+// If a data warehouse error occurs, it returns a *WarehouseError wrapping the
+// cause, which may be *warehouses.SettingsError if the settings are invalid.
 func (store *Store) MergeDestinationUsers(ctx context.Context, pipeline string, profiles []DestinationProfile, idsToDelete []string) error {
 	store.mustBeOpen()
 	ctx, done, err := store.mc.StartOperation(ctx, normalMode)
@@ -439,9 +426,9 @@ func (store *Store) Mode() state.WarehouseMode {
 //
 // If the pipeline's output schema does not align with the profile schema, it
 // returns a *schemas.Error error.
-func (store *Store) NewBatchIdentityWriter(pipeline *state.Pipeline, purge bool) (*BatchIdentityWriter, error) {
+func (store *Store) NewBatchIdentityWriter(pipeline *state.Pipeline, purge bool, metrics PipelineMetrics) (*BatchIdentityWriter, error) {
 	store.mustBeOpen()
-	return newBatchIdentityWriter(store, pipeline, purge)
+	return newBatchIdentityWriter(store, pipeline, purge, metrics)
 }
 
 // NewEventIdentityWriter returns an identity writer for writing identities,
@@ -449,15 +436,15 @@ func (store *Store) NewBatchIdentityWriter(pipeline *state.Pipeline, purge bool)
 // identities from events.
 //
 // It must be called on a frozen state.
-func (store *Store) NewEventIdentityWriter(pipelineID string) *EventIdentityWriter {
+func (store *Store) NewEventIdentityWriter(pipelineID string, metrics PipelineMetrics) *EventIdentityWriter {
 	store.mustBeOpen()
-	return newEventIdentityWriter(store, pipelineID)
+	return newEventIdentityWriter(store, pipelineID, metrics)
 }
 
 // NewEventWriter returns a new writer to write events.
-func (store *Store) NewEventWriter() *EventWriter {
+func (store *Store) NewEventWriter(metrics PipelineMetrics) *EventWriter {
 	store.mustBeOpen()
-	return newEventWriter(store)
+	return newEventWriter(store, metrics)
 }
 
 // PreviewAlterProfileSchema provides a preview of an alter profile schema
@@ -474,8 +461,8 @@ func (store *Store) NewEventWriter() *EventWriter {
 // are columns, so there is a mix of different levels of abstraction. This is
 // discussed in the issue https://github.com/krenalis/krenalis/issues/862.
 //
-// If an error occurs with the data warehouse, it returns an *UnavailableError
-// error.
+// If a data warehouse error occurs, it returns a *WarehouseError wrapping the
+// cause, which may be *warehouses.SettingsError if the settings are invalid.
 func (store *Store) PreviewAlterProfileSchema(ctx context.Context, schema types.Type, operations []warehouses.AlterOperation) ([]string, error) {
 	store.mustBeOpen()
 	ctx, done, err := store.mc.StartOperation(ctx, anyMode)
@@ -487,24 +474,46 @@ func (store *Store) PreviewAlterProfileSchema(ctx context.Context, schema types.
 	return store.warehouse().PreviewAlterProfileSchema(ctx, profileColumns, operations)
 }
 
+// ConsentCondition describes the consent locations a profile must satisfy.
+type ConsentCondition struct {
+	Operator  state.WhereLogical
+	Locations []state.ProfileConsentLocation
+}
+
+// ConsentConditionError reports an invalid consent condition.
+type ConsentConditionError struct {
+	Msg string
+}
+
+// Error returns the reason the consent condition is invalid.
+func (err *ConsentConditionError) Error() string {
+	return err.Msg
+}
+
 // ProfileRecords returns an iterator over the profiles, according to the
 // provided query and schema. The properties to return are the properties of
-// schema, and the returned properties will conform to schema.
+// schema, and the returned properties will conform to schema. Consent locations
+// are checked against the profile schema and need not be included in schema.
 //
 // query.Properties must be nil.
 //
 // If the data warehouse is in maintenance mode, it returns the
 // ErrMaintenanceMode error. If the schema, which must be valid, does not align
 // with the profile schema, it returns a *schemas.Error error. If the workspace
-// no longer exists, it returns [ErrWorkspaceNotExist]. If an error occurs with
-// the data warehouse, it returns an *UnavailableError error.
-func (store *Store) ProfileRecords(ctx context.Context, query Query, schema types.Type, matching *Matching) (*Records, error) {
+// no longer exists, it returns [ErrWorkspaceNotExist]. If a consent property
+// is missing or has an incompatible type, it returns a *ConsentConditionError.
+//
+// If a data warehouse error occurs, it returns a *WarehouseError wrapping the
+// cause, which may be *warehouses.SettingsError if the settings are invalid.
+func (store *Store) ProfileRecords(ctx context.Context, query Query, consentCondition ConsentCondition, schema types.Type, matching *Matching) (*Records, error) {
+
 	store.mustBeOpen()
 	ctx, done, err := store.mc.StartOperation(ctx, normalMode|inspectionMode)
 	if err != nil {
 		return nil, err
 	}
 	defer done()
+
 	if query.Properties != nil {
 		return nil, errors.New("query.properties is not nil")
 	}
@@ -515,100 +524,96 @@ func (store *Store) ProfileRecords(ctx context.Context, query Query, schema type
 	if !ok {
 		return nil, ErrWorkspaceNotExist
 	}
+
 	// Check that schema is aligned with the profile schema.
 	err = schemas.CheckAlignment(schema, workspace.ProfileSchema, nil)
 	if err != nil {
 		return nil, err
 	}
+
+	// Check consent locations against the profile schema.
+	if len(consentCondition.Locations) > 0 {
+		if consentCondition.Operator != state.OpAnd && consentCondition.Operator != state.OpOr {
+			return nil, errors.New("invalid consent operator")
+		}
+		properties := workspace.ProfileSchema.Properties()
+		for _, loc := range consentCondition.Locations {
+			if !types.IsValidPropertyPath(loc.Property) {
+				return nil, errors.New("invalid consent property path")
+			}
+			property, err := properties.ByPath(loc.Property)
+			if err != nil {
+				return nil, &ConsentConditionError{
+					Msg: fmt.Sprintf("consent property «%s» does not exist in profile schema", loc.Property),
+				}
+			}
+			requiredKind := types.BooleanKind
+			if loc.JSONKey != "" {
+				requiredKind = types.JSONKind
+			}
+			if property.Type.Kind() != requiredKind {
+				return nil, &ConsentConditionError{
+					Msg: fmt.Sprintf("consent property «%s» does not have type «%s» but «%s»",
+						loc.Property, requiredKind, property.Type.Kind()),
+				}
+			}
+		}
+	}
+
 	query.table = "profiles"
+
 	query.Properties = []string{}
 	for path := range schema.Properties().WalkObjects() {
 		query.Properties = append(query.Properties, path)
 	}
-	return records(ctx, store.warehouse(), query, "_kpid", store.profileColumnByProperty(), true, matching)
+
+	return records(ctx, store.warehouse(), query, consentCondition, "_kpid", store.profileColumnByProperty(), true, matching)
 }
 
-// ProfileCount returns the number of profiles matched by where.
-// schema describes the properties used by where and may be invalid only when
-// where is nil. It returns *schemas.Error if schema is not aligned,
-// ErrWorkspaceNotExist if the workspace no longer exists, ErrMaintenanceMode
-// in maintenance mode, or *UnavailableError for a warehouse failure.
-func (store *Store) ProfileCount(ctx context.Context, where *state.Where, schema types.Type) (int, error) {
+// Profiles returns the profiles matching query and an estimate of their
+// total number.
+//
+// schema must be an object type with the properties in query.Properties,
+// query.Where, and query.OrderBy. It may describe other profile properties.
+// The meta properties "_kpid" and "_updated_at" can be used in query but must
+// not be included in schema.
+//
+// query.First must be in [0, math.MaxInt32] and query.Limit must be positive.
+//
+// If the workspace no longer exists, it returns the ErrWorkspaceNotExist error.
+// If the data warehouse is in maintenance mode, it returns the
+// ErrMaintenanceMode error. If schema is not aligned with the workspace's
+// profile schema, it returns a *schemas.Error error.
+//
+// If a data warehouse error occurs, it returns a *WarehouseError wrapping the
+// cause, which may be *warehouses.SettingsError if the settings are invalid.
+func (store *Store) Profiles(ctx context.Context, query Query, schema types.Type) ([]map[string]any, int, error) {
 
 	store.mustBeOpen()
 
-	if (where != nil || schema.Valid()) && (schema.Kind() != types.ObjectKind || schema.Generic()) {
-		return 0, errors.New("schema is not a concrete object type")
+	if query.First < 0 || query.First > math.MaxInt32 {
+		return nil, 0, errors.New("core/internal/datastore: offset is out of range")
 	}
+	if query.Limit < 1 {
+		return nil, 0, errors.New("core/internal/datastore: limit is out of range")
+	}
+	if !schema.IsObject() {
+		return nil, 0, errors.New("core/internal/datastore: schema is not an object type")
+	}
+
 	ctx, done, err := store.mc.StartOperation(ctx, normalMode|inspectionMode)
 	if err != nil {
-		return 0, err
-	}
-	defer done()
-
-	if schema.Valid() {
-
-		workspace, ok := store.ds.state.Workspace(store.workspace)
-		if !ok {
-			return 0, ErrWorkspaceNotExist
-		}
-		err = schemas.CheckAlignment(schema, workspace.ProfileSchema, nil)
-		if err != nil {
-			return 0, err
-		}
-
-	}
-
-	var expression warehouses.Expr
-	if where != nil {
-		expression, err = convertWhere(where, profileColumnByProperty(schema))
-		if err != nil {
-			return 0, unavailableError(err)
-		}
-	}
-	total, err := store.warehouse().Count(ctx, "profiles", nil, expression)
-	if err != nil {
-		return 0, unavailableError(err)
-	}
-	if total < 0 {
-		return 0, unavailableError(errors.New("profile count is negative"))
-	}
-
-	return total, nil
-}
-
-// Profiles returns profiles matching query, their total count, and whether
-// another row follows the requested range. schema describes all properties
-// used by query, excluding the built-in KPID and update time.
-// It returns *schemas.Error if schema is not aligned, ErrWorkspaceNotExist
-// if the workspace no longer exists, ErrMaintenanceMode in maintenance mode,
-// or *UnavailableError for a warehouse failure.
-func (store *Store) Profiles(ctx context.Context, query Query, schema types.Type) ([]map[string]any, int, bool, error) {
-
-	store.mustBeOpen()
-
-	if schema.Kind() != types.ObjectKind || schema.Generic() {
-		return nil, 0, false, errors.New("schema is not a concrete object type")
-	}
-	if query.First < 0 || query.First > 2147483647 {
-		return nil, 0, false, errors.New("profile offset is out of range")
-	}
-	if query.Limit < 1 || query.Limit > 1000 {
-		return nil, 0, false, errors.New("profile limit is out of range")
-	}
-	ctx, done, err := store.mc.StartOperation(ctx, normalMode|inspectionMode)
-	if err != nil {
-		return nil, 0, false, err
+		return nil, 0, err
 	}
 	defer done()
 
 	workspace, ok := store.ds.state.Workspace(store.workspace)
 	if !ok {
-		return nil, 0, false, ErrWorkspaceNotExist
+		return nil, 0, ErrWorkspaceNotExist
 	}
 	err = schemas.CheckAlignment(schema, workspace.ProfileSchema, nil)
 	if err != nil {
-		return nil, 0, false, err
+		return nil, 0, err
 	}
 
 	columns := profileColumnByProperty(schema)
@@ -616,18 +621,8 @@ func (store *Store) Profiles(ctx context.Context, query Query, schema types.Type
 	columns["_updated_at"] = warehouses.Column{Name: "_updated_at", Type: types.DateTime()}
 	query.table = "profiles"
 	query.total = true
-	requestedLimit := query.Limit
-	query.Limit++
-	profiles, total, err := store.query(ctx, query, columns, true)
-	if err != nil {
-		return nil, 0, false, unavailableError(err)
-	}
-	hasNext := len(profiles) > requestedLimit
-	if hasNext {
-		profiles = profiles[:requestedLimit]
-	}
 
-	return profiles, total, hasNext, nil
+	return store.query(ctx, query, columns, true)
 }
 
 // PurgePipelines purges the provided pipelines from the data warehouse,
@@ -635,8 +630,9 @@ func (store *Store) Profiles(ctx context.Context, query Query, schema types.Type
 //
 // If the data warehouse is in inspection mode, it returns the ErrInspectionMode
 // error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
-// If an error occurs with the data warehouse, it returns an *UnavailableError
-// error.
+//
+// If a data warehouse error occurs, it returns a *WarehouseError wrapping the
+// cause, which may be *warehouses.SettingsError if the settings are invalid.
 func (store *Store) PurgePipelines(ctx context.Context, pipelines []string) error {
 	store.mustBeOpen()
 	ctx, done, err := store.mc.StartOperation(ctx, normalMode)
@@ -656,6 +652,53 @@ func (store *Store) PurgePipelines(ctx context.Context, pipelines []string) erro
 	return store.warehouse().Delete(ctx, "krenalis_destination_profiles", where)
 }
 
+// ProfileCount returns the number of profiles matched by where. schema must
+// have the properties in where and may be invalid only when where is nil.
+//
+// It returns *schemas.Error if schema is not aligned, ErrWorkspaceNotExist if
+// the workspace no longer exists, or ErrMaintenanceMode in maintenance mode.
+//
+// If a data warehouse error occurs, it returns a *WarehouseError wrapping the
+// cause, which may be *warehouses.SettingsError if the settings are invalid.
+func (store *Store) ProfileCount(ctx context.Context, where *state.Where, schema types.Type) (int, error) {
+
+	store.mustBeOpen()
+
+	if (where != nil || schema.Valid()) && !schema.IsObject() {
+		return 0, errors.New("core/internal/datastore: schema is not an object type")
+	}
+	ctx, done, err := store.mc.StartOperation(ctx, normalMode|inspectionMode)
+	if err != nil {
+		return 0, err
+	}
+	defer done()
+
+	if schema.Valid() {
+		workspace, ok := store.ds.state.Workspace(store.workspace)
+		if !ok {
+			return 0, ErrWorkspaceNotExist
+		}
+		err = schemas.CheckAlignment(schema, workspace.ProfileSchema, nil)
+		if err != nil {
+			return 0, err
+		}
+	}
+
+	var expression warehouses.Expr
+	if where != nil {
+		expression, err = convertWhere(where, profileColumnByProperty(schema))
+		if err != nil {
+			return 0, err
+		}
+	}
+	counts, err := store.warehouse().Counts(ctx, "profiles", []warehouses.Expr{expression})
+	if err != nil {
+		return 0, err
+	}
+
+	return counts[0], nil
+}
+
 // Repair repairs the database objects on the data warehouse needed by Krenalis.
 // The given profile schema will be used to repair the user tables.
 //
@@ -663,8 +706,8 @@ func (store *Store) PurgePipelines(ctx context.Context, pipelines []string) erro
 // initialized, with the aim of correcting any extraordinary issues (such as
 // accidental table deletions) in an attempt to make Krenalis functional again.
 //
-// If an error occurs with the data warehouse during the repair, it returns an
-// *UnavailableError error.
+// If a data warehouse error occurs, it returns a *WarehouseError wrapping the
+// cause, which may be *warehouses.SettingsError if the settings are invalid.
 func (store *Store) Repair(ctx context.Context, userSchema types.Type) error {
 	store.mustBeOpen()
 	ctx, done, err := store.mc.StartOperation(ctx, anyMode)
@@ -684,26 +727,21 @@ func (store *Store) Repair(ctx context.Context, userSchema types.Type) error {
 // ResolveIdentities resolves the identities on the store's workspace.
 //
 // opID is an identifier that uniquely identifies a specific resolve identities
-// operation; if the method is called again passing the same identifier, whether
-// the operation ended successfully or with a *warehouses.OperationError error,
-// that result is returned again.
+// operation. If the operation succeeds, subsequent calls with the same
+// identifier return the previous result.
 //
-// This method, once called, can then return in five distinct cases:
+// If the data warehouse is in inspection mode, it returns the ErrInspectionMode
+// error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
+// If the workspace no longer exists, it returns [ErrWorkspaceNotExist].
+// If the context is canceled, the operation stops. Failures without a
+// recorded outcome can be retried with the same opID.
 //
-// (1) the operation was successful and no error was returned;
-//
-// (2) the workspace no longer exists and [ErrWorkspaceNotExist] was returned;
-//
-// (3) the context was canceled;
-//
-// (4) the operation ended with an error of type *warehouses.OperationError, and
-// this means that even if the method is called again with the same ID, this
-// error is still returned;
-//
-// (5) the operation ended with an unexpected and unknown error, and it is
-// therefore up to the caller to try calling this method again by providing the
-// same ID.
-func (store *Store) ResolveIdentities(ctx context.Context, opID string) error {
+// If a data warehouse error occurs, it returns a *WarehouseError wrapping the
+// cause, which may be:
+//   - *warehouses.SettingsError if the settings are invalid
+//   - *warehouses.OperationError if the operation failed and the failure was
+//     recorded; subsequent calls with the same opID return that failure again
+func (store *Store) ResolveIdentities(ctx context.Context, opID string) (*warehouses.IdentityResolutionCounts, error) {
 	store.mustBeOpen()
 
 	// TODO(Gianluca): the context here is discarded, rather than passed to the
@@ -711,14 +749,14 @@ func (store *Store) ResolveIdentities(ctx context.Context, opID string) error {
 	// https://github.com/krenalis/krenalis/issues/1224.
 	_, done, err := store.mc.StartOperation(ctx, normalMode)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer done()
 
 	// Retrieve the workspace.
 	ws, ok := store.ds.state.Workspace(store.workspace)
 	if !ok {
-		return ErrWorkspaceNotExist
+		return nil, ErrWorkspaceNotExist
 	}
 
 	// Determine the identifiers columns.
@@ -727,7 +765,7 @@ func (store *Store) ResolveIdentities(ctx context.Context, opID string) error {
 	for i, ident := range ws.Identifiers {
 		identifier, err := properties.ByPath(ident)
 		if err != nil {
-			return errors.New("unexpected error: identifier does not exist in profile schema")
+			return nil, errors.New("unexpected error: identifier does not exist in profile schema")
 		}
 		identifiers[i] = warehouses.Column{
 			Name:     strings.ReplaceAll(ident, ".", "_"),
@@ -747,19 +785,21 @@ func (store *Store) ResolveIdentities(ctx context.Context, opID string) error {
 	}
 
 	// Resolve the identities.
-	err = store.warehouse().ResolveIdentities(ctx, opID, identifiers, profileColumns, primarySources)
+	counts, err := store.warehouse().ResolveIdentities(ctx, opID, identifiers, profileColumns, primarySources)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return counts, nil
 }
 
 // TestWarehouseUpdate tests if it is possible to update the warehouse of the
 // store. If an attempt is made to connect a data warehouse which has already
 // been connected to another workspace, the method returns the error
-// ErrDifferentWarehouse. If an error occurs with the data warehouse, it returns
-// an *UnavailableError error.
+// ErrDifferentWarehouse.
+//
+// If a data warehouse error occurs, it returns a *WarehouseError wrapping the
+// cause, which may be *warehouses.SettingsError if the settings are invalid.
 func (store *Store) TestWarehouseUpdate(ctx context.Context, toSettings json.Value) error {
 	store.mustBeOpen()
 	ctx, done, err := store.mc.StartOperation(ctx, anyMode)
@@ -788,7 +828,7 @@ func (store *Store) TestWarehouseUpdate(ctx context.Context, toSettings json.Val
 	}
 
 	// Count the users on the warehouse that will be connected.
-	dw := warehouses.Registered(ws.Warehouse.Platform).New(newStateSettingsLoader(ws), dialer.DialWith(ws.Organization().ID))
+	dw := newWarehouse(ws.Warehouse.Platform, newStateSettingsLoader(ws), dialer.DialWith(ws.Organization().ID))
 	defer func() {
 		err := dw.Close()
 		if err != nil {
@@ -798,11 +838,11 @@ func (store *Store) TestWarehouseUpdate(ctx context.Context, toSettings json.Val
 	// Even if rows is not read, it is assigned because it must be closed.
 	rows, count2, err := dw.Query(ctx, query, true)
 	if err != nil {
-		return unavailableError(err)
+		return err
 	}
 	err = rows.Close()
 	if err != nil {
-		return unavailableError(err)
+		return err
 	}
 	// If the number of users is different, it means (except for the "unlucky"
 	// cases where Identity Resolution is in progress) that an attempt is being
@@ -816,6 +856,12 @@ func (store *Store) TestWarehouseUpdate(ctx context.Context, toSettings json.Val
 // UnsetIdentityProperties unsets values for the specified identity properties
 // for the given pipeline. properties contains the property paths and must not be
 // empty. If the provided pipeline does not exist, it does nothing.
+//
+// If the data warehouse is in inspection mode, it returns the ErrInspectionMode
+// error. If it is in maintenance mode, it returns the ErrMaintenanceMode error.
+//
+// If a data warehouse error occurs, it returns a *WarehouseError wrapping the
+// cause, which may be *warehouses.SettingsError if the settings are invalid.
 func (store *Store) UnsetIdentityProperties(ctx context.Context, pipeline string, properties []string) error {
 	store.mustBeOpen()
 	if len(properties) == 0 {
@@ -838,7 +884,7 @@ func (store *Store) close() error {
 	}
 	err := store.warehouse().Close()
 	if err != nil {
-		err = fmt.Errorf("error occurred closing data warehouse: %s", err)
+		err = fmt.Errorf("cannot close %s", err)
 	}
 	return err
 }
@@ -958,9 +1004,8 @@ func (store *Store) profileColumnByProperty() map[string]warehouses.Column {
 // column, and omitNil indicates whether properties with a nil value should be
 // omitted from each record.
 //
-// If the data warehouse is in maintenance mode, it returns the
-// ErrMaintenanceMode error. If an error occurs with the data warehouse, it
-// returns an *UnavailableError error.
+// If a data warehouse error occurs, it returns a *WarehouseError wrapping the
+// cause, which may be *warehouses.SettingsError if the settings are invalid.
 func (store *Store) query(ctx context.Context, query Query, columnByProperty map[string]warehouses.Column, omitNil bool) ([]map[string]any, int, error) {
 
 	columns, unflat := columnsFromProperties(query.Properties, columnByProperty, omitNil)
@@ -975,16 +1020,12 @@ func (store *Store) query(ctx context.Context, query Query, columnByProperty map
 	}
 
 	var orderBy []warehouses.Column
-	orderDesc := query.OrderDesc
-	if len(query.OrderBy) > 0 {
-		orderBy = make([]warehouses.Column, len(query.OrderBy))
-		for i, property := range query.OrderBy {
-			c, ok := columnByProperty[property]
-			if !ok {
-				return nil, 0, fmt.Errorf("property path %s does not exist", property)
-			}
-			orderBy[i] = c
+	for _, path := range query.OrderBy {
+		c, ok := columnByProperty[path]
+		if !ok {
+			return nil, 0, fmt.Errorf("property path %s does not exist", path)
 		}
+		orderBy = append(orderBy, c)
 	}
 
 	rows, total, err := store.warehouse().Query(ctx, warehouses.RowQuery{
@@ -992,7 +1033,7 @@ func (store *Store) query(ctx context.Context, query Query, columnByProperty map
 		Table:     query.table,
 		Where:     where,
 		OrderBy:   orderBy,
-		OrderDesc: orderDesc,
+		OrderDesc: query.OrderDesc && len(orderBy) > 0,
 		First:     query.First,
 		Limit:     query.Limit,
 	}, true)
@@ -1000,33 +1041,24 @@ func (store *Store) query(ctx context.Context, query Query, columnByProperty map
 		return nil, 0, err
 	}
 
-	defer rows.Close()
-	if query.table == "profiles" && total < 0 {
-		return nil, 0, errors.New("profile count is negative")
-	}
+	records := make([]map[string]any, 0)
 
-	records := []map[string]any{}
+	defer rows.Close()
 	row := make([]any, len(columns))
 	for rows.Next() {
-		if query.table == "profiles" && len(records) >= query.Limit {
-			return nil, 0, errors.New("profile row count exceeds requested limit")
-		}
-		err = rows.Scan(row...)
-		if err != nil {
+		if err := rows.Scan(row...); err != nil {
 			return nil, 0, err
 		}
 		records = append(records, unflat(row))
 	}
-	err = rows.Err()
-	if err != nil {
+	if err = rows.Err(); err != nil {
 		return nil, 0, err
 	}
 
-	// Profile counts and rows are independent observations. Preserve the
-	// existing estimate adjustment for other queries.
-	if query.table != "profiles" {
-		total = max(len(records), total)
-	}
+	// Since total is an estimate, being counted separately from the actual
+	// total number of record returned, ensure to not return a value lower than
+	// the actually returned number of users.
+	total = max(len(records), total)
 
 	return records, total, nil
 }

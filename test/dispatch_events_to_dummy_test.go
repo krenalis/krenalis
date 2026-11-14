@@ -18,9 +18,9 @@ import (
 )
 
 const (
-	pipelineProcessingSteps = 7
-	transformationStep      = 4
-	outputValidationStep    = 5
+	pipelineProcessingSteps = 9
+	transformationStep      = 5
+	outputValidationStep    = 6
 )
 
 func TestDispatchEventsToDummy(t *testing.T) {

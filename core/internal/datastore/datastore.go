@@ -6,7 +6,6 @@ package datastore
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -14,9 +13,9 @@ import (
 	"sync/atomic"
 
 	"github.com/krenalis/krenalis/core/internal/dialer"
-	"github.com/krenalis/krenalis/core/internal/metrics"
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/core/internal/util"
+	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
@@ -38,19 +37,17 @@ func (err ConnectionFailed) Error() string {
 }
 
 type Datastore struct {
-	state   *state.State
-	mu      sync.Mutex // for the store field
-	store   map[string]*Store
-	metrics *metrics.Pipelines
-	closed  atomic.Bool
+	state  *state.State
+	mu     sync.Mutex // for the store field
+	store  map[string]*Store
+	closed atomic.Bool
 }
 
 // New returns a *Datastore instance.
-func New(st *state.State, metrics *metrics.Pipelines) (*Datastore, error) {
+func New(st *state.State) (*Datastore, error) {
 	ds := &Datastore{
-		state:   st,
-		store:   map[string]*Store{},
-		metrics: metrics,
+		state: st,
+		store: map[string]*Store{},
 	}
 	st.Freeze()
 	ds.state.AddListener(ds.onCreatePipeline)
@@ -75,36 +72,40 @@ func New(st *state.State, metrics *metrics.Pipelines) (*Datastore, error) {
 //
 // organization is the ID of the organization performing the operation.
 //
-// It returns a *warehouses.WarehouseSettingsError error if the settings are not
-// valid, a *warehouses.WarehouseNotInitializableError if the data warehouse is
-// not initializable, and *UnavailableError if an error occurred with the data
-// warehouse.
+// If a data warehouse error occurs, it returns a *WarehouseError wrapping the
+// cause, which may be:
+//   - *warehouses.SettingsError if the settings are invalid
+//   - *warehouses.NonInitializableError if the warehouse cannot be initialized
 func (ds *Datastore) CanInitialize(ctx context.Context, organization, platform string, settings json.Value) error {
 	ds.mustBeOpen()
-	dw := warehouses.Registered(platform).New(newSettingsLoader(settings), dialer.DialWith(organization))
+	dw := newWarehouse(platform, newSettingsLoader(settings), dialer.DialWith(organization))
 	defer dw.Close()
 	err := dw.CanInitialize(ctx)
 	if err != nil {
-		return unavailableError(err)
+		return err
 	}
-	return unavailableError(dw.Close())
+	return dw.Close()
 }
 
 // CheckMCPSettings checks that the MCP settings are valid, that is it checks
 // that datastore's warehouse access with these settings is read-only (at least
-// on the Krenalis tables), returning a *warehouses.WarehouseSettingsNotReadOnly
-// error in case it is not, explaining the reason.
+// on the Krenalis tables).
 //
 // organization is the ID of the organization performing the operation.
+//
+// If a data warehouse error occurs, it returns a *WarehouseError wrapping the
+// cause, which may be:
+//   - *warehouses.SettingsError if the settings are invalid
+//   - *warehouses.SettingsNotReadOnly if access is not read-only
 func (ds *Datastore) CheckMCPSettings(ctx context.Context, organization, platform string, settings json.Value) error {
 	ds.mustBeOpen()
-	dw := warehouses.Registered(platform).New(newSettingsLoader(settings), dialer.DialWith(organization))
+	dw := newWarehouse(platform, newSettingsLoader(settings), dialer.DialWith(organization))
 	defer dw.Close()
 	err := dw.CheckReadOnlyAccess(ctx)
 	if err != nil {
-		return unavailableError(err)
+		return err
 	}
-	return unavailableError(dw.Close())
+	return dw.Close()
 }
 
 // Close closes the datastore. When Close is called, no other calls to
@@ -134,18 +135,18 @@ func (ds *Datastore) Close() {
 // environment determines whether development-only warehouse tables are
 // initialized.
 //
-// It returns a SettingsError error if the settings are not valid, and a
-// *datastore.UnavailableError error if an error occurs with the data warehouse.
+// If a data warehouse error occurs, it returns a *WarehouseError wrapping the
+// cause, which may be *warehouses.SettingsError if the settings are invalid.
 func (ds *Datastore) Initialize(ctx context.Context, organization, platform string, settings json.Value, profileSchema types.Type, environment warehouses.Environment) error {
 	ds.mustBeOpen()
-	dw := warehouses.Registered(platform).New(newSettingsLoader(settings), dialer.DialWith(organization))
+	dw := newWarehouse(platform, newSettingsLoader(settings), dialer.DialWith(organization))
 	defer dw.Close()
 	profileColumns := util.PropertiesToColumns(profileSchema.Properties())
 	err := dw.Initialize(ctx, environment, profileColumns)
 	if err != nil {
-		return unavailableError(err)
+		return err
 	}
-	return unavailableError(dw.Close())
+	return dw.Close()
 }
 
 // Store returns the store for the workspace with the given ID.
@@ -164,21 +165,24 @@ func (ds *Datastore) Store(workspace string) (*Store, bool) {
 // organization is the ID of the organization performing the operation.
 //
 // It returns ErrWarehousePlatformNotExist if the given warehouse platform does
-// not exist, and *warehouses.SettingsError if the settings are invalid.
+// not exist.
+//
+// If a data warehouse error occurs, it returns a *WarehouseError wrapping the
+// cause, which may be *warehouses.SettingsError if the settings are invalid.
 func (ds *Datastore) ValidateWarehouseSettings(ctx context.Context, organization, platform string, settings json.Value) (json.Value, error) {
 	ds.mustBeOpen()
 	if _, ok := ds.state.WarehousePlatform(platform); !ok {
 		return nil, ErrWarehousePlatformNotExist
 	}
-	dw := warehouses.Registered(platform).New(newSettingsLoader(settings), dialer.DialWith(organization))
+	dw := newWarehouse(platform, newSettingsLoader(settings), dialer.DialWith(organization))
 	defer dw.Close()
 	s, err := dw.ValidateSettings(ctx)
 	if err != nil {
-		return nil, unavailableError(err)
+		return nil, err
 	}
 	err = dw.Close()
 	if err != nil {
-		return nil, unavailableError(err)
+		return nil, err
 	}
 	return s, nil
 }
@@ -304,7 +308,7 @@ func (ds *Datastore) onUpdateWarehouse(n state.UpdateWarehouse) {
 	// Update the warehouse if the settings have changed.
 	prevWarehouse := store.warehouse()
 	ws, _ := ds.state.Workspace(n.Workspace)
-	nextWarehouse := warehouses.Registered(ws.Warehouse.Platform).New(newStateSettingsLoader(ws), dialer.DialWith(ws.Organization().ID))
+	nextWarehouse := newWarehouse(ws.Warehouse.Platform, newStateSettingsLoader(ws), dialer.DialWith(ws.Organization().ID))
 	if n.SettingsHaveChanged() {
 		store.wh.Store(nextWarehouse)
 		// Close the previous warehouse.

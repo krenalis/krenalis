@@ -39,11 +39,11 @@ func TestDestinationRecordSchema(t *testing.T) {
 		t.Fatalf("expected five address properties, got %d", len(got))
 	}
 	country, _ := address.Type.Properties().ByName("country")
-	if country.Type.Semantic() != types.CountrySemantic || country.Type.CountryFormat() != types.ISO3166Alpha2 {
+	if country.Type.Semantics() != types.CountrySemantics || country.Type.CountryFormat() != types.ISO3166Alpha2 {
 		t.Fatalf("expected address.country to use ISO alpha-2, got %+v", country.Type)
 	}
 	photo, _ := destinationSchema.Properties().ByName("photo")
-	if photo.Type.Semantic() != types.URLSemantic {
+	if photo.Type.Semantics() != types.URLSemantics {
 		t.Fatalf("expected photo to use URL semantic, got %+v", photo.Type)
 	}
 }

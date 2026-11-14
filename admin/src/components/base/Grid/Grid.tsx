@@ -4,7 +4,6 @@ import GridHeaderRow from './GridHeaderRow/GridHeaderRow';
 import {
 	GridRow as GridRowType,
 	GridColumn,
-	GridKeyboardNavigationMode,
 	GridNestedRowsIndentation,
 	GridRef,
 	NestedGridRows,
@@ -12,8 +11,8 @@ import {
 	SortableRowComponent,
 	StandardGridRow,
 } from './Grid.types';
-import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import WaSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import { useGrid } from './useGrid';
 import { getChildIndexClassname } from './Grid.helpers';
 import {
@@ -47,7 +46,7 @@ interface GridProps {
 	isShown?: boolean;
 	loadingText?: string;
 	nestedRowsIndentation?: GridNestedRowsIndentation;
-	keyboardNavigation?: GridKeyboardNavigationMode;
+	keyboardNavigation?: boolean;
 	reordering?: GridReordering;
 	activeRowID?: string;
 	ariaLabel?: string;
@@ -138,13 +137,7 @@ const Grid = forwardRef<GridRef, GridProps>(
 				navigate: (key: string, shiftKey = false) => {
 					return gridRef.current == null
 						? false
-						: navigateGrid(
-								gridRef.current,
-								key,
-								shiftKey,
-								keyboardNavigation ?? 'tree',
-								reorderDisabled ? undefined : onSortRow,
-							);
+						: navigateGrid(gridRef.current, key, shiftKey, reorderDisabled ? undefined : onSortRow);
 				},
 				scrollRowIntoView: (id: string) => {
 					const rows = gridRef.current?.querySelectorAll('.grid__row[data-id]') as
@@ -157,7 +150,7 @@ const Grid = forwardRef<GridRef, GridProps>(
 					}
 				},
 			};
-		}, [keyboardNavigation, onSortRow, reorderDisabled]);
+		}, [onSortRow, reorderDisabled]);
 
 		const { rowComponents, sortableRowComponents } = useMemo(() => {
 			const rowComponents = [] as ReactNode[];
@@ -237,8 +230,8 @@ const Grid = forwardRef<GridRef, GridProps>(
 				}
 				return;
 			}
-			if (keyboardNavigation != null) {
-				navigateGridWithKeyboard(event, keyboardNavigation, reorderDisabled ? undefined : onSortRow);
+			if (keyboardNavigation) {
+				navigateGridWithKeyboard(event, reorderDisabled ? undefined : onSortRow);
 			}
 		};
 
@@ -262,7 +255,7 @@ const Grid = forwardRef<GridRef, GridProps>(
 			>
 				{isLoading ? (
 					<div className='grid__loading'>
-						<SlSpinner
+						<WaSpinner
 							style={
 								{
 									fontSize: '3rem',
@@ -282,7 +275,7 @@ const Grid = forwardRef<GridRef, GridProps>(
 						{rows.length === 0 && noRowsMessage ? (
 							<div className='grid__no-rows'>
 								<div className='grid__no-rows-text'>
-									<SlIcon name={noRowsIcon ?? 'exclamation-circle'}></SlIcon>
+									<WaIcon name={noRowsIcon ?? 'exclamation-circle'}></WaIcon>
 									{noRowsMessage}
 								</div>
 							</div>
@@ -302,7 +295,7 @@ const Grid = forwardRef<GridRef, GridProps>(
 						) : (
 							<div className='grid__no-rows'>
 								<div className='grid__no-rows-text'>
-									<SlIcon name='exclamation-circle'></SlIcon>
+									<WaIcon name='exclamation-circle'></WaIcon>
 									No rows to show
 								</div>
 							</div>

@@ -1,7 +1,7 @@
 import React, { forwardRef, useContext, useRef } from 'react';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import SlButtonElement from '@shoelace-style/shoelace/dist/components/button/button.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaButtonElement from '@awesome.me/webawesome/dist/components/button/button.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import { FilterEditor } from '../../base/FilterEditor/FilterEditor';
 import Section from '../../base/Section/Section';
 import PipelineContext from '../../../context/PipelineContext';
@@ -22,7 +22,7 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 	const propertiesToHide =
 		isEventBasedUserImport || isAppEventsExport || isEventImport ? HIDDEN_KPID_PROPERTIES : undefined;
 	const isDisabled = connection.isFileStorage && connection.isSource && isTransformationDisabled;
-	const addFilterButtonRef = useRef<SlButtonElement>(null);
+	const addFilterButtonRef = useRef<WaButtonElement>(null);
 
 	const onChange = (filter: Filter | null) => setPipeline({ ...pipeline, filter });
 	const onAddFilter = () =>
@@ -48,17 +48,18 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 			annotated={true}
 		>
 			{pipeline.filter == null && (
-				<SlButton
+				<WaButton
 					ref={addFilterButtonRef}
 					className='pipeline__filters-add-condition'
-					size='medium'
-					variant='text'
+					size='m'
+					variant='brand'
+					appearance='plain'
 					onClick={onAddFilter}
 					disabled={isDisabled}
 				>
-					<SlIcon slot='prefix' name='plus-circle' />
+					<WaIcon slot='start' name='plus-circle' />
 					Add filter
-				</SlButton>
+				</WaButton>
 			)}
 			<FilterEditor
 				disabled={isDisabled}

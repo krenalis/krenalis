@@ -119,7 +119,7 @@ func TestWorkspaceEnvironment(t *testing.T) {
 		Name: "email", Type: types.String().AsEmail().WithMaxLength(254), ReadOptional: true,
 	}})
 	request := map[string]any{
-		"name": "development", "environment": "development", "profileSchema": profileSchema,
+		"name": "development", "environment": "development", "profileSchema": krenalistester.ProfileSchema{Schema: profileSchema},
 		"warehouse": map[string]any{"platform": "PostgreSQL", "mode": "Normal", "settings": settings},
 	}
 	var created struct {

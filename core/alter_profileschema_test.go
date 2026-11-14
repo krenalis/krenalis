@@ -5,11 +5,587 @@
 package core
 
 import (
+	"bytes"
+	"context"
+	"encoding/base64"
+	"fmt"
+	"maps"
+	"regexp"
+	"sync/atomic"
 	"testing"
+	"time"
 
+	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/modules/postgres"
+
+	_ "github.com/krenalis/krenalis/connectors/postgresql"
+	"github.com/krenalis/krenalis/core/internal/datastore"
 	"github.com/krenalis/krenalis/core/internal/datastore/diffschemas"
+	"github.com/krenalis/krenalis/core/internal/db"
+	"github.com/krenalis/krenalis/core/internal/initdb"
+	"github.com/krenalis/krenalis/core/internal/state"
+	"github.com/krenalis/krenalis/test/testimages"
+	"github.com/krenalis/krenalis/tools/errors"
+	"github.com/krenalis/krenalis/tools/kms"
 	"github.com/krenalis/krenalis/tools/types"
+	"github.com/krenalis/krenalis/warehouses"
 )
+
+// TestAlterProfileSchemaFinalization verifies that duplicate finalizations
+// preserve committed state, stale finalizations leave newer operations
+// untouched, failed finalizations preserve the current schema and property
+// roles, and repeated cleanup does not repeat remote effects.
+func TestAlterProfileSchemaFinalization(t *testing.T) {
+
+	if testing.Short() {
+		t.Skip("requires PostgreSQL")
+	}
+	container, err := postgres.Run(t.Context(), testimages.PostgreSQL,
+		postgres.WithDatabase("krenalis"), postgres.WithUsername("krenalis"), postgres.WithPassword("krenalis"),
+		postgres.BasicWaitStrategies())
+	t.Cleanup(func() {
+		err := testcontainers.TerminateContainer(container)
+		if err != nil {
+			t.Errorf("expected container termination, got %v", err)
+		}
+	})
+	if err != nil {
+		t.Fatalf("expected PostgreSQL container, got %v", err)
+	}
+	host, err := container.Host(t.Context())
+	if err != nil {
+		t.Fatalf("expected container host, got %v", err)
+	}
+	port, err := container.MappedPort(t.Context(), "5432/tcp")
+	if err != nil {
+		t.Fatalf("expected container port, got %v", err)
+	}
+	options := db.Options{Host: host, Port: int(port.Num()), Username: "krenalis", Password: "krenalis", Database: "krenalis"}
+	admin, err := db.Open(&options)
+	if err != nil {
+		t.Fatalf("expected database pool, got %v", err)
+	}
+	t.Cleanup(admin.Close)
+
+	t.Run("duplicate", func(t *testing.T) {
+
+		const name = "duplicate"
+		_, err := admin.Exec(t.Context(), "CREATE DATABASE "+name)
+		if err != nil {
+			t.Fatalf("expected test database, got %v", err)
+		}
+		opts := options
+		opts.Database = name
+		database, err := db.Open(&opts)
+		if err != nil {
+			t.Fatalf("expected test pool, got %v", err)
+		}
+		t.Cleanup(database.Close)
+		manager, err := kms.New(t.Context(), "key:"+base64.StdEncoding.EncodeToString(make([]byte, 32)))
+		if err != nil {
+			t.Fatalf("expected KMS, got %v", err)
+		}
+		err = initdb.InitIfEmpty(t.Context(), database, manager, false)
+		if err != nil {
+			t.Fatalf("expected initialized schema, got %v", err)
+		}
+		const workspace = "111111111111"
+		const source = "222222222222"
+		const pipeline = "333333333333"
+		const opID = "00000000-0000-4000-8000-000000000001"
+		schema := types.Object([]types.Property{{Name: "email", Type: types.String(), ReadOptional: true}})
+		raw, err := schema.MarshalJSON()
+		if err != nil {
+			t.Fatalf("expected encoded schema, got %v", err)
+		}
+		remote := &finalizationWarehouse{}
+		platform := fmt.Sprintf("FinalizationTest%d", finalizationWarehouseNumber.Add(1))
+		warehouses.Register(warehouses.Platform{Name: platform}, func(warehouses.SettingsLoader, warehouses.DialWith) *finalizationWarehouse {
+			return remote
+		})
+		currentRoles := state.PropertyRoles{FirstName: "email"}
+		pendingRoles := state.PropertyRoles{LastName: "email"}
+		// Only primary sources and property roles change, so execution needs no warehouse DDL.
+		_, err = database.Exec(t.Context(), `INSERT INTO workspaces
+				(id, organization, name, warehouse_name, warehouse_mode, warehouse_settings,
+				kms_encrypted_warehouse_settings_key, kms_encrypted_warehouse_mcp_settings_key,
+				profile_schema, identifiers, alter_profile_schema_id, alter_profile_schema_schema,
+				alter_profile_schema_primary_sources, alter_profile_schema_operations,
+				profile_role_first_name, alter_profile_schema_role_last_name)
+				SELECT $1, id, 'test', $5, 'Normal', '', '', '', $2, ARRAY['email'], $3, $2,
+				jsonb_build_object('email', $4::text), '[]', $6, $7 FROM organizations`,
+			workspace, raw, opID, source, platform, currentRoles.FirstName, pendingRoles.LastName)
+		if err != nil {
+			t.Fatalf("expected pending schema operation, got %v", err)
+		}
+		_, err = database.Exec(t.Context(), `INSERT INTO connections
+				(id, workspace, connector, role, kms_encrypted_settings_key)
+				VALUES ($1, $2, 'postgresql', 'Source', '')`, source, workspace)
+		if err != nil {
+			t.Fatalf("expected source connection, got %v", err)
+		}
+		_, err = database.Exec(t.Context(), `INSERT INTO pipelines
+				(id, connection, target, event_type, ordering_group, delivery_endpoint, transformation_language,
+				matching_in, matching_out, update_on_duplicates, table_key, properties_to_unset)
+				VALUES ($1, $2, 'User', '', '', '', 'JavaScript', '', '', false, '', ARRAY['email'])`, pipeline, source)
+		if err != nil {
+			t.Fatalf("expected cleanup pipeline, got %v", err)
+		}
+		_, err = database.Exec(t.Context(), "UPDATE workspaces SET pipelines_to_purge = ARRAY[$1] WHERE id = $2", pipeline, workspace)
+		if err != nil {
+			t.Fatalf("expected pending purge, got %v", err)
+		}
+		st, err := state.New(t.Context(), database, manager, nil, false)
+		if err != nil {
+			t.Fatalf("expected initialized State, got %v", err)
+		}
+		t.Cleanup(func() { st.Close(context.Background()) })
+		loaded, ok := st.Workspace(workspace)
+		if !ok {
+			t.Fatal("expected loaded workspace, got none")
+		}
+		if loaded.PropertyRoles != currentRoles {
+			t.Fatalf("expected loaded property roles %#v, got %#v", currentRoles, loaded.PropertyRoles)
+		}
+		if loaded.AlterProfileSchema.PropertyRoles != pendingRoles {
+			t.Fatalf("expected pending roles %#v, got %#v", pendingRoles, loaded.AlterProfileSchema.PropertyRoles)
+		}
+		ds, err := datastore.New(st)
+		if err != nil {
+			t.Fatalf("expected datastore, got %v", err)
+		}
+		t.Cleanup(ds.Close)
+		core := &Core{state: st, datastore: ds}
+		ctx, cancel := context.WithTimeout(t.Context(), 15*time.Second)
+		defer cancel()
+		remote.cancelOnRepeat = cancel
+		core.close.ctx = ctx
+		// A duplicate must not overwrite schema, property roles or primary sources. Change only
+		// schema metadata to keep this check independent of warehouse DDL.
+		duplicateSchema := types.Object([]types.Property{
+			{Name: "email", Type: types.String(), ReadOptional: true, Description: "Unexpected description"},
+		})
+		duplicateRaw, err := duplicateSchema.MarshalJSON()
+		if err != nil {
+			t.Fatalf("expected encoded duplicate schema, got %v", err)
+		}
+		if bytes.Equal(raw, duplicateRaw) {
+			t.Fatal("expected duplicate schema to differ from committed schema, got identical JSON")
+		}
+		var completed, notifiedCompleted time.Time
+		for _, test := range []struct {
+			name           string
+			schema         types.Type
+			primarySources map[string]string
+		}{
+			{"first", schema, map[string]string{"email": source}},
+			{"repeated", duplicateSchema, map[string]string{}},
+		} {
+
+			t.Logf("checking %s finalization", test.name)
+			core.executeAlterProfileSchema(workspace, opID, test.schema, test.primarySources, nil)
+			loaded, ok := st.Workspace(workspace)
+			if !ok {
+				t.Fatal("expected finalized workspace, got none")
+			}
+			if !types.Equal(loaded.ProfileSchema, schema) {
+				t.Error("expected preserved profile schema, got changed schema")
+			}
+			if !maps.Equal(loaded.PrimarySources, map[string]string{"email": source}) {
+				t.Errorf("expected primary source %s/email, got %#v", source, loaded.PrimarySources)
+			}
+			if loaded.PropertyRoles != pendingRoles {
+				t.Errorf("expected finalized property roles %#v, got %#v", pendingRoles, loaded.PropertyRoles)
+			}
+			if loaded.AlterProfileSchema.PropertyRoles != (state.PropertyRoles{}) {
+				t.Errorf("expected cleared pending roles, got %#v", loaded.AlterProfileSchema.PropertyRoles)
+			}
+			if loaded.AlterProfileSchema.ID != nil {
+				t.Errorf("expected cleared operation ID, got %s", *loaded.AlterProfileSchema.ID)
+			}
+			if loaded.AlterProfileSchema.Schema.Valid() || loaded.AlterProfileSchema.PrimarySources != nil ||
+				loaded.AlterProfileSchema.Operations != nil {
+				t.Error("expected cleared pending schema, primary sources and operations, got pending fields")
+			}
+			if loaded.AlterProfileSchema.Err == nil {
+				t.Fatal("expected empty operation error, got nil")
+			}
+			if got := *loaded.AlterProfileSchema.Err; got != "" {
+				t.Errorf("expected empty operation error, got %q", got)
+			}
+			if loaded.AlterProfileSchema.EndTime == nil {
+				t.Fatal("expected completion time, got nil")
+			}
+			if notifiedCompleted.IsZero() {
+				notifiedCompleted = *loaded.AlterProfileSchema.EndTime
+			}
+			if !notifiedCompleted.Equal(*loaded.AlterProfileSchema.EndTime) {
+				t.Errorf("expected completion time %v, got %v", notifiedCompleted,
+					*loaded.AlterProfileSchema.EndTime)
+			}
+
+			var schemaValid, identifiersValid, rolesValid, operationCleared bool
+			var completedAt time.Time
+			var operationError string
+			err := database.QueryRow(ctx, `SELECT profile_schema = $2, identifiers = ARRAY['email'],
+					profile_role_first_name = '' AND profile_role_last_name = 'email',
+					alter_profile_schema_id IS NULL AND alter_profile_schema_schema = 'null'
+						AND alter_profile_schema_primary_sources = 'null'
+						AND alter_profile_schema_operations = 'null'
+						AND alter_profile_schema_role_last_name = '',
+					alter_profile_schema_end_time, alter_profile_schema_error
+					FROM workspaces WHERE id = $1`, workspace, raw).
+				Scan(&schemaValid, &identifiersValid, &rolesValid, &operationCleared, &completedAt, &operationError)
+			if err != nil {
+				t.Fatalf("expected finalization readback, got %v", err)
+			}
+			if !schemaValid {
+				t.Error("expected preserved profile schema, got changed schema")
+			}
+			if !identifiersValid {
+				t.Error("expected preserved identifiers, got changed identifiers")
+			}
+			if !rolesValid {
+				t.Error("expected persisted pending property roles, got different roles")
+			}
+			if !operationCleared {
+				t.Error("expected cleared schema alteration fields, got pending fields")
+			}
+			if completed.IsZero() {
+				completed = completedAt
+			}
+			if !completed.Equal(completedAt) {
+				t.Errorf("expected persisted completion time %v, got %v", completed, completedAt)
+			}
+			if operationError != "" {
+				t.Errorf("expected empty persisted operation error, got %q", operationError)
+			}
+			var sourceCount, matchingSources int
+			err = database.QueryRow(ctx, `SELECT count(*),
+					count(*) FILTER (WHERE s.source = $2 AND s.path = 'email')
+					FROM primary_sources s JOIN connections c ON c.id = s.source WHERE c.workspace = $1`,
+				workspace, source).
+				Scan(&sourceCount, &matchingSources)
+			if err != nil {
+				t.Fatalf("expected primary sources readback, got %v", err)
+			}
+			if sourceCount != 1 || matchingSources != 1 {
+				t.Errorf("expected exactly one primary source matching %s/email, got %d sources and %d matches",
+					source, sourceCount, matchingSources)
+			}
+			var completionEvents int
+			err = database.QueryRow(ctx, "SELECT count(*) FROM notifications WHERE name = 'EndAlterProfileSchema'").
+				Scan(&completionEvents)
+			if err != nil {
+				t.Fatalf("expected completion events readback, got %v", err)
+			}
+			if completionEvents != 1 {
+				t.Errorf("expected one completion event, got %d", completionEvents)
+			}
+
+		}
+
+		t.Run("cleaner_does_not_repeat_remote_effects", func(t *testing.T) {
+
+			cleaner := &pipelineCleaner{core: core}
+			cleaner.close.ctx = ctx
+			cleaner.purgeWorkspace(workspace)
+			cleaner.unsetIdentityProperties(pipeline)
+			if remote.deletes != 2 || remote.unsets != 1 {
+				t.Fatalf("expected two table deletes and one unset, got %d, %d", remote.deletes, remote.unsets)
+			}
+			var purged, propertiesUnset bool
+			if err := database.QueryRow(ctx, `SELECT
+						(SELECT cardinality(pipelines_to_purge) = 0 FROM workspaces WHERE id = $1),
+						(SELECT cardinality(properties_to_unset) = 0 FROM pipelines WHERE id = $2)`,
+				workspace, pipeline).Scan(&purged, &propertiesUnset); err != nil {
+				t.Fatalf("expected persisted cleanup, got %v", err)
+			}
+			if !purged {
+				t.Fatal("expected no pipelines pending purge, got pending pipelines")
+			}
+			if !propertiesUnset {
+				t.Fatal("expected no properties pending removal, got pending properties")
+			}
+
+			// Repeating completed cleanup must leave the remote counters unchanged.
+			cleaner.purgeWorkspace(workspace)
+			cleaner.unsetIdentityProperties(pipeline)
+			if remote.deletes != 2 || remote.unsets != 1 {
+				t.Fatalf("expected repeated cleanup to leave two deletes and one unset, got %d deletes and %d unsets",
+					remote.deletes, remote.unsets)
+			}
+			if err := ctx.Err(); err != nil {
+				t.Fatalf("expected active cleanup context, got %v", err)
+			}
+
+		})
+
+		t.Run("stale_finalization_preserves_new_operation", func(t *testing.T) {
+
+			nextSchema := types.Object([]types.Property{
+				{Name: "email", Type: types.String(), ReadOptional: true, Description: "Next description"},
+			})
+			nextRoles := PropertyRoles{FirstName: "email"}
+			err := core.startAlterProfileSchema(ctx, workspace, nextSchema, nextRoles,
+				map[string]string{}, []warehouses.AlterOperation{})
+			if err != nil {
+				t.Fatalf("expected next schema operation, got %v", err)
+			}
+			loaded, ok := st.Workspace(workspace)
+			if !ok {
+				t.Fatal("expected workspace with next operation, got none")
+			}
+			if loaded.AlterProfileSchema.ID == nil || loaded.AlterProfileSchema.StartTime == nil {
+				t.Fatal("expected pending operation ID and start time, got missing fields")
+			}
+			nextID := *loaded.AlterProfileSchema.ID
+			nextStart := *loaded.AlterProfileSchema.StartTime
+			if nextID == opID {
+				t.Fatalf("expected a different operation ID, got %s", nextID)
+			}
+
+			core.executeAlterProfileSchema(workspace, opID, duplicateSchema, map[string]string{}, nil)
+			loaded, ok = st.Workspace(workspace)
+			if !ok {
+				t.Fatal("expected workspace after stale finalization, got none")
+			}
+			if !types.Equal(loaded.ProfileSchema, schema) {
+				t.Error("expected preserved profile schema, got changed schema")
+			}
+			if loaded.PropertyRoles != pendingRoles {
+				t.Errorf("expected preserved property roles %#v, got %#v", pendingRoles, loaded.PropertyRoles)
+			}
+			if !maps.Equal(loaded.PrimarySources, map[string]string{"email": source}) {
+				t.Errorf("expected preserved primary source %s/email, got %#v", source, loaded.PrimarySources)
+			}
+			if loaded.AlterProfileSchema.ID == nil {
+				t.Fatal("expected pending operation ID, got nil")
+			}
+			if got := *loaded.AlterProfileSchema.ID; got != nextID {
+				t.Errorf("expected pending operation ID %s, got %s", nextID, got)
+			}
+			if !types.Equal(loaded.AlterProfileSchema.Schema, nextSchema) {
+				t.Error("expected preserved next schema, got changed schema")
+			}
+			if loaded.AlterProfileSchema.PropertyRoles != state.PropertyRoles(nextRoles) {
+				t.Errorf("expected pending property roles %#v, got %#v", nextRoles,
+					loaded.AlterProfileSchema.PropertyRoles)
+			}
+			if loaded.AlterProfileSchema.PrimarySources == nil || len(loaded.AlterProfileSchema.PrimarySources) != 0 ||
+				loaded.AlterProfileSchema.Operations == nil || len(loaded.AlterProfileSchema.Operations) != 0 {
+				t.Error("expected empty pending primary sources and operations, got changed fields")
+			}
+			if loaded.AlterProfileSchema.StartTime == nil {
+				t.Fatal("expected pending start time, got nil")
+			}
+			if got := *loaded.AlterProfileSchema.StartTime; !nextStart.Equal(got) {
+				t.Errorf("expected pending start time %v, got %v", nextStart, got)
+			}
+			if loaded.AlterProfileSchema.EndTime != nil || loaded.AlterProfileSchema.Err != nil {
+				t.Error("expected no pending completion time or error, got completed fields")
+			}
+
+			var schemaValid, rolesValid, pendingUnchanged bool
+			var matchingSources, completionEvents int
+			err = database.QueryRow(ctx, `SELECT profile_schema = $2,
+					profile_role_first_name = '' AND profile_role_last_name = 'email',
+					alter_profile_schema_id = $3 AND alter_profile_schema_schema = $4
+						AND alter_profile_schema_primary_sources = '{}' AND alter_profile_schema_operations = '[]'
+						AND alter_profile_schema_role_first_name = 'email' AND alter_profile_schema_role_last_name = ''
+						AND alter_profile_schema_role_email = '' AND alter_profile_schema_role_country = ''
+						AND alter_profile_schema_role_photo = '' AND alter_profile_schema_start_time IS NOT NULL
+						AND alter_profile_schema_end_time IS NULL AND alter_profile_schema_error IS NULL,
+					(SELECT count(*) FROM primary_sources WHERE source = $5 AND path = 'email'),
+					(SELECT count(*) FROM notifications WHERE name = 'EndAlterProfileSchema')
+					FROM workspaces WHERE id = $1`, workspace, raw, nextID, nextSchema, source).
+				Scan(&schemaValid, &rolesValid, &pendingUnchanged, &matchingSources, &completionEvents)
+			if err != nil {
+				t.Fatalf("expected stale finalization readback, got %v", err)
+			}
+			if !schemaValid || !rolesValid {
+				t.Error("expected preserved persisted schema and property roles, got changed fields")
+			}
+			if !pendingUnchanged {
+				t.Error("expected preserved persisted next operation, got changed fields")
+			}
+			if matchingSources != 1 {
+				t.Errorf("expected one persisted primary source matching %s/email, got %d", source, matchingSources)
+			}
+			if completionEvents != 1 {
+				t.Errorf("expected one completion event after stale finalization, got %d", completionEvents)
+			}
+
+		})
+
+	})
+
+	t.Run("operation_error", func(t *testing.T) {
+
+		const name = "operation_error"
+		_, err := admin.Exec(t.Context(), "CREATE DATABASE "+name)
+		if err != nil {
+			t.Fatalf("expected test database, got %v", err)
+		}
+		opts := options
+		opts.Database = name
+		database, err := db.Open(&opts)
+		if err != nil {
+			t.Fatalf("expected test pool, got %v", err)
+		}
+		t.Cleanup(database.Close)
+		manager, err := kms.New(t.Context(), "key:"+base64.StdEncoding.EncodeToString(make([]byte, 32)))
+		if err != nil {
+			t.Fatalf("expected KMS, got %v", err)
+		}
+		err = initdb.InitIfEmpty(t.Context(), database, manager, false)
+		if err != nil {
+			t.Fatalf("expected initialized schema, got %v", err)
+		}
+
+		properties := []types.Property{
+			{Name: "first_name", Type: types.String(), ReadOptional: true},
+			{Name: "last_name", Type: types.String(), ReadOptional: true},
+			{Name: "email", Type: types.String().AsEmail(), ReadOptional: true},
+			{Name: "country", Type: types.String().AsCountry(types.ISO3166Alpha2), ReadOptional: true},
+			{Name: "photo", Type: types.String().AsURL(), ReadOptional: true},
+		}
+		schema := types.Object([]types.Property{
+			{Name: "current", Type: types.Object(properties), ReadOptional: true},
+		})
+		pendingSchema := types.Object(append(schema.Properties().Slice(), types.Property{
+			Name: "pending", Type: types.Object(properties), ReadOptional: true,
+		}))
+		operations, err := diffschemas.Diff(schema, pendingSchema, nil, "")
+		if err != nil {
+			t.Fatalf("expected valid schema alteration, got %v", err)
+		}
+		if len(operations) == 0 {
+			t.Fatal("expected warehouse DDL operations, got none")
+		}
+		currentRoles := state.PropertyRoles{
+			FirstName: "current.first_name",
+			LastName:  "current.last_name",
+			Email:     "current.email",
+			Country:   "current.country",
+			Photo:     "current.photo",
+		}
+		pendingRoles := state.PropertyRoles{
+			FirstName: "pending.first_name",
+			LastName:  "pending.last_name",
+			Email:     "pending.email",
+			Country:   "pending.country",
+			Photo:     "pending.photo",
+		}
+		warehouseErr := warehouses.NewOperationError(errors.New("schema alteration failed"))
+		remote := &failedAlterSchemaWarehouse{err: warehouseErr}
+		platform := fmt.Sprintf("FinalizationTest%d", finalizationWarehouseNumber.Add(1))
+		warehouses.Register(warehouses.Platform{Name: platform},
+			func(warehouses.SettingsLoader, warehouses.DialWith) *failedAlterSchemaWarehouse {
+				return remote
+			})
+		const workspace = "111111111111"
+		const opID = "00000000-0000-4000-8000-000000000001"
+		_, err = database.Exec(t.Context(), `INSERT INTO workspaces
+				(id, organization, name, warehouse_name, warehouse_mode, warehouse_settings,
+				kms_encrypted_warehouse_settings_key, kms_encrypted_warehouse_mcp_settings_key,
+				profile_schema, profile_role_first_name, profile_role_last_name, profile_role_email,
+				profile_role_country, profile_role_photo, alter_profile_schema_id, alter_profile_schema_schema,
+				alter_profile_schema_primary_sources, alter_profile_schema_operations,
+				alter_profile_schema_role_first_name, alter_profile_schema_role_last_name,
+				alter_profile_schema_role_email, alter_profile_schema_role_country, alter_profile_schema_role_photo)
+				SELECT $1, id, 'test', $2, 'Normal', '', '', '', $3, $4, $5, $6, $7, $8, $9, $10,
+				'{}', $11, $12, $13, $14, $15, $16 FROM organizations`,
+			workspace, platform, schema, currentRoles.FirstName, currentRoles.LastName,
+			currentRoles.Email, currentRoles.Country, currentRoles.Photo, opID, pendingSchema, operations,
+			pendingRoles.FirstName, pendingRoles.LastName, pendingRoles.Email, pendingRoles.Country, pendingRoles.Photo)
+		if err != nil {
+			t.Fatalf("expected pending schema operation, got %v", err)
+		}
+		st, err := state.New(t.Context(), database, manager, nil, false)
+		if err != nil {
+			t.Fatalf("expected initialized State, got %v", err)
+		}
+		t.Cleanup(func() { st.Close(context.Background()) })
+		loaded, ok := st.Workspace(workspace)
+		if !ok {
+			t.Fatal("expected loaded workspace, got none")
+		}
+		if loaded.AlterProfileSchema.PropertyRoles != pendingRoles {
+			t.Fatalf("expected pending roles %#v, got %#v", pendingRoles, loaded.AlterProfileSchema.PropertyRoles)
+		}
+		ds, err := datastore.New(st)
+		if err != nil {
+			t.Fatalf("expected datastore, got %v", err)
+		}
+		t.Cleanup(ds.Close)
+
+		core := &Core{state: st, datastore: ds}
+		ctx, cancel := context.WithTimeout(t.Context(), 15*time.Second)
+		defer cancel()
+		core.close.ctx = ctx
+		core.executeAlterProfileSchema(workspace, opID, pendingSchema, map[string]string{}, operations)
+		if remote.calls != 1 {
+			t.Fatalf("expected one warehouse alteration, got %d", remote.calls)
+		}
+		loaded, ok = st.Workspace(workspace)
+		if !ok {
+			t.Fatal("expected finalized workspace, got none")
+		}
+		if !types.Equal(loaded.ProfileSchema, schema) {
+			t.Error("expected preserved profile schema, got changed schema")
+		}
+		if loaded.PropertyRoles != currentRoles {
+			t.Errorf("expected preserved property roles %#v, got %#v", currentRoles, loaded.PropertyRoles)
+		}
+		if loaded.AlterProfileSchema.PropertyRoles != (state.PropertyRoles{}) {
+			t.Errorf("expected cleared pending roles, got %#v", loaded.AlterProfileSchema.PropertyRoles)
+		}
+		if loaded.AlterProfileSchema.ID != nil {
+			t.Errorf("expected cleared operation ID, got %s", *loaded.AlterProfileSchema.ID)
+		}
+		if loaded.AlterProfileSchema.Err == nil {
+			t.Fatal("expected operation error, got nil")
+		}
+		if got := *loaded.AlterProfileSchema.Err; got != warehouseErr.Error() {
+			t.Errorf("expected operation error %q, got %q", warehouseErr, got)
+		}
+
+		var persistedRoles, persistedPendingRoles state.PropertyRoles
+		var schemaUnchanged, operationCleared bool
+		var operationError string
+		err = database.QueryRow(ctx, `SELECT profile_schema = $2, profile_role_first_name, profile_role_last_name,
+				profile_role_email, profile_role_country, profile_role_photo,
+				alter_profile_schema_role_first_name, alter_profile_schema_role_last_name,
+				alter_profile_schema_role_email, alter_profile_schema_role_country, alter_profile_schema_role_photo,
+				alter_profile_schema_id IS NULL, alter_profile_schema_error FROM workspaces WHERE id = $1`,
+			workspace, schema).
+			Scan(&schemaUnchanged, &persistedRoles.FirstName, &persistedRoles.LastName, &persistedRoles.Email,
+				&persistedRoles.Country, &persistedRoles.Photo, &persistedPendingRoles.FirstName,
+				&persistedPendingRoles.LastName, &persistedPendingRoles.Email, &persistedPendingRoles.Country,
+				&persistedPendingRoles.Photo, &operationCleared, &operationError)
+		if err != nil {
+			t.Fatalf("expected finalization readback, got %v", err)
+		}
+		if !schemaUnchanged {
+			t.Error("expected preserved persisted profile schema, got changed schema")
+		}
+		if persistedRoles != currentRoles {
+			t.Errorf("expected persisted roles %#v, got %#v", currentRoles, persistedRoles)
+		}
+		if persistedPendingRoles != (state.PropertyRoles{}) {
+			t.Errorf("expected cleared persisted pending roles, got %#v", persistedPendingRoles)
+		}
+		if !operationCleared {
+			t.Error("expected cleared persisted operation ID, got pending operation")
+		}
+		if operationError != warehouseErr.Error() {
+			t.Errorf("expected persisted operation error %q, got %q", warehouseErr, operationError)
+		}
+
+	})
+
+}
 
 func Test_checkAllowedTypesProfileSchema(t *testing.T) {
 
@@ -29,7 +605,8 @@ func Test_checkAllowedTypesProfileSchema(t *testing.T) {
 					Name: "measurements", Type: types.Map(types.Decimal(18, 4).AsMeasurement(types.Kilogram)),
 					ReadOptional: true,
 				},
-				{Name: "duration", Type: types.Int(64).AsDuration(types.Second), ReadOptional: true},
+				{Name: "duration", Type: types.Float(64).Real().AsDuration(types.Second), ReadOptional: true},
+				{Name: "year", Type: types.Int(16).WithIntRange(1, 9999).AsYear(), ReadOptional: true},
 				{Name: "shipping_address", Type: types.Object([]types.Property{
 					{Name: "street1", Type: types.String(), ReadOptional: true},
 					{Name: "street2", Type: types.String(), ReadOptional: true},
@@ -129,6 +706,14 @@ func Test_checkAllowedTypesProfileSchema(t *testing.T) {
 			err: "profile schema properties with type array cannot specify maximum elements count",
 		},
 		{
+			name: "Array with string with values item",
+			schema: types.Object([]types.Property{
+				{Name: "first_name", Type: types.String(), ReadOptional: true},
+				{Name: "data", Type: types.Array(types.String().WithValues("a", "b")), ReadOptional: true},
+			}),
+			err: "profile schema properties of type array(string) cannot specify values for their element type",
+		},
+		{
 			name: "Map with object item",
 			schema: types.Object([]types.Property{
 				{Name: "first_name", Type: types.String(), ReadOptional: true},
@@ -137,6 +722,15 @@ func Test_checkAllowedTypesProfileSchema(t *testing.T) {
 				})), ReadOptional: true},
 			}),
 			err: "profile schema properties cannot have type map(object)",
+		},
+		{
+			name: "Map with string with pattern item",
+			schema: types.Object([]types.Property{
+				{Name: "first_name", Type: types.String(), ReadOptional: true},
+				{Name: "data", Type: types.Map(
+					types.String().WithPattern(regexp.MustCompile(`^a+$`))), ReadOptional: true},
+			}),
+			err: "profile schema properties of type map(string) cannot specify a pattern for their element type",
 		},
 		{
 			name: "String with values",
@@ -151,70 +745,105 @@ func Test_checkAllowedTypesProfileSchema(t *testing.T) {
 			err: "profile schema properties with type string cannot specify values",
 		},
 		{
-			name: "Country semantic with alpha-3 format",
+			name: "Year semantics on array of int(32)",
+			schema: types.Object([]types.Property{
+				{Name: "year", Type: types.Array(types.Int(32).AsYear()), ReadOptional: true},
+			}),
+			err: "profile schema properties with year semantics must have signed int(16) values",
+		},
+		{
+			name: "Year semantics on map of unsigned int(16)",
+			schema: types.Object([]types.Property{
+				{Name: "year", Type: types.Map(types.Int(16).Unsigned().AsYear()), ReadOptional: true},
+			}),
+			err: "profile schema properties with year semantics must have signed int(16) values",
+		},
+		{
+			name: "Year semantics without explicit range",
+			schema: types.Object([]types.Property{
+				{Name: "year", Type: types.Int(16).AsYear(), ReadOptional: true},
+			}),
+			err: "profile schema properties with year semantics must have range [1,9999]",
+		},
+		{
+			name: "Year semantics with restricted minimum",
+			schema: types.Object([]types.Property{
+				{Name: "year", Type: types.Int(16).AsYear().WithIntRange(1900, 9999), ReadOptional: true},
+			}),
+			err: "profile schema properties with year semantics must have range [1,9999]",
+		},
+		{
+			name: "Year semantics with restricted maximum",
+			schema: types.Object([]types.Property{
+				{Name: "year", Type: types.Int(16).AsYear().WithIntRange(1, 2100), ReadOptional: true},
+			}),
+			err: "profile schema properties with year semantics must have range [1,9999]",
+		},
+		{
+			name: "Country semantics with alpha-3 format",
 			schema: types.Object([]types.Property{
 				{Name: "country", Type: types.String().AsCountry(types.ISO3166Alpha3), ReadOptional: true},
 			}),
-			err: "profile schema properties with country semantic must use ISO 3166 alpha-2 format",
+			err: "profile schema properties with country semantics must use ISO 3166 alpha-2 format",
 		},
 		{
-			name: "Money semantic with wrong decimal precision",
+			name: "Money semantics with wrong decimal precision",
 			schema: types.Object([]types.Property{
 				{Name: "amount", Type: types.Decimal(17, 4).AsMoney(), ReadOptional: true},
 			}),
-			err: "profile schema properties with money semantic must have decimal(18,4) values",
+			err: "profile schema properties with money semantics must have decimal(18,4) values",
 		},
 		{
-			name: "Percentage semantic with wrong decimal precision",
+			name: "Percentage semantics with wrong decimal precision",
 			schema: types.Object([]types.Property{
 				{
 					Name: "percentage", Type: types.Decimal(17, 4).AsPercentage(), ReadOptional: true,
 				},
 			}),
-			err: "profile schema properties with percentage semantic must have decimal(18,4) values",
+			err: "profile schema properties with percentage semantics must have decimal(18,4) values",
 		},
 		{
-			name: "Measurement semantic on map of int",
+			name: "Measurement semantics on map of int",
 			schema: types.Object([]types.Property{
 				{
 					Name: "measurements", Type: types.Map(types.Int(64).AsMeasurement(types.Kilogram)), ReadOptional: true,
 				},
 			}),
-			err: "profile schema properties with measurement semantic must have decimal(18,4) values",
+			err: "profile schema properties with measurement semantics must have decimal(18,4) values",
 		},
 		{
-			name: "Measurement semantic with wrong decimal scale",
+			name: "Measurement semantics with wrong decimal scale",
 			schema: types.Object([]types.Property{
 				{
 					Name: "measurement", Type: types.Decimal(18, 3).AsMeasurement(types.Kilogram), ReadOptional: true,
 				},
 			}),
-			err: "profile schema properties with measurement semantic must have decimal(18,4) values",
+			err: "profile schema properties with measurement semantics must have decimal(18,4) values",
 		},
 		{
-			name: "Duration semantic on decimal",
+			name: "Duration semantics on decimal",
 			schema: types.Object([]types.Property{
 				{
 					Name: "duration", Type: types.Decimal(10, 2).AsDuration(types.Second), ReadOptional: true,
 				},
 			}),
-			err: "profile schema properties with duration semantic must have signed int(64) values",
+			err: "profile schema properties with duration semantics must have real float(64) values",
 		},
 		{
-			name: "Duration semantic on int(32)",
+			name: "Duration semantics on int(64)",
 			schema: types.Object([]types.Property{
-				{Name: "duration", Type: types.Int(32).AsDuration(types.Second), ReadOptional: true},
+				{Name: "duration", Type: types.Int(64).AsDuration(types.Second), ReadOptional: true},
 			}),
-			err: "profile schema properties with duration semantic must have signed int(64) values",
+			err: "profile schema properties with duration semantics must have real float(64) values",
 		},
 		{
-			name: "Duration semantic on unsigned int(64)",
+			name: "Duration semantics on real float(32)",
 			schema: types.Object([]types.Property{
 				{
-					Name: "duration", Type: types.Int(64).Unsigned().AsDuration(types.Second), ReadOptional: true,
+					Name: "duration", Type: types.Float(32).Real().AsDuration(types.Second), ReadOptional: true,
 				},
 			}),
-			err: "profile schema properties with duration semantic must have signed int(64) values",
+			err: "profile schema properties with duration semantics must have real float(64) values",
 		},
 	}
 
@@ -399,4 +1028,162 @@ func Test_validatePrimarySources(t *testing.T) {
 		})
 	}
 
+}
+
+// Test_validatePropertyRoles verifies property role assignment
+// validation.
+func Test_validatePropertyRoles(t *testing.T) {
+
+	schema := types.Object([]types.Property{
+		{Name: "given_name", Type: types.String(), ReadOptional: true},
+		{Name: "family_name", Type: types.String(), ReadOptional: true},
+		{Name: "email", Type: types.String().AsEmail(), ReadOptional: true},
+		{Name: "country", Type: types.String().AsCountry(types.ISO3166Alpha2), ReadOptional: true},
+		{Name: "emails", Type: types.Array(types.String().AsEmail()), ReadOptional: true},
+		{Name: "countries", Type: types.Array(types.String().AsCountry(types.ISO3166Alpha2)), ReadOptional: true},
+		{Name: "photo_url", Type: types.String().AsURL(), ReadOptional: true},
+		{Name: "photo_urls", Type: types.Array(types.String().AsURL()), ReadOptional: true},
+		{Name: "subscribed", Type: types.Boolean(), ReadOptional: true},
+		{Name: "details", Type: types.Object([]types.Property{
+			{Name: "name", Type: types.String(), ReadOptional: true},
+		}), ReadOptional: true},
+	})
+
+	tests := []struct {
+		name        string
+		assignments PropertyRoles
+		err         string
+	}{
+		{name: "No assignments"},
+		{
+			name: "All roles",
+			assignments: PropertyRoles{
+				FirstName: "given_name",
+				LastName:  "family_name",
+				Email:     "email",
+				Country:   "country",
+				Photo:     "photo_url",
+			},
+		},
+		{name: "Nested property", assignments: PropertyRoles{FirstName: "details.name"}},
+		{
+			name:        "Invalid path",
+			assignments: PropertyRoles{FirstName: "invalid-path"},
+			err:         `property role "firstName" has invalid property path "invalid-path"`,
+		},
+		{
+			name:        "Missing property",
+			assignments: PropertyRoles{FirstName: "missing"},
+			err:         `property role "firstName" refers to property "missing", which does not exist`,
+		},
+		{
+			name:        "Two roles on one property",
+			assignments: PropertyRoles{FirstName: "given_name", LastName: "given_name"},
+			err:         `property "given_name" is assigned to both roles "firstName" and "lastName"`,
+		},
+		{
+			name:        "Name with semantic",
+			assignments: PropertyRoles{FirstName: "email"},
+			err:         `property "email" is not compatible with role "firstName"`,
+		},
+		{
+			name:        "String email",
+			assignments: PropertyRoles{Email: "given_name"},
+			err:         `property "given_name" is not compatible with role "email"`,
+		},
+		{
+			name:        "Array email",
+			assignments: PropertyRoles{Email: "emails"},
+			err:         `property "emails" is not compatible with role "email"`,
+		},
+		{
+			name:        "Email country",
+			assignments: PropertyRoles{Country: "email"},
+			err:         `property "email" is not compatible with role "country"`,
+		},
+		{
+			name:        "Array country",
+			assignments: PropertyRoles{Country: "countries"},
+			err:         `property "countries" is not compatible with role "country"`,
+		},
+		{
+			name:        "Boolean photo",
+			assignments: PropertyRoles{Photo: "subscribed"},
+			err:         `property "subscribed" is not compatible with role "photo"`,
+		},
+		{
+			name:        "Array photo",
+			assignments: PropertyRoles{Photo: "photo_urls"},
+			err:         `property "photo_urls" is not compatible with role "photo"`,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			err := validatePropertyRoles(schema, test.assignments)
+			if err != nil {
+				if test.err == "" {
+					t.Fatalf("expected no error, got %v", err)
+				}
+				if got := err.Error(); got != test.err {
+					t.Fatalf("expected error %q, got %q", test.err, got)
+				}
+				return
+			}
+			if test.err != "" {
+				t.Fatalf("expected error %q, got nil", test.err)
+			}
+		})
+	}
+
+}
+
+// failedAlterSchemaWarehouse returns a terminal error when altering a profile
+// schema.
+type failedAlterSchemaWarehouse struct {
+	warehouses.Warehouse
+	calls int
+	err   *warehouses.OperationError
+}
+
+func (w *failedAlterSchemaWarehouse) AlterProfileSchema(ctx context.Context, opID string, columns []warehouses.Column, operations []warehouses.AlterOperation) error {
+	w.calls++
+	return w.err
+}
+
+func (w *failedAlterSchemaWarehouse) Close() error {
+	return nil
+}
+
+var finalizationWarehouseNumber atomic.Uint64
+
+// finalizationWarehouse counts remote cleanup effects; other methods are
+// deliberately unavailable because these tests execute no warehouse DDL.
+type finalizationWarehouse struct {
+	warehouses.Warehouse
+	deletes        int
+	unsets         int
+	cancelOnRepeat context.CancelFunc
+}
+
+func (w *finalizationWarehouse) Close() error {
+	return nil
+}
+
+func (w *finalizationWarehouse) Delete(ctx context.Context, table string, where warehouses.Expr) error {
+	w.deletes++
+	if w.deletes > 2 {
+		w.cancelOnRepeat()
+		return context.Canceled
+	}
+	return nil
+}
+
+func (w *finalizationWarehouse) UnsetIdentityColumns(ctx context.Context, pipeline string, columns []warehouses.Column) error {
+	w.unsets++
+	if w.unsets > 1 {
+		w.cancelOnRepeat()
+		return context.Canceled
+	}
+	return nil
 }

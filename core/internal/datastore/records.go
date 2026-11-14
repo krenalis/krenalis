@@ -42,44 +42,64 @@ type Matching struct {
 // property to the relative column, and omitNil indicates whether attributes
 // with a nil value should be omitted from each record.
 //
-// pipeline and appExport parameters (if specified) represent the pipeline
-// identifier and the export options for an application pipeline, respectively.
-// When provided, the resulting records are compared against the destination
-// users table.
-//
 // If matching is not nil and a matching application user exists for a record,
 // the record's ExternalID will be set to the external ID of the matched
 // application user.
-func records(ctx context.Context, warehouse warehouses.Warehouse, query Query, idProperty string, columnByProperty map[string]warehouses.Column, omitNil bool, matching *Matching) (*Records, error) {
+func records(ctx context.Context, warehouse warehouses.Warehouse, query Query, consentCondition ConsentCondition, idProperty string, columnByProperty map[string]warehouses.Column, omitNil bool, matching *Matching) (*Records, error) {
 
 	columns, unflat := columnsFromProperties(query.Properties, columnByProperty, omitNil)
 
-	var where warehouses.Expr
+	var filterWhere warehouses.Expr
 	if query.Where != nil {
 		var err error
-		where, err = convertWhere(query.Where, columnByProperty)
+		filterWhere, err = convertWhere(query.Where, columnByProperty)
 		if err != nil {
 			return nil, err
 		}
 	}
 
+	var consentWhere warehouses.Expr
+	if len(consentCondition.Locations) > 0 {
+		operands := make([]warehouses.Expr, len(consentCondition.Locations))
+		for i, loc := range consentCondition.Locations {
+			column, ok := columnByProperty[loc.Property]
+			if !ok {
+				return nil, &ConsentConditionError{Msg: fmt.Sprintf("consent property «%s» does not exist", loc.Property)}
+			}
+			expr := warehouses.NewBaseExpr(column, warehouses.OpIsTrue)
+			if loc.JSONKey != "" {
+				expr.Keys = []string{loc.JSONKey}
+			}
+			operands[i] = expr
+		}
+		consentWhere = warehouses.NewMultiExpr(warehouses.LogicalOperator(consentCondition.Operator), operands)
+	}
+
+	where := filterWhere
+	if consentWhere != nil {
+		if where == nil {
+			where = consentWhere
+		} else {
+			where = warehouses.NewMultiExpr(warehouses.OpAnd, []warehouses.Expr{where, consentWhere})
+		}
+	}
+
 	var joins []warehouses.Join
 	var orderBy []warehouses.Column
-	orderDesc := query.OrderDesc
+	var orderDesc bool
 	var matchingIndex int // index of matching column in columns slice; 0 if matching is nil
 
 	if matching == nil {
 
-		if len(query.OrderBy) > 0 {
-			orderBy = make([]warehouses.Column, len(query.OrderBy))
-			for i, property := range query.OrderBy {
-				c, ok := columnByProperty[property]
-				if !ok {
-					return nil, fmt.Errorf("property path %s does not exist", property)
-				}
-				orderBy[i] = c
+		orderBy = make([]warehouses.Column, len(query.OrderBy))
+		for i, path := range query.OrderBy {
+			c, ok := columnByProperty[path]
+			if !ok {
+				return nil, fmt.Errorf("property path %s does not exist", path)
 			}
+			orderBy[i] = c
 		}
+		orderDesc = query.OrderDesc && len(orderBy) > 0
 
 	} else {
 
@@ -127,7 +147,7 @@ func records(ctx context.Context, warehouse warehouses.Warehouse, query Query, i
 			columnByProperty[idProperty],
 			externalIDColumn,
 		}
-		orderDesc = false
+		query.OrderDesc = false
 
 	}
 
@@ -156,7 +176,7 @@ func records(ctx context.Context, warehouse warehouses.Warehouse, query Query, i
 		matchingIndex: matchingIndex,
 	}
 
-	return records, err
+	return records, nil
 }
 
 // andExpressions returns an expression resulting from the AND of expr with
@@ -347,6 +367,8 @@ func (r *Records) Close() error {
 
 // Err returns any error encountered during iteration which may have occurred
 // after an explicit or implicit Close.
+//
+// If a data warehouse error occurs, it returns a *WarehouseError.
 func (r *Records) Err() error {
 	return r.err
 }

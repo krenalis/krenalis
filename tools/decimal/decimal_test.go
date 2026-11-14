@@ -9,6 +9,7 @@ import (
 	"database/sql/driver"
 	"errors"
 	"fmt"
+	"io"
 	"math"
 	"reflect"
 	"strconv"
@@ -74,6 +75,47 @@ func Test_Decimal_Cmp(t *testing.T) {
 		if test.expected != got {
 			t.Fatalf("Cwd(%q, %q): expected %d, got %d", test.x, test.y, test.expected, got)
 		}
+	}
+
+}
+
+// Test_Decimal_Float32 checks rounding and exactness of float32 conversions.
+func Test_Decimal_Float32(t *testing.T) {
+
+	tests := []struct {
+		name     string
+		value    Decimal
+		expected float32
+		exact    bool
+	}{
+		{"zero", Decimal{}, 0, true},
+		{"scaled zero", New(0, MinScale), 0, true},
+		{"exact", MustParse("1.5"), 1.5, true},
+		{"no double rounding", MustParse("1.0000000596046448"), 1.0000001192092896, false},
+		{"negative no double rounding", MustParse("-1.0000000596046448"), -1.0000001192092896, false},
+		{"tie to even", MustParse("1.000000059604644775390625"), 1, false},
+		{"maximum", MustParse("340282346638528859811704183484516925440"), math.MaxFloat32, true},
+		{"overflow", MustParse("3.5e38"), float32(math.Inf(1)), false},
+		{"negative overflow", MustParse("-3.5e38"), float32(math.Inf(-1)), false},
+		{"minimum scale", New(1, MinScale), float32(math.Inf(1)), false},
+		{"negative minimum scale", New(-1, MinScale), float32(math.Inf(-1)), false},
+		{"exact subnormal", MustParse("1.40129846432481707092372958328991613128026194187651577175706828388979108268586060148663818836212158203125e-45"), math.SmallestNonzeroFloat32, true},
+		{"rounded subnormal", MustParse("9e-46"), math.SmallestNonzeroFloat32, false},
+		{"negative underflow", MustParse("-1e-46"), float32(math.Copysign(0, -1)), false},
+		{"maximum scale", New(1, MaxScale), 0, false},
+		{"negative maximum scale", New(-1, MaxScale), float32(math.Copysign(0, -1)), false},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, exact := test.value.Float32()
+			if math.Float32bits(got) != math.Float32bits(test.expected) {
+				t.Fatalf("expected %g, got %g", test.expected, got)
+			}
+			if exact != test.exact {
+				t.Fatalf("expected exact %t, got %t", test.exact, exact)
+			}
+		})
 	}
 
 }
@@ -159,6 +201,61 @@ func Test_Decimal_Neg(t *testing.T) {
 		if !MustParse(test.expected).Equal(got) {
 			t.Fatalf("%q.Neg(): expected %q, got %q", test.x, test.expected, got)
 		}
+	}
+
+}
+
+// Test_Decimal_PrecisionScale checks that precision and scale are exact and
+// that the original decimal remains unchanged.
+func Test_Decimal_PrecisionScale(t *testing.T) {
+
+	// Build a large mantissa with trailing fractional zeros through binary decoding.
+	// Reducing it also exposes mutations caused by a shallow copy.
+	encoded, err := MustParse("12345678901234567890123456.78").Binary(4)
+	if err != nil {
+		t.Fatalf("expected decimal binary encoding, got %v", err)
+	}
+	nonMinimal, err := Binary(encoded, 30, 4)
+	if err != nil {
+		t.Fatalf("expected decimal with trailing fractional zeros, got %v", err)
+	}
+
+	for _, test := range []struct {
+		name             string
+		value            Decimal
+		precision, scale int
+	}{
+		{"zero_value", Decimal{}, 1, 0},
+		{"zero_max_scale", New(0, MaxScale), 1, 0},
+		{"parsed_negative_zero", MustParse("-0.000e999999"), 1, 0},
+		{"parsed_trailing_zeros", MustParse("123.4500"), 5, 2},
+		{"negative_fraction", MustParse("-.00500"), 3, 3},
+		{"negative_decimal", MustParse("-123.4500"), 5, 2},
+		{"trailing_fractional_zeros", New(12300, 4), 3, 2},
+		{"integer_with_scale", New(100, 1), 2, 0},
+		{"non_minimal_binary", nonMinimal, 28, 2},
+		{"scale_38", New(10, 38), 37, 37},
+		{"min_scale", New(10, MinScale), 2 - MinScale, 0},
+		{"max_scale", New(1000, MaxScale), MaxScale - 3, MaxScale - 3},
+		{"exponent_75", MustParse("1e75"), 76, 0},
+		{"exponent_76", MustParse("1e76"), 77, 0},
+		{"exponent_minus_37", MustParse("1e-37"), 37, 37},
+		{"exponent_minus_38", MustParse("1e-38"), 38, 38},
+		{"large_positive_exponent", MustParse("1e999999"), 1000000, 0},
+		{"large_negative_exponent", MustParse("1e-999999"), 999999, 999999},
+		{"76_integer_digits", MustParse(strings.Repeat("9", 76)), 76, 0},
+		{"76_mixed_digits", MustParse(strings.Repeat("9", 39) + "." + strings.Repeat("8", 37)), 76, 37},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			before := fmt.Sprintf("%e", test.value)
+			precision, scale := test.value.PrecisionScale()
+			if precision != test.precision || scale != test.scale {
+				t.Fatalf("expected precision %d and scale %d, got %d and %d", test.precision, test.scale, precision, scale)
+			}
+			if after := fmt.Sprintf("%e", test.value); before != after {
+				t.Fatalf("expected unchanged decimal %s, got %s", before, after)
+			}
+		})
 	}
 
 }
@@ -421,7 +518,44 @@ func Test_Float64(t *testing.T) {
 		{23.78, 4, 2, "23.78", nil},
 		{23.78, 2, 0, "24", nil},
 		{23.49, 4, 0, "23", nil},
+		{1.239, 5, 2, "1.24", nil},
+		{-1.239, 5, 2, "-1.24", nil},
+		{1.125, 4, 2, "1.12", nil},
+		{1.375, 4, 2, "1.38", nil},
+		{-1.125, 4, 2, "-1.12", nil},
+		{-1.375, 4, 2, "-1.38", nil},
 		{0.001, 3, 3, "0.001", nil},
+		{0.001, 5, 2, "0", nil},
+		{-0.001, 5, 2, "0", nil},
+		{0.0001, 5, 2, "0", nil},
+		{-0.0001, 5, 2, "0", nil},
+		{0.05, 5, 1, "0.1", nil},
+		{-0.05, 5, 1, "-0.1", nil},
+		{0.5, 1, 0, "0", nil},
+		{-0.5, 1, 0, "0", nil},
+		{math.Nextafter(0.5, 1), 1, 0, "1", nil},
+		{0.5, 1, 1, "0.5", nil},
+		{0.001, 2, 2, "0", nil},
+		{0.999, 2, 2, "", ErrRange},
+		{999.99, 5, 2, "999.99", nil},
+		{-999.99, 5, 2, "-999.99", nil},
+		{1234.5, 5, 2, "", ErrRange},
+		{99999, 5, 2, "", ErrRange},
+		{999.995, 5, 2, "", ErrRange},
+		{-999.995, 5, 2, "", ErrRange},
+		{9.5, 1, 0, "", ErrRange},
+		{-9.5, 1, 0, "", ErrRange},
+		{-5, 1, -1, "0", nil},
+		{125, 2, -1, "120", nil},
+		{135, 2, -1, "140", nil},
+		{995, 2, -1, "", ErrRange},
+		{123456789012345.125, 17, 2, "123456789012345.12", nil},
+		{math.SmallestNonzeroFloat64, 324, 324, "5e-324", nil},
+		{math.SmallestNonzeroFloat64, 323, 323, "0", nil},
+		{math.MaxFloat64, 308, 0, "", ErrRange},
+		{math.MaxFloat64, 1, MinScale, "0", nil},
+		{0.5, MaxPrecision, MaxScale, "0.5", nil},
+		{1, MaxPrecision, MaxScale, "", ErrRange},
 		{14627436592.089, 14, 3, "14627436592.089", nil},
 		{14627436592.089, 13, 2, "14627436592.09", nil},
 		{14627436592.089, 12, 1, "14627436592.1", nil},
@@ -429,19 +563,46 @@ func Test_Float64(t *testing.T) {
 		{-22.951, 7, 5, "-22.951", nil},
 		{330.164, 5, 3, "", ErrRange},
 		{1, 1, 2, "", ErrRange},
-		{math.NaN(), 1, 2, "", ErrRange},
-		{math.Inf(-1), 1, 2, "", ErrRange},
-		{math.Inf(1), 1, 2, "", ErrRange},
+		{1, 0, 0, "", ErrRange},
+		{1, MaxPrecision + 1, 0, "", ErrRange},
+		{1, 1, MinScale - 1, "", ErrRange},
+		{1, MaxPrecision, MaxScale + 1, "", ErrRange},
+		{math.NaN(), 1, 0, "", ErrRange},
+		{math.Inf(-1), 1, 0, "", ErrRange},
+		{math.Inf(1), 1, 0, "", ErrRange},
 	}
 
 	for _, test := range tests {
-		got, err := Float64(test.f, test.precision, test.scale)
-		if !reflect.DeepEqual(test.err, err) {
-			t.Fatalf("expected error '%#v', got error '%#v'", test.err, err)
-		}
-		if test.expected != "" && !MustParse(test.expected).Equal(got) {
-			t.Fatalf("Float64(%f, %d, %d): expected %q, got %q", test.f, test.precision, test.scale, test.expected, got)
-		}
+		t.Run(fmt.Sprintf("%g/%d/%d", test.f, test.precision, test.scale), func(t *testing.T) {
+
+			got, err := Float64(test.f, test.precision, test.scale)
+			if err != nil {
+				if err != test.err {
+					t.Fatalf("expected error %v, got %v", test.err, err)
+				}
+				return
+			}
+			if test.err != nil {
+				t.Fatalf("expected error %v, got nil", test.err)
+			}
+			if !got.b.IsFinite() {
+				t.Fatalf("expected a finite decimal, got %q", got)
+			}
+			if !MustParse(test.expected).Equal(got) {
+				t.Fatalf("expected %q, got %q", test.expected, got)
+			}
+
+			if test.expected == "0" {
+				b, err := got.MarshalJSON()
+				if err != nil {
+					t.Fatalf("expected JSON 0, got error %v", err)
+				}
+				if string(b) != "0" {
+					t.Fatalf("expected JSON %q, got %q", "0", b)
+				}
+			}
+
+		})
 	}
 
 }
@@ -553,6 +714,7 @@ func Test_Parse(t *testing.T) {
 		{"0", 1, 1, "0", "0", nil},
 		{"-0", 1, 0, "0", "0", nil},
 		{"+0", 1, 0, "0", "0", nil},
+		{"0.", 1, 0, "0", "0", nil},
 		{"0.0", 1, 0, "0", "0", nil},
 		{"0.00", 1, 0, "0", "0", nil},
 		{"0.00", 1, 1, "0", "0", nil},
@@ -563,6 +725,8 @@ func Test_Parse(t *testing.T) {
 		{"0e0", 1, 0, "0", "0", nil},
 		{"0e12", 1, 0, "0", "0", nil},
 		{"0e-5", 1, 0, "0", "0", nil},
+		{"0e" + strconv.Itoa(decimal.MaxScale+1), 1, 0, "0", "0", nil},
+		{"-0.00e-20000000000000000000", 5, 2, "0", "0", nil},
 		{"-0.1e0", 1, 1, "-0.1", "-0.1", nil},
 		{"-.0", 1, 0, "0", "0", nil},
 		{"-.00", 1, 0, "0", "0", nil},
@@ -581,6 +745,24 @@ func Test_Parse(t *testing.T) {
 		{"6800", 4, 0, "6.8e+3", "6800", nil},
 		{"6800.", 6, 2, "6.8e+3", "6800", nil},
 		{"6800.00", 6, 2, "6.8e+3", "6800", nil},
+		{"1000.", 4, 0, "1e+3", "1000", nil},
+		{"1000.0", 4, 0, "1e+3", "1000", nil},
+		{"1000.0000", 4, 0, "1e+3", "1000", nil},
+		{"1000.0000", 1, -3, "1e+3", "1000", nil},
+		{"+1000.0000", 4, 0, "1e+3", "1000", nil},
+		{"50000.000", 5, 0, "5e+4", "50000", nil},
+		{"-2000.00", 4, 0, "-2e+3", "-2000", nil},
+		{"-2000.0000", 4, 0, "-2e+3", "-2000", nil},
+		{"1500.0000", 4, 0, "1.5e+3", "1500", nil},
+		{"1000.5000", 5, 1, "1000.5", "1000.5", nil},
+		{"1000000000000000000000000000000000.0000", 34, 0, "1e+33", "1000000000000000000000000000000000", nil},
+		{"0.0001000", 4, 4, "0.0001", "0.0001", nil},
+		{".001000", 3, 3, "0.001", ".001", nil},
+		{"1000.0000e0", 4, 0, "1e+3", "1000", nil},
+		{"1000.0000E+000", 4, 0, "1e+3", "1000", nil},
+		{"-2000.0000e-0", 4, 0, "-2e+3", "-2000", nil},
+		{"1000.0000e2", 6, 0, "1e+5", "1000.0000e2", nil},
+		{"1000.0000e-6", 3, 3, "0.001", "1000.0000e-6", nil},
 		{"33510672.20416625806", 19, 11, "33510672.20416625806", "33510672.20416625806", nil},
 		{"0.17305728433", 12, 11, "0.17305728433", "0.17305728433", nil},
 		{"-0.0000001", 7, 7, "-1e-7", "-0.0000001", nil},
@@ -592,12 +774,15 @@ func Test_Parse(t *testing.T) {
 		{"0.00123E3", 3, 2, "1.23", "0.00123E3", nil},
 		{"0.00123e6", 6, 0, "1.23e+3", "0.00123e6", nil},
 		{"-0.00123E10", 10, 0, "-1.23e+7", "-0.00123E10", nil},
-		{"-0.00123E10", 10, 0, "-1.23e+7", "-0.00123E10", nil},
-		{"-0.00123E10", 10, 0, "-1.23e+7", "-0.00123E10", nil},
 		{"123456789e100", 0, 0, "1.23456789e+108", "123456789e100", nil},
 		{"-9223372036854775808", 0, 0, "-9223372036854775808", "-9223372036854775808", nil},
 		{"1e" + strconv.Itoa(decimal.MaxScale), 0, 0, "1e+999999999999999999", "1e999999999999999999", nil},
 		{"1e" + strconv.Itoa(decimal.MinScale), 0, 0, "1e-999999999999999999", "1e-999999999999999999", nil},
+		{"0.1e" + strconv.Itoa(decimal.MaxScale+1), 0, 0, "1e+999999999999999999", "0.1e1000000000000000000", nil},
+		{"10e" + strconv.Itoa(decimal.MinScale-1), 0, 0, "1e-999999999999999999", "10e-1000000000000000000", nil},
+		{"1e" + strings.Repeat("0", 64), 0, 0, "1", "1", nil},
+		{"1e+" + strings.Repeat("0", 64) + "1", 0, 0, "1e+1", "1e+" + strings.Repeat("0", 64) + "1", nil},
+		{"1e-" + strings.Repeat("0", 64) + "1", 0, 0, "0.1", "1e-" + strings.Repeat("0", 64) + "1", nil},
 		{
 			"9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999",
 			100,
@@ -646,6 +831,31 @@ func Test_Parse(t *testing.T) {
 		{"6.5.7", 20, 5, "", "", ErrSyntax},
 		{"+", 20, 5, "", "", ErrSyntax},
 		{"-", 20, 5, "", "", ErrSyntax},
+		{".", 0, 0, "", "", ErrSyntax},
+		{"e" + strconv.Itoa(decimal.MaxScale+1), 0, 0, "", "", ErrSyntax},
+		{".e" + strconv.Itoa(decimal.MaxScale+1), 0, 0, "", "", ErrSyntax},
+		{"1e", 0, 0, "", "", ErrSyntax},
+		{"1e+", 0, 0, "", "", ErrSyntax},
+		{"1e-", 0, 0, "", "", ErrSyntax},
+		{"1e++1", 0, 0, "", "", ErrSyntax},
+		{"1e+-1", 0, 0, "", "", ErrSyntax},
+		{"1e1_0", 0, 0, "", "", ErrSyntax},
+		{"1e0x10", 0, 0, "", "", ErrSyntax},
+		{"1e 1", 0, 0, "", "", ErrSyntax},
+		{"1e1 ", 0, 0, "", "", ErrSyntax},
+		{"1e１", 0, 0, "", "", ErrSyntax},
+		{"1e١", 0, 0, "", "", ErrSyntax},
+		{"1e999999999999999999999x", 0, 0, "", "", ErrSyntax},
+		{"1e-999999999999999999999x", 0, 0, "", "", ErrSyntax},
+		{"1e1x9", 0, 0, "", "", ErrSyntax},
+		{"1e1x99999999999999999999", 0, 0, "", "", ErrSyntax},
+		{"1ex99999999999999999999", 0, 0, "", "", ErrSyntax},
+		{"1e-x99999999999999999999", 0, 0, "", "", ErrSyntax},
+		{"1e-+99999999999999999999", 0, 0, "", "", ErrSyntax},
+		{"1ex1" + strings.Repeat("0", 64), 0, 0, "", "", ErrSyntax},
+		{"1e-x1" + strings.Repeat("0", 64), 0, 0, "", "", ErrSyntax},
+		{"100ex" + strconv.Itoa(math.MaxInt), 0, 0, "", "", ErrSyntax},
+		{"0.01e-x" + strconv.Itoa(math.MaxInt), 0, 0, "", "", ErrSyntax},
 
 		{"1", 1, 1, "", "", ErrRange},
 		{"678", 3, 1, "", "", ErrRange},
@@ -653,23 +863,114 @@ func Test_Parse(t *testing.T) {
 		{"1.0000001", 7, 7, "", "", ErrRange},
 		{"123.4", 4, 2, "", "", ErrRange},
 		{"0.0000001", 7, 6, "", "", ErrRange},
+		{"1000.0000", 3, 0, "", "", ErrRange},
+		{"1000.0000", 5, 2, "", "", ErrRange},
+		{"1000.0000", 1, -4, "", "", ErrRange},
+		{"1000.5000", 4, 0, "", "", ErrRange},
 		{"1e" + strconv.Itoa(decimal.MaxScale+1), 0, 0, "", "", ErrRange},
 		{"1e" + strconv.Itoa(decimal.MinScale-1), 0, 0, "", "", ErrRange},
+		{"1e1" + strings.Repeat("0", 64), 0, 0, "", "", ErrRange},
+		{"1e-1" + strings.Repeat("0", 64), 0, 0, "", "", ErrRange},
+		{"1e18446744073709551616", 0, 0, "", "", ErrRange},
+		{"1e20000000000000000000", 0, 0, "", "", ErrRange},
+		{"1e-20000000000000000000", 0, 0, "", "", ErrRange},
+		{"1e" + strconv.Itoa(math.MaxInt), 0, 0, "", "", ErrRange},
+		{"1e" + strconv.Itoa(math.MinInt), 0, 0, "", "", ErrRange},
+		{"100e" + strconv.Itoa(math.MaxInt), 0, 0, "", "", ErrRange},
+		{"0.01e" + strconv.Itoa(math.MinInt), 0, 0, "", "", ErrRange},
+
+		// Invalid precision or scale.
+		{"1", -1, -1, "", "", ErrRange},
+	}
+
+	type namedString string
+	type namedBytes []byte
+	inputs := []struct {
+		name      string
+		parse     func(string, int, int) (Decimal, error)
+		keepsText bool
+	}{
+		{"string", Parse[string], true},
+		{"named string", func(n string, p, s int) (Decimal, error) { return Parse(namedString(n), p, s) }, true},
+		{"bytes", func(n string, p, s int) (Decimal, error) { return Parse([]byte(n), p, s) }, false},
+		{"named bytes", func(n string, p, s int) (Decimal, error) { return Parse(namedBytes(n), p, s) }, false},
 	}
 
 	for _, test := range tests {
-		got, err := Parse(test.n, test.precision, test.scale)
-		if !reflect.DeepEqual(test.err, err) {
-			t.Fatalf("Parse(%q): expected error '%#v', got error '%#v'", test.n, test.err, err)
-		}
-		if test.expected != "" && test.expected != str(got) {
-			t.Fatalf("Parse(%q): expected %q, got %q", test.n, test.expected, str(got))
-		}
-		if test.expectedS != got.s {
-			t.Fatalf("Parse(%q): expected s=%q, got s=%q", test.n, test.expectedS, got.s)
-		}
-		if err := isMinimal(got); err != nil {
-			t.Fatalf("Parse(%q): %s", test.n, got)
+		for _, input := range inputs {
+			name := fmt.Sprintf("%s/%q/precision=%d/scale=%d", input.name, test.n, test.precision, test.scale)
+			t.Run(name, func(t *testing.T) {
+
+				got, err := input.parse(test.n, test.precision, test.scale)
+				if err != nil {
+					if !errors.Is(err, test.err) {
+						t.Fatalf("expected error %v, got %v", test.err, err)
+					}
+					return
+				}
+				if test.err != nil {
+					t.Fatalf("expected error %v, got nil", test.err)
+				}
+				if test.expected != str(got) {
+					t.Fatalf("expected %q, got %q", test.expected, str(got))
+				}
+				expectedS := test.expectedS
+				if !input.keepsText && got.Sign() != 0 {
+					expectedS = ""
+				}
+				if expectedS != got.s {
+					t.Errorf("expected s=%q, got s=%q", expectedS, got.s)
+				}
+				err = isMinimal(got)
+				if err != nil {
+					t.Fatalf("expected minimal representation, got %v", err)
+				}
+
+				// The table uses lowercase exponents, unlike the formatter.
+				formattedText := strings.Replace(test.expected, "e", "E", 1)
+				expectedText := formattedText
+				if input.keepsText {
+					expectedText = test.expectedS
+				}
+				var text strings.Builder
+				n, err := got.WriteTo(&text)
+				if err != nil {
+					t.Fatalf("expected WriteTo to succeed, got %v", err)
+				}
+				if n != int64(text.Len()) {
+					t.Fatalf("expected WriteTo count %d, got %d", text.Len(), n)
+				}
+				var buf bytes.Buffer
+				n, err = got.WriteTo(struct{ io.Writer }{&buf})
+				if err != nil {
+					t.Fatalf("expected WriteTo without StringWriter to succeed, got %v", err)
+				}
+				if n != int64(buf.Len()) {
+					t.Fatalf("expected WriteTo count %d, got %d", buf.Len(), n)
+				}
+				for _, output := range []struct {
+					name     string
+					text     string
+					expected string
+				}{
+					{"String", got.String(), expectedText},
+					{"Append", string(got.Append(nil)), expectedText},
+					{"WriteTo", text.String(), expectedText},
+					{"WriteTo without StringWriter", buf.String(), formattedText},
+				} {
+					if output.text != output.expected {
+						t.Errorf("expected %s text %q, got %q", output.name, output.expected, output.text)
+					}
+					parsed, err := Parse(output.text, 0, 0)
+					if err != nil {
+						t.Fatalf("expected valid decimal from %s, got %q: %v", output.name, output.text, err)
+					}
+					if !parsed.Equal(got) {
+						t.Errorf("expected %s to represent %s exactly, got %q", output.name, str(got), output.text)
+					}
+				}
+
+			})
 		}
 	}
 
@@ -835,7 +1136,9 @@ func Test_New_Panic(t *testing.T) {
 func Test_Range_Panic(t *testing.T) {
 	cases := []struct{ p, s int }{
 		{MaxPrecision + 1, 0},
-		{0, MaxScale + 1},
+		{0, 0},
+		{-1, -1},
+		{1, MaxScale + 1},
 		{1, 2},
 		{1, MinScale - 1},
 	}
@@ -855,8 +1158,8 @@ func Test_validPrecisionScale(t *testing.T) {
 	cases := []struct{ p, s int }{
 		{MaxPrecision + 1, 0},
 		{MinPrecision - 1, 0},
-		{0, MaxScale + 1},
-		{0, MinScale - 1},
+		{1, MaxScale + 1},
+		{1, MinScale - 1},
 		{1, 2},
 	}
 	for _, c := range cases {

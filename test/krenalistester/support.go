@@ -63,12 +63,12 @@ func (k *Krenalis) AlterProfileSchemaAndWait(schema types.Type, primarySources m
 	k.alterProfileSchemaAndWait(req)
 }
 
-// AlterProfileSchemaWithAssignedRolesAndWait alters the profile schema and its
-// assigned roles and waits for the operation to complete before returning.
-func (k *Krenalis) AlterProfileSchemaWithAssignedRolesAndWait(schema types.Type, assignedRoles ProfileRoleAssignments, primarySources map[string]string, rePaths map[string]any) {
+// AlterProfileSchemaWithPropertyRolesAndWait alters the profile schema and its
+// property roles and waits for the operation to complete before returning.
+func (k *Krenalis) AlterProfileSchemaWithPropertyRolesAndWait(schema types.Type, propertyRoles PropertyRoles, primarySources map[string]string, rePaths map[string]any) {
 	req := map[string]any{
 		"schema":         schema,
-		"assignedRoles":  assignedRoles,
+		"propertyRoles":  propertyRoles,
 		"primarySources": primarySources,
 		"rePaths":        rePaths,
 	}
@@ -86,12 +86,12 @@ func (k *Krenalis) TryAlterProfileSchema(schema types.Type, primarySources map[s
 	return k.TryCall("PUT", "/v1/profiles/schema", nil, req, nil)
 }
 
-// TryAlterProfileSchemaWithAssignedRoles alters the profile schema and its
-// assigned roles, returning an error if it fails.
-func (k *Krenalis) TryAlterProfileSchemaWithAssignedRoles(schema types.Type, assignedRoles ProfileRoleAssignments, primarySources map[string]string, rePaths map[string]any) error {
+// TryAlterProfileSchemaWithPropertyRoles alters the profile schema and its
+// property roles, returning an error if it fails.
+func (k *Krenalis) TryAlterProfileSchemaWithPropertyRoles(schema types.Type, propertyRoles PropertyRoles, primarySources map[string]string, rePaths map[string]any) error {
 	req := map[string]any{
 		"schema":         schema,
-		"assignedRoles":  assignedRoles,
+		"propertyRoles":  propertyRoles,
 		"primarySources": primarySources,
 		"rePaths":        rePaths,
 	}
@@ -161,6 +161,23 @@ func (k *Krenalis) ConnectionUI(connection string) map[string]any {
 	var ui map[string]any
 	k.Call("GET", path, nil, nil, &ui)
 	return ui
+}
+
+// ConsentPurpose returns the consent purpose with the given ID, failing the
+// test if it cannot be read or does not exist.
+func (k *Krenalis) ConsentPurpose(id string) core.ConsentPurpose {
+	k.t.Helper()
+	var response struct {
+		Purposes []core.ConsentPurpose `json:"purposes"`
+	}
+	must(k.t, k.tryCall("GET", "/v1/consent-purposes", nil, nil, &response, true))
+	for _, purpose := range response.Purposes {
+		if purpose.ID == id {
+			return purpose
+		}
+	}
+	k.t.Fatalf("expected a purpose with ID %q, got no matching purpose", id)
+	return core.ConsentPurpose{}
 }
 
 // CreateConnection creates a connection and returns its ID.
@@ -533,6 +550,19 @@ func (k *Krenalis) Identities(kpid uuid.UUID, first, limit int) ([]Identity, int
 	return response.Identities, response.Total
 }
 
+// IdentityResolutionRuns returns Identity Resolution run history.
+func (k *Krenalis) IdentityResolutionRuns(first, limit int, status string) []IdentityResolutionRun {
+	var response struct {
+		Runs []IdentityResolutionRun `json:"runs"`
+	}
+	path := fmt.Sprintf("/v1/identity-resolution/runs?first=%d&limit=%d", first, limit)
+	if status != "" {
+		path += "&status=" + url.QueryEscape(status)
+	}
+	k.Call("GET", path, nil, nil, &response)
+	return response.Runs
+}
+
 // JavaScriptSDKURL returns the JavaScript SDK URL from the public metadata.
 func (k *Krenalis) JavaScriptSDKURL() string {
 	var metadata map[string]any
@@ -597,12 +627,12 @@ func (k *Krenalis) TryOrganizations(first, limit int) ([]Organization, error) {
 	return response.Organizations, err
 }
 
-// organizationsHeaders returns the headers needed to call the platform
-// management API.
+// organizationsHeaders returns the headers needed to call the Platform
+// Management API.
 func organizationsHeaders() http.Header {
 	return http.Header{
 		"Krenalis-Workspace": nil, // so that Call does not add automatically the header.
-		"Authorization":      []string{"Bearer " + testsSettings.OrganizationsAPIKey},
+		"Authorization":      []string{"Bearer " + testsSettings.PlatformManagementAPIKey},
 	}
 }
 
@@ -697,32 +727,33 @@ func (k *Krenalis) ProfilePropertiesSuitableAsIdentifiers() types.Type {
 
 // Profiles returns the profiles in the given range and their total count.
 func (k *Krenalis) Profiles(properties []string, order string, orderDesc bool, first, limit int) (users []Profile, total int) {
-	var schema types.Type
+	var schema ProfileSchema
 	k.Call("GET", "/v1/profiles/schema", nil, nil, &schema)
-	users, total, _ = k.ProfilesWithSchema(schema, properties, order, orderDesc, first, limit)
+	users, total, _ = k.ProfilesWithSchema(schema.Schema, properties, order, orderDesc, first, limit)
 	return users, total
 }
 
 // ProfilesWithSchema returns profiles queried using schema, their total
 // count, and continuation state.
 func (k *Krenalis) ProfilesWithSchema(schema types.Type, properties []string, order string, orderDesc bool, first, limit int) ([]Profile, int, bool) {
-	schemaJSON, err := schema.MarshalJSON()
-	must(k.t, err)
-	queryString := url.Values{
-		"schema":     []string{string(schemaJSON)},
+	body := map[string]any{
+		"schema":     schema,
 		"properties": properties,
-		"order":      []string{order},
-		"orderDesc":  []string{fmt.Sprintf("%t", orderDesc)},
-		"first":      []string{strconv.Itoa(first)},
-		"limit":      []string{strconv.Itoa(limit)},
+		"order":      order,
+		"orderDesc":  orderDesc,
+		"first":      first,
+		"limit":      limit,
 	}
 	var response struct {
 		Profiles []Profile `json:"profiles"`
 		Total    int       `json:"total"`
-		HasNext  bool      `json:"hasNext"`
+		HasNext  *bool     `json:"hasNext"`
 	}
-	k.Call("GET", "/v1/profiles?"+queryString.Encode(), nil, nil, &response)
-	return response.Profiles, response.Total, response.HasNext
+	k.Call("POST", "/v1/profiles/query", nil, body, &response)
+	if response.HasNext == nil {
+		k.t.Fatal("expected hasNext to be a boolean, got missing or null")
+	}
+	return response.Profiles, response.Total, *response.HasNext
 }
 
 // RepairWarehouse repairs the warehouse.
@@ -739,7 +770,7 @@ func (k *Krenalis) TryRepairWarehouse() error {
 // RunIdentityResolutionAndWait runs the identity resolution and waits for it to
 // complete before returning.
 func (k *Krenalis) RunIdentityResolutionAndWait() {
-	ts := time.Now().UTC()
+	ts := time.Now().UTC().Truncate(time.Millisecond)
 	k.Call("POST", "/v1/identity-resolution/start", nil, nil, nil)
 	// Waits for the Identity Resolution that was started following the call to
 	// this method to finish.
@@ -799,7 +830,7 @@ func (s sendEventCallback) Failure(msg analytics.Message, err error) {
 }
 
 // SetOrganizationStatus enables or disables an organization through the
-// platform management API.
+// Platform Management API.
 func (k *Krenalis) SetOrganizationStatus(id string, enabled bool) {
 	must(k.t, k.TrySetOrganizationStatus(id, enabled, organizationsHeaders()))
 }
@@ -809,6 +840,12 @@ func (k *Krenalis) SetOrganizationStatus(id string, enabled bool) {
 func (k *Krenalis) TrySetOrganizationStatus(id string, enabled bool, headers http.Header) error {
 	body := map[string]any{"enabled": enabled}
 	return k.TryCall("PUT", fmt.Sprintf("/v1/organizations/%s/status", id), headers, body, nil)
+}
+
+// TrySetOrganizationStatusWithBody is like TrySetOrganizationStatus but sends
+// the given request body with the Platform Management API key.
+func (k *Krenalis) TrySetOrganizationStatusWithBody(id string, body any) error {
+	return k.TryCall("PUT", fmt.Sprintf("/v1/organizations/%s/status", id), organizationsHeaders(), body, nil)
 }
 
 // SettingsProperties encodes the given "JSON" format properties as connection
@@ -903,8 +940,11 @@ func (k *Krenalis) TestWorkspaceCreation(name string, profileSchema types.Type, 
 		"Krenalis-Workspace": nil,
 	}
 	body := map[string]any{
-		"name":          name,
-		"profileSchema": profileSchema,
+		"name": name,
+		"profileSchema": map[string]any{
+			"schema":        profileSchema,
+			"propertyRoles": PropertyRoles{},
+		},
 		"warehouse": map[string]any{
 			"platform": whPlatform,
 			"mode":     mode,
@@ -956,6 +996,13 @@ func (k *Krenalis) UpdateWarehouse(mode string, settings json.Value) {
 		"settings": settings,
 	}
 	k.Call("PUT", "/v1/warehouse", nil, body, nil)
+}
+
+// Version returns the Krenalis version from the public metadata.
+func (k *Krenalis) Version() string {
+	var metadata map[string]any
+	k.Call("GET", "/v1/public/metadata", nil, nil, &metadata)
+	return metadata["version"].(string)
 }
 
 // WaitConnectionIdentitiesStoredIntoWarehouse waits until the expected number
@@ -1030,7 +1077,7 @@ func (k *Krenalis) waitForRunsCompletion(allowFailed bool, ids ...string) {
 				if run.Error != "" {
 					k.t.Fatalf("error running pipeline %s for run %s: %s", run.Pipeline, run.ID, run.Error)
 				}
-				if !allowFailed && run.Failed != [7]int{} {
+				if !allowFailed && run.Failed != [9]int{} {
 					k.t.Fatalf("error running pipeline %s for run %s: %d failed", run.Pipeline, run.ID, run.Failed)
 				}
 				return
@@ -1051,7 +1098,7 @@ func (k *Krenalis) waitForRunsCompletion(allowFailed bool, ids ...string) {
 			if run.Error != "" {
 				k.t.Fatalf("error running pipeline %s for run %s: %s", run.Pipeline, run.ID, run.Error)
 			}
-			if !allowFailed && run.Failed != [7]int{} {
+			if !allowFailed && run.Failed != [9]int{} {
 				k.t.Fatalf("error running pipeline %s for run %s: %d failed", run.Pipeline, run.ID, run.Failed)
 			}
 		}

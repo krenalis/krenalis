@@ -54,7 +54,7 @@ func ParseTime[bytes []byte | string](p bytes) (t time.Time, ok bool) {
 func PropertiesToColumns(properties types.Properties) []warehouses.Column {
 	columns := make([]warehouses.Column, 0, properties.Len())
 	for _, p := range properties.All() {
-		if p.Type.Kind() == types.ObjectKind {
+		if p.Type.IsObject() {
 			for _, column := range PropertiesToColumns(p.Type.Properties()) {
 				column.Name = p.Name + "_" + column.Name
 				columns = append(columns, column)

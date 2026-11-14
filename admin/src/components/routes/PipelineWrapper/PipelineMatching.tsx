@@ -1,7 +1,7 @@
 import React, { forwardRef, useContext, useMemo } from 'react';
 import { getMatchingComboboxItems } from '../../helpers/getSchemaComboboxItems';
 import PipelineContext from '../../../context/PipelineContext';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import {
 	flattenSchema,
 	matchingSemanticsAreCompatibleWithDestination,
@@ -9,7 +9,7 @@ import {
 	FlatSchema,
 	validateMatching,
 } from '../../../lib/core/pipeline';
-import { checkIfPropertyExists } from './Pipeline.helpers';
+import { checkIfPropertyExists } from '../../helpers/checkIfPropertyExists';
 import { Combobox } from '../../base/Combobox/Combobox';
 
 const PipelineMatching = forwardRef<any>((_, ref) => {
@@ -167,7 +167,7 @@ const PipelineMatching = forwardRef<any>((_, ref) => {
 				</div>
 				{showEmptyMatchingError && (pipeline.matching.in === '' || pipeline.matching.out === '') && (
 					<div className='pipeline__matching-empty-error'>
-						<SlIcon name='exclamation-circle' slot='prefix' />
+						<WaIcon name='exclamation-circle' />
 						Matching properties cannot be empty
 					</div>
 				)}

@@ -5,7 +5,6 @@
 package main
 
 import (
-	"bufio"
 	"errors"
 	"flag"
 	"fmt"
@@ -18,14 +17,21 @@ import (
 	"time"
 )
 
+// goTestFlags are the flags passed to every 'go test' invocation.
+var goTestFlags = []string{
+	"-count",
+	"1",
+	"-failfast",
+	"-v",
+	// It is important to specify a timeout, because otherwise 'go test'
+	// has a default timeout of 10 minutes (see 'go help testflag'),
+	// which may not be sufficient to run all the tests inside "/test".
+	"--timeout=2h",
+}
+
 func main() {
 
 	cliOptions := parseCli()
-
-	if cliOptions.justTestAdmin {
-		runGoTestAdmin()
-		os.Exit(0)
-	}
 
 	// The KRENALIS_SKIP_SNOWFLAKE_TESTS environment variable is set internally
 	// by this script when -no-snowflake-tests is used. It must not be set
@@ -57,6 +63,12 @@ func main() {
 	repo, err := os.Getwd()
 	if err != nil {
 		fatal("cannot read the current working directory: %s", err)
+	}
+
+	if cliOptions.justTestAdmin {
+		runGoTestAdmin(repo)
+		fmt.Printf("\nDone! (took ~%v)\n", time.Since(start).Round(time.Second))
+		os.Exit(0)
 	}
 
 	// Tidy modules.
@@ -93,18 +105,9 @@ func main() {
 	NewCmd("go", "mod", "vendor").InDir(repo).Run()
 
 	// Run checks and do operations on the Admin.
+	// Keep the commands that regenerate the Admin files in sync with runGoTestAdmin.
 	fmt.Println("Run checks and do operations on the Admin")
 	NewCmd("npm", "ci").InDir(repo, "admin").Run()
-
-	// TODO(Gianluca): this is a workaround for this npm bug:
-	// https://github.com/npm/cli/issues/8690#issuecomment-3463552492.
-	//
-	// See https://github.com/krenalis/krenalis/issues/2164.
-	err = removePeerLines("admin/package-lock.json")
-	if err != nil {
-		fatal("cannot remove peer lines from 'admin/package-lock.json': %s", err)
-	}
-
 	NewCmd("npm", "run", "prettier").InDir(repo, "admin").Run()
 	NewCmd("npm", "run", "minify-snippet").InDir(repo, "admin").Run()
 	NewCmd("npm", "run", "typecheck").InDir(repo, "admin").Run()
@@ -119,17 +122,7 @@ func main() {
 	// Run Go tests.
 	if runGoTests := !cliOptions.noGoTest; runGoTests {
 		fmt.Println("Run Go tests")
-		args := []string{
-			"test",
-			"-count",
-			"1",
-			"-failfast",
-			"-v",
-			// It is important to specify a timeout, because otherwise 'go test'
-			// has a default timeout of 10 minutes (see 'go help testflag'),
-			// which may not be sufficient to run all the tests inside "/test".
-			"--timeout=2h",
-		}
+		args := append([]string{"test"}, goTestFlags...)
 		if cliOptions.short {
 			args = append(args, "-short")
 		}
@@ -156,45 +149,6 @@ type cliOptions struct {
 	short            bool
 }
 
-// TODO(Gianluca): this function is a workaround for this npm bug:
-// https://github.com/npm/cli/issues/8690#issuecomment-3463552492.
-//
-// See https://github.com/krenalis/krenalis/issues/2164.
-func removePeerLines(filepath string) error {
-	file, err := os.Open(filepath)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	var lines []string
-	scanner := bufio.NewScanner(file)
-	scanner.Buffer(make([]byte, 1024*1024), 1024*1024)
-
-	for scanner.Scan() {
-		line := scanner.Text()
-		if !strings.Contains(line, `"peer": true`) {
-			lines = append(lines, line)
-		}
-	}
-	if err := scanner.Err(); err != nil {
-		return err
-	}
-
-	for i := 0; i < len(lines)-1; i++ {
-		trimmed := strings.TrimSpace(lines[i])
-		nextTrimmed := strings.TrimSpace(lines[i+1])
-		if strings.HasSuffix(trimmed, ",") &&
-			(strings.HasPrefix(nextTrimmed, "}") || strings.HasPrefix(nextTrimmed, "]")) {
-			commaIdx := strings.LastIndex(lines[i], ",")
-			lines[i] = lines[i][:commaIdx]
-		}
-	}
-
-	output := strings.Join(lines, "\n") + "\n"
-	return os.WriteFile(filepath, []byte(output), 0644)
-}
-
 func parseCli() cliOptions {
 
 	var justTestAdmin bool
@@ -208,8 +162,8 @@ func parseCli() cliOptions {
 		" so some parts of the software and/or changes made may not be validated " +
 		"when running the script with this option"
 
-	flag.BoolVar(&justTestAdmin, "just-test-admin", false, "just run the Go tests on the Admin console. "+
-		reducedTestSetWarning)
+	flag.BoolVar(&justTestAdmin, "just-test-admin", false, "just regenerate the Admin files and run the Go tests"+
+		" on the Admin console. "+reducedTestSetWarning)
 	flag.BoolVar(&noConnectorTests, "no-connector-tests", false, "do not run 'go test' within the 'connectors' directory. "+reducedTestSetWarning)
 	flag.BoolVar(&noSnowflakeTests, "no-snowflake-tests", false, "skip Go tests that need a Snowflake environment. "+reducedTestSetWarning)
 	flag.BoolVar(&noGoTest, "no-go-test", false, "do not run 'go test' at all."+
@@ -249,6 +203,7 @@ func parseCli() cliOptions {
 	mutualExclusive(justTestAdmin, noConnectorTests, "-just-test-admin", "-no-connector-tests")
 	mutualExclusive(justTestAdmin, noGoTest, "-just-test-admin", "-no-go-test")
 	mutualExclusive(justTestAdmin, short, "-just-test-admin", "-short")
+	mutualExclusive(justTestAdmin, noSnowflakeTests, "-just-test-admin", "-no-snowflake-tests")
 	// Flags incompatible with '--no-go-test'.
 	mutualExclusive(noGoTest, short, "-no-go-test", "-short")
 	mutualExclusive(noGoTest, noConnectorTests, "-no-go-test", "-no-connector-tests")
@@ -351,12 +306,15 @@ func removeGoSum(repo, module string) {
 	}
 }
 
-// runGoTestAdmin runs Admin tests via go test.
-func runGoTestAdmin() {
+// runGoTestAdmin runs Admin tests via go test, after regenerating the Admin
+// files embedded in the Krenalis instance that the tests build.
+func runGoTestAdmin(repo string) {
+	// Keep in sync with the corresponding commands in the main function.
+	NewCmd("npm", "ci").InDir(repo, "admin").Run()
+	NewCmd("npm", "run", "minify-snippet").InDir(repo, "admin").Run()
+	NewCmd("npm", "run", "makevendor").InDir(repo, "admin").Run()
 	start := time.Now()
-	args := []string{
-		"test", "-run", "^TestAdmin$", "github.com/krenalis/krenalis/test", "-timeout=15m", "-count", "1", "-v",
-	}
+	args := append([]string{"test", "-run", "^TestAdmin$", "github.com/krenalis/krenalis/test"}, goTestFlags...)
 	NewCmd("go", args...).Run()
 	elapsed := time.Since(start)
 	if elapsed < 2*time.Second {

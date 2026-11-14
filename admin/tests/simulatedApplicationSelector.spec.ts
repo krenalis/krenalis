@@ -84,7 +84,7 @@ test('Simulated selector empty state guides creation in Simulated world', async 
 	await expect(page.locator('.connector-ui')).toContainText(
 		'There are no available simulated data stores. Create one in the Simulated world section',
 	);
-	await expect(page.locator('.connector-ui sl-select')).toHaveCount(0);
+	await expect(page.locator('.connector-ui wa-select')).toHaveCount(0);
 	for (const obsolete of ['New account name', 'Initial user records', 'Duplicate records', 'Create new account']) {
 		await expect(page.getByText(obsolete, { exact: false })).toHaveCount(0);
 	}
@@ -103,21 +103,21 @@ test('Simulated selector offers only Available systems and enforces each role in
 
 	for (const role of ['Source', 'Destination'] as const) {
 		await openSelector(page, role);
-		const selector = page.locator('.connector-ui sl-select');
-		await expect(selector.locator('sl-option')).toHaveCount(3);
-		await expect(selector.locator(`sl-option[value="${free}"]`)).toHaveJSProperty('disabled', false);
-		await expect(selector.locator(`sl-option[value="${source}"]`)).toHaveJSProperty('disabled', role === 'Source');
-		await expect(selector.locator(`sl-option[value="${destination}"]`)).toHaveJSProperty(
+		const selector = page.locator('.connector-ui wa-select');
+		await expect(selector.locator('wa-option')).toHaveCount(3);
+		await expect(selector.locator(`wa-option[value="${free}"]`)).toHaveJSProperty('disabled', false);
+		await expect(selector.locator(`wa-option[value="${source}"]`)).toHaveJSProperty('disabled', role === 'Source');
+		await expect(selector.locator(`wa-option[value="${destination}"]`)).toHaveJSProperty(
 			'disabled',
 			role === 'Destination',
 		);
 		for (const system of systems.filter((item) => item.status !== 'Available')) {
-			await expect(selector.locator(`sl-option[value="${system.id}"]`)).toHaveCount(0);
+			await expect(selector.locator(`wa-option[value="${system.id}"]`)).toHaveCount(0);
 		}
 		await selector.click();
-		await selector.locator(`sl-option[value="${role === 'Source' ? source : destination}"]`).click({ force: true });
-		await expect(selector).toHaveJSProperty('value', '');
-		await selector.locator(`sl-option[value="${role === 'Source' ? destination : source}"]`).click();
+		await selector.locator(`wa-option[value="${role === 'Source' ? source : destination}"]`).click({ force: true });
+		await expect(selector).toHaveJSProperty('value', null);
+		await selector.locator(`wa-option[value="${role === 'Source' ? destination : source}"]`).click();
 		await expect(selector).toHaveJSProperty('value', role === 'Source' ? destination : source);
 	}
 });
@@ -128,20 +128,20 @@ test('Simulated selector refresh discovers systems, preserves valid selection an
 	await openSelector(page, 'Source');
 	const account = await createSystem(page, 'Created elsewhere');
 	await page.getByRole('button', { name: 'Refresh simulated data stores' }).click();
-	const selector = page.locator('.connector-ui sl-select');
-	await expect(selector.locator(`sl-option[value="${account}"]`)).toBeAttached();
+	const selector = page.locator('.connector-ui wa-select');
+	await expect(selector.locator(`wa-option[value="${account}"]`)).toBeAttached();
 	await selector.click();
-	await selector.locator(`sl-option[value="${account}"]`).click();
+	await selector.locator(`wa-option[value="${account}"]`).click();
 	await expect(selector).toHaveJSProperty('value', account);
 
 	await createSystem(page, 'Another system');
 	await page.getByRole('button', { name: 'Refresh simulated data stores' }).click();
-	await expect(selector.locator('sl-option')).toHaveCount(2);
+	await expect(selector.locator('wa-option')).toHaveCount(2);
 	await expect(selector).toHaveJSProperty('value', account);
 	await createConnection(page, 'Source', account);
 	await page.getByRole('button', { name: 'Refresh simulated data stores' }).click();
-	await expect(selector.locator(`sl-option[value="${account}"]`)).toHaveJSProperty('disabled', true);
-	await expect(selector).toHaveJSProperty('value', '');
+	await expect(selector.locator(`wa-option[value="${account}"]`)).toHaveJSProperty('disabled', true);
+	await expect(selector).toHaveJSProperty('value', null);
 });
 
 test('Simulated selector saves exactly the selected binding and saved connection cannot rebind', async ({ page }) => {
@@ -153,9 +153,9 @@ test('Simulated selector saves exactly the selected binding and saved connection
 			systemCreates += 1;
 	});
 	await openSelector(page, 'Destination');
-	const selector = page.locator('.connector-ui sl-select');
+	const selector = page.locator('.connector-ui wa-select');
 	await selector.click();
-	await selector.locator(`sl-option[value="${account}"]`).click();
+	await selector.locator(`wa-option[value="${account}"]`).click();
 	const saved = page.waitForResponse(
 		(response) => response.request().method() === 'POST' && new URL(response.url()).pathname === '/v1/connections',
 	);
@@ -173,7 +173,7 @@ test('Simulated selector saves exactly the selected binding and saved connection
 	await page.getByRole('tab', { name: 'Application settings', exact: true }).click();
 	const application = page.getByRole('tabpanel', { name: 'Application settings', exact: true });
 	await expect(application).toContainText('Selected system');
-	await expect(application.locator('sl-select')).toHaveCount(0);
+	await expect(application.locator('wa-select')).toHaveCount(0);
 	await expect(application.getByRole('button', { name: 'Save', exact: true })).toHaveCount(0);
 	await expect(application.getByRole('button', { name: 'Refresh simulated data stores' })).toHaveCount(0);
 	await page.getByRole('tab', { name: 'General', exact: true }).click();

@@ -76,10 +76,10 @@ func TestStorage(t *testing.T) {
 	}
 
 	expectedSchema := types.Object([]types.Property{
-		{Name: "customer_id", Type: types.String()},
-		{Name: "email", Type: types.String()},
-		{Name: "first_name", Type: types.String()},
-		{Name: "last_name", Type: types.String()},
+		{Name: "customer_id", Type: types.String(), DisplayName: "customer_id"},
+		{Name: "email", Type: types.String(), DisplayName: "email"},
+		{Name: "first_name", Type: types.String(), DisplayName: "first_name"},
+		{Name: "last_name", Type: types.String(), DisplayName: "last_name"},
 	})
 	if !types.Equal(expectedSchema, schema) {
 		t.Fatal("schemas do not match")

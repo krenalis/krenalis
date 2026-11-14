@@ -6,7 +6,10 @@ package types
 
 import (
 	"encoding/json"
+	"fmt"
+	"math"
 	"regexp"
+	"strconv"
 	"testing"
 
 	"github.com/krenalis/krenalis/tools/decimal"
@@ -34,6 +37,15 @@ func TestParseErrors(t *testing.T) {
 		{"{\"kind\":\"string\",\"maxBytes\":1,\"values\":[\"a\"]}", "values cannot be provided if max bytes is provided"},
 		{"{\"kind\":\"string\",\"values\":[\"a\"],\"maxLength\":1}", "max length cannot be provided if values are provided"},
 		{"{\"kind\":\"string\",\"maxLength\":1,\"values\":[\"a\"]}", "values cannot be provided if max length is provided"},
+		{"{\"kind\":\"float\",\"bitSize\":32,\"minimum\":1e400}", "invalid value for minimum"},
+		{"{\"kind\":\"float\",\"bitSize\":32,\"maximum\":1e400}", "invalid value for maximum"},
+		{"{\"kind\":\"float\",\"bitSize\":64,\"minimum\":1e400}", "invalid value for minimum"},
+		{"{\"kind\":\"float\",\"bitSize\":64,\"maximum\":1e400}", "invalid value for maximum"},
+		{"{\"kind\":\"float\",\"bitSize\":32,\"minimum\":1,\"maximum\":0}", "maximum cannot be less than minimum"},
+		{"{\"kind\":\"float\",\"bitSize\":32,\"minimum\":1.00000001,\"maximum\":1}", "maximum cannot be less than minimum"},
+		{"{\"kind\":\"float\",\"bitSize\":32,\"minimum\":1e100,\"maximum\":1e99}", "maximum cannot be less than minimum"},
+		{"{\"kind\":\"float\",\"bitSize\":32,\"minimum\":-1e99,\"maximum\":-1e100}", "maximum cannot be less than minimum"},
+		{"{\"kind\":\"float\",\"bitSize\":64,\"minimum\":1,\"maximum\":0}", "maximum cannot be less than minimum"},
 	}
 	for _, tc := range tests {
 		_, err := Parse(tc.data)
@@ -59,15 +71,15 @@ func TestPropertySerialization(t *testing.T) {
 		},
 		{
 			Property: Property{Name: "a", Type: Parameter("custom")},
-			Expected: `{"name":"a","type":{"kind":"custom"},"description":""}`,
+			Expected: `{"name":"a","type":{"kind":"custom"}}`,
 		},
 		{
 			Property: Property{Name: "a", Type: String()},
-			Expected: `{"name":"a","type":{"kind":"string"},"description":""}`,
+			Expected: `{"name":"a","type":{"kind":"string"}}`,
 		},
 		{
 			Property: Property{Name: "a", Type: String()},
-			Expected: `{"name":"a","type":{"kind":"string"},"description":""}`,
+			Expected: `{"name":"a","type":{"kind":"string"}}`,
 		},
 		{
 			Property: Property{Name: "a", Type: String(), Description: "some description"},
@@ -213,7 +225,7 @@ func TestPropertySerializationDeserialization(t *testing.T) {
 		{
 			`{"name":"Apple","type":{"kind":"string"},"description":""}`,
 			Property{Name: "Apple", Type: String()},
-			`{"name":"Apple","type":{"kind":"string"},"description":""}`,
+			`{"name":"Apple","type":{"kind":"string"}}`,
 		},
 		{
 			`{"name":"Apple","type":{"kind":"string","values":["g","c"]},"description":"Some description..."}`,
@@ -226,12 +238,12 @@ func TestPropertySerializationDeserialization(t *testing.T) {
 			`{"name":"first_name","type":{"kind":"string"},"displayName":"First name","description":"Given name"}`,
 		},
 		{
-			`{"name":"amount","type":{"kind":"decimal","currency":"EUR","semantic":"money",` +
+			`{"name":"amount","type":{"kind":"decimal","currency":"EUR","semantics":"money",` +
 				`"precision":10,"scale":2},"description":"Amount"}`,
 			Property{
 				Name: "amount", Type: Decimal(10, 2).AsMoney().WithCurrency("EUR"), Description: "Amount",
 			},
-			`{"name":"amount","type":{"kind":"decimal","semantic":"money","currency":"EUR",` +
+			`{"name":"amount","type":{"kind":"decimal","semantics":"money","currency":"EUR",` +
 				`"precision":10,"scale":2},"description":"Amount"}`,
 		},
 	}
@@ -258,10 +270,12 @@ func TestPropertySerializationDeserialization(t *testing.T) {
 
 func TestTypeSerialization(t *testing.T) {
 
-	tests := []struct {
-		Data string
-		Type Type
-	}{
+	type testCase struct {
+		Data      string
+		ParseData string
+		Type      Type
+	}
+	tests := []testCase{
 		{
 			Data: `{"kind":"string"}`,
 			Type: String(),
@@ -287,8 +301,39 @@ func TestTypeSerialization(t *testing.T) {
 			Data: `{"kind":"int","bitSize":8,"minimum":10}`,
 			Type: Int(8).WithIntRange(10, MaxInt8),
 		}, {
+			Data:      `{"kind":"int","bitSize":8}`,
+			ParseData: `{"kind":"int","bitSize":8,"minimum":-128}`,
+			Type:      Int(8),
+		}, {
+			Data:      `{"kind":"int","bitSize":16,"maximum":-1}`,
+			ParseData: `{"kind":"int","bitSize":16,"minimum":-32768,"maximum":-1}`,
+			Type:      Int(16).WithIntRange(MinInt16, -1),
+		}, {
+			Data:      `{"kind":"int","bitSize":24}`,
+			ParseData: `{"kind":"int","bitSize":24,"maximum":8388607}`,
+			Type:      Int(24),
+		}, {
+			Data:      `{"kind":"int","bitSize":8,"unsigned":true,"minimum":1}`,
+			ParseData: `{"kind":"int","bitSize":8,"unsigned":true,"minimum":1,"maximum":255}`,
+			Type:      Int(8).Unsigned().WithUnsignedRange(1, MaxUint8),
+		}, {
+			Data:      `{"kind":"int","bitSize":32,"unsigned":true}`,
+			ParseData: `{"kind":"int","bitSize":32,"unsigned":true,"maximum":4294967295}`,
+			Type:      Int(32).Unsigned(),
+		}, {
 			Data: `{"kind":"int","bitSize":32,"unsigned":true,"minimum":20,"maximum":30}`,
 			Type: Int(32).Unsigned().WithUnsignedRange(20, 30),
+		}, {
+			Data: `{"kind":"int","bitSize":32,"unsigned":true,"minimum":3000000000,"maximum":4000000000}`,
+			Type: Int(32).Unsigned().WithUnsignedRange(3000000000, 4000000000),
+		}, {
+			Data:      `{"kind":"int","semantics":"year","bitSize":16}`,
+			ParseData: `{"kind":"int","bitSize":16,"semantics":"year"}`,
+			Type:      Int(16).AsYear(),
+		}, {
+			Data:      `{"kind":"int","semantics":"year","bitSize":64,"unsigned":true}`,
+			ParseData: `{"kind":"int","bitSize":64,"unsigned":true,"semantics":"year"}`,
+			Type:      Int(64).Unsigned().AsYear(),
 		}, {
 			Data: `{"kind":"float","bitSize":64,"minimum":-3.9936173,"maximum":8.00002312}`,
 			Type: Float(64).WithFloatRange(-3.9936173, 8.00002312),
@@ -296,8 +341,29 @@ func TestTypeSerialization(t *testing.T) {
 			Data: `{"kind":"float","bitSize":32,"minimum":3.99,"maximum":5.31}`,
 			Type: Float(32).WithFloatRange(3.99, 5.31),
 		}, {
-			Data: `{"kind":"float","bitSize":64,"real":true}`,
-			Type: Float(64).Real(),
+			Data:      `{"kind":"float","bitSize":32,"minimum":0,"maximum":0}`,
+			ParseData: `{"kind":"float","bitSize":32,"minimum":-0,"maximum":-0}`,
+			Type:      Float(32).WithFloatRange(0, 0),
+		}, {
+			Data:      `{"kind":"float","bitSize":64,"minimum":0,"maximum":0}`,
+			ParseData: `{"kind":"float","bitSize":64,"minimum":-0,"maximum":-0}`,
+			Type:      Float(64).WithFloatRange(0, 0),
+		}, {
+			Data:      `{"kind":"float","bitSize":32,"minimum":0,"maximum":0}`,
+			ParseData: `{"kind":"float","bitSize":32,"minimum":-1e-100,"maximum":-1e-100}`,
+			Type:      Float(32).WithFloatRange(0, 0),
+		}, {
+			Data:      `{"kind":"float","bitSize":32,"minimum":1,"maximum":1}`,
+			ParseData: `{"kind":"float","bitSize":32,"minimum":1,"maximum":1.00000001}`,
+			Type:      Float(32).WithFloatRange(1, 1.00000001),
+		}, {
+			Data:      `{"kind":"float","bitSize":32,"minimum":1.0000001,"maximum":2}`,
+			ParseData: `{"kind":"float","bitSize":32,"minimum":1.000000059604644775390626,"maximum":2}`,
+			Type:      Float(32).WithFloatRange(float64(math.Nextafter32(1, 2)), 2),
+		}, {
+			Data:      `{"kind":"float","bitSize":64,"minimum":1.0000000596046448,"maximum":2}`,
+			ParseData: `{"kind":"float","bitSize":64,"minimum":1.000000059604644775390626,"maximum":2}`,
+			Type:      Float(64).WithFloatRange(1.0000000596046448, 2),
 		}, {
 			Data: `{"kind":"decimal","precision":1}`,
 			Type: Decimal(1, 0),
@@ -332,30 +398,87 @@ func TestTypeSerialization(t *testing.T) {
 			Data: `{"kind":"array","minElements":2,"maxElements":8,"uniqueElements":true,"elementType":{"kind":"decimal","precision":1}}`,
 			Type: Array(Decimal(1, 0)).WithMinElements(2).WithMaxElements(8).WithUnique(),
 		}, {
-			Data: `{"kind":"object","properties":[{"name":"email","type":{"kind":"string"},"description":""},{"name":"size","type":{"kind":"decimal","precision":1},"description":""}]}`,
+			Data: `{"kind":"object","properties":[{"name":"email","type":{"kind":"string"}},{"name":"size","type":{"kind":"decimal","precision":1}}]}`,
 			Type: Object([]Property{{Name: "email", Type: String()}, {Name: "size", Type: Decimal(1, 0)}}),
 		}, {
-			Data: `{"kind":"object","properties":[{"name":"email","type":{"kind":"string"},"nullable":true,"description":""}]}`,
+			Data: `{"kind":"object","properties":[{"name":"email","type":{"kind":"string"},"nullable":true}]}`,
 			Type: Object([]Property{{Name: "email", Type: String(), Nullable: true}}),
 		}, {
-			Data: `{"kind":"object","properties":[{"name":"first_name","type":{"kind":"string"},"displayName":"First name","description":""}]}`,
+			Data: `{"kind":"object","properties":[{"name":"first_name","type":{"kind":"string"},"displayName":"First name"}]}`,
 			Type: Object([]Property{{Name: "first_name", Type: String(), DisplayName: "First name"}}),
 		}, {
-			Data: `{"kind":"object","properties":[{"name":"birthday","type":{"kind":"date"},"description":""}]}`,
+			Data: `{"kind":"object","properties":[{"name":"birthday","type":{"kind":"date"}}]}`,
 			Type: Object([]Property{{Name: "birthday", Type: Date()}}),
 		}, {
-			Data: `{"kind":"object","properties":[{"name":"birthday","prefilled":"mm/dd/yyyy","type":{"kind":"date"},"description":""}]}`,
+			Data: `{"kind":"object","properties":[{"name":"birthday","prefilled":"mm/dd/yyyy","type":{"kind":"date"}}]}`,
 			Type: Object([]Property{{Name: "birthday", Prefilled: "mm/dd/yyyy", Type: Date()}}),
 		},
 	}
+
+	for _, size := range []int{32, 64} {
+		limit := math.MaxFloat64
+		if size == 32 {
+			limit = math.MaxFloat32
+		}
+		for _, test := range []struct {
+			min, max float64
+			bounds   string
+		}{
+			{-1, 1, `,"minimum":-1,"maximum":1`},
+			{0, 0, `,"minimum":0,"maximum":0`},
+			{0, math.Inf(1), `,"minimum":0`},
+			{math.Inf(-1), 0, `,"maximum":0`},
+			{math.Inf(-1), math.Inf(1), ""},
+			{0, limit, `,"minimum":0`},
+			{-limit, 0, `,"maximum":0`},
+			{-limit, limit, ""},
+			{0, math.MaxFloat64, `,"minimum":0`},
+			{-math.MaxFloat64, 0, `,"maximum":0`},
+			{-math.MaxFloat64, math.MaxFloat64, ""},
+			{math.MaxFloat64, math.MaxFloat64, `,"minimum":` + strconv.FormatFloat(limit, 'f', -1, size)},
+			{-math.MaxFloat64, -math.MaxFloat64, `,"maximum":` + strconv.FormatFloat(-limit, 'f', -1, size)},
+		} {
+			var parseBounds string
+			if !math.IsInf(test.min, -1) {
+				parseBounds += fmt.Sprintf(`,"minimum":%g`, test.min)
+			}
+			if !math.IsInf(test.max, 1) {
+				parseBounds += fmt.Sprintf(`,"maximum":%g`, test.max)
+			}
+			bounded := Float(size).WithFloatRange(test.min, test.max)
+			data, err := bounded.MarshalJSON()
+			if err != nil {
+				t.Fatalf("expected valid JSON, got %v", err)
+			}
+			tests = append(tests,
+				// Check normalization and the round trip for non-real floats.
+				testCase{Data: string(data), Type: bounded},
+				testCase{
+					Data:      string(data),
+					ParseData: fmt.Sprintf(`{"kind":"float","bitSize":%d%s}`, size, parseBounds),
+					Type:      bounded,
+				},
+				testCase{
+					Data:      fmt.Sprintf(`{"kind":"float","bitSize":%d,"real":true%s}`, size, test.bounds),
+					ParseData: fmt.Sprintf(`{"kind":"float","bitSize":%d,"real":true%s}`, size, parseBounds),
+					Type:      Float(size).Real().WithFloatRange(test.min, test.max),
+				},
+			)
+		}
+	}
+
 	for _, test := range tests {
-		got, err := Parse(test.Data)
+		data := test.Data
+		if test.ParseData != "" {
+			data = test.ParseData
+		}
+		got, err := Parse(data)
 		if err != nil {
-			t.Errorf("cannot unmarshal type %q: %s", test.Data, err)
+			t.Errorf("cannot unmarshal type %q: %s", data, err)
 			continue
 		}
 		if err = sameType(test.Type, got); err != nil {
-			t.Errorf("%s: %s", test.Data, err)
+			t.Errorf("%s: %s", data, err)
 			continue
 		}
 		b, err := test.Type.MarshalJSON()
@@ -386,7 +509,7 @@ func TestGenericTypeSerialization(t *testing.T) {
 			Data: `{"kind":"map","elementType":{"kind":"T"}}`,
 		}, {
 			Type: Object([]Property{{Name: "items", Type: Array(Parameter("T"))}}),
-			Data: `{"kind":"object","properties":[{"name":"items","type":{"kind":"array","elementType":{"kind":"T"}},"description":""}]}`,
+			Data: `{"kind":"object","properties":[{"name":"items","type":{"kind":"array","elementType":{"kind":"T"}}}]}`,
 		},
 	}
 	for _, test := range tests {

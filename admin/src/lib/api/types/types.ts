@@ -1,5 +1,3 @@
-type Role = 'Both' | 'Source' | 'Destination';
-
 type TypeKind =
 	| 'boolean'
 	| 'int'
@@ -8,7 +6,6 @@ type TypeKind =
 	| 'datetime'
 	| 'date'
 	| 'time'
-	| 'year'
 	| 'uuid'
 	| 'json'
 	| 'ip'
@@ -23,7 +20,7 @@ type FloatBitSize = 32 | 64;
 
 type CountryFormat = 'alpha-2' | 'alpha-3';
 
-type UnitOfMeasure =
+type Unit =
 	| 'g'
 	| 'kg'
 	| 'mm'
@@ -43,22 +40,27 @@ type UnitOfMeasure =
 	| 'in'
 	| 'ft'
 	| 'yd'
-	| 'mi';
+	| 'mi'
+	| 'millisecond'
+	| 'second'
+	| 'minute'
+	| 'hour'
+	| 'day'
+	| 'week'
+	| 'month'
+	| 'year';
 
-type DurationUnit = 'millisecond' | 'second' | 'minute' | 'hour' | 'day' | 'week';
-
-type Semantic = 'email' | 'phone' | 'url' | 'country' | 'money' | 'percentage' | 'measurement' | 'duration';
+type Semantics = 'email' | 'phone' | 'url' | 'country' | 'money' | 'percentage' | 'measurement' | 'duration' | 'year';
 
 interface Property {
 	name: string;
 	prefilled: string;
-	role: Role;
 	type: Type;
 	createRequired: boolean;
 	updateRequired: boolean;
 	readOptional: boolean;
 	nullable: boolean;
-	displayName?: string;
+	displayName: string;
 	description: string;
 }
 
@@ -71,7 +73,6 @@ type Type =
 	| DateTimeType
 	| DateType
 	| TimeType
-	| YearType
 	| UUIDType
 	| JSONType
 	| IPType
@@ -81,7 +82,7 @@ type Type =
 
 interface StringType {
 	kind: 'string';
-	semantic?: 'email' | 'phone' | 'url' | 'country';
+	semantics?: 'email' | 'phone' | 'url' | 'country';
 	format?: CountryFormat;
 	maxBytes?: number;
 	maxLength?: number;
@@ -95,8 +96,8 @@ interface BooleanType {
 
 interface IntType {
 	kind: 'int';
-	semantic?: 'measurement' | 'duration';
-	unit?: UnitOfMeasure | DurationUnit;
+	semantics?: 'measurement' | 'duration' | 'year';
+	unit?: Unit;
 	bitSize: IntBitSize;
 	unsigned: boolean;
 	minimum?: number;
@@ -105,8 +106,8 @@ interface IntType {
 
 interface FloatType {
 	kind: 'float';
-	semantic?: 'measurement' | 'duration';
-	unit?: UnitOfMeasure | DurationUnit;
+	semantics?: 'measurement' | 'duration';
+	unit?: Unit;
 	bitSize: FloatBitSize;
 	real?: boolean;
 	minimum?: number;
@@ -115,9 +116,9 @@ interface FloatType {
 
 interface DecimalType {
 	kind: 'decimal';
-	semantic?: 'money' | 'percentage' | 'measurement' | 'duration';
+	semantics?: 'money' | 'percentage' | 'measurement' | 'duration';
 	currency?: string;
-	unit?: UnitOfMeasure | DurationUnit;
+	unit?: Unit;
 	minimum?: number;
 	maximum?: number;
 	precision?: number;
@@ -134,10 +135,6 @@ interface DateType {
 
 interface TimeType {
 	kind: 'time';
-}
-
-interface YearType {
-	kind: 'year';
 }
 
 interface UUIDType {
@@ -179,13 +176,11 @@ export type {
 	IntType,
 	DecimalType,
 	FloatType,
-	Role,
 	TypeKind,
 	IntBitSize,
 	FloatBitSize,
-	CountryFormat,
-	UnitOfMeasure,
-	DurationUnit,
 	MapType,
-	Semantic,
+	Semantics,
+	CountryFormat,
+	Unit,
 };

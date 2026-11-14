@@ -82,11 +82,6 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 		var v string
 		switch s := src.(type) {
 		case string:
-			if s == "" {
-				if values := typ.Values(); values != nil && !slices.Contains(values, "") {
-					return nil, nil
-				}
-			}
 			v = s
 		case []byte:
 			if s == nil && nullable {
@@ -99,39 +94,52 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 		if !utf8.ValidString(v) {
 			return nil, inputValidationErrorf(name, "does not contain valid UTF-8 characters")
 		}
-		switch typ.Semantic() {
-		case types.CountrySemantic:
+		switch typ.Semantics() {
+		case types.CountrySemantics:
+			if src == "" && nullable {
+				return nil, nil
+			}
 			switch typ.CountryFormat() {
 			case types.ISO3166Alpha2:
 				if !validation.IsValidCountryCodeAlpha2(v) {
-					return v, inputValidationErrorf(name, "is not a 2-letters country code")
+					return nil, inputValidationErrorf(name, "is not a 2-letter country code")
 				}
 			case types.ISO3166Alpha3:
 				if !validation.IsValidCountryCodeAlpha3(v) {
-					return v, inputValidationErrorf(name, "is not a 3-letters country code")
+					return nil, inputValidationErrorf(name, "is not a 3-letter country code")
 				}
 			}
-		case types.PhoneSemantic:
+		case types.PhoneSemantics:
+			if src == "" && nullable {
+				return nil, nil
+			}
 			var ok bool
 			v, ok = types.NormalizePhone(v)
 			if !ok {
-				return v, inputValidationErrorf(name, "is not a valid phone number")
+				return nil, inputValidationErrorf(name, "is not a valid phone number")
 			}
-		}
-		if values := typ.Values(); values != nil {
-			if !slices.Contains(values, v) {
-				return nil, inputValidationErrorf(name, "contains an unsupported value")
-			}
-		} else if rx := typ.Pattern(); rx != nil {
-			if !rx.MatchString(v) {
-				return nil, inputValidationErrorf(name, "contains an unsupported value")
-			}
-		} else {
-			if l, ok := typ.MaxBytes(); ok && len(v) > l {
-				return nil, inputValidationErrorf(name, "has a value longer than %d bytes", l)
-			}
-			if l, ok := typ.MaxLength(); ok && utf8.RuneCountInString(v) > l {
-				return nil, inputValidationErrorf(name, "has a value longer than %d characters", l)
+		default:
+			if values := typ.Values(); values != nil {
+				if !slices.Contains(values, v) {
+					if src == "" && nullable {
+						return nil, nil
+					}
+					return nil, inputValidationErrorf(name, "contains an unsupported value")
+				}
+			} else if rx := typ.Pattern(); rx != nil {
+				if !rx.MatchString(v) {
+					if src == "" && nullable {
+						return nil, nil
+					}
+					return nil, inputValidationErrorf(name, "contains an unsupported value")
+				}
+			} else {
+				if l, ok := typ.MaxBytes(); ok && len(v) > l {
+					return nil, inputValidationErrorf(name, "has a value longer than %d bytes", l)
+				}
+				if l, ok := typ.MaxLength(); ok && utf8.RuneCountInString(v) > l {
+					return nil, inputValidationErrorf(name, "has a value longer than %d characters", l)
+				}
 			}
 		}
 		return v, nil
@@ -221,7 +229,6 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 		}
 		var v int64
 		var err error
-		// Keep in sync with the case 'types.YearKind'.
 		switch src := src.(type) {
 		case int:
 			v = int64(src)
@@ -544,73 +551,6 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 			return nil, invalidType(name, src, typ)
 		}
 		return t, nil
-	case types.YearKind:
-		var v int64
-		var err error
-		// Keep in sync with the case 'types.IntKind'.
-		switch src := src.(type) {
-		case int:
-			v = int64(src)
-		case int8:
-			v = int64(src)
-		case int16:
-			v = int64(src)
-		case int32:
-			v = int64(src)
-		case int64:
-			v = src
-		case uint:
-			if src > math.MaxInt64 {
-				return nil, inputValidationErrorf(name, "has value which is not in the range [%d, %d]", types.MinYear, types.MaxYear)
-			}
-			v = int64(src)
-		case uint8:
-			v = int64(src)
-		case uint16:
-			v = int64(src)
-		case uint32:
-			v = int64(src)
-		case uint64:
-			if src > math.MaxInt64 {
-				return nil, inputValidationErrorf(name, "has value which is not in the range [%d, %d]", types.MinYear, types.MaxYear)
-			}
-			v = int64(src)
-		case float32:
-			f := float64(src)
-			if f < types.MinYear || f > types.MaxYear || f != math.Trunc(f) {
-				return nil, inputValidationErrorf(name, "has a float32 value that cannot represent a year value")
-			}
-			v = int64(f)
-		case float64:
-			if src < types.MinYear || src > types.MaxYear || src != math.Trunc(src) {
-				return nil, inputValidationErrorf(name, "has a float64 value that cannot represent a year value")
-			}
-			v = int64(src)
-		case decimal.Decimal:
-			v, err = src.Int64()
-			if err != nil {
-				return nil, inputValidationErrorf(name, "has a deciaml.Decimal value that cannot represent a year value")
-			}
-		case string:
-			v, err = strconv.ParseInt(src, 10, 64)
-			if err != nil {
-				return nil, inputValidationErrorf(name, "has a string value that cannot represent a year value")
-			}
-		case []byte:
-			if src == nil && nullable {
-				return nil, nil
-			}
-			v, err = strconv.ParseInt(string(src), 10, 64)
-			if err != nil {
-				return nil, inputValidationErrorf(name, "has a []byte value that cannot represent a year value")
-			}
-		default:
-			return nil, invalidType(name, src, typ)
-		}
-		if v < types.MinYear || v > types.MaxYear {
-			return nil, inputValidationErrorf(name, "has value which is not in the range [%d, %d]", types.MinYear, types.MaxYear)
-		}
-		return int(v), nil
 	case types.UUIDKind:
 		switch src := src.(type) {
 		case string:
@@ -706,7 +646,7 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 	case types.ArrayKind:
 		if s, ok := src.(string); ok {
 			// Snowflake only supports json as the item type. The driver returns the value as a JSON array.
-			if s == "" || s[0] != '[' || typ.Elem().Kind() != types.JSONKind {
+			if s == "" || s[0] != '[' || !typ.Elem().IsJSON() {
 				return nil, inputValidationErrorf(name, "has a string value but does not contain a JSON array")
 			}
 			v := json.Value(s)
@@ -795,11 +735,14 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 				delete(obj, name)
 			}
 		}
+		if obj == nil {
+			obj = map[string]any{}
+		}
 		return obj, nil
 	case types.MapKind:
 		if s, ok := src.(string); ok {
 			// Snowflake only supports json as the value type. The driver returns the value as a JSON object.
-			if s == "" || s[0] != '{' || typ.Elem().Kind() != types.JSONKind {
+			if s == "" || s[0] != '{' || !typ.Elem().IsJSON() {
 				return nil, inputValidationErrorf(name, "has a string value but does not contain a JSON object")
 			}
 			v := json.Value(s)
@@ -813,7 +756,7 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 			return m, nil
 		}
 		rv := reflect.ValueOf(src)
-		if rv.Kind() != reflect.Map {
+		if rv.Kind() != reflect.Map || rv.Type().Key().Kind() != reflect.String {
 			return nil, invalidType(name, src, typ)
 		}
 		if rv.IsNil() && nullable {

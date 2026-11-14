@@ -15,6 +15,6 @@
 }
 
 .development__content a:focus-visible {
-	outline: 2px solid var(--sl-color-primary-600);
+	outline: 2px solid var(--wa-color-brand-40);
 	outline-offset: 2px;
 }

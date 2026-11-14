@@ -120,7 +120,7 @@ func (store *Store) SimulatedSystemRecords(ctx context.Context, account string, 
 		Limit:   query.Limit + 1,
 	}, false)
 	if err != nil {
-		return SimulatedRecordPage{}, unavailableError(err)
+		return SimulatedRecordPage{}, err
 	}
 	defer rows.Close()
 
@@ -128,17 +128,17 @@ func (store *Store) SimulatedSystemRecords(ctx context.Context, account string, 
 	row := make([]any, 3)
 	for rows.Next() {
 		if len(records) == query.Limit+1 {
-			return SimulatedRecordPage{}, unavailableError(errors.New("warehouse returned too many simulated records"))
+			return SimulatedRecordPage{}, wrapWarehouseError(errors.New("warehouse returned too many simulated records"))
 		}
 		err = rows.Scan(row...)
 		if err != nil {
-			return SimulatedRecordPage{}, unavailableError(err)
+			return SimulatedRecordPage{}, err
 		}
 		id, idOK := row[0].(string)
 		updatedAt, updatedAtOK := row[1].(time.Time)
 		attributes, attributesOK := row[2].(json.Value)
 		if !idOK || id == "" || strings.Contains(id, ":") || !updatedAtOK || !attributesOK {
-			return SimulatedRecordPage{}, unavailableError(errors.New("warehouse returned an invalid simulated record"))
+			return SimulatedRecordPage{}, wrapWarehouseError(errors.New("warehouse returned an invalid simulated record"))
 		}
 		records = append(records, SimulatedRecord{
 			ID:         id,
@@ -148,11 +148,11 @@ func (store *Store) SimulatedSystemRecords(ctx context.Context, account string, 
 	}
 	err = rows.Err()
 	if err != nil {
-		return SimulatedRecordPage{}, unavailableError(err)
+		return SimulatedRecordPage{}, err
 	}
 	err = rows.Close()
 	if err != nil {
-		return SimulatedRecordPage{}, unavailableError(err)
+		return SimulatedRecordPage{}, err
 	}
 
 	page := SimulatedRecordPage{Records: records}

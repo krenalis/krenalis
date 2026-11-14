@@ -12,7 +12,7 @@ import (
 )
 
 // FenceSimulatedSystem advances persistent warehouse authority monotonically.
-// It returns an *UnavailableError if the warehouse cannot establish the fence.
+// It returns an *WarehouseError if the warehouse cannot establish the fence.
 func (store *Store) FenceSimulatedSystem(ctx context.Context, system string, generation int64) error {
 
 	store.mustBeOpen()
@@ -26,10 +26,10 @@ func (store *Store) FenceSimulatedSystem(ctx context.Context, system string, gen
 	defer done()
 	warehouse, ok := store.warehouse().(simulatedSystemWarehouse)
 	if !ok {
-		return unavailableError(errors.New("warehouse does not support simulated system writer fencing"))
+		return wrapWarehouseError(errors.New("warehouse does not support simulated system writer fencing"))
 	}
 
-	return unavailableError(warehouse.FenceSimulatedSystem(ctx, system, generation))
+	return warehouse.FenceSimulatedSystem(ctx, system, generation)
 }
 
 type simulatedSystemWarehouse interface {

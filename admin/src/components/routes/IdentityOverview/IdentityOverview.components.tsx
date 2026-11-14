@@ -1,0 +1,1449 @@
+import React, { ReactNode, useId, useState } from 'react';
+import {
+	Area,
+	AreaChart,
+	Bar,
+	BarChart,
+	CartesianGrid,
+	LabelList,
+	Legend,
+	Line,
+	LineChart,
+	Cell,
+	Pie,
+	PieChart,
+	ResponsiveContainer,
+	Tooltip,
+	XAxis,
+	YAxis,
+} from 'recharts';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaBadge from '@awesome.me/webawesome/dist/react/badge/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
+import WaOption from '@awesome.me/webawesome/dist/react/option/index.js';
+import WaSelect from '@awesome.me/webawesome/dist/react/select/index.js';
+import type WaSelectElement from '@awesome.me/webawesome/dist/components/select/select.js';
+import WaSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
+import WaTooltip from '@awesome.me/webawesome/dist/react/tooltip/index.js';
+import { buttonVariant } from '../../../utils/buttonVariant';
+import Grid from '../../base/Grid/Grid';
+import { GridColumn, GridRow } from '../../base/Grid/Grid.types';
+import { Link } from '../../base/Link/Link';
+import { formatNumber } from '../../../utils/formatNumber';
+import {
+	ConnectionBar,
+	DELETED_CONNECTION_SCOPE,
+	IdentityConnectionOption,
+	IdentityMetricChartDay,
+	IdentityTrend,
+	RecognizedAnonymousHistoryPoint,
+	ResolutionEffectivenessPoint,
+	buildProfileComposition,
+	buildTypeDistribution,
+	chartDomainTicks,
+	formatChartDate,
+	formatRatio,
+	formatResolutionUTCTimestamp,
+	formatRunDuration,
+	formatSharePercent,
+	identityLinkRateChartDomain,
+	ratioChartDomain,
+	sparklineDomain,
+} from './IdentityOverview.helpers';
+import { IdentityResolutionComposition } from '../../../lib/api/types/metrics';
+import { IdentityResolutionRun } from '../../../lib/api/types/workspace';
+
+const CHART_COLOR = '#6062d0';
+const CONNECTION_ANONYMOUS_COLOR = '#b9bae9';
+const IDENTITY_LINK_RATE_COLOR = '#0EA5E9';
+const IDENTITIES_PER_PROFILE_COLOR = '#0f7c82';
+const UNIFIED_PROFILES_RECOGNIZED_COLOR = '#f2822e';
+const UNIFIED_PROFILES_ANONYMOUS_COLOR = '#fce4d3';
+const TYPE_DISTRIBUTION_COLORS = {
+	recognized: '#5a5f6b',
+	anonymous: '#d9dde3',
+};
+const GRID_COLOR = '#e8e8ee';
+const TREND_CHART_ANIMATION_DURATION = 450;
+const DASHBOARD_DONUT_INNER_RADIUS = 50;
+const DASHBOARD_DONUT_OUTER_RADIUS = 70;
+const CONNECTION_AXIS_WIDTH = 180;
+const CONNECTION_AXIS_SHARE_OFFSET = 52;
+
+interface InfoTooltipProps {
+	content: string;
+	label: string;
+}
+
+const InfoTooltip = ({ content, label }: InfoTooltipProps) => {
+	const buttonID = useId();
+
+	return (
+		<>
+			<WaTooltip className='identity-dashboard__tooltip' for={buttonID} placement='top'>
+				{content}
+			</WaTooltip>
+			<button id={buttonID} className='identity-dashboard__info' type='button' aria-label={label}>
+				<WaIcon name='info-circle' />
+			</button>
+		</>
+	);
+};
+
+interface SectionHeadingProps {
+	title: string;
+	secondary?: ReactNode;
+	info: string;
+}
+
+const SectionHeading = ({ title, secondary, info }: SectionHeadingProps) => {
+	return (
+		<div className='identity-dashboard__section-heading'>
+			<h2>{title}</h2>
+			{secondary && <span>{secondary}</span>}
+			<InfoTooltip content={info} label={`About ${title}`} />
+		</div>
+	);
+};
+
+interface DashboardCardProps {
+	title?: string;
+	temporalLabel?: string;
+	info?: string;
+	headerAction?: ReactNode;
+	className?: string;
+	isReloading?: boolean;
+	children: ReactNode;
+}
+
+const DashboardCard = ({
+	title,
+	temporalLabel,
+	info,
+	headerAction,
+	className,
+	isReloading,
+	children,
+}: DashboardCardProps) => {
+	return (
+		<div
+			className={`identity-dashboard__card${className != null && className !== '' ? ` ${className}` : ''}`}
+			aria-busy={isReloading || undefined}
+		>
+			{title && (
+				<div className='identity-dashboard__card-heading'>
+					<h3>{title}</h3>
+					{temporalLabel && <span>{temporalLabel}</span>}
+					{info && <InfoTooltip content={info} label={`About ${title}`} />}
+					{headerAction && <div className='identity-dashboard__card-heading-action'>{headerAction}</div>}
+				</div>
+			)}
+			{children}
+		</div>
+	);
+};
+
+interface DonutCenterProps {
+	value: ReactNode;
+	label: string;
+}
+
+const DonutCenter = ({ value, label }: DonutCenterProps) => {
+	return (
+		<div className='identity-dashboard__donut-center'>
+			<strong>{value}</strong>
+			<span>{label}</span>
+		</div>
+	);
+};
+
+interface ChartTooltipRow {
+	label: ReactNode;
+	value: ReactNode;
+}
+
+interface ChartTooltipProps {
+	active?: boolean;
+	title?: ReactNode;
+	rows: ChartTooltipRow[];
+}
+
+const ChartTooltip = ({ active, title, rows }: ChartTooltipProps) => {
+	if (!active || rows.length === 0) return null;
+
+	return (
+		<div className='identity-dashboard__chart-tooltip' role='tooltip'>
+			{title != null && <strong>{title}</strong>}
+			<dl>
+				{rows.map((row, index) => (
+					<div key={index}>
+						<dt>{row.label}</dt>
+						<dd>{row.value}</dd>
+					</div>
+				))}
+			</dl>
+		</div>
+	);
+};
+
+interface RechartsTooltipEntry {
+	name?: unknown;
+	value?: unknown;
+	payload?: unknown;
+}
+
+interface TimeSeriesTooltipProps {
+	active?: boolean;
+	label?: unknown;
+	payload?: readonly RechartsTooltipEntry[];
+	formatValue: (value: number) => string;
+}
+
+const TimeSeriesTooltip = ({ active, label, payload, formatValue }: TimeSeriesTooltipProps) => {
+	return (
+		<ChartTooltip
+			active={active}
+			title={label == null ? undefined : formatChartDate(String(label))}
+			rows={(payload ?? []).flatMap((entry) =>
+				entry.value == null
+					? []
+					: [{ label: String(entry.name ?? ''), value: formatValue(Number(entry.value)) }],
+			)}
+		/>
+	);
+};
+
+interface RecognizedAnonymousHistoryTooltipProps {
+	active?: boolean;
+	label?: unknown;
+	payload?: readonly RechartsTooltipEntry[];
+}
+
+const RecognizedAnonymousHistoryTooltip = ({ active, label, payload }: RecognizedAnonymousHistoryTooltipProps) => {
+	const entries = (payload ?? []).flatMap((entry) =>
+		entry.value == null ? [] : [{ label: String(entry.name ?? ''), value: Number(entry.value) }],
+	);
+	const total = entries.reduce((sum, entry) => sum + entry.value, 0);
+
+	return (
+		<ChartTooltip
+			active={active}
+			title={label == null ? undefined : formatChartDate(String(label))}
+			rows={entries.map((entry) => ({
+				label: entry.label,
+				value: `${formatNumber(entry.value)} (${formatSharePercent(entry.value, total, 2)})`,
+			}))}
+		/>
+	);
+};
+
+interface DonutTooltipProps {
+	active?: boolean;
+	payload?: readonly RechartsTooltipEntry[];
+}
+
+const DonutTooltip = ({ active, payload }: DonutTooltipProps) => {
+	const entry = payload?.[0];
+	const datum = entry?.payload as { label?: string } | undefined;
+	const label = datum?.label ?? (entry?.name == null ? undefined : String(entry.name));
+	return (
+		<ChartTooltip
+			active={active}
+			title={label}
+			rows={entry?.value == null ? [] : [{ label: 'Total', value: formatNumber(Number(entry.value)) }]}
+		/>
+	);
+};
+
+interface StateMessageProps {
+	variant: 'empty' | 'error' | 'unavailable';
+	title: string;
+	description?: string;
+	action?: ReactNode;
+	compact?: boolean;
+}
+
+const StateMessage = ({ variant, title, description, action, compact }: StateMessageProps) => {
+	return (
+		<div
+			className={`identity-dashboard__state${variant === 'error' ? ' identity-dashboard__state--error' : ''}${compact ? ' identity-dashboard__state--compact' : ''}`}
+			role={variant === 'error' ? 'alert' : 'status'}
+		>
+			<WaIcon name={variant === 'error' ? 'exclamation-triangle' : 'info-circle'} />
+			<div>
+				<div className='identity-dashboard__state-title'>{title}</div>
+				{description && <div className='identity-dashboard__state-description'>{description}</div>}
+				{action}
+			</div>
+		</div>
+	);
+};
+
+interface CardLoadingProps {
+	chart?: boolean;
+}
+
+const CardLoading = ({ chart = false }: CardLoadingProps) => {
+	return (
+		<div
+			className={`identity-dashboard__loading${chart ? ' identity-dashboard__loading--chart' : ''}`}
+			aria-label='Loading'
+		>
+			{chart ? (
+				<WaSpinner style={{ fontSize: '2rem', '--track-width': '4px' } as React.CSSProperties} />
+			) : (
+				<>
+					<div className='identity-dashboard__skeleton identity-dashboard__skeleton--value' />
+					<div className='identity-dashboard__skeleton identity-dashboard__skeleton--label' />
+				</>
+			)}
+		</div>
+	);
+};
+
+interface KpiCardProps {
+	title: string;
+	titleAccentColor?: string;
+	value: ReactNode;
+	secondary?: ReactNode;
+	loading: boolean;
+	sparklinePoints?: IdentityTrend['points'];
+	isComparisonReloading?: boolean;
+	subtleBackground?: boolean;
+	info?: string;
+	comparison?: {
+		delta: string;
+		referenceDate: string;
+	};
+}
+
+const KpiCard = ({
+	title,
+	titleAccentColor,
+	value,
+	secondary,
+	loading,
+	sparklinePoints,
+	isComparisonReloading,
+	subtleBackground,
+	info,
+	comparison,
+}: KpiCardProps) => {
+	return (
+		<DashboardCard
+			className={`identity-dashboard__kpi${subtleBackground ? ' identity-dashboard__kpi--subtle' : ''}`}
+		>
+			<div className='identity-dashboard__kpi-title'>
+				<span className='identity-dashboard__kpi-title-label'>
+					{titleAccentColor && (
+						<span
+							className='identity-dashboard__kpi-title-accent'
+							style={{ backgroundColor: titleAccentColor }}
+							aria-hidden='true'
+						/>
+					)}
+					<span>{title}</span>
+				</span>
+				{info && <InfoTooltip content={info} label={`About ${title}`} />}
+			</div>
+			{loading ? (
+				<CardLoading />
+			) : (
+				<>
+					<div>
+						<div className='identity-dashboard__kpi-value'>{value}</div>
+						{secondary != null && <div className='identity-dashboard__kpi-secondary'>{secondary}</div>}
+						{comparison && (
+							<div
+								className='identity-dashboard__kpi-comparison'
+								aria-busy={isComparisonReloading || undefined}
+							>
+								<span>{comparison.delta}</span>
+								<span>from {comparison.referenceDate}</span>
+							</div>
+						)}
+					</div>
+					{sparklinePoints != null && sparklinePoints.length > 1 && (
+						<TrendSparkline points={sparklinePoints} />
+					)}
+				</>
+			)}
+		</DashboardCard>
+	);
+};
+
+interface TrendSparklineProps {
+	points: IdentityTrend['points'];
+}
+
+const TrendSparkline = ({ points }: TrendSparklineProps) => {
+	const domain = sparklineDomain(points);
+	return (
+		<div className='identity-dashboard__sparkline' aria-hidden='true'>
+			<ResponsiveContainer width='100%' height='100%'>
+				<LineChart data={points}>
+					<XAxis dataKey='day' hide={true} />
+					<YAxis hide={true} domain={domain} />
+					<Line
+						type='linear'
+						dataKey='total'
+						stroke={CHART_COLOR}
+						strokeWidth={2}
+						dot={false}
+						connectNulls={false}
+						isAnimationActive={false}
+					/>
+				</LineChart>
+			</ResponsiveContainer>
+		</div>
+	);
+};
+
+const compactNumber = (value: number): string =>
+	new Intl.NumberFormat('en-US', { notation: 'compact', compactDisplay: 'short', maximumFractionDigits: 1 }).format(
+		value,
+	);
+
+const formatPercentage = (value: number | null): string => (value == null ? '—' : `${value.toFixed(1)}%`);
+
+type IdentityType = 'recognized' | 'anonymous';
+
+const useSeriesVisibility = <Key extends string>() => {
+	const [hiddenSeries, setHiddenSeries] = useState<Key[]>([]);
+	const toggleSeries = (key: Key) => {
+		setHiddenSeries((hidden) =>
+			hidden.includes(key) ? hidden.filter((value) => value !== key) : [...hidden, key],
+		);
+	};
+	return { hiddenSeries, toggleSeries };
+};
+
+interface LegendToggleProps {
+	isVisible: boolean;
+	onToggle: () => void;
+	children: ReactNode;
+}
+
+const LegendToggle = ({ isVisible, onToggle, children }: LegendToggleProps) => {
+	return (
+		<button className='identity-dashboard__legend-toggle' type='button' aria-pressed={isVisible} onClick={onToggle}>
+			{children}
+		</button>
+	);
+};
+
+interface RecognizedAnonymousLegendProps {
+	recognizedColor: string;
+	anonymousColor: string;
+	hiddenIdentityTypes: IdentityType[];
+	onToggle: (type: IdentityType) => void;
+}
+
+const RecognizedAnonymousLegend = ({
+	recognizedColor,
+	anonymousColor,
+	hiddenIdentityTypes,
+	onToggle,
+}: RecognizedAnonymousLegendProps) => {
+	const types = [
+		{ type: 'recognized', label: 'Recognized', color: recognizedColor },
+		{ type: 'anonymous', label: 'Anonymous', color: anonymousColor },
+	] as const;
+	return (
+		<ul className='identity-dashboard__connection-legend' aria-label='Series'>
+			{types.map(({ type, label, color }) => (
+				<li key={type}>
+					<LegendToggle isVisible={!hiddenIdentityTypes.includes(type)} onToggle={() => onToggle(type)}>
+						<span style={{ background: color }} />
+						{label}
+					</LegendToggle>
+				</li>
+			))}
+		</ul>
+	);
+};
+
+interface RecognizedAnonymousHistoryChartProps {
+	title: string;
+	info: string;
+	headerAction?: ReactNode;
+	days: RecognizedAnonymousHistoryPoint[];
+	recognizedColor: string;
+	anonymousColor: string;
+	loading: boolean;
+	isReloading?: boolean;
+	error?: string;
+	errorTitle: string;
+	emptyTitle: string;
+}
+
+const RecognizedAnonymousHistoryChart = ({
+	title,
+	info,
+	headerAction,
+	days,
+	recognizedColor,
+	anonymousColor,
+	loading,
+	isReloading,
+	error,
+	errorTitle,
+	emptyTitle,
+}: RecognizedAnonymousHistoryChartProps) => {
+	const { hiddenSeries: hiddenIdentityTypes, toggleSeries: toggleIdentityType } = useSeriesVisibility<IdentityType>();
+	const isRecognizedVisible = !hiddenIdentityTypes.includes('recognized');
+	const isAnonymousVisible = !hiddenIdentityTypes.includes('anonymous');
+	const maximumVisibleTotal = days.reduce(
+		(maximum, day) =>
+			Math.max(
+				maximum,
+				(isRecognizedVisible ? (day.recognized ?? 0) : 0) + (isAnonymousVisible ? (day.anonymous ?? 0) : 0),
+			),
+		1,
+	);
+	return (
+		<DashboardCard
+			title={title}
+			info={info}
+			headerAction={headerAction}
+			className='identity-dashboard__chart-card'
+			isReloading={isReloading}
+		>
+			{loading ? (
+				<CardLoading chart={true} />
+			) : error != null ? (
+				<StateMessage variant='error' title={errorTitle} description={error} compact={true} />
+			) : days.every((day) => day.recognized == null && day.anonymous == null) ? (
+				<StateMessage
+					variant='empty'
+					title={emptyTitle}
+					description='Choose another start date.'
+					compact={true}
+				/>
+			) : (
+				<div className='identity-dashboard__chart'>
+					<ResponsiveContainer width='100%' height='100%'>
+						<AreaChart data={days} margin={{ top: 8, right: 18, bottom: 2, left: 4 }}>
+							<CartesianGrid stroke={GRID_COLOR} vertical={false} />
+							<XAxis dataKey='day' tickFormatter={formatChartDate} minTickGap={28} tickLine={false} />
+							<YAxis
+								tickFormatter={compactNumber}
+								allowDecimals={false}
+								tickLine={false}
+								width={54}
+								allowDataOverflow={true}
+								domain={[0, maximumVisibleTotal]}
+							/>
+							<Tooltip
+								content={({ active, label, payload }) => (
+									<RecognizedAnonymousHistoryTooltip
+										active={active}
+										label={label}
+										payload={payload}
+									/>
+								)}
+							/>
+							<Legend
+								content={
+									<RecognizedAnonymousLegend
+										recognizedColor={recognizedColor}
+										anonymousColor={anonymousColor}
+										hiddenIdentityTypes={hiddenIdentityTypes}
+										onToggle={toggleIdentityType}
+									/>
+								}
+							/>
+							<Area
+								type='linear'
+								dataKey='recognized'
+								name='Recognized'
+								hide={!isRecognizedVisible}
+								stackId='identity-types'
+								stroke='none'
+								fill={recognizedColor}
+								fillOpacity={1}
+								dot={{ r: 3, fill: recognizedColor, stroke: 'none' }}
+								activeDot={{ r: 4, fill: recognizedColor, stroke: 'none' }}
+								connectNulls={false}
+								isAnimationActive={true}
+								animationDuration={TREND_CHART_ANIMATION_DURATION}
+								animationEasing='ease-out'
+							/>
+							<Area
+								type='linear'
+								dataKey='anonymous'
+								name='Anonymous'
+								hide={!isAnonymousVisible}
+								stackId='identity-types'
+								stroke='none'
+								fill={anonymousColor}
+								fillOpacity={1}
+								dot={{ r: 3, fill: anonymousColor, stroke: 'none' }}
+								activeDot={{ r: 4, fill: anonymousColor, stroke: 'none' }}
+								connectNulls={false}
+								isAnimationActive={true}
+								animationDuration={TREND_CHART_ANIMATION_DURATION}
+								animationEasing='ease-out'
+							/>
+						</AreaChart>
+					</ResponsiveContainer>
+				</div>
+			)}
+		</DashboardCard>
+	);
+};
+
+interface IdentitiesChartProps {
+	days: IdentityMetricChartDay[];
+	loading: boolean;
+	isReloading?: boolean;
+	error?: string;
+	connectionOptions: IdentityConnectionOption[];
+	selectedConnection: string;
+	onConnectionChange: (connection: string) => void;
+}
+
+const IdentitiesChart = ({
+	days,
+	loading,
+	isReloading,
+	error,
+	connectionOptions,
+	selectedConnection,
+	onConnectionChange,
+}: IdentitiesChartProps) => {
+	return (
+		<RecognizedAnonymousHistoryChart
+			title='Identities over time (daily)'
+			info='Counts of recognized and anonymous identities at the end of each UTC day over the selected date range. Days with no data are shown as gaps.'
+			headerAction={
+				<WaSelect
+					className='identity-dashboard__connection-select'
+					size='s'
+					value={selectedConnection}
+					aria-label='Connection'
+					onChange={(event) => {
+						const connection = String((event.currentTarget as WaSelectElement).value);
+						// The select also reports the option that is already selected.
+						if (connection === selectedConnection) {
+							return;
+						}
+						onConnectionChange(connection);
+					}}
+				>
+					<WaOption className='identity-dashboard__connection-option' value=''>
+						All connections
+					</WaOption>
+					{connectionOptions.map((connection) => (
+						<WaOption
+							className={`identity-dashboard__connection-option${
+								connection.id === DELETED_CONNECTION_SCOPE
+									? ' identity-dashboard__connection-option--deleted'
+									: ''
+							}`}
+							key={connection.id}
+							value={connection.id}
+						>
+							<span className='identity-dashboard__connection-option-name'>{connection.name}</span>
+						</WaOption>
+					))}
+				</WaSelect>
+			}
+			days={days}
+			recognizedColor={CHART_COLOR}
+			anonymousColor={CONNECTION_ANONYMOUS_COLOR}
+			loading={loading}
+			isReloading={isReloading}
+			error={error}
+			errorTitle='Identity metrics could not be loaded'
+			emptyTitle='No identity data in this period'
+		/>
+	);
+};
+
+interface ProfilesChartProps {
+	days: RecognizedAnonymousHistoryPoint[];
+	loading: boolean;
+	isReloading?: boolean;
+	error?: string;
+}
+
+const ProfilesChart = ({ days, loading, isReloading, error }: ProfilesChartProps) => {
+	return (
+		<RecognizedAnonymousHistoryChart
+			title='Profiles over time (daily)'
+			info='Daily end-of-day counts of recognized and anonymous unified profiles over the selected date range. Values carry forward until the next successful identity resolution run; days before the first available data point are shown as gaps.'
+			days={days}
+			recognizedColor={UNIFIED_PROFILES_RECOGNIZED_COLOR}
+			anonymousColor={UNIFIED_PROFILES_ANONYMOUS_COLOR}
+			loading={loading}
+			isReloading={isReloading}
+			error={error}
+			errorTitle='Unified profile metrics could not be loaded'
+			emptyTitle='No unified profile data in this period'
+		/>
+	);
+};
+
+interface ConnectionTooltipProps {
+	active?: boolean;
+	connection?: ConnectionBar;
+	hiddenIdentityTypes: IdentityType[];
+}
+
+const ConnectionTooltip = ({ active, connection, hiddenIdentityTypes }: ConnectionTooltipProps) => {
+	if (!active || connection == null) return null;
+	const rows = [
+		{ label: hiddenIdentityTypes.length === 0 ? 'Total' : 'Total shown', value: formatNumber(connection.total) },
+	];
+	if (!hiddenIdentityTypes.includes('recognized')) {
+		rows.push({
+			label: 'Recognized',
+			value: `${formatNumber(connection.recognized)} (${formatSharePercent(connection.recognized, connection.total, 2)})`,
+		});
+	}
+	if (!hiddenIdentityTypes.includes('anonymous')) {
+		rows.push({
+			label: 'Anonymous',
+			value: `${formatNumber(connection.anonymous)} (${formatSharePercent(connection.anonymous, connection.total, 2)})`,
+		});
+	}
+
+	return <ChartTooltip active={true} title={connection.name} rows={rows} />;
+};
+
+interface ConnectionAxisTickProps {
+	x?: number;
+	y?: number;
+	index?: number;
+	data: ConnectionBar[];
+	totalIdentities: number | null;
+}
+
+const ConnectionAxisTick = ({ x = 0, y = 0, index = 0, data, totalIdentities }: ConnectionAxisTickProps) => {
+	const connection = data[index];
+	if (connection == null) return <g />;
+	const isDeleted = connection.connection === DELETED_CONNECTION_SCOPE;
+
+	return (
+		<g transform={`translate(0 ${y})`}>
+			<text
+				className={`identity-dashboard__connection-axis-name${
+					isDeleted ? ' identity-dashboard__connection-axis-name--deleted' : ''
+				}`}
+				x={x - CONNECTION_AXIS_SHARE_OFFSET}
+				y={0}
+				dominantBaseline='central'
+				textAnchor='end'
+			>
+				{connection.name}
+			</text>
+			<text
+				className={`identity-dashboard__connection-axis-share${
+					isDeleted ? ' identity-dashboard__connection-axis-share--deleted' : ''
+				}`}
+				x={x - CONNECTION_AXIS_SHARE_OFFSET / 2}
+				y={0}
+				dominantBaseline='central'
+				textAnchor='middle'
+			>
+				{totalIdentities == null ? '—' : formatSharePercent(connection.total, totalIdentities, 0)}
+			</text>
+		</g>
+	);
+};
+
+interface ConnectionsChartProps {
+	data: ConnectionBar[];
+	totalIdentities: number | null;
+	observedLabel?: string;
+	loading: boolean;
+	error?: string;
+}
+
+const ConnectionsChart = ({ data, totalIdentities, observedLabel, loading, error }: ConnectionsChartProps) => {
+	const { hiddenSeries: hiddenIdentityTypes, toggleSeries: toggleIdentityType } = useSeriesVisibility<IdentityType>();
+	const isRecognizedVisible = !hiddenIdentityTypes.includes('recognized');
+	const isAnonymousVisible = !hiddenIdentityTypes.includes('anonymous');
+	const visibleData = data.map((connection) => ({
+		...connection,
+		total: (isRecognizedVisible ? connection.recognized : 0) + (isAnonymousVisible ? connection.anonymous : 0),
+	}));
+	const visibleTotalIdentities =
+		hiddenIdentityTypes.length === 0
+			? totalIdentities
+			: visibleData.reduce((total, connection) => total + connection.total, 0);
+	const hasVisibleIdentities = visibleData.some((connection) => connection.total > 0);
+	return (
+		<DashboardCard
+			title='Identities by connection'
+			temporalLabel={observedLabel == null ? undefined : `(as of ${observedLabel})`}
+			info='Latest identity state grouped by source connection. Identities from deleted connections are grouped under “Removed connections”. Smaller categories may be combined under “Other”. Identities without a profile are still counted as recognized or anonymous.'
+			className='identity-dashboard__chart-card'
+		>
+			{loading ? (
+				<CardLoading chart={true} />
+			) : error != null ? (
+				<StateMessage
+					variant='error'
+					title='Connection metrics could not be loaded'
+					description={error}
+					compact={true}
+				/>
+			) : data.length === 0 ? (
+				<StateMessage
+					variant='empty'
+					title='No connections with identities'
+					description='Connection contributions will appear after identities are imported.'
+					compact={true}
+				/>
+			) : (
+				<div
+					className='identity-dashboard__chart identity-dashboard__connections-chart'
+					style={{ height: 258 + (data.length > 1 ? data.length * 2 + 2 : 0) }}
+				>
+					<ResponsiveContainer width='100%' height='100%'>
+						<BarChart
+							data={visibleData}
+							layout='vertical'
+							margin={{ top: 8, right: 58, bottom: 2, left: 4 }}
+						>
+							<CartesianGrid stroke={GRID_COLOR} horizontal={false} />
+							<XAxis
+								type='number'
+								tickFormatter={compactNumber}
+								allowDecimals={false}
+								tickLine={false}
+								allowDataOverflow={!hasVisibleIdentities}
+								domain={hasVisibleIdentities ? undefined : [0, 1]}
+							/>
+							<YAxis
+								type='category'
+								dataKey='name'
+								width={CONNECTION_AXIS_WIDTH}
+								tickLine={false}
+								tickSize={0}
+								tickMargin={0}
+								interval={0}
+								tick={
+									<ConnectionAxisTick data={visibleData} totalIdentities={visibleTotalIdentities} />
+								}
+							/>
+							<Tooltip
+								cursor={{ fill: '#f6f6f8' }}
+								content={({ active, payload }) => (
+									<ConnectionTooltip
+										active={active}
+										connection={payload?.[0]?.payload as ConnectionBar | undefined}
+										hiddenIdentityTypes={hiddenIdentityTypes}
+									/>
+								)}
+							/>
+							<Legend
+								content={
+									<RecognizedAnonymousLegend
+										recognizedColor={CHART_COLOR}
+										anonymousColor={CONNECTION_ANONYMOUS_COLOR}
+										hiddenIdentityTypes={hiddenIdentityTypes}
+										onToggle={toggleIdentityType}
+									/>
+								}
+							/>
+							<Bar
+								dataKey='recognized'
+								name='Recognized'
+								hide={!isRecognizedVisible}
+								fill={CHART_COLOR}
+								stackId='identity-types'
+								barSize={17}
+								radius={!isAnonymousVisible ? [0, 4, 4, 0] : undefined}
+								isAnimationActive={false}
+							>
+								{!isAnonymousVisible && (
+									<LabelList
+										dataKey='total'
+										position='right'
+										formatter={(value) => formatNumber(Number(value))}
+									/>
+								)}
+							</Bar>
+							<Bar
+								dataKey='anonymous'
+								name='Anonymous'
+								hide={!isAnonymousVisible}
+								fill={CONNECTION_ANONYMOUS_COLOR}
+								stackId='identity-types'
+								barSize={17}
+								radius={[0, 4, 4, 0]}
+								isAnimationActive={false}
+							>
+								<LabelList
+									dataKey='total'
+									position='right'
+									formatter={(value) => formatNumber(Number(value))}
+								/>
+							</Bar>
+						</BarChart>
+					</ResponsiveContainer>
+				</div>
+			)}
+		</DashboardCard>
+	);
+};
+
+interface ResolutionEffectivenessChartProps {
+	data: ResolutionEffectivenessPoint[];
+	loading: boolean;
+	isReloading?: boolean;
+	error?: string;
+}
+
+const ResolutionEffectivenessChart = ({ data, loading, isReloading, error }: ResolutionEffectivenessChartProps) => {
+	const identityLinkRateCount = data.filter((day) => day.linkedIdentitiesRatePercent != null).length;
+	const identitiesPerProfileCount = data.filter((day) => day.identitiesPerProfile != null).length;
+	const hasIdentityLinkRate = identityLinkRateCount > 0;
+	const hasIdentitiesPerProfile = identitiesPerProfileCount > 0;
+	const hasData = hasIdentityLinkRate || hasIdentitiesPerProfile;
+	const identityLinkRateDomain = identityLinkRateChartDomain(data);
+	const ratioDomain = ratioChartDomain(data);
+	const identityLinkRateTicks = chartDomainTicks(identityLinkRateDomain);
+	const ratioTicks = chartDomainTicks(ratioDomain);
+
+	return (
+		<DashboardCard
+			title='Resolution effectiveness over time (daily)'
+			className='identity-dashboard__chart-card identity-dashboard__resolution-chart-card'
+			isReloading={isReloading}
+		>
+			{loading ? (
+				<CardLoading chart={true} />
+			) : error != null && error !== '' ? (
+				<StateMessage
+					variant='error'
+					title='Resolution metrics could not be loaded'
+					description={error}
+					compact={true}
+				/>
+			) : !hasData ? (
+				<StateMessage
+					variant='empty'
+					title='No identity resolution data in this period'
+					description='Run identity resolution to populate the daily series.'
+					compact={true}
+				/>
+			) : (
+				<div className='identity-dashboard__effectiveness-content'>
+					<div className='identity-dashboard__effectiveness-metric'>
+						<div className='identity-dashboard__effectiveness-metric-heading'>
+							<h4>Identities per profile</h4>
+							<InfoTooltip
+								content='Average number of identities per unified profile over the selected date range. Each day shows the value as of the latest successful identity resolution run.'
+								label='About identities per profile'
+							/>
+						</div>
+						{hasIdentitiesPerProfile ? (
+							<div className='identity-dashboard__effectiveness-chart'>
+								<ResponsiveContainer width='100%' height='100%'>
+									<LineChart
+										data={data}
+										margin={{ top: 10, right: 12, bottom: 10, left: 0 }}
+										syncId='identity-resolution-effectiveness'
+										syncMethod='value'
+									>
+										<CartesianGrid stroke={GRID_COLOR} vertical={false} />
+										<XAxis dataKey='day' hide={true} />
+										<YAxis
+											domain={ratioDomain}
+											ticks={ratioTicks}
+											tickFormatter={(value) => formatRatio(Number(value))}
+											tickLine={false}
+											axisLine={{ stroke: GRID_COLOR }}
+											interval={0}
+											width={42}
+										/>
+										<Tooltip
+											content={({ active, label, payload }) => (
+												<TimeSeriesTooltip
+													active={active}
+													label={label}
+													payload={payload}
+													formatValue={formatRatio}
+												/>
+											)}
+										/>
+										<Line
+											type='stepAfter'
+											dataKey='identitiesPerProfile'
+											name='Identities per profile (ratio)'
+											stroke={IDENTITIES_PER_PROFILE_COLOR}
+											strokeWidth={2}
+											dot={
+												identitiesPerProfileCount === 1
+													? { r: 3, fill: IDENTITIES_PER_PROFILE_COLOR, stroke: 'none' }
+													: false
+											}
+											activeDot={{ r: 3 }}
+											connectNulls={false}
+											isAnimationActive={true}
+											animationDuration={TREND_CHART_ANIMATION_DURATION}
+											animationEasing='ease-out'
+										/>
+									</LineChart>
+								</ResponsiveContainer>
+							</div>
+						) : (
+							<div className='identity-dashboard__effectiveness-empty'>No data available</div>
+						)}
+					</div>
+					<div className='identity-dashboard__effectiveness-metric'>
+						<div className='identity-dashboard__effectiveness-metric-heading'>
+							<h4>Identity link rate</h4>
+							<InfoTooltip
+								content='Share of identities that are part of a unified profile with multiple identities over the selected date range. Each day shows the value as of the latest successful identity resolution run.'
+								label='About identity link rate'
+							/>
+						</div>
+						{hasIdentityLinkRate ? (
+							<div className='identity-dashboard__effectiveness-chart'>
+								<ResponsiveContainer width='100%' height='100%'>
+									<LineChart
+										data={data}
+										margin={{ top: 10, right: 12, bottom: 2, left: 0 }}
+										syncId='identity-resolution-effectiveness'
+										syncMethod='value'
+									>
+										<CartesianGrid stroke={GRID_COLOR} vertical={false} />
+										<XAxis
+											dataKey='day'
+											tickFormatter={formatChartDate}
+											minTickGap={28}
+											tickLine={false}
+											axisLine={{ stroke: GRID_COLOR }}
+										/>
+										<YAxis
+											domain={identityLinkRateDomain}
+											ticks={identityLinkRateTicks}
+											tickFormatter={(value) => formatPercentage(Number(value))}
+											tickLine={false}
+											axisLine={{ stroke: GRID_COLOR }}
+											interval={0}
+											width={42}
+										/>
+										<Tooltip
+											content={({ active, label, payload }) => (
+												<TimeSeriesTooltip
+													active={active}
+													label={label}
+													payload={payload}
+													formatValue={formatPercentage}
+												/>
+											)}
+										/>
+										<Line
+											type='stepAfter'
+											dataKey='linkedIdentitiesRatePercent'
+											name='Identity link rate (%)'
+											stroke={IDENTITY_LINK_RATE_COLOR}
+											strokeWidth={2}
+											dot={
+												identityLinkRateCount === 1
+													? { r: 3, fill: IDENTITY_LINK_RATE_COLOR, stroke: 'none' }
+													: false
+											}
+											activeDot={{
+												r: 3,
+												fill: IDENTITY_LINK_RATE_COLOR,
+												stroke: IDENTITY_LINK_RATE_COLOR,
+											}}
+											connectNulls={false}
+											isAnimationActive={true}
+											animationDuration={TREND_CHART_ANIMATION_DURATION}
+											animationEasing='ease-out'
+										/>
+									</LineChart>
+								</ResponsiveContainer>
+							</div>
+						) : (
+							<div className='identity-dashboard__effectiveness-empty'>No data available</div>
+						)}
+					</div>
+				</div>
+			)}
+		</DashboardCard>
+	);
+};
+
+const COMPOSITION_COLORS = ['#5557be', '#686ac7', '#7778cf', '#999ade', '#b9bae9', '#d9d9f2'];
+interface TypeDistributionSnapshot {
+	total: number;
+	recognized: number;
+	anonymous: number;
+	temporalLabel: string;
+}
+
+interface TypeDistributionBlockProps {
+	title: string;
+	snapshot?: TypeDistributionSnapshot;
+	loading: boolean;
+	error?: string;
+	recognizedColor?: string;
+	anonymousColor?: string;
+	typeDescriptions?: Record<IdentityType, string>;
+}
+
+const TypeDistributionBlock = ({
+	title,
+	snapshot,
+	loading,
+	error,
+	recognizedColor = TYPE_DISTRIBUTION_COLORS.recognized,
+	anonymousColor = TYPE_DISTRIBUTION_COLORS.anonymous,
+	typeDescriptions,
+}: TypeDistributionBlockProps) => {
+	const segments =
+		snapshot == null ? [] : buildTypeDistribution(snapshot.recognized, snapshot.anonymous, snapshot.total);
+	const total = snapshot?.total ?? 0;
+	const hasData = snapshot != null && total > 0 && error == null;
+	const colors = { recognized: recognizedColor, anonymous: anonymousColor };
+
+	return (
+		<div className='identity-dashboard__distribution-block'>
+			<div className='identity-dashboard__distribution-heading'>
+				<h4>{title}</h4>
+				{snapshot && <p>{snapshot.temporalLabel}</p>}
+			</div>
+			{loading ? (
+				<CardLoading chart={true} />
+			) : !hasData ? (
+				<div className='identity-dashboard__distribution-empty' role='status'>
+					<WaIcon name='info-circle' />
+					<span>No data available</span>
+				</div>
+			) : (
+				<div className='identity-dashboard__distribution-body'>
+					<div className='identity-dashboard__donut-ring' aria-label={`${title} type distribution`}>
+						<ResponsiveContainer width='100%' height='100%'>
+							<PieChart>
+								<Pie
+									data={segments}
+									dataKey='count'
+									nameKey='label'
+									innerRadius={DASHBOARD_DONUT_INNER_RADIUS}
+									outerRadius={DASHBOARD_DONUT_OUTER_RADIUS}
+									startAngle={90}
+									endAngle={-270}
+									stroke='none'
+									isAnimationActive={false}
+								>
+									{segments.map((segment) => (
+										<Cell key={segment.key} fill={colors[segment.key]} />
+									))}
+								</Pie>
+								<Tooltip
+									content={({ active, payload }) => (
+										<DonutTooltip active={active} payload={payload} />
+									)}
+								/>
+							</PieChart>
+						</ResponsiveContainer>
+						<DonutCenter value={formatNumber(total)} label='Total' />
+					</div>
+					<div className='identity-dashboard__distribution-legend'>
+						{segments.map((segment) => (
+							<div className='identity-dashboard__distribution-legend-item' key={segment.key}>
+								<i style={{ background: colors[segment.key] }} />
+								<div>
+									<span>
+										{segment.label}
+										{typeDescriptions != null && (
+											<InfoTooltip
+												content={typeDescriptions[segment.key]}
+												label={`About ${segment.label.toLowerCase()} profiles`}
+											/>
+										)}
+									</span>
+									<strong>{formatPercentage(segment.percentage)}</strong>
+									<small>{formatNumber(segment.count)}</small>
+								</div>
+							</div>
+						))}
+					</div>
+				</div>
+			)}
+		</div>
+	);
+};
+
+interface TypeDistributionCardProps {
+	processed?: TypeDistributionSnapshot;
+	unified?: TypeDistributionSnapshot;
+	loading: boolean;
+	error?: string;
+}
+
+const TypeDistributionCard = ({ processed, unified, loading, error }: TypeDistributionCardProps) => {
+	return (
+		<DashboardCard
+			title='Distribution per type'
+			info='Both charts show the recognized vs. anonymous distribution from the latest successful identity resolution run.'
+			className='identity-dashboard__distribution-card'
+		>
+			<div className='identity-dashboard__distribution-panel'>
+				<TypeDistributionBlock
+					title='Identities processed'
+					snapshot={processed}
+					loading={loading}
+					error={error}
+				/>
+				<div className='identity-dashboard__distribution-divider' aria-hidden='true'>
+					<span>
+						<WaIcon name='arrows' />
+					</span>
+				</div>
+				<TypeDistributionBlock
+					title='Unified profiles'
+					snapshot={unified}
+					loading={loading}
+					error={error}
+					recognizedColor={UNIFIED_PROFILES_RECOGNIZED_COLOR}
+					anonymousColor={UNIFIED_PROFILES_ANONYMOUS_COLOR}
+					typeDescriptions={{
+						recognized: 'A profile with at least one recognized identity.',
+						anonymous: 'A profile with only anonymous identities.',
+					}}
+				/>
+			</div>
+		</DashboardCard>
+	);
+};
+
+interface ProfileCompositionProps {
+	profiles: number;
+	composition?: IdentityResolutionComposition;
+	loading: boolean;
+	error?: string;
+}
+
+const ProfileComposition = ({ profiles, composition, loading, error }: ProfileCompositionProps) => {
+	const { hiddenSeries: hiddenBuckets, toggleSeries: toggleBucket } =
+		useSeriesVisibility<keyof IdentityResolutionComposition>();
+	const buckets =
+		composition == null
+			? []
+			: buildProfileComposition(composition).map((bucket, index) => ({
+					...bucket,
+					color: COMPOSITION_COLORS[index],
+				}));
+	const visibleBuckets = buckets.filter((bucket) => !hiddenBuckets.includes(bucket.key));
+	const visibleProfiles =
+		hiddenBuckets.length === 0 ? profiles : visibleBuckets.reduce((total, bucket) => total + bucket.count, 0);
+	const hasVisibleValues = visibleBuckets.some((bucket) => bucket.count > 0);
+	return (
+		<DashboardCard
+			title='Profiles by number of identities'
+			info='Shows how unified profiles are distributed by the number of identities they contain, based on the latest successful identity resolution run.'
+			className='identity-dashboard__composition-card'
+		>
+			{loading ? (
+				<CardLoading chart={true} />
+			) : error != null && error !== '' ? (
+				<StateMessage
+					variant='error'
+					title='Composition could not be loaded'
+					description={error}
+					compact={true}
+				/>
+			) : composition == null ? (
+				<StateMessage variant='unavailable' title='Profile composition is unavailable' compact={true} />
+			) : (
+				<div className='identity-dashboard__composition-content'>
+					<div className='identity-dashboard__donut-ring' aria-label='Profiles by number of identities'>
+						{hasVisibleValues ? (
+							<ResponsiveContainer width='100%' height='100%'>
+								<PieChart>
+									<Pie
+										data={visibleBuckets}
+										dataKey='count'
+										nameKey='label'
+										innerRadius={DASHBOARD_DONUT_INNER_RADIUS}
+										outerRadius={DASHBOARD_DONUT_OUTER_RADIUS}
+										stroke='none'
+										isAnimationActive={false}
+									>
+										{visibleBuckets.map((bucket) => (
+											<Cell key={bucket.key} fill={bucket.color} />
+										))}
+									</Pie>
+									<Tooltip
+										content={({ active, payload }) => (
+											<DonutTooltip active={active} payload={payload} />
+										)}
+									/>
+								</PieChart>
+							</ResponsiveContainer>
+						) : (
+							<div className='identity-dashboard__composition-ring-placeholder' />
+						)}
+						<DonutCenter
+							value={formatNumber(visibleProfiles)}
+							label={hiddenBuckets.length === 0 ? 'Profiles' : 'Profiles shown'}
+						/>
+					</div>
+					<div className='identity-dashboard__composition-legend'>
+						{buckets.map((bucket) => {
+							const isVisible = !hiddenBuckets.includes(bucket.key);
+							return (
+								<LegendToggle
+									key={bucket.key}
+									isVisible={isVisible}
+									onToggle={() => toggleBucket(bucket.key)}
+								>
+									<i style={{ background: bucket.color }} />
+									<span>{bucket.label}</span>
+									<strong>
+										{isVisible ? formatSharePercent(bucket.count, visibleProfiles, 1) : '—'}
+									</strong>
+								</LegendToggle>
+							);
+						})}
+					</div>
+				</div>
+			)}
+		</DashboardCard>
+	);
+};
+
+const GoToRun = () => {
+	return (
+		<Link path='profile-unification/profiles'>
+			<WaButton size='s' {...buttonVariant('default')}>
+				Go to Run
+			</WaButton>
+		</Link>
+	);
+};
+
+interface ResolutionPeriodEmptyStateProps {
+	isReloading?: boolean;
+}
+
+const ResolutionPeriodEmptyState = ({ isReloading }: ResolutionPeriodEmptyStateProps) => {
+	return (
+		<DashboardCard className='identity-dashboard__period-empty-card' isReloading={isReloading}>
+			<StateMessage
+				variant='empty'
+				title='No identity resolution completed in this period'
+				description='Run identity resolution to see results here.'
+				action={<GoToRun />}
+			/>
+		</DashboardCard>
+	);
+};
+
+const NoResolutionState = () => {
+	return (
+		<DashboardCard className='identity-dashboard__no-resolution-card'>
+			<StateMessage
+				variant='empty'
+				title='No identity resolution completed in this period'
+				description='Run identity resolution to see results here.'
+				action={<GoToRun />}
+			/>
+		</DashboardCard>
+	);
+};
+
+const HISTORY_COLUMNS: GridColumn[] = [
+	{ name: 'Status' },
+	{ name: 'Started at' },
+	{ name: 'Completed at' },
+	{ name: 'Duration' },
+	{ name: 'Error' },
+];
+
+const HISTORY_STATUSES = {
+	running: { label: 'Running', variant: 'brand' },
+	successful: { label: 'Successful', variant: 'success' },
+	failed: { label: 'Failed', variant: 'danger' },
+} as const;
+
+const historyStatusBadge = (status: IdentityResolutionRun['status']): ReactNode => {
+	const { label, variant } = HISTORY_STATUSES[status];
+	return (
+		<WaBadge className='identity-dashboard__history-status' variant={variant} pill>
+			{label}
+		</WaBadge>
+	);
+};
+
+const historyRows = (runs: IdentityResolutionRun[]): GridRow[] =>
+	runs.map((run) => ({
+		key: run.id,
+		cells: [
+			historyStatusBadge(run.status),
+			formatResolutionUTCTimestamp(run.startTime),
+			run.endTime == null ? '—' : formatResolutionUTCTimestamp(run.endTime),
+			formatRunDuration(run.startTime, run.endTime),
+			run.error == null ? (
+				'—'
+			) : (
+				<span className='identity-dashboard__history-error' title={run.error}>
+					{run.error}
+				</span>
+			),
+		],
+	}));
+
+interface HistorySectionProps {
+	runs: IdentityResolutionRun[];
+	loading: boolean;
+	error?: string;
+}
+
+const HistorySection = ({ runs, loading, error }: HistorySectionProps) => {
+	return (
+		<section className='identity-dashboard__section identity-dashboard__section--history'>
+			<SectionHeading
+				title='Identity resolution history'
+				secondary='Most recent runs (up to 100)'
+				info='Identity resolution runs, including those in progress, successful, and failed.'
+			/>
+			<DashboardCard className='identity-dashboard__history-card'>
+				{error == null ? (
+					<div className='identity-dashboard__history-grid'>
+						<Grid
+							columns={HISTORY_COLUMNS}
+							rows={historyRows(runs)}
+							gridColumnsWidths='minmax(120px, 0.7fr) minmax(210px, 1.2fr) minmax(210px, 1.2fr) minmax(110px, 0.6fr) minmax(260px, 1.8fr)'
+							isLoading={loading}
+							loadingText='Loading identity resolution history'
+							noRowsMessage='No identity resolution runs yet'
+						/>
+					</div>
+				) : (
+					<StateMessage
+						variant='error'
+						title='Identity resolution run history could not be loaded'
+						description={error}
+					/>
+				)}
+			</DashboardCard>
+		</section>
+	);
+};
+
+export {
+	ConnectionsChart,
+	HistorySection,
+	IDENTITIES_PER_PROFILE_COLOR,
+	IdentitiesChart,
+	KpiCard,
+	NoResolutionState,
+	ProfileComposition,
+	ResolutionEffectivenessChart,
+	IDENTITY_LINK_RATE_COLOR,
+	ResolutionPeriodEmptyState,
+	SectionHeading,
+	TypeDistributionCard,
+	ProfilesChart,
+};

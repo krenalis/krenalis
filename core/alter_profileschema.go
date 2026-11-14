@@ -19,19 +19,21 @@ import (
 	"github.com/krenalis/krenalis/warehouses"
 )
 
-// AlterProfileSchema alters the profile schema, assigned roles and primary
-// sources of the workspace. schema must be a valid schema.
+// AlterProfileSchema alters the profile schema, property roles and primary
+// sources of the workspace. profileSchema.Schema must be a valid schema.
 //
 // The properties within profile schema cannot specify a prefilled value, cannot
 // be required for creation or update, must be read optional and cannot be
 // nullable; there are also limits on types, which are documented in
 // "datastore/README.md".
 //
-// assignedRoles contains the property paths assigned to Profile roles.
+// profileSchema.PropertyRoles maps roles to property paths.
+// profileSchema.PrimarySources cannot specify a primary source for a property
+// which has kind object or array.
 //
-// Moreover, schema cannot contain conflicting properties, meaning properties
-// whose representations as columns in the data warehouse would have the same
-// column name.
+// Moreover, profileSchema.Schema cannot contain conflicting properties,
+// meaning properties whose representations as columns in the data warehouse
+// would have the same column name.
 //
 // rePaths is a mapping containing the renamed property paths, where the key is
 // the new property path and its value is the old property path. In case of new
@@ -47,15 +49,16 @@ import (
 //   - InspectionMode, if the data warehouse is in inspection mode.
 //   - InvalidAlterSchema, if the alter schema is invalid.
 //   - OperationAlreadyExecuting, if another operation is already executing.
-func (this *Workspace) AlterProfileSchema(ctx context.Context, schema types.Type, assignedRoles ProfileRoleAssignments, primarySources map[string]string, rePaths map[string]any) error {
+func (this *Workspace) AlterProfileSchema(ctx context.Context, profileSchema ProfileSchema, rePaths map[string]any) error {
 	this.core.mustBeOpen()
+	schema, primarySources := profileSchema.Schema, profileSchema.PrimarySources
 	if primarySources == nil {
 		primarySources = map[string]string{}
 	}
 	if !schema.Valid() {
 		return errors.BadRequest("schema must be valid")
 	}
-	if schema.Kind() != types.ObjectKind {
+	if !schema.IsObject() {
 		return errors.BadRequest("expected schema with kind object, got %s", schema.Kind())
 	}
 	if err := validatePrimarySources(schema, primarySources); err != nil {
@@ -77,7 +80,7 @@ func (this *Workspace) AlterProfileSchema(ctx context.Context, schema types.Type
 	if err != nil {
 		return errors.Unprocessable(InvalidAlterSchema, "cannot alter the schema as specified: %s", err)
 	}
-	if err := validateProfileRoleAssignments(schema, assignedRoles); err != nil {
+	if err := validatePropertyRoles(schema, profileSchema.PropertyRoles); err != nil {
 		return errors.BadRequest("%s", err)
 	}
 	for _, s := range primarySources {
@@ -95,7 +98,8 @@ func (this *Workspace) AlterProfileSchema(ctx context.Context, schema types.Type
 	if this.workspace.IR.ID != nil || this.workspace.AlterProfileSchema.ID != nil {
 		return errors.Unprocessable(OperationAlreadyExecuting, "another operation is already executing")
 	}
-	err = this.core.startAlterProfileSchema(ctx, this.workspace.ID, schema, assignedRoles, primarySources, operations)
+	err = this.core.startAlterProfileSchema(ctx, this.workspace.ID, schema, profileSchema.PropertyRoles,
+		primarySources, operations)
 	return err
 }
 
@@ -121,7 +125,7 @@ func (this *Workspace) PreviewAlterProfileSchema(ctx context.Context, schema typ
 	if !schema.Valid() {
 		return nil, errors.BadRequest("schema must be valid")
 	}
-	if schema.Kind() != types.ObjectKind {
+	if !schema.IsObject() {
 		return nil, errors.BadRequest("expected schema with kind object, got %s", schema.Kind())
 	}
 	if err := validateRePaths(rePaths); err != nil {
@@ -142,7 +146,7 @@ func (this *Workspace) PreviewAlterProfileSchema(ctx context.Context, schema typ
 	}
 	queries, err := this.store.PreviewAlterProfileSchema(ctx, schema, operations)
 	if err != nil {
-		if err, ok := err.(*datastore.UnavailableError); ok {
+		if err, ok := err.(*datastore.WarehouseError); ok {
 			return nil, errors.Unavailable("%s", err)
 		}
 		return nil, err
@@ -154,7 +158,7 @@ func (this *Workspace) PreviewAlterProfileSchema(ctx context.Context, schema typ
 // error in case it contains properties which are not allowed in data warehouse
 // profile schemas.
 func checkAllowedPropertyProfileSchema(schema types.Type) error {
-	for _, p := range schema.Properties().All() {
+	for _, p := range schema.Properties().WalkAll() {
 		if datastore.IsMetaProperty(p.Name) {
 			return errors.New("profile schema cannot have meta properties")
 		}
@@ -173,6 +177,7 @@ func checkAllowedPropertyProfileSchema(schema types.Type) error {
 		if p.Nullable {
 			return fmt.Errorf("profile schema properties cannot be nullable")
 		}
+		semanticsType := p.Type
 		switch p.Type.Kind() {
 		case types.StringKind:
 			if p.Type.Values() != nil {
@@ -182,9 +187,17 @@ func checkAllowedPropertyProfileSchema(schema types.Type) error {
 				return fmt.Errorf("profile schema properties with type string cannot specify pattern")
 			}
 		case types.ArrayKind:
-			k := p.Type.Elem().Kind()
-			if k == types.ArrayKind || k == types.ObjectKind || k == types.MapKind {
-				return fmt.Errorf("profile schema properties cannot have type %s(%s)", p.Type.Kind(), k)
+			et := p.Type.Elem()
+			switch et.Kind() {
+			case types.StringKind:
+				if et.Values() != nil {
+					return fmt.Errorf("profile schema properties of type array(string) cannot specify values for their element type")
+				}
+				if et.Pattern() != nil {
+					return fmt.Errorf("profile schema properties of type array(string) cannot specify a pattern for their element type")
+				}
+			case types.ArrayKind, types.ObjectKind, types.MapKind:
+				return fmt.Errorf("profile schema properties cannot have type %s(%s)", p.Type.Kind(), et.Kind())
 			}
 			if p.Type.Unique() {
 				return fmt.Errorf("profile schema properties with type array cannot specify unique elements")
@@ -195,36 +208,59 @@ func checkAllowedPropertyProfileSchema(schema types.Type) error {
 			if p.Type.MaxElements() != types.MaxElements {
 				return fmt.Errorf("profile schema properties with type array cannot specify maximum elements count")
 			}
-		case types.ObjectKind:
-			err := checkAllowedPropertyProfileSchema(p.Type)
-			if err != nil {
-				return err
-			}
+			semanticsType = et
 		case types.MapKind:
-			k := p.Type.Elem().Kind()
-			if k == types.ArrayKind || k == types.ObjectKind || k == types.MapKind {
-				return fmt.Errorf("profile schema properties cannot have type %s(%s)", p.Type.Kind(), k)
+			et := p.Type.Elem()
+			switch et.Kind() {
+			case types.StringKind:
+				if et.Values() != nil {
+					return fmt.Errorf("profile schema properties of type map(string) cannot specify values for their element type")
+				}
+				if et.Pattern() != nil {
+					return fmt.Errorf("profile schema properties of type map(string) cannot specify a pattern for their element type")
+				}
+			case types.ArrayKind, types.ObjectKind, types.MapKind:
+				return fmt.Errorf("profile schema properties cannot have type %s(%s)", p.Type.Kind(), et.Kind())
 			}
+			semanticsType = et
 		}
-		semanticType := p.Type
-		for semanticType.Kind() == types.ArrayKind || semanticType.Kind() == types.MapKind {
-			semanticType = semanticType.Elem()
+		if err := checkAllowedSemanticsProfileSchema(semanticsType); err != nil {
+			return err
 		}
-		switch semanticType.Semantic() {
-		case types.CountrySemantic:
-			if semanticType.CountryFormat() != types.ISO3166Alpha2 {
-				return errors.New("profile schema properties with country semantic must use ISO 3166 alpha-2 format")
-			}
-		case types.MoneySemantic, types.PercentageSemantic, types.MeasurementSemantic:
-			if semanticType.Kind() != types.DecimalKind || semanticType.Precision() != 18 || semanticType.Scale() != 4 {
-				return fmt.Errorf(
-					"profile schema properties with %s semantic must have decimal(18,4) values", semanticType.Semantic(),
-				)
-			}
-		case types.DurationSemantic:
-			if semanticType.Kind() != types.IntKind || semanticType.BitSize() != 64 || semanticType.IsUnsigned() {
-				return errors.New("profile schema properties with duration semantic must have signed int(64) values")
-			}
+	}
+	return nil
+}
+
+// minProfileYear and maxProfileYear bound year values in profile schemas.
+const (
+	minProfileYear = 1
+	maxProfileYear = 9999
+)
+
+// checkAllowedSemanticsProfileSchema returns an error if t does not meet the
+// semantics restrictions for profile schema properties.
+func checkAllowedSemanticsProfileSchema(t types.Type) error {
+	switch t.Semantics() {
+	case types.CountrySemantics:
+		if t.CountryFormat() != types.ISO3166Alpha2 {
+			return errors.New("profile schema properties with country semantics must use ISO 3166 alpha-2 format")
+		}
+	case types.MoneySemantics, types.PercentageSemantics, types.MeasurementSemantics:
+		if !t.IsDecimal() || t.Precision() != 18 || t.Scale() != 4 {
+			return fmt.Errorf("profile schema properties with %s semantics must have decimal(18,4) values",
+				t.Semantics())
+		}
+	case types.DurationSemantics:
+		if !t.IsFloat(64) {
+			return errors.New("profile schema properties with duration semantics must have real float(64) values")
+		}
+	case types.YearSemantics:
+		if !t.IsInt(16) || t.IsUnsigned() {
+			return errors.New("profile schema properties with year semantics must have signed int(16) values")
+		}
+		if min, max := t.IntRange(); min != minProfileYear || max != maxProfileYear {
+			return fmt.Errorf("profile schema properties with year semantics must have range [%d,%d]",
+				minProfileYear, maxProfileYear)
 		}
 	}
 	return nil
@@ -263,60 +299,61 @@ func validatePrimarySources(schema types.Type, primarySources map[string]string)
 		if !IsValidID(source) {
 			return fmt.Errorf("primary source identifier %q is not valid", source)
 		}
-		if k := p.Type.Kind(); k == types.ObjectKind || k == types.ArrayKind {
+		if p.Type.IsObject() || p.Type.IsArray() {
 			return fmt.Errorf("primary sources cannot be specified for %s properties", p.Type)
 		}
 	}
 	return nil
 }
 
-// validateProfileRoleAssignments validates assignments against schema.
-func validateProfileRoleAssignments(schema types.Type, assignments ProfileRoleAssignments) error {
-
-	assignedProperties := map[string]string{}
+// validatePropertyRoles validates roles against schema.
+func validatePropertyRoles(schema types.Type, roles PropertyRoles) error {
+	propertyToRole := map[string]string{}
 	properties := schema.Properties()
 	for _, assignment := range [...]struct {
 		role string
 		path string
 	}{
-		{role: "first_name", path: assignments.FirstName},
-		{role: "last_name", path: assignments.LastName},
-		{role: "email", path: assignments.Email},
-		{role: "country", path: assignments.Country},
-		{role: "photo", path: assignments.Photo},
+		{role: "firstName", path: roles.FirstName},
+		{role: "lastName", path: roles.LastName},
+		{role: "email", path: roles.Email},
+		{role: "country", path: roles.Country},
+		{role: "photo", path: roles.Photo},
 	} {
 		if assignment.path == "" {
 			continue
 		}
 		if !types.IsValidPropertyPath(assignment.path) {
-			return fmt.Errorf("profile role %q has invalid property path %q", assignment.role, assignment.path)
+			return fmt.Errorf("property role %q has invalid property path %q", assignment.role, assignment.path)
 		}
 		property, err := properties.ByPath(assignment.path)
 		if err != nil {
-			return fmt.Errorf("profile role %q refers to property %q, which does not exist", assignment.role, assignment.path)
+			return fmt.Errorf("property role %q refers to property %q, which does not exist",
+				assignment.role, assignment.path)
 		}
-		if previousRole, ok := assignedProperties[assignment.path]; ok {
-			return fmt.Errorf("property %q is assigned to both profile roles %q and %q",
+		if previousRole, ok := propertyToRole[assignment.path]; ok {
+			return fmt.Errorf("property %q is assigned to both roles %q and %q",
 				assignment.path, previousRole, assignment.role)
 		}
 		compatible := false
 		singleValue := property.Type.Kind() != types.ArrayKind && property.Type.Kind() != types.MapKind
 		switch assignment.role {
-		case "first_name", "last_name":
-			compatible = property.Type.Kind() == types.StringKind && property.Type.Semantic() == types.NoSemantic
+		case "firstName", "lastName":
+			compatible = property.Type.Kind() == types.StringKind && !property.Type.HasSemantics()
 		case "email":
-			compatible = singleValue && property.Type.Semantic() == types.EmailSemantic
+			compatible = singleValue && property.Type.Semantics() == types.EmailSemantics
 		case "country":
-			compatible = singleValue && property.Type.Semantic() == types.CountrySemantic
+			compatible = singleValue && property.Type.Semantics() == types.CountrySemantics
 		case "photo":
-			compatible = singleValue && property.Type.Semantic() == types.URLSemantic
+			compatible = singleValue && property.Type.Semantics() == types.URLSemantics
+		default:
+			return fmt.Errorf("core: unexpected property role %q", assignment.role)
 		}
 		if !compatible {
-			return fmt.Errorf("property %q is not compatible with profile role %q", assignment.path, assignment.role)
+			return fmt.Errorf("property %q is not compatible with role %q", assignment.path, assignment.role)
 		}
-		assignedProperties[assignment.path] = assignment.role
+		propertyToRole[assignment.path] = assignment.role
 	}
-
 	return nil
 }
 

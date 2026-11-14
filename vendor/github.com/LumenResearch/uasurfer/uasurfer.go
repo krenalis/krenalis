@@ -5,9 +5,10 @@
 // strings.
 package uasurfer
 
-import "strings"
-
-//go:generate stringer -type=DeviceType,BrowserName,OSName,Platform -output=const_string.go
+import (
+	"cmp"
+	"strings"
+)
 
 // DeviceType (int) returns a constant.
 type DeviceType int
@@ -22,7 +23,31 @@ const (
 	DeviceConsole
 	DeviceWearable
 	DeviceTV
+
+	// _deviceTypeFinal terminates the list so tests can enumerate it; keep it last.
+	_deviceTypeFinal
 )
+
+func (d DeviceType) String() string {
+	switch d {
+	case DeviceComputer:
+		return "DeviceComputer"
+	case DeviceTablet:
+		return "DeviceTablet"
+	case DevicePhone:
+		return "DevicePhone"
+	case DeviceConsole:
+		return "DeviceConsole"
+	case DeviceWearable:
+		return "DeviceWearable"
+	case DeviceTV:
+		return "DeviceTV"
+	default:
+		// anything out of range, including a value cast from a newer
+		// release, reads as unknown rather than a numeric placeholder
+		return "DeviceUnknown"
+	}
+}
 
 // StringTrimPrefix is like String() but trims the "Device" prefix
 func (d DeviceType) StringTrimPrefix() string {
@@ -68,8 +93,153 @@ const (
 	BrowserTwitterBot
 	BrowserYandexBot
 	BrowserCocCocBot
-	BrowserYahooBot // Bot list ends here
+	BrowserYahooBot
+	BrowserOpenAIBot
+	BrowserAnthropicBot
+	BrowserPerplexityBot
+	BrowserAmazonBot
+	BrowserBytedanceBot
+	BrowserCommonCrawlBot
+	BrowserAhrefsBot
+	BrowserSemrushBot
+	BrowserPetalBot
+
+	// In-app webviews. A tap on a link inside one of these apps renders in a
+	// frame the app controls, with no address bar and its own idea of a viewport,
+	// which is a different surface to measure than the browser it is built on.
+	BrowserFacebook
+	BrowserInstagram
+	BrowserWeChat
+	BrowserTikTok
+	BrowserSnapchat
+	BrowserLine
+
+	// Chromium with another name on it. The engine is Chrome's; the vendor,
+	// release cadence and default settings are not.
+	BrowserVivaldi
+	BrowserWhale
+	BrowserMIUI
+	BrowserHuawei
+	BrowserDuckDuckGo
+
+	// _browserNameFinal terminates the list so tests can enumerate it; keep it last.
+	_browserNameFinal
 )
+
+func (b BrowserName) String() string {
+	switch b {
+	case BrowserChrome:
+		return "BrowserChrome"
+	case BrowserIE:
+		return "BrowserIE"
+	case BrowserSafari:
+		return "BrowserSafari"
+	case BrowserFirefox:
+		return "BrowserFirefox"
+	case BrowserAndroid:
+		return "BrowserAndroid"
+	case BrowserOpera:
+		return "BrowserOpera"
+	case BrowserBlackberry:
+		return "BrowserBlackberry"
+	case BrowserUCBrowser:
+		return "BrowserUCBrowser"
+	case BrowserSilk:
+		return "BrowserSilk"
+	case BrowserNokia:
+		return "BrowserNokia"
+	case BrowserNetFront:
+		return "BrowserNetFront"
+	case BrowserQQ:
+		return "BrowserQQ"
+	case BrowserMaxthon:
+		return "BrowserMaxthon"
+	case BrowserSogouExplorer:
+		return "BrowserSogouExplorer"
+	case BrowserSpotify:
+		return "BrowserSpotify"
+	case BrowserNintendo:
+		return "BrowserNintendo"
+	case BrowserSamsung:
+		return "BrowserSamsung"
+	case BrowserYandex:
+		return "BrowserYandex"
+	case BrowserCocCoc:
+		return "BrowserCocCoc"
+	case BrowserBot:
+		return "BrowserBot"
+	case BrowserAppleBot:
+		return "BrowserAppleBot"
+	case BrowserBaiduBot:
+		return "BrowserBaiduBot"
+	case BrowserBingBot:
+		return "BrowserBingBot"
+	case BrowserDuckDuckGoBot:
+		return "BrowserDuckDuckGoBot"
+	case BrowserFacebookBot:
+		return "BrowserFacebookBot"
+	case BrowserGoogleBot:
+		return "BrowserGoogleBot"
+	case BrowserLinkedInBot:
+		return "BrowserLinkedInBot"
+	case BrowserMsnBot:
+		return "BrowserMsnBot"
+	case BrowserPingdomBot:
+		return "BrowserPingdomBot"
+	case BrowserTwitterBot:
+		return "BrowserTwitterBot"
+	case BrowserYandexBot:
+		return "BrowserYandexBot"
+	case BrowserCocCocBot:
+		return "BrowserCocCocBot"
+	case BrowserYahooBot:
+		return "BrowserYahooBot"
+	case BrowserOpenAIBot:
+		return "BrowserOpenAIBot"
+	case BrowserAnthropicBot:
+		return "BrowserAnthropicBot"
+	case BrowserPerplexityBot:
+		return "BrowserPerplexityBot"
+	case BrowserAmazonBot:
+		return "BrowserAmazonBot"
+	case BrowserBytedanceBot:
+		return "BrowserBytedanceBot"
+	case BrowserCommonCrawlBot:
+		return "BrowserCommonCrawlBot"
+	case BrowserAhrefsBot:
+		return "BrowserAhrefsBot"
+	case BrowserSemrushBot:
+		return "BrowserSemrushBot"
+	case BrowserPetalBot:
+		return "BrowserPetalBot"
+	case BrowserFacebook:
+		return "BrowserFacebook"
+	case BrowserInstagram:
+		return "BrowserInstagram"
+	case BrowserWeChat:
+		return "BrowserWeChat"
+	case BrowserTikTok:
+		return "BrowserTikTok"
+	case BrowserSnapchat:
+		return "BrowserSnapchat"
+	case BrowserLine:
+		return "BrowserLine"
+	case BrowserVivaldi:
+		return "BrowserVivaldi"
+	case BrowserWhale:
+		return "BrowserWhale"
+	case BrowserMIUI:
+		return "BrowserMIUI"
+	case BrowserHuawei:
+		return "BrowserHuawei"
+	case BrowserDuckDuckGo:
+		return "BrowserDuckDuckGo"
+	default:
+		// anything out of range, including a value cast from a newer
+		// release, reads as unknown rather than a numeric placeholder
+		return "BrowserUnknown"
+	}
+}
 
 // StringTrimPrefix is like String() but trims the "Browser" prefix
 func (b BrowserName) StringTrimPrefix() string {
@@ -100,7 +270,58 @@ const (
 	OSXbox
 	OSNintendo
 	OSBot
+	OSTizen // Samsung smart TVs, and the handful of Tizen phones
+	OSRoku
+	OSTvOS
+
+	// _osNameFinal terminates the list so tests can enumerate it; keep it last.
+	_osNameFinal
 )
+
+func (o OSName) String() string {
+	switch o {
+	case OSWindowsPhone:
+		return "OSWindowsPhone"
+	case OSWindows:
+		return "OSWindows"
+	case OSMacOSX:
+		return "OSMacOSX"
+	case OSiOS:
+		return "OSiOS"
+	case OSiPadOS:
+		return "OSiPadOS"
+	case OSAndroid:
+		return "OSAndroid"
+	case OSBlackberry:
+		return "OSBlackberry"
+	case OSChromeOS:
+		return "OSChromeOS"
+	case OSKindle:
+		return "OSKindle"
+	case OSWebOS:
+		return "OSWebOS"
+	case OSLinux:
+		return "OSLinux"
+	case OSPlaystation:
+		return "OSPlaystation"
+	case OSXbox:
+		return "OSXbox"
+	case OSNintendo:
+		return "OSNintendo"
+	case OSBot:
+		return "OSBot"
+	case OSTizen:
+		return "OSTizen"
+	case OSRoku:
+		return "OSRoku"
+	case OSTvOS:
+		return "OSTvOS"
+	default:
+		// anything out of range, including a value cast from a newer
+		// release, reads as unknown rather than a numeric placeholder
+		return "OSUnknown"
+	}
+}
 
 // StringTrimPrefix is like String() but trims the "OS" prefix
 func (o OSName) StringTrimPrefix() string {
@@ -128,7 +349,46 @@ const (
 	PlatformXbox
 	PlatformNintendo
 	PlatformBot
+	PlatformAppleTV
+
+	// _platformFinal terminates the list so tests can enumerate it; keep it last.
+	_platformFinal
 )
+
+func (p Platform) String() string {
+	switch p {
+	case PlatformWindows:
+		return "PlatformWindows"
+	case PlatformMac:
+		return "PlatformMac"
+	case PlatformLinux:
+		return "PlatformLinux"
+	case PlatformiPad:
+		return "PlatformiPad"
+	case PlatformiPhone:
+		return "PlatformiPhone"
+	case PlatformiPod:
+		return "PlatformiPod"
+	case PlatformBlackberry:
+		return "PlatformBlackberry"
+	case PlatformWindowsPhone:
+		return "PlatformWindowsPhone"
+	case PlatformPlaystation:
+		return "PlatformPlaystation"
+	case PlatformXbox:
+		return "PlatformXbox"
+	case PlatformNintendo:
+		return "PlatformNintendo"
+	case PlatformBot:
+		return "PlatformBot"
+	case PlatformAppleTV:
+		return "PlatformAppleTV"
+	default:
+		// anything out of range, including a value cast from a newer
+		// release, reads as unknown rather than a numeric placeholder
+		return "PlatformUnknown"
+	}
+}
 
 // StringTrimPrefix is like String() but trims the "Platform" prefix
 func (p Platform) StringTrimPrefix() string {
@@ -141,24 +401,13 @@ type Version struct {
 	Patch int
 }
 
+// Less reports whether v sorts before c, comparing major, then minor, then patch.
 func (v Version) Less(c Version) bool {
-	if v.Major < c.Major {
-		return true
-	}
-
-	if v.Major > c.Major {
-		return false
-	}
-
-	if v.Minor < c.Minor {
-		return true
-	}
-
-	if v.Minor > c.Minor {
-		return false
-	}
-
-	return v.Patch < c.Patch
+	return cmp.Or(
+		cmp.Compare(v.Major, c.Major),
+		cmp.Compare(v.Minor, c.Minor),
+		cmp.Compare(v.Patch, c.Patch),
+	) < 0
 }
 
 type UserAgent struct {
@@ -167,6 +416,10 @@ type UserAgent struct {
 	DeviceType DeviceType
 }
 
+// Browser contains the name of the browser and its version. Browsers are
+// grouped without consideration for device: Chrome (Chrome/43.0) and Chrome for
+// iOS (CriOS/43.0) both report as BrowserChrome with version 43.0, and Internet
+// Explorer 11 and Edge 12 both report as BrowserIE with version 11 or 12.
 type Browser struct {
 	Name    BrowserName
 	Version Version
@@ -178,29 +431,36 @@ type OS struct {
 	Version  Version
 }
 
-type Hints struct {
-	ScreenSize *ScreenSize
+// Reset resets the UserAgent to it's zero value
+func (u *UserAgent) Reset() {
+	u.Browser = Browser{}
+	u.OS = OS{}
+	u.DeviceType = DeviceUnknown
 }
 
-// Reset resets the UserAgent to it's zero value
-func (ua *UserAgent) Reset() {
-	ua.Browser = Browser{}
-	ua.OS = OS{}
-	ua.DeviceType = DeviceUnknown
-}
+// botNames marks the BrowserName values that identify a bot, by the one thing
+// every such constant has in common: its name ends in "Bot".
+//
+// A set rather than the range this used to be. The range required the bot
+// constants to be contiguous and last, which meant a new browser could only be
+// added by inserting it ahead of them and shifting their values - and callers
+// persist those values as ints. Now either list grows by appending, and a
+// constant named "…Bot" is a bot with nothing else to remember;
+// TestIsBot asserts exactly that correspondence.
+var botNames = func() (set [_browserNameFinal]bool) {
+	for b := range _browserNameFinal {
+		set[b] = strings.HasSuffix(b.String(), "Bot")
+	}
+	return
+}()
 
 // IsBot returns true if the UserAgent represent a bot
-func (ua *UserAgent) IsBot() bool {
-	if ua.Browser.Name >= BrowserBot && ua.Browser.Name <= BrowserYahooBot {
-		return true
-	}
-	if ua.OS.Name == OSBot {
-		return true
-	}
-	if ua.OS.Platform == PlatformBot {
-		return true
-	}
-	return false
+func (u *UserAgent) IsBot() bool {
+	// A name cast from a newer release can be out of range, and reads as no bot
+	// rather than panicking.
+	return (u.Browser.Name >= 0 && u.Browser.Name < _browserNameFinal && botNames[u.Browser.Name]) ||
+		u.OS.Name == OSBot ||
+		u.OS.Platform == PlatformBot
 }
 
 // Parse accepts a raw user agent (string) and returns the UserAgent.
@@ -231,24 +491,25 @@ func ParseUserAgentWithHints(ua string, hints *Hints, dest *UserAgent) {
 
 func parse(ua string, hints *Hints, dest *UserAgent) {
 	ua = normalise(ua)
-	switch {
-	case len(ua) == 0:
-		dest.OS.Platform = PlatformUnknown
-		dest.OS.Name = OSUnknown
-		dest.Browser.Name = BrowserUnknown
-		dest.DeviceType = DeviceUnknown
-
-	// stop on on first case returning true
-	case dest.evalOS(ua, hints):
-	case dest.evalBrowserName(ua):
-	default:
-		dest.evalBrowserVersion(ua)
-		dest.evalDevice(ua)
+	if len(ua) == 0 {
+		return // dest keeps its zero (Unknown) values
 	}
+	// each parse* reports a bot, which needs nothing further parsed
+	if dest.parseOS(ua, hints) || dest.parseBrowserName(ua) {
+		return
+	}
+	dest.parseBrowserVersion(ua)
+	dest.parseDevice(ua)
+	hints.apply(dest)
 }
 
 // normalise normalises the user supplied agent string so that
 // we can more easily parse it.
+//
+// The returned string is the parser's one remaining allocation: buf itself is
+// stack allocated, but converting it to a string that outlives this frame is
+// not something the compiler can keep on the stack. Removing it would mean
+// parsing over []byte throughout rather than string.
 func normalise(ua string) string {
 	if len(ua) <= 1024 {
 		var buf [1024]byte

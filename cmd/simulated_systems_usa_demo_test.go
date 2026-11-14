@@ -108,7 +108,7 @@ func TestSimulatedSystemUSAGeneration(t *testing.T) {
 	var workspace struct{ ID string }
 	k.Call("POST", "/v1/workspaces", http.Header{"Krenalis-Workspace": nil}, map[string]any{
 		"name": "USA internal demo", "environment": "development",
-		"profileSchema": profileSchema,
+		"profileSchema": krenalistester.ProfileSchema{Schema: profileSchema},
 		"warehouse":     map[string]any{"platform": "PostgreSQL", "mode": "Normal", "settings": settings},
 	}, &workspace)
 	k.SetWorkspaceID(workspace.ID)

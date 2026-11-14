@@ -22,13 +22,7 @@ import {
 	useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
-
-interface GridHeaderRowProps {
-	columns: GridColumn[];
-	onSortColumn?: (overColumnKey: string, movedColumnKey: string) => void;
-	semanticRow?: boolean;
-}
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 
 interface SortableGridHeaderCellProps {
 	className: string;
@@ -62,7 +56,7 @@ const SortableGridHeaderCell = ({ className, column, columnKey, semanticCell }: 
 					{...listeners}
 					aria-label={`Move ${column.name} column`}
 				>
-					<SlIcon name='grip-vertical' aria-hidden='true' />
+					<WaIcon name='grip-vertical' aria-hidden='true' />
 				</button>
 			}
 			semanticCell={semanticCell}
@@ -70,6 +64,12 @@ const SortableGridHeaderCell = ({ className, column, columnKey, semanticCell }: 
 		/>
 	);
 };
+
+interface GridHeaderRowProps {
+	columns: GridColumn[];
+	onSortColumn?: (overColumnKey: string, movedColumnKey: string) => void;
+	semanticRow?: boolean;
+}
 
 const GridHeaderRow = ({ columns, onSortColumn, semanticRow }: GridHeaderRowProps) => {
 	const [activeColumnKey, setActiveColumnKey] = useState<string>();
@@ -148,7 +148,7 @@ const GridHeaderRow = ({ columns, onSortColumn, semanticRow }: GridHeaderRowProp
 							alignment={activeColumn.alignment}
 							reorderHandle={
 								<span className='grid__column-reorder-handle'>
-									<SlIcon name='grip-vertical' aria-hidden='true' />
+									<WaIcon name='grip-vertical' aria-hidden='true' />
 								</span>
 							}
 						/>

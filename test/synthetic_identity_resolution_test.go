@@ -97,7 +97,7 @@ func TestSyntheticABIdentityResolution(t *testing.T) {
 		sources[index].connection = k.CreateSourceFileSystem()
 	}
 
-	properties := k.Workspace().ProfileSchema.Properties().Slice()
+	properties := k.Workspace().ProfileSchema.Schema.Properties().Slice()
 	properties = append(properties, []types.Property{
 		{Name: "first_name", Type: types.String().WithMaxLength(300), ReadOptional: true},
 		{Name: "last_name", Type: types.String().WithMaxLength(300), ReadOptional: true},
@@ -106,14 +106,14 @@ func TestSyntheticABIdentityResolution(t *testing.T) {
 		{Name: "country", Type: types.String().AsCountry(types.ISO3166Alpha2), ReadOptional: true},
 	}...)
 	profileSchema := types.Object(properties)
-	assignedRoles := krenalistester.ProfileRoleAssignments{
+	assignedRoles := krenalistester.PropertyRoles{
 		FirstName: "first_name", LastName: "last_name", Country: "country", Photo: "photo_url",
 	}
 	primarySources := map[string]string{}
 	for _, property := range profileSchema.Properties().Slice() {
 		primarySources[property.Name] = sources[1].connection
 	}
-	k.AlterProfileSchemaWithAssignedRolesAndWait(profileSchema, assignedRoles, primarySources, nil)
+	k.AlterProfileSchemaWithPropertyRolesAndWait(profileSchema, assignedRoles, primarySources, nil)
 
 	for index := range sources {
 		sources[index].pipeline = k.CreatePipeline(sources[index].connection, "User", krenalistester.PipelineToSet{
@@ -150,7 +150,7 @@ func TestSyntheticABIdentityResolution(t *testing.T) {
 	k.WaitForRunsCompletion(runs...)
 	for _, runID := range runs {
 		run := k.PipelineRun(runID)
-		if run.Error != "" || run.Failed != [7]int{} {
+		if run.Error != "" || run.Failed != [9]int{} {
 			t.Fatalf("expected successful pipeline run, got %+v", run)
 		}
 	}

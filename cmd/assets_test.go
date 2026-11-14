@@ -15,7 +15,7 @@ import (
 	"github.com/andybalholm/brotli"
 )
 
-// TestAssetsHandler_Index verifies that the production assets handler correctly
+// TestAssetsHandler_Index verifies that the embedded assets handler correctly
 // serves the index page and handles Brotli compression when the client requests
 // it.
 func TestAssetsHandler_Index(t *testing.T) {

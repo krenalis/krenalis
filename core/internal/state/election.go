@@ -7,7 +7,6 @@ package state
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"fmt"
 	"log/slog"
 	"math"
@@ -17,6 +16,7 @@ import (
 
 	"github.com/krenalis/krenalis/core/internal/db"
 	"github.com/krenalis/krenalis/tools/backoff"
+	"github.com/krenalis/krenalis/tools/errors"
 )
 
 var debugElection = false
@@ -25,6 +25,7 @@ const (
 	leaderInterval         = 2 * time.Second
 	grantedLeaderInterval  = leaderInterval + leaderInterval/2
 	electionRandomInterval = leaderInterval / 5
+	leaderClockSkew        = 500 * time.Millisecond
 )
 
 // keepElections keeps leader elections.
@@ -32,7 +33,6 @@ const (
 func (state *State) keepElections() {
 
 	defer state.close.Done()
-	state.election.lastSeen = time.Now()
 
 	// Check if the KRENALIS_DEBUG_ELECTION variable is set.
 	if v := os.Getenv("KRENALIS_DEBUG_ELECTION"); v == "true" {
@@ -48,6 +48,8 @@ func (state *State) keepElections() {
 	// |--------------|          leaderInterval
 	// |--------------|·······|  grantedLeaderInterval
 	// |~~~~~~~|                 electionRandomInterval
+	//
+	// Heartbeat expiry also allows leaderClockSkew for clock differences.
 
 	debugf := func(format string, a ...any) {
 		if !debugElection {
@@ -55,6 +57,11 @@ func (state *State) keepElections() {
 		}
 		_, _ = fmt.Fprintf(os.Stderr, format, a...)
 	}
+
+	// Preserve the sequence across retries and while waiting for our election
+	// notification. A restarted node gets a new ID and must win a new election
+	// before sending heartbeats.
+	var sequence uint64
 
 	// leader is called when the node is the leader.
 	// If state.ctx is canceled, leader returns its error.
@@ -64,9 +71,18 @@ func (state *State) keepElections() {
 		bo.SetCap(leaderInterval)
 		var failed bool
 		for bo.Next(state.close.ctx) {
+			if sequence == math.MaxUint64 {
+				slog.Error("core/state: see leader sequence limit reached")
+				return errors.New("see leader sequence limit reached")
+			}
 			// Send the see leader notification.
 			err := state.Transaction(state.close.ctx, func(tx *db.Tx) (any, error) {
-				return SeeLeader{Election: election.number}, nil
+				sequence++
+				return SeeLeader{
+					Election:  election.number,
+					Sequence:  sequence,
+					Timestamp: time.Now().UnixMilli(),
+				}, nil
 			})
 			if err == nil {
 				break
@@ -91,29 +107,28 @@ func (state *State) keepElections() {
 	follower := func(election election) error {
 		debugf("-- %d Follower\n", election.number)
 		now := time.Now()
-		deadline := election.lastSeen.Add(grantedLeaderInterval)
-		if deadline.After(now) {
-			return state.sleep(deadline.Sub(now))
+		if election.validUntil.After(now) {
+			return state.sleep(election.validUntil.Sub(now))
 		}
 		d := time.Duration(rand.IntN(int(electionRandomInterval)))
 		debugf("\t%s until election\n", d)
 		if err := state.sleep(d); err != nil {
 			return err
 		}
-		election.number++
-		if int32(election.number) < 0 {
-			election.number = 1
-		}
 		state.mu.Lock()
-		number := state.election.number
+		current := state.election
 		state.mu.Unlock()
-		if election.number == number {
+		if election.number < current.number {
 			debugf("\telection already ended\n")
 			return nil
 		}
-		debugf("\ttry election %d: ", election.number)
+		if current.validUntil.After(time.Now()) {
+			return nil
+		}
+		debugf("\ttry election after %d: ", election.number)
 		err := state.electAsLeader(election.number)
 		if err == nil {
+			election.number++
 			debugf("elected!\n")
 			if err := state.sleep(leaderInterval); err != nil {
 				return err
@@ -163,21 +178,20 @@ func (state *State) keepElections() {
 // errEndedElection indicates that an election is ended.
 var errEndedElection = errors.New("ended election")
 
-// electAsLeader attempts to elect the current node as leader in the given
-// election. It returns an errEndedElection error if the given election is
-// ended.
-func (state *State) electAsLeader(election int) error {
-	n := ElectLeader{Leader: state.id, Number: election}
-	var prevElection = election - 1
-	if prevElection == 0 {
-		prevElection = math.MaxInt32
+// electAsLeader attempts to elect this node in the election following
+// previousElection, using the State's lifecycle context. It returns
+// errEndedElection if no election row has number previousElection.
+func (state *State) electAsLeader(previousElection int) error {
+	if previousElection == math.MaxInt64 {
+		return errors.New("election number limit reached")
 	}
+	n := ElectLeader{Leader: state.id, Number: previousElection + 1}
 	ctx := state.close.ctx
 	err := state.Transaction(ctx, func(tx *db.Tx) (any, error) {
 		var t bool
 		err := tx.QueryRow(ctx, "UPDATE election\n"+
 			"SET number = $1, leader = $2, date = NOW()::timestamp\n"+
-			"WHERE number = $3 RETURNING true", n.Number, n.Leader, prevElection).Scan(&t)
+			"WHERE number = $3 RETURNING true", n.Number, n.Leader, previousElection).Scan(&t)
 		if err != nil {
 			if err == sql.ErrNoRows {
 				err = errEndedElection

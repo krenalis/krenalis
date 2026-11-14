@@ -20,6 +20,7 @@ import (
 	"regexp"
 	"runtime"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -125,6 +126,8 @@ type snowflakeFileTransferAgent struct {
 	presignedURLs               []string
 	options                     *SnowflakeFileTransferOptions
 	streamBuffer                *bytes.Buffer
+	streamDownload              bool
+	streamDownloadFileName      string
 }
 
 func (sfa *snowflakeFileTransferAgent) execute() error {
@@ -202,7 +205,11 @@ func (sfa *snowflakeFileTransferAgent) execute() error {
 			return err
 		}
 	} else {
-		if err = sfa.download(largeFileMetas); err != nil {
+		// Local-stage downloads place their file metadata in smallFileMetas (see the
+		// stageLocationType == local branch above); cloud downloads use largeFileMetas.
+		// Passing only largeFileMetas drops every file for a LOCAL_FS stage, so download()
+		// reports "downloading 0 files" and result() returns ErrNotImplemented (264011).
+		if err = sfa.download(append(largeFileMetas, smallFileMetas...)); err != nil {
 			return err
 		}
 	}
@@ -220,6 +227,19 @@ func (sfa *snowflakeFileTransferAgent) parseCommand() error {
 
 	sfa.initEncryptionMaterial()
 	if len(sfa.data.SrcLocations) == 0 {
+		if sfa.streamDownload {
+			name := sfa.streamDownloadFileName
+			if name == "" {
+				name = "requested stage object"
+			}
+			return exceptionTelemetry(&SnowflakeError{
+				Number:      ErrFileNotExists,
+				SQLState:    SQLStateNoData,
+				QueryID:     sfa.data.QueryID,
+				Message:     errors2.ErrMsgDownloadStreamFileNotFound,
+				MessageArgs: []any{name},
+			}, sfa.sc)
+		}
 		return exceptionTelemetry(&SnowflakeError{
 			Number:   ErrInvalidStageLocation,
 			SQLState: sfa.data.SQLState,
@@ -257,18 +277,29 @@ func (sfa *snowflakeFileTransferAgent) parseCommand() error {
 			}, sfa.sc)
 		}
 
-		sfa.localLocation, err = expandUser(sfa.data.LocalLocation)
-		if err != nil {
-			return err
+		// A get-stream / DownloadStream can return only one file. GET resolves its stage
+		// path by prefix, so a short name can match several objects; fail instead of
+		// picking one at random.
+		if isFileGetStream(sfa.ctx) || sfa.streamDownload {
+			if err = sfa.ensureSingleGetStreamFile(); err != nil {
+				return err
+			}
 		}
-		if fi, err := os.Stat(sfa.localLocation); err != nil || !fi.IsDir() {
-			return exceptionTelemetry(&SnowflakeError{
-				Number:      ErrLocalPathNotDirectory,
-				SQLState:    sfa.data.SQLState,
-				QueryID:     sfa.data.QueryID,
-				Message:     errors2.ErrMsgLocalPathNotDirectory,
-				MessageArgs: []any{sfa.localLocation},
-			}, sfa.sc)
+
+		if !sfa.streamDownload {
+			sfa.localLocation, err = expandUser(sfa.data.LocalLocation)
+			if err != nil {
+				return err
+			}
+			if fi, err := os.Stat(sfa.localLocation); err != nil || !fi.IsDir() {
+				return exceptionTelemetry(&SnowflakeError{
+					Number:      ErrLocalPathNotDirectory,
+					SQLState:    sfa.data.SQLState,
+					QueryID:     sfa.data.QueryID,
+					Message:     errors2.ErrMsgLocalPathNotDirectory,
+					MessageArgs: []any{sfa.localLocation},
+				}, sfa.sc)
+			}
 		}
 	}
 
@@ -291,6 +322,22 @@ func (sfa *snowflakeFileTransferAgent) parseCommand() error {
 			QueryID:     sfa.data.QueryID,
 			Message:     errors2.ErrMsgInvalidStageFs,
 			MessageArgs: []any{sfa.stageLocationType},
+		}, sfa.sc)
+	}
+	return nil
+}
+
+// ensureSingleGetStreamFile fails when GET matched more than one file. A GET
+// resolves its stage path by prefix, so it can match several files, but
+// get-stream and DownloadStream can return only one. Rather than guess which
+// file the caller meant, return ErrGetStreamMultipleFiles.
+func (sfa *snowflakeFileTransferAgent) ensureSingleGetStreamFile() error {
+	if len(sfa.srcFiles) > 1 {
+		return exceptionTelemetry(&SnowflakeError{
+			Number:   ErrGetStreamMultipleFiles,
+			SQLState: sfa.data.SQLState,
+			QueryID:  sfa.data.QueryID,
+			Message:  errors2.ErrMsgGetStreamMultipleFiles,
 		}, sfa.sc)
 	}
 	return nil
@@ -650,6 +697,12 @@ func (sfa *snowflakeFileTransferAgent) transferAccelerateConfigWithUtil(s3Util s
 	if err != nil {
 		return err
 	}
+	// role used in Snowflake stage (bucket sfc-*) operations doesn't have s3:GetAccelerateConfiguration
+	// thus get-bucket-accelerate-configuration API calls will surely fail with HTTP 403
+	if strings.HasPrefix(strings.ToLower(s3Loc.bucketName), "sfc-") {
+		logger.WithContext(sfa.sc.ctx).Debugf("Not attempting to get bucket transfer accelerate endpoint for internal stage.")
+		return nil
+	}
 	s3Cli, err := s3Util.createClientWithConfig(sfa.stageInfo, false, sfa.sc.cfg, sfa.sc.telemetry)
 	if err != nil {
 		return err
@@ -663,12 +716,16 @@ func (sfa *snowflakeFileTransferAgent) transferAccelerateConfigWithUtil(s3Util s
 			Message:  errors2.ErrMsgFailedToConvertToS3Client,
 		}, sfa.sc)
 	}
+	logger.WithContext(sfa.sc.ctx).Debugf("Getting accelerate endpoint for bucket %v.", s3Loc.bucketName)
 	ret, err := withCloudStorageTimeout(sfa.ctx, sfa.sc.cfg, func(ctx context.Context) (*s3.GetBucketAccelerateConfigurationOutput, error) {
 		return client.GetBucketAccelerateConfiguration(ctx, &s3.GetBucketAccelerateConfigurationInput{
 			Bucket: &s3Loc.bucketName,
 		})
 	})
 	sfa.useAccelerateEndpoint = ret != nil && ret.Status == "Enabled"
+	if sfa.useAccelerateEndpoint {
+		logger.WithContext(sfa.sc.ctx).Debugf("Transfer acceleration enabled for bucket %v.", s3Loc.bucketName)
+	}
 	if err != nil {
 		logger.WithContext(sfa.sc.ctx).Warnf("An error occurred when getting accelerate config: %v", err)
 	}
@@ -786,24 +843,22 @@ func (sfa *snowflakeFileTransferAgent) uploadFilesParallel(fileMetas []*fileMeta
 	fileMetaLen := len(fileMetas)
 	var err error
 	for idx < fileMetaLen {
-		endOfIdx := intMin(fileMetaLen, idx+int(sfa.parallel))
+		endOfIdx := min(fileMetaLen, idx+int(sfa.parallel))
 		targetMeta := fileMetas[idx:endOfIdx]
 		for {
 			var wg sync.WaitGroup
 			results := make([]*fileMetadata, len(targetMeta))
 			errors := make([]error, len(targetMeta))
 			for i, meta := range targetMeta {
-				wg.Add(1)
-				go func(k int, m *fileMetadata) {
-					defer wg.Done()
+				wg.Go(func() {
 					defer func() {
 						if r := recover(); r != nil {
-							errors[k] = fmt.Errorf("panic during file upload: %v", r)
-							results[k] = nil
+							errors[i] = fmt.Errorf("panic during file upload: %v", r)
+							results[i] = nil
 						}
 					}()
-					results[k], errors[k] = sfa.uploadOneFile(m)
-				}(i, meta)
+					results[i], errors[i] = sfa.uploadOneFile(meta)
+				})
 			}
 			wg.Wait()
 
@@ -954,24 +1009,22 @@ func (sfa *snowflakeFileTransferAgent) downloadFilesParallel(fileMetas []*fileMe
 	fileMetaLen := len(fileMetas)
 	var err error
 	for idx < fileMetaLen {
-		endOfIdx := intMin(fileMetaLen, idx+int(sfa.parallel))
+		endOfIdx := min(fileMetaLen, idx+int(sfa.parallel))
 		targetMeta := fileMetas[idx:endOfIdx]
 		for {
 			var wg sync.WaitGroup
 			results := make([]*fileMetadata, len(targetMeta))
 			errors := make([]error, len(targetMeta))
 			for i, meta := range targetMeta {
-				wg.Add(1)
-				go func(k int, m *fileMetadata) {
-					defer wg.Done()
+				wg.Go(func() {
 					defer func() {
 						if r := recover(); r != nil {
-							errors[k] = fmt.Errorf("panic during file download: %v", r)
-							results[k] = nil
+							errors[i] = fmt.Errorf("panic during file download: %v", r)
+							results[i] = nil
 						}
 					}()
-					results[k], errors[k] = sfa.downloadOneFile(sfa.ctx, m)
-				}(i, meta)
+					results[i], errors[i] = sfa.downloadOneFile(sfa.ctx, meta)
+				})
 			}
 			wg.Wait()
 
@@ -1136,8 +1189,8 @@ func (sfa *snowflakeFileTransferAgent) result() (*execResponse, error) {
 			})
 			ccrs := make([][]*string, 0, len(rowset))
 			for _, rs := range rowset {
-				srcFileSize := fmt.Sprintf("%v", rs.srcFileSize)
-				dstFileSize := fmt.Sprintf("%v", rs.dstFileSize)
+				srcFileSize := strconv.FormatInt(rs.srcFileSize, 10)
+				dstFileSize := strconv.FormatInt(rs.dstFileSize, 10)
 				resStatus := rs.resStatus.String()
 				errorStr := ""
 				if rs.errorDetails != nil {
@@ -1195,7 +1248,7 @@ func (sfa *snowflakeFileTransferAgent) result() (*execResponse, error) {
 			})
 			ccrs := make([][]*string, 0, len(rowset))
 			for _, rs := range rowset {
-				dstFileSize := fmt.Sprintf("%v", rs.dstFileSize)
+				dstFileSize := strconv.FormatInt(rs.dstFileSize, 10)
 				resStatus := rs.resStatus.String()
 				errorStr := ""
 				if rs.errorDetails != nil {

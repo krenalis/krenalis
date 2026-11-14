@@ -1,48 +1,50 @@
-import Type, { DurationUnit, Semantic, UnitOfMeasure } from '../../lib/api/types/types';
+import Type, { Semantics, Unit } from '../../lib/api/types/types';
 
-interface UnitOfMeasureOption {
+interface UnitOption {
 	groupLabel?: string;
-	label: string;
-	value: UnitOfMeasure;
-}
-
-interface DurationUnitOption {
+	isDurationUnit?: boolean;
 	label: string;
 	symbol: string;
-	value: DurationUnit;
+	value: Unit;
 }
 
-const UNIT_OF_MEASURE_OPTIONS: UnitOfMeasureOption[] = [
-	{ value: 'mm', label: 'Millimetre', groupLabel: 'Length' },
-	{ value: 'cm', label: 'Centimetre' },
-	{ value: 'm', label: 'Metre' },
-	{ value: 'km', label: 'Kilometre' },
-	{ value: 'in', label: 'Inch' },
-	{ value: 'ft', label: 'Foot' },
-	{ value: 'yd', label: 'Yard' },
-	{ value: 'mi', label: 'Mile' },
-	{ value: 'g', label: 'Gram', groupLabel: 'Weight' },
-	{ value: 'kg', label: 'Kilogram' },
-	{ value: 'oz', label: 'Ounce' },
-	{ value: 'lb', label: 'Pound' },
-	{ value: 'B', label: 'Byte', groupLabel: 'Data size' },
-	{ value: 'kB', label: 'Kilobyte' },
-	{ value: 'MB', label: 'Megabyte' },
-	{ value: 'GB', label: 'Gigabyte' },
-	{ value: '°C', label: 'Degree Celsius', groupLabel: 'Temperature' },
-	{ value: '°F', label: 'Degree Fahrenheit' },
-	{ value: 'mL', label: 'Millilitre', groupLabel: 'Volume' },
-	{ value: 'L', label: 'Litre' },
+interface ProfileSchemaTypePresentation {
+	metadata?: string;
+	primary: string;
+}
+
+const UNIT_OPTIONS: UnitOption[] = [
+	{ value: 'mm', label: 'Millimetre', symbol: 'mm', groupLabel: 'Length' },
+	{ value: 'cm', label: 'Centimetre', symbol: 'cm' },
+	{ value: 'm', label: 'Metre', symbol: 'm' },
+	{ value: 'km', label: 'Kilometre', symbol: 'km' },
+	{ value: 'in', label: 'Inch', symbol: 'in' },
+	{ value: 'ft', label: 'Foot', symbol: 'ft' },
+	{ value: 'yd', label: 'Yard', symbol: 'yd' },
+	{ value: 'mi', label: 'Mile', symbol: 'mi' },
+	{ value: 'g', label: 'Gram', symbol: 'g', groupLabel: 'Weight' },
+	{ value: 'kg', label: 'Kilogram', symbol: 'kg' },
+	{ value: 'oz', label: 'Ounce', symbol: 'oz' },
+	{ value: 'lb', label: 'Pound', symbol: 'lb' },
+	{ value: 'B', label: 'Byte', symbol: 'B', groupLabel: 'Data size' },
+	{ value: 'kB', label: 'Kilobyte', symbol: 'kB' },
+	{ value: 'MB', label: 'Megabyte', symbol: 'MB' },
+	{ value: 'GB', label: 'Gigabyte', symbol: 'GB' },
+	{ value: '°C', label: 'Degree Celsius', symbol: '°C', groupLabel: 'Temperature' },
+	{ value: '°F', label: 'Degree Fahrenheit', symbol: '°F' },
+	{ value: 'mL', label: 'Millilitre', symbol: 'mL', groupLabel: 'Volume' },
+	{ value: 'L', label: 'Litre', symbol: 'L' },
+	{ value: 'millisecond', label: 'Millisecond', symbol: 'ms', groupLabel: 'Time', isDurationUnit: true },
+	{ value: 'second', label: 'Second', symbol: 's', isDurationUnit: true },
+	{ value: 'minute', label: 'Minute', symbol: 'min', isDurationUnit: true },
+	{ value: 'hour', label: 'Hour', symbol: 'h', isDurationUnit: true },
+	{ value: 'day', label: 'Day', symbol: 'd', isDurationUnit: true },
+	{ value: 'week', label: 'Week', symbol: 'wk', isDurationUnit: true },
+	{ value: 'month', label: 'Month', symbol: 'mo', isDurationUnit: true },
+	{ value: 'year', label: 'Year', symbol: 'yr', isDurationUnit: true },
 ];
 
-const DURATION_UNIT_OPTIONS: DurationUnitOption[] = [
-	{ value: 'millisecond', label: 'Milliseconds', symbol: 'ms' },
-	{ value: 'second', label: 'Seconds', symbol: 's' },
-	{ value: 'minute', label: 'Minutes', symbol: 'min' },
-	{ value: 'hour', label: 'Hours', symbol: 'h' },
-	{ value: 'day', label: 'Days', symbol: 'd' },
-	{ value: 'week', label: 'Weeks', symbol: 'wk' },
-];
+const DURATION_UNIT_OPTIONS = UNIT_OPTIONS.filter((option) => option.isDurationUnit === true);
 
 function getPropertyValueType(type: Type | null): Type | null {
 	if (type?.kind === 'array' || type?.kind === 'map') {
@@ -51,8 +53,42 @@ function getPropertyValueType(type: Type | null): Type | null {
 	return type;
 }
 
-function getTypeSemantic(type: Type | null): Semantic | undefined {
-	return type != null && 'semantic' in type ? type.semantic : undefined;
+function getProfileSchemaTypePresentation(type: Type): ProfileSchemaTypePresentation {
+	const valueType = getPropertyValueType(type);
+	const semantics = getTypeSemantics(valueType);
+	if (semantics == null) {
+		return { primary: toProfileSchemaPhysicalType(type) };
+	}
+
+	let primary = toSemanticsLabel(semantics);
+	switch (semantics) {
+		case 'country': {
+			const letters = valueType.kind === 'string' && valueType.format === 'alpha-2' ? 2 : 3;
+			primary += ` — ${letters}-letter ISO code`;
+			break;
+		}
+		case 'money':
+			if (valueType.kind === 'decimal' && valueType.currency != null) {
+				primary += ` — ${valueType.currency}`;
+			}
+			break;
+		case 'measurement':
+		case 'duration': {
+			const unit = UNIT_OPTIONS.find((option) => 'unit' in valueType && option.value === valueType.unit);
+			if (unit != null) {
+				primary += ` — ${unit.symbol}`;
+			}
+			break;
+		}
+	}
+	if (type.kind === 'array' || type.kind === 'map') {
+		primary = `${type.kind} of ${primary}`;
+	}
+	return { primary, metadata: toProfileSchemaPhysicalType(valueType) };
+}
+
+function getTypeSemantics(type: Type | null): Semantics | undefined {
+	return type != null && 'semantics' in type ? type.semantics : undefined;
 }
 
 function isSuitableAsIdentifier(type: Type): boolean {
@@ -74,6 +110,46 @@ function replacePropertyValueType(type: Type, valueType: Type): Type {
 		return { ...type, elementType: valueType };
 	}
 	return valueType;
+}
+
+function toCompactPhysicalType(type: Type): string {
+	switch (type.kind) {
+		case 'array':
+		case 'map':
+			return `${type.kind} of ${toCompactPhysicalType(type.elementType)}`;
+		case 'int':
+			return type.unsigned ? 'unsigned int' : 'int';
+		default:
+			return type.kind;
+	}
+}
+
+function toProfileSchemaPhysicalType(type: Type): string {
+	if (type.kind === 'array' || type.kind === 'map') {
+		return `${type.kind} of ${toProfileSchemaPhysicalType(type.elementType)}`;
+	}
+	const normalizedType =
+		type.kind === 'int' && type.unsigned && type.minimum == null ? { ...type, minimum: 0 } : type;
+	return toKrenalisStringType(normalizedType, undefined, ' · ');
+}
+
+function toSemanticsLabel(semantics: Semantics): string {
+	switch (semantics) {
+		case 'phone':
+			return 'phone number';
+		case 'url':
+			return 'URL';
+		case 'email':
+		case 'country':
+		case 'money':
+		case 'percentage':
+		case 'measurement':
+		case 'duration':
+		case 'year':
+			return semantics;
+		default:
+			throw new Error(`unknown property semantics ${semantics satisfies never}`);
+	}
 }
 
 function toKrenalisStringType(type: Type, nullable?: boolean, firstConstraintSeparator = ', ') {
@@ -176,9 +252,6 @@ function toJavascriptType(type: Type, preserveJSON: boolean, nullable?: boolean)
 		case 'time':
 			t = 'Date';
 			break;
-		case 'year':
-			t = 'number';
-			break;
 		case 'uuid':
 			t = 'string';
 			break;
@@ -243,9 +316,6 @@ function toPythonType(type: Type, preserveJSON: boolean, nullable?: boolean) {
 		case 'time':
 			t = 'datetime.time';
 			break;
-		case 'year':
-			t = 'int';
-			break;
 		case 'uuid':
 			t = 'uuid.UUID';
 			break;
@@ -286,11 +356,15 @@ function toPythonType(type: Type, preserveJSON: boolean, nullable?: boolean) {
 
 export {
 	DURATION_UNIT_OPTIONS,
-	UNIT_OF_MEASURE_OPTIONS,
+	UNIT_OPTIONS,
 	getPropertyValueType,
-	getTypeSemantic,
+	getProfileSchemaTypePresentation,
+	getTypeSemantics,
 	isSuitableAsIdentifier,
 	replacePropertyValueType,
+	toCompactPhysicalType,
+	toProfileSchemaPhysicalType,
+	toSemanticsLabel,
 	toKrenalisStringType,
 	toJavascriptType,
 	toPythonType,

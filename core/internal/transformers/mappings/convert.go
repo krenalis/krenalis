@@ -5,16 +5,17 @@
 package mappings
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"slices"
 	"strconv"
+	"strings"
 	"time"
 	"unicode/utf8"
 
 	"github.com/krenalis/krenalis/core/internal/util"
 	"github.com/krenalis/krenalis/tools/decimal"
-	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/tools/validation"
@@ -25,18 +26,18 @@ import (
 var excelEpoch = time.Date(1899, 12, 31, 0, 0, 0, 0, time.UTC)
 
 var (
-	errCountryAlpha2Conversion = errors.New("not a valid 2-letters country code")
-	errCountryAlpha3Conversion = errors.New("not a valid 3-letters country code")
+	errCountryAlpha2Conversion = errors.New("not a valid 2-letter country code")
+	errCountryAlpha3Conversion = errors.New("not a valid 3-letter country code")
+	errMaxBytesConversion      = errors.New("invalid max bytes")
+	errMaxLengthConversion     = errors.New("invalid max length")
 	errEnumConversion          = errors.New("not a valid enum value")
 	errInvalidConversion       = errors.New("cannot convert")
-	errMaxBytesConversion      = errors.New("invalid max bytes")
 	errMaxConversion           = errors.New("too large")
-	errMaxLengthConversion     = errors.New("invalid max length")
 	errMinConversion           = errors.New("too small")
 	errParseConversion         = errors.New("cannot parse")
+	errRangeConversion         = errors.New("out of range")
 	errPatternConversion       = errors.New("pattern mismatch")
 	errPhoneConversion         = errors.New("not a valid phone number")
-	errRangeConversion         = errors.New("out of range")
 	errYearRangeConversion     = errors.New("year not in range [1,9999]")
 )
 
@@ -56,16 +57,17 @@ var (
 	maxUintDecimal = decimal.MustUint(18446744073709551615)
 )
 
-// convert converts v from type st to type dt and returns the converted value.
+// convert converts v from type st to type dt without modifying v.
+// The result may share slices and maps with v. To modify either value
+// independently, callers must first make a deep copy of that value.
+//
 // nullable reports whether nil is allowed as return value. If v is nil and
 // nullable is true, it returns nil.
 //
-// If inPlace is true, the conversion is permitted to modify array, object, and
-// map values directly within the value being converted.
-//
 // purpose specifies the reason for the transformation. If Create or Update,
 // then all the properties required for creation or the update must be present
-// in the returned value.
+// in the returned value. For Create and Update, this requirement also applies
+// when the source and destination are equal array, object, or map types.
 //
 // If the value cannot be converted, it returns v and one of the following:
 //   - errMaxBytesConversion
@@ -78,7 +80,7 @@ var (
 //   - errRangeConversion
 //   - errPatternConversion
 //   - errYearRangeConversion
-func convert(v any, st, dt types.Type, nullable, inPlace bool, purpose Purpose) (any, error) {
+func convert(v any, st, dt types.Type, nullable bool, purpose Purpose) (any, error) {
 	sk := st.Kind()
 	dk := dt.Kind()
 	if nullable {
@@ -132,8 +134,6 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, purpose Purpose) 
 			s = v.(time.Time).Format(time.DateOnly)
 		case types.TimeKind:
 			s = v.(time.Time).Format("15:04:05.999999999")
-		case types.YearKind:
-			s = strconv.Itoa(v.(int))
 		case types.UUIDKind, types.IPKind:
 			s = v.(string)
 		case types.JSONKind:
@@ -146,8 +146,11 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, purpose Purpose) 
 		default:
 			return v, errInvalidConversion
 		}
-		switch dt.Semantic() {
-		case types.CountrySemantic:
+		switch dt.Semantics() {
+		case types.CountrySemantics:
+			if s == "" && nullable {
+				return nil, nil
+			}
 			switch dt.CountryFormat() {
 			case types.ISO3166Alpha2:
 				if !validation.IsValidCountryCodeAlpha2(s) {
@@ -159,7 +162,10 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, purpose Purpose) 
 				}
 			}
 			return s, nil
-		case types.PhoneSemantic:
+		case types.PhoneSemantics:
+			if s == "" && nullable {
+				return nil, nil
+			}
 			s, ok := types.NormalizePhone(s)
 			if !ok {
 				return v, errPhoneConversion
@@ -167,13 +173,12 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, purpose Purpose) 
 			return s, nil
 		}
 		if values := dt.Values(); values != nil {
-			if s == "" && nullable {
-				return nil, nil
+			if !slices.Contains(values, s) {
+				if s == "" && nullable {
+					return nil, nil
+				}
+				return v, errEnumConversion
 			}
-			if slices.Contains(values, s) {
-				return s, nil
-			}
-			return v, errEnumConversion
 		} else if re := dt.Pattern(); re != nil {
 			if !re.MatchString(s) {
 				if s == "" && nullable {
@@ -261,8 +266,6 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, purpose Purpose) 
 				if err != nil {
 					return v, err
 				}
-			case types.YearKind:
-				n = uint(v.(int))
 			case types.JSONKind:
 				v := v.(json.Value)
 				n, err = v.Uint()
@@ -321,8 +324,6 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, purpose Purpose) 
 			if err != nil {
 				return v, err
 			}
-		case types.YearKind:
-			n = v.(int)
 		case types.JSONKind:
 			v := v.(json.Value)
 			n, err = v.Int()
@@ -356,22 +357,27 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, purpose Purpose) 
 			}
 		case types.FloatKind:
 			n = v.(float64)
-			if dt.IsReal() && !st.IsReal() && (math.IsNaN(n) || math.IsInf(n, 0)) {
-				return v, errRangeConversion
-			}
 			if dt.BitSize() == 32 && st.BitSize() != 32 {
 				n = float64(float32(n))
 			}
 		case types.IntKind:
 			if st.IsUnsigned() {
 				n = float64(v.(uint))
+				if dt.BitSize() == 32 {
+					n = float64(float32(v.(uint)))
+				}
 			} else {
 				n = float64(v.(int))
+				if dt.BitSize() == 32 {
+					n = float64(float32(v.(int)))
+				}
 			}
 		case types.DecimalKind:
-			n, _ = v.(decimal.Decimal).Float64()
 			if dt.BitSize() == 32 {
-				n = float64(float32(n))
+				f, _ := v.(decimal.Decimal).Float32()
+				n = float64(f)
+			} else {
+				n, _ = v.(decimal.Decimal).Float64()
 			}
 		case types.JSONKind:
 			v := v.(json.Value)
@@ -383,6 +389,10 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, purpose Purpose) 
 			return v, errInvalidConversion
 		}
 		if err != nil {
+			return v, errInvalidConversion
+		}
+		// Reject NaN explicitly because range comparisons do not catch it.
+		if dt.IsReal() && math.IsNaN(n) {
 			return v, errInvalidConversion
 		}
 		min, max := dt.FloatRange()
@@ -401,6 +411,10 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, purpose Purpose) 
 			n, err = decimal.Parse(v.(string), dt.Precision(), dt.Scale())
 		case types.DecimalKind:
 			n, _ = v.(decimal.Decimal)
+			_, scale := n.PrecisionScale()
+			if scale > dt.Scale() {
+				return v, errInvalidConversion
+			}
 		case types.IntKind:
 			if st.IsUnsigned() {
 				n, err = decimal.Uint(v.(uint), dt.Precision(), dt.Scale())
@@ -526,52 +540,10 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, purpose Purpose) 
 			if !ok {
 				return v, errParseConversion
 			}
-		}
-		return t, nil
-	case types.YearKind:
-		var err error
-		var n int
-		switch sk {
-		case types.StringKind:
-			s := v.(string)
-			if l := len(s); l == 0 || l > 4 || s[0] == '+' || s[0] == '-' || s[0] == '0' {
-				return v, errParseConversion
-			}
-			n, err = strconv.Atoi(s)
-			if err != nil {
-				if e := err.(*strconv.NumError); e.Err == strconv.ErrRange {
-					return v, errYearRangeConversion
-				}
-				return v, errParseConversion
-			}
-		case types.YearKind:
-			return v.(int), nil
-		case types.IntKind:
-			if st.IsUnsigned() {
-				u := v.(uint)
-				if u > math.MaxInt64 {
-					return v, errYearRangeConversion
-				}
-				n = int(u)
-			} else {
-				n = v.(int)
-			}
-		case types.JSONKind:
-			v := v.(json.Value)
-			n, err = v.Int()
-			if err != nil {
-				if err == json.ErrRange {
-					return v, errYearRangeConversion
-				}
-				return v, errInvalidConversion
-			}
 		default:
 			return v, errInvalidConversion
 		}
-		if n < 1 || n > 9999 {
-			return v, errYearRangeConversion
-		}
-		return n, nil
+		return t, nil
 	case types.UUIDKind:
 		switch sk {
 		case types.StringKind:
@@ -647,7 +619,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, purpose Purpose) 
 				if min > 1 || max == 0 {
 					return v, errInvalidConversion
 				}
-				elem, err := convert(s, types.JSON(), et, false, inPlace, purpose)
+				elem, err := convert(s, types.JSON(), et, false, purpose)
 				if err != nil {
 					return nil, err
 				}
@@ -658,7 +630,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, purpose Purpose) 
 				if i == max {
 					return v, errInvalidConversion
 				}
-				e, err := convert(elem, types.JSON(), et, false, inPlace, purpose)
+				e, err := convert(elem, types.JSON(), et, false, purpose)
 				if err != nil {
 					return nil, err
 				}
@@ -686,13 +658,11 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, purpose Purpose) 
 			it1 := st.Elem()
 			it2 := dt.Elem()
 			sameType := types.Equal(it1, it2)
-			if !sameType {
-				if !inPlace {
-					d = make([]any, len(s))
-				}
+			if !sameType || purpose != None && len(s) > 0 && (it2.IsObject() || it2.IsArray() || it2.IsMap()) {
+				d = make([]any, len(s))
 				var err error
 				for i, item := range s {
-					d[i], err = convert(item, it1, it2, false, inPlace, purpose)
+					d[i], err = convert(item, it1, it2, false, purpose)
 					if err != nil {
 						return nil, err
 					}
@@ -714,53 +684,42 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, purpose Purpose) 
 		dProperties := dt.Properties()
 		switch sk {
 		case types.ObjectKind:
-			if types.Equal(st, dt) {
+			if types.Equal(st, dt) && purpose == None {
 				return v, nil
 			}
 			s := v.(map[string]any)
-			d = s
-			if !inPlace {
-				d = make(map[string]any)
-			}
+			d = map[string]any{}
 			var err error
 			sProperties := st.Properties()
 			for name, value := range s {
 				dp, ok := dProperties.ByName(name)
 				if !ok {
-					if inPlace {
-						delete(d, name)
-					}
 					continue
 				}
 				if value == nil {
 					if !dp.Nullable {
 						return v, errInvalidConversion
 					}
-					if !inPlace {
-						d[name] = nil
-					}
+					d[name] = nil
 					continue
 				}
 				sp, ok := sProperties.ByName(name)
 				if !ok {
 					panic(fmt.Sprintf("unknown property %s", name))
 				}
-				d[name], err = convert(value, sp.Type, dp.Type, dp.Nullable, inPlace, purpose)
+				d[name], err = convert(value, sp.Type, dp.Type, dp.Nullable, purpose)
 				if err != nil {
 					return nil, err
 				}
 			}
 		case types.MapKind:
 			s := v.(map[string]any)
-			d := s
-			if !inPlace {
-				d = make(map[string]any)
-			}
+			d := map[string]any{}
 			vt := st.Elem()
 			var err error
 			for _, p := range dProperties.All() {
 				if value, ok := s[p.Name]; ok {
-					d[p.Name], err = convert(value, vt, p.Type, p.Nullable, inPlace, purpose)
+					d[p.Name], err = convert(value, vt, p.Type, p.Nullable, purpose)
 					if err != nil {
 						return nil, err
 					}
@@ -786,7 +745,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, purpose Purpose) 
 				if !ok {
 					continue
 				}
-				d[name], err = convert(value, types.JSON(), p.Type, p.Nullable, inPlace, purpose)
+				d[name], err = convert(value, types.JSON(), p.Type, p.Nullable, purpose)
 				if err != nil {
 					return nil, err
 				}
@@ -820,17 +779,15 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, purpose Purpose) 
 		case types.MapKind:
 			vt1 := st.Elem()
 			vt2 := dt.Elem()
-			if types.Equal(vt1, vt2) {
+			if types.Equal(vt1, vt2) && (purpose == None || len(v.(map[string]any)) == 0 ||
+				!vt2.IsObject() && !vt2.IsArray() && !vt2.IsMap()) {
 				return v, nil
 			}
 			s := v.(map[string]any)
-			d := s
-			if !inPlace {
-				d = make(map[string]any, len(s))
-			}
+			d := make(map[string]any, len(s))
 			var err error
 			for key, value := range s {
-				d[key], err = convert(value, vt1, vt2, false, inPlace, purpose)
+				d[key], err = convert(value, vt1, vt2, false, purpose)
 				if err != nil {
 					return nil, err
 				}
@@ -838,15 +795,12 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, purpose Purpose) 
 			return d, nil
 		case types.ObjectKind:
 			s := v.(map[string]any)
-			d := s
-			if !inPlace {
-				d = make(map[string]any, len(s))
-			}
+			d := make(map[string]any, len(s))
 			vt := dt.Elem()
 			var err error
 			for _, p := range st.Properties().All() {
 				if value, ok := s[p.Name]; ok {
-					d[p.Name], err = convert(value, p.Type, vt, true, inPlace, purpose)
+					d[p.Name], err = convert(value, p.Type, vt, false, purpose)
 					if err != nil {
 						return nil, err
 					}
@@ -862,7 +816,7 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, purpose Purpose) 
 			d := make(map[string]any)
 			var err error
 			for name, value := range s.Properties() {
-				d[name], err = convert(value, types.JSON(), vt, false, inPlace, purpose)
+				d[name], err = convert(value, types.JSON(), vt, false, purpose)
 				if err != nil {
 					return nil, err
 				}
@@ -873,26 +827,24 @@ func convert(v any, st, dt types.Type, nullable, inPlace bool, purpose Purpose) 
 	return v, errInvalidConversion
 }
 
+// convertStringToDate parses dates in YYYY-MM-DD format and Excel serial dates.
+// Fractional parts of serial dates are discarded, and Excel's fictitious day 60
+// is rejected.
+//
+// It returns errParseConversion for invalid dates and errYearRangeConversion
+// for years outside [1, 9999].
 func convertStringToDate(s string) (time.Time, error) {
-	month, day, year := -1, -1, -1
-	if len(s) == 10 {
-		if s[4] == '-' && s[7] == '-' {
-			year, month, day = parseUint(s[0:4]), parseUint(s[5:7]), parseUint(s[8:10]) // yyyy-mm-dd
-		} else if s[2] == '/' && s[5] == '/' || s[2] == '.' && s[5] == '.' {
-			month, day, year = parseUint(s[0:2]), parseUint(s[3:5]), parseUint(s[6:10]) // mm/dd/yyyy, mm.dd.yyyy
-		}
-	} else if len(s) == 8 {
-		if s[2] == '-' && s[5] == '-' {
-			year, month, day = parseUint(s[0:2]), parseUint(s[3:5]), parseUint(s[5:8]) // yy-mm-dd
-		} else if s[2] == '/' && s[5] == '/' || s[2] == '.' && s[5] == '.' {
-			month, day, year = parseUint(s[0:2]), parseUint(s[3:5]), parseUint(s[6:10]) // mm/dd/yy, mm.dd.yy
-		}
-	} else if isSimpleFloat(s) {
+	if isSimpleFloat(s) {
 		// Parse as Excel serial date-time.
 		// https://support.microsoft.com/en-us/office/datevalue-function-df8b07d4-7761-4a93-bc33-b7471bbff252
-		days, err := strconv.ParseFloat(s, 64)
+		// Parse whole days directly to prevent fractions from rounding into another day.
+		whole, _, _ := strings.Cut(s, ".")
+		days, err := strconv.Atoi(whole)
 		if err != nil {
-			return time.Time{}, errParseConversion
+			return time.Time{}, errYearRangeConversion
+		}
+		if days > 2958465 { // 9999-12-31, the last supported date
+			return time.Time{}, errYearRangeConversion
 		}
 		if days == 60 {
 			// 1900-02-29 does not exist. Excel returns it for compatibility with Lotus 1-2-3.
@@ -901,10 +853,13 @@ func convertStringToDate(s string) (time.Time, error) {
 		if days > 60 {
 			days--
 		}
-		t := excelEpoch.Add(time.Duration(days) * 24 * time.Hour)
-		return time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC), nil
+		return excelEpoch.AddDate(0, 0, days), nil
 	}
-	if month < 1 || month > 12 || day < 1 || day > 31 {
+	if len(s) != 10 || s[4] != '-' || s[7] != '-' {
+		return time.Time{}, errParseConversion
+	}
+	year, month, day := parseUint(s[0:4]), parseUint(s[5:7]), parseUint(s[8:10])
+	if year < 0 || month < 1 || month > 12 || day < 1 || day > 31 {
 		return time.Time{}, errParseConversion
 	}
 	if year < 1 || year > 9999 {
@@ -973,6 +928,36 @@ func isSimpleFloat(s string) bool {
 	return true
 }
 
+// needsConversion reports whether non-null results of expr must pass through
+// convert to apply conversions or validation checks.
+func needsConversion(expr []part, dt types.Type) bool {
+	if len(expr) == 1 && expr[0].value == nil {
+		p := expr[0]
+		if p.path.elements == nil {
+			return false
+		}
+		if p.args != nil {
+			args := p.args
+			switch p.path.elements[0] {
+			case "if":
+				args = args[1:]
+			case "coalesce":
+				// Each argument can supply the result.
+			default:
+				// Constructed values can still need validation.
+				return true
+			}
+			for _, arg := range args {
+				if needsConversion(arg, dt) {
+					return true
+				}
+			}
+			return false
+		}
+	}
+	return typeNeedsConversion(typeOf(expr), dt)
+}
+
 func parseUint(s string) int {
 	var n int
 	for _, c := range []byte(s) {
@@ -985,4 +970,40 @@ func parseUint(s string) int {
 		}
 	}
 	return n
+}
+
+// typeNeedsConversion reports whether a value of type st needs conversion to dt
+// for any purpose, including conversion-specific checks.
+// st and dt cannot be the invalid type.
+func typeNeedsConversion(st, dt types.Type) bool {
+	if st.Kind() != dt.Kind() {
+		return true
+	}
+	switch st.Kind() {
+	case types.ObjectKind:
+		sp, dp := st.Properties(), dt.Properties()
+		if sp.Len() != dp.Len() {
+			return true
+		}
+		for _, p := range sp.All() {
+			d, ok := dp.ByName(p.Name)
+			if !ok || p.Nullable && !d.Nullable {
+				return true
+			}
+			if p.ReadOptional && (d.CreateRequired || d.UpdateRequired) {
+				return true
+			}
+			if typeNeedsConversion(p.Type, d.Type) {
+				return true
+			}
+		}
+		return false
+	case types.ArrayKind:
+		return st.MinElements() != dt.MinElements() || st.MaxElements() != dt.MaxElements() ||
+			st.Unique() != dt.Unique() || typeNeedsConversion(st.Elem(), dt.Elem())
+	case types.MapKind:
+		return typeNeedsConversion(st.Elem(), dt.Elem())
+	default:
+		return !types.Equal(st, dt)
+	}
 }

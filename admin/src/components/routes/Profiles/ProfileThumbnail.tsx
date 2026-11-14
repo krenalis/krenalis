@@ -1,5 +1,5 @@
 import React from 'react';
-import SlAvatar from '@shoelace-style/shoelace/dist/react/avatar/index.js';
+import WaAvatar from '@awesome.me/webawesome/dist/react/avatar/index.js';
 import { getProfileAvatarColors, getProfileInitials, getProfilePhotoSource } from './Profiles.helpers';
 
 interface ProfileThumbnailProps {
@@ -12,10 +12,6 @@ interface ProfileThumbnailProps {
 
 const ProfileThumbnail = ({ className, firstName, lastName, photo, profileID }: ProfileThumbnailProps) => {
 	const initials = getProfileInitials(firstName, lastName);
-	if (photo == null && initials === '') {
-		return null;
-	}
-
 	const name = [firstName, lastName].filter((value) => value != null).join(' ');
 	const colors = getProfileAvatarColors(profileID);
 	const style = {
@@ -25,7 +21,7 @@ const ProfileThumbnail = ({ className, firstName, lastName, photo, profileID }: 
 	const kind = photo == null ? 'avatar' : 'photo';
 
 	return (
-		<SlAvatar
+		<WaAvatar
 			className={`profile-thumbnail profile-thumbnail--${kind}${className == null ? '' : ` ${className}`}`}
 			image={getProfilePhotoSource(photo)}
 			initials={initials}

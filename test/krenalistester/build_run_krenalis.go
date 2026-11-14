@@ -17,6 +17,9 @@ import (
 	"testing"
 )
 
+// KrenalisVersion is the version with which Krenalis is built for the tests.
+const KrenalisVersion = "v0.0.0-krenalistester"
+
 // buildKrenalis builds Krenalis.
 func buildKrenalis(t *testing.T, repo, krenalisDir string) {
 
@@ -45,7 +48,7 @@ func buildKrenalis(t *testing.T, repo, krenalisDir string) {
 	// Edit the go.mod so that our Snowflake fork is used.
 	// See https://github.com/krenalis/krenalis/issues/2368.
 	// Keep in sync with the version within "go.mod".
-	execCmd(t, tmpdir, "go", "mod", "edit", "-replace", "github.com/snowflakedb/gosnowflake/v2=github.com/krenalis/gosnowflake/v2@v2.1.0-patched")
+	execCmd(t, tmpdir, "go", "mod", "edit", "-replace", "github.com/snowflakedb/gosnowflake/v2=github.com/krenalis/gosnowflake/v2@v2.3.0-patched")
 
 	// Copy the file with the connectors and warehouse imports, replacing the
 	// package name "krenalistester" with "main".
@@ -67,7 +70,8 @@ func buildKrenalis(t *testing.T, repo, krenalisDir string) {
 
 	// Build Krenalis, putting the output into the krenalisDir, where it will be
 	// executed by the tests.
-	execCmd(t, tmpdir, "go", "build", "-o", filepath.Join(krenalisDir, krenalisExecFilename()))
+	execCmd(t, tmpdir, "go", "build", "-ldflags", "-X github.com/krenalis/krenalis/cmd.buildVersion="+KrenalisVersion,
+		"-o", filepath.Join(krenalisDir, krenalisExecFilename()))
 
 }
 
@@ -99,7 +103,7 @@ func copyFile(src, dst string) error {
 }
 
 // generateAssets generates the assets necessary for the compilation and
-// execution of Krenalis in production mode, which is the mode used by the tests.
+// execution of Krenalis with embedded assets, which is how the tests run it.
 func generateAssets(ctx context.Context, repo string) error {
 	cmd := exec.CommandContext(ctx, "go", "generate")
 	cmd.Stdout = os.Stdout

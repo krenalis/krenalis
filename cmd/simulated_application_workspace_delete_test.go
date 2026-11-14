@@ -66,7 +66,7 @@ func TestDeleteWorkspaceWithBoundSimulatedSystemFreshSchema(t *testing.T) {
 	}
 	k.Call("POST", "/v1/workspaces", http.Header{"Krenalis-Workspace": nil}, map[string]any{
 		"name": "Fresh-schema workspace deletion", "environment": "development",
-		"profileSchema": simulatedApplicationProfileSchema(),
+		"profileSchema": krenalistester.ProfileSchema{Schema: simulatedApplicationProfileSchema()},
 		"warehouse":     map[string]any{"platform": "PostgreSQL", "mode": "Normal", "settings": warehouseSettings},
 	}, &workspace)
 	k.SetWorkspaceID(workspace.ID)

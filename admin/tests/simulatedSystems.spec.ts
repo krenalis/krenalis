@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { adminURL, config } from './utils';
+import { adminURL, config, loadSyncToken, syncTokenHeaders } from './utils';
 import { WORKSPACE_ID_KEY } from '../src/constants/storage';
 
 const account = {
@@ -33,6 +33,7 @@ test.beforeEach(async ({ page }) => {
 		data: { email: 'test@krenalis.com', password: 'krenalis-password' },
 	});
 	expect(response.ok()).toBe(true);
+	await loadSyncToken(page);
 	await page.addInitScript(({ workspace, key }) => localStorage.setItem(key, workspace), {
 		workspace: config.workspaceID,
 		key: WORKSPACE_ID_KEY,
@@ -143,11 +144,11 @@ test('systems grid shows initial records and live connection activity', async ({
 		'href',
 		`/admin/connections/${destinationID}/pipelines`,
 	);
-	await expect(connected.getByRole('link', { name: 'Source' }).locator('sl-icon')).toHaveAttribute(
+	await expect(connected.getByRole('link', { name: 'Source' }).locator('wa-icon')).toHaveAttribute(
 		'name',
 		'arrow-down-right-square',
 	);
-	await expect(connected.getByRole('link', { name: 'Destination' }).locator('sl-icon')).toHaveAttribute(
+	await expect(connected.getByRole('link', { name: 'Destination' }).locator('wa-icon')).toHaveAttribute(
 		'name',
 		'arrow-up-right-square',
 	);
@@ -181,16 +182,11 @@ test('systems grid shows initial records and live connection activity', async ({
 	).toHaveCount(1, {
 		timeout: 7000,
 	});
-	await expect(connected.getByRole('link', { name: 'Source' }).locator('.simulated-systems__shimmer')).toHaveCount(
-		0,
-	);
+	await expect(connected.getByRole('link', { name: 'Source' }).locator('.simulated-systems__shimmer')).toHaveCount(0);
 	isDestinationRunning = false;
-	await expect(connected.locator('.simulated-systems__connection-links .simulated-systems__shimmer')).toHaveCount(
-		0,
-		{
-			timeout: 7000,
-		},
-	);
+	await expect(connected.locator('.simulated-systems__connection-links .simulated-systems__shimmer')).toHaveCount(0, {
+		timeout: 7000,
+	});
 });
 
 test('systems grid shows configured country independently of the system name', async ({ page }) => {
@@ -209,7 +205,7 @@ test('systems grid shows configured country independently of the system name', a
 	await page.goto(`${adminURL}/simulated-world`);
 	const rows = page.locator('.simulated-systems__list-content .grid__row');
 	await expect(rows.locator('.grid__cell:nth-child(3)')).toHaveText(['Italy', 'United States', '—']);
-	await expect(rows.locator('.grid__cell:nth-child(3) sl-badge')).toHaveCount(0);
+	await expect(rows.locator('.grid__cell:nth-child(3) wa-badge')).toHaveCount(0);
 });
 
 for (const view of ['list', 'detail'] as const) {
@@ -258,7 +254,7 @@ test('OK shows a newly created system in the list', async ({ page }) => {
 		if (route.request().method() === 'GET')
 			return route.fulfill({ json: { simulatedSystems: isCreated ? [newAccount] : [] } });
 		isCreated = true;
-		return route.fulfill({ json: { id: account.id } });
+		return route.fulfill({ json: { id: account.id }, headers: syncTokenHeaders() });
 	});
 	await page.route(`**/v1/simulated/systems/${account.id}`, (route) => route.fulfill({ json: newAccount }));
 
@@ -266,8 +262,8 @@ test('OK shows a newly created system in the list', async ({ page }) => {
 	await expect(page.getByText('No simulated systems yet', { exact: false })).toBeVisible();
 	await page.getByRole('link', { name: 'Create simulated system' }).click();
 	await page.getByLabel('Name', { exact: true }).fill('New system');
-	await page.locator('sl-select#simulated-system-user-count').click();
-	await page.locator('sl-select#simulated-system-user-count sl-option[value="0"]').click();
+	await page.locator('wa-select#simulated-system-user-count').click();
+	await page.locator('wa-select#simulated-system-user-count wa-option[value="0"]').click();
 	await page.getByLabel('Source connection').uncheck();
 	await page.getByLabel('Destination connection').uncheck();
 	await page.getByRole('button', { name: 'Create', exact: true }).click();
@@ -289,7 +285,7 @@ test('custom validation and zero records submit no hidden configuration', async 
 		if (route.request().method() === 'GET')
 			return route.fulfill({ json: { simulatedSystems: submitted == null ? [] : [emptyAccount] } });
 		submitted = route.request().postDataJSON();
-		await route.fulfill({ json: { id: account.id } });
+		await route.fulfill({ json: { id: account.id }, headers: syncTokenHeaders() });
 	});
 	await page.route(`**/v1/simulated/systems/${account.id}`, (route) => route.fulfill({ json: emptyAccount }));
 
@@ -301,32 +297,32 @@ test('custom validation and zero records submit no hidden configuration', async 
 	await page.getByRole('link', { name: 'Create simulated system' }).click();
 	await expect(page.getByRole('dialog', { name: 'Create simulated system' })).toBeVisible();
 	await expect(
-		page.locator('sl-dialog.simulated-systems__dialog').getByRole('button', { name: 'Close' }),
+		page.locator('wa-dialog.simulated-systems__dialog').getByRole('button', { name: 'Close' }),
 	).toHaveCount(0);
 	await expect(page.getByText('Connector', { exact: true })).toHaveCount(0);
 	await page.getByLabel('Name', { exact: true }).fill('Empty test');
-	await page.locator('sl-select#simulated-system-user-count').click();
-	await page.locator('sl-select#simulated-system-user-count sl-option[value="100000"]').click();
-	await expect(page.locator('sl-select#simulated-system-user-count sl-option[value="custom"]')).toBeHidden();
-	await page.locator('sl-select#simulated-system-user-count').click();
-	await page.locator('sl-select#simulated-system-user-count sl-option[value="custom"]').click();
+	await page.locator('wa-select#simulated-system-user-count').click();
+	await page.locator('wa-select#simulated-system-user-count wa-option[value="100000"]').click();
+	await expect(page.locator('wa-select#simulated-system-user-count wa-option[value="custom"]')).toBeHidden();
+	await page.locator('wa-select#simulated-system-user-count').click();
+	await page.locator('wa-select#simulated-system-user-count wa-option[value="custom"]').click();
 	await expect(page.getByRole('textbox', { name: 'User records to generate', exact: true })).toBeFocused();
 	await expect(page.getByRole('textbox', { name: 'User records to generate', exact: true })).toHaveValue('100,000');
 	await expect(page.getByLabel('Duplicate records', { exact: true })).toBeVisible();
 	await expect(page.getByText('Country distribution', { exact: true })).toBeVisible();
 	await page.getByRole('textbox', { name: 'User records to generate', exact: true }).fill('1000');
-	await expect(page.locator('sl-select#simulated-system-user-count')).toHaveCount(0);
+	await expect(page.locator('wa-select#simulated-system-user-count')).toHaveCount(0);
 	await expect(page.getByRole('textbox', { name: 'User records to generate', exact: true })).toHaveValue('1000');
-	await page.locator('sl-select#simulated-system-duplicate-percent').click();
-	await page.locator('sl-select#simulated-system-duplicate-percent sl-option[value="custom"]').click();
-	const duplicateInput = page.locator('sl-input#simulated-system-duplicate-percent');
-	await expect(page.locator('sl-select#simulated-system-duplicate-percent')).toHaveCount(0);
+	await page.locator('wa-select#simulated-system-duplicate-percent').click();
+	await page.locator('wa-select#simulated-system-duplicate-percent wa-option[value="custom"]').click();
+	const duplicateInput = page.locator('wa-input#simulated-system-duplicate-percent');
+	await expect(page.locator('wa-select#simulated-system-duplicate-percent')).toHaveCount(0);
 	await expect(duplicateInput).toBeFocused();
 	await expect(duplicateInput.locator('input')).toHaveValue('2');
-	await expect(duplicateInput.locator('[slot="suffix"]')).toHaveText('%');
+	await expect(duplicateInput.locator('[slot="end"]')).toHaveText('%');
 	await duplicateInput.locator('input').fill('2.001');
 	await page
-		.locator('sl-dialog.simulated-systems__dialog')
+		.locator('wa-dialog.simulated-systems__dialog')
 		.getByRole('button', { name: 'Create', exact: true })
 		.click();
 	await expect(page.getByRole('alert')).toContainText('at most two decimal places');
@@ -337,7 +333,7 @@ test('custom validation and zero records submit no hidden configuration', async 
 	await page.getByLabel('Source connection').uncheck();
 	await page.getByLabel('Destination connection').uncheck();
 	await page
-		.locator('sl-dialog.simulated-systems__dialog')
+		.locator('wa-dialog.simulated-systems__dialog')
 		.getByRole('button', { name: 'Create', exact: true })
 		.click();
 	await expect(page.getByRole('heading', { name: 'Simulated system created' })).toBeVisible();
@@ -383,7 +379,9 @@ test('creation shows user progress and creates both selected connections', async
 			},
 		}),
 	);
-	await page.route('**/v1/simulated/systems', (route) => route.fulfill({ json: { id: account.id } }));
+	await page.route('**/v1/simulated/systems', (route) =>
+		route.fulfill({ json: { id: account.id }, headers: syncTokenHeaders() }),
+	);
 	await page.route(`**/v1/simulated/systems/${account.id}`, (route) => {
 		accountReads += 1;
 		return route.fulfill({
@@ -415,17 +413,17 @@ test('creation shows user progress and creates both selected connections', async
 				},
 			});
 		connections.push(route.request().postDataJSON());
-		return route.fulfill({ json: { id: `CONNECTION0${connections.length}` } });
+		return route.fulfill({ json: { id: `CONNECTION0${connections.length}` }, headers: syncTokenHeaders() });
 	});
 
 	await page.goto(`${adminURL}/simulated-world/create`);
 	await expect(page.getByLabel('Source connection')).toBeChecked();
 	await expect(page.getByLabel('Destination connection')).toBeChecked();
 	await page.getByLabel('Name', { exact: true }).fill('Test account');
-	await page.locator('sl-select#simulated-system-user-count').click();
-	await page.locator('sl-select#simulated-system-user-count sl-option[value="10"]').click();
+	await page.locator('wa-select#simulated-system-user-count').click();
+	await page.locator('wa-select#simulated-system-user-count wa-option[value="10"]').click();
 	await page
-		.locator('sl-dialog.simulated-systems__dialog')
+		.locator('wa-dialog.simulated-systems__dialog')
 		.getByRole('button', { name: 'Create', exact: true })
 		.click();
 	await expect(page.getByRole('progressbar', { name: 'Simulated users created' })).toHaveAttribute('value', '4');
@@ -467,23 +465,25 @@ test('creation shows user progress and creates both selected connections', async
 for (const selectedRole of ['Source', 'Destination'] as const) {
 	test(`creation can add only the ${selectedRole.toLowerCase()} connection`, async ({ page }) => {
 		const connections: any[] = [];
-		await page.route('**/v1/simulated/systems', (route) => route.fulfill({ json: { id: account.id } }));
+		await page.route('**/v1/simulated/systems', (route) =>
+			route.fulfill({ json: { id: account.id }, headers: syncTokenHeaders() }),
+		);
 		await page.route(`**/v1/simulated/systems/${account.id}`, (route) =>
 			route.fulfill({ json: { ...account, userCount: 0, generatedRecordCount: 0 } }),
 		);
 		await page.route('**/v1/connections', (route) => {
 			if (route.request().method() !== 'POST') return route.continue();
 			connections.push(route.request().postDataJSON());
-			return route.fulfill({ json: { id: 'CONNECTION01' } });
+			return route.fulfill({ json: { id: 'CONNECTION01' }, headers: syncTokenHeaders() });
 		});
 
 		await page.goto(`${adminURL}/simulated-world/create`);
 		await page.getByLabel('Name', { exact: true }).fill('Test account');
-		await page.locator('sl-select#simulated-system-user-count').click();
-		await page.locator('sl-select#simulated-system-user-count sl-option[value="0"]').click();
+		await page.locator('wa-select#simulated-system-user-count').click();
+		await page.locator('wa-select#simulated-system-user-count wa-option[value="0"]').click();
 		await page.getByLabel(selectedRole === 'Source' ? 'Destination connection' : 'Source connection').uncheck();
 		await page
-			.locator('sl-dialog.simulated-systems__dialog')
+			.locator('wa-dialog.simulated-systems__dialog')
 			.getByRole('button', { name: 'Create', exact: true })
 			.click();
 		await expect(page.getByRole('heading', { name: 'Simulated system created' })).toBeVisible();
@@ -499,7 +499,9 @@ for (const selectedRole of ['Source', 'Destination'] as const) {
 
 test('a failed source connection does not prevent the destination connection', async ({ page }) => {
 	const roles: string[] = [];
-	await page.route('**/v1/simulated/systems', (route) => route.fulfill({ json: { id: account.id } }));
+	await page.route('**/v1/simulated/systems', (route) =>
+		route.fulfill({ json: { id: account.id }, headers: syncTokenHeaders() }),
+	);
 	await page.route(`**/v1/simulated/systems/${account.id}`, (route) =>
 		route.fulfill({ json: { ...account, userCount: 0, generatedRecordCount: 0 } }),
 	);
@@ -512,15 +514,15 @@ test('a failed source connection does not prevent the destination connection', a
 				status: 422,
 				json: { error: { code: 'InvalidSettings', message: 'Source connection could not be created' } },
 			});
-		return route.fulfill({ json: { id: 'CONNECTION01' } });
+		return route.fulfill({ json: { id: 'CONNECTION01' }, headers: syncTokenHeaders() });
 	});
 
 	await page.goto(`${adminURL}/simulated-world/create`);
 	await page.getByLabel('Name', { exact: true }).fill('Test account');
-	await page.locator('sl-select#simulated-system-user-count').click();
-	await page.locator('sl-select#simulated-system-user-count sl-option[value="0"]').click();
+	await page.locator('wa-select#simulated-system-user-count').click();
+	await page.locator('wa-select#simulated-system-user-count wa-option[value="0"]').click();
 	await page
-		.locator('sl-dialog.simulated-systems__dialog')
+		.locator('wa-dialog.simulated-systems__dialog')
 		.getByRole('button', { name: 'Create', exact: true })
 		.click();
 	await expect(page.locator('.simulated-systems__step--failed')).toContainText(
@@ -688,7 +690,7 @@ test('rename and delete retain the account after errors, then update the list', 
 					json: { error: { code: 'Unavailable', message: 'Rename interrupted' } },
 				});
 			name = route.request().postDataJSON().name;
-			return route.fulfill({ json: null });
+			return route.fulfill({ json: null, headers: syncTokenHeaders() });
 		}
 		deleteRequests += 1;
 		if (deleteRequests === 1)
@@ -697,7 +699,7 @@ test('rename and delete retain the account after errors, then update the list', 
 				json: { error: { code: 'Unavailable', message: 'Delete interrupted' } },
 			});
 		isDeleted = true;
-		await route.fulfill({ json: null });
+		await route.fulfill({ json: null, headers: syncTokenHeaders() });
 	});
 	await page.goto(`${adminURL}/simulated-world/${account.id}`);
 	await page.getByRole('button', { name: 'Rename simulated system' }).click();
@@ -708,16 +710,14 @@ test('rename and delete retain the account after errors, then update the list', 
 	await page.getByRole('button', { name: 'Save' }).click();
 	await expect(page.getByRole('heading', { name: 'Renamed account' })).toBeVisible();
 	await page.getByRole('link', { name: '← Simulated world' }).click();
-	await expect(page.locator('.simulated-systems__list-content .grid__row[data-id]')).toContainText(
-		'Renamed account',
-	);
+	await expect(page.locator('.simulated-systems__list-content .grid__row[data-id]')).toContainText('Renamed account');
 	await expect(page.getByText('Connector', { exact: true })).toHaveCount(0);
 	await expect(page.getByText('S3', { exact: true })).toHaveCount(0);
 	await page.locator('.simulated-systems__list-content .grid__row[data-id]').click();
 	await expect(page.getByRole('heading', { name: 'Renamed account' })).toBeVisible();
 	await page.getByRole('button', { name: 'Delete simulated system' }).click();
 	await page
-		.locator('sl-dialog.simulated-systems__dialog')
+		.locator('wa-dialog.simulated-systems__dialog')
 		.getByRole('button', { name: 'Delete simulated system' })
 		.click();
 	await expect(page.getByText('Delete interrupted')).toBeVisible();
@@ -744,17 +744,17 @@ test('deletion removes connections before account records and can retry a failed
 				status: 503,
 				json: { error: { code: 'Unavailable', message: 'Source deletion interrupted' } },
 			});
-		return route.fulfill({ json: null });
+		return route.fulfill({ json: null, headers: syncTokenHeaders() });
 	});
 	await page.route(`**/v1/connections/DESTINATION01`, (route) => {
 		operations.push('destination');
-		return route.fulfill({ json: null });
+		return route.fulfill({ json: null, headers: syncTokenHeaders() });
 	});
 	await page.route(`**/v1/simulated/systems/${account.id}`, (route) => {
 		if (route.request().method() === 'DELETE') {
 			operations.push('account');
 			hasStartedAccountDeletion = true;
-			return route.fulfill({ json: null });
+			return route.fulfill({ json: null, headers: syncTokenHeaders() });
 		}
 		if (!hasStartedAccountDeletion)
 			return route.fulfill({
@@ -771,11 +771,11 @@ test('deletion removes connections before account records and can retry a failed
 
 	await page.goto(`${adminURL}/simulated-world/${account.id}`);
 	await page.getByRole('button', { name: 'Delete simulated system' }).click();
-	await expect(page.locator('sl-dialog.simulated-systems__dialog')).toContainText(
+	await expect(page.locator('wa-dialog.simulated-systems__dialog')).toContainText(
 		'its connections, and its records.',
 	);
 	await page
-		.locator('sl-dialog.simulated-systems__dialog')
+		.locator('wa-dialog.simulated-systems__dialog')
 		.getByRole('button', { name: 'Delete simulated system' })
 		.click();
 	await expect(page.getByText('Source deletion interrupted')).toBeVisible();
@@ -796,7 +796,7 @@ test('deletion retry picks up a connection added after the account was opened', 
 	let accountDeleteRequests = 0;
 	await page.route(`**/v1/connections/SOURCE02`, (route) => {
 		operations.push('source');
-		return route.fulfill({ json: null });
+		return route.fulfill({ json: null, headers: syncTokenHeaders() });
 	});
 	await page.route(`**/v1/simulated/systems/${account.id}`, (route) => {
 		if (route.request().method() === 'GET') {
@@ -813,18 +813,16 @@ test('deletion retry picks up a connection added after the account was opened', 
 				status: 422,
 				json: { error: { code: 'SimulatedSystemInUse', message: 'Account is in use' } },
 			});
-		return route.fulfill({ json: null });
+		return route.fulfill({ json: null, headers: syncTokenHeaders() });
 	});
 
 	await page.goto(`${adminURL}/simulated-world/${account.id}`);
 	await page.getByRole('button', { name: 'Delete simulated system' }).click();
 	await page
-		.locator('sl-dialog.simulated-systems__dialog')
+		.locator('wa-dialog.simulated-systems__dialog')
 		.getByRole('button', { name: 'Delete simulated system' })
 		.click();
-	await expect(page.locator('.simulated-systems__step--failed')).toContainText(
-		'Delete simulated system records',
-	);
+	await expect(page.locator('.simulated-systems__step--failed')).toContainText('Delete simulated system records');
 	await page.getByRole('button', { name: 'Retry' }).click();
 	await expect(page.locator('.simulated-systems__step--done')).toHaveCount(3);
 	await expect(page.getByRole('heading', { name: 'Simulated system deleted' })).toBeVisible();

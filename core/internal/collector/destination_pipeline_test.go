@@ -178,7 +178,7 @@ func TestDestinationPipelineCloseCompletesQueuedEvent(t *testing.T) {
 			"anonymousId": "user",
 			"messageId":   "second",
 		}
-		s.SendEvent(s.CreateEvent(dp.id, dp.eventType, types.Type{}, second, new(countingAck)))
+		s.SendEvent(s.CreateEvent(dp.id, dp.eventType, dp.orderingGroup, types.Type{}, second, new(countingAck)))
 
 		select {
 		case got := <-app.delivered:
@@ -248,7 +248,7 @@ func TestDestinationPipelineCloseUnblocksQueueEvent(t *testing.T) {
 			"anonymousId": "user",
 			"messageId":   "following",
 		}
-		s.SendEvent(s.CreateEvent(dp.id, dp.eventType, types.Type{}, following, new(countingAck)))
+		s.SendEvent(s.CreateEvent(dp.id, dp.eventType, dp.orderingGroup, types.Type{}, following, new(countingAck)))
 
 		select {
 		case got := <-app.delivered:

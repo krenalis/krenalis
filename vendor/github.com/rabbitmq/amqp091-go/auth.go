@@ -23,6 +23,11 @@ type PlainAuth struct {
 	Password string
 }
 
+// String returns a redacted representation of PlainAuth.
+func (auth PlainAuth) String() string {
+	return fmt.Sprintf("PlainAuth{Username: %q, Password: [REDACTED]}", auth.Username)
+}
+
 // Mechanism returns "PLAIN"
 func (auth *PlainAuth) Mechanism() string {
 	return "PLAIN"
@@ -37,6 +42,11 @@ func (auth *PlainAuth) Response() string {
 type AMQPlainAuth struct {
 	Username string
 	Password string
+}
+
+// String returns a redacted representation of AMQPlainAuth.
+func (auth AMQPlainAuth) String() string {
+	return fmt.Sprintf("AMQPlainAuth{Username: %q, Password: [REDACTED]}", auth.Username)
 }
 
 // Mechanism returns "AMQPLAIN"
@@ -78,4 +88,33 @@ func pickSASLMechanism(client []Authentication, serverMechanisms []string) (auth
 	}
 
 	return
+}
+
+func cloneAuthentications(auths []Authentication) []Authentication {
+	if auths == nil {
+		return nil
+	}
+	clones := make([]Authentication, len(auths))
+	for i, auth := range auths {
+		clones[i] = cloneAuthentication(auth)
+	}
+	return clones
+}
+
+// cloneAuthentication copies *PlainAuth/*AMQPlainAuth, since openComplete
+// zeroes their credentials post-handshake. Other types are returned as-is,
+// so a custom Authentication stays the caller's live instance across
+// reconnects — in-place mutations (e.g. rotating a token) are picked up on
+// the next Reconnect().
+func cloneAuthentication(auth Authentication) Authentication {
+	switch a := auth.(type) {
+	case *PlainAuth:
+		clone := *a
+		return &clone
+	case *AMQPlainAuth:
+		clone := *a
+		return &clone
+	default:
+		return auth
+	}
 }

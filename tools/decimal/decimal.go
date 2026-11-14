@@ -22,13 +22,15 @@
 // Precision defines the total number of significant digits, while scale
 // specifies the number of digits after the decimal point. Precision must be
 // within [MinPrecision, MaxPrecision], and scale must be within
-// [MinScale, MaxScale].
+// [MinScale, MaxScale]. As an exception, [Parse] also accepts a precision
+// of 0, meaning no limit.
 //
 // The [Int], [Uint], [Parse], and [Binary] functions ensure the decimal fits
 // within the specified precision and scale, returning an error otherwise. The
-// [New] function accepts a mantissa and scale to create the decimal. [Float64]
-// rounds the given float to the specified scale and returns an error if it
-// exceeds the provided precision.
+// [New] function accepts a mantissa and scale to create the decimal.
+// [Float64] rounds the given floating-point number to the specified scale and
+// returns an error if the result cannot be represented with the specified
+// precision and scale.
 //
 // Each factory function, except [New], has a corresponding Must variant. These
 // Must functions do not impose any additional precision and scale limits beyond
@@ -57,7 +59,7 @@ import (
 
 const (
 	MaxPrecision = 999_999_999_999_999_999
-	MinPrecision = -MaxPrecision
+	MinPrecision = 1
 	MaxScale     = 999_999_999_999_999_999
 	MinScale     = -MaxScale
 )
@@ -160,6 +162,24 @@ func (x Decimal) Equal(y Decimal) bool {
 	return x.b.Cmp(&y.b) == 0
 }
 
+// Float32 returns the float32 value closest to x and a bool indicating whether
+// the float32 represents exactly x. Overflow returns an infinity and false.
+func (x Decimal) Float32() (float32, bool) {
+	sign := x.b.Sign()
+	if sign == 0 {
+		return 0, true
+	}
+	// Avoid enormous powers of ten for values that round to infinity or zero.
+	order := x.b.Precision() - x.b.Scale()
+	if order > 39 {
+		return float32(math.Inf(sign)), false
+	}
+	if order < -45 {
+		return float32(math.Copysign(0, float64(sign))), false
+	}
+	return x.b.Rat(nil).Float32()
+}
+
 // Float64 returns the float64 value closest to x and a bool indicating whether
 // the float64 represents exactly x.
 func (x Decimal) Float64() (float64, bool) {
@@ -223,6 +243,25 @@ func (x Decimal) Neg() Decimal {
 		y.s = x.s[1:]
 	}
 	return y
+}
+
+// PrecisionScale returns the minimum precision and nonnegative scale needed to
+// represent x exactly, ignoring trailing fractional zeros.
+// Leading fractional zeros count toward precision: 0.005 has precision 3 and
+// scale 3. Zero has precision 1 and scale 0.
+func (x Decimal) PrecisionScale() (precision, scale int) {
+	if x.b.Sign() == 0 {
+		return 1, 0
+	}
+	integerDigits := x.b.Precision() - x.b.Scale()
+	if x.b.Scale() <= 0 {
+		return integerDigits, 0
+	}
+	var reduced decimal.Big
+	reduced.Copy(&x.b)
+	decimal.ContextUnlimited.Reduce(&reduced)
+	scale = max(reduced.Scale(), 0)
+	return max(integerDigits, 0) + scale, scale
 }
 
 // Sign returns:
@@ -335,10 +374,12 @@ func Binary(b []byte, precision, scale int) (Decimal, error) {
 	return n, nil
 }
 
-// Float64 returns the decimal representation of f, rounded down to "scale"
-// decimal places. Precision must be > 0 and scale <= precision. If the result
-// exceeds the specified precision, or if f is NaN, +Inf or -Inf, the function
-// returns 0 and [ErrRange].
+// Float64 returns the decimal representation of f, rounded to scale decimal
+// places using rounding to nearest with ties to even. Precision must be > 0
+// and scale <= precision. If the rounded value cannot be represented with the
+// specified precision and scale, or if f is NaN, +Inf or -Inf, Float64 returns
+// 0 and [ErrRange]. Rounding applies to the exact binary value of f. For
+// example, Float64(0.15, 5, 1) returns 0.1.
 func Float64(f float64, precision, scale int) (Decimal, error) {
 	if err := validPrecisionScale(precision, scale); err != nil {
 		return Decimal{}, err
@@ -351,9 +392,17 @@ func Float64(f float64, precision, scale int) (Decimal, error) {
 	}
 	x := Decimal{}
 	x.b.SetFloat64(f)
-	s := x.b.Precision() - x.b.Scale() + scale
-	x.b.Round(s)
-	if x.b.Precision() > precision {
+	// Avoid constructing a large power of ten when the value rounds to zero.
+	if x.b.Precision()-x.b.Scale()+scale < 0 {
+		return Decimal{}, nil
+	}
+	if x.b.Scale() > scale {
+		decimal.ContextUnlimited.Quantize(&x.b, scale)
+		if x.b.Sign() == 0 {
+			return Decimal{}, nil
+		}
+	}
+	if x.b.Precision()-x.b.Scale() > precision-scale {
 		return Decimal{}, ErrRange
 	}
 	return x, nil
@@ -423,16 +472,25 @@ func New(mantissa int64, scale int) Decimal {
 	return x
 }
 
-// Parse parses n, which must contain a text representation of a decimal number
-// that does not exceed the provided precision or scale, where precision > 0
-// and scale <= precision.
+// Parse parses n as a decimal number without rounding.
+// When precision > 0, the value must be exactly representable with the given
+// precision and scale. For nonnegative scale, this means that the value has at
+// most precision - scale digits in its integer part, so 0.5 has none, and at
+// most scale digits in its fractional part, ignoring trailing zeros.
+// precision cannot be negative.
 //
-// If n is not syntactically correct, it returns [ErrSyntax]. If the number is
-// out of range, [ErrRange] is returned.
+// It returns [ErrSyntax] if n is syntactically invalid and [ErrRange] if
+// precision or scale are invalid, or if the value is out of range or cannot be
+// represented exactly.
 //
-// As a special case, if precision is 0, the precision and scale are ignored,
-// and no limits are enforced on the number of significant digits or the scale
-// of the number.
+// Scale must be <= precision. When precision is 0, no limits are enforced on
+// the parsed value.
+//
+// For example:
+//
+//	Parse("12.3400", 4, 2) // returns 12.34, nil
+//	Parse("123.4", 4, 2)   // returns ErrRange: more than 2 integer digits
+//	Parse("1.234", 4, 2)   // returns ErrRange: more than 2 fractional digits
 //
 // The following formats are valid:
 //
@@ -489,8 +547,15 @@ func Parse[T ~string | ~[]byte](n T, precision, scale int) (Decimal, error) {
 			return Decimal{}, ErrSyntax
 		}
 	case '.':
+		if len(n) == 1 || n[1] < '0' || n[1] > '9' {
+			return Decimal{}, ErrSyntax
+		}
 		dot = -1
 		n = n[1:]
+	default:
+		if n[0] < '1' || n[0] > '9' {
+			return Decimal{}, ErrSyntax
+		}
 	}
 	zeros := 0
 	mantissa := mantissa{}
@@ -548,34 +613,42 @@ func Parse[T ~string | ~[]byte](n T, precision, scale int) (Decimal, error) {
 		}
 		prev := s
 		factor := 1
+		overflow := false
 		for j := len(n) - 1; j >= i; j-- {
 			c := n[j]
 			if c < '0' || c > '9' {
 				return Decimal{}, ErrSyntax
 			}
-			if c == '0' {
-				factor *= 10
+			if overflow {
 				continue
 			}
-			d := int(c-'0') * factor
-			if d < 0 {
-				return Decimal{}, ErrRange
-			}
-			s2 := s
-			if neg {
-				s += d
-				if s < s2 {
-					return Decimal{}, ErrRange
+			if c != '0' {
+				if factor == 0 || factor > math.MaxInt/int(c-'0') {
+					overflow = true
+					continue
 				}
+				d := int(c-'0') * factor
+				s2 := s
+				if neg {
+					s += d
+					if s < s2 {
+						overflow = true
+					}
+				} else {
+					s -= d
+					if s > s2 {
+						overflow = true
+					}
+				}
+			}
+			if factor > math.MaxInt/10 {
+				// Only leading zeros are allowed beyond this position.
+				factor = 0
 			} else {
-				s -= d
-				if s > s2 {
-					return Decimal{}, ErrRange
-				}
+				factor *= 10
 			}
-			factor *= 10
 		}
-		if s < MinScale || s > MaxScale {
+		if (overflow || s < MinScale || s > MaxScale) && !mantissa.isZero() {
 			return Decimal{}, ErrRange
 		}
 		if s == prev {
@@ -608,11 +681,9 @@ func Parse[T ~string | ~[]byte](n T, precision, scale int) (Decimal, error) {
 		}
 	}
 	if x.s != "" && dot != 0 {
-		if x.s[len(x.s)-zeros-1] == '0' {
-			zeros--
-		}
 		if zeros > 0 {
-			x.s = x.s[:len(x.s)-zeros]
+			// Nonzero exponents disable trimming; s+zeros gives the number of fractional digits.
+			x.s = x.s[:len(x.s)-min(zeros, s+zeros)]
 		}
 		x.s = strings.TrimSuffix(x.s, ".")
 	}

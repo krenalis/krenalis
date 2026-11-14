@@ -1,0 +1,45 @@
+name: Run go run ./test/commit -just-test-admin
+
+on:
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  tests:
+    # Note that 'ubuntu-24.04' includes the Docker server, which is required to
+    # run './test/commit'.
+    #
+    # TODO(Gianluca): `ubuntu-latest` causes issues with the
+    # current version of Playwright ("Failed to install browsers; ERROR:
+    # Playwright does not support chromium on ubuntu26.04-x64"), so for now,
+    # let's pin it to version 24.04, which works.
+    runs-on: ubuntu-24.04
+
+    timeout-minutes: 60
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-go@v7
+        with:
+          # Keep in sync with the version within ".github/workflows/*.yml".
+          # Keep in sync with the version within "Dockerfile".
+          # Keep in sync with the version within "go.mod".
+          go-version: "1.27"
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: go run ./test/commit -just-test-admin
+        run: go run ./test/commit -just-test-admin
+
+      - name: Check that the repository is clean
+        run: ./test/commit/repo_is_clean.bash

@@ -16,11 +16,9 @@ import (
 	"github.com/krenalis/krenalis/tools/types"
 )
 
-var jsonArrayType = types.Array(types.JSON())
-
-// Expression represents a mapping expression used to transform data from a
-// source to a destination. An Expression can contain strings, numbers, true,
-// false, null, property paths and function calls.
+// Expression represents a mapping used to transform data conforming to an input
+// schema into data of a specific output type. An Expression can contain
+// strings, numbers, true, false, null, property paths, and function calls.
 type Expression struct {
 	parts  []part // parts.
 	source string // source code used for error messages.
@@ -33,15 +31,17 @@ type Expression struct {
 // The schema defines the structure of the paths used in the expression, while
 // dt specifies the destination type.
 //
+// Function calls may be nested up to 10 levels.
+//
 // If schema is invalid, the expression will be compiled without path resolution.
 func Compile(expr string, schema, dt types.Type) (*Expression, []string, error) {
-	if schema.Valid() && schema.Kind() != types.ObjectKind {
+	if schema.Valid() && !schema.IsObject() {
 		return nil, nil, errors.New("schema is not an object")
 	}
 	if !dt.Valid() {
 		return nil, nil, errors.New("destination type is the invalid type")
 	}
-	parts, src, err := parse(expr, 0, len(expr))
+	parts, src, err := parse(expr, 0, len(expr), 0)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -90,11 +90,10 @@ func checkAnd(args [][]part, schema, dt types.Type, nullable bool, attributes ma
 
 // checkArray type checks a call to 'array' with the given arguments.
 func checkArray(args [][]part, schema, dt types.Type, nullable bool, attributes map[string]struct{}) (types.Type, error) {
-	// Ensure that all arguments can be converted to the element type of the destination array.
-	// If the destination type (dt) is not an array, no checks are performed,
-	// and it is left to the caller to fail later.
+	// For array destinations, ensure that all arguments can be converted to the element type.
+	// Otherwise, use JSON elements and let the caller validate the destination type.
 	et := types.JSON()
-	if dt.Kind() == types.ArrayKind {
+	if dt.IsArray() {
 		et = dt.Elem()
 	}
 	for _, arg := range args {
@@ -103,7 +102,7 @@ func checkArray(args [][]part, schema, dt types.Type, nullable bool, attributes 
 			return types.Type{}, err
 		}
 	}
-	return jsonArrayType, nil
+	return types.Array(et), nil
 }
 
 // checkCoalesce type checks a call to 'coalesce' with the given arguments.
@@ -232,23 +231,30 @@ func checkLTrim(args [][]part, schema, dt types.Type, nullable bool, attributes 
 
 // checkMap type checks a call to 'map' with the given arguments.
 func checkMap(args [][]part, schema, dt types.Type, nullable bool, attributes map[string]struct{}) (types.Type, error) {
+
 	if len(args)%2 != 0 {
 		return types.Type{}, errors.New("'map' function requires an even number of arguments")
 	}
 
+	et := types.JSON()
+	if dt.IsMap() {
+		et = dt.Elem()
+	}
 	keys := make(map[string]struct{}, len(args)/2)
 	for i := 0; i < len(args); i += 2 {
+
 		if len(args[i]) != 1 || args[i][0].path.elements != nil {
 			return types.Type{}, errors.New("'map' key is not constant")
 		}
-		if args[i][0].typ.Kind() != types.StringKind {
+		if !args[i][0].typ.IsString() {
 			return types.Type{}, errors.New("'map' key is not string")
 		}
 
 		if err := typeCheck(args[i], schema, types.String(), false, attributes); err != nil {
 			return types.Type{}, err
 		}
-		if err := typeCheck(args[i+1], schema, types.JSON(), false, attributes); err != nil {
+		err := typeCheck(args[i+1], schema, et, false, attributes)
+		if err != nil {
 			return types.Type{}, err
 		}
 
@@ -257,9 +263,10 @@ func checkMap(args [][]part, schema, dt types.Type, nullable bool, attributes ma
 			return types.Type{}, errors.New("duplicate key in 'map' function")
 		}
 		keys[key] = struct{}{}
+
 	}
 
-	return types.Map(types.JSON()), nil
+	return types.Map(et), nil
 }
 
 // checkNe type checks a call to 'ne' with the given arguments.
@@ -511,15 +518,30 @@ func asType(expr []part, dt types.Type, nullable bool) error {
 		if s, ok := p.value.(string); ok && s == "" {
 			nullable = false
 		}
-		v, err := convert(p.value, p.typ, dt, nullable, false, None)
+		v, err := convert(p.value, p.typ, dt, nullable, None)
 		if err != nil {
 			if p.value == nil {
 				return fmt.Errorf("null is not convertible to the %s type", dt)
 			}
+			var s string
+			switch v := p.value.(type) {
+			case string:
+				s = strconv.Quote(v)
+			case int:
+				s = strconv.Itoa(v)
+			case decimal.Decimal:
+				s = v.String()
+			case bool:
+				s = strconv.FormatBool(v)
+			case json.Value:
+				s = "null"
+			default:
+				return fmt.Errorf("core/internal/transformers/mappings: unexpected value type %T", v)
+			}
 			var msg string
 			switch err {
 			case errRangeConversion:
-				msg = fmt.Sprintf("number %s is not a %s value", p.value, dt)
+				msg = fmt.Sprintf("number %s is too small or too large for the %s type", s, dt)
 			case errMinConversion:
 				var n any
 				switch dt.Kind() {
@@ -534,7 +556,7 @@ func asType(expr []part, dt types.Type, nullable bool) error {
 				case types.DecimalKind:
 					n, _ = dt.DecimalRange()
 				}
-				msg = fmt.Sprintf("number %s is less than %v", p.value, n)
+				msg = fmt.Sprintf("number %s is less than %v", s, n)
 			case errMaxConversion:
 				var n any
 				switch dt.Kind() {
@@ -549,31 +571,24 @@ func asType(expr []part, dt types.Type, nullable bool) error {
 				case types.DecimalKind:
 					_, n = dt.DecimalRange()
 				}
-				msg = fmt.Sprintf("number %s is greater than %v", p.value, n)
+				msg = fmt.Sprintf("number %s is greater than %v", s, n)
 			case errEnumConversion:
-				msg = fmt.Sprintf("%q is not one of the allowed values", p.value)
+				msg = fmt.Sprintf("%s is not one of the allowed values", s)
+			case errCountryAlpha2Conversion:
+				msg = fmt.Sprintf("%s is not a 2-letter country code", s)
+			case errCountryAlpha3Conversion:
+				msg = fmt.Sprintf("%s is not a 3-letter country code", s)
+			case errPhoneConversion:
+				msg = fmt.Sprintf("%s is not a valid phone number", s)
 			case errPatternConversion:
-				msg = fmt.Sprintf("%q does not match /%s/", p.value, dt.Pattern())
+				msg = fmt.Sprintf("%s does not match /%s/", s, dt.Pattern())
 			case errMaxBytesConversion:
 				n, _ := dt.MaxBytes()
-				msg = fmt.Sprintf("%q exceeds the %d-byte limit", p.value, n)
+				msg = fmt.Sprintf("%s exceeds the %d-byte limit", s, n)
 			case errMaxLengthConversion:
 				n, _ := dt.MaxLength()
-				msg = fmt.Sprintf("%q exceeds the %d-char limit", p.value, n)
+				msg = fmt.Sprintf("%s exceeds the %d-char limit", s, n)
 			default:
-				var s string
-				switch v := p.value.(type) {
-				case string:
-					s = strconv.Quote(v)
-				case int:
-					s = strconv.Itoa(v)
-				case decimal.Decimal:
-					s = v.String()
-				case bool:
-					s = strconv.FormatBool(v)
-				case json.Value:
-					s = "null"
-				}
 				msg = fmt.Sprintf("%s is not convertible to the %s type", s, dt.String())
 			}
 			return errors.New(msg)

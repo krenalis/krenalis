@@ -1,49 +1,97 @@
-import React, { useContext, useEffect, useState, forwardRef } from 'react';
+import React, { useContext, useEffect, useRef, useState, forwardRef } from 'react';
 import Section from '../../base/Section/Section';
 import PipelineContext from '../../../context/PipelineContext';
-import AppContext from '../../../context/AppContext';
 import { ConsentPurpose } from '../../../lib/api/types/workspace';
 import { ConsentPurposesOperator } from '../../../lib/api/types/pipeline';
-import SlCheckbox from '@shoelace-style/shoelace/dist/react/checkbox/index.js';
-import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
-import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import { getMissingConsentLocation, isOutputPathTransformed } from '../../../lib/core/pipeline';
+import { UI_BASE_PATH } from '../../../constants/paths';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
+import WaSwitch from '@awesome.me/webawesome/dist/react/switch/index.js';
+import WaSelect from '@awesome.me/webawesome/dist/react/select/index.js';
+import WaOption from '@awesome.me/webawesome/dist/react/option/index.js';
+import type WaOptionElement from '@awesome.me/webawesome/dist/components/option/option.js';
+
+interface PurposeError {
+	purpose: ConsentPurpose;
+	message: string;
+	isDeleted: boolean;
+}
 
 const PipelineConsents = forwardRef<any>((_, ref) => {
-	const { pipeline, setPipeline } = useContext(PipelineContext);
+	const {
+		pipeline,
+		pipelineType,
+		setPipeline,
+		connection,
+		isImport,
+		consentPurposes: purposes,
+		deletedConsentPurposes,
+		consentPropertyPaths,
+		selectedOutPaths,
+	} = useContext(PipelineContext);
 
-	const [purposes, setPurposes] = useState<ConsentPurpose[]>([]);
-	const [arePurposesLoaded, setArePurposesLoaded] = useState(false);
 	const [isEnabled, setIsEnabled] = useState((pipeline.requiredConsents?.purposes.length ?? 0) > 0);
 
-	const { api, handleError } = useContext(AppContext);
+	const operatorRef = useRef<any>(null);
+	const purposesRef = useRef<any>(null);
+	const purposeTagsRef = useRef(new WeakMap<WaOptionElement, HTMLElement>());
 
 	useEffect(() => {
 		setIsEnabled((pipeline.requiredConsents?.purposes.length ?? 0) > 0);
 	}, [pipeline.id]);
 
 	useEffect(() => {
-		const fetchPurposes = async () => {
-			try {
-				const res = await api.workspaces.consentPurposes();
-				setPurposes(res.purposes);
-				setArePurposesLoaded(true);
-			} catch (err) {
-				handleError(err);
+		const select = operatorRef.current;
+		if (select == null || isEnabled) {
+			return;
+		}
+
+		const onMouseDown = (e: MouseEvent) => {
+			e.preventDefault();
+			e.stopPropagation();
+			select.focus();
+		};
+
+		const onKeyDown = (e: KeyboardEvent) => {
+			if (e.key === 'Tab' || e.key === 'Escape' || e.altKey || e.ctrlKey || e.metaKey) {
+				return;
+			}
+			e.preventDefault();
+			e.stopPropagation();
+		};
+
+		// When the consents are disabled, keep the operator readable as part of
+		// the sentence, but prevent it from being changed.
+		select.addEventListener('mousedown', onMouseDown, true);
+		select.addEventListener('keydown', onKeyDown, true);
+
+		return () => {
+			// restore select interactions.
+			select.removeEventListener('mousedown', onMouseDown, true);
+			select.removeEventListener('keydown', onKeyDown, true);
+		};
+	}, [isEnabled]);
+
+	useEffect(() => {
+		const select = purposesRef.current;
+		if (select == null) {
+			return;
+		}
+
+		// Stop a click on an unavailable purpose before the select handles it, so
+		// that the purpose is not even briefly selected.
+		const onMouseUp = (e: MouseEvent) => {
+			if ((e.target as HTMLElement).closest('.pipeline__consents-option--unavailable') != null) {
+				e.stopPropagation();
 			}
 		};
-		fetchPurposes();
+
+		select.addEventListener('mouseup', onMouseUp, true);
+
+		return () => {
+			select.removeEventListener('mouseup', onMouseUp, true);
+		};
 	}, []);
-
-	const selectedCodes = pipeline.requiredConsents?.purposes ?? [];
-
-	// undefinedCodes are the required codes that are no longer the code of a
-	// purpose of the workspace, because the purpose has been deleted or its
-	// code has been changed. The pipeline does not process any event until they
-	// are removed, so they are listed as options to let the user remove them.
-	const undefinedCodes = arePurposesLoaded
-		? selectedCodes.filter((code) => !purposes.some((p) => p.code === code))
-		: [];
 
 	const setEnabled = (enabled: boolean) => {
 		const p = structuredClone(pipeline);
@@ -61,18 +109,25 @@ const PipelineConsents = forwardRef<any>((_, ref) => {
 	};
 
 	const onSentenceClick = (e: React.MouseEvent) => {
-		if (purposes.length === 0) {
+		if (!hasPurposes) {
 			return;
 		}
-		if ((e.target as HTMLElement).closest('sl-select')) {
+		if ((e.target as HTMLElement).closest('wa-select')) {
 			return;
 		}
 		setEnabled(!isEnabled);
 	};
 
 	const onChangePurposes = (e: any) => {
+		// An unavailable purpose can be removed, but not selected.
+		const ids = (e.target.value as string[]).filter(
+			(id) => !unavailablePurposeIDs.has(id) || selectedPurposeIDs.includes(id),
+		);
+		if (ids.length < e.target.value.length) {
+			e.target.value = ids;
+		}
 		const p = structuredClone(pipeline);
-		p.requiredConsents = { ...p.requiredConsents, purposes: e.target.value };
+		p.requiredConsents = { ...p.requiredConsents, purposes: ids };
 		setPipeline(p);
 	};
 
@@ -82,64 +137,199 @@ const PipelineConsents = forwardRef<any>((_, ref) => {
 		setPipeline(p);
 	};
 
+	const selectedPurposeIDs = pipeline.requiredConsents?.purposes ?? [];
+	const hasPurposes = purposes.length > 0 || deletedConsentPurposes.length > 0;
+
+	// The purposes that cannot be selected: the deleted ones, and those without
+	// the consent location read by the pipeline. Their options are not disabled,
+	// because the select drops the values of disabled options, and with them the
+	// tags of the purposes that are already selected.
+	const unavailablePurposeIDs = new Set([
+		...purposes.filter((p) => getMissingConsentLocation(p, pipelineType, connection) != null).map((p) => p.id),
+		...deletedConsentPurposes.map((p) => p.id),
+	]);
+
+	// Collect the selected purposes that have been deleted, or that no longer
+	// have the consent location read by the pipeline.
+	const purposeErrors: PurposeError[] = [];
+	for (const id of selectedPurposeIDs) {
+		const purpose = purposes.find((p) => p.id === id);
+		if (purpose == null) {
+			const deleted = deletedConsentPurposes.find((p) => p.id === id);
+			if (deleted != null) {
+				purposeErrors.push({
+					purpose: deleted,
+					message: `Consent purpose "${deleted.name}" no longer exists. Remove it from the selected purposes.`,
+					isDeleted: true,
+				});
+			}
+			continue;
+		}
+		const location = getMissingConsentLocation(purpose, pipelineType, connection);
+		if (location != null) {
+			purposeErrors.push({
+				purpose,
+				message: `Consent purpose "${purpose.name}" has no ${location} consent location.`,
+				isDeleted: false,
+			});
+		}
+	}
+
+	// Show the tags of these purposes in red. The other tags are the same as
+	// the default ones of the select.
+	const invalidPurposeIDs = new Set(purposeErrors.map(({ purpose }) => purpose.id));
+	const getPurposeTag = (option: WaOptionElement): HTMLElement => {
+		// The select renders its tags again when it loses the focus, which
+		// happens on the mousedown on a remove button. Reuse the tag of the
+		// option and change it only when needed, as a tag replaced or changed
+		// at that moment does not receive the click.
+		let tag = purposeTagsRef.current.get(option);
+		if (tag == null) {
+			tag = document.createElement('wa-tag');
+			tag.setAttribute('exportparts', 'content:tag__content, remove-button:tag__remove-button');
+			tag.setAttribute('size', 'm');
+			tag.setAttribute('with-remove', '');
+			tag.dataset.value = option.value;
+			purposeTagsRef.current.set(option, tag);
+		}
+		const part = invalidPurposeIDs.has(option.value) ? 'tag invalid-tag' : 'tag';
+		if (tag.getAttribute('part') !== part) {
+			tag.setAttribute('part', part);
+		}
+		const label = option.label;
+		if (tag.textContent !== label) {
+			tag.textContent = label;
+		}
+		return tag;
+	};
+
+	// Collect the profile properties holding a required consent that the
+	// transformation does not return.
+	const untransformedConsentPaths = [...consentPropertyPaths].filter(
+		([path]) => !isOutputPathTransformed(path, pipeline, pipelineType, selectedOutPaths),
+	);
+	const hasTransformationFunction = pipeline.transformation?.function != null;
+
+	const isEventTarget = pipelineType.target === 'Event';
+	const usersTerm = connection.connector.terms.users.toLowerCase();
+	const subjects = isEventTarget ? 'events' : isImport ? usersTerm : 'profiles';
+	const actionVerb = isImport ? 'import' : isEventTarget ? 'send' : 'export';
+	const actionParticiple = isImport ? 'imported' : isEventTarget ? 'sent' : 'exported';
+
 	return (
 		<Section
 			className='pipeline__consents'
-			title='Privacy'
-			description='Choose whether this pipeline should require consent for specific purposes before processing events.'
+			title='Consent requirements'
+			description={`Define which consent purposes ${subjects} must have before they can be ${actionParticiple}.`}
 			padded={true}
 			ref={ref}
 			annotated={true}
 		>
 			<div className='pipeline__consents-toggle'>
-				<SlCheckbox checked={isEnabled} onSlChange={onToggle} disabled={purposes.length === 0} />
+				<WaSwitch checked={isEnabled} onChange={onToggle} disabled={!hasPurposes} />
 				<div
 					className={`pipeline__consents-logical-sentence${
-						purposes.length === 0 ? ' pipeline__consents-logical-sentence--disabled' : ''
+						hasPurposes ? '' : ' pipeline__consents-logical-sentence--disabled'
 					}`}
 					onClick={onSentenceClick}
 				>
-					An event must have consent for
-					<SlSelect
-						className='pipeline__consents-logical-select'
-						size='small'
+					{`Only ${actionVerb} ${subjects} ${subjects === 'events' ? 'that have consent for' : 'who have consented to'}`}
+					<WaSelect
+						ref={operatorRef}
+						className={`pipeline__consents-logical-select${
+							isEnabled ? '' : ' pipeline__consents-logical-select--readonly'
+						}`}
+						size='s'
 						value={pipeline.requiredConsents?.operator || 'and'}
-						onSlChange={onChangeOperator}
-						disabled={!isEnabled}
+						onChange={onChangeOperator}
 					>
-						<SlOption value='and'>all</SlOption>
-						<SlOption value='or'>any</SlOption>
-					</SlSelect>
-					of the selected purposes to be processed by this pipeline.
+						<WaOption value='and'>all</WaOption>
+						<WaOption value='or'>any</WaOption>
+					</WaSelect>
+					of the selected purposes.
 				</div>
 			</div>
 			<div className='pipeline__consents-details'>
-				<SlSelect
+				<WaSelect
+					ref={purposesRef}
 					className='pipeline__consents-select'
 					multiple
-					clearable
-					placeholder={purposes.length === 0 ? 'No purposes defined yet' : 'Select the required purposes'}
-					value={selectedCodes}
-					onSlChange={onChangePurposes}
-					disabled={!isEnabled || (purposes.length === 0 && undefinedCodes.length === 0)}
+					withClear
+					placeholder={purposes.length === 0 ? 'No purposes defined yet' : 'Select consent purposes'}
+					value={selectedPurposeIDs}
+					getTag={getPurposeTag}
+					onChange={onChangePurposes}
+					disabled={!isEnabled || !hasPurposes}
 				>
-					{purposes.map((p) => (
-						<SlOption key={p.code} value={p.code}>
+					<WaIcon name='x-circle-fill' slot='clear-icon' />
+					{purposes.map((p) => {
+						// A purpose without the consent location read by the pipeline
+						// cannot be selected.
+						const location = getMissingConsentLocation(p, pipelineType, connection);
+						return (
+							<WaOption
+								key={p.id}
+								value={p.id}
+								label={p.name}
+								className={location != null ? 'pipeline__consents-option--unavailable' : undefined}
+							>
+								{p.name}
+								{location != null && (
+									<span slot='end' className='pipeline__consents-option-message'>
+										{`has no ${location} consent location`}
+									</span>
+								)}
+							</WaOption>
+						);
+					})}
+					{deletedConsentPurposes.map((p) => (
+						<WaOption
+							key={p.id}
+							value={p.id}
+							label={p.name}
+							className='pipeline__consents-option--unavailable'
+						>
 							{p.name}
-						</SlOption>
+							<span slot='end' className='pipeline__consents-option-message'>
+								no longer exists
+							</span>
+						</WaOption>
 					))}
-					{undefinedCodes.map((code) => (
-						<SlOption key={code} value={code} className='pipeline__consents-undefined-option'>
-							{code}
-						</SlOption>
-					))}
-				</SlSelect>
-				{undefinedCodes.length > 0 && (
-					<div className='pipeline__consents-warning'>
-						<SlIcon slot='icon' name='exclamation-triangle' />
-						{undefinedCodes.length === 1
-							? `The "${undefinedCodes[0]}" purpose no longer exists. This pipeline does not process any event until you remove it or define the purpose again.`
-							: `The ${undefinedCodes.map((c) => `"${c}"`).join(', ')} purposes no longer exist. This pipeline does not process any event until you remove them or define the purposes again.`}
+				</WaSelect>
+				{(purposeErrors.length > 0 || untransformedConsentPaths.length > 0) && (
+					<div className='pipeline__consents-errors'>
+						{purposeErrors.map(({ purpose, message, isDeleted }) => (
+							<div key={purpose.id} className='pipeline__consents-error'>
+								<WaIcon name='exclamation-circle' />
+								<span>
+									{message}
+									{!isDeleted && (
+										<>
+											{' '}
+											<a
+												href={`${UI_BASE_PATH}settings/consent-management?purpose=${encodeURIComponent(purpose.id)}`}
+												target='_blank'
+												rel='noopener'
+											>
+												Configure the purpose
+											</a>
+										</>
+									)}
+								</span>
+							</div>
+						))}
+						{untransformedConsentPaths.map(([path, pathPurposes]) => (
+							<div key={path} className='pipeline__consents-error'>
+								<WaIcon name='exclamation-circle' />
+								<span>
+									{`Consent for ${pathPurposes.map((p) => `"${p.name}"`).join(', ')} is read from the profile property "${path}": ${
+										hasTransformationFunction
+											? 'select it as an output property of the transformation function in Full mode'
+											: 'map it in the transformation'
+									}`}
+								</span>
+							</div>
+						))}
 					</div>
 				)}
 			</div>

@@ -5,7 +5,7 @@ import {
 	SendingMode,
 	ConnectorTerms,
 } from '../api/types/connector';
-import { Role } from '../api/types/types';
+import { ConnectionRole } from '../api/types/connection';
 import { ConnectorOAuth } from '../api/types/connector';
 
 class TransformedConnector {
@@ -93,7 +93,7 @@ class TransformedConnector {
 		}
 	}
 
-	hasSettings(role: Role): boolean {
+	hasSettings(role: ConnectionRole): boolean {
 		return (
 			(role === 'Source' && this.asSource.hasSettings) ||
 			(role === 'Destination' && this.asDestination.hasSettings)

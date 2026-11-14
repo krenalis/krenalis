@@ -18,25 +18,24 @@ var convertMatrix = [...]int32{
 	//                │ │ ┌────── int
 	//                │ │ │ ┌── float
 	//                │ │ │ │  ┌─ datetime
-	//                │ │ │ │  │   ┌─ year
+	//                │ │ │ │  │   ┌─ uuid
 	//                │ │ │ │  │   │  ┌── json
 	//                │ │ │ │  │   │  │  ┌── array
 	//                │ │ │ │  │   │  │  │
-	/* string   */ 0b_1_1_1_11_111_11_11_000,
-	/* boolean  */ 0b_1_1_0_00_000_00_10_000,
-	/* int      */ 0b_1_0_1_11_000_10_10_000,
-	/* float    */ 0b_1_0_1_11_000_00_10_000,
-	/* decimal  */ 0b_1_0_1_11_000_00_10_000,
-	/* datetime */ 0b_1_0_0_00_111_00_10_000,
-	/* date     */ 0b_1_0_0_00_110_00_10_000,
-	/* time     */ 0b_1_0_0_00_001_00_10_000,
-	/* year     */ 0b_1_0_1_00_000_10_10_000,
-	/* uuid     */ 0b_1_0_0_00_000_01_10_000,
-	/* json     */ 0b_1_1_1_11_111_11_11_111,
-	/* ip       */ 0b_1_0_0_00_000_00_11_000,
-	/* array    */ 0b_0_0_0_00_000_00_10_100,
-	/* object   */ 0b_0_0_0_00_000_00_10_011,
-	/* map      */ 0b_0_0_0_00_000_00_10_011,
+	/* string   */ 0b_1_1_1_11_111_1_11_000,
+	/* boolean  */ 0b_1_1_0_00_000_0_10_000,
+	/* int      */ 0b_1_0_1_11_000_0_10_000,
+	/* float    */ 0b_1_0_1_11_000_0_10_000,
+	/* decimal  */ 0b_1_0_1_11_000_0_10_000,
+	/* datetime */ 0b_1_0_0_00_111_0_10_000,
+	/* date     */ 0b_1_0_0_00_110_0_10_000,
+	/* time     */ 0b_1_0_0_00_001_0_10_000,
+	/* uuid     */ 0b_1_0_0_00_000_1_10_000,
+	/* json     */ 0b_1_1_1_11_111_1_11_111,
+	/* ip       */ 0b_1_0_0_00_000_0_11_000,
+	/* array    */ 0b_0_0_0_00_000_0_10_100,
+	/* object   */ 0b_0_0_0_00_000_0_10_011,
+	/* map      */ 0b_0_0_0_00_000_0_10_011,
 }
 
 // convertibleTo reports whether a value of type st can be converted to type dt.
@@ -45,10 +44,10 @@ func convertibleTo(st, dt types.Type) bool {
 	dk := dt.Kind()
 	mask := int32(1 << (types.MapKind - dk))
 	if convertMatrix[sk-1]&mask == 0 {
-		if sk == types.BooleanKind && dk == types.IntKind && dt.BitSize() == 8 { // boolean is convertible to int(8)
+		if sk == types.BooleanKind && dt.IsInt(8) { // boolean is convertible to int(8)
 			return true
 		}
-		if sk == types.IntKind && dk == types.BooleanKind && st.BitSize() == 8 { // int(8) is convertible to boolean.
+		if st.IsInt(8) && dk == types.BooleanKind { // int(8) is convertible to boolean.
 			return true
 		}
 		return false

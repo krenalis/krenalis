@@ -8,7 +8,16 @@ import { useSchema } from './useSchema';
 const Schema = () => {
 	const { setTitle } = useContext(AppContext);
 
-	const { isLoadingSchema, setIsLoadingSchema, schema, isAltering, setIsAltering, latestAlterError } = useSchema();
+	const {
+		consentPurposes,
+		isLoadingSchema,
+		setIsLoadingSchema,
+		schema,
+		isAltering,
+		setIsAltering,
+		latestAlterStartTime,
+		latestAlterError,
+	} = useSchema();
 
 	const location = useLocation();
 
@@ -21,8 +30,10 @@ const Schema = () => {
 			<SchemaContext.Provider
 				value={{
 					schema,
+					consentPurposes,
 					isLoadingSchema,
 					setIsLoadingSchema,
+					latestAlterStartTime,
 					latestAlterError,
 					isAltering,
 					setIsAltering,

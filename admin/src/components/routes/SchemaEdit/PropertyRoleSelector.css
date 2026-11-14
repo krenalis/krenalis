@@ -1,0 +1,111 @@
+.property-role-selector,
+.property-role-selector__trigger {
+	width: 100%;
+}
+
+.property-role-selector {
+	container-type: inline-size;
+}
+
+.property-role-selector .property-role-selector__trigger::part(button) {
+	background-color: var(--wa-form-control-background-color);
+	color: var(--text-light);
+	justify-content: flex-start;
+}
+
+.property-role-selector__trigger::part(label) {
+	font-weight: var(--wa-font-weight-normal);
+	text-align: left;
+	width: 100%;
+}
+
+.property-role-selector__trigger::part(caret) {
+	margin-left: auto;
+}
+
+.property-role-selector::part(menu) {
+	background-color: var(--wa-color-surface-default);
+	border: solid var(--wa-border-width-s) var(--wa-color-neutral-80);
+	border-radius: var(--wa-border-radius-m);
+	box-sizing: border-box;
+	padding: 0;
+	width: min(100cqi, calc(100vw - 40px));
+}
+
+.property-role-selector wa-divider {
+	--spacing: 0;
+}
+
+.property-role-selector__option {
+	min-height: 32px;
+	padding: 3px 12px;
+}
+
+.property-role-selector__none-option {
+	align-items: center;
+	min-height: var(--input-height-medium);
+}
+
+.property-role-selector__option::before,
+.property-role-selector__option::after {
+	display: none;
+}
+
+.property-role-selector__option::part(label) {
+	overflow: visible;
+	white-space: normal;
+}
+
+.property-role-selector__option:not(.property-role-selector__option--selected):hover,
+.property-role-selector__option:not(.property-role-selector__option--selected):focus-visible {
+	background-color: var(--property-form-option-hover-background-color);
+	color: var(--text-primary) !important;
+}
+
+.property-role-selector__option--selected,
+.property-role-selector__option--selected:hover,
+.property-role-selector__option--selected:focus,
+.property-role-selector__option--selected:focus-visible {
+	background-color: var(--property-form-option-selected-background-color);
+	color: var(--text-primary) !important;
+}
+
+/* App.css recolours every descendant of a focused dropdown item; keep the
+   colours that the option has when it is not focused. */
+.property-role-selector__option:focus-visible * {
+	color: inherit !important;
+}
+
+.property-role-selector__option:focus-visible .property-role-selector__option-description {
+	color: var(--text-light) !important;
+}
+
+.property-role-selector__option:focus-visible .property-role-selector__option-assignment,
+.property-role-selector__option:focus-visible > [slot='details'] {
+	color: var(--wa-color-brand-40) !important;
+}
+
+.property-role-selector__option > [slot='details'] {
+	color: var(--wa-color-brand-40);
+}
+
+.property-role-selector__option-content {
+	display: flex;
+	flex-direction: column;
+	line-height: 1.25;
+	padding-block: 4px;
+}
+
+.property-role-selector__option-description {
+	color: var(--text-light);
+	font-size: 12px;
+}
+
+.property-role-selector__option-assignment {
+	color: var(--wa-color-brand-40);
+	font-size: 11px;
+}
+
+.property-role-selector__option-assignment-path {
+	font-family: var(--monospace-fonts);
+}

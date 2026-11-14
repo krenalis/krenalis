@@ -17,28 +17,34 @@ import (
 // These data types are copy-paste of the types defined within the APIs.
 
 type PipelineToSet struct {
-	Name               string          `json:"name"`
-	Enabled            bool            `json:"enabled"`
-	Filter             *Filter         `json:"filter"`
-	InSchema           types.Type      `json:"inSchema"`
-	OutSchema          types.Type      `json:"outSchema"`
-	Transformation     *Transformation `json:"transformation"`
-	Query              string          `json:"query"`
-	Format             string          `json:"format"`
-	Path               string          `json:"path"`
-	Sheet              string          `json:"sheet"`
-	Compression        Compression     `json:"compression"`
-	OrderBy            string          `json:"orderBy"`
-	FormatSettings     json.Value      `json:"formatSettings,omitempty"`
-	ExportMode         ExportMode      `json:"exportMode,omitempty"`
-	Matching           Matching        `json:"matching"`
-	UpdateOnDuplicates bool            `json:"updateOnDuplicates"`
-	TableName          string          `json:"tableName"`
-	TableKey           string          `json:"tableKey"`
-	UserIDColumn       string          `json:"userIDColumn"`
-	UpdatedAtColumn    string          `json:"updatedAtColumn"`
-	UpdatedAtFormat    string          `json:"updatedAtFormat"`
-	Incremental        bool            `json:"incremental"`
+	Name               string            `json:"name"`
+	Enabled            bool              `json:"enabled"`
+	Filter             *Filter           `json:"filter"`
+	RequiredConsents   *RequiredConsents `json:"requiredConsents,omitempty"`
+	InSchema           types.Type        `json:"inSchema"`
+	OutSchema          types.Type        `json:"outSchema"`
+	Transformation     *Transformation   `json:"transformation"`
+	Query              string            `json:"query"`
+	Format             string            `json:"format"`
+	Path               string            `json:"path"`
+	Sheet              string            `json:"sheet"`
+	Compression        Compression       `json:"compression"`
+	OrderBy            string            `json:"orderBy"`
+	FormatSettings     json.Value        `json:"formatSettings,omitempty"`
+	ExportMode         ExportMode        `json:"exportMode,omitempty"`
+	Matching           Matching          `json:"matching"`
+	UpdateOnDuplicates bool              `json:"updateOnDuplicates"`
+	TableName          string            `json:"tableName"`
+	TableKey           string            `json:"tableKey"`
+	UserIDColumn       string            `json:"userIDColumn"`
+	UpdatedAtColumn    string            `json:"updatedAtColumn"`
+	UpdatedAtFormat    string            `json:"updatedAtFormat"`
+	Incremental        bool              `json:"incremental"`
+}
+
+type RequiredConsents struct {
+	Operator string   `json:"operator"`
+	Purposes []string `json:"purposes"`
 }
 
 type Compression string
@@ -74,13 +80,22 @@ type DummySettings struct {
 	OperationDelay          string `json:"operationDelay,omitempty"`
 }
 
+// IdentityResolutionRun represents an Identity Resolution execution.
+type IdentityResolutionRun struct {
+	ID        string     `json:"id"`
+	Status    string     `json:"status"`
+	StartTime time.Time  `json:"startTime"`
+	EndTime   *time.Time `json:"endTime"`
+	Error     *string    `json:"error"`
+}
+
 type PipelineRun struct {
 	ID        string     `json:"id"`
 	Pipeline  string     `json:"pipeline"`
 	StartTime time.Time  `json:"startTime"`
 	EndTime   *time.Time `json:"endTime"`
-	Passed    [7]int     `json:"passed"`
-	Failed    [7]int     `json:"failed"`
+	Passed    [9]int     `json:"passed"`
+	Failed    [9]int     `json:"failed"`
 	Error     string     `json:"error"`
 }
 
@@ -410,19 +425,24 @@ type Organization struct {
 
 // Workspace represents a workspace returned by the APIs.
 type Workspace struct {
-	ID                             string                 `json:"id"`
-	Name                           string                 `json:"name"`
-	ProfileSchema                  types.Type             `json:"profileSchema"`
-	AssignedRoles                  ProfileRoleAssignments `json:"assignedRoles"`
-	PrimarySources                 map[string]string      `json:"primarySources"`
-	ResolveIdentitiesOnBatchImport bool                   `json:"resolveIdentitiesOnBatchImport"`
-	Identifiers                    []string               `json:"identifiers"`
-	WarehouseMode                  WarehouseMode          `json:"warehouseMode"`
+	ID                             string        `json:"id"`
+	Name                           string        `json:"name"`
+	ProfileSchema                  ProfileSchema `json:"profileSchema"`
+	ResolveIdentitiesOnBatchImport bool          `json:"resolveIdentitiesOnBatchImport"`
+	Identifiers                    []string      `json:"identifiers"`
+	WarehouseMode                  WarehouseMode `json:"warehouseMode"`
 }
 
-// ProfileRoleAssignments maps each Profile role to the path of the property
-// assigned to it. An empty path means no property is assigned to that role.
-type ProfileRoleAssignments struct {
+// ProfileSchema contains the profile properties, roles and primary sources.
+type ProfileSchema struct {
+	Schema         types.Type        `json:"schema"`
+	PropertyRoles  PropertyRoles     `json:"propertyRoles"`
+	PrimarySources map[string]string `json:"primarySources"`
+}
+
+// PropertyRoles maps each property role to its property's path.
+// An empty path means no property is assigned to that role.
+type PropertyRoles struct {
 	FirstName string `json:"firstName"`
 	LastName  string `json:"lastName"`
 	Email     string `json:"email"`

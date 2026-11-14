@@ -10,6 +10,7 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
+	"slices"
 	"testing"
 	"time"
 
@@ -21,6 +22,49 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 )
+
+// TestCounts checks unconditional and conditional row counts.
+func TestCounts(t *testing.T) {
+
+	warehouse, db := newTestSnowflakeWarehouse(t)
+	mustExecSQL(t, db, `CREATE TABLE "COUNT_CONDITIONS" ("FLAG" BOOLEAN, "OTHER_FLAG" BOOLEAN)`)
+	mustExecSQL(t, db, `INSERT INTO "COUNT_CONDITIONS" VALUES
+		(TRUE, TRUE), (TRUE, FALSE), (FALSE, TRUE), (NULL, TRUE)`)
+
+	flag := warehouses.NewBaseExpr(warehouses.Column{Name: "flag", Type: types.Boolean()}, warehouses.OpIsTrue)
+	falseFlag := warehouses.NewBaseExpr(warehouses.Column{Name: "flag", Type: types.Boolean()}, warehouses.OpIsFalse)
+	otherFlag := warehouses.NewBaseExpr(warehouses.Column{Name: "other_flag", Type: types.Boolean()}, warehouses.OpIsTrue)
+	conditions := []warehouses.Expr{
+		nil,
+		flag,
+		falseFlag,
+		otherFlag,
+		warehouses.NewMultiExpr(warehouses.OpAnd, []warehouses.Expr{flag, otherFlag}),
+	}
+
+	totalCounts, err := warehouse.Counts(t.Context(), "count_conditions", nil)
+	if err != nil {
+		t.Fatalf("expected counts, got %v", err)
+	}
+	if !slices.Equal(totalCounts, []int{4}) {
+		t.Fatalf("expected counts [4], got %v", totalCounts)
+	}
+
+	_, err = warehouse.Counts(t.Context(), "count_conditions", []warehouses.Expr{})
+	if err == nil {
+		t.Fatalf("expected an error, got %v", err)
+	}
+
+	counts, err := warehouse.Counts(t.Context(), "count_conditions", conditions)
+	if err != nil {
+		t.Fatalf("expected counts, got %v", err)
+	}
+	want := []int{4, 2, 1, 3, 1}
+	if !slices.Equal(counts, want) {
+		t.Fatalf("expected counts %v, got %v", want, counts)
+	}
+
+}
 
 func Test_Merge(t *testing.T) {
 	// The KRENALIS_SKIP_SNOWFLAKE_TESTS environment variable is set by 'go run
@@ -37,6 +81,7 @@ func Test_Merge(t *testing.T) {
 		{types.Boolean(), true},
 		{types.Int(8), 103},
 		{types.Int(16), 8030},
+		{types.Int(16).AsYear(), 2014},
 		{types.Int(24), -3582672},
 		{types.Int(32), 1023947264},
 		{types.Int(64), -603826591193},
@@ -51,13 +96,13 @@ func Test_Merge(t *testing.T) {
 		{types.DateTime(), time.Date(2023, 1, 1, 1, 2, 3, 0, time.UTC)},
 		{types.Date(), time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)},
 		{types.Time(), time.Date(1970, 1, 1, 2, 3, 0, 0, time.UTC)},
-		{types.Year(), 2014},
 		{types.UUID(), "4d92d698-687d-4447-b34f-6b29d74a9730"},
 		{types.JSON(), json.Value(`{"foo":"boo"}`)},
 		{types.IP(), "127.0.0.1"},
 		{types.Array(types.Boolean()), []any{true, false}},
 		{types.Array(types.Int(8)), []any{5, -2, 12}},
 		{types.Array(types.Int(16)), []any{32057, -9381, 1623}},
+		{types.Array(types.Int(16).AsYear()), []any{1, 1970, 2020, 9999}},
 		{types.Array(types.Int(24)), []any{6318609, -93810, 16423}},
 		{types.Array(types.Int(32)), []any{7936605, -179804772, 23}},
 		{types.Array(types.Int(64)), []any{-193874627541, 819, 3481674621874}},
@@ -71,7 +116,6 @@ func Test_Merge(t *testing.T) {
 		{types.Array(types.DateTime()), []any{time.Date(2023, 1, 1, 1, 2, 3, 0, time.UTC), time.Date(2024, 10, 3, 15, 38, 36, 920638000, time.UTC)}},
 		{types.Array(types.Date()), []any{time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC), time.Date(2024, 10, 3, 0, 0, 0, 0, time.UTC)}},
 		{types.Array(types.Time()), []any{time.Date(1970, 1, 1, 2, 3, 0, 0, time.UTC), time.Date(1970, 1, 1, 15, 40, 07, 184741000, time.UTC)}},
-		{types.Array(types.Year()), []any{1, 1970, 2020, 9999}},
 		{types.Array(types.UUID()), []any{"4d92d698-687d-4447-b34f-6b29d74a9730", "4d92d698-687d-4447-b34f-6b29d74a9730"}},
 		{types.Array(types.JSON()), []any{json.Value(`{"foo":"boo"}`), json.Value(`null`)}},
 		{types.Array(types.IP()), []any{"127.0.0.1", "2001:db8:85a3::8a2e:370:7334"}},
@@ -154,13 +198,6 @@ func Test_Merge(t *testing.T) {
 		Table:   table.Name,
 		Columns: table.Columns,
 	}
-	count, err := dw.Count(t.Context(), table.Name, nil, nil)
-	if err != nil {
-		t.Fatalf("cannot count: %s", err)
-	}
-	if count != 2 {
-		t.Fatalf("expected count 2, got %d", count)
-	}
 	rows, count, err := dw.Query(context.Background(), query, true)
 	if err != nil {
 		t.Fatalf("cannot query: %s", err)
@@ -192,7 +229,7 @@ func Test_Merge(t *testing.T) {
 			}
 			got = v
 		case types.ArrayKind:
-			if c.KrenalisType.Elem().Kind() == types.JSONKind {
+			if c.KrenalisType.Elem().IsJSON() {
 				elements, ok := got.([]any)
 				if !ok {
 					t.Fatalf("type %s: expected a []any value, got %#v (type %T)", c.KrenalisType, got, got)
@@ -210,7 +247,7 @@ func Test_Merge(t *testing.T) {
 				}
 			}
 		case types.MapKind:
-			if c.KrenalisType.Elem().Kind() == types.JSONKind {
+			if c.KrenalisType.Elem().IsJSON() {
 				elements, ok := got.(map[string]any)
 				if !ok {
 					t.Fatalf("type %s: expected a map[string]any value, got %#v (type %T)", c.KrenalisType, got, got)

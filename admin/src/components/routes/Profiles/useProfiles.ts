@@ -6,10 +6,11 @@ import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import { ProfileProperty, ProfileSchemaProperties } from './Profiles.types';
 import { ObjectType } from '../../../lib/api/types/types';
 import { Filter } from '../../../lib/api/types/pipeline';
-import { CountProfilesResponse, FindProfilesResponse } from '../../../lib/api/types/responses';
+import { FindProfilesResponse } from '../../../lib/api/types/responses';
+import { ProfilePropertyRoles } from '../../../lib/api/types/workspace';
 import { flattenSchema } from '../../../lib/core/pipeline';
 import { PROFILES_PROPERTIES_KEY } from '../../../constants/storage';
-import { getProfilePropertyPathLabel } from './Profiles.helpers';
+import { getPropertyPathDisplayValue } from '../../helpers/getPropertyPathDisplayValue';
 import {
 	createProfilesQueryKey,
 	createProfilesSequenceState,
@@ -40,6 +41,8 @@ interface InFlightProfilesRequest {
 interface ProfilesReplacement {
 	activeProfileID: string;
 	animateColumnVisibility?: boolean;
+	isFilterApplication?: boolean;
+	isRefresh?: boolean;
 	filter: Filter | null;
 	first: number;
 	profileProperties: ProfileProperty[];
@@ -85,6 +88,7 @@ const useProfiles = () => {
 	const [profileSchema, setProfileSchema] = useState<ObjectType>();
 	const [profileSchemaSessionID, setProfileSchemaSessionID] = useState(0);
 	const [appliedFilter, setAppliedFilter] = useState<Filter | null>(null);
+	const [isApplyingFilter, setIsApplyingFilter] = useState(false);
 
 	const { api, handleError, redirect, selectedWorkspace, warehouse, workspaces } = useContext(AppContext);
 	const sequenceRef = useRef(sequence);
@@ -96,6 +100,7 @@ const useProfiles = () => {
 	const pendingNavigationRef = useRef(false);
 	const gridReplacementGenerationRef = useRef(0);
 	const gridReplacementControllerRef = useRef<AbortController>();
+	const isRefreshPendingRef = useRef(false);
 
 	const applySequenceAction = useCallback((action: ProfilesSequenceAction) => {
 		sequenceRef.current = profilesSequenceReducer(sequenceRef.current, action);
@@ -115,6 +120,8 @@ const useProfiles = () => {
 		gridReplacementGenerationRef.current++;
 		gridReplacementControllerRef.current?.abort();
 		gridReplacementControllerRef.current = undefined;
+		isRefreshPendingRef.current = false;
+		setIsApplyingFilter(false);
 	}, []);
 
 	const loadProfilesRange = useCallback(
@@ -158,7 +165,7 @@ const useProfiles = () => {
 						return false;
 					}
 					if (error instanceof UnprocessableError && error.code === 'SchemaNotAligned') {
-						applySequenceAction({ type: 'markSchemaNotAligned', executionID });
+						applySequenceAction({ type: 'markSchemaNotAligned', executionID, message: error.message });
 						return false;
 					}
 					throw error;
@@ -203,7 +210,7 @@ const useProfiles = () => {
 			const executionID = ++executionRef.current;
 			const { filter, queryKey, request } = createProfilesExecution(
 				selectedWorkspace,
-				workspaces.find((candidate) => candidate.id === selectedWorkspace)?.assignedRoles,
+				workspaces.find((candidate) => candidate.id === selectedWorkspace)?.profileSchema.propertyRoles,
 				profileProperties,
 				schema,
 				pageSize,
@@ -246,7 +253,7 @@ const useProfiles = () => {
 
 		let schema: ObjectType;
 		try {
-			schema = await api.workspaces.profileSchema();
+			schema = (await api.workspaces.profileSchema()).schema;
 		} catch (error) {
 			if (executionRef.current === schemaExecutionID) {
 				applySequenceAction({ type: 'initialFailed', executionID: schemaExecutionID });
@@ -408,12 +415,6 @@ const useProfiles = () => {
 		[applySequenceAction, transitionToPage],
 	);
 
-	const refreshProfiles = useCallback(() => {
-		if (profileSchema != null) {
-			startExecution(profilesProperties, profileSchema, sequenceRef.current.pageSize);
-		}
-	}, [profileSchema, profilesProperties, startExecution]);
-
 	const resetProfilesSchema = useCallback(() => {
 		appliedFilterRef.current = null;
 		setAppliedFilter(null);
@@ -425,29 +426,12 @@ const useProfiles = () => {
 		localStorage.setItem(PROFILES_PROPERTIES_KEY, JSON.stringify(properties));
 	}, []);
 
-	const previewProfilesFilter = useCallback(
-		async (filter: Filter | null, signal?: AbortSignal): Promise<CountProfilesResponse> => {
-			const executionID = executionRef.current;
-			try {
-				return await api.workspaces.profiles.count(filter, profileSchema, signal);
-			} catch (error) {
-				if (!signal?.aborted && executionRef.current === executionID) {
-					if (error instanceof UnprocessableError && error.code === 'SchemaNotAligned') {
-						applySequenceAction({ type: 'markSchemaNotAligned', executionID });
-					} else if (error instanceof NotFoundError) {
-						reportProfilesError(error);
-					}
-				}
-				throw error;
-			}
-		},
-		[api, applySequenceAction, profileSchema, reportProfilesError],
-	);
-
 	const replaceProfilesExecution = useCallback(
 		async ({
 			activeProfileID,
 			animateColumnVisibility,
+			isFilterApplication = false,
+			isRefresh = false,
 			filter: requestedFilter,
 			first,
 			profileProperties,
@@ -461,10 +445,12 @@ const useProfiles = () => {
 			const generation = gridReplacementGenerationRef.current;
 			const controller = new AbortController();
 			gridReplacementControllerRef.current = controller;
+			isRefreshPendingRef.current = isRefresh;
+			setIsApplyingFilter(isFilterApplication);
 			const pageSize = sequenceRef.current.pageSize;
 			const { filter, queryKey, request } = createProfilesExecution(
 				selectedWorkspace,
-				workspaces.find((candidate) => candidate.id === selectedWorkspace)?.assignedRoles,
+				workspaces.find((candidate) => candidate.id === selectedWorkspace)?.profileSchema.propertyRoles,
 				profileProperties,
 				profileSchema,
 				pageSize,
@@ -526,12 +512,18 @@ const useProfiles = () => {
 					return false;
 				}
 				if (error instanceof UnprocessableError && error.code === 'SchemaNotAligned') {
-					applySequenceAction({ type: 'markSchemaNotAligned', executionID: sequenceRef.current.executionID });
+					applySequenceAction({
+						type: 'markSchemaNotAligned',
+						executionID: sequenceRef.current.executionID,
+						message: error.message,
+					});
 				}
 				throw error;
 			} finally {
 				if (gridReplacementControllerRef.current === controller) {
 					gridReplacementControllerRef.current = undefined;
+					isRefreshPendingRef.current = false;
+					setIsApplyingFilter(false);
 				}
 			}
 		},
@@ -546,11 +538,28 @@ const useProfiles = () => {
 		],
 	);
 
+	const refreshProfiles = useCallback(() => {
+		void replaceProfilesExecution({
+			activeProfileID: '',
+			isRefresh: true,
+			filter: appliedFilterRef.current,
+			first: 0,
+			profileProperties: profilesProperties,
+			projection: sequenceRef.current.projection,
+		}).catch((error) => {
+			if (error instanceof UnprocessableError && error.code === 'SchemaNotAligned') {
+				return;
+			}
+			reportProfilesError(error);
+		});
+	}, [profilesProperties, replaceProfilesExecution, reportProfilesError]);
+
 	const showProfilesFilter = useCallback(
 		async (filter: Filter | null): Promise<boolean> => {
 			try {
 				return await replaceProfilesExecution({
 					activeProfileID: '',
+					isFilterApplication: true,
 					filter,
 					first: 0,
 					profileProperties: profilesProperties,
@@ -611,10 +620,13 @@ const useProfiles = () => {
 				updateProperties();
 			}
 
-			const assignedRoles = workspaces.find((candidate) => candidate.id === selectedWorkspace)?.assignedRoles;
-			const requestedProjection = profileProjection(properties, assignedRoles);
+			const propertyRoles = workspaces.find((candidate) => candidate.id === selectedWorkspace)?.profileSchema
+				.propertyRoles;
+			const requestedProjection = profileProjection(properties, propertyRoles);
 			if (requestedProjection.every((root) => loadedRoots.has(root))) {
-				cancelGridReplacement();
+				if (!isRefreshPendingRef.current) {
+					cancelGridReplacement();
+				}
 				return;
 			}
 
@@ -658,7 +670,12 @@ const useProfiles = () => {
 	);
 
 	const markProfileSchemaNotAligned = useCallback(
-		() => applySequenceAction({ type: 'markSchemaNotAligned', executionID: sequenceRef.current.executionID }),
+		(message?: string) =>
+			applySequenceAction({
+				type: 'markSchemaNotAligned',
+				executionID: sequenceRef.current.executionID,
+				message,
+			}),
 		[applySequenceAction],
 	);
 
@@ -671,7 +688,6 @@ const useProfiles = () => {
 
 	return {
 		appliedFilter,
-		previewProfilesFilter,
 		showProfilesFilter,
 		profiles,
 		profilesTotal: sequence.total,
@@ -679,6 +695,7 @@ const useProfiles = () => {
 		profileSchema,
 		profileSchemaProperties,
 		isLoading: sequence.isInitialLoading,
+		isApplyingFilter,
 		isBoundaryLoading: sequence.pendingFirst != null,
 		profilesFirst: sequence.visibleFirst,
 		profilesLimit: sequence.pageSize,
@@ -692,6 +709,7 @@ const useProfiles = () => {
 		canNavigateNextProfile,
 		canNavigatePreviousProfile,
 		isProfileSchemaNotAligned: sequence.schemaNotAligned,
+		profileSchemaErrorMessage: sequence.schemaNotAlignedMessage,
 		goToProfilesPage,
 		markProfileSchemaNotAligned,
 		navigateProfile,
@@ -730,7 +748,7 @@ const profileMetadata = (schema: ObjectType) => {
 		const preference = preferences.find((property) => property.name === path);
 		const isTypeChanged = preference != null && preference.type !== flatSchema[path].type;
 		properties.push({
-			label: getProfilePropertyPathLabel(path, schemaProperties),
+			label: getPropertyPathDisplayValue(path, (path) => schemaProperties[path]),
 			name: path,
 			isUsed: preference != null && !isTypeChanged ? preference.isUsed : true,
 			type: flatSchema[path].type,
@@ -742,13 +760,16 @@ const profileMetadata = (schema: ObjectType) => {
 			(preferencePositions.get(first.name) ?? preferences.length) -
 			(preferencePositions.get(second.name) ?? preferences.length),
 	);
+	if (properties.length > 0 && !properties.some((property) => property.isUsed)) {
+		properties[0].isUsed = true;
+	}
 
 	return { properties, schemaProperties };
 };
 
 const profileProjection = (
 	properties: ProfileProperty[],
-	assignedRoles: { firstName: string; lastName: string; email: string; country: string; photo: string } | undefined,
+	propertyRoles: ProfilePropertyRoles | undefined,
 ): string[] => {
 	const roots = new Set<string>();
 	for (const property of properties) {
@@ -756,10 +777,11 @@ const profileProjection = (
 			roots.add(property.name.split('.')[0]);
 		}
 	}
-	if (assignedRoles != null) {
-		for (const path of Object.values(assignedRoles)) {
-			if (path !== '') {
-				roots.add(path.split('.')[0]);
+	if (propertyRoles != null) {
+		for (const path of Object.values(propertyRoles)) {
+			const root = path.split('.')[0];
+			if (root !== '' && properties.some((property) => property.name.split('.')[0] === root)) {
+				roots.add(root);
 			}
 		}
 	}
@@ -768,7 +790,7 @@ const profileProjection = (
 
 const createProfilesExecution = (
 	workspace: string,
-	assignedRoles: { firstName: string; lastName: string; email: string; country: string; photo: string } | undefined,
+	propertyRoles: ProfilePropertyRoles | undefined,
 	properties: ProfileProperty[],
 	schema: ObjectType,
 	pageSize: number,
@@ -776,10 +798,11 @@ const createProfilesExecution = (
 	requestedProjection?: string[],
 ) => {
 	const filter = requestedFilter == null ? null : structuredClone(requestedFilter);
-	const projection = requestedProjection ?? profileProjection(properties, assignedRoles);
+	const projection = Array.from(
+		new Set([...profileProjection(properties, propertyRoles), ...(requestedProjection ?? [])]),
+	).sort();
 	const identity: ProfilesQueryIdentity = {
 		workspace,
-		search: '',
 		filter,
 		order: [
 			{ property: '_updated_at', desc: true },

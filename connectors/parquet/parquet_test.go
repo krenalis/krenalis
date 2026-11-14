@@ -70,8 +70,6 @@ func TestExportAndImportParquet(t *testing.T) {
 		{Name: "my_datetime", Type: types.DateTime(), ReadOptional: true},
 		{Name: "my_date", Type: types.Date(), ReadOptional: true},
 		{Name: "my_time", Type: types.Time(), ReadOptional: true},
-		// This cannot be tested as Parquet does not support years.
-		// {Name: "my_year", Type: types.Year(), ReadOptional: true},
 		{Name: "my_uuid", Type: types.UUID(), ReadOptional: true},
 		{Name: "my_json", Type: types.JSON(), ReadOptional: true},
 	}
@@ -256,7 +254,7 @@ func TestExportAndImportParquet(t *testing.T) {
 			expectedProperty := expectedRecord[c.Name]
 			gotProperty := gotRecords[c.Name]
 			var equalProperty bool
-			if c.Type.Kind() == types.DecimalKind {
+			if c.Type.IsDecimal() {
 				expectedDec, ok1 := expectedProperty.(decimal.Decimal)
 				gotDec, ok2 := gotProperty.(decimal.Decimal)
 				if ok1 && ok2 {
@@ -294,7 +292,6 @@ func TestExport(t *testing.T) {
 	exportedColumns := []types.Property{
 		{Name: "rank_int24", Type: types.Int(24), ReadOptional: true},
 		{Name: "rank_uint24", Type: types.Int(24).Unsigned(), ReadOptional: true},
-		{Name: "p_year", Type: types.Year(), ReadOptional: true},
 		{Name: "p_inet", Type: types.IP(), ReadOptional: true},
 		{Name: "address", Type: types.Object([]types.Property{
 			{Name: "street", Type: types.String(), ReadOptional: true},
@@ -305,7 +302,6 @@ func TestExport(t *testing.T) {
 		{
 			"rank_int24":  int(1234),
 			"rank_uint24": uint(1234),
-			"p_year":      2001,
 			"p_inet":      "192.128.0.1",
 			"address": map[string]any{
 				"street":   "123 Strett",
@@ -673,7 +669,7 @@ func Test_timeTimeToInt64(t *testing.T) {
 func lookupPythonExecPath() (string, error) {
 	// TODO: Keep in sync with other copies of this function, scattered
 	// throughout the code, that have the same name.
-	pythonNames := []string{"python", "python3", "python3.14"}
+	pythonNames := []string{"python", "python3", "python3.15"}
 	for _, name := range pythonNames {
 		path, err := exec.LookPath(name)
 		if err == nil {

@@ -8,7 +8,9 @@ import (
 	"iter"
 	"maps"
 	"math/rand"
+	"net/http"
 	"os"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -29,6 +31,7 @@ const (
 	fetchResultByID        ContextKey = "SF_FETCH_RESULT_BY_ID"
 	filePutStream          ContextKey = "STREAMING_PUT_FILE"
 	fileGetStream          ContextKey = "STREAMING_GET_FILE"
+	skipFileTransfer       ContextKey = "SKIP_FILE_TRANSFER"
 	fileTransferOptions    ContextKey = "FILE_TRANSFER_OPTIONS"
 	enableDecfloat         ContextKey = "ENABLE_DECFLOAT"
 	arrowAlloc             ContextKey = "ARROW_ALLOC"
@@ -77,9 +80,23 @@ func WithFilePutStream(ctx context.Context, reader io.Reader) context.Context {
 	return context.WithValue(ctx, filePutStream, reader)
 }
 
-// WithFileGetStream returns a context that contains the address of the file stream to be GET
+// WithFileGetStream returns a context that contains the address of the file stream to be GET.
+//
+// Deprecated: WithFileGetStream buffers the entire object before writing to writer.
+// Use SnowflakeConnection.DownloadStream instead.
 func WithFileGetStream(ctx context.Context, writer io.Writer) context.Context {
 	return context.WithValue(ctx, fileGetStream, writer)
+}
+
+func withSkipFileTransfer(ctx context.Context) context.Context {
+	return context.WithValue(ctx, skipFileTransfer, true)
+}
+
+// isSkipFileTransfer prevents exec from running the regular GET transfer after
+// DownloadStream has executed GET only to obtain stage and object metadata.
+func isSkipFileTransfer(ctx context.Context) bool {
+	v, ok := ctx.Value(skipFileTransfer).(bool)
+	return ok && v
 }
 
 // WithFileTransferOptions returns a context that contains the address of file transfer options
@@ -160,56 +177,12 @@ func getOrGenerateRequestIDFromContext(ctx context.Context) UUID {
 	return NewUUID()
 }
 
-// integer min
-func intMin(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
-// integer max
-func intMax(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
-}
-
-func int64Max(a, b int64) int64 {
-	if a > b {
-		return a
-	}
-	return b
-}
-
+// getMin returns the smallest element of arr, or -1 when arr is empty.
 func getMin(arr []int) int {
 	if len(arr) == 0 {
 		return -1
 	}
-	min := arr[0]
-	for _, v := range arr {
-		if v <= min {
-			min = v
-		}
-	}
-	return min
-}
-
-// time.Duration max
-func durationMax(d1, d2 time.Duration) time.Duration {
-	if d1-d2 > 0 {
-		return d1
-	}
-	return d2
-}
-
-// time.Duration min
-func durationMin(d1, d2 time.Duration) time.Duration {
-	if d1-d2 < 0 {
-		return d1
-	}
-	return d2
+	return slices.Min(arr)
 }
 
 // toNamedValues converts a slice of driver.Value to a slice of driver.NamedValue for Go 1.8 SQL package
@@ -365,4 +338,27 @@ func findByPrefix(in []string, prefix string) int {
 		}
 	}
 	return -1
+}
+
+// headerNames returns the header names of h, sorted, with every value omitted.
+//
+// Header values carry session tokens, storage credentials and the SSE-C
+// customer key, so they must not reach a log. Relying on the log masking to
+// redact them is not sufficient: the masking is pattern-based and therefore
+// sensitive to how the value was rendered, and formatting an http.Header with
+// %v produces map[Name:[value]], a shape the header-specific patterns in
+// internal/logger do not match. Omitting the values removes that dependency.
+//
+// The result is sorted so log output is deterministic; Go randomizes map
+// iteration order.
+func headerNames(h http.Header) []string {
+	if len(h) == 0 {
+		return nil
+	}
+	names := make([]string, 0, len(h))
+	for name := range h {
+		names = append(names, name)
+	}
+	slices.Sort(names)
+	return names
 }

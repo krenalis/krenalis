@@ -167,6 +167,90 @@ func TestRecordWriterYieldsRecordAtLimit(t *testing.T) {
 
 }
 
+// TestFileRecordSemantics verifies that Record, RecordSlice, and RecordStrings
+// validate and normalize values according to their semantics.
+func TestFileRecordSemantics(t *testing.T) {
+
+	country := types.String().AsCountry(types.ISO3166Alpha2)
+	tests := []struct {
+		name      string
+		semantics types.Type
+		value     string
+		want      string
+		valid     bool
+	}{
+		{"valid alpha-2 country", country, "IT", "IT", true},
+		{"valid alpha-3 country", types.String().AsCountry(types.ISO3166Alpha3), "ITA", "ITA", true},
+		{"unknown alpha-3 country", types.String().AsCountry(types.ISO3166Alpha3), "ZZZ", "", false},
+		{"unknown alpha-2 country", country, "ZZ", "", false},
+		{"empty country", country, "", "", false},
+		{"formatted phone", types.String().AsPhone(), "+39 02-36618 300", "+390236618300", true},
+		{"empty phone", types.String().AsPhone(), "", "", false},
+		{"invalid phone", types.String().AsPhone(), "a (b)", "", false},
+	}
+
+	for _, test := range tests {
+
+		t.Run(test.name, func(t *testing.T) {
+
+			for _, method := range []string{"Record", "RecordSlice", "RecordStrings"} {
+
+				t.Run(method, func(t *testing.T) {
+
+					var got Record
+					var yieldCount int
+					rw := newRecordWriter("test", nil, time.Time{}, nil, time.Time{}, 2)
+					err := rw.Columns([]types.Property{{Name: "value", Type: test.semantics}})
+					if err != nil {
+						t.Fatalf("expected Columns to succeed, got %v", err)
+					}
+					rw.yield = func(record Record) bool {
+						got = record
+						yieldCount++
+						return true
+					}
+
+					switch method {
+					case "Record":
+						err = rw.Record(map[string]any{"value": test.value})
+					case "RecordSlice":
+						err = rw.RecordSlice([]any{test.value})
+					case "RecordStrings":
+						err = rw.RecordStrings([]string{test.value})
+					}
+					if err != nil {
+						t.Fatalf("expected no error, got %v", err)
+					}
+
+					if yieldCount != 1 {
+						t.Fatalf("expected one record, got %d", yieldCount)
+					}
+					if err := got.Err; err != nil {
+						if test.valid {
+							t.Fatalf("expected no record error, got %v", err)
+						}
+						if _, ok := errors.AsType[InputValidationError](err); !ok {
+							t.Fatalf("expected InputValidationError, got %T", err)
+						}
+						return
+					}
+					if !test.valid {
+						t.Fatal("expected a record error, got nil")
+					}
+					if got.Attributes["value"] != test.want {
+						t.Fatalf("expected value %q, got %#v", test.want, got.Attributes["value"])
+					}
+
+				})
+
+			}
+
+		})
+
+	}
+
+}
+
 // errorCloseReader is a reader whose Close method fails.
 type errorCloseReader struct {
 	io.Reader

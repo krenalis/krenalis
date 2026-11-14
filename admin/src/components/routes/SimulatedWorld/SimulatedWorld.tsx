@@ -1,16 +1,16 @@
 import React, { FormEvent, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import SlBadge from '@shoelace-style/shoelace/dist/react/badge/index.js';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import SlDialog from '@shoelace-style/shoelace/dist/react/dialog/index.js';
-import type SlDialogElement from '@shoelace-style/shoelace/dist/components/dialog/dialog.component.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
-import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
-import type SlInputElement from '@shoelace-style/shoelace/dist/components/input/input.component.js';
-import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
-import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
-import type SlSelectElement from '@shoelace-style/shoelace/dist/components/select/select.component.js';
-import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
+import WaBadge from '@awesome.me/webawesome/dist/react/badge/index.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaDialog from '@awesome.me/webawesome/dist/react/dialog/index.js';
+import type WaDialogElement from '@awesome.me/webawesome/dist/components/dialog/dialog.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
+import WaInput from '@awesome.me/webawesome/dist/react/input/index.js';
+import type WaInputElement from '@awesome.me/webawesome/dist/components/input/input.js';
+import WaOption from '@awesome.me/webawesome/dist/react/option/index.js';
+import WaSelect from '@awesome.me/webawesome/dist/react/select/index.js';
+import type WaSelectElement from '@awesome.me/webawesome/dist/components/select/select.js';
+import WaSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
 import AppContext from '../../../context/AppContext';
 import { NotFoundError } from '../../../lib/api/errors';
 import { ConnectionRole } from '../../../lib/api/types/connection';
@@ -37,6 +37,13 @@ const DUPLICATE_PRESETS = [
 
 const errorText = (err: unknown): string =>
 	err instanceof Error ? err.message : 'The request failed. Please try again.';
+
+// Web Awesome does not propagate its host label to the native dialog.
+const onDialogShow = (event: Event) => {
+	if (event.target !== event.currentTarget) return;
+	const dialog = event.currentTarget as WaDialogElement;
+	dialog.dialog.setAttribute('aria-label', dialog.label);
+};
 
 interface AccountProgressProps {
 	generated: number;
@@ -73,7 +80,7 @@ interface AccountConnectionProps {
 
 const AccountConnection = ({ role, id, isRunning }: AccountConnectionProps) => (
 	<Link path={`connections/${id}/pipelines`} className='simulated-systems__connection-link'>
-		<SlIcon name={role === 'Source' ? 'arrow-down-right-square' : 'arrow-up-right-square'} />
+		<WaIcon name={role === 'Source' ? 'arrow-down-right-square' : 'arrow-up-right-square'} />
 		<ShimmerText isActive={isRunning}>{role}</ShimmerText>
 	</Link>
 );
@@ -275,13 +282,13 @@ const AccountList = ({ refreshVersion }: AccountListProps) => {
 					{account.name}
 				</Link>
 				{account.status !== 'Available' && (
-					<SlBadge
+					<WaBadge
 						className={`simulated-systems__status-badge simulated-systems__status-badge--${account.status.toLowerCase()}`}
 						pill
 						variant='neutral'
 					>
 						{account.status}
-					</SlBadge>
+					</WaBadge>
 				)}
 			</span>,
 			'SaaS application',
@@ -314,10 +321,10 @@ const AccountList = ({ refreshVersion }: AccountListProps) => {
 	return (
 		<main className='route-content simulated-systems'>
 			<Link path='simulated-world/create' className='simulated-systems__create-link'>
-				<SlButton variant={accounts != null && accounts.length === 0 ? 'primary' : 'text'}>
-					<SlIcon name='plus-circle' slot='suffix' />
+				<WaButton variant='brand' appearance={accounts != null && accounts.length === 0 ? 'accent' : 'plain'}>
+					<WaIcon name='plus-circle' slot='end' />
 					Create simulated system
-				</SlButton>
+				</WaButton>
 			</Link>
 			<Section
 				title='Simulated systems'
@@ -336,14 +343,14 @@ const AccountList = ({ refreshVersion }: AccountListProps) => {
 					{error !== '' && (
 						<div className='simulated-systems__error' role='alert'>
 							{error}{' '}
-							<SlButton size='small' onClick={() => setRefresh((value) => value + 1)}>
+							<WaButton size='small' onClick={() => setRefresh((value) => value + 1)}>
 								Retry
-							</SlButton>
+							</WaButton>
 						</div>
 					)}
 					{accounts == null && error === '' && (
 						<div className='simulated-systems__loading'>
-							<SlSpinner /> Loading simulated systems…
+							<WaSpinner /> Loading simulated systems…
 						</div>
 					)}
 					{accounts != null && (
@@ -367,11 +374,11 @@ interface CreateAccountProps {
 const CreateAccount = ({ onDone }: CreateAccountProps) => {
 	const { api, redirect, setIsLoadingConnections, publicMetadata } = useContext(AppContext);
 	const isActive = useRef(true);
-	const dialogRef = useRef<SlDialogElement>(null);
+	const dialogRef = useRef<WaDialogElement>(null);
 	const [isDialogOpen, setIsDialogOpen] = useState(false);
 	const nameInput = useRef<HTMLInputElement>(null);
 	const countInput = useRef<HTMLInputElement>(null);
-	const duplicateInput = useRef<SlInputElement>(null);
+	const duplicateInput = useRef<WaInputElement>(null);
 	const isSubmitPending = useRef(false);
 	const requestController = useRef<AbortController | null>(null);
 	const [name, setName] = useState('');
@@ -410,7 +417,11 @@ const CreateAccount = ({ onDone }: CreateAccountProps) => {
 		if (countMode === 'custom') countInput.current?.focus();
 	}, [countMode]);
 	useEffect(() => {
-		if (duplicateMode === 'custom') duplicateInput.current?.focus();
+		const input = duplicateInput.current;
+		if (duplicateMode !== 'custom' || input == null) return;
+		void input.updateComplete.then(() => {
+			if (duplicateInput.current === input) input.focus();
+		});
 	}, [duplicateMode]);
 
 	const rawCount = countMode === 'custom' ? customCount : countMode;
@@ -578,17 +589,19 @@ const CreateAccount = ({ onDone }: CreateAccountProps) => {
 	};
 
 	return (
-		<SlDialog
+		<WaDialog
 			ref={dialogRef}
 			className='simulated-systems__dialog simulated-systems__dialog--create'
 			label='Create simulated system'
-			noHeader
+			withoutHeader
+			lightDismiss
 			open={isDialogOpen}
-			onSlInitialFocus={(event) => {
-				event.preventDefault();
+			onWaShow={onDialogShow}
+			onWaAfterShow={() => {
 				nameInput.current?.focus({ preventScroll: true });
 			}}
-			onSlRequestClose={(event) => {
+			onWaHide={(event) => {
+				if (event.target !== event.currentTarget || !isDialogOpen) return;
 				event.preventDefault();
 				if (progress == null) redirect('simulated-world');
 			}}
@@ -649,26 +662,26 @@ const CreateAccount = ({ onDone }: CreateAccountProps) => {
 								}}
 							/>
 						) : (
-							<SlSelect
+							<WaSelect
 								id='simulated-system-user-count'
 								aria-label='User records to generate'
 								value={countMode}
 								aria-invalid={countError !== ''}
 								aria-describedby={countError !== '' ? 'simulated-system-user-count-error' : undefined}
-								onSlChange={(event) => {
-									const value = String((event.target as SlSelectElement).value);
+								onChange={(event) => {
+									const value = String((event.target as WaSelectElement).value);
 									if (value === 'custom') setCustomCount(Number(countMode).toLocaleString('en-US'));
 									setCountMode(value);
 									setCountError('');
 								}}
 							>
 								{COUNT_PRESETS.map((value) => (
-									<SlOption key={value} value={String(value)}>
+									<WaOption key={value} value={String(value)}>
 										{value === 0 ? '0 — Start empty' : value.toLocaleString('en-US')}
-									</SlOption>
+									</WaOption>
 								))}
-								<SlOption value='custom'>Custom…</SlOption>
-							</SlSelect>
+								<WaOption value='custom'>Custom…</WaOption>
+							</WaSelect>
 						)}
 						{countError !== '' && (
 							<span
@@ -690,7 +703,7 @@ const CreateAccount = ({ onDone }: CreateAccountProps) => {
 									Use duplicates to test identity resolution and profile unification.
 								</small>
 								{duplicateMode === 'custom' ? (
-									<SlInput
+									<WaInput
 										id='simulated-system-duplicate-percent'
 										aria-label='Duplicate records'
 										ref={duplicateInput}
@@ -702,15 +715,15 @@ const CreateAccount = ({ onDone }: CreateAccountProps) => {
 												? 'simulated-system-duplicate-percent-error'
 												: undefined
 										}
-										onSlInput={(event) => {
-											setCustomDuplicate((event.target as SlInputElement).value);
+										onInput={(event) => {
+											setCustomDuplicate((event.target as WaInputElement).value);
 											setDuplicateError('');
 										}}
 									>
-										<span slot='suffix'>%</span>
-									</SlInput>
+										<span slot='end'>%</span>
+									</WaInput>
 								) : (
-									<SlSelect
+									<WaSelect
 										id='simulated-system-duplicate-percent'
 										aria-label='Duplicate records'
 										value={duplicateMode}
@@ -720,20 +733,20 @@ const CreateAccount = ({ onDone }: CreateAccountProps) => {
 												? 'simulated-system-duplicate-percent-error'
 												: undefined
 										}
-										onSlChange={(event) => {
-											const value = String((event.target as SlSelectElement).value);
+										onChange={(event) => {
+											const value = String((event.target as WaSelectElement).value);
 											if (value === 'custom') setCustomDuplicate(duplicateMode);
 											setDuplicateMode(value);
 											setDuplicateError('');
 										}}
 									>
 										{DUPLICATE_PRESETS.map(({ value, label }) => (
-											<SlOption key={value} value={String(value)}>
+											<WaOption key={value} value={String(value)}>
 												{label}
-											</SlOption>
+											</WaOption>
 										))}
-										<SlOption value='custom'>Custom…</SlOption>
-									</SlSelect>
+										<WaOption value='custom'>Custom…</WaOption>
+									</WaSelect>
 								)}
 								{duplicateError !== '' && (
 									<span
@@ -747,17 +760,17 @@ const CreateAccount = ({ onDone }: CreateAccountProps) => {
 							</div>
 							<div className='simulated-systems__field'>
 								<label htmlFor='simulated-system-country'>Country distribution</label>
-								<SlSelect
+								<WaSelect
 									id='simulated-system-country'
 									aria-label='Country distribution'
 									value={country}
-									onSlChange={(event) => setCountry(String((event.target as SlSelectElement).value))}
+									onChange={(event) => setCountry(String((event.target as WaSelectElement).value))}
 								>
-									<SlOption value='IT'>Italy</SlOption>
+									<WaOption value='IT'>Italy</WaOption>
 									{publicMetadata.usaDemoEnabled === true && (
-										<SlOption value='US'>United States · Internal demo</SlOption>
+										<WaOption value='US'>United States · Internal demo</WaOption>
 									)}
-								</SlSelect>
+								</WaSelect>
 							</div>
 						</>
 					)}
@@ -782,16 +795,16 @@ const CreateAccount = ({ onDone }: CreateAccountProps) => {
 					</fieldset>
 					<div className='simulated-systems__actions'>
 						<Link path='simulated-world'>
-							<SlButton size='small'>Cancel</SlButton>
+							<WaButton size='small'>Cancel</WaButton>
 						</Link>
-						<SlButton
+						<WaButton
 							className='simulated-systems__create-button'
 							size='small'
 							type='submit'
-							variant='primary'
+							variant='brand'
 						>
 							Create
-						</SlButton>
+						</WaButton>
 					</div>
 				</form>
 			) : (
@@ -875,18 +888,18 @@ const CreateAccount = ({ onDone }: CreateAccountProps) => {
 						<div className='simulated-systems__actions'>
 							{progress.id !== '' ? (
 								<Link path='simulated-world' onClick={onDone}>
-									<SlButton className='simulated-systems__ok-button' variant='primary'>
+									<WaButton className='simulated-systems__ok-button' variant='brand'>
 										OK
-									</SlButton>
+									</WaButton>
 								</Link>
 							) : (
-								<SlButton onClick={() => setProgress(null)}>Back to form</SlButton>
+								<WaButton onClick={() => setProgress(null)}>Back to form</WaButton>
 							)}
 						</div>
 					)}
 				</div>
 			)}
-		</SlDialog>
+		</WaDialog>
 	);
 };
 
@@ -1122,14 +1135,14 @@ const AccountDetail = ({ id }: AccountDetailProps) => {
 			{loadError !== '' && (
 				<div className='simulated-systems__error' role='alert'>
 					Unable to refresh simulated system: {loadError}{' '}
-					<SlButton size='small' onClick={() => setRefresh((value) => value + 1)}>
+					<WaButton size='small' onClick={() => setRefresh((value) => value + 1)}>
 						Retry
-					</SlButton>
+					</WaButton>
 				</div>
 			)}
 			{account == null && loadError === '' && (
 				<div className='simulated-systems__loading'>
-					<SlSpinner /> Loading simulated system…
+					<WaSpinner /> Loading simulated system…
 				</div>
 			)}
 			{account != null && (
@@ -1152,25 +1165,25 @@ const AccountDetail = ({ id }: AccountDetailProps) => {
 									}}
 									aria-label='Simulated system name'
 								/>
-								<SlButton
+								<WaButton
 									type='submit'
-									variant='primary'
+									variant='brand'
 									loading={isSaving}
 									disabled={isSaving || account.status === 'Deleting'}
 								>
 									Save
-								</SlButton>
-								<SlButton
+								</WaButton>
+								<WaButton
 									onClick={() => {
 										setIsEditing(false);
 										setActionError('');
 									}}
 								>
 									Cancel
-								</SlButton>
+								</WaButton>
 							</form>
 						) : (
-							<SlButton
+							<WaButton
 								disabled={account.status === 'Deleting'}
 								onClick={() => {
 									setName(account.name);
@@ -1178,7 +1191,7 @@ const AccountDetail = ({ id }: AccountDetailProps) => {
 								}}
 							>
 								Rename simulated system
-							</SlButton>
+							</WaButton>
 						)}
 					</div>
 					{actionError !== '' && deletionProgress == null && (
@@ -1219,20 +1232,27 @@ const AccountDetail = ({ id }: AccountDetailProps) => {
 					>
 						{account.status === 'Preparing' && <p>Deletion is available when preparation finishes.</p>}
 						{account.status === 'Deleting' && <p>Deletion is in progress.</p>}
-						<SlButton
+						<WaButton
 							variant='danger'
 							disabled={account.status === 'Preparing' || account.status === 'Deleting'}
 							onClick={() => setIsDeleteConfirmationOpen(true)}
 						>
 							Delete simulated system
-						</SlButton>
+						</WaButton>
 					</Section>
-					<SlDialog
+					<WaDialog
 						className='simulated-systems__dialog'
 						label='Delete simulated system'
-						noHeader
+						withoutHeader
+						lightDismiss
 						open={isDeleteConfirmationOpen || deletionProgress != null}
-						onSlRequestClose={(event) => {
+						onWaShow={onDialogShow}
+						onWaHide={(event) => {
+							if (
+								event.target !== event.currentTarget ||
+								!(isDeleteConfirmationOpen || deletionProgress != null)
+							)
+								return;
 							event.preventDefault();
 							if (deletionProgress == null) setIsDeleteConfirmationOpen(false);
 						}}
@@ -1244,10 +1264,10 @@ const AccountDetail = ({ id }: AccountDetailProps) => {
 									This permanently deletes “{account.name}”, its connections, and its records.
 								</p>
 								<div className='simulated-systems__actions'>
-									<SlButton onClick={() => setIsDeleteConfirmationOpen(false)}>Cancel</SlButton>
-									<SlButton variant='danger' onClick={onDelete}>
+									<WaButton onClick={() => setIsDeleteConfirmationOpen(false)}>Cancel</WaButton>
+									<WaButton variant='danger' onClick={onDelete}>
 										Delete simulated system
-									</SlButton>
+									</WaButton>
 								</div>
 							</>
 						) : (
@@ -1291,14 +1311,14 @@ const AccountDetail = ({ id }: AccountDetailProps) => {
 								{deletionProgress.isComplete ? (
 									<div className='simulated-systems__actions'>
 										<Link path='simulated-world'>
-											<SlButton className='simulated-systems__ok-button' variant='primary'>
+											<WaButton className='simulated-systems__ok-button' variant='brand'>
 												OK
-											</SlButton>
+											</WaButton>
 										</Link>
 									</div>
 								) : !isDeleting ? (
 									<div className='simulated-systems__actions'>
-										<SlButton
+										<WaButton
 											onClick={() => {
 												setDeletionProgress(null);
 												setActionError('');
@@ -1306,18 +1326,18 @@ const AccountDetail = ({ id }: AccountDetailProps) => {
 											}}
 										>
 											Close
-										</SlButton>
-										<SlButton
+										</WaButton>
+										<WaButton
 											variant='danger'
 											onClick={() => void runDeletion(deletionProgress, true)}
 										>
 											Retry
-										</SlButton>
+										</WaButton>
 									</div>
 								) : null}
 							</div>
 						)}
-					</SlDialog>
+					</WaDialog>
 				</>
 			)}
 		</main>

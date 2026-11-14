@@ -5,6 +5,7 @@
 package postgresql
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
@@ -117,46 +118,51 @@ func TestQueryOrdering(t *testing.T) {
 
 }
 
-// Test_renderCountQuery verifies counts with optional joins and filters.
-func Test_renderCountQuery(t *testing.T) {
+// TestQueryWithNonConformingStrings verifies that string filter operands
+// remain safe when the database defaults to non-standard string escaping.
+func TestQueryWithNonConformingStrings(t *testing.T) {
 
-	id := warehouses.Column{Name: "id", Type: types.Int(32)}
-	joins := []warehouses.Join{{
-		Type:      warehouses.InnerJoin,
-		Table:     "identities",
-		Condition: warehouses.NewBaseExpr(id, warehouses.OpIs, warehouses.Column{Name: "fk", Type: types.Int(32)}),
-	}}
-	where := warehouses.NewBaseExpr(id, warehouses.OpIs, 1)
+	warehouse, db := newTestPostgreSQLWarehouse(t)
+	mustExecSQL(t, db, `CREATE TABLE "query_string_escaping" ("id" integer, "value" text)`)
+	mustExecSQL(t, db, `INSERT INTO "query_string_escaping" VALUES (1, 'safe')`)
+	text := `\' OR TRUE --`
+	_, err := db.Exec(t.Context(), `INSERT INTO "query_string_escaping" VALUES (2, $1)`, text)
+	if err != nil {
+		t.Fatalf("expected string fixture insertion, got %v", err)
+	}
+	mustExecSQL(t, db, "ALTER DATABASE "+quoteIdent(testDatabase)+" SET standard_conforming_strings = off")
+	db.Reset()
 
-	for _, tc := range []struct {
-		name  string
-		joins []warehouses.Join
-		where warehouses.Expr
-		want  string
-	}{
-		{name: "all rows", want: `SELECT COUNT(*) FROM "profiles"`},
-		{name: "filtered rows", where: where, want: `SELECT COUNT(*) FROM "profiles" WHERE "id" = 1`},
-		{
-			name:  "joined rows",
-			joins: joins,
-			want:  `SELECT COUNT(*) FROM "profiles" JOIN "identities" ON "id" = "fk"`,
-		},
-		{
-			name:  "filtered joined rows",
-			joins: joins,
-			where: where,
-			want:  `SELECT COUNT(*) FROM "profiles" JOIN "identities" ON "id" = "fk" WHERE "id" = 1`,
-		},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			statement, err := renderCountQuery("profiles", tc.joins, tc.where)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if statement != tc.want {
-				t.Fatalf("expected %q, got %q", tc.want, statement)
-			}
-		})
+	idColumn := warehouses.Column{Name: "id", Type: types.Int(32)}
+	column := warehouses.Column{Name: "value", Type: types.String()}
+	expr := warehouses.NewBaseExpr(column, warehouses.OpIs, text)
+	rows, total, err := warehouse.Query(t.Context(), warehouses.RowQuery{
+		Table: "query_string_escaping", Columns: []warehouses.Column{idColumn},
+		Where: expr, OrderBy: []warehouses.Column{idColumn},
+	}, true)
+	if err != nil {
+		t.Fatalf("expected query execution, got %v", err)
+	}
+	defer rows.Close()
+	var ids []int
+	values := make([]any, 1)
+	for rows.Next() {
+		err = rows.Scan(values...)
+		if err != nil {
+			t.Fatalf("expected row scan, got %v", err)
+		}
+		id, ok := values[0].(int)
+		if !ok {
+			t.Fatalf("expected integer row ID, got %T", values[0])
+		}
+		ids = append(ids, id)
+	}
+	err = rows.Err()
+	if err != nil {
+		t.Fatalf("expected complete query results, got %v", err)
+	}
+	if !slices.Equal(ids, []int{2}) || total != 1 {
+		t.Fatalf("expected matching IDs [2] and total 1, got %v and %d", ids, total)
 	}
 
 }

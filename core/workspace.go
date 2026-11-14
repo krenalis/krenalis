@@ -38,20 +38,37 @@ const (
 	MaxEventListeners = collector.MaxEventListeners
 )
 
+// IdentityResolutionRunStatus is the derived lifecycle status of an Identity
+// Resolution run.
+type IdentityResolutionRunStatus string
+
+const (
+	IdentityResolutionRunRunning    IdentityResolutionRunStatus = "running"
+	IdentityResolutionRunSuccessful IdentityResolutionRunStatus = "successful"
+	IdentityResolutionRunFailed     IdentityResolutionRunStatus = "failed"
+)
+
+// IdentityResolutionRun describes one accepted Identity Resolution execution.
+type IdentityResolutionRun struct {
+	ID        string                      `json:"id"`
+	Status    IdentityResolutionRunStatus `json:"status"`
+	StartTime time.Time                   `json:"startTime"`
+	EndTime   *time.Time                  `json:"endTime"`
+	Error     *string                     `json:"error"`
+}
+
 // Workspace represents a workspace.
 type Workspace struct {
 	core                           *Core
 	store                          *datastore.Store
 	workspace                      *state.Workspace
-	ID                             string                 `json:"id"`
-	Name                           string                 `json:"name"`
-	Environment                    Environment            `json:"environment"`
-	ProfileSchema                  types.Type             `json:"profileSchema"`
-	AssignedRoles                  ProfileRoleAssignments `json:"assignedRoles"`
-	PrimarySources                 map[string]string      `json:"primarySources"`
-	ResolveIdentitiesOnBatchImport bool                   `json:"resolveIdentitiesOnBatchImport"`
-	Identifiers                    []string               `json:"identifiers"`
-	WarehouseMode                  WarehouseMode          `json:"warehouseMode"`
+	ID                             string        `json:"id"`
+	Name                           string        `json:"name"`
+	Environment                    Environment   `json:"environment"`
+	ProfileSchema                  ProfileSchema `json:"profileSchema"`
+	ResolveIdentitiesOnBatchImport bool          `json:"resolveIdentitiesOnBatchImport"`
+	Identifiers                    []string      `json:"identifiers"`
+	WarehouseMode                  WarehouseMode `json:"warehouseMode"`
 }
 
 // Environment identifies a workspace's immutable application environment.
@@ -105,9 +122,16 @@ func isValidEnvironment(env Environment) bool {
 	return env == Production || env == Development
 }
 
-// ProfileRoleAssignments maps each Profile role to the path of the property
-// assigned to it. An empty path means no property is assigned to that role.
-type ProfileRoleAssignments struct {
+// ProfileSchema contains the profile properties, roles and primary sources.
+type ProfileSchema struct {
+	Schema         types.Type        `json:"schema"`
+	PropertyRoles  PropertyRoles     `json:"propertyRoles"`
+	PrimarySources map[string]string `json:"primarySources"`
+}
+
+// PropertyRoles maps each property role to its property's path.
+// An empty path means no property is assigned to that role.
+type PropertyRoles struct {
 	FirstName string `json:"firstName"`
 	LastName  string `json:"lastName"`
 	Email     string `json:"email"`
@@ -119,13 +143,15 @@ type ProfileRoleAssignments struct {
 type PipelineStep int
 
 const (
-	ReceiveStep          = PipelineStep(metrics.ReceiveStep)
-	InputValidationStep  = PipelineStep(metrics.InputValidationStep)
-	FilterStep           = PipelineStep(metrics.FilterStep)
-	ConsentStep          = PipelineStep(metrics.ConsentStep)
-	TransformationStep   = PipelineStep(metrics.TransformationStep)
-	OutputValidationStep = PipelineStep(metrics.OutputValidationStep)
-	FinalizeStep         = PipelineStep(metrics.FinalizeStep)
+	ReceiveStep              = PipelineStep(metrics.ReceiveStep)
+	InputValidationStep      = PipelineStep(metrics.InputValidationStep)
+	FilterStep               = PipelineStep(metrics.FilterStep)
+	EventConsentStep         = PipelineStep(metrics.EventConsentStep)
+	ExportProfileConsentStep = PipelineStep(metrics.ExportProfileConsentStep)
+	TransformationStep       = PipelineStep(metrics.TransformationStep)
+	OutputValidationStep     = PipelineStep(metrics.OutputValidationStep)
+	ImportProfileConsentStep = PipelineStep(metrics.ImportProfileConsentStep)
+	FinalizeStep             = PipelineStep(metrics.FinalizeStep)
 )
 
 func (step PipelineStep) String() string {
@@ -136,12 +162,16 @@ func (step PipelineStep) String() string {
 		return "InputValidation"
 	case FilterStep:
 		return "Filter"
-	case ConsentStep:
-		return "Consent"
+	case EventConsentStep:
+		return "EventConsent"
+	case ExportProfileConsentStep:
+		return "ExportProfileConsent"
 	case TransformationStep:
 		return "Transformation"
 	case OutputValidationStep:
 		return "OutputValidation"
+	case ImportProfileConsentStep:
+		return "ImportProfileConsent"
 	case FinalizeStep:
 		return "Finalize"
 	}
@@ -158,12 +188,16 @@ func ParsePipelineStep(step string) (PipelineStep, error) {
 		return InputValidationStep, nil
 	case "Filter":
 		return FilterStep, nil
-	case "Consent":
-		return ConsentStep, nil
+	case "EventConsent":
+		return EventConsentStep, nil
+	case "ExportProfileConsent":
+		return ExportProfileConsentStep, nil
 	case "Transformation":
 		return TransformationStep, nil
 	case "OutputValidation":
 		return OutputValidationStep, nil
+	case "ImportProfileConsent":
+		return ImportProfileConsentStep, nil
 	case "Finalize":
 		return FinalizeStep, nil
 	}
@@ -269,61 +303,69 @@ func (this *Workspace) PipelineErrors(ctx context.Context, start, end time.Time,
 	return errs, nil
 }
 
-// Attributes returns the attributes described by schema for the profile kpid.
-// It returns errors.BadRequestError for invalid arguments, errors.NotFoundError
-// if the profile or workspace does not exist, errors.UnprocessableError with
-// code MaintenanceMode or SchemaNotAligned, or errors.UnavailableError for a
-// warehouse failure.
+// Attributes returns the attributes defined by the specified schema for the
+// given profile.
+//
+// It returns an errors.NotFoundError error if the workspace or profile does not
+// exist.
+// It returns an errors.UnprocessableError error with code
+//   - MaintenanceMode, if the data warehouse is in maintenance mode.
+//   - SchemaNotAligned, if schema is not aligned with the profile schema.
 func (this *Workspace) Attributes(ctx context.Context, kpid string, schema types.Type) (json.Value, error) {
 
 	this.core.mustBeOpen()
 
+	// Parse the KPID.
 	id, err := uuid.Parse(kpid)
 	if err != nil {
 		return nil, errors.BadRequest("profile %q is not a valid profile identifier", kpid)
 	}
 	kpid = id.String()
-	if schema.Kind() != types.ObjectKind || schema.Generic() {
-		return nil, errors.BadRequest("schema is not a concrete object type")
-	}
 
+	if !schema.Valid() {
+		return nil, errors.BadRequest("schema is required")
+	}
+	if !schema.IsObject() {
+		return nil, errors.BadRequest("schema is not an object type")
+	}
+	properties := schema.Properties().Names()
 	where := &state.Where{
 		Operator: state.OpAnd,
-		Rules: []state.WhereRule{&state.WhereCondition{
-			Property: []string{"_kpid"},
-			Operator: state.OpIs,
-			Values:   []any{kpid},
-		}},
+		Rules: []state.WhereRule{
+			&state.WhereCondition{
+				Property: []string{"_kpid"},
+				Operator: state.OpIs,
+				Values:   []any{kpid},
+			},
+		},
 	}
-	profiles, _, _, err := this.store.Profiles(ctx, datastore.Query{
-		Properties: schema.Properties().Names(),
+
+	// Retrieve the profile attributes.
+	profiles, _, err := this.store.Profiles(ctx, datastore.Query{
+		Properties: properties,
 		Where:      where,
 		Limit:      1,
 	}, schema)
 	if err != nil {
-		if errors.Is(err, datastore.ErrMaintenanceMode) {
+		if err == datastore.ErrWorkspaceNotExist {
+			return nil, errors.NotFound("workspace %s does not exist", this.workspace.ID)
+		}
+		if err == datastore.ErrMaintenanceMode {
 			return nil, errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
 		}
-		if errors.Is(err, datastore.ErrWorkspaceNotExist) {
-			return nil, errors.NotFound("workspace does not exist")
+		if err, ok := err.(*datastore.WarehouseError); ok {
+			return nil, errors.Unavailable("%s", err)
 		}
-		if schemaErr, ok := errors.AsType[*schemas.Error](err); ok {
-			return nil, errors.Unprocessable(SchemaNotAligned, "%s", schemaErr)
+		if err, ok := err.(*schemas.Error); ok {
+			return nil, errors.Unprocessable(SchemaNotAligned, "%s", err)
 		}
-		if warehouseErr, ok := errors.AsType[*datastore.UnavailableError](err); ok {
-			return nil, errors.Unavailable("%s", warehouseErr)
-		}
-		return nil, errors.New(err.Error())
+		return nil, err
 	}
 	if len(profiles) == 0 {
 		return nil, errors.NotFound("profile %q does not exist", kpid)
 	}
-	attributes, err := types.Marshal(profiles[0], schema)
-	if err != nil {
-		return nil, errors.New(err.Error())
-	}
 
-	return attributes, nil
+	return types.Marshal(profiles[0], schema)
 }
 
 // ColumnTypeDescription returns a description for the warehouse column type
@@ -331,7 +373,7 @@ func (this *Workspace) Attributes(ctx context.Context, kpid string, schema types
 // The description is not required to be a syntactically valid warehouse type,
 // and may therefore include additional human-readable details (such as type
 // information, maximum character count, enum values, etc...).
-func (this Workspace) ColumnTypeDescription(t types.Type) (string, error) {
+func (this *Workspace) ColumnTypeDescription(t types.Type) (string, error) {
 	this.core.mustBeOpen()
 	return this.store.ColumnTypeDescription(t)
 }
@@ -439,10 +481,12 @@ func (this *Workspace) Connection(ctx context.Context, id string) (*Connection, 
 		eventTypes := make([]EventType, len(appEventTypes))
 		for i, et := range appEventTypes {
 			eventTypes[i] = EventType{
-				ID:            et.ID,
-				Name:          et.Name,
-				Description:   et.Description,
-				DefaultFilter: et.DefaultFilter,
+				ID:               et.ID,
+				Name:             et.Name,
+				Description:      et.Description,
+				OrderingGroup:    et.OrderingGroup,
+				DeliveryEndpoint: et.DeliveryEndpoint,
+				DefaultFilter:    et.DefaultFilter,
 			}
 		}
 		connection.EventTypes = &eventTypes
@@ -818,6 +862,13 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 	return n.ID, nil
 }
 
+// EventListenerConsents represents the consents required by an event
+// listener. Each purpose is represented by its event consent locations.
+type EventListenerConsents struct {
+	Operator ConsentPurposesOperator  `json:"operator"`
+	Purposes [][]EventConsentLocation `json:"purposes"`
+}
+
 // CreateEventListener creates an event listener for the workspace that listens
 // to events and returns its identifier.
 //
@@ -836,12 +887,12 @@ func (this *Workspace) CreateConnection(ctx context.Context, connection Connecti
 //
 // If requiredConsents is non-nil, only events whose consents satisfy its
 // purposes, according to its operator, will be observed. Its purposes must be
-// at most MaxRequiredConsentPurposes and must not contain duplicates.
+// at most MaxRequiredConsentPurposes, and each must have at least one event
+// consent location.
 //
-// It returns an errors.UnprocessableError error with code:
-//
-//   - TooManyListeners, if there are already too many listeners.
-func (this *Workspace) CreateEventListener(connection string, size int, filter *Filter, requiredConsents *RequiredConsents) (string, error) {
+// It returns an errors.UnprocessableError error with code TooManyListeners if
+// there are already too many listeners.
+func (this *Workspace) CreateEventListener(connection string, size int, filter *Filter, requiredConsents *EventListenerConsents) (string, error) {
 	this.core.mustBeOpen()
 	if connection != "" && !IsValidID(connection) {
 		return "", errors.BadRequest("identifier %q is not a valid connection identifier", connection)
@@ -883,15 +934,20 @@ func (this *Workspace) CreateEventListener(connection string, size int, filter *
 		}
 		rc = &state.RequiredConsents{
 			Operator: state.ConsentPurposesOperator(requiredConsents.Operator),
-			Purposes: slices.Clone(requiredConsents.Purposes),
+			Purposes: make([]*state.ConsentPurpose, len(requiredConsents.Purposes)),
 		}
-		for i, code := range rc.Purposes {
-			if err := validateConsentPurposeCode(code); err != nil {
+		for i, locations := range requiredConsents.Purposes {
+			if len(locations) == 0 {
+				return "", errors.BadRequest("required consent purpose %d has no event consent locations", i)
+			}
+			if err := validateEventConsentLocations(locations); err != nil {
 				return "", errors.BadRequest("%s", err)
 			}
-			if slices.Contains(rc.Purposes[i+1:], code) {
-				return "", errors.BadRequest("required consent purpose %q is duplicated", code)
+			cp := &state.ConsentPurpose{EventConsentLocations: make([]state.EventConsentLocation, len(locations))}
+			for j, loc := range locations {
+				cp.EventConsentLocations[j] = state.EventConsentLocation(loc)
 			}
+			rc.Purposes[i] = cp
 		}
 	}
 	observer, ok := this.core.collector.Observer(this.workspace.ID)
@@ -1090,7 +1146,7 @@ func (this *Workspace) Events(ctx context.Context, properties []string, filter *
 		if err == datastore.ErrMaintenanceMode {
 			return nil, errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
 		}
-		if err, ok := err.(*datastore.UnavailableError); ok {
+		if err, ok := err.(*datastore.WarehouseError); ok {
 			return nil, errors.Unavailable("%s", err)
 		}
 		return nil, err
@@ -1110,13 +1166,10 @@ func (this *Workspace) Events(ctx context.Context, properties []string, filter *
 //
 // If the KPID does not exist, still return an empty slice instead of an error.
 //
-// It returns an errors.UnprocessableError error with code:
-//
-//   - MaintenanceMode, if the data warehouse is in maintenance mode.
+// It returns an errors.UnprocessableError error with code MaintenanceMode if
+// the data warehouse is in maintenance mode.
 func (this *Workspace) Identities(ctx context.Context, kpid string, first, limit int) ([]Identity, int, error) {
-
 	this.core.mustBeOpen()
-
 	id, err := uuid.Parse(kpid)
 	if err != nil {
 		return nil, 0, errors.BadRequest("profile %q is not a valid KPID", kpid)
@@ -1150,8 +1203,71 @@ func (this *Workspace) Identities(ctx context.Context, kpid string, first, limit
 	if identities == nil {
 		identities = []Identity{}
 	}
-
 	return identities, total, nil
+}
+
+// IdentityResolutionRuns returns Identity Resolution runs for the workspace,
+// ordered from newest to oldest.
+// first must be between 0 and math.MaxInt32, and limit between 1 and 1000.
+// status is optional and, if specified, must be running, successful, or failed.
+func (this *Workspace) IdentityResolutionRuns(ctx context.Context, first, limit int, status IdentityResolutionRunStatus) ([]IdentityResolutionRun, error) {
+
+	this.core.mustBeOpen()
+
+	// Validate pagination.
+	if first < 0 || first > maxInt32 {
+		return nil, errors.BadRequest("first %d is not valid", first)
+	}
+	if limit < 1 || limit > 1000 {
+		return nil, errors.BadRequest("limit %d is not valid", limit)
+	}
+
+	// Validate status and build its query predicate.
+	var predicate string
+	switch status {
+	case "":
+	case IdentityResolutionRunRunning:
+		predicate = " AND end_time IS NULL"
+	case IdentityResolutionRunSuccessful:
+		predicate = " AND end_time IS NOT NULL AND error IS NULL"
+	case IdentityResolutionRunFailed:
+		predicate = " AND end_time IS NOT NULL AND error IS NOT NULL"
+	default:
+		return nil, errors.BadRequest("status %q is not valid", status)
+	}
+
+	query := `SELECT id::text, start_time, end_time, error
+		FROM identity_resolution_runs
+		WHERE workspace = $1` + predicate + `
+		ORDER BY start_time DESC, id DESC
+		OFFSET $2 LIMIT $3`
+
+	runs := make([]IdentityResolutionRun, 0)
+	err := this.core.db.QueryScan(ctx, query, this.workspace.ID, first, limit, func(rows *db.Rows) error {
+		for rows.Next() {
+			var run IdentityResolutionRun
+			if err := rows.Scan(&run.ID, &run.StartTime, &run.EndTime, &run.Error); err != nil {
+				return err
+			}
+			switch {
+			case run.EndTime == nil && run.Error == nil:
+				run.Status = IdentityResolutionRunRunning
+			case run.EndTime != nil && run.Error == nil:
+				run.Status = IdentityResolutionRunSuccessful
+			case run.EndTime != nil && run.Error != nil:
+				run.Status = IdentityResolutionRunFailed
+			default:
+				return fmt.Errorf("core: unexpected status for identity resolution run %q", run.ID)
+			}
+			runs = append(runs, run)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return runs, nil
 }
 
 // LatestIdentityResolution return information about the latest identity
@@ -1253,15 +1369,15 @@ func (this *Workspace) PipelineRun(ctx context.Context, id string) (*PipelineRun
 	var run PipelineRun
 	err := this.core.db.QueryRow(ctx,
 		"SELECT r.id, r.pipeline, r.start_time, r.end_time, r.passed_0, r.passed_1, r.passed_2, r.passed_3,"+
-			" r.passed_4, r.passed_5, r.passed_6, r.failed_0, r.failed_1, r.failed_2, r.failed_3, r.failed_4,"+
-			" r.failed_5, r.failed_6, r.error\n"+
+			" r.passed_4, r.passed_5, r.passed_6, r.passed_7, r.passed_8, r.failed_0, r.failed_1, r.failed_2, r.failed_3,"+
+			" r.failed_4, r.failed_5, r.failed_6, r.failed_7, r.failed_8, r.error\n"+
 			"FROM pipelines_runs r\n"+
 			"INNER JOIN pipelines p ON p.id = r.pipeline\n"+
 			"INNER JOIN connections c ON c.id = p.connection\n"+
 			"WHERE c.workspace = $1 AND r.id = $2", this.workspace.ID, id).Scan(
 		&run.ID, &run.Pipeline, &run.StartTime, &run.EndTime, &run.Passed[0], &run.Passed[1], &run.Passed[2], &run.Passed[3],
-		&run.Passed[4], &run.Passed[5], &run.Passed[6], &run.Failed[0], &run.Failed[1], &run.Failed[2], &run.Failed[3], &run.Failed[4],
-		&run.Failed[5], &run.Failed[6], &run.Error)
+		&run.Passed[4], &run.Passed[5], &run.Passed[6], &run.Passed[7], &run.Passed[8], &run.Failed[0], &run.Failed[1], &run.Failed[2],
+		&run.Failed[3], &run.Failed[4], &run.Failed[5], &run.Failed[6], &run.Failed[7], &run.Failed[8], &run.Error)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, errors.NotFound("pipeline run %s does not exist", id)
@@ -1269,8 +1385,8 @@ func (this *Workspace) PipelineRun(ctx context.Context, id string) (*PipelineRun
 		return nil, err
 	}
 	if run.EndTime == nil {
-		run.Passed = [7]int{}
-		run.Failed = [7]int{}
+		run.Passed = [9]int{}
+		run.Failed = [9]int{}
 	}
 	return &run, nil
 }
@@ -1283,7 +1399,7 @@ func (this *Workspace) PipelineRuns(ctx context.Context) ([]*PipelineRun, error)
 	runs := []*PipelineRun{}
 	err := this.core.db.QueryScan(ctx,
 		"SELECT r.id, r.pipeline, r.start_time, r.end_time, r.passed_0, r.passed_1, r.passed_2, r.passed_3,"+
-			" r.passed_4, r.passed_5, r.passed_6, r.failed_0, r.failed_1, r.failed_2, r.failed_3, r.failed_4, r.failed_5, r.failed_6, r.error\n"+
+			" r.passed_4, r.passed_5, r.passed_6, r.passed_7, r.passed_8, r.failed_0, r.failed_1, r.failed_2, r.failed_3, r.failed_4, r.failed_5, r.failed_6, r.failed_7, r.failed_8, r.error\n"+
 			"FROM pipelines_runs r\n"+
 			"INNER JOIN pipelines p ON p.id = r.pipeline\n"+
 			"INNER JOIN connections c ON c.id = p.connection\n"+
@@ -1293,8 +1409,8 @@ func (this *Workspace) PipelineRuns(ctx context.Context) ([]*PipelineRun, error)
 			for rows.Next() {
 				var run PipelineRun
 				if err = rows.Scan(&run.ID, &run.Pipeline, &run.StartTime, &run.EndTime, &run.Passed[0], &run.Passed[1], &run.Passed[2], &run.Passed[3],
-					&run.Passed[4], &run.Passed[5], &run.Passed[6], &run.Failed[0], &run.Failed[1], &run.Failed[2], &run.Failed[3], &run.Failed[4],
-					&run.Failed[5], &run.Failed[6], &run.Error); err != nil {
+					&run.Passed[4], &run.Passed[5], &run.Passed[6], &run.Passed[7], &run.Passed[8], &run.Failed[0], &run.Failed[1], &run.Failed[2],
+					&run.Failed[3], &run.Failed[4], &run.Failed[5], &run.Failed[6], &run.Failed[7], &run.Failed[8], &run.Error); err != nil {
 					return err
 				}
 				runs = append(runs, &run)
@@ -1307,65 +1423,63 @@ func (this *Workspace) PipelineRuns(ctx context.Context) ([]*PipelineRun, error)
 
 	for _, run := range runs {
 		if run.EndTime == nil {
-			run.Passed = [7]int{}
-			run.Failed = [7]int{}
+			run.Passed = [9]int{}
+			run.Failed = [9]int{}
 		}
 	}
 
 	return runs, nil
 }
 
-// ProfileCount returns the number of profiles matching filter.
-// schema is required when filter is present. Only filter dependencies must
-// align with the current profile schema.
-// It returns errors.UnprocessableError with code MaintenanceMode,
-// PropertyNotExist, or SchemaNotAligned, and errors.NotFoundError if the
-// workspace no longer exists. Invalid arguments return errors.BadRequestError;
-// warehouse failures return errors.UnavailableError.
+// ProfileCount returns the number of profiles matching filter. If filter is
+// nil, it returns the total number of profiles.
+//
+// If filter is not nil, schema must be an object type with the properties used
+// by filter. If filter is nil, schema can be the invalid type.
+//
+// It returns an errors.NotFoundError error if the workspace does not exist.
+// It returns an errors.UnprocessableError error with code
+//   - MaintenanceMode, if the data warehouse is in maintenance mode.
+//   - PropertyNotExist, if a property in filter does not exist in schema.
+//   - SchemaNotAligned, if schema is valid and is not aligned with the profile
+//     schema.
 func (this *Workspace) ProfileCount(ctx context.Context, filter *Filter, schema types.Type) (int, error) {
 
 	this.core.mustBeOpen()
 
-	if (schema.Valid() || filter != nil) && (schema.Kind() != types.ObjectKind || schema.Generic()) {
-		return 0, errors.BadRequest("schema is not a concrete object type")
+	if filter != nil && !schema.Valid() {
+		return 0, errors.BadRequest("schema is required")
 	}
-	var where *state.Where
-	var dependencies types.Type
-	if filter != nil {
+	if schema.Valid() && !schema.IsObject() {
+		return 0, errors.BadRequest("schema is not an object type")
+	}
 
-		paths, err := validateFilter(filter, schema, state.Destination, state.TargetUser)
+	var where *state.Where
+	if filter != nil {
+		_, err := validateFilter(filter, schema, state.Destination, state.TargetUser)
 		if err != nil {
-			if pathErr, ok := errors.AsType[types.PathNotExistError](err); ok {
-				return 0, errors.Unprocessable(PropertyNotExist, "filter's property %s does not exist", pathErr.Path)
+			if err, ok := errors.AsType[types.PathNotExistError](err); ok {
+				return 0, errors.Unprocessable(PropertyNotExist, "filter's property %s does not exist", err.Path)
 			}
 			return 0, errors.BadRequest("filter is not valid: %s", err)
 		}
 		where = convertFilterToWhere(filter, schema)
-		dependencies = types.Prune(schema, func(path string) bool {
-			for _, dependency := range paths {
-				if path == dependency || strings.HasPrefix(path, dependency+".") {
-					return true
-				}
-			}
-			return false
-		})
-
 	}
-	total, err := this.store.ProfileCount(ctx, where, dependencies)
+	total, err := this.store.ProfileCount(ctx, where, schema)
 	if err != nil {
+		if errors.Is(err, datastore.ErrWorkspaceNotExist) {
+			return 0, errors.NotFound("workspace %s does not exist", this.workspace.ID)
+		}
 		if errors.Is(err, datastore.ErrMaintenanceMode) {
 			return 0, errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
 		}
-		if errors.Is(err, datastore.ErrWorkspaceNotExist) {
-			return 0, errors.NotFound("workspace does not exist")
+		if err, ok := errors.AsType[*schemas.Error](err); ok {
+			return 0, errors.Unprocessable(SchemaNotAligned, "%s", err)
 		}
-		if schemaErr, ok := errors.AsType[*schemas.Error](err); ok {
-			return 0, errors.Unprocessable(SchemaNotAligned, "%s", schemaErr)
+		if err, ok := errors.AsType[*datastore.WarehouseError](err); ok {
+			return 0, errors.Unavailable("%s", err)
 		}
-		if warehouseErr, ok := errors.AsType[*datastore.UnavailableError](err); ok {
-			return 0, errors.Unavailable("%s", warehouseErr)
-		}
-		return 0, errors.New(err.Error())
+		return 0, err
 	}
 
 	return total, nil
@@ -1389,24 +1503,38 @@ type Profile struct {
 	Attributes map[string]any `json:"attributes"`
 }
 
-// Profiles returns profiles matching filter, their total count, and whether
-// another row follows the requested range.
-// schema describes the request's properties, filter, and ordering; only
-// dependencies used by the request must align with the current schema.
+// Profiles returns profiles matching filter, an estimate of their total number,
+// and whether more results are available for a subsequent call with the next
+// range.
+//
+// schema must be an object type with the properties used in properties, filter,
+// and order.
+//
 // If properties is nil, all properties in schema are returned. Otherwise,
 // properties must contain at least one top-level property name.
-// first must be in [0, 2147483647] and limit in [1, 1000].
-// order defaults to update time; KPID breaks ties in the same direction.
-// It returns errors.NotFoundError if the workspace no longer exists, or
-// errors.UnprocessableError with code MaintenanceMode, PropertyNotExist,
-// OrderNotExist, OrderTypeNotSortable, or SchemaNotAligned. Invalid arguments
-// return errors.BadRequestError; warehouse failures return errors.UnavailableError.
+//
+// first must be in [0, math.MaxInt32] and limit in [1, 1000]. order defaults to
+// update time. Profiles with the same value for the ordering property are also
+// sorted by KPID, in ascending order if orderDesc is false and descending order
+// if it is true.
+//
+// It returns an errors.NotFoundError error if the workspace does not exist.
+// It returns an errors.UnprocessableError error with code
+//   - MaintenanceMode, if the data warehouse is in maintenance mode.
+//   - OrderNotExist, if order does not exist in schema.
+//   - OrderTypeNotSortable, if the type of the order property is not sortable.
+//   - PropertyNotExist, if a property in properties or filter does not exist
+//     in schema.
+//   - SchemaNotAligned, if schema is not aligned with the profile schema.
 func (this *Workspace) Profiles(ctx context.Context, schema types.Type, properties []string, filter *Filter, order string, orderDesc bool, first, limit int) ([]Profile, int, bool, error) {
 
 	this.core.mustBeOpen()
 
-	if schema.Kind() != types.ObjectKind || schema.Generic() {
-		return nil, 0, false, errors.BadRequest("schema is not a concrete object type")
+	if !schema.Valid() {
+		return nil, 0, false, errors.BadRequest("schema is required")
+	}
+	if !schema.IsObject() {
+		return nil, 0, false, errors.BadRequest("schema is not an object type")
 	}
 	profileProperties := schema.Properties()
 
@@ -1430,40 +1558,32 @@ func (this *Workspace) Profiles(ctx context.Context, schema types.Type, properti
 				if !types.IsValidPropertyName(name) {
 					return nil, 0, false, errors.BadRequest("property name %q is not valid", name)
 				}
-				return nil, 0, false, errors.Unprocessable(
-					PropertyNotExist, "property name %s does not exist", name)
+				return nil, 0, false, errors.Unprocessable(PropertyNotExist, "property name %s does not exist", name)
 			}
 		}
 	}
 
 	// Validate the filter.
 	var where *state.Where
-	paths := slices.Clone(properties)
 	if filter != nil {
-
-		filterPaths, err := validateFilter(filter, schema, state.Destination, state.TargetUser)
+		_, err := validateFilter(filter, schema, state.Destination, state.TargetUser)
 		if err != nil {
-			if pathErr, ok := errors.AsType[types.PathNotExistError](err); ok {
-				return nil, 0, false, errors.Unprocessable(
-					PropertyNotExist, "filter's property %s does not exist", pathErr.Path)
+			if err, ok := errors.AsType[types.PathNotExistError](err); ok {
+				return nil, 0, false, errors.Unprocessable(PropertyNotExist, "filter's property %s does not exist", err.Path)
 			}
 			return nil, 0, false, errors.BadRequest("filter is not valid: %s", err)
 		}
 		where = convertFilterToWhere(filter, schema)
-		paths = append(paths, filterPaths...)
-
 	}
 
 	// Validate the order.
 	if order != "" {
-		paths = append(paths, order)
 		orderProperty, ok := profileProperties.ByName(order)
 		if !ok {
 			if !types.IsValidPropertyName(order) {
 				return nil, 0, false, errors.BadRequest("order %q is not a valid property name", order)
 			}
-			return nil, 0, false, errors.Unprocessable(
-				OrderNotExist, "order %s does not exist in schema", order)
+			return nil, 0, false, errors.Unprocessable(OrderNotExist, "order %s does not exist in schema", order)
 		}
 		switch orderProperty.Type.Kind() {
 		case types.JSONKind, types.ArrayKind, types.ObjectKind, types.MapKind:
@@ -1482,42 +1602,36 @@ func (this *Workspace) Profiles(ctx context.Context, schema types.Type, properti
 		return nil, 0, false, errors.BadRequest("limit %d is not valid", limit)
 	}
 
-	// Restrict the schema to the request's dependencies.
-	dependencies := types.Prune(schema, func(path string) bool {
-		for _, dependency := range paths {
-			if path == dependency || strings.HasPrefix(path, dependency+".") {
-				return true
-			}
-		}
-		return false
-	})
-
 	// Read the profiles.
-	rows, total, hasNext, err := this.store.Profiles(ctx, datastore.Query{
+	rows, total, err := this.store.Profiles(ctx, datastore.Query{
 		Properties: append([]string{"_kpid", "_updated_at"}, properties...),
 		Where:      where,
 		OrderBy:    []string{order, "_kpid"},
 		OrderDesc:  orderDesc,
 		First:      first,
-		Limit:      limit,
-	}, dependencies)
+		Limit:      limit + 1,
+	}, schema)
 	if err != nil {
 		if err == datastore.ErrMaintenanceMode {
-			return nil, 0, false, errors.Unprocessable(
-				MaintenanceMode, "data warehouse is in maintenance mode")
+			return nil, 0, false, errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
 		}
-		if errors.Is(err, datastore.ErrWorkspaceNotExist) {
-			return nil, 0, false, errors.NotFound("workspace does not exist")
+		if err == datastore.ErrWorkspaceNotExist {
+			return nil, 0, false, errors.NotFound("workspace %s does not exist", this.workspace.ID)
 		}
-		if schemaErr, ok := errors.AsType[*schemas.Error](err); ok {
-			return nil, 0, false, errors.Unprocessable(SchemaNotAligned, "%s", schemaErr)
+		if err, ok := err.(*schemas.Error); ok {
+			return nil, 0, false, errors.Unprocessable(SchemaNotAligned, "%s", err)
 		}
-		if err, ok := errors.AsType[*datastore.UnavailableError](err); ok {
+		if err, ok := err.(*datastore.WarehouseError); ok {
 			return nil, 0, false, errors.Unavailable("%s", err)
 		}
-		return nil, 0, false, errors.New(err.Error())
+		return nil, 0, false, err
 	}
 
+	hasNext := len(rows) > limit
+	if hasNext {
+		rows[limit] = nil
+		rows = rows[:limit]
+	}
 	profiles := make([]Profile, len(rows))
 	for i, row := range rows {
 		profiles[i].KPID = row["_kpid"].(string)
@@ -1655,7 +1769,7 @@ func (this *Workspace) RepairWarehouse(ctx context.Context) error {
 	this.core.mustBeOpen()
 	err := this.store.Repair(ctx, this.workspace.ProfileSchema)
 	if err != nil {
-		if err, ok := (err).(*datastore.UnavailableError); ok {
+		if err, ok := (err).(*datastore.WarehouseError); ok {
 			return errors.Unavailable("%s", err)
 		}
 		return err
@@ -1778,7 +1892,7 @@ func (this *Workspace) TestWarehouseUpdate(ctx context.Context, settings, mcpSet
 	ws := this.workspace
 	settings, err := this.core.datastore.ValidateWarehouseSettings(ctx, ws.Organization().ID, ws.Warehouse.Platform, settings)
 	if err != nil {
-		if err, ok := err.(*warehouses.SettingsError); ok {
+		if err, ok := errors.AsType[*warehouses.SettingsError](err); ok {
 			return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse settings are not valid: %w", err.Err)
 		}
 		return err
@@ -1786,7 +1900,7 @@ func (this *Workspace) TestWarehouseUpdate(ctx context.Context, settings, mcpSet
 	if mcpSettings != nil {
 		mcpSettings, err = this.core.datastore.ValidateWarehouseSettings(ctx, ws.Organization().ID, ws.Warehouse.Platform, mcpSettings)
 		if err != nil {
-			if err, ok := err.(*warehouses.SettingsError); ok {
+			if err, ok := errors.AsType[*warehouses.SettingsError](err); ok {
 				return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse MCP settings are not valid: %w", err.Err)
 			}
 			return err
@@ -1796,10 +1910,10 @@ func (this *Workspace) TestWarehouseUpdate(ctx context.Context, settings, mcpSet
 		}
 		err = this.core.datastore.CheckMCPSettings(ctx, ws.Organization().ID, ws.Warehouse.Platform, mcpSettings)
 		if err != nil {
-			if err, ok := err.(*warehouses.SettingsNotReadOnly); ok {
+			if err, ok := errors.AsType[*warehouses.SettingsNotReadOnly](err); ok {
 				return errors.Unprocessable(NotReadOnlyMCPSettings, "invalid MCP settings: %s", err)
 			}
-			if err, ok := err.(*datastore.UnavailableError); ok {
+			if err, ok := err.(*datastore.WarehouseError); ok {
 				return errors.Unavailable("%s", err)
 			}
 			return err
@@ -1807,7 +1921,7 @@ func (this *Workspace) TestWarehouseUpdate(ctx context.Context, settings, mcpSet
 	}
 	err = this.store.TestWarehouseUpdate(ctx, settings)
 	if err != nil {
-		if err, ok := err.(*datastore.UnavailableError); ok {
+		if err, ok := err.(*datastore.WarehouseError); ok {
 			return errors.Unavailable("%s", err)
 		}
 		if err == datastore.ErrDifferentWarehouse {
@@ -1966,7 +2080,7 @@ func (this *Workspace) UpdateWarehouse(ctx context.Context, mode WarehouseMode, 
 
 	settings, err := this.core.datastore.ValidateWarehouseSettings(ctx, ws.Organization().ID, ws.Warehouse.Platform, settings)
 	if err != nil {
-		if err, ok := err.(*warehouses.SettingsError); ok {
+		if err, ok := errors.AsType[*warehouses.SettingsError](err); ok {
 			return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse settings are not valid: %w", err.Err)
 		}
 		return err
@@ -1975,7 +2089,7 @@ func (this *Workspace) UpdateWarehouse(ctx context.Context, mode WarehouseMode, 
 	if mcpSettings != nil {
 		mcpSettings, err = this.core.datastore.ValidateWarehouseSettings(ctx, ws.Organization().ID, ws.Warehouse.Platform, mcpSettings)
 		if err != nil {
-			if err, ok := err.(*warehouses.SettingsError); ok {
+			if err, ok := errors.AsType[*warehouses.SettingsError](err); ok {
 				return errors.Unprocessable(InvalidWarehouseSettings, "data warehouse MCP settings are not valid: %w", err.Err)
 			}
 			return err
@@ -1985,10 +2099,10 @@ func (this *Workspace) UpdateWarehouse(ctx context.Context, mode WarehouseMode, 
 		}
 		err = this.core.datastore.CheckMCPSettings(ctx, ws.Organization().ID, ws.Warehouse.Platform, mcpSettings)
 		if err != nil {
-			if err, ok := err.(*warehouses.SettingsNotReadOnly); ok {
+			if err, ok := errors.AsType[*warehouses.SettingsNotReadOnly](err); ok {
 				return errors.Unprocessable(NotReadOnlyMCPSettings, "invalid MCP settings: %s", err)
 			}
-			if err, ok := err.(*datastore.UnavailableError); ok {
+			if err, ok := err.(*datastore.WarehouseError); ok {
 				return errors.Unavailable("%s", err)
 			}
 			return err
@@ -1997,7 +2111,7 @@ func (this *Workspace) UpdateWarehouse(ctx context.Context, mode WarehouseMode, 
 
 	err = this.store.TestWarehouseUpdate(ctx, settings)
 	if err != nil {
-		if err, ok := err.(*datastore.UnavailableError); ok {
+		if err, ok := err.(*datastore.WarehouseError); ok {
 			return errors.Unavailable("%s", err)
 		}
 		if err == datastore.ErrDifferentWarehouse {
@@ -2141,6 +2255,9 @@ func (this *Workspace) identities(ctx context.Context, where *state.Where, first
 	if err != nil {
 		if err == datastore.ErrMaintenanceMode {
 			return nil, 0, errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
+		}
+		if err, ok := errors.AsType[*datastore.WarehouseError](err); ok {
+			return nil, 0, errors.Unavailable("%s", err)
 		}
 		return nil, 0, err
 	}
@@ -2410,4 +2527,16 @@ func filterWorkspacePipelines(ws *state.Workspace, pipelines []string) []string 
 		return ok
 	})
 	return pipelines
+}
+
+// lockWorkspace locks the workspace with the given identifier until tx ends.
+func lockWorkspace(ctx context.Context, tx *db.Tx, workspace string) error {
+	locked, err := tx.QueryExists(ctx, "SELECT FROM workspaces WHERE id = $1 FOR UPDATE", workspace)
+	if err != nil {
+		return err
+	}
+	if !locked {
+		return fmt.Errorf("cannot lock workspace %s: it does not exist", workspace)
+	}
+	return nil
 }

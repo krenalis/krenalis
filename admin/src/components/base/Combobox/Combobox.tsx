@@ -1,12 +1,11 @@
 import React, { ReactNode, useState, useMemo, useRef, useEffect, useLayoutEffect, useContext } from 'react';
+import { flushSync } from 'react-dom';
 import './Combobox.css';
-import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
-import SlMenu from '@shoelace-style/shoelace/dist/react/menu/index.js';
-import SlMenuItem from '@shoelace-style/shoelace/dist/react/menu-item/index.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
-import SlTabGroup from '@shoelace-style/shoelace/dist/react/tab-group/index.js';
-import SlTabPanel from '@shoelace-style/shoelace/dist/react/tab-panel/index.js';
-import SlTab from '@shoelace-style/shoelace/dist/react/tab/index.js';
+import WaInput from '@awesome.me/webawesome/dist/react/input/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
+import WaTabGroup from '@awesome.me/webawesome/dist/react/tab-group/index.js';
+import WaTabPanel from '@awesome.me/webawesome/dist/react/tab-panel/index.js';
+import WaTab from '@awesome.me/webawesome/dist/react/tab/index.js';
 import { ComboboxItem } from './Combobox.types';
 import { ExpressionFragment, parseMapExpression } from '../../../utils/mapExpression';
 import { autocompleteExpression } from './Combobox.helpers';
@@ -34,12 +33,15 @@ interface ComboboxProps {
 	className?: string;
 	error?: string;
 	caret?: boolean;
+	clearable?: boolean;
 	controlled?: boolean;
 	autoResize?: boolean;
 	disabled?: boolean;
 	hoist?: boolean;
 	indentation?: number;
 	children?: ReactNode;
+	label?: string;
+	helpText?: string;
 	syncOnChange?: any;
 	propertiesToHide?: string[] | null;
 	[key: string]: any;
@@ -62,12 +64,15 @@ const Combobox = ({
 	className,
 	error,
 	caret = false,
+	clearable = false,
 	controlled = false,
 	autoResize,
-	disabled,
+	disabled = false,
 	hoist = false,
 	indentation,
 	children,
+	label,
+	helpText,
 	syncOnChange,
 	propertiesToHide,
 	...rest
@@ -86,6 +91,7 @@ const Combobox = ({
 	const listRef = useRef<any>();
 	const tabGroupRef = useRef<any>();
 	const programmaticFocus = useRef(false);
+	const isEditing = useRef(false);
 
 	const { api, handleError } = useContext(appContext);
 	const { connection } = useContext(ConnectionContext);
@@ -118,7 +124,9 @@ const Combobox = ({
 			setIsOpen(true);
 			updateCursorPosition();
 		} else if (event.key === 'Escape' || event.key === 'Tab') {
-			setIsOpen(false);
+			// Close the list before the browser moves the focus on Tab, so that
+			// the focus does not land on the tabs of the list.
+			flushSync(() => setIsOpen(false));
 		}
 	};
 
@@ -164,7 +172,7 @@ const Combobox = ({
 		}
 
 		setTimeout(() => {
-			const inputSuffix = inputRef.current.shadowRoot?.querySelector('[part="suffix"]');
+			const inputSuffix = inputRef.current.shadowRoot?.querySelector('[part="end"]');
 			inputSuffix.addEventListener('click', () => {
 				inputRef.current.focus();
 				setIsOpen(true);
@@ -184,15 +192,16 @@ const Combobox = ({
 
 	useEffect(() => {
 		if (controlled) {
+			const inputValue = isEditing.current ? value : (displayValue ?? value);
 			if (isFirstControl.current) {
 				// Defer update to next event loop tick to ensure the input is
 				// mounted before updating its value.
 				setTimeout(() => {
-					updateComboboxValue(displayValue ?? value);
+					updateComboboxValue(inputValue);
 					isFirstControl.current = false;
 				});
 			} else {
-				updateComboboxValue(displayValue ?? value);
+				updateComboboxValue(inputValue);
 			}
 		}
 		if (autoResize && !isFirstControl.current) {
@@ -217,10 +226,10 @@ const Combobox = ({
 
 			let menuItems: any[];
 			if (selectedTab == null) {
-				menuItems = menu.querySelectorAll('sl-menu-item');
+				menuItems = menu.querySelectorAll('.combobox-list__item');
 			} else {
-				const panel = menu.querySelector(`sl-tab-panel[name="${selectedTab}"]`);
-				menuItems = panel.querySelectorAll('sl-menu-item');
+				const panel = menu.querySelector(`wa-tab-panel[name="${selectedTab}"]`);
+				menuItems = panel.querySelectorAll('.combobox-list__item');
 			}
 
 			// Get the width of the wider menu item.
@@ -241,7 +250,7 @@ const Combobox = ({
 			}
 
 			// Get the width of the tabs.
-			const tabs = menu.querySelectorAll('sl-tab');
+			const tabs = menu.querySelectorAll('wa-tab');
 			let tabsWidth = 0;
 			for (const t of tabs) {
 				tabsWidth += t.offsetWidth;
@@ -269,7 +278,7 @@ const Combobox = ({
 		const positionList = () => {
 			if (hoist) {
 				const inputRect = inputRef.current.getBoundingClientRect();
-				const viewportSpacing = parseFloat(getComputedStyle(list).getPropertyValue('--sl-spacing-small'));
+				const viewportSpacing = parseFloat(getComputedStyle(list).getPropertyValue('--wa-space-s'));
 				const spacing = Number.isFinite(viewportSpacing) ? viewportSpacing : 8;
 				const width = Math.min(Math.max(inputRect.width, listWidth ?? 0), window.innerWidth - spacing * 2);
 				list.style.width = `${width}px`;
@@ -311,8 +320,8 @@ const Combobox = ({
 		}
 		setTimeout(() => {
 			const isConstant = CONSTANT_REGEX.test(val);
-			if (val === '' || isConstant) {
-				tabGroupRef.current?.show('enum');
+			if ((val === '' || isConstant) && tabGroupRef.current != null) {
+				tabGroupRef.current.active = 'enum';
 			}
 		});
 	}, [isOpen]);
@@ -375,6 +384,7 @@ const Combobox = ({
 
 	const onInput = (e) => {
 		e.preventDefault();
+		isEditing.current = true;
 		if (!isOpen) {
 			// if the user has closed the list via escape button.
 			setIsOpen(true);
@@ -439,13 +449,24 @@ const Combobox = ({
 			textWidth = 100; // min width.
 		}
 
-		const prefix = inputRef.current.shadowRoot.querySelector('span[part="prefix"]');
+		const prefix = inputRef.current.shadowRoot.querySelector('[part="start"]');
 		const prefixWidth = prefix?.offsetWidth || 0;
-		const suffix = inputRef.current.shadowRoot.querySelector('span[part="suffix"]');
+		const suffix = inputRef.current.shadowRoot.querySelector('[part="end"]');
 		const suffixWidth = suffix?.offsetWidth || 0;
 
 		const wrapper = inputRef.current.closest('.combobox');
 		wrapper.style.width = `${textWidth + prefixWidth + suffixWidth + 30}px`;
+	};
+
+	const onInputBlur = () => {
+		isEditing.current = false;
+		programmaticFocus.current = false;
+		if (displayValue != null) {
+			updateComboboxValue(displayValue);
+			if (autoResize) {
+				resizeCombobox();
+			}
+		}
 	};
 
 	const onInputFocus = () => {
@@ -457,6 +478,13 @@ const Combobox = ({
 			// continue typing, not to immediately open the list again.
 			programmaticFocus.current = false;
 			return;
+		}
+		isEditing.current = true;
+		if (displayValue != null) {
+			updateComboboxValue(value);
+			if (autoResize) {
+				resizeCombobox();
+			}
 		}
 		setIsOpen(true);
 		updateCursorPosition();
@@ -509,6 +537,7 @@ const Combobox = ({
 	const onSelect = (e, term: string, type: 'property' | 'function' | 'enum', selectedDisplayValue?: string) => {
 		e.preventDefault();
 		e.stopPropagation();
+		isEditing.current = true;
 
 		if (type === 'enum') {
 			let v = term;
@@ -521,7 +550,7 @@ const Combobox = ({
 			return;
 		}
 		if (type === 'property' && !isExpression && selectedDisplayValue != null) {
-			updateComboboxValue(selectedDisplayValue);
+			updateComboboxValue(term);
 			programmaticFocus.current = true;
 			inputRef.current.focus();
 			onSelectFunc(name, term);
@@ -575,7 +604,7 @@ const Combobox = ({
 		} else if (type === 'function') {
 			// probably now the user wants to select a property to pass as
 			// argument to the function.
-			tabGroupRef.current.show('properties');
+			tabGroupRef.current.active = 'properties';
 		}
 
 		updateComboboxValue(v);
@@ -614,24 +643,27 @@ const Combobox = ({
 			}
 		>
 			<div className='combobox-input'>
-				<SlInput
+				<WaInput
 					data-is-combobox-input
-					onSlInput={disabled ? undefined : onInput}
-					onSlFocus={onInputFocus}
+					onInput={disabled ? undefined : onInput}
+					onBlur={onInputBlur}
+					onFocus={onInputFocus}
 					disabled={disabled}
 					autocomplete='off'
-					size={size}
+					size={size === 'small' ? 's' : size === 'large' ? 'l' : 'm'}
+					withClear={clearable}
+					hint={helpText}
+					label={label}
 					ref={inputRef}
 					{...rest}
 				>
 					{children}
+					<WaIcon name='x-circle-fill' slot='clear-icon' />
 					{error && val !== '' && (
-						<SlIcon className='combobox-input__error-icon' name='exclamation-circle' slot='suffix'></SlIcon>
+						<WaIcon className='combobox-input__error-icon' name='exclamation-circle' slot='end'></WaIcon>
 					)}
-					{caret && (
-						<SlIcon className='combobox-input__caret-icon' name='chevron-down' slot='suffix'></SlIcon>
-					)}
-				</SlInput>
+					{caret && <WaIcon className='combobox-input__caret-icon' name='chevron-down' slot='end'></WaIcon>}
+				</WaInput>
 				{error && (
 					<div
 						className={`combobox-input__error${isErrorExpanded ? ' combobox-input__error--expanded' : ''}`}
@@ -639,7 +671,7 @@ const Combobox = ({
 					>
 						{isErrorOverflowing && !isErrorExpanded && (
 							<div className='combobox-input__error-overlay' onClick={() => setIsErrorExpanded(true)}>
-								<SlIcon className='combobox-input__error-expand' name='three-dots' />
+								<WaIcon className='combobox-input__error-expand' name='three-dots' />
 							</div>
 						)}
 						{error}
@@ -651,7 +683,8 @@ const Combobox = ({
 					enumValues != null ||
 					filteredProperties?.length > 0 ||
 					filteredFunctions?.length > 0) && (
-					<SlMenu
+					<div
+						role='menu'
 						tabIndex={-1}
 						data-is-combobox-list
 						className={`combobox-list${isErrorExpanded ? ' combobox-list--expanded' : ''}`}
@@ -684,73 +717,84 @@ const Combobox = ({
 							</div>
 						)}
 						{hasTabs ? (
-							<SlTabGroup className='combobox-list__tabs' onSlTabShow={onTabClick} ref={tabGroupRef}>
+							<WaTabGroup className='combobox-list__tabs' onWaTabShow={onTabClick} ref={tabGroupRef}>
 								{enumValues != null && (
-									<SlTab slot='nav' panel='enum'>
+									<WaTab slot='nav' panel='enum'>
 										Enum ({enumValues.length})
-									</SlTab>
+									</WaTab>
 								)}
 								{filteredProperties && (
-									<SlTab slot='nav' panel='properties'>
+									<WaTab slot='nav' panel='properties'>
 										Properties ({filteredProperties.length})
-									</SlTab>
+									</WaTab>
 								)}
 								{filteredFunctions && (
-									<SlTab slot='nav' panel='functions'>
+									<WaTab slot='nav' panel='functions'>
 										Functions ({filteredFunctions.length})
-									</SlTab>
+									</WaTab>
 								)}
 								{enumValues != null && (
-									<SlTabPanel name='enum'>
+									<WaTabPanel name='enum'>
 										{enumValues.map((v) => {
 											return (
-												<SlMenuItem key={v} onClick={(e) => onSelect(e, v, 'enum')}>
+												<div
+													key={v}
+													className='combobox-list__item'
+													role='menuitem'
+													onClick={(e) => onSelect(e, v, 'enum')}
+												>
 													<div className='enum-item'>{v}</div>
-												</SlMenuItem>
+												</div>
 											);
 										})}
-									</SlTabPanel>
+									</WaTabPanel>
 								)}
-								<SlTabPanel name='properties'>
+								<WaTabPanel name='properties'>
 									{filteredProperties?.map((item) => {
 										return (
-											<SlMenuItem
+											<div
 												key={item.term}
+												className='combobox-list__item'
+												role='menuitem'
 												onClick={(e) => onSelect(e, item.term, 'property', item.displayValue)}
 											>
 												{item.content}
-											</SlMenuItem>
+											</div>
 										);
 									})}
-								</SlTabPanel>
-								<SlTabPanel name='functions'>
+								</WaTabPanel>
+								<WaTabPanel name='functions'>
 									{filteredFunctions?.map((item) => {
 										return (
-											<SlMenuItem
+											<div
 												key={item.term}
+												className='combobox-list__item'
+												role='menuitem'
 												onClick={(e) => onSelect(e, item.term, 'function')}
 											>
 												{item.content}
-											</SlMenuItem>
+											</div>
 										);
 									})}
-								</SlTabPanel>
-							</SlTabGroup>
+								</WaTabPanel>
+							</WaTabGroup>
 						) : (
 							<div>
 								{filteredProperties?.map((item) => {
 									return (
-										<SlMenuItem
+										<div
 											key={item.term}
+											className='combobox-list__item'
+											role='menuitem'
 											onClick={(e) => onSelect(e, item.term, 'property', item.displayValue)}
 										>
 											{item.content}
-										</SlMenuItem>
+										</div>
 									);
 								})}
 							</div>
 						)}
-					</SlMenu>
+					</div>
 				)}
 		</div>
 	);

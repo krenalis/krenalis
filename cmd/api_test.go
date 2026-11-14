@@ -5,9 +5,84 @@
 package cmd
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"slices"
+	"strings"
 	"testing"
+
+	"github.com/krenalis/krenalis/cmd/internal/workos"
+	"github.com/krenalis/krenalis/tools/errors"
 )
+
+// TestSignup verifies how the signup endpoint handles a request when
+// WorkOS is disabled, when the honeypot field is filled in, and when the
+// request is malformed or carries an invalid admin email address.
+func TestSignup(t *testing.T) {
+
+	// The WorkOS of the enabled server has no Core: a request that reaches the
+	// creation of an organization fails the test.
+	enabled := api{&apisServer{workOS: &workos.WorkOS{}}}
+	disabled := api{&apisServer{}}
+
+	t.Run("reports not found when WorkOS is disabled", func(t *testing.T) {
+		body := `{"organizationName":"Acme","adminEmail":"admin@example.com"}`
+		_, err := disabled.Signup(nil, newSignupRequest(body))
+		if err != nil {
+			if _, ok := errors.AsType[*errors.NotFoundError](err); !ok {
+				t.Fatalf("expected *errors.NotFoundError, got %T", err)
+			}
+			return
+		}
+		t.Fatal("expected error, got nil")
+	})
+
+	t.Run("ignores a request that fills in the honeypot", func(t *testing.T) {
+		body := `{"organizationName":"Acme","adminEmail":"admin@example.com","website":"https://example.com"}`
+		result, err := enabled.Signup(nil, newSignupRequest(body))
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+		if result != nil {
+			t.Errorf("expected no result, got %v", result)
+		}
+	})
+
+	t.Run("rejects a request without body", func(t *testing.T) {
+		r := httptest.NewRequest(http.MethodPost, "/signup", nil)
+		_, err := enabled.Signup(nil, r)
+		if err != nil {
+			if err.Error() != "request's body is missing" {
+				t.Fatalf("expected error %q, got %q", "request's body is missing", err)
+			}
+			return
+		}
+		t.Fatal("expected error, got nil")
+	})
+
+	t.Run("rejects a malformed body", func(t *testing.T) {
+		_, err := enabled.Signup(nil, newSignupRequest(`{"organizationName":`))
+		if err != nil {
+			if _, ok := errors.AsType[*errors.BadRequestError](err); !ok {
+				t.Fatalf("expected *errors.BadRequestError, got %T", err)
+			}
+			return
+		}
+		t.Fatal("expected error, got nil")
+	})
+
+	t.Run("rejects an invalid admin email", func(t *testing.T) {
+		_, err := enabled.Signup(nil, newSignupRequest(`{"organizationName":"Acme","adminEmail":"admin"}`))
+		if err != nil {
+			if _, ok := errors.AsType[*errors.BadRequestError](err); !ok {
+				t.Fatalf("expected *errors.BadRequestError, got %T", err)
+			}
+			return
+		}
+		t.Fatal("expected error, got nil")
+	})
+
+}
 
 // TestSplitQueryParameters verifies comma-separated query parameter splitting.
 func TestSplitQueryParameters(t *testing.T) {
@@ -78,4 +153,12 @@ func TestSplitQueryParameters(t *testing.T) {
 			}
 		})
 	}
+}
+
+// newSignupRequest returns a POST request to the signup endpoint with
+// the given JSON body.
+func newSignupRequest(body string) *http.Request {
+	r := httptest.NewRequest(http.MethodPost, "/signup", strings.NewReader(body))
+	r.Header.Set("Content-Type", "application/json")
+	return r
 }

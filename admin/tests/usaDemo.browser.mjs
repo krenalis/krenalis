@@ -25,10 +25,10 @@ try {
 	page.on('pageerror', (error) => errors.push(error.message));
 	await page.goto(`${baseURL}/admin/simulated-world/create`);
 	await page.getByLabel('Name', { exact: true }).fill('USA internal demo with photographs');
-	await page.locator('sl-select#simulated-system-user-count').click();
-	await page.locator('sl-select#simulated-system-user-count sl-option[value="10"]').click();
-	await page.locator('sl-select#simulated-system-country').click();
-	await page.locator('sl-select#simulated-system-country sl-option[value="US"]').click();
+	await page.locator('wa-select#simulated-system-user-count').click();
+	await page.locator('wa-select#simulated-system-user-count wa-option[value="10"]').click();
+	await page.locator('wa-select#simulated-system-country').click();
+	await page.locator('wa-select#simulated-system-country wa-option[value="US"]').click();
 	const created = page.waitForResponse(
 		(response) =>
 			response.request().method() === 'POST' && new URL(response.url()).pathname === '/v1/simulated/systems',

@@ -95,7 +95,7 @@ func testSimulatedSystemGeneration(t *testing.T, k *krenalistester.Krenalis, pho
 		ID string `json:"id"`
 	}
 	k.Call("POST", "/v1/workspaces", http.Header{"Krenalis-Workspace": nil}, map[string]any{
-		"name": "generation", "environment": "development", "profileSchema": profileSchema,
+		"name": "generation", "environment": "development", "profileSchema": krenalistester.ProfileSchema{Schema: profileSchema},
 		"warehouse": map[string]any{"platform": "PostgreSQL", "mode": "Normal", "settings": settings},
 	}, &workspace)
 	k.SetWorkspaceID(workspace.ID)
@@ -260,7 +260,7 @@ func testSimulatedSystemGeneration(t *testing.T, k *krenalistester.Krenalis, pho
 	k.WaitForRunsCompletion(runID)
 
 	run := k.PipelineRun(runID)
-	if run.Error != "" || run.Failed != [7]int{} {
+	if run.Error != "" || run.Failed != [9]int{} {
 		t.Fatalf("expected successful Source readback and mapping, got %+v", run)
 	}
 	k.RunIdentityResolutionAndWait()

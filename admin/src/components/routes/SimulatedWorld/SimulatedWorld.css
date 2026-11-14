@@ -63,18 +63,18 @@
 }
 
 .simulated-systems__status-badge--preparing::part(base) {
-	background-color: var(--sl-color-primary-100);
-	color: var(--sl-color-primary-800);
+	background-color: var(--wa-color-brand-90);
+	color: var(--wa-color-brand-20);
 }
 
 .simulated-systems__status-badge--failed::part(base) {
-	background-color: var(--sl-color-danger-100);
-	color: var(--sl-color-danger-800);
+	background-color: var(--wa-color-danger-90);
+	color: var(--wa-color-danger-20);
 }
 
 .simulated-systems__status-badge--deleting::part(base) {
-	background-color: var(--sl-color-warning-100);
-	color: var(--sl-color-warning-800);
+	background-color: var(--wa-color-warning-90);
+	color: var(--wa-color-warning-20);
 }
 
 .simulated-systems__connection-links {
@@ -85,32 +85,32 @@
 }
 
 .simulated-systems__connection-link {
-	--simulated-systems-shimmer-color: var(--sl-color-primary-600);
+	--simulated-systems-shimmer-color: var(--wa-color-brand-40);
 	align-items: center;
-	color: var(--sl-color-primary-600);
+	color: var(--wa-color-brand-40);
 	display: inline-flex;
 	gap: 5px;
 	text-decoration: none;
 }
 
-.simulated-systems__connection-link sl-icon {
+.simulated-systems__connection-link wa-icon {
 	font-size: calc(1em - 2px);
 }
 
 .simulated-systems__connection-link:is(:hover, :focus-visible) {
-	--simulated-systems-shimmer-color: var(--sl-color-primary-700);
-	color: var(--sl-color-primary-700);
+	--simulated-systems-shimmer-color: var(--wa-color-brand-30);
+	color: var(--wa-color-brand-30);
 }
 
 .simulated-systems__connection-link:focus-visible {
-	outline: 2px solid var(--sl-color-primary-600);
+	outline: 2px solid var(--wa-color-brand-40);
 	outline-offset: 2px;
 }
 
 .simulated-systems__account-link:focus-visible,
 .simulated-systems__back:focus-visible,
 :is(.simulated-systems, .simulated-systems__dialog) input:focus-visible {
-	outline: 2px solid var(--sl-color-primary-600);
+	outline: 2px solid var(--wa-color-brand-40);
 	outline-offset: 2px;
 }
 
@@ -137,7 +137,7 @@
 
 .simulated-systems__progress progress {
 	appearance: none;
-	background: var(--sl-color-neutral-200);
+	background: var(--wa-color-neutral-80);
 	border: 0;
 	border-radius: 4px;
 	height: 8px;
@@ -146,7 +146,7 @@
 }
 
 .simulated-systems__progress progress::-webkit-progress-bar {
-	background: var(--sl-color-neutral-200);
+	background: var(--wa-color-neutral-80);
 }
 
 .simulated-systems__progress progress::-webkit-progress-value {
@@ -171,7 +171,7 @@
 }
 
 .simulated-systems__error {
-	color: var(--sl-color-danger-700);
+	color: var(--wa-color-danger-30);
 }
 
 .simulated-systems__dialog {
@@ -180,11 +180,11 @@
 
 .simulated-systems__dialog--create {
 	--width: min(455px, calc(100vw - 32px));
-	--sl-font-size-medium: var(--sl-font-size-small);
-	--sl-input-font-size-medium: var(--sl-font-size-small);
+	--wa-font-size-m: var(--wa-font-size-s);
+	--input-font-size: var(--wa-font-size-s);
 }
 
-.simulated-systems__dialog--create::part(panel) {
+.simulated-systems__dialog--create::part(dialog) {
 	background-color: var(--bg-gray);
 }
 
@@ -235,12 +235,12 @@
 }
 
 .simulated-systems__form .simulated-systems__name-note {
-	color: var(--sl-color-neutral-500);
+	color: var(--wa-color-neutral-50);
 	margin-inline: 4px;
 }
 
 .simulated-systems__form .simulated-systems__field-error {
-	color: var(--sl-color-danger-700);
+	color: var(--wa-color-danger-30);
 }
 
 .simulated-systems__connections {
@@ -268,11 +268,11 @@
 }
 
 .simulated-systems__connections input[type='checkbox'] {
-	accent-color: var(--sl-color-primary-600);
-	height: var(--sl-toggle-size-medium);
+	accent-color: var(--wa-color-brand-40);
+	height: var(--toggle-size-medium);
 	min-height: 0;
 	padding: 0;
-	width: var(--sl-toggle-size-medium);
+	width: var(--toggle-size-medium);
 }
 
 .simulated-systems__dialog-progress .simulated-systems__steps {
@@ -331,7 +331,7 @@
 }
 
 .simulated-systems__step-marker {
-	border: 2px solid var(--sl-color-neutral-400);
+	border: 2px solid var(--wa-color-neutral-60);
 	border-radius: 50%;
 	box-sizing: border-box;
 	flex: 0 0 12px;
@@ -349,27 +349,27 @@
 }
 
 .simulated-systems__steps--delete .simulated-systems__step--done .simulated-systems__step-marker {
-	background: var(--sl-color-danger-600);
-	border-color: var(--sl-color-danger-600);
+	background: var(--wa-color-danger-40);
+	border-color: var(--wa-color-danger-40);
 }
 
 .simulated-systems__steps--delete .simulated-systems__step--active .simulated-systems__step-marker {
-	border-color: var(--sl-color-danger-600);
+	border-color: var(--wa-color-danger-40);
 }
 
 .simulated-systems__step--failed .simulated-systems__step-marker {
-	background: var(--sl-color-danger-600);
-	border-color: var(--sl-color-danger-600);
+	background: var(--wa-color-danger-40);
+	border-color: var(--wa-color-danger-40);
 }
 
 .simulated-systems__step--skipped,
 .simulated-systems__step--blocked {
-	color: var(--sl-color-neutral-500);
+	color: var(--wa-color-neutral-50);
 }
 
 .simulated-systems__step--skipped .simulated-systems__step-marker,
 .simulated-systems__step--blocked .simulated-systems__step-marker {
-	border-color: var(--sl-color-neutral-300);
+	border-color: var(--wa-color-neutral-70);
 }
 
 .simulated-systems__step-line {
@@ -384,7 +384,7 @@
 	background: linear-gradient(
 		90deg,
 		var(--simulated-systems-shimmer-color, var(--text-primary)) 42%,
-		var(--sl-color-neutral-400) 50%,
+		var(--wa-color-neutral-60) 50%,
 		var(--simulated-systems-shimmer-color, var(--text-primary)) 58%
 	);
 	background-position: 100% 0;
@@ -403,7 +403,7 @@
 }
 
 .simulated-systems__step--failed small {
-	color: var(--sl-color-danger-700);
+	color: var(--wa-color-danger-30);
 }
 
 @keyframes simulated-systems-shimmer {
@@ -423,7 +423,7 @@
 
 :is(.simulated-systems, .simulated-systems__dialog) input {
 	background: white;
-	border: 1px solid var(--sl-color-neutral-300);
+	border: 1px solid var(--wa-color-neutral-70);
 	border-radius: var(--radius);
 	box-sizing: border-box;
 	color: inherit;
@@ -436,10 +436,10 @@
 }
 
 .simulated-systems__dialog--create input:not([type='checkbox']) {
-	color: var(--sl-input-color);
-	font-size: var(--sl-input-font-size-medium);
-	min-height: var(--sl-input-height-medium);
-	padding-inline: var(--sl-input-spacing-medium);
+	color: var(--wa-form-control-value-color);
+	font-size: var(--input-font-size);
+	min-height: var(--wa-form-control-height);
+	padding-inline: var(--wa-form-control-padding-inline);
 }
 
 .simulated-systems__actions,

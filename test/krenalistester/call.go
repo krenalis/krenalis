@@ -122,7 +122,6 @@ func (k *Krenalis) tryCall(method, path string, headers http.Header, body, respo
 		k.t.Logf("[info] %s %s: Krenalis responded with HTTP status %d", method, url, resp.StatusCode)
 
 		if resp.StatusCode == http.StatusTooManyRequests && retry {
-			_, _ = io.Copy(io.Discard, resp.Body)
 			resp.Body.Close()
 			delay, err := parseRetryAfter(resp.Header.Get("Retry-After"))
 			if err != nil {

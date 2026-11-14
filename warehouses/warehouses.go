@@ -6,12 +6,12 @@ package warehouses
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math"
 	"net"
 	"reflect"
 	"slices"
-	"strconv"
 	"time"
 	"unicode/utf8"
 
@@ -159,6 +159,43 @@ const (
 	Development
 )
 
+// IdentityCounts contains counts of anonymous and recognized identities,
+// including those without a profile, grouped by connection.
+// A missing connection is equivalent to zero.
+type IdentityCounts struct {
+	Anonymous  map[string]int
+	Recognized map[string]int
+
+	// WithoutProfile counts anonymous and recognized identities that have not
+	// been assigned to a profile.
+	WithoutProfile map[string]int
+}
+
+// IdentityResolutionCounts contains profile and identity counts for a specific
+// Identity Resolution.
+type IdentityResolutionCounts struct {
+	Profiles    Counts                        `json:"profiles"`
+	Identities  Counts                        `json:"identities"`
+	Composition IdentityResolutionComposition `json:"composition"`
+}
+
+// IdentityResolutionComposition contains counts of profiles grouped by their
+// number of identities.
+type IdentityResolutionComposition struct {
+	One            int `json:"one"`
+	Two            int `json:"two"`
+	Three          int `json:"three"`
+	FourToTen      int `json:"fourToTen"`
+	ElevenToTwenty int `json:"elevenToTwenty"`
+	MoreThanTwenty int `json:"moreThanTwenty"`
+}
+
+// Counts contains anonymous and recognized counts.
+type Counts struct {
+	Anonymous  int `json:"anonymous"`
+	Recognized int `json:"recognized"`
+}
+
 // Warehouse is the interface implemented by warehouses.
 type Warehouse interface {
 
@@ -210,9 +247,22 @@ type Warehouse interface {
 	// information, maximum character count, enum values, etc...).
 	ColumnTypeDescription(t types.Type) (string, error)
 
-	// Count returns the number of rows in table after applying joins and where.
-	// A nil where expression does not filter the rows.
-	Count(ctx context.Context, table string, joins []Join, where Expr) (int, error)
+	// Counts returns one row count for each condition on the table.
+	// A nil slice of conditions, or a nil condition, counts all rows.
+	// A non-nil empty slice of conditions is invalid. Each result is between
+	// zero and math.MaxInt32. All counts use the same snapshot of the table.
+	Counts(ctx context.Context, table string, conditions []Expr) ([]int, error)
+
+	// CountIdentities counts anonymous and recognized identities, including those
+	// without a profile, from the provided pipelines, grouped by connection.
+	// For anonymous and recognized identities, it counts physical rows when all
+	// rows belonging to the provided pipelines for a connection come from one
+	// pipeline. When they span multiple pipelines, it counts each identity ID once
+	// within every category in which it occurs. Identities without a profile are
+	// always counted once per identity ID within each category.
+	//
+	// The returned maps are sparse; a missing connection is equivalent to zero.
+	CountIdentities(ctx context.Context, pipelines []string) (*IdentityCounts, error)
 
 	// Delete deletes rows from the specified table that match the provided where
 	// expression. Returns an error if the expression is nil.
@@ -306,7 +356,8 @@ type Warehouse interface {
 	//
 	// This method, once called, can then return in four distinct cases:
 	//
-	// (1) the operation was successful and no error was returned;
+	// (1) the operation was successful and its counts were returned; completed
+	// operations from versions that did not store counts return zeros;
 	//
 	// (2) the context was canceled;
 	//
@@ -317,7 +368,7 @@ type Warehouse interface {
 	// (4) the operation ended with an unexpected and unknown error, and it is
 	// therefore up to the caller to try calling this method again by providing the
 	// same ID.
-	ResolveIdentities(ctx context.Context, opID string, identifiers, profileColumns []Column, profilePrimarySources map[string]string) error
+	ResolveIdentities(ctx context.Context, opID string, identifiers, profileColumns []Column, profilePrimarySources map[string]string) (*IdentityResolutionCounts, error)
 
 	// Repair repairs the database objects on the data warehouse needed by warehouses.
 	// It also takes care of correcting other inconsistent data (such as any tables
@@ -385,10 +436,12 @@ type RowQuery struct {
 	// Where, when not nil, filters the records to return.
 	Where Expr
 
-	// OrderBy specifies the columns by which the returned rows are ordered.
+	// OrderBy, when provided, specifies the columns used to order the returned
+	// rows.
 	OrderBy []Column
 
-	// OrderDesc applies descending order to every OrderBy column.
+	// OrderDesc, when true and OrderBy is provided, orders the returned rows in
+	// descending order instead of ascending order.
 	OrderDesc bool
 
 	// First is the index of the first returned row and must be >= 0.
@@ -455,6 +508,9 @@ type OperationError struct{ message string }
 // MaxOperationErrorBytes are abbreviated at a Unicode character boundary with
 // a trailing "[...]". If the resulting message is not valid UTF-8, it is
 // replaced with a fixed message. NewOperationError panics if err is nil.
+//
+// NewOperationError is intended to be called by warehouse implementations
+// when an Identity Resolution or profile schema update operation fails.
 func NewOperationError(err error) *OperationError {
 	if err == nil {
 		panic("warehouses.NewOperationError: nil error")
@@ -491,6 +547,143 @@ func NewPersistedOperationError(message string) *OperationError {
 // Error returns the operation error message.
 func (err OperationError) Error() string {
 	return err.message
+}
+
+// ValidateIdentityCounts validates the internal consistency of identity counts
+// returned by a warehouse.
+func ValidateIdentityCounts(counts *IdentityCounts) error {
+
+	if counts == nil {
+		return errors.New("warehouse returned nil identity counts")
+	}
+
+	var anonymousTotal, recognizedTotal, withoutProfileTotal int
+	for _, count := range counts.Anonymous {
+		if count < 0 {
+			return errors.New("warehouse returned a negative anonymous identity count")
+		}
+		if count > math.MaxInt-anonymousTotal {
+			return errors.New("warehouse returned an anonymous identity count total that is too large")
+		}
+		anonymousTotal += count
+	}
+	for _, count := range counts.Recognized {
+		if count < 0 {
+			return errors.New("warehouse returned a negative recognized identity count")
+		}
+		if count > math.MaxInt-recognizedTotal {
+			return errors.New("warehouse returned a recognized identity count total that is too large")
+		}
+		recognizedTotal += count
+	}
+	for _, count := range counts.WithoutProfile {
+		if count < 0 {
+			return errors.New("warehouse returned a negative identity count without a profile")
+		}
+		if count > math.MaxInt-withoutProfileTotal {
+			return errors.New("warehouse returned an identity count total without a profile that is too large")
+		}
+		withoutProfileTotal += count
+	}
+
+	for connection, anonymous := range counts.Anonymous {
+		if anonymous > math.MaxInt-counts.Recognized[connection] {
+			return errors.New("warehouse returned a connection identity count total that is too large")
+		}
+	}
+	for connection, withoutProfile := range counts.WithoutProfile {
+		if withoutProfile > counts.Anonymous[connection]+counts.Recognized[connection] {
+			return errors.New("warehouse returned an identity count without a profile greater than its connection total")
+		}
+	}
+	if anonymousTotal > math.MaxInt-recognizedTotal {
+		return errors.New("warehouse returned an identity count total that is too large")
+	}
+
+	return nil
+}
+
+// ValidateIdentityResolutionCounts validates the internal consistency of
+// Identity Resolution counts returned by a warehouse.
+func ValidateIdentityResolutionCounts(counts *IdentityResolutionCounts) error {
+
+	// Validate top-level counts.
+	if counts == nil {
+		return errors.New("warehouse returned nil Identity Resolution counts")
+	}
+	if counts.Profiles.Anonymous < 0 || counts.Profiles.Recognized < 0 {
+		return fmt.Errorf("warehouse returned negative profile counts: %v", counts.Profiles)
+	}
+	if counts.Identities.Anonymous < 0 || counts.Identities.Recognized < 0 {
+		return fmt.Errorf("warehouse returned negative identity counts: %v", counts.Identities)
+	}
+	if counts.Profiles.Anonymous > math.MaxInt-counts.Profiles.Recognized {
+		return fmt.Errorf("warehouse returned a profile count total that is too large: %v", counts.Profiles)
+	}
+	if counts.Identities.Anonymous > math.MaxInt-counts.Identities.Recognized {
+		return fmt.Errorf("warehouse returned an identity count total that is too large: %v", counts.Identities)
+	}
+	profilesTotal := counts.Profiles.Anonymous + counts.Profiles.Recognized
+	identitiesTotal := counts.Identities.Anonymous + counts.Identities.Recognized
+	if profilesTotal > math.MaxInt32 {
+		return fmt.Errorf("warehouse returned a profile count total greater than %d", math.MaxInt32)
+	}
+
+	// Validate composition.
+	minimumIdentitiesPerProfile := [...]int{1, 2, 3, 4, 11, 21}
+	maximumIdentitiesPerProfile := [...]int{1, 2, 3, 10, 20}
+	composition := [...]int{
+		counts.Composition.One,
+		counts.Composition.Two,
+		counts.Composition.Three,
+		counts.Composition.FourToTen,
+		counts.Composition.ElevenToTwenty,
+		counts.Composition.MoreThanTwenty,
+	}
+	compositionTotal := 0
+	minimumIdentitiesTotal := 0
+	maximumIdentitiesTotal := 0
+	for index, count := range composition {
+		if count < 0 {
+			return fmt.Errorf("warehouse returned a negative composition count: %v", counts.Composition)
+		}
+		if count > math.MaxInt-compositionTotal {
+			return fmt.Errorf("warehouse returned a composition total that is too large: %v", counts.Composition)
+		}
+		compositionTotal += count
+		minimum := minimumIdentitiesPerProfile[index]
+		if count > (math.MaxInt-minimumIdentitiesTotal)/minimum {
+			return fmt.Errorf("warehouse returned a minimum identity total that is too large: %v", counts.Composition)
+		}
+		minimumIdentitiesTotal += count * minimum
+		if index < len(maximumIdentitiesPerProfile) {
+			maximum := maximumIdentitiesPerProfile[index]
+			if count > (math.MaxInt-maximumIdentitiesTotal)/maximum {
+				maximumIdentitiesTotal = math.MaxInt
+			} else {
+				maximumIdentitiesTotal += count * maximum
+			}
+		}
+	}
+
+	// Validate consistency between profile, identity, and composition totals.
+	if profilesTotal != compositionTotal {
+		return fmt.Errorf("warehouse returned profile counts inconsistent with composition: %v", counts)
+	}
+	if counts.Identities.Anonymous < counts.Profiles.Anonymous {
+		return fmt.Errorf("warehouse returned fewer anonymous identities than anonymous profiles: %v", counts)
+	}
+	if counts.Identities.Recognized < counts.Profiles.Recognized {
+		return fmt.Errorf("warehouse returned fewer recognized identities than recognized profiles: %v", counts)
+	}
+	if identitiesTotal < minimumIdentitiesTotal {
+		return fmt.Errorf("warehouse returned fewer identities than required by composition: %v", counts)
+	}
+	if counts.Composition.MoreThanTwenty == 0 && identitiesTotal > maximumIdentitiesTotal {
+		return fmt.Errorf("warehouse returned more identities than allowed by composition: %v", counts)
+	}
+
+	return nil
 }
 
 // ValidateInt validates an int value.
@@ -575,23 +768,6 @@ func ValidateUnsigned(name string, t types.Type, n uint) (any, error) {
 	return n, nil
 }
 
-// ValidateYear validates a year value.
-func ValidateYear(name string, year int) (any, error) {
-	if year < types.MinYear || year > types.MaxYear {
-		return nil, fmt.Errorf("data warehouse returned a value of %d for column %s which is not a year type", year, name)
-	}
-	return year, nil
-}
-
-// ValidateYearString validates a year value represented as a string.
-func ValidateYearString(name string, year string) (any, error) {
-	y, err := strconv.Atoi(year)
-	if err != nil || y < types.MinYear || y > types.MaxYear {
-		return nil, fmt.Errorf("data warehouse returned a value of %q for column %s which is not a year type", year, name)
-	}
-	return y, nil
-}
-
 // ValidateUUID validates a uuid value.
 func ValidateUUID(name string, s string) (any, error) {
 	u, ok := types.NormalizeUUID(s)
@@ -641,20 +817,20 @@ func ValidateString(name string, t types.Type, s string) (any, error) {
 	if !utf8.ValidString(s) {
 		return nil, fmt.Errorf("data warehouse returned a value for column %s, which contains invalid UTF-8 characters", name)
 	}
-	switch t.Semantic() {
-	case types.CountrySemantic:
+	switch t.Semantics() {
+	case types.CountrySemantics:
 		switch t.CountryFormat() {
 		case types.ISO3166Alpha2:
 			if !validation.IsValidCountryCodeAlpha2(s) {
-				return nil, fmt.Errorf("data warehouse returned a value for column %s, which is not a 2-letters country code", name)
+				return nil, fmt.Errorf("data warehouse returned a value for column %s, which is not a 2-letter country code", name)
 			}
 		case types.ISO3166Alpha3:
 			if !validation.IsValidCountryCodeAlpha3(s) {
-				return nil, fmt.Errorf("data warehouse returned a value for column %s, which is not a 3-letters country code", name)
+				return nil, fmt.Errorf("data warehouse returned a value for column %s, which is not a 3-letter country code", name)
 			}
 		}
 		return s, nil
-	case types.PhoneSemantic:
+	case types.PhoneSemantics:
 		if !types.IsPhone(s) {
 			return nil, fmt.Errorf("data warehouse returned a value for column %s, which is not a valid canonical phone number", name)
 		}
@@ -749,10 +925,13 @@ const (
 	OpOr
 )
 
-// BaseExpr represents an SQL expression that refers to a property, on which an
-// operator is applied, an eventually an operand, if the operator is binary.
+// BaseExpr represents an SQL expression that applies an operator to a column.
+// For OpIsTrue and OpIsFalse on JSON columns, Keys specifies successive object
+// keys. Each key is treated literally, including any dots. If Keys is empty,
+// these operators apply to the entire column.
 type BaseExpr struct {
 	Column   Column
+	Keys     []string
 	Operator Operator
 	Values   []any // may be nil for unary expressions.
 }

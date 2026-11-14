@@ -1,6 +1,7 @@
 import { ConnectorSettings } from './responses';
 import { Compression } from './connection';
 import Type, { ObjectType } from './types';
+import { EventConsentLocation } from './workspace';
 
 type PipelineTarget = 'Event' | 'User' | 'Group';
 
@@ -8,9 +9,11 @@ type PipelineStep =
 	| 'Receive'
 	| 'InputValidation'
 	| 'Filter'
-	| 'Consent'
+	| 'EventConsent'
+	| 'ExportProfileConsent'
 	| 'Transformation'
 	| 'OutputValidation'
+	| 'ImportProfileConsent'
 	| 'Finalize';
 
 type SchedulePeriod = 'Off' | '5m' | '15m' | '30m' | '1h' | '2h' | '3h' | '6h' | '8h' | '12h' | '24h';
@@ -22,6 +25,11 @@ type ConsentPurposesOperator = 'and' | 'or';
 interface RequiredConsents {
 	operator: ConsentPurposesOperator;
 	purposes: string[];
+}
+
+interface EventListenerConsents {
+	operator: ConsentPurposesOperator;
+	purposes: EventConsentLocation[][];
 }
 
 type Mapping = Record<string, string>;
@@ -101,6 +109,8 @@ interface Pipeline {
 	name: string;
 	enabled: boolean;
 	eventType: string | null;
+	orderingGroup: string | null;
+	deliveryEndpoint: string | null;
 	running: boolean;
 	scheduleStart: number | null;
 	schedulePeriod: SchedulePeriod | null;
@@ -131,6 +141,8 @@ interface PipelineType {
 	description: string;
 	target: PipelineTarget;
 	eventType: string;
+	orderingGroup: string | null;
+	deliveryEndpoint: string | null;
 }
 
 interface PipelineToSet {
@@ -171,8 +183,8 @@ interface PipelineMetricsSeries {
 	workspace?: string;
 	connection?: string;
 	pipeline?: string;
-	passed: [number, number, number, number, number, number, number][];
-	failed: [number, number, number, number, number, number, number][];
+	passed: [number, number, number, number, number, number, number, number, number][];
+	failed: [number, number, number, number, number, number, number, number, number][];
 }
 
 interface PipelineMetrics {
@@ -194,6 +206,7 @@ export type {
 	FilterRule,
 	ConsentPurposesOperator,
 	RequiredConsents,
+	EventListenerConsents,
 	FilterCondition,
 	Pipeline,
 	PipelineType,

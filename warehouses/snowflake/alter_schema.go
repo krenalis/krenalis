@@ -37,15 +37,20 @@ func (warehouse *Snowflake) AlterProfileSchema(ctx context.Context, opID string,
 	var operationErr *warehouses.OperationError
 	err = warehouse.alterProfileSchema(ctx, columns, operations)
 	if err != nil {
+		if ctx.Err() != nil {
+			err = fmt.Errorf("operation interrupted: %w", context.Cause(ctx))
+		}
 		operationErr = warehouses.NewOperationError(err)
 	}
+	ctx, cancel := withDelayedCancellation(ctx, finalizationGracePeriod)
+	defer cancel()
 	bo := backoff.New(200)
 	bo.SetCap(time.Second)
 	for bo.Next(ctx) {
-		err2 := warehouse.setOperationAsCompleted(ctx, db, opID, operationErr)
+		err2 := warehouse.setOperationAsCompleted(ctx, db, opID, nil, operationErr)
 		if err2 != nil {
 			slog.Error("cannot set alter profile columns operation as completed, retrying",
-				"err", warehouses.NewOperationError(err2), "operationError", operationErr)
+				"err", err2, "operationError", operationErr)
 			continue
 		}
 		if operationErr != nil {
@@ -70,7 +75,7 @@ func (warehouse *Snowflake) alterProfileSchema(ctx context.Context, columns []wa
 	// Execute the alter schema queries within a transaction.
 	err = warehouse.execTransaction(ctx, func(tx *sql.Tx) error {
 		for _, query := range queries {
-			_, err := tx.Exec(query)
+			_, err := tx.ExecContext(ctx, query)
 			if err != nil {
 				return snowflake(err)
 			}
@@ -222,15 +227,10 @@ func createViewQuery(profilesTableName string, profileColumns []warehouses.Colum
 func typeToSnowflakeType(t types.Type) string {
 	switch t.Kind() {
 	case types.StringKind:
-		switch t.Semantic() {
-		case types.CountrySemantic:
-			switch t.CountryFormat() {
-			case types.ISO3166Alpha2:
-				return "VARCHAR(2)"
-			case types.ISO3166Alpha3:
-				return "VARCHAR(3)"
-			}
-		case types.PhoneSemantic:
+		switch t.Semantics() {
+		case types.CountrySemantics:
+			return "VARCHAR(2)"
+		case types.PhoneSemantics:
 			return "VARCHAR(16)"
 		}
 		var maxLength int
@@ -293,8 +293,6 @@ func typeToSnowflakeType(t types.Type) string {
 		return "DATE"
 	case types.TimeKind:
 		return "TIME"
-	case types.YearKind:
-		return "NUMBER(4,0)"
 	case types.UUIDKind:
 		return "VARCHAR"
 	case types.JSONKind:

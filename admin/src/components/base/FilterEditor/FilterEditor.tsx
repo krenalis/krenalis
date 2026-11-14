@@ -1,14 +1,17 @@
-import React, { ReactNode, RefObject, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, { ReactNode, RefObject, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import './FilterEditor.css';
+import { checkIfPropertyExists } from '../../helpers/checkIfPropertyExists';
+import { getPropertyPathDisplayValue } from '../../helpers/getPropertyPathDisplayValue';
 import { getFilterPropertyComboboxItems } from '../../helpers/getSchemaComboboxItems';
-import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
-import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import type SlButtonElement from '@shoelace-style/shoelace/dist/components/button/button.component.js';
-import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
-import type SlInputElement from '@shoelace-style/shoelace/dist/components/input/input.component.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
-import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
+import WaOption from '@awesome.me/webawesome/dist/react/option/index.js';
+import WaSelect from '@awesome.me/webawesome/dist/react/select/index.js';
+import type WaSelectElement from '@awesome.me/webawesome/dist/components/select/select.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import type WaButtonElement from '@awesome.me/webawesome/dist/components/button/button.js';
+import WaInput from '@awesome.me/webawesome/dist/react/input/index.js';
+import type WaInputElement from '@awesome.me/webawesome/dist/components/input/input.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
+import WaTooltip from '@awesome.me/webawesome/dist/react/tooltip/index.js';
 import { Combobox } from '../Combobox/Combobox';
 import {
 	FILTER_OPERATORS,
@@ -30,7 +33,8 @@ import {
 	FilterOperator,
 	PipelineTarget,
 } from '../../../lib/api/types/pipeline';
-import { ObjectType, Role, StringType } from '../../../lib/api/types/types';
+import { ObjectType, StringType } from '../../../lib/api/types/types';
+import { ConnectionRole } from '../../../lib/api/types/connection';
 
 // countFilterRules returns the number of groups and conditions below filter.
 const countFilterRules = (filter: Filter): number =>
@@ -73,42 +77,28 @@ const NO_HIDDEN_PROPERTIES: string[] = [];
 const EMPTY_FILTER: Filter = { operator: 'and', rules: [] };
 const EMPTY_FILTER_WITH_CONDITION: Filter = { operator: 'and', rules: [newFilterCondition()] };
 
-// checkIfPropertyExists returns an error when property is not available to the
-// filter editor.
-const checkIfPropertyExists = (
-	property: string,
-	schema: ReturnType<typeof flattenSchema>,
-	toHide: string[],
-): string => {
-	if (schema == null || property === '') {
-		return '';
-	}
-	if (schema[property] == null || toHide.includes(property)) {
-		return `Property "${property}" does not exist`;
-	}
-	return '';
-};
-
 interface FilterEditorProps {
 	disabled?: boolean;
 	emptyFilterFocusRef?: RefObject<HTMLElement>;
+	errors?: Record<string, string>;
 	filter: Filter | null;
 	hoistMenus?: boolean;
 	onChange: (filter: Filter | null) => void;
 	onCommit?: (filter: Filter | null) => void;
 	propertiesToHide?: string[];
-	role: Role;
+	role: ConnectionRole;
 	rootActions?: ReactNode;
 	schema: ObjectType;
 	showEmptyFilterAsCondition?: boolean;
 	subject: string;
 	target: PipelineTarget;
-	textValueCommitDelayMs?: number;
+	validationAttempt?: number;
 }
 
 const FilterEditor = ({
 	disabled = false,
 	emptyFilterFocusRef,
+	errors,
 	filter,
 	hoistMenus = false,
 	onChange,
@@ -120,8 +110,9 @@ const FilterEditor = ({
 	showEmptyFilterAsCondition = false,
 	subject,
 	target,
-	textValueCommitDelayMs,
+	validationAttempt,
 }: FilterEditorProps) => {
+	const editorID = useId();
 	const [conditionRemovalAnnouncement, setConditionRemovalAnnouncement] = useState('');
 	const announcementFrameRef = useRef<number>();
 	const rootRef = useRef<HTMLDivElement>(null);
@@ -144,19 +135,36 @@ const FilterEditor = ({
 	);
 
 	useLayoutEffect(() => {
+		if (validationAttempt == null || validationAttempt === 0) {
+			return;
+		}
+		const input = rootRef.current?.querySelector<WaInputElement | WaSelectElement>('[aria-invalid="true"]');
+		if (input == null) {
+			return;
+		}
+		let canceled = false;
+		void input.updateComplete.then(() => {
+			if (!canceled && input.isConnected) {
+				input.focus();
+			}
+		});
+		return () => {
+			canceled = true;
+		};
+	}, [validationAttempt]);
+
+	useLayoutEffect(() => {
 		const pendingFocus = pendingConditionFocusRef.current;
 		if (pendingFocus == null) {
 			return;
 		}
 		pendingConditionFocusRef.current = undefined;
 
-		const propertyInputs = rootRef.current?.querySelectorAll<SlInputElement>(
-			'.pipeline__filters-property sl-input',
-		);
+		const propertyInputs = rootRef.current?.querySelectorAll<WaInputElement>('.filter-editor__property wa-input');
 		const target =
 			typeof pendingFocus === 'number'
 				? propertyInputs?.[pendingFocus]
-				: rootRef.current?.querySelector<SlButtonElement>('.pipeline__filters-add-condition');
+				: rootRef.current?.querySelector<WaButtonElement>('.filter-editor__add-condition');
 		if (target != null) {
 			// Removing a rule can remount the next input before its internal control is ready.
 			let canceled = false;
@@ -243,10 +251,10 @@ const FilterEditor = ({
 
 	const onRemoveCondition = (path: number[]) => {
 		const propertyInputs = Array.from(
-			rootRef.current?.querySelectorAll<HTMLElement>('.pipeline__filters-property sl-input') ?? [],
+			rootRef.current?.querySelectorAll<HTMLElement>('.filter-editor__property wa-input') ?? [],
 		);
 		const currentProperty = rootRef.current?.querySelector<HTMLElement>(
-			`[data-id="property-${pathID(path)}"] sl-input`,
+			`[data-id="property-${pathID(path)}"] wa-input`,
 		);
 		const currentIndex = currentProperty == null ? -1 : propertyInputs.indexOf(currentProperty);
 
@@ -279,7 +287,7 @@ const FilterEditor = ({
 		const newProperty = findPropertyInSchema(newPropertyName);
 		const [, newPath] = splitPropertyAndPath(newPropertyName, flatInputSchema);
 
-		const compatibleOperators = getCompatibleFilterOperators(newProperty, newPath !== '', role, target);
+		const compatibleOperators = getCompatibleFilterOperators(newProperty, newPath !== '');
 		if (condition.operator !== '' && !compatibleOperators.includes(FILTER_OPERATORS.indexOf(condition.operator))) {
 			condition.operator = '';
 			condition.values = [''];
@@ -297,12 +305,7 @@ const FilterEditor = ({
 		const updatedFilter = updateProperty(path, value);
 		const condition = filterConditionAt(updatedFilter, path);
 		const [, propertyPath] = splitPropertyAndPath(condition.property, flatInputSchema);
-		const compatibleOperators = getCompatibleFilterOperators(
-			flatInputSchema[value],
-			propertyPath !== '',
-			role,
-			target,
-		);
+		const compatibleOperators = getCompatibleFilterOperators(flatInputSchema[value], propertyPath !== '');
 		const currentOperatorIndex = FILTER_OPERATORS.findIndex((operator) => operator === condition.operator);
 		const isJSON = flatInputSchema[value]?.type === 'json';
 
@@ -311,10 +314,7 @@ const FilterEditor = ({
 			if (!isJSON) {
 				setTimeout(() => {
 					const property: any = document.querySelector(`[data-id="property-${pathID(path)}"]`);
-					property
-						?.closest('.pipeline__filters-condition')
-						?.querySelector('.pipeline__filters-operator')
-						?.show();
+					property?.closest('.filter-editor__condition')?.querySelector('.filter-editor__operator')?.show();
 				}, 10);
 			}
 		}
@@ -323,7 +323,7 @@ const FilterEditor = ({
 		if (isJSON) {
 			setTimeout(() => {
 				const property: any = document.querySelector(`[data-id="property-${pathID(path)}"]`);
-				property?.closest('.pipeline__filters-condition')?.querySelector('.pipeline__filters-path')?.select();
+				property?.closest('.filter-editor__condition')?.querySelector('.filter-editor__path')?.select();
 			}, 10);
 		}
 	};
@@ -332,7 +332,7 @@ const FilterEditor = ({
 		const updatedFilter = structuredClone(editableFilter);
 		const condition = filterConditionAt(updatedFilter, path);
 		const [base] = splitPropertyAndPath(condition.property, flatInputSchema);
-		const compatibleOperators = getCompatibleFilterOperators(flatInputSchema[base], value !== '', role, target);
+		const compatibleOperators = getCompatibleFilterOperators(flatInputSchema[base], value !== '');
 		if (condition.operator !== '' && !compatibleOperators.includes(FILTER_OPERATORS.indexOf(condition.operator))) {
 			condition.operator = '';
 			condition.values = [''];
@@ -377,13 +377,11 @@ const FilterEditor = ({
 		if (operator == null || isUnaryOperator(operator)) {
 			return;
 		}
-		const valueInput = select
-			.closest('.pipeline__filters-condition')
-			?.querySelector('.pipeline__filters-value-input');
+		const valueInput = select.closest('.filter-editor__condition')?.querySelector('.filter-editor__value-input');
 		if (valueInput == null) {
 			return;
 		}
-		if (valueInput.tagName === 'SL-SELECT' && !valueInput.open) {
+		if (valueInput.tagName === 'WA-SELECT' && !valueInput.open) {
 			valueInput.show();
 		} else {
 			valueInput.focus();
@@ -406,13 +404,13 @@ const FilterEditor = ({
 		setTimeout(() => {
 			const property: any = document.querySelector(`[data-id="property-${pathID(path)}"]`);
 			const inputs = property
-				?.closest('.pipeline__filters-condition')
-				?.querySelectorAll('.pipeline__filters-value-input');
+				?.closest('.filter-editor__condition')
+				?.querySelectorAll('.filter-editor__value-input');
 			const input = inputs?.[position];
 			if (input == null) {
 				return;
 			}
-			if (input.tagName === 'SL-SELECT') {
+			if (input.tagName === 'WA-SELECT') {
 				input.show();
 			} else {
 				input.focus();
@@ -451,6 +449,27 @@ const FilterEditor = ({
 		const values = condition.values ?? [];
 		const propertyName = isJSON ? base : condition.property;
 		const propertyDisplayValue = propertyItems.find((item) => item.term === propertyName)?.displayValue;
+		const formatError = (error: string | undefined): ReactNode => {
+			if (error == null) {
+				return undefined;
+			}
+			const message = error.endsWith('.') ? error : `${error}.`;
+			const quotedProperty = `"${condition.property.trim()}"`;
+			const position = message.indexOf(quotedProperty);
+			const prefix = message.slice(0, position);
+			if (position < 0 || (prefix !== 'Property ' && prefix !== 'The filter value on the property ')) {
+				return message;
+			}
+			return (
+				<>
+					{prefix}
+					<strong>
+						{getPropertyPathDisplayValue(condition.property.trim(), (path) => flatInputSchema[path]?.full)}
+					</strong>
+					{message.slice(position + quotedProperty.length)}
+				</>
+			);
+		};
 
 		const propertyInput = (
 			<Combobox
@@ -458,7 +477,7 @@ const FilterEditor = ({
 				onSelect={(_, value) => onSelectProperty(path, value)}
 				value={propertyName}
 				displayValue={propertyDisplayValue}
-				className='pipeline__filters-property'
+				className='filter-editor__property'
 				size='small'
 				name={`property-${id}`}
 				items={propertyItems}
@@ -470,47 +489,71 @@ const FilterEditor = ({
 				autoResize={true}
 				hoist={hoistMenus}
 				error={
+					errors == null &&
 					condition.property !== '' &&
 					checkIfPropertyExists(isJSON ? base : condition.property, flatInputSchema, propertiesToHide)
 				}
-			/>
+				aria-invalid={errors?.[`property-${id}`] != null ? 'true' : undefined}
+			>
+				{errors?.[`property-${id}`] != null && (
+					<span slot='hint' role='alert'>
+						{formatError(errors[`property-${id}`])}
+					</span>
+				)}
+			</Combobox>
 		);
 		const pathInput = isJSON ? (
-			<SlInput
-				size='small'
-				className='pipeline__filters-path'
+			<WaInput
+				size='s'
+				className='filter-editor__path'
 				value={propertyPath}
-				onSlInput={(event: any) => changeFilter(updatePath(path, event.target.value))}
-				onSlChange={(event: any) => changeFilter(updatePath(path, event.target.value), true)}
+				onInput={(event: any) => changeFilter(updatePath(path, event.target.value))}
+				onChange={(event: any) => changeFilter(updatePath(path, event.target.value), true)}
 				name={`path-${id}`}
 				disabled={disabled}
 				placeholder='Path (optional)'
-			/>
+				aria-invalid={errors?.[`path-${id}`] != null ? 'true' : undefined}
+			>
+				{errors?.[`path-${id}`] != null && (
+					<span slot='hint' role='alert'>
+						{formatError(errors[`path-${id}`])}
+					</span>
+				)}
+			</WaInput>
 		) : null;
 		const operatorSelect = (
-			<SlSelect
-				size='small'
+			<WaSelect
+				size='s'
 				name={`operator-${id}`}
-				className='pipeline__filters-operator'
-				value={condition.operator === '' ? '' : String(FILTER_OPERATORS.indexOf(condition.operator))}
-				onSlChange={(event: any) => changeOperator(path, FILTER_OPERATORS[event.target.value])}
-				onSlAfterHide={onOperatorSelectClose}
+				className='filter-editor__operator'
+				value={
+					condition.operator === ''
+						? ''
+						: String(FILTER_OPERATORS.findIndex((operator) => operator === condition.operator))
+				}
+				onChange={(event: any) => changeOperator(path, FILTER_OPERATORS[event.target.value])}
+				onWaAfterHide={onOperatorSelectClose}
 				placeholder='Operator'
 				disabled={isInvalidProperty || disabled}
-				hoist={hoistMenus}
+				aria-invalid={errors?.[`operator-${id}`] != null ? 'true' : undefined}
 			>
 				{property != null
-					? getCompatibleFilterOperators(property, propertyPath !== '', role, target).map((index) => (
-							<SlOption key={index} value={String(index)}>
+					? getCompatibleFilterOperators(property, propertyPath !== '').map((index) => (
+							<WaOption key={index} value={String(index)}>
 								{FILTER_OPERATORS[index]}
-							</SlOption>
+							</WaOption>
 						))
 					: FILTER_OPERATORS.map((operator, index) => (
-							<SlOption key={operator} value={String(index)}>
+							<WaOption key={operator} value={String(index)}>
 								{operator}
-							</SlOption>
+							</WaOption>
 						))}
-			</SlSelect>
+				{errors?.[`operator-${id}`] != null && (
+					<span slot='hint' role='alert'>
+						{formatError(errors[`operator-${id}`])}
+					</span>
+				)}
+			</WaSelect>
 		);
 
 		const valueElements: ReactNode[] = [];
@@ -519,46 +562,43 @@ const FilterEditor = ({
 				<FilterValueControl
 					key={`value-${id}-0`}
 					name={`value-${id}-0`}
+					error={formatError(errors?.[`value-${id}-0`])}
 					value={values[0] ?? ''}
 					options={propertyValues}
 					disabled={isInvalidProperty || disabled}
-					hoist={hoistMenus}
 					onValueChange={(value) => changeFilter(updateValue(path, 0, value))}
 					onValueCommit={(value) => changeFilter(updateValue(path, 0, value), true)}
-					textValueCommitDelayMs={textValueCommitDelayMs}
 				/>,
 			);
 			if (isBetween) {
 				valueElements.push(
-					<span className='pipeline__filters-value-and' key='and'>
+					<span className='filter-editor__value-and' key='and'>
 						and
 					</span>,
 					<FilterValueControl
 						key={`value-${id}-1`}
 						name={`value-${id}-1`}
+						error={formatError(errors?.[`value-${id}-1`])}
 						value={values[1] ?? ''}
 						options={propertyValues}
 						disabled={isInvalidProperty || disabled}
-						hoist={hoistMenus}
 						onValueChange={(value) => changeFilter(updateValue(path, 1, value))}
 						onValueCommit={(value) => changeFilter(updateValue(path, 1, value), true)}
-						textValueCommitDelayMs={textValueCommitDelayMs}
 					/>,
 				);
 			} else if (isOneOf) {
 				for (const [position, value] of values.slice(1).entries()) {
 					const valuePosition = position + 1;
 					valueElements.push(
-						<div className='pipeline__filters-value' key={`value-${id}-${valuePosition}`}>
+						<div className='filter-editor__value' key={`value-${id}-${valuePosition}`}>
 							<FilterValueControl
 								name={`value-${id}-${valuePosition}`}
+								error={formatError(errors?.[`value-${id}-${valuePosition}`])}
 								value={value}
 								options={propertyValues}
 								disabled={isInvalidProperty || disabled}
-								hoist={hoistMenus}
 								onValueChange={(value) => changeFilter(updateValue(path, valuePosition, value))}
 								onValueCommit={(value) => changeFilter(updateValue(path, valuePosition, value), true)}
-								textValueCommitDelayMs={textValueCommitDelayMs}
 								removable={true}
 								onRemove={() => onRemoveValue(path, valuePosition)}
 							/>
@@ -566,59 +606,53 @@ const FilterEditor = ({
 					);
 				}
 				valueElements.push(
-					<SlButton
-						className='pipeline__filters-add-value'
+					<WaButton
+						className='filter-editor__add-value'
 						key='add-button'
-						variant='default'
-						size='small'
+						appearance='outlined'
+						size='s'
 						disabled={disabled}
 						onClick={() => onAddValue(path)}
 					>
 						Add value
-					</SlButton>,
+					</WaButton>,
 				);
 			}
 		}
 
+		const removeButtonID = `${editorID}-${id}-remove-condition`;
 		const removeButton = (
 			<button
 				type='button'
-				className='pipeline__filters-remove-condition pipeline__filters-remove-rule'
+				className='filter-editor__remove-condition filter-editor__remove-rule'
 				aria-label={`Remove condition ${conditionNumber}`}
 				onClick={() => onRemoveCondition(path)}
 				disabled={isRemoveDisabled}
 			>
-				<SlIcon name='x' aria-hidden='true' />
+				<WaIcon name='x' aria-hidden='true' />
 			</button>
 		);
 
 		return (
-			<div className='pipeline__filters-filter' key={id}>
-				<div
-					className={`pipeline__filters-condition${isOneOf ? ' pipeline__filters-condition--is-one-of' : ''}`}
-				>
-					<div className='pipeline__filters-property-and-operator'>
+			<div className='filter-editor__filter' key={id}>
+				<div className={`filter-editor__condition${isOneOf ? ' filter-editor__condition--is-one-of' : ''}`}>
+					<div className='filter-editor__property-and-operator'>
 						{propertyInput}
 						{pathInput}
 						{operatorSelect}
 					</div>
-					{isOneOf ? (
-						<div className='pipeline__filters-is-one-of-values'>{valueElements}</div>
-					) : (
-						valueElements
-					)}
+					{isOneOf ? <div className='filter-editor__is-one-of-values'>{valueElements}</div> : valueElements}
 					{!hideRemoveButton && (
-						<div className='pipeline__filters-remove-condition-wrapper'>
+						<div id={removeButtonID} className='filter-editor__remove-condition-wrapper'>
 							{isRemoveDisabled ? (
 								removeButton
 							) : (
-								<SlTooltip
-									className='app-tooltip'
-									content={`Remove condition ${conditionNumber}`}
-									hoist={true}
-								>
+								<>
+									<WaTooltip className='app-tooltip' for={removeButtonID}>
+										Remove condition
+									</WaTooltip>
 									{removeButton}
-								</SlTooltip>
+								</>
 							)}
 						</div>
 					)}
@@ -629,65 +663,66 @@ const FilterEditor = ({
 
 	const renderGroup = (group: Filter, groupPath: number[], depth: number): ReactNode => {
 		const isRoot = depth === 1;
+		const currentGroupNumber = isRoot ? undefined : ++groupNumber;
 		const removeGroupTooltip = group.rules.some(isFilterGroup) ? 'Remove groups' : 'Remove group';
 
 		return (
 			<div
 				ref={isRoot ? rootRef : undefined}
-				className={`pipeline__filters-group${isRoot ? ' pipeline__filters-group--root' : ''}`}
+				className={`filter-editor__group${isRoot ? ' filter-editor__group--root' : ''}`}
 				key={pathID(groupPath) || 'root'}
 			>
-				<div className='pipeline__filters-group-header'>
-					<span className='pipeline__filters-group-subject'>
-						{isRoot ? `${subject} matching` : 'matching'}
-					</span>
-					<SlSelect
-						className='pipeline__filters-logical'
-						size='small'
+				<div className='filter-editor__group-header'>
+					<span className='filter-editor__group-subject'>{isRoot ? `${subject} matching` : 'matching'}</span>
+					<WaSelect
+						className='filter-editor__logical'
+						size='s'
 						value={group.operator}
-						onSlChange={(event: any) => onLogicalChange(groupPath, event.target.value as FilterLogical)}
+						onChange={(event: any) => onLogicalChange(groupPath, event.target.value as FilterLogical)}
 						disabled={disabled}
-						hoist={hoistMenus}
 						aria-label='Match rules'
 					>
-						<SlOption value='and'>all</SlOption>
-						<SlOption value='or'>any</SlOption>
-					</SlSelect>
+						<WaOption value='and'>all</WaOption>
+						<WaOption value='or'>any</WaOption>
+					</WaSelect>
 					<span>of the following:</span>
 					{isRoot && rootActions != null && <div className='filter-editor__root-actions'>{rootActions}</div>}
 					{!isRoot && (
-						<div className='pipeline__filters-remove-group-wrapper'>
-							<SlTooltip className='app-tooltip' content={removeGroupTooltip} hoist={true}>
-								<SlButton
-									className='pipeline__filters-remove-group pipeline__filters-remove-rule'
-									size='small'
-									variant='text'
-									onClick={() => onRemoveRule(groupPath)}
-									disabled={disabled}
-								>
-									<SlIcon name='x' aria-hidden='true' />
-									<span className='pipeline__filters-remove-rule-label'>Remove group</span>
-								</SlButton>
-							</SlTooltip>
+						<div className='filter-editor__remove-group-wrapper'>
+							<WaTooltip className='app-tooltip' for={`${editorID}-${pathID(groupPath)}-remove-group`}>
+								{removeGroupTooltip}
+							</WaTooltip>
+							<WaButton
+								id={`${editorID}-${pathID(groupPath)}-remove-group`}
+								className='filter-editor__remove-group filter-editor__remove-rule'
+								size='s'
+								variant='brand'
+								appearance='plain'
+								onClick={() => onRemoveRule(groupPath)}
+								disabled={disabled}
+							>
+								<WaIcon name='x' aria-hidden='true' />
+								<span className='filter-editor__remove-rule-label'>{`Remove group ${currentGroupNumber}`}</span>
+							</WaButton>
 						</div>
 					)}
 				</div>
-				<div className='pipeline__filters-group-rules'>
+				<div className='filter-editor__group-rules'>
 					{group.rules.map((rule, index) => {
 						const path = [...groupPath, index];
 						const isGroup = isFilterGroup(rule);
 
 						return (
 							<div
-								className={`pipeline__filters-rule${isGroup ? ' pipeline__filters-rule--group' : ''}`}
+								className={`filter-editor__rule${isGroup ? ' filter-editor__rule--group' : ''}`}
 								key={pathID(path)}
 							>
 								{index > 0 && (
-									<div className='pipeline__filters-connector' aria-hidden='true'>
+									<div className='filter-editor__connector' aria-hidden='true'>
 										{group.operator}
 									</div>
 								)}
-								<div className='pipeline__filters-rule-content'>
+								<div className='filter-editor__rule-content'>
 									{isGroup
 										? renderGroup(rule, path, depth + 1)
 										: renderCondition(rule, path, ++conditionNumber)}
@@ -696,33 +731,36 @@ const FilterEditor = ({
 						);
 					})}
 				</div>
-				<div className='pipeline__filters-group-actions'>
-					<SlButton
-						className='pipeline__filters-add-condition'
-						size='medium'
-						variant='text'
+				<div className='filter-editor__group-actions'>
+					<WaButton
+						className='filter-editor__add-condition'
+						size='m'
+						variant='brand'
+						appearance='plain'
 						onClick={() => onAddCondition(groupPath)}
 						disabled={disabled || filterRuleCount >= MAX_FILTER_RULE_COUNT}
 					>
-						<SlIcon slot='prefix' name='plus-circle' />
+						<WaIcon slot='start' name='plus-circle' />
 						Add a condition
-					</SlButton>
-					<SlButton
-						className='pipeline__filters-add-group'
-						size='medium'
-						variant='text'
+					</WaButton>
+					<WaButton
+						className='filter-editor__add-group'
+						size='m'
+						variant='brand'
+						appearance='plain'
 						onClick={() => onAddGroup(groupPath)}
 						disabled={disabled || depth >= MAX_FILTER_DEPTH || filterRuleCount > MAX_FILTER_RULE_COUNT - 2}
 					>
-						<SlIcon slot='prefix' name='plus-circle' />
+						<WaIcon slot='start' name='plus-circle' />
 						Add a group
-					</SlButton>
+					</WaButton>
 				</div>
 			</div>
 		);
 	};
 
 	let conditionNumber = 0;
+	let groupNumber = 0;
 
 	return (
 		<>
@@ -735,84 +773,33 @@ const FilterEditor = ({
 };
 
 interface FilterValueControlProps {
+	error?: ReactNode;
 	name: string;
 	value: string;
 	options: string[];
 	disabled: boolean;
-	hoist: boolean;
 	onValueChange: (value: string) => void;
 	onValueCommit: (value: string) => void;
-	textValueCommitDelayMs?: number;
 	removable?: boolean;
 	onRemove?: () => void;
 }
 
 const FilterValueControl = ({
+	error,
 	name,
 	value,
 	options,
 	disabled,
-	hoist,
 	onValueChange,
 	onValueCommit,
-	textValueCommitDelayMs,
 	removable = false,
 	onRemove,
 }: FilterValueControlProps) => {
-	const idleCommitTimerRef = useRef<ReturnType<typeof setTimeout>>();
-	const isComposingRef = useRef(false);
-	const onValueCommitRef = useRef(onValueCommit);
-	const scheduledValueRef = useRef<string>();
-	onValueCommitRef.current = onValueCommit;
-
-	const cancelIdleCommit = useCallback(() => {
-		if (idleCommitTimerRef.current != null) {
-			clearTimeout(idleCommitTimerRef.current);
-			idleCommitTimerRef.current = undefined;
-		}
-		scheduledValueRef.current = undefined;
-	}, []);
-
-	const scheduleIdleCommit = useCallback(
-		(nextValue: string) => {
-			cancelIdleCommit();
-			if (disabled || textValueCommitDelayMs == null) {
-				return;
-			}
-			scheduledValueRef.current = nextValue;
-			idleCommitTimerRef.current = setTimeout(() => {
-				idleCommitTimerRef.current = undefined;
-				scheduledValueRef.current = undefined;
-				onValueCommitRef.current(nextValue);
-			}, textValueCommitDelayMs);
-		},
-		[cancelIdleCommit, disabled, textValueCommitDelayMs],
-	);
-
-	useEffect(() => () => cancelIdleCommit(), [cancelIdleCommit]);
-
-	useLayoutEffect(() => {
-		if (disabled || textValueCommitDelayMs == null) {
-			cancelIdleCommit();
-		}
-	}, [cancelIdleCommit, disabled, textValueCommitDelayMs]);
-
-	useEffect(() => {
-		if (scheduledValueRef.current != null && scheduledValueRef.current !== value) {
-			cancelIdleCommit();
-		}
-	}, [cancelIdleCommit, value]);
-
 	const handleInput = (event: any) => {
-		const nextValue = event.target.value;
-		onValueChange(nextValue);
-		if (!isComposingRef.current) {
-			scheduleIdleCommit(nextValue);
-		}
+		onValueChange(event.target.value);
 	};
 
 	const handleSelect = (event: any) => {
-		cancelIdleCommit();
 		const target = event.target as any;
 		const v = event.detail?.value ?? target.value;
 		onValueChange(v);
@@ -820,79 +807,76 @@ const FilterValueControl = ({
 	};
 
 	const handleCommit = (event: any) => {
-		cancelIdleCommit();
 		onValueCommit(event.target.value);
 	};
 
 	const handleKeyDown = (event: React.KeyboardEvent) => {
 		if (event.key === 'Enter' && !event.nativeEvent.isComposing) {
-			cancelIdleCommit();
 			onValueCommit((event.currentTarget as any).value);
 		}
 	};
 
-	const handleCompositionStart = () => {
-		isComposingRef.current = true;
-		cancelIdleCommit();
-	};
-
-	const handleCompositionEnd = (event: React.CompositionEvent) => {
-		isComposingRef.current = false;
-		scheduleIdleCommit((event.currentTarget as any).value);
-	};
-
 	const removeButton = removable ? (
-		<SlButton
-			slot='suffix'
-			variant='default'
-			size='small'
-			circle
-			className='pipeline__filters-value-remove'
+		<WaButton
+			slot='end'
+			appearance='outlined'
+			size='s'
+			pill
+			className='filter-editor__value-remove'
 			onClick={onRemove}
 			disabled={disabled}
 		>
-			<SlIcon name='x' />
-		</SlButton>
+			<WaIcon name='x' />
+		</WaButton>
 	) : null;
 
 	if (options.length > 0) {
 		return (
-			<div className={removable ? 'pipeline__filters-value-control--removable' : undefined}>
-				<SlSelect
-					size='small'
-					className='pipeline__filters-value-input'
+			<div className={removable ? 'filter-editor__value-control--removable' : undefined}>
+				<WaSelect
+					size='s'
+					className='filter-editor__value-input'
 					name={name}
 					value={value ?? ''}
-					onSlChange={handleSelect}
+					onChange={handleSelect}
 					disabled={disabled}
-					hoist={hoist}
+					aria-invalid={error != null ? 'true' : undefined}
 				>
 					{options.map((option, index) => (
-						<SlOption key={`${index}-${option}`} value={option}>
+						<WaOption key={`${index}-${option}`} value={option}>
 							{option === '' ? '\u00A0' : option}
-						</SlOption>
+						</WaOption>
 					))}
 					{removeButton}
-				</SlSelect>
+					{error != null && (
+						<span slot='hint' role='alert'>
+							{error}
+						</span>
+					)}
+				</WaSelect>
 			</div>
 		);
 	}
 
 	return (
-		<SlInput
-			size='small'
-			className='pipeline__filters-value-input'
+		<WaInput
+			size='s'
+			className='filter-editor__value-input'
 			value={value ?? ''}
-			onSlInput={handleInput}
-			onSlChange={handleCommit}
+			onInput={handleInput}
+			onChange={handleCommit}
 			onKeyDown={handleKeyDown}
-			onCompositionStart={handleCompositionStart}
-			onCompositionEnd={handleCompositionEnd}
 			name={name}
 			disabled={disabled}
+			aria-invalid={error != null ? 'true' : undefined}
 		>
 			{removeButton}
-		</SlInput>
+			{error != null && (
+				<span slot='hint' role='alert'>
+					{error}
+				</span>
+			)}
+		</WaInput>
 	);
 };
 

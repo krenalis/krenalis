@@ -68,18 +68,8 @@ const getProfilePropertyLabel = (path: string, properties: ProfileSchemaProperti
 		return fragments[fragments.length - 1];
 	}
 
-	return property.displayName?.trim() || property.name;
-};
-
-const getProfilePropertyPathLabel = (path: string, properties: ProfileSchemaProperties): string => {
-	let propertyPath = '';
-	const labels: string[] = [];
-	for (const fragment of path.split('.')) {
-		propertyPath = propertyPath === '' ? fragment : `${propertyPath}.${fragment}`;
-		labels.push(getProfilePropertyLabel(propertyPath, properties));
-	}
-
-	return labels.join(' › ');
+	const displayName = property.displayName?.trim() ?? '';
+	return displayName !== '' ? displayName : property.name;
 };
 
 export {
@@ -88,5 +78,4 @@ export {
 	getProfileInitials,
 	getProfilePhotoSource,
 	getProfilePropertyLabel,
-	getProfilePropertyPathLabel,
 };

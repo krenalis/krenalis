@@ -6,7 +6,6 @@ package datastore
 
 import (
 	"github.com/krenalis/krenalis/core/internal/schemas"
-	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
 )
 
@@ -112,7 +111,7 @@ func init() {
 
 	i := 0
 	for path, p := range schemas.Event.Properties().WalkAll() {
-		if p.Type.Kind() == types.ObjectKind || path == "originalTimestamp" {
+		if p.Type.IsObject() || path == "originalTimestamp" {
 			continue
 		}
 		name := eventColumnNameFromPropertyPath[path]

@@ -56,7 +56,7 @@ func (store *Store) SimulatedSystemRecordsByID(ctx context.Context, account stri
 		Limit:   len(ids),
 	}, false)
 	if err != nil {
-		return nil, unavailableError(err)
+		return nil, err
 	}
 	defer rows.Close()
 
@@ -64,20 +64,20 @@ func (store *Store) SimulatedSystemRecordsByID(ctx context.Context, account stri
 	row := make([]any, 2)
 	for rows.Next() {
 		if err := rows.Scan(row...); err != nil {
-			return nil, unavailableError(err)
+			return nil, err
 		}
 		id, idOK := row[0].(string)
 		data, dataOK := row[1].(json.Value)
 		if !idOK || id == "" || !dataOK {
-			return nil, unavailableError(errors.New("warehouse returned an invalid simulated record"))
+			return nil, wrapWarehouseError(errors.New("warehouse returned an invalid simulated record"))
 		}
 		result[id] = slices.Clone(data)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, unavailableError(err)
+		return nil, err
 	}
 	if err := rows.Close(); err != nil {
-		return nil, unavailableError(err)
+		return nil, err
 	}
 	return result, nil
 }
@@ -157,11 +157,11 @@ func (store *Store) WriteSimulatedSystemRecords(ctx context.Context, account str
 	}
 	warehouse, ok := store.warehouse().(simulatedSystemWarehouse)
 	if !ok {
-		return SimulatedSystemRecordWriteResult{}, unavailableError(errors.New("warehouse does not support simulated system writer fencing"))
+		return SimulatedSystemRecordWriteResult{}, wrapWarehouseError(errors.New("warehouse does not support simulated system writer fencing"))
 	}
 	err = warehouse.MergeSimulatedSystemRecords(ctx, account, writer.generation, simulatedSystemRecordsTable, rows)
 	if err != nil {
-		return SimulatedSystemRecordWriteResult{}, unavailableError(err)
+		return SimulatedSystemRecordWriteResult{}, err
 	}
 	return result, nil
 }
@@ -176,28 +176,28 @@ func (store *Store) simulatedSystemRecordsMaximumUpdatedAt(ctx context.Context, 
 		Limit:     1,
 	}, false)
 	if err != nil {
-		return time.Time{}, unavailableError(err)
+		return time.Time{}, err
 	}
 	defer rows.Close()
 	if !rows.Next() {
 		if err := rows.Err(); err != nil {
-			return time.Time{}, unavailableError(err)
+			return time.Time{}, err
 		}
 		if err := rows.Close(); err != nil {
-			return time.Time{}, unavailableError(err)
+			return time.Time{}, err
 		}
 		return time.Time{}, nil
 	}
 	row := make([]any, 1)
 	if err := rows.Scan(row...); err != nil {
-		return time.Time{}, unavailableError(err)
+		return time.Time{}, err
 	}
 	if err := rows.Close(); err != nil {
-		return time.Time{}, unavailableError(err)
+		return time.Time{}, err
 	}
 	updatedAt, ok := row[0].(time.Time)
 	if !ok {
-		return time.Time{}, unavailableError(errors.New("warehouse returned an invalid simulated-record timestamp"))
+		return time.Time{}, wrapWarehouseError(errors.New("warehouse returned an invalid simulated-record timestamp"))
 	}
 	return updatedAt.UTC().Truncate(time.Microsecond), nil
 }

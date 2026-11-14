@@ -7,6 +7,7 @@ package mappings
 import (
 	"errors"
 	"reflect"
+	"regexp"
 	"testing"
 	"time"
 
@@ -41,6 +42,7 @@ func Test_Compile(t *testing.T) {
 		{Name: "properties", Type: types.JSON(), Nullable: true},
 		{Name: "jsonNull", Type: types.JSON()},
 		{Name: "jsonNil", Type: types.JSON(), Nullable: true},
+		{Name: "flag", Type: types.Boolean()},
 	})
 
 	cx := decimal.MustParse("0.142")
@@ -79,7 +81,32 @@ func Test_Compile(t *testing.T) {
 		{expr: "jsonNil", dt: types.JSON(), nullable: true, expected: nil},
 
 		{expr: "''", dt: types.Map(types.String()), compileErr: errors.New("\"\" is not convertible to the map(string) type")},
+		{expr: "'ZZ'", dt: types.String().AsCountry(types.ISO3166Alpha2), compileErr: errors.New(`"ZZ" is not a 2-letter country code`)},
+		{expr: "'ZZZ'", dt: types.String().AsCountry(types.ISO3166Alpha3), compileErr: errors.New(`"ZZZ" is not a 3-letter country code`)},
+		{expr: "'abc'", dt: types.String().AsPhone(), compileErr: errors.New(`"abc" is not a valid phone number`)},
+		{expr: "-1", dt: types.Int(32).Unsigned(), compileErr: errors.New("number -1 is too small or too large for the unsigned int(32) type")},
+		{expr: "'9223372036854775808'", dt: types.Int(64), compileErr: errors.New(`number "9223372036854775808" is too small or too large for the int(64) type`)},
+		{expr: "'18446744073709551616'", dt: types.Int(64).Unsigned(), compileErr: errors.New(`number "18446744073709551616" is too small or too large for the unsigned int(64) type`)},
+		{expr: "10000000000000000000.5", dt: types.Int(64), compileErr: errors.New("number 10000000000000000000.5 is too small or too large for the int(64) type")},
+		{expr: "'1e400'", dt: types.Float(64), compileErr: errors.New(`number "1e400" is too small or too large for the float(64) type`)},
+		{expr: "1000", dt: types.Decimal(5, 2), compileErr: errors.New("number 1000 is too small or too large for the decimal(5,2) type")},
+		{expr: "-200", dt: types.Int(8), compileErr: errors.New("number -200 is less than -128")},
+		{expr: "300", dt: types.Int(8), compileErr: errors.New("number 300 is greater than 127")},
+		{expr: "'300'", dt: types.Int(8), compileErr: errors.New(`number "300" is greater than 127`)},
+		{expr: "1.5", dt: types.Float(64).WithFloatRange(2, 10), compileErr: errors.New("number 1.5 is less than 2")},
+		{expr: "true", dt: types.String().WithValues("a", "b"), compileErr: errors.New("true is not one of the allowed values")},
+		{expr: "12", dt: types.String().AsCountry(types.ISO3166Alpha2), compileErr: errors.New("12 is not a 2-letter country code")},
+		{expr: "123", dt: types.String().AsCountry(types.ISO3166Alpha3), compileErr: errors.New("123 is not a 3-letter country code")},
+		{expr: "1", dt: types.String().AsPhone(), compileErr: errors.New("1 is not a valid phone number")},
+		{expr: "12", dt: types.String().WithPattern(regexp.MustCompile(`^[a-z]+$`)), compileErr: errors.New("12 does not match /^[a-z]+$/")},
+		{expr: "1.5", dt: types.String().WithMaxBytes(2), compileErr: errors.New("1.5 exceeds the 2-byte limit")},
+		{expr: "123", dt: types.String().WithMaxLength(2), compileErr: errors.New("123 exceeds the 2-char limit")},
 		{expr: "' '   '  '", dt: types.String(), expected: "   "},
+		{expr: "null 'x'", dt: types.String(), expected: "x"},
+		{expr: "'a' null 'b'", dt: types.String(), expected: "ab"},
+		{expr: "null null", dt: types.String(), expected: ""},
+		{expr: "'[' flag ']'", dt: types.String(), expected: "[true]"},
+		{expr: "eq(passengers, 250) ':' eq(passengers, 1)", dt: types.String(), expected: "true:false"},
 		{expr: "''", dt: types.JSON(), expected: json.Value(`""`)},
 		{expr: "'100'", dt: types.JSON(), expected: json.Value(`"100"`)},
 		{expr: "'42'", dt: types.Int(32), expected: 42},
@@ -145,6 +172,9 @@ func Test_Compile(t *testing.T) {
 		{expr: "true && false", dt: types.Boolean(), compileErr: errors.New(`unexpected character '&'`)},
 		{expr: "1,000", dt: types.Int(32), compileErr: errors.New(`unexpected character ','`)},
 		{expr: "true", dt: types.Int(32), compileErr: errors.New("true is not convertible to the int(32) type")},
+		{expr: "true", dt: types.Time(), compileErr: errors.New("true is not convertible to the time type")},
+		{expr: "42", dt: types.Time(), compileErr: errors.New("42 is not convertible to the time type")},
+		{expr: "1.5", dt: types.Time(), compileErr: errors.New("1.5 is not convertible to the time type")},
 		{expr: "engine", dt: types.Object([]types.Property{{Name: "notfound", Type: types.String()}}), compileErr: errors.New("cannot convert expression (type object) to object")},
 		{expr: "engine", dt: types.Object([]types.Property{{Name: "power", Type: types.Boolean()}}), compileErr: errors.New("cannot convert expression (type object) to object")},
 		{expr: "revision_dates", dt: types.Array(types.Boolean()), compileErr: errors.New("cannot convert expression (type array(datetime)) to array(boolean)")},
@@ -233,9 +263,28 @@ func Test_Compile(t *testing.T) {
 		{expr: "if('true', 1, 2)", dt: types.Int(32), expected: 1},
 
 		// initcap.
+		{expr: "initcap('')", dt: types.String(), expected: ""},
 		{expr: "initcap('new york')", dt: types.String(), expected: "New York"},
 		{expr: "initcap(' new york ')", dt: types.String(), expected: " New York "},
-		{expr: "initcap('neW YORK')", dt: types.String(), expected: "NeW YORK"},
+		{expr: "initcap('NEW YORK')", dt: types.String(), expected: "New York"},
+		{expr: "initcap('neW YORK')", dt: types.String(), expected: "New York"},
+		{expr: "initcap('ÈLIO ÀLVAREZ')", dt: types.String(), expected: "Èlio Àlvarez"},
+		{expr: "initcap('ǆemal ǉiljana ǌegoš ǳurinda')", dt: types.String(), expected: "ǅemal ǈiljana ǋegoš ǲurinda"},
+		{expr: "initcap('ǄEMAL ǇILJANA ǊEGOŠ ǱURINDA')", dt: types.String(), expected: "ǅemal ǈiljana ǋegoš ǲurinda"},
+		{expr: "initcap('ǅemal ǈiljana ǋegoš ǲurinda')", dt: types.String(), expected: "ǅemal ǈiljana ǋegoš ǲurinda"},
+		{expr: "initcap('AǄǅǆ AǇǈǉ AǊǋǌ AǱǲǳ')", dt: types.String(), expected: "Aǆǆǆ Aǉǉǉ Aǌǌǌ Aǳǳǳ"},
+		{expr: "initcap('ⅰABC')", dt: types.String(), expected: "Ⅰabc"},
+		{expr: "initcap('AⅠB')", dt: types.String(), expected: "Aⅰb"},
+		{expr: "initcap('ⓐABC')", dt: types.String(), expected: "Ⓐabc"},
+		{expr: "initcap('AⒶB')", dt: types.String(), expected: "Aⓐb"},
+		{expr: "initcap('\u0345ABC')", dt: types.String(), expected: "Ιabc"},
+		{expr: "initcap('A\u0345B')", dt: types.String(), expected: "A\u0345b"},
+		{expr: "initcap('²ABC')", dt: types.String(), expected: "²Abc"},
+		{expr: "initcap('A²B')", dt: types.String(), expected: "A²B"},
+		{expr: `initcap("D'ANGELO D’ANGELO")`, dt: types.String(), expected: "D'Angelo D’Angelo"},
+		{expr: "initcap('FOO_BAR-BAZ.QUX—ZAP')", dt: types.String(), expected: "Foo_Bar-Baz.Qux—Zap"},
+		{expr: "initcap('123ABC abc123DEF ١ABC')", dt: types.String(), expected: "123abc Abc123def ١abc"},
+		{expr: "initcap(manufacturer)", dt: types.String(), expected: "Myplanecompany"},
 		{expr: "initcap(null)", dt: types.String(), expected: nil},
 		{expr: "initcap()", dt: types.String(), compileErr: errors.New("'initcap' function requires a single argument")},
 		{expr: "initcap('a', 5)", dt: types.String(), compileErr: errors.New("'initcap' function requires a single argument")},
@@ -290,6 +339,9 @@ func Test_Compile(t *testing.T) {
 		// map.
 		{expr: "map()", dt: types.Map(types.JSON()), expected: map[string]any{}},
 		{expr: "map('a', 5)", dt: types.Map(types.JSON()), expected: map[string]any{"a": json.Value("5")}},
+		{expr: "map('a', '46022')", dt: types.Map(types.Date()), expected: map[string]any{"a": time.Date(2025, 12, 31, 0, 0, 0, 0, time.UTC)}},
+		{expr: "map('a', 256)", dt: types.Map(types.Int(8)), compileErr: errors.New("number 256 is greater than 127")},
+		{expr: "map('a', null)", dt: types.Map(types.String()), compileErr: errors.New("null is not convertible to the string type")},
 		{expr: "map('foo', 'bar', 'baz', true)", dt: types.Map(types.JSON()), expected: map[string]any{"foo": json.Value(`"bar"`), "baz": json.Value("true")}},
 		{expr: "map('a', 1, 'b')", dt: types.Map(types.JSON()), compileErr: errors.New("'map' function requires an even number of arguments")},
 		{expr: "map(1, true)", dt: types.Map(types.JSON()), compileErr: errors.New("'map' key is not string")},
@@ -416,6 +468,7 @@ func Test_Compile(t *testing.T) {
 				"properties": json.Value(`{"a":1.0,"b":{"c":[1.0,2.0]},"[x":1.0,"x]":2.0,"[x]":3.0,"?":4.0,"x?":5.0,"[x]?":6.0,":":7.0,":x":8.0}`),
 				"jsonNull":   json.Value("null"),
 				"jsonNil":    nil,
+				"flag":       true,
 				"ip":         " 127.0.0.1  ",
 				"uuid":       "\n2e3e96c4-2bc8-41d5-b492-bd6745190691 ",
 			}
@@ -450,7 +503,7 @@ func Test_Compile(t *testing.T) {
 				t.Fatalf("unexpected eval error: %s", err)
 			}
 			if v != nil {
-				v, err = convert(v, vt, test.dt, true, false, test.purpose)
+				v, err = convert(v, vt, test.dt, true, test.purpose)
 			}
 			if test.convertErr != nil {
 				if err == nil {

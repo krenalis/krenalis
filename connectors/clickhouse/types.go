@@ -130,6 +130,9 @@ func parseType(s string, allowNullable bool) (types.Type, bool, string) {
 			if !ok {
 				return types.Type{}, false, ""
 			}
+			if !utf8.ValidString(item) || strings.Contains(item, "\x00") {
+				return types.Type{}, false, ""
+			}
 			if s, ok = trimEqual(s); ok {
 				_, s, ok = parseInt(s)
 				if !ok {
@@ -169,7 +172,7 @@ func parseType(s string, allowNullable bool) (types.Type, bool, string) {
 	case "Map":
 		key, _, s := parseType(s[i+1:], false)
 		s, comma := trimComma(s)
-		if !key.Valid() || key.Kind() != types.StringKind || !comma {
+		if !key.IsString() || !comma {
 			return types.Type{}, false, ""
 		}
 		value, _, s := parseType(s, false)

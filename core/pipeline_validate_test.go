@@ -432,7 +432,7 @@ func Test_validatePipeline(t *testing.T) {
 				Name: "Import events into the data warehouse",
 				RequiredConsents: RequiredConsents{
 					Operator: PurposesAnd,
-					Purposes: []string{"marketing", "analytics"},
+					Purposes: []string{"111111111111", "222222222222"},
 				},
 			},
 			target:                  state.TargetEvent,
@@ -454,7 +454,7 @@ func Test_validatePipeline(t *testing.T) {
 				},
 				RequiredConsents: RequiredConsents{
 					Operator: PurposesAnd,
-					Purposes: []string{"marketing"},
+					Purposes: []string{"111111111111"},
 				},
 			},
 			target:                  state.TargetUser,
@@ -467,7 +467,7 @@ func Test_validatePipeline(t *testing.T) {
 				Name: "Import events into the data warehouse",
 				RequiredConsents: RequiredConsents{
 					Operator: PurposesOr,
-					Purposes: []string{"marketing"},
+					Purposes: []string{"111111111111"},
 				},
 			},
 			target:                  state.TargetEvent,
@@ -664,7 +664,7 @@ func Test_validatePipeline(t *testing.T) {
 				},
 				RequiredConsents: RequiredConsents{
 					Operator: PurposesAnd,
-					Purposes: []string{"marketing", "analytics"},
+					Purposes: []string{"111111111111", "222222222222"},
 				},
 			},
 			target:                  state.TargetEvent,
@@ -684,15 +684,15 @@ func Test_validatePipeline(t *testing.T) {
 						"email_out": "traits.email",
 					},
 				},
-				RequiredConsents: RequiredConsents{Purposes: []string{"marketing", "marketing"}},
+				RequiredConsents: RequiredConsents{Purposes: []string{"111111111111", "111111111111"}},
 			},
 			target:                  state.TargetEvent,
 			connectionRole:          state.Destination,
 			connectionConnectorType: state.Application,
-			err:                     `required consent purpose "marketing" is duplicated`,
+			err:                     `required consent purpose 111111111111 is duplicated`,
 		},
 		{
-			name: "BAD: Source/Application/User - required consents are not allowed",
+			name: "GOOD: Source/Application/User - with required consents",
 			pipeline: PipelineToSet{
 				Name: "Import users",
 				InSchema: types.Object([]types.Property{
@@ -706,12 +706,39 @@ func Test_validatePipeline(t *testing.T) {
 						"email_out": "email_in",
 					},
 				},
-				RequiredConsents: RequiredConsents{Purposes: []string{"marketing"}},
+				RequiredConsents: RequiredConsents{Purposes: []string{"111111111111"}},
 			},
 			target:                  state.TargetUser,
 			connectionRole:          state.Source,
 			connectionConnectorType: state.Application,
-			err:                     "required consents are not allowed",
+		},
+		{
+			name: "GOOD: Destination/Application/User - with required consents",
+			pipeline: PipelineToSet{
+				Name: "Export users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.String(), ReadOptional: true},
+					{Name: "first_name", Type: types.String(), ReadOptional: true},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.String()},
+					{Name: "first_name", Type: types.String()},
+				}),
+				Transformation: &Transformation{
+					Mapping: map[string]string{
+						"first_name": "first_name",
+					},
+				},
+				ExportMode: CreateOrUpdate,
+				Matching: Matching{
+					In:  "email_in",
+					Out: "email_out",
+				},
+				RequiredConsents: RequiredConsents{Purposes: []string{"111111111111"}},
+			},
+			target:                  state.TargetUser,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.Application,
 		},
 		{
 			name: "GOOD: Destination/Application/Event - missing required consents operator defaults to and",
@@ -726,7 +753,7 @@ func Test_validatePipeline(t *testing.T) {
 						"email_out": "traits.email",
 					},
 				},
-				RequiredConsents: RequiredConsents{Purposes: []string{"marketing"}},
+				RequiredConsents: RequiredConsents{Purposes: []string{"111111111111"}},
 			},
 			target:                  state.TargetEvent,
 			connectionRole:          state.Destination,
@@ -913,6 +940,28 @@ func Test_validatePipeline(t *testing.T) {
 				OutSchema: types.Type{},
 				Format:    "csv",
 				Path:      "my_output_users - ${now}.csv",
+				OrderBy:   "email",
+			},
+			target:                  state.TargetUser,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.FileStorage,
+			formatType:              state.File,
+			formatTargets:           state.UsersFlag,
+			formatHasSettings:       false,
+			formatHasSheets:         false,
+		},
+		{
+			name: "GOOD: Destination/FileStorage/User - path at maximum length after placeholder replacement",
+			pipeline: PipelineToSet{
+				Name: "Export users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email", Type: types.String(), ReadOptional: true},
+					{Name: "first_name", Type: types.String(), ReadOptional: true},
+					{Name: "last_name", Type: types.String(), ReadOptional: true},
+				}),
+				OutSchema: types.Type{},
+				Format:    "csv",
+				Path:      strings.Repeat("a", MaxFilePathSize-len("2006-01-02-15-04-05")) + "${now}",
 				OrderBy:   "email",
 			},
 			target:                  state.TargetUser,
@@ -1556,6 +1605,29 @@ func Test_validatePipeline(t *testing.T) {
 			formatHasSettings:       false,
 			formatHasSheets:         false,
 			err:                     "path is longer than 1024 runes",
+		},
+		{
+			name: "BAD: Destination/FileStorage/User - path too long after placeholder replacement",
+			pipeline: PipelineToSet{
+				Name: "Export users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email", Type: types.String(), ReadOptional: true},
+					{Name: "first_name", Type: types.String(), ReadOptional: true},
+					{Name: "last_name", Type: types.String(), ReadOptional: true},
+				}),
+				OutSchema: types.Type{},
+				Format:    "csv",
+				Path:      strings.Repeat("a", MaxFilePathSize+1-len("2006-01-02-15-04-05")) + "${now}",
+				OrderBy:   "email",
+			},
+			target:                  state.TargetUser,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.FileStorage,
+			formatType:              state.File,
+			formatTargets:           state.UsersFlag,
+			formatHasSettings:       false,
+			formatHasSheets:         false,
+			err:                     fmt.Sprintf("path is longer than %d runes after placeholder replacement", MaxFilePathSize),
 		},
 
 		{
@@ -2209,6 +2281,30 @@ func Test_validatePipeline(t *testing.T) {
 			connectionRole:          state.Destination,
 			connectionConnectorType: state.Database,
 			err:                     "type array(string) cannot be used as table key",
+		},
+		{
+			name: "GOOD: Destination/Database/User - table key has year semantics",
+			pipeline: PipelineToSet{
+				Name: "Export users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.String(), ReadOptional: true},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.String()},
+					{Name: "year", Type: types.Int(16).AsYear(), CreateRequired: true},
+				}),
+				Transformation: &Transformation{
+					Mapping: map[string]string{
+						"email_out": "email_in",
+						"year":      "2024",
+					},
+				},
+				TableName: "my_users_table",
+				TableKey:  "year",
+			},
+			target:                  state.TargetUser,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.Database,
 		},
 		{
 			name: "BAD: Destination/Database/User - unmapped property in input schema",
@@ -2999,6 +3095,64 @@ func Test_validatePipeline(t *testing.T) {
 			err:                     "output matching property \"email_out\" not found within the output schema",
 		},
 		{
+			name: "BAD: Destination/Application/User - input matching property is not a valid property path",
+			pipeline: PipelineToSet{
+				Name: "Export users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.String(), ReadOptional: true},
+					{Name: "first_name", Type: types.String(), ReadOptional: true},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.String()},
+					{Name: "first_name", Type: types.String()},
+				}),
+				Transformation: &Transformation{
+					Mapping: map[string]string{
+						"first_name": "first_name",
+					},
+				},
+				ExportMode: CreateOrUpdate,
+				Matching: Matching{
+					In:  "email_in.",
+					Out: "email_out",
+				},
+				UpdateOnDuplicates: false,
+			},
+			target:                  state.TargetUser,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.Application,
+			err:                     "input matching property \"email_in.\" is not a valid property path",
+		},
+		{
+			name: "BAD: Destination/Application/User - output matching property is not a valid property path",
+			pipeline: PipelineToSet{
+				Name: "Export users",
+				InSchema: types.Object([]types.Property{
+					{Name: "email_in", Type: types.String(), ReadOptional: true},
+					{Name: "first_name", Type: types.String(), ReadOptional: true},
+				}),
+				OutSchema: types.Object([]types.Property{
+					{Name: "email_out", Type: types.String()},
+					{Name: "first_name", Type: types.String()},
+				}),
+				Transformation: &Transformation{
+					Mapping: map[string]string{
+						"first_name": "first_name",
+					},
+				},
+				ExportMode: CreateOrUpdate,
+				Matching: Matching{
+					In:  "email_in",
+					Out: "email_out.",
+				},
+				UpdateOnDuplicates: false,
+			},
+			target:                  state.TargetUser,
+			connectionRole:          state.Destination,
+			connectionConnectorType: state.Application,
+			err:                     "output matching property \"email_out.\" is not a valid property path",
+		},
+		{
 			name: "BAD: Destination/Application/User - non-matching output property cannot have ReadOptional set to true",
 			pipeline: PipelineToSet{
 				Name: "Export users",
@@ -3611,11 +3765,9 @@ func Test_validatePipeline(t *testing.T) {
 
 }
 
-// TestMatchingPropertySemantics checks semantic compatibility between matching
+// TestMatchingPropertySemantics checks semantics compatibility between matching
 // properties without affecting existing kind conversions.
 func TestMatchingPropertySemantics(t *testing.T) {
-
-	const semanticMismatchErr = "input and output matching properties do not have the same semantic and semantic options"
 
 	pipeline := func(in, out types.Type, mode ExportMode) PipelineToSet {
 		return PipelineToSet{
@@ -3648,6 +3800,7 @@ func TestMatchingPropertySemantics(t *testing.T) {
 		mode    ExportMode
 		wantErr string
 	}{
+		// No property has semantics.
 		{"int to int without semantics", types.Int(32), types.Int(64), CreateOrUpdate, ""},
 		{"int to string without semantics", types.Int(32), types.String(), CreateOrUpdate, ""},
 		{"string to int without semantics", types.String(), types.Int(32), CreateOrUpdate, ""},
@@ -3655,26 +3808,57 @@ func TestMatchingPropertySemantics(t *testing.T) {
 		{"string to UUID without semantics", types.String(), types.UUID(), CreateOrUpdate, ""},
 		{"UUID to UUID without semantics", types.UUID(), types.UUID(), CreateOrUpdate, ""},
 		{"UUID to string without semantics", types.UUID(), types.String(), CreateOrUpdate, ""},
+
+		// Both properties have the same semantics and options.
 		{"phone", types.String().AsPhone(), types.String().AsPhone(), CreateOrUpdate, ""},
+		{"email", types.String().AsEmail(), types.String().AsEmail(), CreateOrUpdate, ""},
+		{
+			"country", types.String().AsCountry(types.ISO3166Alpha2), types.String().AsCountry(types.ISO3166Alpha2),
+			CreateOrUpdate, "",
+		},
 		{
 			"duration with different constraints", types.Int(64).AsDuration(types.Second),
 			types.Int(32).AsDuration(types.Second), CreateOrUpdate, "",
 		},
+
+		// Only one property has semantics.
+		{"input country only", types.String().AsCountry(types.ISO3166Alpha2), types.String(), CreateOrUpdate, ""},
+		{"output country only", types.String(), types.String().AsCountry(types.ISO3166Alpha2), CreateOrUpdate, ""},
+		{"input phone only", types.String().AsPhone(), types.String(), CreateOnly, ""},
+		{"output phone only", types.String(), types.String().AsPhone(), UpdateOnly, ""},
+		{"input email only", types.String().AsEmail(), types.String(), CreateOnly, ""},
+		{"output email only", types.String(), types.String().AsEmail(), UpdateOnly, ""},
+		{"input duration only", types.Int(64).AsDuration(types.Second), types.Int(64), CreateOrUpdate, ""},
+		{"output duration only", types.Int(64), types.Int(64).AsDuration(types.Second), CreateOrUpdate, ""},
+		{"input measurement only", types.Int(64).AsMeasurement(types.Meter), types.String(), CreateOrUpdate, ""},
+		{"output measurement only", types.String(), types.Int(64).AsMeasurement(types.Meter), CreateOrUpdate, ""},
+		{"input year", types.Int(16).AsYear(), types.String(), CreateOrUpdate, ""},
+		{"output year", types.String(), types.Int(16).AsYear(), CreateOrUpdate, ""},
+		{"unsigned year", types.Int(64).Unsigned().AsYear(), types.String(), CreateOrUpdate, ""},
+
+		// Both properties have semantics, but not the same semantics and options.
 		{
-			"input phone only", types.String().AsPhone(), types.String(), CreateOnly,
-			semanticMismatchErr,
-		},
-		{
-			"output phone only", types.String(), types.String().AsPhone(), UpdateOnly,
-			semanticMismatchErr,
+			"country with different formats", types.String().AsCountry(types.ISO3166Alpha2),
+			types.String().AsCountry(types.ISO3166Alpha3), CreateOrUpdate, "input matching property has country format alpha-2, but output matching property requires alpha-3",
 		},
 		{
 			"different semantics", types.String().AsEmail(), types.String().AsPhone(), CreateOrUpdate,
-			semanticMismatchErr,
+			"input matching property has email semantics, but output matching property requires phone semantics",
+		},
+		{
+			"different measurement units", types.Int(64).AsMeasurement(types.Meter), types.Int(64).AsMeasurement(types.Kilometer),
+			CreateOrUpdate, "input matching property has unit of measure m, but output matching property requires km",
 		},
 		{
 			"different duration units", types.Int(64).AsDuration(types.Second), types.Int(64).AsDuration(types.Minute),
-			CreateOrUpdate, semanticMismatchErr,
+			CreateOrUpdate, "input matching property has duration unit second, but output matching property requires minute",
+		},
+
+		// Types that cannot be used for matching.
+		{
+			"money cannot be used for matching", types.Decimal(18, 4).AsMoney().WithCurrency("EUR"),
+			types.Decimal(18, 4).AsMoney().WithCurrency("USD"), CreateOrUpdate,
+			"type decimal(18,4) cannot be used as matching property",
 		},
 	}
 
@@ -3700,8 +3884,8 @@ func TestMatchingPropertySemantics(t *testing.T) {
 
 	}
 
-	t.Run("nested phone mismatch", func(t *testing.T) {
-		p := pipeline(types.String().AsPhone(), types.String(), CreateOrUpdate)
+	t.Run("nested semantics mismatch", func(t *testing.T) {
+		p := pipeline(types.String().AsPhone(), types.String().AsEmail(), CreateOrUpdate)
 		p.InSchema = types.Object([]types.Property{
 			{Name: "container", Type: types.Object([]types.Property{
 				{Name: "matching", Type: types.String().AsPhone(), ReadOptional: true},
@@ -3709,17 +3893,18 @@ func TestMatchingPropertySemantics(t *testing.T) {
 			{Name: "value_in", Type: types.String(), ReadOptional: true},
 		})
 		p.OutSchema = types.Object([]types.Property{
-			{Name: "container", Type: types.Object([]types.Property{{Name: "matching", Type: types.String()}})},
+			{Name: "container", Type: types.Object([]types.Property{{Name: "matching", Type: types.String().AsEmail()}})},
 			{Name: "value_out", Type: types.String()},
 		})
 		p.Matching = Matching{In: "container.matching", Out: "container.matching"}
 
+		wantErr := "input matching property has phone semantics, but output matching property requires email semantics"
 		err := validatePipelineToSet(p, v)
 		if err == nil {
-			t.Fatalf("expected error %q, got nil", semanticMismatchErr)
+			t.Fatalf("expected error %q, got nil", wantErr)
 		}
-		if err.Error() != semanticMismatchErr {
-			t.Fatalf("expected error %q, got %q", semanticMismatchErr, err)
+		if err.Error() != wantErr {
+			t.Fatalf("expected error %q, got %q", wantErr, err)
 		}
 
 	})

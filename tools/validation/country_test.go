@@ -6,7 +6,8 @@ package validation
 
 import "testing"
 
-// TestIsValidCountryCodeAlpha2 tests current, formerly assigned, and invalid country codes.
+// TestIsValidCountryCodeAlpha2 tests current, formerly assigned, and invalid
+// country codes.
 func TestIsValidCountryCodeAlpha2(t *testing.T) {
 	tests := []struct {
 		name string
@@ -32,7 +33,8 @@ func TestIsValidCountryCodeAlpha2(t *testing.T) {
 	}
 }
 
-// TestIsValidCountryCodeAlpha3 tests current, formerly assigned, and invalid alpha-3 codes.
+// TestIsValidCountryCodeAlpha3 tests current, formerly assigned, and invalid
+// alpha-3 codes.
 func TestIsValidCountryCodeAlpha3(t *testing.T) {
 	tests := []struct {
 		name string

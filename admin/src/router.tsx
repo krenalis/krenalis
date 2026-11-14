@@ -24,7 +24,7 @@ import { createBrowserRouter } from 'react-router-dom';
 import DataWarehouse from './components/routes/DataWarehouse/DataWarehouse';
 import GeneralSettings from './components/routes/GeneralSettings/GeneralSettings';
 import Settings from './components/routes/Settings/Settings';
-import Privacy from './components/routes/Privacy/Privacy';
+import ConsentManagement from './components/routes/ConsentManagement/ConsentManagement';
 import Members from './components/routes/Members/Members';
 import Member from './components/routes/Member/Member';
 import Organization from './components/routes/Organization/Organization';
@@ -41,6 +41,7 @@ import { ResetPassword } from './components/routes/ResetPassword/ResetPassword';
 import { ResetPasswordToken } from './components/routes/ResetPasswordToken/ResetPasswordToken';
 import { SimulatedWorld } from './components/routes/SimulatedWorld/SimulatedWorld';
 import { Development } from './components/routes/Development/Development';
+import IdentityOverview from './components/routes/IdentityOverview/IdentityOverview';
 
 const router = createBrowserRouter([
 	{
@@ -116,8 +117,8 @@ const router = createBrowserRouter([
 								element: <DataWarehouse />,
 							},
 							{
-								path: 'privacy',
-								element: <Privacy />,
+								path: 'consent-management',
+								element: <ConsentManagement />,
 							},
 						],
 					},
@@ -125,6 +126,10 @@ const router = createBrowserRouter([
 						path: 'profile-unification',
 						element: <ProfileUnification />,
 						children: [
+							{
+								path: 'overview',
+								element: <IdentityOverview />,
+							},
 							{
 								path: 'profiles',
 								element: <Profiles />,

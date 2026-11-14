@@ -1,5 +1,150 @@
 # Changelog
 
+## [v1.16.0](https://github.com/rabbitmq/amqp091-go/tree/v1.16.0) (2026-10-19)
+
+[Full Changelog](https://github.com/rabbitmq/amqp091-go/compare/v1.15.0...v1.16.0)
+
+**Implemented enhancements:**
+
+- Add support for basic cancel ok response [\#405](https://github.com/rabbitmq/amqp091-go/pull/405) ([Zerpet](https://github.com/Zerpet))
+
+**Fixed bugs:**
+
+- Start recovery watcher only after a successful handshake [\#409](https://github.com/rabbitmq/amqp091-go/pull/409) ([suchitd](https://github.com/suchitd))
+- Reject out-of-range heartbeat in ParseURI [\#407](https://github.com/rabbitmq/amqp091-go/pull/407) ([suchitd](https://github.com/suchitd))
+- Reject heartbeat frames sent on a non-zero channel [\#402](https://github.com/rabbitmq/amqp091-go/pull/402) ([suchitd](https://github.com/suchitd))
+
+**Closed issues:**
+
+- DialConfig leaks a watchConnection goroutine when the AMQP handshake fails with Recovery enabled [\#408](https://github.com/rabbitmq/amqp091-go/issues/408)
+- panic: unexpected frame type [\#400](https://github.com/rabbitmq/amqp091-go/issues/400)
+- v1.13.0: openComplete\(\) zeroes caller-owned SASL credentials, breaking Config reuse across dials [\#394](https://github.com/rabbitmq/amqp091-go/issues/394)
+- Dial returns 403 "no access to this vhost" when the broker refuses connection.open with 530 NOT\_ALLOWED \(e.g. user connection limit reached\) [\#392](https://github.com/rabbitmq/amqp091-go/issues/392)
+- Question mark in password breaks connection string parsing [\#305](https://github.com/rabbitmq/amqp091-go/issues/305)
+
+**Merged pull requests:**
+
+- Fix golangci-lint v2.15.0 errcheck failures [\#411](https://github.com/rabbitmq/amqp091-go/pull/411) ([suchitd](https://github.com/suchitd))
+- chore\(deps\): bump github/codeql-action from 4.38.2 to 4.38.3 in the github-actions group [\#410](https://github.com/rabbitmq/amqp091-go/pull/410) ([dependabot[bot]](https://github.com/apps/dependabot))
+- chore\(deps\): bump github/codeql-action from 4.38.1 to 4.38.2 in the github-actions group [\#401](https://github.com/rabbitmq/amqp091-go/pull/401) ([dependabot[bot]](https://github.com/apps/dependabot))
+- Add Fuzzy tests for reader [\#399](https://github.com/rabbitmq/amqp091-go/pull/399) ([Zerpet](https://github.com/Zerpet))
+- chore\(deps\): bump github/codeql-action from 4.38.0 to 4.38.1 in the github-actions group [\#398](https://github.com/rabbitmq/amqp091-go/pull/398) ([dependabot[bot]](https://github.com/apps/dependabot))
+- Reader hardening [\#397](https://github.com/rabbitmq/amqp091-go/pull/397) ([Zerpet](https://github.com/Zerpet))
+- docs: document URI credential percent-encoding requirement \(\#305\) [\#396](https://github.com/rabbitmq/amqp091-go/pull/396) ([cipherprofessor](https://github.com/cipherprofessor))
+- chore: remove redundant legacy +build tag from fuzz.go [\#395](https://github.com/rabbitmq/amqp091-go/pull/395) ([cipherprofessor](https://github.com/cipherprofessor))
+- Surface the broker's connection.close reason from Dial instead of a hardcoded 403 [\#393](https://github.com/rabbitmq/amqp091-go/pull/393) ([mohammadkshn](https://github.com/mohammadkshn))
+- chore\(deps\): bump github/codeql-action from 4.37.9 to 4.38.0 in the github-actions group [\#391](https://github.com/rabbitmq/amqp091-go/pull/391) ([dependabot[bot]](https://github.com/apps/dependabot))
+
+## [v1.15.0](https://github.com/rabbitmq/amqp091-go/tree/v1.15.0) (2026-09-15)
+
+[Full Changelog](https://github.com/rabbitmq/amqp091-go/compare/v1.14.0...v1.15.0)
+
+**Fixed bugs:**
+
+- fix: preserve caller-provided SASL credentials across Reconnect\(\) [\#389](https://github.com/rabbitmq/amqp091-go/pull/389) ([suchitd](https://github.com/suchitd))
+- fix: clone SASL authentication before zeroing credentials post-handshake [\#388](https://github.com/rabbitmq/amqp091-go/pull/388) ([suchitd](https://github.com/suchitd))
+
+**Closed issues:**
+
+- v1.13.0 \(\#350\) zeroes caller-provided PlainAuth.Password, breaking auth on any reconnect that reuses the Config [\#387](https://github.com/rabbitmq/amqp091-go/issues/387)
+
+**Merged pull requests:**
+
+- chore\(deps\): bump github/codeql-action from 4.37.8 to 4.37.9 in the github-actions group [\#390](https://github.com/rabbitmq/amqp091-go/pull/390) ([dependabot[bot]](https://github.com/apps/dependabot))
+- chore\(deps\): bump github/codeql-action from 4.37.7 to 4.37.8 in the github-actions group [\#386](https://github.com/rabbitmq/amqp091-go/pull/386) ([dependabot[bot]](https://github.com/apps/dependabot))
+- chore\(deps\): bump github/codeql-action from 4.37.6 to 4.37.7 in the github-actions group [\#385](https://github.com/rabbitmq/amqp091-go/pull/385) ([dependabot[bot]](https://github.com/apps/dependabot))
+
+## [v1.14.0](https://github.com/rabbitmq/amqp091-go/tree/v1.14.0) (2026-08-18)
+
+[Full Changelog](https://github.com/rabbitmq/amqp091-go/compare/v1.13.0...v1.14.0)
+
+**Implemented enhancements:**
+
+- refactor: extract shared close prologue into beginClose\(\) [\#376](https://github.com/rabbitmq/amqp091-go/pull/376) ([suchitd](https://github.com/suchitd))
+
+**Fixed bugs:**
+
+- Retry consumer recovery instead of cancelling on a failed re-subscribe [\#380](https://github.com/rabbitmq/amqp091-go/pull/380) ([lukebakken](https://github.com/lukebakken))
+- Fix auto-recovery correctness gaps [\#379](https://github.com/rabbitmq/amqp091-go/pull/379) ([suchitd](https://github.com/suchitd))
+- Enforce frame size in pre-negotiation state [\#377](https://github.com/rabbitmq/amqp091-go/pull/377) ([Zerpet](https://github.com/Zerpet))
+- test: retry cleanup connection after clearing memory alarm [\#375](https://github.com/rabbitmq/amqp091-go/pull/375) ([suchitd](https://github.com/suchitd))
+- fix: eliminate flakiness in TestTLSHandshake [\#373](https://github.com/rabbitmq/amqp091-go/pull/373) ([suchitd](https://github.com/suchitd))
+- fix: close goroutine leaks from Close\(\)/Reconnect\(\) races [\#372](https://github.com/rabbitmq/amqp091-go/pull/372) ([suchitd](https://github.com/suchitd))
+
+**Merged pull requests:**
+
+- chore\(deps\): reduce github-actions dependabot updates to weekly [\#384](https://github.com/rabbitmq/amqp091-go/pull/384) ([suchitd](https://github.com/suchitd))
+- chore\(deps\): bump github/codeql-action from 4.37.5 to 4.37.6 in the github-actions group [\#383](https://github.com/rabbitmq/amqp091-go/pull/383) ([dependabot[bot]](https://github.com/apps/dependabot))
+- docs: update CLAUDE.md with lifecycle/log files and updated recovery details [\#382](https://github.com/rabbitmq/amqp091-go/pull/382) ([suchitd](https://github.com/suchitd))
+- chore\(deps\): bump github/codeql-action from 4.37.4 to 4.37.5 in the github-actions group [\#381](https://github.com/rabbitmq/amqp091-go/pull/381) ([dependabot[bot]](https://github.com/apps/dependabot))
+- chore\(deps\): bump github/codeql-action from 4.37.3 to 4.37.4 in the github-actions group [\#378](https://github.com/rabbitmq/amqp091-go/pull/378) ([dependabot[bot]](https://github.com/apps/dependabot))
+- chore\(deps\): bump github/codeql-action from 4 to 4.37.3 in the github-actions group [\#374](https://github.com/rabbitmq/amqp091-go/pull/374) ([dependabot[bot]](https://github.com/apps/dependabot))
+
+## [v1.13.0](https://github.com/rabbitmq/amqp091-go/tree/v1.13.0) (2026-07-21)
+
+[Full Changelog](https://github.com/rabbitmq/amqp091-go/compare/v1.12.0...v1.13.0)
+
+**Implemented enhancements:**
+
+- feat: skip-and-continue topology recovery with per-entity error surfacing [\#365](https://github.com/rabbitmq/amqp091-go/pull/365) ([suchitd](https://github.com/suchitd))
+- Make TopologyRecoveryAllEnabled the default topology recovery mode [\#362](https://github.com/rabbitmq/amqp091-go/pull/362) ([suchitd](https://github.com/suchitd))
+- feature: implement automatic topology recovery [\#357](https://github.com/rabbitmq/amqp091-go/pull/357) ([suchitd](https://github.com/suchitd))
+
+**Fixed bugs:**
+
+- Evict auto-delete queues and exchanges from topology store to prevent stale resurrection during recovery [\#368](https://github.com/rabbitmq/amqp091-go/issues/368)
+- Data race in Connection.shutdown between buffered listener send goroutine and close\(listener\) [\#360](https://github.com/rabbitmq/amqp091-go/issues/360)
+- fix: reject frames exceeding negotiated frame\_max before allocation [\#369](https://github.com/rabbitmq/amqp091-go/pull/369) ([suchitd](https://github.com/suchitd))
+- fix: prevent recursive channel recovery during connection reconnection [\#367](https://github.com/rabbitmq/amqp091-go/pull/367) ([suchitd](https://github.com/suchitd))
+- fix: eliminate multiple data races in Channel and Connection operations [\#366](https://github.com/rabbitmq/amqp091-go/pull/366) ([suchitd](https://github.com/suchitd))
+- fix: forget auto-delete topology on last consumer/binding removal [\#363](https://github.com/rabbitmq/amqp091-go/pull/363) ([suchitd](https://github.com/suchitd))
+- fix: explicitly enforce TLS 1.2 minimum version in tlsConfigFromURI [\#355](https://github.com/rabbitmq/amqp091-go/pull/355) ([suchitd](https://github.com/suchitd))
+- fix: return error when shortstr exceeds 255 bytes [\#354](https://github.com/rabbitmq/amqp091-go/pull/354) ([suchitd](https://github.com/suchitd))
+- fix: enforce AMQP minimum frame size during negotiation [\#353](https://github.com/rabbitmq/amqp091-go/pull/353) ([suchitd](https://github.com/suchitd))
+- fix: URL-encode TLS file paths in URI.String\(\) query string [\#352](https://github.com/rabbitmq/amqp091-go/pull/352) ([suchitd](https://github.com/suchitd))
+- Reject negative prefetch values in Qos [\#351](https://github.com/rabbitmq/amqp091-go/pull/351) ([suchitd](https://github.com/suchitd))
+- fix: redact and zero out plaintext SASL credentials after handshake [\#350](https://github.com/rabbitmq/amqp091-go/pull/350) ([suchitd](https://github.com/suchitd))
+- Avoid notifications blocking reader. [\#349](https://github.com/rabbitmq/amqp091-go/pull/349) ([MirahImage](https://github.com/MirahImage))
+- Return error when longstring too long. [\#347](https://github.com/rabbitmq/amqp091-go/pull/347) ([MirahImage](https://github.com/MirahImage))
+- Cap body pre-allocation to FrameMax. [\#346](https://github.com/rabbitmq/amqp091-go/pull/346) ([MirahImage](https://github.com/MirahImage))
+- Safely handle negative x- field length. [\#344](https://github.com/rabbitmq/amqp091-go/pull/344) ([MirahImage](https://github.com/MirahImage))
+
+**Merged pull requests:**
+
+- chore\(deps\): bump actions/setup-go from 6 to 7 in the github-actions group [\#370](https://github.com/rabbitmq/amqp091-go/pull/370) ([dependabot[bot]](https://github.com/apps/dependabot))
+- docs: update CLAUDE.md to document automatic recovery and new notify methods [\#359](https://github.com/rabbitmq/amqp091-go/pull/359) ([suchitd](https://github.com/suchitd))
+- chore\(deps\): bump actions/cache from 5 to 6 in the github-actions group [\#358](https://github.com/rabbitmq/amqp091-go/pull/358) ([dependabot[bot]](https://github.com/apps/dependabot))
+- chore\(deps\): bump actions/checkout from 6 to 7 in the github-actions group [\#356](https://github.com/rabbitmq/amqp091-go/pull/356) ([dependabot[bot]](https://github.com/apps/dependabot))
+
+## [v1.12.0](https://github.com/rabbitmq/amqp091-go/tree/v1.12.0) (2026-06-16)
+
+[Full Changelog](https://github.com/rabbitmq/amqp091-go/compare/v1.11.0...v1.12.0)
+
+**Implemented enhancements:**
+
+- Feature: implement automatic connection and channel recovery with state change notifications [\#339](https://github.com/rabbitmq/amqp091-go/pull/339) ([suchitd](https://github.com/suchitd))
+- Add integration test for publish with immediate flag [\#338](https://github.com/rabbitmq/amqp091-go/pull/338) ([suchitd](https://github.com/suchitd))
+- Add integration tests for QueueUnbind and QueuePurge [\#337](https://github.com/rabbitmq/amqp091-go/pull/337) ([suchitd](https://github.com/suchitd))
+- Add integration test for exchange-to-exchange binding and unbinding [\#336](https://github.com/rabbitmq/amqp091-go/pull/336) ([suchitd](https://github.com/suchitd))
+
+**Fixed bugs:**
+
+- Fix Client example to work with RabbitMQ 4.3 [\#341](https://github.com/rabbitmq/amqp091-go/pull/341) ([suchitd](https://github.com/suchitd))
+- Update CONTRIBUTING.md and .gitignore files [\#335](https://github.com/rabbitmq/amqp091-go/pull/335) ([suchitd](https://github.com/suchitd))
+- Fix inconsistencies in the Makefile [\#334](https://github.com/rabbitmq/amqp091-go/pull/334) ([suchitd](https://github.com/suchitd))
+- Fix integration tests for RabbitMQ 4.3 [\#331](https://github.com/rabbitmq/amqp091-go/pull/331) ([suchitd](https://github.com/suchitd))
+
+**Closed issues:**
+
+- PublishWithContext does not respect context cancellation [\#329](https://github.com/rabbitmq/amqp091-go/issues/329)
+
+**Merged pull requests:**
+
+- doc: remove auto-reconnect from non-goals in README [\#343](https://github.com/rabbitmq/amqp091-go/pull/343) ([suchitd](https://github.com/suchitd))
+- Add CLAUDE.md to repo [\#342](https://github.com/rabbitmq/amqp091-go/pull/342) ([Zerpet](https://github.com/Zerpet))
+- Bump CI windows workflow RabbitMQ and Erlang versions [\#333](https://github.com/rabbitmq/amqp091-go/pull/333) ([suchitd](https://github.com/suchitd))
+- Add pull request template [\#332](https://github.com/rabbitmq/amqp091-go/pull/332) ([suchitd](https://github.com/suchitd))
+
 ## [v1.11.0](https://github.com/rabbitmq/amqp091-go/tree/v1.11.0) (2026-04-21)
 
 [Full Changelog](https://github.com/rabbitmq/amqp091-go/compare/v1.10.0...v1.11.0)

@@ -158,6 +158,164 @@ func Test_Generic(t *testing.T) {
 
 }
 
+// Test_IsFloat checks ordinary and real float recognition with optional bit
+// sizes, false results for other types and panics for invalid arguments.
+func Test_IsFloat(t *testing.T) {
+
+	for _, size := range []int{32, 64} {
+		for _, real := range []bool{false, true} {
+			typ := Float(size)
+			if real {
+				typ = typ.Real()
+			}
+			t.Run(fmt.Sprintf("size=%d/real=%t", size, real), func(t *testing.T) {
+				if got := typ.IsFloat(); !got {
+					t.Errorf("IsFloat(): expected true, got %t", got)
+				}
+				for _, requested := range []int{32, 64} {
+					expected := requested == size
+					if got := typ.IsFloat(requested); got != expected {
+						t.Errorf("IsFloat(%d): expected %t, got %t", requested, expected, got)
+					}
+				}
+			})
+		}
+	}
+
+	for _, typ := range []Type{Int(32), Int(64), String(), {}} {
+		t.Run(fmt.Sprintf("other/type=%s", typ), func(t *testing.T) {
+			if got := typ.IsFloat(); got {
+				t.Errorf("IsFloat(): expected false, got %t", got)
+			}
+			for _, size := range []int{32, 64} {
+				if got := typ.IsFloat(size); got {
+					t.Errorf("IsFloat(%d): expected false, got %t", size, got)
+				}
+			}
+		})
+	}
+
+	for _, typ := range []Type{Float(64), String(), {}} {
+		for _, sizes := range [][]int{{-1}, {0}, {8}, {16}, {24}, {63}, {128}, {32, 64}} {
+			t.Run(fmt.Sprintf("panic/type=%s/sizes=%v", typ, sizes), func(t *testing.T) {
+				defer func() {
+					if recover() == nil {
+						t.Fatal("expected panic, got none")
+					}
+				}()
+				typ.IsFloat(sizes...)
+			})
+		}
+	}
+
+}
+
+// Test_IsInt checks signed and unsigned int recognition with optional bit
+// sizes, false results for other types and panics for invalid arguments.
+func Test_IsInt(t *testing.T) {
+
+	for _, size := range []int{8, 16, 24, 32, 64} {
+		for _, unsigned := range []bool{false, true} {
+			typ := Int(size)
+			if unsigned {
+				typ = typ.Unsigned()
+			}
+			t.Run(fmt.Sprintf("size=%d/unsigned=%t", size, unsigned), func(t *testing.T) {
+				if got := typ.IsInt(); !got {
+					t.Errorf("IsInt(): expected true, got %t", got)
+				}
+				for _, requested := range []int{8, 16, 24, 32, 64} {
+					expected := requested == size
+					if got := typ.IsInt(requested); got != expected {
+						t.Errorf("IsInt(%d): expected %t, got %t", requested, expected, got)
+					}
+				}
+			})
+		}
+	}
+
+	for _, typ := range []Type{Float(32), Float(64), String(), {}} {
+		t.Run(fmt.Sprintf("other/type=%s", typ), func(t *testing.T) {
+			if got := typ.IsInt(); got {
+				t.Errorf("IsInt(): expected false, got %t", got)
+			}
+			for _, size := range []int{8, 16, 24, 32, 64} {
+				if got := typ.IsInt(size); got {
+					t.Errorf("IsInt(%d): expected false, got %t", size, got)
+				}
+			}
+		})
+	}
+
+	for _, typ := range []Type{Int(64), String(), {}} {
+		for _, sizes := range [][]int{{-1}, {0}, {9}, {63}, {128}, {32, 64}} {
+			t.Run(fmt.Sprintf("panic/type=%s/sizes=%v", typ, sizes), func(t *testing.T) {
+				defer func() {
+					if recover() == nil {
+						t.Fatal("expected panic, got none")
+					}
+				}()
+				typ.IsInt(sizes...)
+			})
+		}
+	}
+
+}
+
+// Test_IsReal checks recognition of floats marked with Real and false results
+// for ordinary floats, ints, strings and the zero Type.
+func Test_IsReal(t *testing.T) {
+
+	tests := []struct {
+		name     string
+		typ      Type
+		expected bool
+	}{
+		{"float32", Float(32), false},
+		{"float64", Float(64), false},
+		{"real32", Float(32).Real(), true},
+		{"real64", Float(64).Real(), true},
+		{"int", Int(32), false},
+		{"string", String(), false},
+		{"invalid", Type{}, false},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := test.typ.IsReal(); got != test.expected {
+				t.Fatalf("IsReal(): expected %t, got %t", test.expected, got)
+			}
+		})
+	}
+
+}
+
+// Test_IsUnsigned checks that IsUnsigned returns true for unsigned integers
+// and false for signed integers and types other than integers.
+func Test_IsUnsigned(t *testing.T) {
+
+	tests := []struct {
+		name     string
+		typ      Type
+		expected bool
+	}{
+		{"signed", Int(32), false},
+		{"unsigned", Int(32).Unsigned(), true},
+		{"float", Float(32), false},
+		{"string", String(), false},
+		{"invalid", Type{}, false},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := test.typ.IsUnsigned(); got != test.expected {
+				t.Fatalf("IsUnsigned(): expected %t, got %t", test.expected, got)
+			}
+		})
+	}
+
+}
+
 func Test_Ranges(t *testing.T) {
 
 	for _, s := range []int{8, 16, 24, 32, 64} {
@@ -180,6 +338,115 @@ func Test_Ranges(t *testing.T) {
 	}
 	if min, max := Float(64).Real().FloatRange(); min != -math.MaxFloat64 || max != math.MaxFloat64 {
 		t.Errorf("Float(64).FloatRange(): expected (%f, %f), got (%f, %f)", -math.MaxFloat64, math.MaxFloat64, min, max)
+	}
+
+	for _, size := range []int{32, 64} {
+		limit := math.MaxFloat64
+		tiny := -math.SmallestNonzeroFloat64
+		largeMin := math.MaxFloat64 / 2
+		if size == 32 {
+			limit = math.MaxFloat32
+			tiny = 0
+			largeMin = limit
+		}
+		tests := []struct {
+			name             string
+			min, max         float64
+			wantMin, wantMax float64
+		}{
+			{"finite", -1, 1, -1, 1},
+			{"single value", 0, 0, 0, 0},
+			{"negative zero minimum", math.Copysign(0, -1), 1, 0, 1},
+			{"negative zero maximum", -1, math.Copysign(0, -1), -1, 0},
+			{"tiny negative minimum", -math.SmallestNonzeroFloat64, 1, tiny, 1},
+			{"tiny negative maximum", -1, -math.SmallestNonzeroFloat64, -1, tiny},
+			{"minimum", 0, math.Inf(1), 0, limit},
+			{"maximum", math.Inf(-1), 0, -limit, 0},
+			{"unbounded", math.Inf(-1), math.Inf(1), -limit, limit},
+			{"finite upper default", 0, limit, 0, limit},
+			{"finite lower default", -limit, 0, -limit, 0},
+			{"finite defaults", -limit, limit, -limit, limit},
+			{"large finite minimum", -math.MaxFloat64, 0, -limit, 0},
+			{"large finite maximum", 0, math.MaxFloat64, 0, limit},
+			{"large finite bounds", -math.MaxFloat64, math.MaxFloat64, -limit, limit},
+			{"large positive range", math.MaxFloat64 / 2, math.MaxFloat64, largeMin, limit},
+			{"large negative range", -math.MaxFloat64, -math.MaxFloat64 / 2, -limit, -largeMin},
+		}
+		for _, test := range tests {
+			t.Run(fmt.Sprintf("%d/%s", size, test.name), func(t *testing.T) {
+				bounded := Float(size).WithFloatRange(test.min, test.max)
+				realFirst := Float(size).Real().WithFloatRange(test.min, test.max)
+				rangeFirst := bounded.Real()
+				if !Equal(realFirst, rangeFirst) {
+					t.Fatalf("expected equal construction results, got %#v and %#v", realFirst, rangeFirst)
+				}
+				if min, max := realFirst.FloatRange(); min != test.wantMin || max != test.wantMax {
+					t.Fatalf("expected range [%g, %g], got [%g, %g]", test.wantMin, test.wantMax, min, max)
+				}
+				wantMin, wantMax := test.wantMin, test.wantMax
+				if math.IsInf(test.min, -1) {
+					wantMin = test.min
+				}
+				if math.IsInf(test.max, 1) {
+					wantMax = test.max
+				}
+				if min, max := bounded.FloatRange(); min != wantMin || max != wantMax {
+					t.Fatalf("expected range [%g, %g], got [%g, %g]", wantMin, wantMax, min, max)
+				}
+				canonical := Float(size).Real().WithFloatRange(test.wantMin, test.wantMax)
+				if !Equal(realFirst, canonical) {
+					t.Fatalf("expected canonical type %#v, got %#v", canonical, realFirst)
+				}
+				for _, typ := range []Type{bounded, realFirst} {
+					min, max := typ.FloatRange()
+					if min == 0 && math.Signbit(min) || max == 0 && math.Signbit(max) {
+						t.Fatalf("expected positive zero bounds, got [%g, %g]", min, max)
+					}
+				}
+				if test.wantMin == -limit && test.wantMax == limit && !Equal(Float(size).Real(), realFirst) {
+					t.Fatal("expected the default real type, got redundant bounds")
+				}
+				replaced := Float(size).Real().WithFloatRange(-0.5, 0.5).WithFloatRange(test.min, test.max)
+				if !Equal(realFirst, replaced) {
+					t.Fatal("expected replacement of previous real bounds, got a different type")
+				}
+				replaced = Float(size).WithFloatRange(-0.5, 0.5).WithFloatRange(test.min, test.max)
+				if !Equal(bounded, replaced) {
+					t.Fatal("expected replacement of previous float bounds, got a different type")
+				}
+			})
+		}
+	}
+
+	tests := []struct {
+		name     string
+		typ      Type
+		min, max float64
+		want     string
+	}{
+		{"wrong kind", Int(32), 0, 1, "type is not a float type"},
+		{"NaN minimum", Float(64), math.NaN(), 1, "min and max cannot be NaN"},
+		{"NaN maximum", Float(64), 0, math.NaN(), "min and max cannot be NaN"},
+		{"reversed", Float(64), 1, 0, "max cannot be less than min"},
+		{"reversed before rounding", Float(32), 1.00000001, 1, "max cannot be less than min"},
+		{"reversed positive saturation", Float(32), math.MaxFloat64, math.MaxFloat64 / 2, "max cannot be less than min"},
+		{"reversed negative saturation", Float(32), -math.MaxFloat64 / 2, -math.MaxFloat64, "max cannot be less than min"},
+		{"positive infinity minimum", Float(64), math.Inf(1), math.Inf(1), "min cannot be +Inf"},
+		{"negative infinity maximum", Float(64).Real(), math.Inf(-1), math.Inf(-1), "max cannot be -Inf"},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			defer func() {
+				got := recover()
+				if got == nil {
+					t.Fatal("expected a panic, got none")
+				}
+				if message := fmt.Sprint(got); message != test.want {
+					t.Fatalf("expected panic %q, got %q", test.want, message)
+				}
+			}()
+			test.typ.WithFloatRange(test.min, test.max)
+		})
 	}
 
 }
@@ -217,6 +484,35 @@ func Test_Len(t *testing.T) {
 			}
 		} else {
 			t.Errorf("MaxLength(%d): expected %t, got %t", test.Expected.Len, test.Expected.OK, ok)
+		}
+	}
+
+}
+
+// Test_String checks the string representation of types, including the
+// unsigned flag of integers.
+func Test_String(t *testing.T) {
+
+	tests := []struct {
+		typ      Type
+		expected string
+	}{
+		{String(), "string"},
+		{Boolean(), "boolean"},
+		{Int(8), "int(8)"},
+		{Int(32).Unsigned(), "unsigned int(32)"},
+		{Int(64).Unsigned().WithUnsignedRange(1, 10), "unsigned int(64)"},
+		{Float(32), "float(32)"},
+		{Decimal(10, 2), "decimal(10,2)"},
+		{Array(Int(16).Unsigned()), "array(unsigned int(16))"},
+		{Map(Int(24)), "map(int(24))"},
+		{Parameter("T"), "T"},
+		{Type{}, ""},
+	}
+
+	for _, test := range tests {
+		if got := test.typ.String(); got != test.expected {
+			t.Errorf("String(): expected %q, got %q", test.expected, got)
 		}
 	}
 
@@ -392,8 +688,8 @@ func sameType(t1, t2 Type) error {
 		t1.unsigned == t2.unsigned &&
 		t1.unique == t2.unique &&
 		t1.real == t2.real &&
-		t1.semantic == t2.semantic &&
-		t1.semanticOption == t2.semanticOption &&
+		t1.semantics == t2.semantics &&
+		t1.semanticsOption == t2.semanticsOption &&
 		t1.p == t2.p &&
 		t1.s == t2.s &&
 		t1.vl == nil && t2.vl == nil {
@@ -444,13 +740,13 @@ func sameType(t1, t2 Type) error {
 	if t1.real != t2.real {
 		return fmt.Errorf("expected real %t, got %t", t1.real, t2.real)
 	}
-	// Semantic.
-	if t1.semantic != t2.semantic {
-		return fmt.Errorf("expected type semantic %s, got %s", t1.semantic, t2.semantic)
+	// Semantics.
+	if t1.semantics != t2.semantics {
+		return fmt.Errorf("expected semantics %s, got %s", t1.semantics, t2.semantics)
 	}
-	// Semantic option.
-	if t1.semanticOption != t2.semanticOption {
-		return fmt.Errorf("expected semantic option %v, got %v", t1.semanticOption, t2.semanticOption)
+	// Option associated with the semantics.
+	if t1.semanticsOption != t2.semanticsOption {
+		return fmt.Errorf("expected semantics option %v, got %v", t1.semanticsOption, t2.semanticsOption)
 	}
 	// Precision, byte length or elements minimum length.
 	if t1.p != t2.p {

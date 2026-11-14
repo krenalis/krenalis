@@ -25,14 +25,14 @@ import (
 	"github.com/evanw/esbuild/pkg/api"
 )
 
-//go:embed package.json public/index.html all:src tsconfig.json all:node_modules_vendor node_modules_vendor/resolve.json
+//go:embed package.json public/index.html public/favicon.png all:src tsconfig.json all:node_modules_vendor node_modules_vendor/resolve.json
 var assetsFS embed.FS
 
-// Path to the Shoelace icons within the "node_modules" directory.
-const shoelaceIconsPath = "@shoelace-style/shoelace/dist/assets/icons"
+// Path to the Bootstrap Icons within the "node_modules" directory.
+const iconsPath = "bootstrap-icons/icons"
 
-// Destination directory for the Shoelace icons in "admin/assets".
-const shoelaceIconsDir = "shoelace/dist/assets/icons"
+// Destination directory for the icons in "admin/assets".
+const iconsDir = "icons"
 
 func main() {
 	err := buildAssets()
@@ -44,6 +44,7 @@ func main() {
 }
 
 var generatedFiles = []string{
+	"favicon.png",
 	"index.css",
 	"index.css.map",
 	"index.html",
@@ -220,27 +221,34 @@ func buildAssets() error {
 		return err
 	}
 
-	// Copy the Shoelace icons.
-	shoelaceIconsFS, err := fs.Sub(assetsFS, path.Join("node_modules_vendor", shoelaceIconsPath))
+	// Copy the "favicon.png" file.
+	data, _ = assetsFS.ReadFile("public/favicon.png")
+	err = os.WriteFile(outDir+"favicon.png", data, 0666)
 	if err != nil {
-		return fmt.Errorf("cannot create an fs.FS for the Shoelace icons directory: %s", err)
-	}
-	err = os.CopyFS(outDir+shoelaceIconsDir, shoelaceIconsFS)
-	if err != nil {
-		return fmt.Errorf("cannot copy Shoelace icons: %s", err)
+		return err
 	}
 
-	// Read the Shoelace icons names and append them to the generatedFiles slice.
-	shoelaceIconsNames, err := fs.Glob(shoelaceIconsFS, "*")
+	// Copy the icons.
+	iconsFS, err := fs.Sub(assetsFS, path.Join("node_modules_vendor", iconsPath))
 	if err != nil {
-		return fmt.Errorf("cannot glob Shoelace icons: %s", err)
+		return fmt.Errorf("cannot create an fs.FS for the icons directory: %s", err)
 	}
-	for _, name := range shoelaceIconsNames {
-		generatedFiles = append(generatedFiles, path.Join(shoelaceIconsDir, name))
-	}
-	err = os.MkdirAll(path.Join(dstDir, shoelaceIconsDir), 0o777)
+	err = os.CopyFS(outDir+iconsDir, iconsFS)
 	if err != nil {
-		return fmt.Errorf("cannot create the Shoelace icons directory into the destination dir: %s", err)
+		return fmt.Errorf("cannot copy icons: %s", err)
+	}
+
+	// Read the icons names and append them to the generatedFiles slice.
+	iconsNames, err := fs.Glob(iconsFS, "*")
+	if err != nil {
+		return fmt.Errorf("cannot glob icons: %s", err)
+	}
+	for _, name := range iconsNames {
+		generatedFiles = append(generatedFiles, path.Join(iconsDir, name))
+	}
+	err = os.MkdirAll(path.Join(dstDir, iconsDir), 0o777)
+	if err != nil {
+		return fmt.Errorf("cannot create the icons directory into the destination dir: %s", err)
 	}
 
 	// Compress the Admin's assets.

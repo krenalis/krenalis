@@ -165,7 +165,7 @@ func unflatRowRec(pk *propertyKey, row []any, omitNil bool) any {
 func profileColumnByProperty(schema types.Type) map[string]warehouses.Column {
 	columnByProperty := map[string]warehouses.Column{}
 	for path, p := range schema.Properties().WalkAll() {
-		if p.Type.Kind() == types.ObjectKind {
+		if p.Type.IsObject() {
 			continue
 		}
 		name := strings.ReplaceAll(path, ".", "_")

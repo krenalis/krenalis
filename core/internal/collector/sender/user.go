@@ -11,61 +11,61 @@ import (
 	"sync"
 )
 
-// user represents the per-user state used during event processing.
-type user struct {
-	anonymousID string    // anonymous ID.
-	queue       userQueue // per-user queue holding out-of-order events.
-	iterator    *iterator // iterator over the user's events; nil when no iteration is active.
-	consumed    int       // number of events already consumed from iterator, if any.
-	totals      int       // total number of the user's events in the sender queue.
+// orderingKey identifies an independent event ordering for a user.
+type orderingKey struct {
+	group       string // ordering group.
+	anonymousID string // anonymous ID.
 }
 
-// disposable reports whether the user has no pending or queued events and can
-// be safely removed from the sender.
-//
-// It must be called holding the owning Sender's mutex.
-func (u *user) disposable() bool {
-	seq := u.queue.sequence
-	return seq.expected == seq.next && u.totals == 0 && u.consumed == 0
+// ordering owns the queued and in-flight events associated with one ordering
+// key.
+type ordering struct {
+	key      orderingKey   // key identifying the event ordering.
+	queue    orderingQueue // events waiting for preceding events.
+	iterator *iterator     // iterator over the ordering's events; nil when no iteration is active.
+	consumed int           // number of events consumed by the active iterator.
+	total    int           // total number of the ordering's events in the sender queue.
 }
 
-// userQueue represents a per-user event queue.
+// disposable reports whether the ordering has no remaining events and can be
+// safely removed from the sender.
 //
-// Normally, an event passed to sender.SendEvent is enqueued directly into the
-// sender queue, and an event passed to sender.DiscardEvent is discarded
-// immediately.
+// The owning Sender's mutex must be held when calling this method.
+func (o *ordering) disposable() bool {
+	seq := o.queue.sequence
+	return seq.expected == seq.next && o.total == 0 && o.consumed == 0
+}
+
+// orderingQueue buffers events processed out of creation order for one
+// ordering key.
 //
-// When events are not processed in creation order—from the earliest created
-// with sender.CreateEvent to the latest—they must first be buffered in a
-// per-user queue. This allows events to be reordered before being enqueued into
-// the sender queue in the correct order.
-//
-// userQueue therefore holds events, both to be sent and discarded, that are
-// waiting for an earlier-created event to arrive.
-//
-// Events are ordered from the most recent to the least recent.
-type userQueue struct {
-	events   []*Event // events waiting for the event with the expected sequence to be enqueued first.
+// An event is buffered until all earlier-created events have been processed.
+// It is then either appended to the sender queue or discarded. Buffered events
+// are stored from newest to oldest.
+type orderingQueue struct {
+	events   []*Event // buffered events, newest first.
 	sequence struct {
-		expected int // sequence number expected to be added next to Sender.events.
-		next     int // next sequence number to assign to a newly created event for this user.
+		expected int // sequence number expected to be processed next.
+		next     int // next sequence number to assign to a newly created event for this ordering.
 	}
 }
 
-// enqueue adds event to the per-user queue or forwards it immediately.
+// enqueue adds an event to the ordering queue or passes it to forward when
+// possible.
 //
-// If event has the expected sequence number, enqueue advances the expected
-// sequence and forwards event (and any subsequently unblocked queued events)
-// by calling forward. Events that were discarded are not forwarded, but they
-// still advance the expected sequence and may unblock later events.
+// If the event has the expected sequence number, enqueue passes it and any
+// queued events that become unblocked to forward. Discarded events are not
+// forwarded, but they still advance the expected sequence and may unblock
+// later events.
 //
-// If event is out of order, it is inserted into the per-user queue to wait
+// If the event is out of order, enqueue inserts it into the ordering queue
 // until all earlier sequence numbers have been processed.
 //
-// If sender is closed, forward returns false and enqueue returns immediately.
+// If the sender is closed, forward returns false and enqueue returns
+// immediately.
 //
-// It must be called holding the owning Sender's mutex.
-func (q *userQueue) enqueue(event *Event, forward func(event *Event) bool) {
+// The owning Sender's mutex must be held when calling this method.
+func (q *orderingQueue) enqueue(event *Event, forward func(event *Event) bool) {
 	// If the sequence has been rescaled, realign the current event's number.
 	if event.sequence > q.sequence.next {
 		event.sequence += math.MinInt
@@ -102,11 +102,11 @@ func (q *userQueue) enqueue(event *Event, forward func(event *Event) bool) {
 	return
 }
 
-// next returns the next sequence number for this user.
-// It is called for each new event of this user.
+// next returns the next sequence number for this ordering.
+// It is called once for each new event with the same ordering key.
 //
-// It must be called holding the owning Sender's mutex.
-func (q *userQueue) next() int {
+// The owning Sender's mutex must be held when calling this method.
+func (q *orderingQueue) next() int {
 	next := q.sequence.next
 	q.sequence.next++
 	// On overflow (unlikely in practice),
@@ -121,32 +121,33 @@ func (q *userQueue) next() int {
 	return next
 }
 
-// users is a shared pool used by all senders.
-// It allows reuse of *user instances to reduce allocations and GC pressure.
-var users usersPool
+// orderingsPool is shared by all senders and reuses orderings to reduce
+// allocations and GC pressure.
+var orderingsPool orderingPool
 
-type usersPool struct {
+// orderingPool stores orderings for reuse by senders.
+type orderingPool struct {
 	p sync.Pool
 }
 
-// Get returns a *user from the pool.
-// If the pool is empty, a new instance is allocated.
-// The returned user is reset to a clean state while preserving internal
-// buffers.
-func (p *usersPool) Get() *user {
+// Get returns an ordering from the pool, allocating a new one if necessary.
+//
+// The returned ordering is reset for reuse while preserving its event buffer.
+func (p *orderingPool) Get() *ordering {
 	v := p.p.Get()
 	if v == nil {
-		return new(user)
+		return new(ordering)
 	}
-	u := v.(*user)
-	events := u.queue.events[:0]
-	*u = user{}
-	u.queue.events = events
-	return u
+	o := v.(*ordering)
+	events := o.queue.events[:0]
+	*o = ordering{}
+	o.queue.events = events
+	return o
 }
 
-// Put returns a *user to the pool for reuse.
-// The caller must ensure the user is no longer in use.
-func (p *usersPool) Put(u *user) {
-	p.p.Put(u)
+// Put returns an ordering to the pool for reuse.
+//
+// The caller must ensure that the ordering is no longer in use.
+func (p *orderingPool) Put(o *ordering) {
+	p.p.Put(o)
 }

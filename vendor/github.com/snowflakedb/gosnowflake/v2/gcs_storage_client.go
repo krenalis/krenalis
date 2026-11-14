@@ -308,7 +308,7 @@ func (util *snowflakeGcsClient) nativeDownloadFile(
 	fullDstFileName string,
 	maxConcurrency int64,
 	partSize int64) error {
-	partSize = int64Max(partSize, minimumDownloadPartSize)
+	partSize = max(partSize, minimumDownloadPartSize)
 	downloadURL := meta.presignedURL
 	var accessToken string
 	var err error
@@ -371,6 +371,84 @@ func (util *snowflakeGcsClient) nativeDownloadFile(
 	meta.gcsFileHeaderContentLength = fileSize
 	meta.gcsFileHeaderEncryptionMeta = &encryptMeta
 	return nil
+}
+
+func (util *snowflakeGcsClient) downloadToStream(ctx context.Context, meta *fileMetadata) (io.ReadCloser, error) {
+	downloadURL := meta.presignedURL
+	gcsHeaders := make(map[string]string)
+	var accessToken string
+	var err error
+	if downloadURL == nil || downloadURL.String() == "" {
+		downloadURL, err = util.generateFileURL(meta.stageInfo, strings.TrimLeft(meta.srcFileName, "/"))
+		if err != nil {
+			return nil, err
+		}
+		var ok bool
+		accessToken, ok = meta.client.(string)
+		if !ok {
+			return nil, fmt.Errorf("interface convertion. expected type string but got %T", meta.client)
+		}
+		if accessToken != "" {
+			gcsHeaders["Authorization"] = "Bearer " + accessToken
+		}
+	}
+	// Do not wrap this GET in withCloudStorageTimeout: that helper cancels the
+	// request context when the call returns, which aborts the response body.
+	req, err := http.NewRequestWithContext(ctx, "GET", downloadURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+	for k, v := range gcsHeaders {
+		req.Header.Add(k, v)
+	}
+	client, err := newGcsClient(util.cfg, util.telemetry)
+	if err != nil {
+		return nil, err
+	}
+	if meta.mockGcsClient != nil {
+		client = meta.mockGcsClient
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != http.StatusOK {
+		_ = resp.Body.Close()
+		return nil, util.handleHTTPError(resp, meta, accessToken)
+	}
+	header, err := gcsHeaderFromHTTP(resp)
+	if err != nil {
+		_ = resp.Body.Close()
+		return nil, err
+	}
+	return maybeDecryptStream(resp.Body, header, meta.encryptionMaterial)
+}
+
+func gcsHeaderFromHTTP(resp *http.Response) (*fileHeader, error) {
+	h := &fileHeader{digest: resp.Header.Get(gcsMetadataSfcDigest)}
+	if cl := resp.Header.Get("content-length"); cl != "" {
+		if n, err := strconv.Atoi(cl); err == nil {
+			h.contentLength = int64(n)
+		}
+	}
+	if resp.Header.Get(gcsMetadataEncryptionDataProp) == "" {
+		return h, nil
+	}
+	var encryptData *encryptionData
+	if err := json.Unmarshal([]byte(resp.Header.Get(gcsMetadataEncryptionDataProp)), &encryptData); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal GCS encryption metadata: %w", err)
+	}
+	if encryptData == nil {
+		return nil, fmt.Errorf("missing GCS encryption metadata")
+	}
+	h.encryptionMetadata = &encryptMetadata{
+		key: encryptData.WrappedContentKey.EncryptionKey,
+		iv:  encryptData.ContentEncryptionIV,
+	}
+	if key := resp.Header.Get(gcsMetadataMatdescKey); key != "" {
+		h.encryptionMetadata.matdesc = key
+	}
+	return h, nil
 }
 
 // getFileHeaderForDownload gets the file header using a HEAD request
@@ -815,7 +893,7 @@ func (util *snowflakeGcsClient) generateFileURL(stageInfo *execResponseStageInfo
 	// TODO: SNOW-1789759 hardcoded region will be replaced in the future
 	isRegionalURLEnabled := (strings.ToLower(stageInfo.Region) == gcsRegionMeCentral2) || stageInfo.UseRegionalURL
 	if stageInfo.EndPoint != "" {
-		endPoint = fmt.Sprintf("https://%s", stageInfo.EndPoint)
+		endPoint = "https://" + stageInfo.EndPoint
 	} else if stageInfo.UseVirtualURL {
 		endPoint = fmt.Sprintf("https://%s.storage.googleapis.com", gcsLoc.bucketName)
 	} else if stageInfo.Region != "" && isRegionalURLEnabled {

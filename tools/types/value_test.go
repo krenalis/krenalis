@@ -59,6 +59,10 @@ func Test_Decode(t *testing.T) {
 			Type: Int(16),
 		},
 		{
+			Name: "Int16_Year",
+			Type: Int(16).AsYear(),
+		},
+		{
 			Name: "Int24",
 			Type: Int(24),
 		},
@@ -115,10 +119,6 @@ func Test_Decode(t *testing.T) {
 			Type: Time(),
 		},
 		{
-			Name: "Year",
-			Type: Year(),
-		},
-		{
 			Name: "UUID",
 			Type: UUID(),
 		},
@@ -163,7 +163,7 @@ func Test_Decode(t *testing.T) {
 		},
 	})
 
-	data := `{"String":"some text","Text_values":"c","Text_regexp":"foo","Text_nil":null,"Boolean":true,"Int8":-12,"Int16":8023,"Int24":-2880217,"Int32":1307298102,"Int64":"927041163082605","Uint8":12,"Uint16":8023,"Uint24":2880217,"Uint32":1307298102,"Uint64":"927041163082605","Float32":57.16038,"Float64":18372.36240184391,"Decimal":1752.064,"DateTime":"2023-10-17T09:34:25.836540129Z","Date":"2023-10-17","Time":"09:34:25.836540129","Year":2023,"UUID":"550E8400-E29B-41D4-A716-446655440000","JSON":{"foo": 5,"boo": true},"JSON_null":null,"IP":"192.158.1.38","Array":["foo","boo"],"Object":{"a":9,"b":null},"Map":{"a":1,"b":2,"c":3}}`
+	data := `{"String":"some text","Text_values":"c","Text_regexp":"foo","Text_nil":null,"Boolean":true,"Int8":-12,"Int16":8023,"Int16_Year":2023,"Int24":-2880217,"Int32":1307298102,"Int64":"927041163082605","Uint8":12,"Uint16":8023,"Uint24":2880217,"Uint32":1307298102,"Uint64":"927041163082605","Float32":57.16038,"Float64":18372.36240184391,"Decimal":1752.064,"DateTime":"2023-10-17T09:34:25.836540129Z","Date":"2023-10-17","Time":"09:34:25.836540129","UUID":"550E8400-E29B-41D4-A716-446655440000","JSON":{"foo": 5,"boo": true},"JSON_null":null,"IP":"192.158.1.38","Array":["foo","boo"],"Object":{"a":9,"b":null},"Map":{"a":1,"b":2,"c":3}}`
 	expected := map[string]any{
 		"String":      "some text",
 		"Text_values": "c",
@@ -172,6 +172,7 @@ func Test_Decode(t *testing.T) {
 		"Boolean":     true,
 		"Int8":        -12,
 		"Int16":       8023,
+		"Int16_Year":  2023,
 		"Int24":       -2880217,
 		"Int32":       1307298102,
 		"Int64":       927041163082605,
@@ -186,7 +187,6 @@ func Test_Decode(t *testing.T) {
 		"DateTime":    time.Date(2023, 10, 17, 9, 34, 25, 836540129, time.UTC),
 		"Date":        time.Date(2023, 10, 17, 0, 0, 0, 0, time.UTC),
 		"Time":        time.Date(1970, 01, 01, 9, 34, 25, 836540129, time.UTC),
-		"Year":        2023,
 		"UUID":        "550e8400-e29b-41d4-a716-446655440000",
 		"JSON":        json.Value(`{"foo": 5,"boo": true}`),
 		"JSON_null":   json.Value(`null`),
@@ -274,6 +274,15 @@ func Test_Decode(t *testing.T) {
 			err:  newErrInvalidValue(`is out of range [-20, 20]: -25`, "Int8"),
 		},
 		{
+			data: `{"Int16_Year":32768}`,
+			err:  newErrInvalidValue(`is out of range [-32768, 32767]: 32768`, "Int16_Year"),
+		},
+		{
+			typ:  Object([]Property{{Name: "Uint64", Type: Int(64).Unsigned().WithUnsignedRange(1, 9999).AsYear()}}),
+			data: `{"Uint64":"10000"}`,
+			err:  newErrInvalidValue(`is out of range [1, 9999]: 10000`, "Uint64"),
+		},
+		{
 			data: `{"Boolean":"a \" \\ b"}`,
 			err:  newErrInvalidValue(`does not have a valid value: "a \" \\ b"`, "Boolean"),
 		},
@@ -341,6 +350,97 @@ func Test_Decode(t *testing.T) {
 
 }
 
+// Test_DecodeFloatRanges checks how float ranges handle infinities and NaN.
+func Test_DecodeFloatRanges(t *testing.T) {
+	tests := []struct {
+		name     string
+		min, max float64
+		input    string
+		want     float64
+		wantErr  string
+	}{
+		{
+			name:    "positive infinity with finite bounds",
+			min:     0,
+			max:     1,
+			input:   `"Infinity"`,
+			wantErr: "is out of range [0, 1]: +Inf",
+		},
+		{
+			name:    "negative infinity with finite bounds",
+			min:     0,
+			max:     1,
+			input:   `"-Infinity"`,
+			wantErr: "is out of range [0, 1]: -Inf",
+		},
+		{
+			name:  "positive infinity with infinite upper bound",
+			min:   0,
+			max:   math.Inf(1),
+			input: `"Infinity"`,
+			want:  math.Inf(1),
+		},
+		{
+			name:    "negative infinity below finite lower bound",
+			min:     0,
+			max:     math.Inf(1),
+			input:   `"-Infinity"`,
+			wantErr: "is out of range [0, +Inf]: -Inf",
+		},
+		{
+			name:    "positive infinity above finite upper bound",
+			min:     math.Inf(-1),
+			max:     0,
+			input:   `"Infinity"`,
+			wantErr: "is out of range [-Inf, 0]: +Inf",
+		},
+		{
+			name:  "negative infinity with infinite lower bound",
+			min:   math.Inf(-1),
+			max:   0,
+			input: `"-Infinity"`,
+			want:  math.Inf(-1),
+		},
+		{
+			name:  "NaN with finite bounds",
+			min:   0,
+			max:   1,
+			input: `"NaN"`,
+			want:  math.NaN(),
+		},
+	}
+	for _, size := range []int{32, 64} {
+		for _, test := range tests {
+			t.Run(fmt.Sprintf("float%d/%s", size, test.name), func(t *testing.T) {
+				typ := Float(size).WithFloatRange(test.min, test.max)
+				got, err := Decode[float64](strings.NewReader(test.input), typ)
+				if err != nil {
+					if test.wantErr == "" {
+						t.Fatalf("expected no decoding error, got %v", err)
+					}
+					if _, ok := errors.AsType[*SchemaValidationError](err); !ok {
+						t.Fatalf("expected a SchemaValidationError, got %T: %v", err, err)
+					}
+					if !strings.Contains(err.Error(), test.wantErr) {
+						t.Fatalf("expected error containing %q, got %q", test.wantErr, err)
+					}
+					return
+				}
+				if test.wantErr != "" {
+					t.Fatalf("expected error containing %q, got value %g", test.wantErr, got)
+				}
+				if math.IsNaN(test.want) {
+					if !math.IsNaN(got) {
+						t.Fatalf("expected NaN, got %g", got)
+					}
+				} else if got != test.want {
+					t.Fatalf("expected value %g, got %g", test.want, got)
+				}
+			})
+		}
+	}
+}
+
 // Test_NormalizeIP checks IP address normalization and validation.
 func Test_NormalizeIP(t *testing.T) {
 
@@ -399,13 +499,21 @@ func Test_Marshal(t *testing.T) {
 			name:   "Types",
 			schema: schema,
 			value:  value,
-			result: []byte(`{"String":"some text","Boolean":true,"Int8":-12,"Int16":8023,"Int24":-2880217,"Int32":1307298102,"Int64":"927041163082605","Uint8":12,"Uint16":8023,"Uint24":2880217,"Uint32":1307298102,"Uint64":"927041163082605","Float32":57.16038,"Float64":18372.36240184391,"Float64_NaN":"NaN","Float64_Positive_Infinity":"Infinity","Float64_Negative_Infinity":"-Infinity","Decimal":1752.064,"DateTime":"2023-10-17T09:34:25.836042841Z","Date":"2023-10-17","Time":"09:34:25.836042841","Year":2023,"UUID":"550e8400-e29b-41d4-a716-446655440000","JSON":{"foo":5,"boo":true},"JSON_null":null,"IP":"192.158.1.38","Array":["foo","boo"],"Object":{"a":9,"b":false},"Map":{"a":1,"b":2,"c":3}}`),
+			result: []byte(`{"String":"some text","Boolean":true,"Int8":-12,"Int16":8023,"Int16_Year":2023,"Int24":-2880217,"Int32":1307298102,"Int64":"927041163082605","Uint8":12,"Uint16":8023,"Uint24":2880217,"Uint32":1307298102,"Uint64":"927041163082605","Float32":57.16038,"Float64":18372.36240184391,"Float64_NaN":"NaN","Float64_Positive_Infinity":"Infinity","Float64_Negative_Infinity":"-Infinity","Decimal":1752.064,"DateTime":"2023-10-17T09:34:25.836042841Z","Date":"2023-10-17","Time":"09:34:25.836042841","UUID":"550e8400-e29b-41d4-a716-446655440000","JSON":{"foo":5,"boo":true},"JSON_null":null,"IP":"192.158.1.38","Array":["foo","boo"],"Object":{"a":9,"b":false},"Map":{"a":1,"b":2,"c":3}}`),
 		},
 		{
 			name:   "Empty",
 			schema: schema,
 			value:  map[string]any{},
 			result: []byte(`{}`),
+		},
+		{
+			name: "Decimal without leading zero",
+			schema: Object([]Property{
+				{Name: "a", Type: Decimal(5, 3)},
+			}),
+			value:  map[string]any{"a": decimal.MustParse(".123")},
+			result: []byte(`{"a":0.123}`),
 		},
 		{
 			name: "JSON nil",
@@ -431,6 +539,38 @@ func Test_Marshal(t *testing.T) {
 			}
 		})
 	}
+}
+
+// Test_NormalizeUUID checks that UUIDs are canonicalized and invalid or
+// non-standard forms are rejected.
+func Test_NormalizeUUID(t *testing.T) {
+	t.Run("valid", func(t *testing.T) {
+		id, ok := NormalizeUUID("F47AC10B-58CC-4372-A567-0E02B2C3D479")
+		if !ok || id != "f47ac10b-58cc-4372-a567-0e02b2c3d479" {
+			t.Fatalf("unexpected result %q %t", id, ok)
+		}
+	})
+	t.Run("invalid", func(t *testing.T) {
+		if id, ok := NormalizeUUID("invalid"); ok || id != "" {
+			t.Fatalf("expected failure, got %q %t", id, ok)
+		}
+	})
+	t.Run("malformed", func(t *testing.T) {
+		if id, ok := NormalizeUUID("F47AC10B-58CC-4372-A567-0E02B2C3D47Z"); ok || id != "" {
+			t.Fatalf("expected failure, got %q %t", id, ok)
+		}
+	})
+	t.Run("non-standard", func(t *testing.T) {
+		for _, s := range []string{
+			"F47AC10B58CC4372A5670E02B2C3D479",
+			"{F47AC10B-58CC-4372-A567-0E02B2C3D479}",
+			"urn:uuid:F47AC10B-58CC-4372-A567-0E02B2C3D479",
+		} {
+			if id, ok := NormalizeUUID(s); ok || id != "" {
+				t.Fatalf("expected failure for %q, got %q %t", s, id, ok)
+			}
+		}
+	})
 }
 
 // equalValues reports whether v1 and v2 are equal according to the type t.
@@ -587,6 +727,10 @@ var schema = Object([]Property{
 		Type: Int(16),
 	},
 	{
+		Name: "Int16_Year",
+		Type: Int(16).AsYear(),
+	},
+	{
 		Name: "Int24",
 		Type: Int(24),
 	},
@@ -655,10 +799,6 @@ var schema = Object([]Property{
 		Type: Time(),
 	},
 	{
-		Name: "Year",
-		Type: Year(),
-	},
-	{
 		Name: "UUID",
 		Type: UUID(),
 	},
@@ -702,6 +842,7 @@ var value = map[string]any{
 	"Boolean":                   true,
 	"Int8":                      -12,
 	"Int16":                     8023,
+	"Int16_Year":                2023,
 	"Int24":                     -2880217,
 	"Int32":                     1307298102,
 	"Int64":                     927041163082605,
@@ -719,7 +860,6 @@ var value = map[string]any{
 	"DateTime":                  time.Date(2023, 10, 17, 9, 34, 25, 836042841, time.UTC),
 	"Date":                      time.Date(2023, 10, 17, 0, 0, 0, 0, time.UTC),
 	"Time":                      time.Date(1970, 01, 01, 9, 34, 25, 836042841, time.UTC),
-	"Year":                      2023,
 	"UUID":                      "550e8400-e29b-41d4-a716-446655440000",
 	"JSON":                      json.Value(`{"foo":5,"boo":true}`),
 	"JSON_null":                 json.Value(`null`),
@@ -766,7 +906,6 @@ func TestDecodeArrayUnique(t *testing.T) {
 		},
 		{"dates", Date(), `["2026-09-08","2026-09-08"]`, 1},
 		{"times", Time(), `["10:00:00.1","10:00:00.100"]`, 1},
-		{"years", Year(), `[2025,2026,2025]`, 2},
 		{
 			"UUID case", UUID(),
 			`["550e8400-e29b-41d4-a716-446655440000","550E8400-E29B-41D4-A716-446655440000"]`, 1,
@@ -924,15 +1063,16 @@ func TestDecodePhone(t *testing.T) {
 
 }
 
-// TestDecodeSemantics checks semantic constraints and nested containers.
+// TestDecodeSemantics checks constraints imposed by semantics and nested
+// containers.
 func TestDecodeSemantics(t *testing.T) {
 
 	country := String().AsCountry(ISO3166Alpha2)
 	tests := []struct {
-		name     string
-		semantic Type
-		value    string
-		valid    bool
+		name      string
+		semantics Type
+		value     string
+		valid     bool
 	}{
 		{"current country", country, "IT", true},
 		{"alpha-3 country", String().AsCountry(ISO3166Alpha3), "ITA", true},
@@ -972,7 +1112,7 @@ func TestDecodeSemantics(t *testing.T) {
 
 				t.Run(shape, func(t *testing.T) {
 
-					typ := test.semantic
+					typ := test.semantics
 					data := strconv.Quote(test.value)
 					switch shape {
 					case "array":
@@ -1014,9 +1154,9 @@ func TestDecodeSemantics(t *testing.T) {
 
 }
 
-// TestSemanticConstraintsRoundTrip checks that semantics do not introduce
+// TestSemanticsConstraintsRoundTrip checks that semantics do not introduce
 // string constraints.
-func TestSemanticConstraintsRoundTrip(t *testing.T) {
+func TestSemanticsConstraintsRoundTrip(t *testing.T) {
 
 	typesToTest := []Type{
 		String().AsCountry(ISO3166Alpha2),
@@ -1165,6 +1305,7 @@ func TestIsPhone(t *testing.T) {
 		want  bool
 	}{
 		{"canonical", "+390236618300", true},
+		{"surrounding whitespace", "\t +390236618300 \u00a0", false},
 		{"structurally possible", "+12001230101", true},
 		{"formatted", "+39 02-36618 300", false},
 		{"national", "0236618300", false},
@@ -1210,9 +1351,9 @@ func TestNormalizePhone(t *testing.T) {
 		{"011390236618300", ""},
 		{"0236618300", ""},
 		{"390236618300", ""},
-		{" +390236618300", ""},
-		{"+390236618300 ", ""},
-		{"\u00a0+390236618300", ""},
+		{" +390236618300", "+390236618300"},
+		{"+390236618300 ", "+390236618300"},
+		{"\u00a0+390236618300", "+390236618300"},
 		{"+390236618300\u200b", ""},
 		{"Call +390236618300", ""},
 		{"+390236618300 please", ""},
@@ -1228,7 +1369,7 @@ func TestNormalizePhone(t *testing.T) {
 		{"+390236618300/+16502530000", ""},
 		{"+390236618300 6502530000", ""},
 		{"+39\t0236618300", ""},
-		{"+390236618300\n", ""},
+		{"+390236618300\n", "+390236618300"},
 		{"+390236618300\xff", ""},
 		{"+12001230101", "+12001230101"}, // structurally possible even if not classified as valid
 		{"+12530000", ""},                // possible only locally: missing an area code
@@ -1236,7 +1377,8 @@ func TestNormalizePhone(t *testing.T) {
 		{"+3902", ""},
 		{"+9990236618300", ""},
 		{"+49301234567890123", ""}, // numbering-plan lengths must still fit E.164
-		{"+" + strings.Repeat("1", 250), ""},
+		{"+" + strings.Repeat("1", maxPhoneInputBytes), ""},
+		{strings.Repeat(" ", maxPhoneInputBytes+1-len("+390236618300")) + "+390236618300", ""},
 	}
 
 	for _, test := range tests {
@@ -1259,8 +1401,8 @@ func TestValidPhoneInput(t *testing.T) {
 		input string
 		valid bool
 	}{
-		{"at byte limit", "+" + strings.Repeat("1", 249), true},
-		{"over byte limit", "+" + strings.Repeat("1", 250), false},
+		{"at byte limit", "+" + strings.Repeat("1", maxPhoneInputBytes-1), true},
+		{"over byte limit", "+" + strings.Repeat("1", maxPhoneInputBytes), false},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -1280,7 +1422,7 @@ func TestNormalizePhoneInRegion(t *testing.T) {
 		region string
 		want   string
 	}{
-		{"02-36618 300", "IT", "+390236618300"},
+		{"\t 02-36618 300 \u00a0", "IT", "+390236618300"},
 		{"340 1234567", "IT", "+393401234567"},
 		{"0039 02-36618 300", "IT", "+390236618300"},
 		{"0039 02-36618 300", "US", ""},
@@ -1345,38 +1487,6 @@ func FuzzNormalizePhoneInRegion(f *testing.F) {
 				"expected regional result %q to normalize to itself and true, got %q and %t for input %q",
 				canonical, again, valid, s,
 			)
-		}
-	})
-}
-
-// Test_NormalizeUUID checks that UUIDs are canonicalized and invalid or
-// non-standard forms are rejected.
-func Test_NormalizeUUID(t *testing.T) {
-	t.Run("valid", func(t *testing.T) {
-		id, ok := NormalizeUUID("F47AC10B-58CC-4372-A567-0E02B2C3D479")
-		if !ok || id != "f47ac10b-58cc-4372-a567-0e02b2c3d479" {
-			t.Fatalf("unexpected result %q %t", id, ok)
-		}
-	})
-	t.Run("invalid", func(t *testing.T) {
-		if id, ok := NormalizeUUID("invalid"); ok || id != "" {
-			t.Fatalf("expected failure, got %q %t", id, ok)
-		}
-	})
-	t.Run("malformed", func(t *testing.T) {
-		if id, ok := NormalizeUUID("F47AC10B-58CC-4372-A567-0E02B2C3D47Z"); ok || id != "" {
-			t.Fatalf("expected failure, got %q %t", id, ok)
-		}
-	})
-	t.Run("non-standard", func(t *testing.T) {
-		for _, s := range []string{
-			"F47AC10B58CC4372A5670E02B2C3D479",
-			"{F47AC10B-58CC-4372-A567-0E02B2C3D479}",
-			"urn:uuid:F47AC10B-58CC-4372-A567-0E02B2C3D479",
-		} {
-			if id, ok := NormalizeUUID(s); ok || id != "" {
-				t.Fatalf("expected failure for %q, got %q %t", s, id, ok)
-			}
 		}
 	})
 }
@@ -1668,9 +1778,9 @@ func TestMarshalValidateCanonicalRepresentation(t *testing.T) {
 		{"time as string", Time(), "12:30:45", false},
 
 		// Year values.
-		{"year", Year(), int(2026), true},
-		{"year as int32", Year(), int32(2026), false},
-		{"year as string", Year(), "2026", false},
+		{"year", Int(16).WithIntRange(MinYear, MaxYear).AsYear(), int(2026), true},
+		{"year as int32", Int(16).WithIntRange(MinYear, MaxYear).AsYear(), int32(2026), false},
+		{"year as string", Int(16).WithIntRange(MinYear, MaxYear).AsYear(), "2026", false},
 
 		// UUID values.
 		{
@@ -2127,7 +2237,7 @@ func TestMarshalValidateConstraints(t *testing.T) {
 		// Year boundaries.
 		{
 			"minimum year",
-			Year(),
+			Int(16).WithIntRange(MinYear, MaxYear).AsYear(),
 			int(MinYear),
 			true,
 			"",
@@ -2135,7 +2245,7 @@ func TestMarshalValidateConstraints(t *testing.T) {
 		},
 		{
 			"maximum year",
-			Year(),
+			Int(16).WithIntRange(MinYear, MaxYear).AsYear(),
 			int(MaxYear),
 			true,
 			"",
@@ -2143,7 +2253,7 @@ func TestMarshalValidateConstraints(t *testing.T) {
 		},
 		{
 			"year below minimum",
-			Year(),
+			Int(16).WithIntRange(MinYear, MaxYear).AsYear(),
 			int(0),
 			false,
 			"",
@@ -2151,7 +2261,7 @@ func TestMarshalValidateConstraints(t *testing.T) {
 		},
 		{
 			"year above maximum",
-			Year(),
+			Int(16).WithIntRange(MinYear, MaxYear).AsYear(),
 			int(10000),
 			false,
 			"",
@@ -2970,7 +3080,7 @@ func TestMarshalValidateMatchesDecodeValidation(t *testing.T) {
 		},
 		{
 			"year",
-			Year(),
+			Int(16).WithIntRange(MinYear, MaxYear).AsYear(),
 			int(10000),
 			`10000`,
 		},

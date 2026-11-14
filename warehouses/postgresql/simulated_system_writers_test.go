@@ -111,12 +111,12 @@ func TestSimulatedSystemWriterFencing(t *testing.T) {
 			}
 			err = warehouse.MergeSimulatedSystemRecords(t.Context(), system, test.generation+2, table, rows)
 			if err != nil {
-				count, countErr := warehouse.Count(t.Context(), table.Name, nil, where)
+				counts, countErr := warehouse.Counts(t.Context(), table.Name, []warehouses.Expr{where})
 				if countErr != nil {
 					t.Fatalf("expected post-cleanup count, got %v", countErr)
 				}
-				if count != 0 {
-					t.Fatalf("expected no stale resurrection, got %d records", count)
+				if len(counts) != 1 || counts[0] != 0 {
+					t.Fatalf("expected one zero count after cleanup, got %v", counts)
 				}
 				return
 			}

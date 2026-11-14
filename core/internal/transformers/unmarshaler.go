@@ -6,6 +6,7 @@ package transformers
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -18,7 +19,6 @@ import (
 
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/tools/decimal"
-	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/tools/validation"
@@ -54,7 +54,20 @@ func (err RecordValidationError) Error() string {
 }
 
 func (err RecordValidationError) addIndexToPath(i int) RecordValidationError {
-	err.path = "[" + strconv.Itoa(i) + "]." + err.path
+	index := "[" + strconv.Itoa(i) + "]"
+	if err.path != "" && err.path[0] != '[' {
+		index += "."
+	}
+	err.path = index + err.path
+	return err
+}
+
+func (err RecordValidationError) addMapKeyToPath(key string) RecordValidationError {
+	name := "[" + strconv.Quote(key) + "]"
+	if err.path != "" && err.path[0] != '[' {
+		name += "."
+	}
+	err.path = name + err.path
 	return err
 }
 
@@ -134,7 +147,6 @@ var pythonDecoderOptions = decoderOptions{
 //     "2006-01-02T15:04:05.999999999Z07:00"
 //   - date: a String representing a time formatted as "2006-01-02"
 //   - time: a String representing a time formatted as "15:04:05.999999999"
-//   - year: a Number representing an integer
 //   - uuid: a String representing a UUID
 //   - json: if preserveJSON is false: true, false, a Number, a String, an
 //     Array, or an Object; Otherwise a String representing a JSON value
@@ -154,7 +166,6 @@ var pythonDecoderOptions = decoderOptions{
 //     15:04:05.999999"
 //   - date: a String representing a date formatted as "2006-01-02"
 //   - time: a String representing a time formatted as "15:04:05.999999"
-//   - year: a Number representing an integer
 //   - uuid: a String representing a UUID
 //   - ip: a String representing an IP number
 //   - json: if preserveJSON is false: true, false, a Number, a String, an
@@ -177,7 +188,7 @@ func Unmarshal(r io.Reader, records []Record, schema types.Type, language state.
 	if r == nil {
 		return errors.New("core/transformers: r is nil")
 	}
-	if schema.Valid() && schema.Kind() != types.ObjectKind {
+	if schema.Valid() && !schema.IsObject() {
 		return errors.New("core/transformers: schema is not an object")
 	}
 	d := decoder{dec: json.NewDecoder(r)}
@@ -339,7 +350,7 @@ func (d decoder) readValue() (json.Value, error) {
 
 // unmarshal unmarshals a JSON value.
 func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ any, err error) {
-	if t.Kind() == types.JSONKind && !preserveJSON {
+	if t.IsJSON() && !preserveJSON {
 		v, err := d.readValue()
 		if err != nil {
 			return nil, err
@@ -360,7 +371,7 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 		if _, err := d.readToken(); err != nil {
 			return nil, err
 		}
-		if t.Kind() != types.ArrayKind {
+		if !t.IsArray() {
 			return nil, newRecordValidationError("", fmt.Sprintf("has a value that is not of type «%s»", d.opts.terms.Type(t)))
 		}
 		min := t.MinElements()
@@ -392,8 +403,7 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 				return nil, newRecordValidationError("", "contains a duplicated value")
 			}
 		}
-		_, err = d.readToken()
-		if err != nil {
+		if _, err := d.readToken(); err != nil {
 			return nil, err
 		}
 		return arr, nil
@@ -448,7 +458,7 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 						return nil, err
 					}
 					if !p.Nullable {
-						if p.Type.Kind() != types.JSONKind || preserveJSON {
+						if !p.Type.IsJSON() || preserveJSON {
 							if purpose == Import {
 								continue
 							}
@@ -509,6 +519,9 @@ func (d decoder) unmarshal(t types.Type, preserveJSON bool, purpose Purpose) (_ 
 				// Read the property's value.
 				value, err := d.unmarshal(t.Elem(), preserveJSON, purpose)
 				if err != nil {
+					if e, ok := err.(RecordValidationError); ok {
+						err = e.addMapKeyToPath(name)
+					}
 					return nil, err
 				}
 				m[name] = value
@@ -541,20 +554,20 @@ func (d decoder) value(v json.Value, t types.Type) (any, error) {
 	case types.StringKind:
 		if v.Kind() == '"' {
 			s := d.unquoteString(v)
-			switch t.Semantic() {
-			case types.CountrySemantic:
+			switch t.Semantics() {
+			case types.CountrySemantics:
 				switch t.CountryFormat() {
 				case types.ISO3166Alpha2:
 					if !validation.IsValidCountryCodeAlpha2(s) {
-						return nil, newRecordValidationError("", "is not a 2-letters country code")
+						return nil, newRecordValidationError("", "is not a 2-letter country code")
 					}
 				case types.ISO3166Alpha3:
 					if !validation.IsValidCountryCodeAlpha3(s) {
-						return nil, newRecordValidationError("", "is not a 3-letters country code")
+						return nil, newRecordValidationError("", "is not a 3-letter country code")
 					}
 				}
 				return s, nil
-			case types.PhoneSemantic:
+			case types.PhoneSemantics:
 				normalized, ok := types.NormalizePhone(s)
 				if !ok {
 					return nil, newRecordValidationError("", "is not a valid phone number")
@@ -658,9 +671,15 @@ func (d decoder) value(v json.Value, t types.Type) (any, error) {
 				return math.NaN(), nil
 			}
 			if bytes.Equal(v, posInfinity) {
+				if _, max := t.FloatRange(); !math.IsInf(max, 1) {
+					return nil, newRecordValidationError("", fmt.Sprintf("is greater than %g", max))
+				}
 				return math.Inf(1), nil
 			}
 			if bytes.Equal(v, negInfinity) {
+				if min, _ := t.FloatRange(); !math.IsInf(min, -1) {
+					return nil, newRecordValidationError("", fmt.Sprintf("is less than %g", min))
+				}
 				return math.Inf(-1), nil
 			}
 		}
@@ -709,16 +728,6 @@ func (d decoder) value(v json.Value, t types.Type) (any, error) {
 				return nil, newRecordValidationError("", fmt.Sprintf("is not in the expected time format"))
 			}
 			return time.Date(1970, 1, 1, t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), time.UTC), nil
-		}
-	case types.YearKind:
-		if v.Kind() == '0' {
-			y, err := strconv.ParseInt(string(v), 10, 64)
-			if err == nil {
-				if y < types.MinYear || y > types.MaxYear {
-					return nil, newRecordValidationError("", "year is not in range [1,9999]")
-				}
-				return int(y), nil
-			}
 		}
 	case types.UUIDKind:
 		if v.Kind() == '"' {
@@ -773,8 +782,6 @@ func toJavascriptType(t types.Type) string {
 		return "string"
 	case types.DateTimeKind, types.DateKind, types.TimeKind:
 		return "string"
-	case types.YearKind:
-		return "number"
 	case types.UUIDKind, types.JSONKind, types.IPKind:
 		return "string"
 	case types.ArrayKind:
@@ -810,8 +817,6 @@ func toPythonType(t types.Type) string {
 		return "datetime.date"
 	case types.TimeKind:
 		return "datetime.time"
-	case types.YearKind:
-		return "int"
 	case types.UUIDKind:
 		return "uuid.UUID"
 	case types.JSONKind, types.IPKind:

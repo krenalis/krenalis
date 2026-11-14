@@ -1,49 +1,45 @@
 import React, { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import './PropertyForm.css';
-import SlBadge from '@shoelace-style/shoelace/dist/react/badge/index.js';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import SlCheckbox from '@shoelace-style/shoelace/dist/react/checkbox/index.js';
-import SlDivider from '@shoelace-style/shoelace/dist/react/divider/index.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
-import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
-import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
-import SlRadioButton from '@shoelace-style/shoelace/dist/react/radio-button/index.js';
-import SlRadioGroup from '@shoelace-style/shoelace/dist/react/radio-group/index.js';
-import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
-import SlTextarea from '@shoelace-style/shoelace/dist/react/textarea/index.js';
-import type SlCheckboxElement from '@shoelace-style/shoelace/dist/components/checkbox/checkbox.component.js';
-import type SlInputElement from '@shoelace-style/shoelace/dist/components/input/input.component.js';
-import type SlTextareaElement from '@shoelace-style/shoelace/dist/components/textarea/textarea.component.js';
+import WaBadge from '@awesome.me/webawesome/dist/react/badge/index.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaCheckbox from '@awesome.me/webawesome/dist/react/checkbox/index.js';
+import WaDivider from '@awesome.me/webawesome/dist/react/divider/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
+import WaInput from '@awesome.me/webawesome/dist/react/input/index.js';
+import WaOption from '@awesome.me/webawesome/dist/react/option/index.js';
+import WaRadio from '@awesome.me/webawesome/dist/react/radio/index.js';
+import WaRadioGroup from '@awesome.me/webawesome/dist/react/radio-group/index.js';
+import WaSelect from '@awesome.me/webawesome/dist/react/select/index.js';
+import WaTextarea from '@awesome.me/webawesome/dist/react/textarea/index.js';
 import AppContext from '../../../context/AppContext';
 import Type, {
-	CountryFormat,
 	DecimalType,
 	FloatBitSize,
 	FloatType,
 	IntBitSize,
 	IntType,
-	Semantic,
+	Semantics,
 	StringType,
 } from '../../../lib/api/types/types';
-import { ProfileRoleAssignments, ProfileRoleID } from '../../../lib/api/types/workspace';
+import { ProfilePropertyRoles, ProfilePropertyRoleID } from '../../../lib/api/types/workspace';
 import TransformedConnection from '../../../lib/core/connection';
 import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
 import AlertDialog from '../../base/AlertDialog/AlertDialog';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
 import { COMMON_CURRENCY_OPTION_COUNT, CURRENCY_OPTIONS } from '../../helpers/currencies';
 import {
-	getCompatibleProfileRoles,
-	getProfileRole,
-	isProfileRoleCompatible,
-	PROFILE_ROLES,
-} from '../../helpers/profileRoles';
+	getCompatibleProfilePropertyRoles,
+	getProfilePropertyRole,
+	isProfilePropertyRoleCompatible,
+	PROFILE_PROPERTY_ROLES,
+} from '../../helpers/profilePropertyRoles';
 import {
 	DURATION_UNIT_OPTIONS,
+	getProfileSchemaTypePresentation,
 	getPropertyValueType,
-	getTypeSemantic,
 	isSuitableAsIdentifier,
 	replacePropertyValueType,
-	UNIT_OF_MEASURE_OPTIONS,
+	UNIT_OPTIONS,
 } from '../../helpers/types';
 import {
 	SchemaPropertyIdentifierLabel,
@@ -51,10 +47,10 @@ import {
 	SchemaPropertyInfoTooltip,
 	SchemaPropertyPrimarySourceLabel,
 } from '../Schema/SchemaPropertyGrid';
-import { ProfileRoleSelector } from './ProfileRoleSelector';
-import { PropertyTypeSelector, type PropertyTypeSelectorRef } from './PropertyTypeSelector';
+import { PropertyRoleSelector } from './PropertyRoleSelector';
 import { getParentPropertyKey } from './SchemaEdit.helpers';
 import { PropertyFieldChanges, PropertyParent, PropertyToEdit } from './useSchemaEdit';
+import { PropertyTypeSelector } from './PropertyTypeSelector';
 
 const INT_BITSIZES: string[] = ['8', '16', '24', '32', '64'];
 const FLOAT_BITSIZES: string[] = ['32', '64'];
@@ -91,33 +87,15 @@ interface PropertyTypeError {
 	message: string;
 }
 
-const disableShoelaceTextareaHeightReset = (textarea: SlTextareaElement | null) => {
-	if (textarea == null) {
-		return;
-	}
-	// Shoelace 2.20 resets the inline height whenever its ResizeObserver runs,
-	// which prevents the browser's vertical resize handle from working.
-	// See https://github.com/shoelace-style/shoelace/pull/2465.
-	Reflect.set(textarea, 'setTextareaHeight', () => undefined);
-};
-
-const preventReadOnlyTypeControlFocus = (event: React.PointerEvent) => {
-	event.preventDefault();
-};
-
-const removeReadOnlyTypeControlFromTabOrder = (control: SlCheckboxElement | SlInputElement | null) => {
-	if (control == null) {
-		return;
-	}
-	// Setting tabindex on the Shoelace host does not remove its internal input from the tab order.
-	void control.updateComplete.then(() => {
-		control.input.tabIndex = -1;
-	});
-};
+interface PendingTypeChange {
+	description: React.ReactNode;
+	rolesToUnassign: ProfilePropertyRoleID[];
+	type: Type;
+}
 
 interface PropertyFormProps {
-	assignedRole: ProfileRoleID | null;
-	assignedRoles: ProfileRoleAssignments;
+	propertyRole: ProfilePropertyRoleID | null;
+	propertyRoles: ProfilePropertyRoles;
 	fieldChanges?: PropertyFieldChanges;
 	formID: string;
 	identifierPosition?: number;
@@ -129,22 +107,16 @@ interface PropertyFormProps {
 	onSave: (
 		property: PropertyToEdit,
 		primarySource: string | null,
-		assignedRole: ProfileRoleID | null,
-		rolesToUnassign: readonly ProfileRoleID[],
+		propertyRole: ProfilePropertyRoleID | null,
+		rolesToUnassign: readonly ProfilePropertyRoleID[],
 	) => void;
 	onDirtyChange?: (dirty: boolean) => void;
 	onValidityChange?: (valid: boolean) => void;
 }
 
-interface PendingTypeChange {
-	description: React.ReactNode;
-	rolesToUnassign: ProfileRoleID[];
-	type: Type;
-}
-
 const PropertyForm = ({
-	assignedRole: assignedRoleToEdit,
-	assignedRoles,
+	propertyRole: propertyRoleToEdit,
+	propertyRoles,
 	fieldChanges,
 	formID,
 	identifierPosition,
@@ -159,9 +131,9 @@ const PropertyForm = ({
 }: PropertyFormProps) => {
 	const [property, setProperty] = useState<PropertyToEdit>(() => structuredClone(propertyToEdit));
 	const [primarySource, setPrimarySource] = useState<string | null>(primarySources[propertyToEdit.key] || null);
-	const [assignedRole, setAssignedRole] = useState<ProfileRoleID | null>(assignedRoleToEdit);
-	const [descendantRolesToUnassign, setDescendantRolesToUnassign] = useState<ProfileRoleID[]>([]);
-	const [roleToReassign, setRoleToReassign] = useState<ProfileRoleID | null>(null);
+	const [propertyRole, setPropertyRole] = useState<ProfilePropertyRoleID | null>(propertyRoleToEdit);
+	const [descendantRolesToUnassign, setDescendantRolesToUnassign] = useState<ProfilePropertyRoleID[]>([]);
+	const [roleToReassign, setRoleToReassign] = useState<ProfilePropertyRoleID | null>(null);
 	const [pendingTypeChange, setPendingTypeChange] = useState<PendingTypeChange | null>(null);
 	const [typeSelectorRevision, setTypeSelectorRevision] = useState(0);
 	const [decimalTypeInputs, setDecimalTypeInputs] = useState<DecimalTypeInputs>(() =>
@@ -175,7 +147,6 @@ const PropertyForm = ({
 	const [typeError, setTypeError] = useState<PropertyTypeError | null>(null);
 	const initialState = useRef('');
 	const nameInputRef = useRef<any>();
-	const typeSelectorRef = useRef<PropertyTypeSelectorRef>();
 
 	const { connections } = useContext(AppContext);
 	const isEditing = propertyToEdit.key != null;
@@ -201,7 +172,7 @@ const PropertyForm = ({
 		const nextNumericRangeInputs = getNumericRangeInputs(propertyToEdit.type);
 		setProperty(nextProperty);
 		setPrimarySource(nextPrimarySource);
-		setAssignedRole(assignedRoleToEdit);
+		setPropertyRole(propertyRoleToEdit);
 		setDescendantRolesToUnassign([]);
 		setRoleToReassign(null);
 		setPendingTypeChange(null);
@@ -216,7 +187,7 @@ const PropertyForm = ({
 			nextPrimarySource,
 			nextDecimalTypeInputs,
 			nextNumericRangeInputs,
-			assignedRoleToEdit,
+			propertyRoleToEdit,
 			[],
 		);
 		onDirtyChange?.(false);
@@ -237,7 +208,7 @@ const PropertyForm = ({
 				}
 			}
 		});
-	}, [assignedRoleToEdit, propertyToEdit]);
+	}, [propertyRoleToEdit, propertyToEdit]);
 
 	useEffect(() => {
 		if (initialState.current === '') {
@@ -249,11 +220,11 @@ const PropertyForm = ({
 				primarySource,
 				decimalTypeInputs,
 				numericRangeInputs,
-				assignedRole,
+				propertyRole,
 				descendantRolesToUnassign,
 			) !== initialState.current,
 		);
-	}, [assignedRole, descendantRolesToUnassign, property, primarySource, decimalTypeInputs, numericRangeInputs]);
+	}, [propertyRole, descendantRolesToUnassign, property, primarySource, decimalTypeInputs, numericRangeInputs]);
 
 	useEffect(() => {
 		const type = getPropertyValueType(property.type);
@@ -261,7 +232,7 @@ const PropertyForm = ({
 			if (current != null && current.location !== 'decimal-constraints' && current.location !== 'numeric-range') {
 				return current;
 			}
-			if (isNumericType(type) && (type.semantic == null || hasSemanticDecimalRange(type.semantic))) {
+			if (isNumericType(type) && (type.semantics == null || hasSemanticsDecimalRange(type.semantics))) {
 				return getNumericTypeError(type, decimalTypeInputs, numericRangeInputs);
 			}
 			return null;
@@ -328,22 +299,6 @@ const PropertyForm = ({
 		});
 	};
 
-	const onKeyDownName = (event: React.KeyboardEvent<any>) => {
-		if (
-			isEditing ||
-			showParent ||
-			event.currentTarget.value === '' ||
-			event.key !== 'Tab' ||
-			event.shiftKey ||
-			event.altKey ||
-			event.ctrlKey ||
-			event.metaKey
-		) {
-			return;
-		}
-		requestAnimationFrame(() => typeSelectorRef.current?.focusStructureTrigger());
-	};
-
 	const onKeyDownPrimarySource = (event: React.KeyboardEvent<HTMLDivElement>) => {
 		if (event.key !== 'Tab' || event.shiftKey || event.altKey || event.ctrlKey || event.metaKey) {
 			return;
@@ -393,14 +348,14 @@ const PropertyForm = ({
 			return;
 		}
 		const proposedProperty = { ...property, type };
-		const rolesToUnassign: ProfileRoleID[] = [];
-		if (assignedRole != null && !isProfileRoleCompatible(assignedRole, proposedProperty)) {
-			rolesToUnassign.push(assignedRole);
+		const rolesToUnassign: ProfilePropertyRoleID[] = [];
+		if (propertyRole != null && !isProfilePropertyRoleCompatible(propertyRole, proposedProperty)) {
+			rolesToUnassign.push(propertyRole);
 		}
 		if (propertyToEdit.key != null && propertyToEdit.type?.kind === 'object' && type.kind !== 'object') {
-			for (const role of PROFILE_ROLES) {
+			for (const role of PROFILE_PROPERTY_ROLES) {
 				if (
-					assignedRoles[role.id].startsWith(`${propertyToEdit.key}.`) &&
+					propertyRoles[role.id].startsWith(`${propertyToEdit.key}.`) &&
 					!descendantRolesToUnassign.includes(role.id)
 				) {
 					rolesToUnassign.push(role.id);
@@ -416,10 +371,10 @@ const PropertyForm = ({
 			return;
 		}
 
-		const typeLabel = getTypeSemantic(getPropertyValueType(type)) || type.kind;
+		const typeLabel = getProfileSchemaTypePresentation(type).primary;
 		let description: React.ReactNode;
-		if (uniqueRolesToUnassign.length === 1 && uniqueRolesToUnassign[0] === assignedRole) {
-			const role = getProfileRole(uniqueRolesToUnassign[0]);
+		if (uniqueRolesToUnassign.length === 1 && uniqueRolesToUnassign[0] === propertyRole) {
+			const role = getProfilePropertyRole(uniqueRolesToUnassign[0]);
 			description =
 				type.kind === 'array' ? (
 					<>
@@ -433,10 +388,11 @@ const PropertyForm = ({
 					</>
 				);
 		} else {
-			const roleLabels = uniqueRolesToUnassign.map((role) => getProfileRole(role).label).join(', ');
+			const roleLabels = uniqueRolesToUnassign.map((role) => getProfilePropertyRole(role).label).join(', ');
 			description = (
 				<>
-					Changing the type to <code>{typeLabel}</code> will remove these roles: {roleLabels}.
+					Changing the type to <code>{typeLabel}</code> will remove{' '}
+					{uniqueRolesToUnassign.length === 1 ? 'this role' : 'these roles'}: {roleLabels}.
 				</>
 			);
 		}
@@ -444,21 +400,21 @@ const PropertyForm = ({
 		setPendingTypeChange({ description, rolesToUnassign: uniqueRolesToUnassign, type });
 	};
 
-	const onChangeAssignedRole = (role: ProfileRoleID | null) => {
-		if (role == null || role === assignedRole) {
-			setAssignedRole(role);
+	const onChangePropertyRole = (role: ProfilePropertyRoleID | null) => {
+		if (role == null || role === propertyRole) {
+			setPropertyRole(role);
 			return;
 		}
-		const assignedPropertyKey = assignedRoles[role];
+		const assignedPropertyKey = propertyRoles[role];
 		if (assignedPropertyKey !== '' && assignedPropertyKey !== propertyToEdit.key) {
 			setRoleToReassign(role);
 			return;
 		}
-		setAssignedRole(role);
+		setPropertyRole(role);
 	};
 
 	const onConfirmReassign = () => {
-		setAssignedRole(roleToReassign);
+		setPropertyRole(roleToReassign);
 		setRoleToReassign(null);
 	};
 
@@ -466,10 +422,13 @@ const PropertyForm = ({
 		if (pendingTypeChange == null) {
 			return;
 		}
-		if (assignedRole != null && pendingTypeChange.rolesToUnassign.includes(assignedRole)) {
-			setAssignedRole(null);
+		if (propertyRole != null && pendingTypeChange.rolesToUnassign.includes(propertyRole)) {
+			setPropertyRole(null);
 		}
-		setDescendantRolesToUnassign(pendingTypeChange.rolesToUnassign.filter((role) => role !== assignedRole));
+		const rolesToUnassign = pendingTypeChange.rolesToUnassign.filter((role) => role !== propertyRole);
+		setDescendantRolesToUnassign((current) =>
+			pendingTypeChange.type.kind === 'object' ? [] : [...new Set([...current, ...rolesToUnassign])],
+		);
 		applyTypeChange(pendingTypeChange.type);
 		setPendingTypeChange(null);
 	};
@@ -593,7 +552,7 @@ const PropertyForm = ({
 	const onChangeCurrency = (event) => {
 		const currency = event.target.value;
 		updateValueType((type: DecimalType) => {
-			if (type.semantic !== 'money') {
+			if (type.semantics !== 'money') {
 				return;
 			}
 			if (currency === 'none') {
@@ -604,19 +563,9 @@ const PropertyForm = ({
 		});
 	};
 
-	const onChangeCountryFormat = (event) => {
-		const format = event.target.value as CountryFormat;
-		updateValueType((type: StringType) => {
-			if (type.semantic !== 'country') {
-				return;
-			}
-			type.format = format;
-		});
-	};
-
 	const onChangeMeasurementUnit = (event) => {
 		updateValueType((type: DecimalType) => {
-			if (type.semantic === 'measurement') {
+			if (type.semantics === 'measurement') {
 				type.unit = event.target.value;
 			}
 		});
@@ -624,8 +573,8 @@ const PropertyForm = ({
 	};
 
 	const onChangeDurationUnit = (event) => {
-		updateValueType((type: IntType) => {
-			if (type.semantic === 'duration') {
+		updateValueType((type: FloatType) => {
+			if (type.semantics === 'duration') {
 				type.unit = event.target.value;
 			}
 		});
@@ -654,7 +603,7 @@ const PropertyForm = ({
 			return;
 		}
 		try {
-			onSave(property, primarySource, assignedRole, descendantRolesToUnassign);
+			onSave(property, primarySource, propertyRole, descendantRolesToUnassign);
 		} catch (err) {
 			setNameError(err.message);
 			return;
@@ -664,16 +613,20 @@ const PropertyForm = ({
 			primarySource,
 			decimalTypeInputs,
 			numericRangeInputs,
-			assignedRole,
+			propertyRole,
 			descendantRolesToUnassign,
 		);
 		onDirtyChange?.(false);
 	};
 
 	const valueType = getPropertyValueType(property.type);
-	const showPercentageControls = valueType?.kind === 'decimal' && valueType.semantic === 'percentage';
-	const showStringConstraints =
-		valueType?.kind === 'string' && valueType.semantic !== 'country' && valueType.semantic !== 'phone';
+	const shouldShowPercentageControls =
+		canEditType && valueType?.kind === 'decimal' && valueType.semantics === 'percentage';
+	const shouldShowStringConstraints =
+		canEditType &&
+		valueType?.kind === 'string' &&
+		valueType.semantics !== 'country' &&
+		valueType.semantics !== 'phone';
 	let decimalDescription: string | null = null;
 	if (valueType?.kind === 'decimal' && checkDecimalType(valueType) == null) {
 		const scale = valueType.scale ?? 0;
@@ -685,21 +638,18 @@ const PropertyForm = ({
 	}
 	const selectedConnection = sourceConnections.find((connection) => connection.id === primarySource);
 	const selectedCurrencyOption =
-		valueType?.kind === 'decimal' && valueType.semantic === 'money'
+		valueType?.kind === 'decimal' && valueType.semantics === 'money'
 			? CURRENCY_OPTIONS.find((option) => option.code === valueType.currency)
 			: undefined;
-	const selectedMeasurementUnitOption =
-		valueType?.kind === 'decimal' && valueType.semantic === 'measurement'
-			? UNIT_OF_MEASURE_OPTIONS.find((option) => option.value === valueType.unit)
-			: undefined;
-	const selectedDurationUnitOption =
-		valueType?.kind === 'int' && valueType.semantic === 'duration'
-			? DURATION_UNIT_OPTIONS.find((option) => option.value === valueType.unit)
+	const selectedUnitOption =
+		(valueType?.kind === 'decimal' && valueType.semantics === 'measurement') ||
+		(valueType?.kind === 'float' && valueType.semantics === 'duration')
+			? UNIT_OPTIONS.find((option) => option.value === valueType.unit)
 			: undefined;
 	const propertyParentPath = propertyPaths[parentKey] ?? '';
 	const propertyPath = propertyParentPath === '' ? property.name : `${propertyParentPath}.${property.name}`;
-	const showAssignedRole = getCompatibleProfileRoles(property).length > 0 || assignedRole != null;
-	const reassignedRole = roleToReassign == null ? null : getProfileRole(roleToReassign);
+	const showPropertyRole = getCompatibleProfilePropertyRoles(property).length > 0 || propertyRole != null;
+	const reassignedRole = roleToReassign == null ? null : getProfilePropertyRole(roleToReassign);
 	let minimumPlaceholder = '';
 	let maximumPlaceholder = '';
 	let minimumTooltip: { content: string; label: string } | undefined;
@@ -727,57 +677,48 @@ const PropertyForm = ({
 	} else if (valueType?.kind === 'decimal') {
 		numericRangeStep = 10 ** -(valueType.scale ?? 0);
 	}
-	const numericRangeControls = isNumericType(valueType) ? (
-		<div className='property-form__numeric-range'>
-			<SlInput
-				className='property-form__minimum'
-				ref={canEditType ? undefined : removeReadOnlyTypeControlFromTabOrder}
-				size='small'
-				value={numericRangeInputs.minimum.value}
-				type='number'
-				readonly={!canEditType}
-				tabIndex={canEditType ? undefined : -1}
-				noSpinButtons={!canEditType}
-				step={numericRangeStep}
-				placeholder={minimumPlaceholder}
-				onPointerDown={canEditType ? undefined : preventReadOnlyTypeControlFocus}
-				onSlInput={(event) => onInputNumericRange('minimum', event)}
-			>
-				<PropertyFormLabel slot='label' tooltip={minimumTooltip}>
-					Min
-				</PropertyFormLabel>
-			</SlInput>
-			<span className='property-form__numeric-range-separator' aria-hidden='true'>
-				–
-			</span>
-			<SlInput
-				className='property-form__maximum'
-				ref={canEditType ? undefined : removeReadOnlyTypeControlFromTabOrder}
-				size='small'
-				value={numericRangeInputs.maximum.value}
-				type='number'
-				readonly={!canEditType}
-				tabIndex={canEditType ? undefined : -1}
-				noSpinButtons={!canEditType}
-				step={numericRangeStep}
-				placeholder={maximumPlaceholder}
-				onPointerDown={canEditType ? undefined : preventReadOnlyTypeControlFocus}
-				onSlInput={(event) => onInputNumericRange('maximum', event)}
-			>
-				<PropertyFormLabel slot='label' tooltip={maximumTooltip}>
-					Max
-				</PropertyFormLabel>
-			</SlInput>
-			{typeError?.location === 'numeric-range' && (
-				<PropertyFormError name='numeric-range'>{typeError.message}</PropertyFormError>
-			)}
-		</div>
-	) : null;
+	const numericRangeControls =
+		canEditType && isNumericType(valueType) ? (
+			<div className='property-form__numeric-range'>
+				<WaInput
+					className='property-form__minimum'
+					size='s'
+					value={numericRangeInputs.minimum.value}
+					type='number'
+					step={numericRangeStep}
+					placeholder={minimumPlaceholder}
+					onInput={(event) => onInputNumericRange('minimum', event)}
+				>
+					<PropertyFormLabel slot='label' tooltip={minimumTooltip}>
+						Min
+					</PropertyFormLabel>
+				</WaInput>
+				<span className='property-form__numeric-range-separator' aria-hidden='true'>
+					–
+				</span>
+				<WaInput
+					className='property-form__maximum'
+					size='s'
+					value={numericRangeInputs.maximum.value}
+					type='number'
+					step={numericRangeStep}
+					placeholder={maximumPlaceholder}
+					onInput={(event) => onInputNumericRange('maximum', event)}
+				>
+					<PropertyFormLabel slot='label' tooltip={maximumTooltip}>
+						Max
+					</PropertyFormLabel>
+				</WaInput>
+				{typeError?.location === 'numeric-range' && (
+					<PropertyFormError name='numeric-range'>{typeError.message}</PropertyFormError>
+				)}
+			</div>
+		) : null;
 
 	return (
 		<form className='property-form' id={formID} onSubmit={onSubmit}>
 			<div className='property-form__control property-form__control--name'>
-				<SlInput
+				<WaInput
 					className='property-form__name-input'
 					ref={nameInputRef}
 					value={property.name}
@@ -785,48 +726,48 @@ const PropertyForm = ({
 					name='name'
 					placeholder='first_name'
 					readonly={!isNameEditable}
-					onSlBlur={onBlurName}
-					onSlFocus={onFocusName}
-					onSlInput={onInputName}
-					onKeyDown={onKeyDownName}
+					onBlur={onBlurName}
+					onFocus={onFocusName}
+					onInput={onInputName}
 				>
 					<PropertyFormLabel slot='label' modified={fieldChanges?.name}>
 						Name
 					</PropertyFormLabel>
 					{isEditing && !isNameEditable && (
-						<SlButton
+						<WaButton
 							className='property-form__change-name'
-							size='small'
-							slot='suffix'
-							variant='text'
+							size='s'
+							slot='end'
+							variant='brand'
+							appearance='plain'
 							onPointerDown={(event) => event.preventDefault()}
 							onClick={onChangeName}
 						>
 							Change
-						</SlButton>
+						</WaButton>
 					)}
-				</SlInput>
+				</WaInput>
 				{nameError !== '' && <PropertyFormError name='name'>{nameError}</PropertyFormError>}
 			</div>
 			{showParent && parents != null && (
 				<div className='property-form__control'>
-					<SlSelect
+					<WaSelect
 						className='property-form__parent'
 						label='Add property to'
 						value={property.parentKey || '__root__'}
-						onSlChange={onChangeParent}
+						onChange={onChangeParent}
 					>
 						{parents.map((parent) => (
-							<SlOption key={parent.key || '__root__'} value={parent.key || '__root__'}>
+							<WaOption key={parent.key || '__root__'} value={parent.key || '__root__'}>
 								{parent.label}
-							</SlOption>
+							</WaOption>
 						))}
-					</SlSelect>
+					</WaSelect>
 				</div>
 			)}
 			<div
 				className={`property-form__control${
-					showPercentageControls ? ' property-form__control--percentage-type' : ''
+					shouldShowPercentageControls ? ' property-form__control--percentage-type' : ''
 				}`}
 			>
 				<div className='property-form__label'>
@@ -834,204 +775,129 @@ const PropertyForm = ({
 				</div>
 				<PropertyTypeSelector
 					key={typeSelectorRevision}
-					ref={typeSelectorRef}
 					type={property.type}
 					canEditType={canEditType}
 					onChange={onChangeType}
 				/>
-				{showPercentageControls && (
+				{shouldShowPercentageControls && (
 					<div className='property-form__percentage-description'>
-						<SlBadge className='property-form__percentage-badge' pill variant='neutral'>
+						<WaBadge className='property-form__percentage-badge' pill variant='neutral'>
 							<span className='property-form__percentage-badge-text'>0.9 represents 90%</span>
-						</SlBadge>
+						</WaBadge>
 					</div>
 				)}
 				{typeError?.location === 'type' && (
 					<PropertyFormError name='type'>{typeError.message}</PropertyFormError>
 				)}
 			</div>
-			{valueType?.kind === 'string' && valueType.semantic === 'country' && (
+			{valueType?.kind === 'string' && valueType.semantics === 'country' && (
 				<div className='property-form__constraints property-form__constraints--country'>
-					{canEditType ? (
-						<SlSelect
-							className='property-form__country-format'
-							size='small'
-							value={valueType.format}
-							onSlChange={onChangeCountryFormat}
-						>
-							<PropertyFormLabel slot='label'>Format</PropertyFormLabel>
-							<SlOption value='alpha-2'>2-letter ISO code</SlOption>
-							<SlOption value='alpha-3'>3-letter ISO code</SlOption>
-						</SlSelect>
-					) : (
-						<SlInput
-							className='property-form__country-format'
-							ref={removeReadOnlyTypeControlFromTabOrder}
-							size='small'
-							value={valueType.format === 'alpha-2' ? '2-letter ISO code' : '3-letter ISO code'}
-							readonly
-							tabIndex={-1}
-							onPointerDown={preventReadOnlyTypeControlFocus}
-						>
-							<PropertyFormLabel slot='label'>Format</PropertyFormLabel>
-						</SlInput>
-					)}
+					<div className='property-form__country-format'>
+						<div className='property-form__label'>Format</div>
+						<div className='property-form__value'>
+							{valueType.format === 'alpha-2' ? '2-letter ISO code' : '3-letter ISO code'}
+						</div>
+					</div>
 				</div>
 			)}
-			{showStringConstraints && (
+			{shouldShowStringConstraints && (
 				<div className='property-form__constraints property-form__constraints--length'>
-					<SlInput
-						ref={canEditType ? undefined : removeReadOnlyTypeControlFromTabOrder}
+					<WaInput
 						label='Max characters'
-						size='small'
+						size='s'
 						value={valueType.maxLength == null ? '' : String(valueType.maxLength)}
 						type='number'
-						readonly={!canEditType}
-						tabIndex={canEditType ? undefined : -1}
-						noSpinButtons={!canEditType}
 						min={1}
 						max={MAX_STRING_LENGTH}
 						step={1}
-						onPointerDown={canEditType ? undefined : preventReadOnlyTypeControlFocus}
-						onSlInput={onInputMaxLength}
+						onInput={onInputMaxLength}
 					/>
-					<SlInput
-						ref={canEditType ? undefined : removeReadOnlyTypeControlFromTabOrder}
+					<WaInput
 						label='Max bytes'
-						size='small'
+						size='s'
 						value={valueType.maxBytes == null ? '' : String(valueType.maxBytes)}
 						type='number'
-						readonly={!canEditType}
-						tabIndex={canEditType ? undefined : -1}
-						noSpinButtons={!canEditType}
 						min={1}
 						max={MAX_STRING_LENGTH}
 						step={1}
-						onPointerDown={canEditType ? undefined : preventReadOnlyTypeControlFocus}
-						onSlInput={onInputMaxBytes}
+						onInput={onInputMaxBytes}
 					/>
 					{typeError?.location === 'string-constraints' && (
 						<PropertyFormError name='string-constraints'>{typeError.message}</PropertyFormError>
 					)}
 				</div>
 			)}
-			{(valueType?.kind === 'int' || valueType?.kind === 'float') && valueType.semantic == null && (
-				<div
-					className={`property-form__constraints property-form__constraints--${
-						valueType.kind === 'int' ? 'integer' : 'float'
-					}`}
-				>
-					{valueType.kind === 'int' &&
-						(canEditType ? (
-							<SlRadioGroup
+			{canEditType &&
+				(valueType?.kind === 'int' || valueType?.kind === 'float') &&
+				valueType.semantics == null && (
+					<div
+						className={`property-form__constraints property-form__constraints--${
+							valueType.kind === 'int' ? 'integer' : 'float'
+						}`}
+					>
+						{valueType.kind === 'int' && (
+							<WaRadioGroup
 								className='property-form__integer-sign'
 								label='Sign'
-								size='small'
+								orientation='horizontal'
+								size='s'
 								value={valueType.unsigned ? 'unsigned' : 'signed'}
-								onSlChange={onUnsignedChange}
+								onChange={onUnsignedChange}
 							>
-								<SlRadioButton value='signed'>signed</SlRadioButton>
-								<SlRadioButton value='unsigned'>unsigned</SlRadioButton>
-							</SlRadioGroup>
-						) : (
-							<SlInput
-								className='property-form__integer-sign'
-								ref={removeReadOnlyTypeControlFromTabOrder}
-								label='Sign'
-								size='small'
-								value={valueType.unsigned ? 'unsigned' : 'signed'}
-								readonly
-								tabIndex={-1}
-								onPointerDown={preventReadOnlyTypeControlFocus}
-							/>
-						))}
-					{canEditType ? (
-						<SlSelect
+								<WaRadio appearance='button' value='signed'>
+									signed
+								</WaRadio>
+								<WaRadio appearance='button' value='unsigned'>
+									unsigned
+								</WaRadio>
+							</WaRadioGroup>
+						)}
+						<WaSelect
 							className='property-form__bit-size'
 							label={valueType.kind === 'int' ? 'Integer size' : 'Bit size'}
-							size='small'
+							size='s'
 							value={String(valueType.bitSize)}
-							onSlChange={onChangeBitSize}
+							onChange={onChangeBitSize}
 						>
 							{(valueType.kind === 'int' ? INT_BITSIZES : FLOAT_BITSIZES).map((bitSize) => (
-								<SlOption key={bitSize} value={bitSize}>
+								<WaOption key={bitSize} value={bitSize}>
 									{bitSize}-bit
-								</SlOption>
+								</WaOption>
 							))}
-						</SlSelect>
-					) : (
-						<SlInput
-							className='property-form__bit-size'
-							ref={removeReadOnlyTypeControlFromTabOrder}
-							label={valueType.kind === 'int' ? 'Integer size' : 'Bit size'}
-							size='small'
-							value={`${valueType.bitSize}-bit`}
-							readonly
-							tabIndex={-1}
-							onPointerDown={preventReadOnlyTypeControlFocus}
-						/>
-					)}
-					{valueType.kind === 'float' && (
-						<div
-							className={`property-form__float-special-values${
-								canEditType ? '' : ' property-form__float-special-values--read-only'
-							}`}
-							onClickCapture={
-								canEditType
-									? undefined
-									: (event) => {
-											event.preventDefault();
-											event.stopPropagation();
-										}
-							}
-							onPointerDownCapture={canEditType ? undefined : preventReadOnlyTypeControlFocus}
-						>
-							<SlCheckbox
-								ref={canEditType ? undefined : removeReadOnlyTypeControlFromTabOrder}
-								size='small'
-								checked={!valueType.real}
-								aria-readonly={!canEditType ? 'true' : undefined}
-								tabIndex={canEditType ? undefined : -1}
-								onSlChange={canEditType ? onRealChange : undefined}
-							>
-								<span className='property-form__float-special-values-label'>Allow ±Inf and NaN</span>
-							</SlCheckbox>
-						</div>
-					)}
-					{numericRangeControls}
-				</div>
-			)}
-			{valueType?.kind === 'decimal' && valueType.semantic == null && (
+						</WaSelect>
+						{valueType.kind === 'float' && (
+							<div className='property-form__float-special-values'>
+								<WaCheckbox size='s' checked={!valueType.real} onChange={onRealChange}>
+									<span className='property-form__float-special-values-label'>
+										Allow ±Inf and NaN
+									</span>
+								</WaCheckbox>
+							</div>
+						)}
+						{numericRangeControls}
+					</div>
+				)}
+			{canEditType && valueType?.kind === 'decimal' && valueType.semantics == null && (
 				<div className='property-form__constraints property-form__constraints--decimal'>
-					<SlInput
+					<WaInput
 						className='property-form__precision'
-						ref={canEditType ? undefined : removeReadOnlyTypeControlFromTabOrder}
 						label='Precision'
-						size='small'
+						size='s'
 						value={decimalTypeInputs.precision}
 						type='number'
-						readonly={!canEditType}
-						tabIndex={canEditType ? undefined : -1}
-						noSpinButtons={!canEditType}
 						max={MAX_DECIMAL_PRECISION}
 						maxlength={2}
-						onPointerDown={canEditType ? undefined : preventReadOnlyTypeControlFocus}
-						onSlInput={onInputPrecision}
+						onInput={onInputPrecision}
 					/>
-					<SlInput
+					<WaInput
 						className='property-form__scale'
-						ref={canEditType ? undefined : removeReadOnlyTypeControlFromTabOrder}
 						label='Scale'
-						size='small'
+						size='s'
 						value={decimalTypeInputs.scale}
 						type='number'
-						readonly={!canEditType}
-						tabIndex={canEditType ? undefined : -1}
-						noSpinButtons={!canEditType}
 						max={MAX_DECIMAL_SCALE}
 						maxlength={2}
-						onPointerDown={canEditType ? undefined : preventReadOnlyTypeControlFocus}
-						onSlInput={onInputScale}
+						onInput={onInputScale}
 					/>
 					{typeError?.location === 'decimal-constraints' ? (
 						<PropertyFormError name='decimal-constraints'>{typeError.message}</PropertyFormError>
@@ -1041,110 +907,91 @@ const PropertyForm = ({
 					{numericRangeControls}
 				</div>
 			)}
-			{valueType?.kind === 'decimal' && valueType.semantic === 'money' && (
+			{valueType?.kind === 'decimal' && valueType.semantics === 'money' && (
 				<div className='property-form__constraints property-form__constraints--money'>
 					{canEditType ? (
-						<SlSelect
+						<WaSelect
 							className='property-form__currency'
-							size='small'
+							size='s'
 							value={valueType.currency || 'none'}
-							onSlChange={onChangeCurrency}
+							onChange={onChangeCurrency}
 						>
 							<PropertyFormLabel slot='label'>Currency</PropertyFormLabel>
-							<SlOption value='none'>No currency specified</SlOption>
-							<SlDivider />
+							<WaOption value='none'>No currency specified</WaOption>
+							<WaDivider />
 							{CURRENCY_OPTIONS.map((option, index) => (
 								<React.Fragment key={option.code}>
-									{index === COMMON_CURRENCY_OPTION_COUNT && <SlDivider />}
-									<SlOption value={option.code}>
+									{index === COMMON_CURRENCY_OPTION_COUNT && <WaDivider />}
+									<WaOption value={option.code}>
 										<span className='property-form__currency-option-code'>{option.code}</span>
 										<span className='property-form__currency-option-separator'> · </span>
 										<span>{option.name}</span>
 										{option.symbol != null && (
-											<span className='property-form__currency-option-symbol' slot='suffix'>
+											<span className='property-form__currency-option-symbol' slot='end'>
 												{option.symbol}
 											</span>
 										)}
-									</SlOption>
+									</WaOption>
 								</React.Fragment>
 							))}
-						</SlSelect>
+						</WaSelect>
 					) : (
-						<SlInput
-							className='property-form__currency'
-							ref={removeReadOnlyTypeControlFromTabOrder}
-							size='small'
-							value={
-								selectedCurrencyOption == null
+						<div className='property-form__currency'>
+							<div className='property-form__label'>Currency</div>
+							<div className='property-form__value'>
+								{selectedCurrencyOption == null
 									? 'No currency specified'
-									: `${selectedCurrencyOption.code} · ${selectedCurrencyOption.name}`
-							}
-							readonly
-							tabIndex={-1}
-							onPointerDown={preventReadOnlyTypeControlFocus}
-						>
-							<PropertyFormLabel slot='label'>Currency</PropertyFormLabel>
-							{selectedCurrencyOption?.symbol != null && (
-								<span className='property-form__currency-option-symbol' slot='suffix'>
-									{selectedCurrencyOption.symbol}
-								</span>
-							)}
-						</SlInput>
+									: `${selectedCurrencyOption.code} · ${selectedCurrencyOption.name}`}
+							</div>
+						</div>
 					)}
 					{numericRangeControls}
 				</div>
 			)}
-			{showPercentageControls && (
+			{shouldShowPercentageControls && (
 				<div className='property-form__constraints property-form__constraints--percentage'>
 					{numericRangeControls}
 				</div>
 			)}
-			{valueType?.kind === 'decimal' && valueType.semantic === 'measurement' && (
+			{valueType?.kind === 'decimal' && valueType.semantics === 'measurement' && (
 				<div className='property-form__constraints property-form__constraints--measurement'>
 					{canEditType ? (
-						<SlSelect
+						<WaSelect
 							className='property-form__measurement-unit'
-							size='small'
+							size='s'
 							value={valueType.unit}
 							placeholder='Select a unit...'
-							onSlChange={onChangeMeasurementUnit}
+							onChange={onChangeMeasurementUnit}
 						>
 							<PropertyFormLabel slot='label'>Unit</PropertyFormLabel>
-							{!valueType.unit && (
-								<SlOption className='property-form__unit-placeholder' value='' disabled />
+							{(valueType.unit == null || valueType.unit.length === 0) && (
+								<WaOption className='property-form__unit-placeholder' value='' disabled />
 							)}
-							{UNIT_OF_MEASURE_OPTIONS.map((option, index) => (
+							{UNIT_OPTIONS.map((option, index) => (
 								<React.Fragment key={option.value}>
-									{option.groupLabel != null && index > 0 && <SlDivider />}
+									{option.groupLabel != null && index > 0 && <WaDivider />}
 									{option.groupLabel != null && (
 										<div className='property-form__unit-option-group' role='presentation'>
 											{option.groupLabel}
 										</div>
 									)}
-									<SlOption value={option.value}>
+									<WaOption value={option.value}>
 										<span>{option.label}</span>
 										<span className='property-form__unit-option-separator'> · </span>
-										<span className='property-form__unit-option-symbol'>{option.value}</span>
-									</SlOption>
+										<span className='property-form__unit-option-symbol'>{option.symbol}</span>
+									</WaOption>
 								</React.Fragment>
 							))}
-						</SlSelect>
+						</WaSelect>
 					) : (
-						<SlInput
-							className='property-form__measurement-unit'
-							ref={removeReadOnlyTypeControlFromTabOrder}
-							size='small'
-							value={
-								selectedMeasurementUnitOption == null
+						<div className='property-form__measurement-unit'>
+							<div className='property-form__label'>Unit</div>
+							<div className='property-form__value'>
+								{selectedUnitOption == null
 									? ''
-									: `${selectedMeasurementUnitOption.label} · ${selectedMeasurementUnitOption.value}`
-							}
-							readonly
-							tabIndex={-1}
-							onPointerDown={preventReadOnlyTypeControlFocus}
-						>
-							<PropertyFormLabel slot='label'>Unit</PropertyFormLabel>
-						</SlInput>
+									: `${selectedUnitOption.label} · ${selectedUnitOption.symbol}`}
+							</div>
+						</div>
 					)}
 					{typeError?.location === 'measurement-unit' && (
 						<PropertyFormError name='measurement-unit'>{typeError.message}</PropertyFormError>
@@ -1152,92 +999,87 @@ const PropertyForm = ({
 					{numericRangeControls}
 				</div>
 			)}
-			{valueType?.kind === 'int' && valueType.semantic === 'duration' && (
+			{valueType?.kind === 'float' && valueType.semantics === 'duration' && (
 				<div className='property-form__constraints property-form__constraints--duration'>
 					{canEditType ? (
-						<SlSelect
+						<WaSelect
 							className='property-form__duration-unit'
-							size='small'
+							size='s'
 							value={valueType.unit}
 							placeholder='Select a unit...'
-							onSlChange={onChangeDurationUnit}
+							onChange={onChangeDurationUnit}
 						>
 							<PropertyFormLabel slot='label'>Unit</PropertyFormLabel>
-							{!valueType.unit && (
-								<SlOption className='property-form__unit-placeholder' value='' disabled />
+							{(valueType.unit == null || valueType.unit.length === 0) && (
+								<WaOption className='property-form__unit-placeholder' value='' disabled />
 							)}
 							{DURATION_UNIT_OPTIONS.map((option) => (
-								<SlOption key={option.value} value={option.value}>
+								<WaOption key={option.value} value={option.value}>
 									<span>{option.label}</span>
 									<span className='property-form__unit-option-separator'> · </span>
 									<span className='property-form__unit-option-symbol'>{option.symbol}</span>
-								</SlOption>
+								</WaOption>
 							))}
-						</SlSelect>
+						</WaSelect>
 					) : (
-						<SlInput
-							className='property-form__duration-unit'
-							ref={removeReadOnlyTypeControlFromTabOrder}
-							size='small'
-							value={
-								selectedDurationUnitOption == null
+						<div className='property-form__duration-unit'>
+							<div className='property-form__label'>Unit</div>
+							<div className='property-form__value'>
+								{selectedUnitOption == null
 									? ''
-									: `${selectedDurationUnitOption.label} · ${selectedDurationUnitOption.symbol}`
-							}
-							readonly
-							tabIndex={-1}
-							onPointerDown={preventReadOnlyTypeControlFocus}
-						>
-							<PropertyFormLabel slot='label'>Unit</PropertyFormLabel>
-						</SlInput>
+									: `${selectedUnitOption.label} · ${selectedUnitOption.symbol}`}
+							</div>
+						</div>
 					)}
 					{typeError?.location === 'duration-unit' && (
 						<PropertyFormError name='duration-unit'>{typeError.message}</PropertyFormError>
 					)}
 				</div>
 			)}
-			{showAssignedRole && (
-				<div className='property-form__control property-form__assigned-role'>
+			{showPropertyRole && (
+				<div className='property-form__control property-form__role'>
 					<div className='property-form__label'>
-						<PropertyFormLabel modified={fieldChanges?.profileRole}>
-							Assigned role <span className='property-form__optional-label'>(optional)</span>
+						<PropertyFormLabel
+							modified={fieldChanges?.propertyRole}
+							tooltip={{
+								content: 'Specifies which profile concept this property represents.',
+								label: 'About roles',
+							}}
+						>
+							Role <span className='property-form__optional-label'>(optional)</span>
 						</PropertyFormLabel>
 					</div>
-					<div className='property-form__assigned-role-description'>
-						Specifies which profile concept this property represents.
-					</div>
-					<ProfileRoleSelector
-						assignedRole={assignedRole}
-						assignedRoles={assignedRoles}
-						onChange={onChangeAssignedRole}
+					<PropertyRoleSelector
+						propertyRole={propertyRole}
+						propertyRoles={propertyRoles}
+						onChange={onChangePropertyRole}
 						property={property}
 						propertyPaths={propertyPaths}
 					/>
 				</div>
 			)}
-			<SlInput
+			<WaInput
 				className='property-form__control property-form__display-name'
 				value={property.displayName || ''}
 				name='displayName'
 				placeholder='First name'
-				onSlInput={onInputDisplayName}
+				onInput={onInputDisplayName}
 			>
 				<PropertyFormLabel slot='label' modified={fieldChanges?.displayName}>
 					Display name <span className='property-form__optional-label'>(optional)</span>
 				</PropertyFormLabel>
-			</SlInput>
-			<SlTextarea
+			</WaInput>
+			<WaTextarea
 				className='property-form__control property-form__description'
-				ref={disableShoelaceTextareaHeightReset}
 				value={property.description || ''}
 				name='description'
 				placeholder='Describe what this property represents…'
-				onSlInput={onInputDescription}
+				onInput={onInputDescription}
 			>
 				<PropertyFormLabel slot='label' modified={fieldChanges?.description}>
 					Description <span className='property-form__optional-label'>(optional)</span>
 				</PropertyFormLabel>
-			</SlTextarea>
+			</WaTextarea>
 			{showIdentityResolution && (
 				<div className='property-form__control'>
 					<div className='property-form__label'>
@@ -1260,16 +1102,16 @@ const PropertyForm = ({
 							<div className='property-form__empty-value'>No source connections are available.</div>
 						</>
 					) : (
-						<SlSelect
+						<WaSelect
 							className='property-form__primary-source'
 							value={primarySource == null ? 'none' : primarySource}
 							name='primary-source'
-							onSlChange={onChangePrimarySource}
+							onChange={onChangePrimarySource}
 						>
 							<PropertyFormLabel slot='label' modified={fieldChanges?.primarySource}>
 								<SchemaPropertyPrimarySourceLabel />
 							</PropertyFormLabel>
-							<div slot='prefix'>
+							<div slot='start'>
 								{selectedConnection != null && (
 									<LittleLogo
 										code={selectedConnection.connector.code}
@@ -1277,16 +1119,16 @@ const PropertyForm = ({
 									/>
 								)}
 							</div>
-							<SlOption value='none'>No primary source</SlOption>
+							<WaOption value='none'>No primary source</WaOption>
 							{sourceConnections.map((connection) => (
-								<SlOption key={connection.id} value={connection.id}>
-									<div slot='prefix'>
+								<WaOption key={connection.id} value={connection.id}>
+									<div slot='start'>
 										<LittleLogo code={connection.connector.code} path={CONNECTORS_ASSETS_PATH} />
 									</div>
 									{connection.name}
-								</SlOption>
+								</WaOption>
 							))}
-						</SlSelect>
+						</WaSelect>
 					)}
 				</div>
 			)}
@@ -1296,22 +1138,24 @@ const PropertyForm = ({
 				title='Reassign role?'
 				actions={
 					<>
-						<SlButton onClick={() => setRoleToReassign(null)}>Cancel</SlButton>
-						<SlButton variant='primary' onClick={onConfirmReassign}>
+						<WaButton appearance='outlined' onClick={() => setRoleToReassign(null)}>
+							Cancel
+						</WaButton>
+						<WaButton variant='brand' onClick={onConfirmReassign}>
 							Reassign
-						</SlButton>
+						</WaButton>
 					</>
 				}
 			>
 				{reassignedRole != null && (
 					<p>
 						{reassignedRole.label} is currently assigned to{' '}
-						<code>{propertyPaths[assignedRoles[reassignedRole.id]]}</code>. Reassign the{' '}
+						<code>{propertyPaths[propertyRoles[reassignedRole.id]]}</code>. Reassign the{' '}
 						{reassignedRole.label} role to <code>{propertyPath}</code>?
-						{assignedRole != null && assignedRole !== reassignedRole.id && (
+						{propertyRole != null && propertyRole !== reassignedRole.id && (
 							<>
 								{' '}
-								This will remove the <code>{getProfileRole(assignedRole).label}</code> role from{' '}
+								This will remove the <code>{getProfilePropertyRole(propertyRole).label}</code> role from{' '}
 								<code>{propertyPath}</code>.
 							</>
 						)}
@@ -1324,10 +1168,12 @@ const PropertyForm = ({
 				title='Change type?'
 				actions={
 					<>
-						<SlButton onClick={() => setPendingTypeChange(null)}>Cancel</SlButton>
-						<SlButton variant='primary' onClick={onConfirmTypeChange}>
+						<WaButton appearance='outlined' onClick={() => setPendingTypeChange(null)}>
+							Cancel
+						</WaButton>
+						<WaButton variant='brand' onClick={onConfirmTypeChange}>
 							Change type
-						</SlButton>
+						</WaButton>
 					</>
 				}
 			>
@@ -1363,7 +1209,7 @@ const PropertyFormLabel = ({
 const PropertyFormError = ({ name, children }: { name: string; children: React.ReactNode }) => {
 	return (
 		<div className='property-form__control-error' data-error-on={name}>
-			<SlIcon name='exclamation-circle' />
+			<WaIcon name='exclamation-circle' />
 			{children}
 		</div>
 	);
@@ -1374,15 +1220,15 @@ const propertyFormStateKey = (
 	primarySource: string | null,
 	decimalTypeInputs: DecimalTypeInputs,
 	numericRangeInputs: NumericRangeInputs,
-	assignedRole: ProfileRoleID | null,
-	rolesToUnassign: readonly ProfileRoleID[],
+	propertyRole: ProfilePropertyRoleID | null,
+	rolesToUnassign: readonly ProfilePropertyRoleID[],
 ): string => {
 	return JSON.stringify({
 		property,
 		primarySource,
 		decimalTypeInputs,
 		numericRangeInputs,
-		assignedRole,
+		propertyRole,
 		rolesToUnassign,
 	});
 };
@@ -1396,7 +1242,7 @@ const validatePropertyType = (
 		return { location: 'type', message: 'Type cannot be empty' };
 	}
 	const type = getPropertyValueType(property.type);
-	if (type.kind === 'decimal' && type.semantic === 'measurement' && !type.unit) {
+	if (type.kind === 'decimal' && type.semantics === 'measurement' && (type.unit == null || type.unit.length === 0)) {
 		return { location: 'measurement-unit', message: 'Unit is required' };
 	}
 	if (type.kind === 'string') {
@@ -1425,7 +1271,7 @@ const validatePropertyType = (
 			return error;
 		}
 	}
-	if (type.kind === 'int' && type.semantic === 'duration' && !type.unit) {
+	if (type.kind === 'float' && type.semantics === 'duration' && (type.unit == null || type.unit.length === 0)) {
 		return { location: 'duration-unit', message: 'Unit is required' };
 	}
 	return null;
@@ -1601,8 +1447,8 @@ const isNumericType = (type: Type | null | undefined): type is NumericType => {
 	return type?.kind === 'int' || type?.kind === 'float' || type?.kind === 'decimal';
 };
 
-const hasSemanticDecimalRange = (semantic?: Semantic): boolean => {
-	return semantic === 'money' || semantic === 'percentage' || semantic === 'measurement';
+const hasSemanticsDecimalRange = (semantics?: Semantics): boolean => {
+	return semantics === 'money' || semantics === 'percentage' || semantics === 'measurement';
 };
 
 const validatePropertyName = (name: string) => {

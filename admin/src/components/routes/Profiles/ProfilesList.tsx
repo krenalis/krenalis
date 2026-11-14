@@ -1,15 +1,16 @@
 import React, { useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import ProfilesContext from '../../../context/ProfilesContext';
 import AlertDialog from '../../base/AlertDialog/AlertDialog';
+import { ErrorNotice } from '../../base/ErrorNotice/ErrorNotice';
 import Grid from '../../base/Grid/Grid';
 import { GridRef } from '../../base/Grid/Grid.types';
 import { GridKeyboardHints } from '../../base/Grid/GridKeyboardHints';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import SlCheckbox from '@shoelace-style/shoelace/dist/react/checkbox/index.js';
-import SlDropdown from '@shoelace-style/shoelace/dist/react/dropdown/index.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
-import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
-import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaCheckbox from '@awesome.me/webawesome/dist/react/checkbox/index.js';
+import WaDropdown from '@awesome.me/webawesome/dist/react/dropdown/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
+import WaInput from '@awesome.me/webawesome/dist/react/input/index.js';
+import WaSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
 import { arrayMove } from '@dnd-kit/sortable';
 import { ProfileDrawer } from './ProfileDrawer';
 import { useProfilesGrid } from './useProfilesGrid';
@@ -19,6 +20,7 @@ import { RelativeTime } from '../../base/RelativeTime/RelativeTime';
 import { formatNumber } from '../../../utils/formatNumber';
 import { ProfilesPagination } from './ProfilesPagination';
 import { ProfilesFilters } from './ProfilesFilters';
+import { getPropertyPathDisplayValue } from '../../helpers/getPropertyPathDisplayValue';
 
 const ProfilesList = () => {
 	const [isLoadingIdentityResolution, setIsLoadingIdentityResolution] = useState<boolean>(false);
@@ -26,12 +28,10 @@ const ProfilesList = () => {
 	const [secondsSinceIRStart, setSecondsSinceIRStart] = useState<number>();
 	const [latestIRExecutionEnd, setLastIRExecutionEnd] = useState<string>();
 	const [columnSearch, setColumnSearch] = useState('');
-	const [askSchemaResetConfirmation, setAskSchemaResetConfirmation] = useState(false);
 
 	const { api, handleError, workspaces, selectedWorkspace } = useContext(AppContext);
 	const {
 		appliedFilter,
-		previewProfilesFilter,
 		showProfilesFilter,
 		profiles,
 		profilesTotal,
@@ -39,6 +39,7 @@ const ProfilesList = () => {
 		profileSchema,
 		profileSchemaProperties,
 		isLoading,
+		isApplyingFilter,
 		isBoundaryLoading,
 		profilesFirst,
 		profilesLimit,
@@ -48,6 +49,7 @@ const ProfilesList = () => {
 		hasNextPage,
 		activeProfileID,
 		isProfileSchemaNotAligned,
+		profileSchemaErrorMessage,
 		goToProfilesPage,
 		navigateProfile,
 		refreshProfiles,
@@ -56,20 +58,20 @@ const ProfilesList = () => {
 		setProfilesPageSize,
 		updateProfilesProperties,
 	} = useContext(ProfilesContext);
-	const assignedRoles = useMemo(
-		() => workspaces.find((workspace) => workspace.id === selectedWorkspace)?.assignedRoles,
+	const propertyRoles = useMemo(
+		() => workspaces.find((workspace) => workspace.id === selectedWorkspace)?.profileSchema.propertyRoles,
 		[workspaces, selectedWorkspace],
 	);
-	const countryType = profileSchemaProperties[assignedRoles?.country ?? '']?.type;
+	const countryType = profileSchemaProperties[propertyRoles?.country ?? '']?.type;
 	const countryFormat =
-		countryType?.kind === 'string' && countryType.semantic === 'country' ? countryType.format : undefined;
+		countryType?.kind === 'string' && countryType.semantics === 'country' ? countryType.format : undefined;
 	const gridRef = useRef<GridRef>(null);
 	const [filterGridActionContainer, setFilterGridActionContainer] = useState<HTMLDivElement | null>(null);
 	const { profilesRows, profileColumns } = useProfilesGrid(
 		profiles,
 		profilesProperties,
 		profilesProjection,
-		assignedRoles,
+		propertyRoles,
 		countryFormat,
 		activeProfileID,
 		setActiveProfileID,
@@ -77,6 +79,8 @@ const ProfilesList = () => {
 	const isGridKeyboardNavigationEnabled = !isLoading && profilesRows.length > 0;
 	const isIdentityResolutionRunning = secondsSinceIRStart != null;
 	const gridResultsLabel = `${formatNumber(profilesTotal)} ${profilesTotal === 1 ? 'profile' : 'profiles'}`;
+	const schemaErrorMessage = profileSchemaErrorMessage?.trim();
+	const missingProperty = schemaErrorMessage?.match(/^«(.+)» property no longer exists$/)?.[1];
 
 	const inspectProfiles = useCallback(() => {
 		requestAnimationFrame(() => gridRef.current?.focus());
@@ -199,38 +203,59 @@ const ProfilesList = () => {
 	return (
 		<div className='profiles-list'>
 			{isProfileSchemaNotAligned && (
-				<div className='profiles-list__stale-notice' role='status'>
-					<span>The profile schema is no longer compatible with this view.</span>
-					<SlButton size='small' onClick={() => setAskSchemaResetConfirmation(true)}>
-						Reset view
-					</SlButton>
-				</div>
+				<ErrorNotice
+					className='profiles-list__stale-notice'
+					title='The profile schema has changed.'
+					description={
+						missingProperty != null ? (
+							<>
+								The property{' '}
+								<strong>
+									{getPropertyPathDisplayValue(
+										missingProperty,
+										(path) => profileSchemaProperties[path],
+									)}
+								</strong>{' '}
+								no longer exists. Your filters need to be cleared to continue.
+							</>
+						) : schemaErrorMessage != null && schemaErrorMessage !== '' ? (
+							`${schemaErrorMessage}${schemaErrorMessage.endsWith('.') ? '' : '.'} Your filters need to be cleared to continue.`
+						) : (
+							'Your current filters are no longer compatible. Clear them to continue.'
+						)
+					}
+					action={
+						<WaButton appearance='outlined' size='m' onClick={resetProfilesSchema}>
+							Clear all filters
+						</WaButton>
+					}
+				/>
 			)}
 			<div className='profiles-list__page-header'>
 				<div>
 					<h1>Profiles</h1>
 				</div>
 				<div className='profiles-list__identity-resolution'>
-					<SlButton
+					<WaButton
 						onClick={() => setAskResolveIdentitiesConfirmation(true)}
-						variant='primary'
+						variant='brand'
 						disabled={isLoadingIdentityResolution || isIdentityResolutionRunning}
 						className='profiles-list__identity-resolution-button'
 					>
 						{isLoadingIdentityResolution || isIdentityResolutionRunning ? (
-							<SlSpinner className='profiles-list__identity-resolution-spinner' slot='prefix' />
+							<WaSpinner className='profiles-list__identity-resolution-spinner' slot='start' />
 						) : (
-							<SlIcon slot='prefix' name='play' />
+							<WaIcon slot='start' name='play' />
 						)}
-						{isIdentityResolutionRunning ? 'Identity Resolution' : 'Run Profile Unification'}
-					</SlButton>
+						{isIdentityResolutionRunning ? 'Identity resolution' : 'Run identity resolution'}
+					</WaButton>
 					{(isIdentityResolutionRunning || latestIRExecutionEnd) && (
 						<div className='profiles-list__identity-resolution-progress'>
 							{isIdentityResolutionRunning ? (
 								<div className='profiles-list__identity-resolution-since-start'>{`Progress: ${String(secondsSinceIRStart)}s`}</div>
 							) : (
 								<div className='profiles-list__identity-resolution-end-time'>
-									<span>Latest Identity Resolution:</span>
+									<span>Last run:</span>
 									<RelativeTime date={latestIRExecutionEnd} />
 								</div>
 							)}
@@ -245,9 +270,7 @@ const ProfilesList = () => {
 						appliedFilter={appliedFilter}
 						gridActionContainer={filterGridActionContainer}
 						onInspectProfiles={inspectProfiles}
-						onPreview={previewProfilesFilter}
 						onShow={showProfilesFilter}
-						profilesTotal={isLoading ? undefined : profilesTotal}
 						schema={profileSchema}
 						schemaProperties={profileSchemaProperties}
 					/>
@@ -258,45 +281,55 @@ const ProfilesList = () => {
 							<div className='profiles-list__grid-summary-group'>
 								<div className='profiles-list__grid-summary'>
 									<span className='profiles-list__grid-summary-content'>
-										<SlIcon name='people' aria-hidden='true' />
+										<WaIcon name='people' aria-hidden='true' />
 										<span>{gridResultsLabel}</span>
 									</span>
 									<span className='profiles-list__grid-summary-sweep' aria-hidden='true'>
-										<SlIcon name='people' />
+										<WaIcon name='people' />
 										<span>{gridResultsLabel}</span>
 									</span>
 								</div>
 								<div ref={setFilterGridActionContainer} className='profiles-list__filter-grid-action' />
 							</div>
 							<div className='profiles-list__toolbar-actions'>
-								<SlButton size='small' onClick={refreshProfiles} disabled={isLoading}>
-									<SlIcon slot='prefix' name='arrow-clockwise' />
+								<WaButton
+									appearance='outlined'
+									size='s'
+									onClick={refreshProfiles}
+									disabled={isLoading || isApplyingFilter}
+								>
+									<WaIcon slot='start' name='arrow-clockwise' />
 									Refresh
-								</SlButton>
-								<SlDropdown
-									stayOpenOnSelect={true}
+								</WaButton>
+								<WaDropdown
 									className='profiles-list__toggle-columns'
 									placement='bottom-end'
 									distance={8}
 								>
-									<SlButton className='profiles-list__toolbar-button' slot='trigger' size='small'>
-										<SlIcon slot='prefix' name='layout-three-columns' />
+									<WaButton
+										appearance='outlined'
+										className='profiles-list__toolbar-button'
+										slot='trigger'
+										size='s'
+										disabled={isApplyingFilter}
+									>
+										<WaIcon slot='start' name='layout-three-columns' />
 										Columns
-									</SlButton>
+									</WaButton>
 									<div className='profiles-list__column-chooser'>
 										<div className='profiles-list__column-chooser-header'>
-											<SlInput
+											<WaInput
 												className='profiles-list__column-chooser-search'
-												size='small'
+												size='s'
 												label='Search columns'
 												placeholder='Search columns...'
-												clearable
+												withClear
 												value={columnSearch}
-												onSlInput={(event: any) => setColumnSearch(event.target.value)}
+												onInput={(event: any) => setColumnSearch(event.target.value)}
 											>
-												<SlIcon slot='prefix' name='search' />
-												<SlIcon slot='clear-icon' name='backspace' />
-											</SlInput>
+												<WaIcon slot='start' name='search' />
+												<WaIcon slot='clear-icon' name='backspace' />
+											</WaInput>
 										</div>
 										<div
 											className='profiles-list__column-chooser-list'
@@ -308,15 +341,15 @@ const ProfilesList = () => {
 													usedProperties.length === 1 &&
 													usedProperties[0].name === property.name;
 												return (
-													<SlCheckbox
+													<WaCheckbox
 														className='profiles-list__column-chooser-option'
 														key={property.name}
-														onSlChange={() => onToggleColumn(property.name)}
+														onChange={() => onToggleColumn(property.name)}
 														checked={property.isUsed}
-														disabled={isLastUsed}
+														disabled={isLastUsed || isApplyingFilter}
 													>
 														{property.label}
-													</SlCheckbox>
+													</WaCheckbox>
 												);
 											})}
 											{matchingProfileProperties.length === 0 && (
@@ -326,7 +359,7 @@ const ProfilesList = () => {
 											)}
 										</div>
 									</div>
-								</SlDropdown>
+								</WaDropdown>
 							</div>
 						</div>
 						<Grid
@@ -351,7 +384,7 @@ const ProfilesList = () => {
 							<ProfilesPagination
 								first={profilesFirst}
 								hasNext={hasNextPage}
-								isLoading={isLoading}
+								isLoading={isLoading || isApplyingFilter}
 								limit={profilesLimit}
 								onFirstChange={goToProfilesPage}
 								onLimitChange={setProfilesPageSize}
@@ -369,42 +402,18 @@ const ProfilesList = () => {
 					)}
 				</div>
 			</div>
-			{askSchemaResetConfirmation && (
-				<AlertDialog
-					isOpen={askSchemaResetConfirmation}
-					onClose={() => setAskSchemaResetConfirmation(false)}
-					title='Reset profile view?'
-					actions={
-						<>
-							<SlButton onClick={() => setAskSchemaResetConfirmation(false)}>Cancel</SlButton>
-							<SlButton
-								variant='primary'
-								onClick={() => {
-									setAskSchemaResetConfirmation(false);
-									resetProfilesSchema();
-								}}
-							>
-								Reset view
-							</SlButton>
-						</>
-					}
-				>
-					<p>
-						This reloads the profile schema and clears the applied filter, draft, filter history, and
-						selection.
-					</p>
-				</AlertDialog>
-			)}
 			<AlertDialog
 				isOpen={askRunIRConfirmation}
 				onClose={() => setAskResolveIdentitiesConfirmation(false)}
 				title='Processing time notice'
 				actions={
 					<>
-						<SlButton onClick={() => setAskResolveIdentitiesConfirmation(false)}>Cancel</SlButton>
-						<SlButton variant='primary' onClick={onStartIdentityResolution}>
-							Run Profile Unification
-						</SlButton>
+						<WaButton appearance='outlined' onClick={() => setAskResolveIdentitiesConfirmation(false)}>
+							Cancel
+						</WaButton>
+						<WaButton variant='brand' onClick={onStartIdentityResolution}>
+							Run identity resolution
+						</WaButton>
 					</>
 				}
 			>

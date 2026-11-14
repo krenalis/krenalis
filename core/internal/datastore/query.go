@@ -34,10 +34,12 @@ type Query struct {
 	// must satisfy.
 	Where *state.Where
 
-	// OrderBy contains the property paths by which the returned rows are ordered.
+	// OrderBy contains the paths of the properties by which the returned rows
+	// are ordered, in order of precedence.
 	OrderBy []string
 
-	// OrderDesc applies descending order to every OrderBy property.
+	// OrderDesc, when true and OrderBy is provided, orders the returned records
+	// in descending order instead of ascending order.
 	OrderDesc bool
 
 	// First is the index of the first returned record and must be >= 0.
@@ -52,7 +54,8 @@ type Query struct {
 // "exists" and "does not exist" operators are mapped to warehouses.OpIsNotNull
 // and warehouses.OpIsNull, respectively. For object properties, "exists"
 // matches if any descendant column is non-null, while "does not exist" matches
-// if all descendant columns are null.
+// if all descendant columns are null. For "is true" and "is false" on JSON,
+// path segments after the column are stored in warehouses.BaseExpr.Keys.
 func convertWhere(where *state.Where, columnByProperty map[string]warehouses.Column) (warehouses.Expr, error) {
 
 	if where == nil {
@@ -106,6 +109,21 @@ func convertWhere(where *state.Where, columnByProperty map[string]warehouses.Col
 				}
 				expr.Operands[i] = warehouses.NewBaseExpr(column, op, rule.Values...)
 				continue
+			}
+			if len(rule.Property) > 1 && (rule.Operator == state.OpIsTrue || rule.Operator == state.OpIsFalse) {
+				parentPath := path
+				for n := len(rule.Property) - 1; n > 0; n-- {
+					parentPath = parentPath[:len(parentPath)-len(rule.Property[n])-1]
+					if column, ok := columnByProperty[parentPath]; ok && column.Type.IsJSON() {
+						operand := warehouses.NewBaseExpr(column, warehouses.Operator(rule.Operator))
+						operand.Keys = rule.Property[n:]
+						expr.Operands[i] = operand
+						break
+					}
+				}
+				if expr.Operands[i] != nil {
+					continue
+				}
 			}
 			var descendantColumns []warehouses.Column
 			n := len(path)

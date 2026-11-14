@@ -1,12 +1,13 @@
 import React, { useState, useContext, useEffect } from 'react';
 import PipelineContext from '../../../context/PipelineContext';
 import AppContext from '../../../context/AppContext';
-import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import SlIconButton from '@shoelace-style/shoelace/dist/react/icon-button/index.js';
+import WaInput from '@awesome.me/webawesome/dist/react/input/index.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import { PipelineIssues } from './PipelineIssues';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
 import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
+import { RequiredConsentsError } from '../../../lib/core/pipeline';
 
 const PipelineHeader = () => {
 	const [isNameEditable, setIsNameEditable] = useState(false);
@@ -29,6 +30,7 @@ const PipelineHeader = () => {
 		onClose,
 		issues,
 		showIssues,
+		handleRequiredConsentsError,
 	} = useContext(PipelineContext);
 
 	useEffect(() => {
@@ -80,7 +82,11 @@ const PipelineHeader = () => {
 					}, 500);
 				});
 			} else {
-				handleError(err);
+				if (err instanceof RequiredConsentsError) {
+					handleRequiredConsentsError();
+				} else {
+					handleError(err);
+				}
 				setIsSaving(false);
 			}
 		}, 200);
@@ -105,18 +111,30 @@ const PipelineHeader = () => {
 				<div className='pipeline__header-name'>
 					{isNameEditable ? (
 						<span>
-							<SlInput
+							<WaInput
 								className='pipeline__header-name-input'
 								value={pipeline != null ? pipeline.name : pipelineType.name}
-								onSlInput={onUpdateName}
+								onInput={onUpdateName}
 								maxlength={60}
-							></SlInput>
-							<SlIconButton name='check-lg' label='Confirm' onClick={() => setIsNameEditable(false)} />
+							></WaInput>
+							<WaButton
+								className='icon-button'
+								appearance='plain'
+								onClick={() => setIsNameEditable(false)}
+							>
+								<WaIcon name='check-lg' label='Confirm' />
+							</WaButton>
 						</span>
 					) : (
 						<span>
 							{pipeline != null ? pipeline.name : pipelineType.name}
-							<SlIconButton name='pencil' label='Edit' onClick={() => setIsNameEditable(true)} />
+							<WaButton
+								className='icon-button'
+								appearance='plain'
+								onClick={() => setIsNameEditable(true)}
+							>
+								<WaIcon name='pencil' label='Edit' />
+							</WaButton>
 						</span>
 					)}
 				</div>
@@ -136,29 +154,31 @@ const PipelineHeader = () => {
 				<div
 					className={`pipeline__header-buttons-save${isFullscreenTransformationOpen ? ' pipeline__header-buttons-save--hidden' : ''}`}
 				>
-					<SlButton className='pipeline__header-cancel' variant='default' onClick={onCancel}>
+					<WaButton className='pipeline__header-cancel' appearance='outlined' onClick={onCancel}>
 						Cancel
-					</SlButton>
-					<SlButton
+					</WaButton>
+					<WaButton
 						className={`pipeline__header-save${isFullscreenClosing ? ' pipeline__header-save--fullscreen-closing-disabled' : ''}`}
-						variant='primary'
+						variant='brand'
 						disabled={isTransformationHidden || isTransformationDisabled || isSaving || isFullscreenClosing}
 						onClick={onSave}
 						loading={isSaving}
 					>
 						{isEditing ? 'Save' : 'Add'}
-					</SlButton>
+					</WaButton>
 				</div>
 				<div
 					className={`pipeline__header-buttons-close-transformation${!isFullscreenTransformationOpen ? ' pipeline__header-buttons-close-transformation--hidden' : ''}`}
 				>
-					<button
+					<WaButton
 						className='pipeline__header-close-transformation'
+						variant='brand'
+						appearance='plain'
 						onClick={onCloseFullscreenTransformation}
-						title='Exit full mode'
 					>
-						×
-					</button>
+						Exit full mode
+						<WaIcon name='arrows-angle-contract' />
+					</WaButton>
 				</div>
 			</div>
 		</div>

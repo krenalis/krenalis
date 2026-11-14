@@ -31,9 +31,17 @@ func TestConvert(t *testing.T) {
 		{types.Int(32), types.String(), nil, nil, true, nil},
 		{types.String(), types.String(), "foo", "foo", true, nil},
 		{types.String(), types.String().WithValues("foo", "boo"), "", nil, true, nil},
+		{types.String(), types.String().WithValues("", "foo", "boo"), "", "", true, nil},
 		{types.String(), types.String().WithValues("foo", "boo"), "boo", "boo", true, nil},
 		{types.String(), types.String().WithPattern(regexp.MustCompile(`^bo+$`)), "", nil, true, nil},
 		{types.String(), types.String().WithPattern(regexp.MustCompile(`^bo+$`)), "boo", "boo", true, nil},
+		{types.String(), types.String().AsCountry(types.ISO3166Alpha2), "", nil, true, nil},
+		{types.String(), types.String().AsCountry(types.ISO3166Alpha2), "", "", false, errCountryAlpha2Conversion},
+		{types.String(), types.String().AsCountry(types.ISO3166Alpha3), "", nil, true, nil},
+		{types.String(), types.String().AsCountry(types.ISO3166Alpha3), "", "", false, errCountryAlpha3Conversion},
+		{types.String(), types.String().AsPhone(), "", nil, true, nil},
+		{types.String(), types.String().AsPhone(), "", "", false, errPhoneConversion},
+		{types.String(), types.String().AsPhone(), "abc", "abc", true, errPhoneConversion},
 		{types.Boolean(), types.String(), true, "true", true, nil},
 		{types.Int(32), types.String(), -603, "-603", true, nil},
 		{types.Float(64), types.String(), 7928301735.704827, "7.928301735704827e+09", true, nil},
@@ -44,8 +52,6 @@ func TestConvert(t *testing.T) {
 		{types.Date(), types.String(), time.Date(2023, 5, 24, 0, 0, 0, 0, time.UTC), "2023-05-24", true, nil},
 		{types.Time(), types.String(), time.Date(1970, 1, 1, 9, 1, 57, 493614090, time.UTC), "09:01:57.49361409", true, nil},
 		{types.Time(), types.String(), time.Date(1970, 1, 1, 9, 1, 57, 0, time.UTC), "09:01:57", true, nil},
-		{types.Year(), types.String(), 1, "1", true, nil},
-		{types.Year(), types.String(), 2023, "2023", true, nil},
 		{types.UUID(), types.String(), "123e4567-e89b-12d3-a456-426614174000", "123e4567-e89b-12d3-a456-426614174000", true, nil},
 		{types.IP(), types.String(), "2001:db8::ff00:42:8329", "2001:db8::ff00:42:8329", true, nil},
 		{types.JSON(), types.String(), json.Value(`"foo"`), "foo", true, nil},
@@ -81,6 +87,13 @@ func TestConvert(t *testing.T) {
 		{types.Int(32), types.Int(32), 831, 831, true, nil},
 		{types.Int(32), types.Int(8), -123, -123, true, nil},
 		{types.Int(32), types.Int(16), 2571, 2571, true, nil},
+		{types.Int(32), types.Int(32).AsYear(), -100, -100, true, nil},
+		{types.Int(16), types.Int(16).AsYear(), 1, 1, true, nil},
+		{types.Int(16), types.Int(16).WithIntRange(1, 9999).AsYear(), 0, nil, true, errMinConversion},
+		{types.Int(16), types.Int(16).WithIntRange(1, 9999).AsYear(), 10000, nil, true, errMaxConversion},
+		{types.Int(16), types.Int(16).AsYear(), 0, 0, true, nil},
+		{types.Int(64), types.Int(64).AsYear(), 10000, 10000, true, nil},
+		{types.Int(64).Unsigned(), types.Int(16).AsYear(), uint(9999), 9999, true, nil},
 		{types.Int(32), types.Int(24), 670329, 670329, true, nil},
 		{types.Int(32), types.Int(64), math.MaxInt64, math.MaxInt64, true, nil},
 		{types.Int(8).Unsigned(), types.Int(32), uint(7), 7, true, nil},
@@ -88,6 +101,7 @@ func TestConvert(t *testing.T) {
 		{types.Int(24).Unsigned(), types.Int(32), uint(89302), 89302, true, nil},
 		{types.Int(64), types.Int(32), math.MaxInt32, math.MaxInt32, true, nil},
 		{types.Float(64), types.Int(24), 10.0, 10, true, nil},
+		{types.Float(64), types.Int(16).AsYear(), 2024.0, 2024, true, nil},
 		{types.Float(64), types.Int(8), 34.4, 34, true, nil},
 		{types.Float(64), types.Int(8), 34.5, 35, true, nil},
 		{types.Float(64), types.Int(8), -0.49, 0, true, nil},
@@ -98,11 +112,11 @@ func TestConvert(t *testing.T) {
 		{types.Decimal(5, 3), types.Int(8), decimal.MustParse("-12.0"), -12, true, nil},
 		{types.Decimal(60, 0), types.Int(64), minIntDecimal, math.MinInt64, true, nil},
 		{types.Decimal(60, 0), types.Int(64), maxIntDecimal, math.MaxInt64, true, nil},
-		{types.Year(), types.Int(16), 2020, 2020, true, nil},
 		{types.String(), types.Int(32), "502842", 502842, true, nil},
 		{types.String(), types.Int(32), "", nil, true, nil},
 		{types.JSON(), types.Int(32), json.Value("12.0"), 12, true, nil},
 		{types.JSON(), types.Int(32), json.Value("-15"), -15, true, nil},
+		{types.JSON(), types.Int(16).AsYear(), json.Value("2023"), 2023, true, nil},
 		{types.Boolean(), types.Int(8), false, 0, true, nil},
 		{types.Boolean(), types.Int(8), true, 1, true, nil},
 
@@ -117,7 +131,7 @@ func TestConvert(t *testing.T) {
 		{types.Int(24).Unsigned(), types.Int(32).Unsigned(), uint(89302), uint(89302), true, nil},
 		{types.Float(64), types.Int(64).Unsigned(), maxFloatConvertibleToUint64, uint(18446744073709549568), true, nil},
 		{types.Decimal(60, 0), types.Int(64).Unsigned(), maxUintDecimal, uint(math.MaxUint64), true, nil},
-		{types.Year(), types.Int(16).Unsigned(), 2020, uint(2020), true, nil},
+		{types.Decimal(4, 0), types.Int(16).Unsigned().AsYear(), decimal.MustInt(2024), uint(2024), true, nil},
 		{types.String(), types.Int(32).Unsigned(), "502842", uint(502842), true, nil},
 		{types.JSON(), types.Int(32).Unsigned(), json.Value("15"), uint(15), true, nil},
 		{types.Boolean(), types.Int(8).Unsigned(), false, uint(0), true, nil},
@@ -129,17 +143,34 @@ func TestConvert(t *testing.T) {
 		{types.Float(32), types.Float(32), float64(float32(6316.0513)), float64(float32(6316.0513)), true, nil},
 		{types.Float(32), types.Float(64), float64(float32(-32.04262)), -32.04262161254883, true, nil},
 		{types.Int(32), types.Float(64), 5617072831, 5.617072831e+09, true, nil},
+		{types.Int(16).AsYear(), types.Float(64), 2024, 2024.0, true, nil},
 		{types.Int(8).Unsigned(), types.Float(32), uint(256), float64(float32(256)), true, nil},
 		{types.Decimal(20, 10), types.Float(64), decimal.MustParse("767.5018382257"), 767.5018382257, true, nil},
+		{types.Decimal(41, 0), types.Float(32), decimal.MustParse("1e40"), math.Inf(1), true, nil},
+		{types.Decimal(41, 0), types.Float(32).Real(), decimal.MustParse("1e40"), nil, true, errMaxConversion},
 		{types.String(), types.Float(64), "767.5018382257", 767.5018382257, true, nil},
 		{types.JSON(), types.Float(64), json.Value("767.5018382257"), 767.5018382257, true, nil},
+		{types.String(), types.Float(32).Real(), "1.5", 1.5, true, nil},
+		{types.String(), types.Float(32).Real(), "NaN", nil, true, errInvalidConversion},
+		{types.String(), types.Float(32), "NaN", math.NaN(), true, nil},
+		{types.String(), types.Float(64).Real(), "1.5", 1.5, true, nil},
+		{types.String(), types.Float(64).Real(), "NaN", nil, true, errInvalidConversion},
+		{types.String(), types.Float(64), "NaN", math.NaN(), true, nil},
+		{types.Float(64), types.Float(32).Real(), math.NaN(), nil, true, errInvalidConversion},
+		{types.Float(64), types.Float(64).Real(), math.NaN(), nil, true, errInvalidConversion},
+		{types.Float(64), types.Float(64).Real(), math.Inf(1), nil, true, errMaxConversion},
+		{types.Float(64), types.Float(64).Real(), math.Inf(-1), nil, true, errMinConversion},
+		{types.Float(64).Real(), types.Float(32).Real().WithFloatRange(0, math.MaxFloat64), math.MaxFloat64, nil, true, errMaxConversion},
+		{types.Float(64).Real(), types.Float(32).Real().WithFloatRange(0, math.MaxFloat64), float64(math.MaxFloat32), float64(math.MaxFloat32), true, nil},
 
 		// decimal.
 		{types.Int(32), types.Decimal(13, 3), math.MaxInt32, decimal.MustInt(math.MaxInt32), true, nil},
 		{types.Int(32), types.Decimal(10, 0), math.MinInt32, decimal.MustInt(math.MinInt32), true, nil},
 		{types.Int(8).Unsigned(), types.Decimal(3, 0), uint(math.MaxUint8), decimal.MustInt(math.MaxUint8), true, nil},
+		{types.Int(16).Unsigned().AsYear(), types.Decimal(4, 0), uint(2024), decimal.MustInt(2024), true, nil},
 		{types.Float(64), types.Decimal(16, 5), 3.918347105316932e+10, decimal.MustParse("39183471053.16932"), true, nil},
 		{types.Float(32), types.Decimal(15, 11), float64(float32(6316.0513)), decimal.MustParse("6316.05126953125"), true, nil},
+		{types.Float(64), types.Decimal(5, 2), 1234.5, nil, true, errRangeConversion},
 		{types.String(), types.Decimal(20, 10), "1048294.202936601", decimal.MustParse("1048294.202936601"), true, nil},
 		{types.JSON(), types.Decimal(20, 10), json.Value("1048294.202936601"), decimal.MustParse("1048294.202936601"), true, nil},
 
@@ -166,16 +197,17 @@ func TestConvert(t *testing.T) {
 		{types.JSON(), types.Time(), json.Value(`"09:01:57"`), time.Date(1970, 1, 1, 9, 1, 57, 0, time.UTC), true, nil},
 		{types.JSON(), types.Time(), json.Value(`"09:01:57.49361409Z"`), time.Date(1970, 1, 1, 9, 1, 57, 493614090, time.UTC), true, nil},
 		{types.Time(), types.Time(), time.Date(1970, 1, 1, 9, 1, 57, 493614090, time.UTC), time.Date(1970, 1, 1, 9, 1, 57, 493614090, time.UTC), true, nil},
-
-		// year.
-		{types.Year(), types.Year(), 2023, 2023, true, nil},
-		{types.Int(16), types.Year(), 1, 1, true, nil},
-		{types.Int(64).Unsigned(), types.Year(), uint(9999), 9999, true, nil},
-		{types.String(), types.Year(), "2023", 2023, true, nil},
-		{types.String(), types.Year(), "1", 1, true, nil},
-		{types.JSON(), types.Year(), json.Value("1.0"), 1, true, nil},
-		{types.JSON(), types.Year(), json.Value("2023.0"), 2023, true, nil},
-		{types.JSON(), types.Year(), json.Value("2023"), 2023, true, nil},
+		{types.Boolean(), types.Time(), true, nil, true, errInvalidConversion},
+		{types.Int(32), types.Time(), 42, nil, true, errInvalidConversion},
+		{types.Int(32).Unsigned(), types.Time(), uint(42), nil, true, errInvalidConversion},
+		{types.Float(64), types.Time(), 1.5, nil, true, errInvalidConversion},
+		{types.Decimal(6, 2), types.Time(), decimal.MustParse("1.5"), nil, true, errInvalidConversion},
+		{types.Date(), types.Time(), time.Date(2023, 5, 24, 0, 0, 0, 0, time.UTC), nil, true, errInvalidConversion},
+		{types.UUID(), types.Time(), "123e4567-e89b-12d3-a456-426614174000", nil, true, errInvalidConversion},
+		{types.IP(), types.Time(), "192.0.2.1", nil, true, errInvalidConversion},
+		{types.Array(types.String()), types.Time(), []any{"09:01:57"}, nil, true, errInvalidConversion},
+		{types.Object([]types.Property{{Name: "value", Type: types.String()}}), types.Time(), map[string]any{"value": "09:01:57"}, nil, true, errInvalidConversion},
+		{types.Map(types.String()), types.Time(), map[string]any{"value": "09:01:57"}, nil, true, errInvalidConversion},
 
 		// uuid.
 		{types.UUID(), types.UUID(), "123e4567-e89b-12d3-a456-426614174000", "123e4567-e89b-12d3-a456-426614174000", true, nil},
@@ -187,6 +219,8 @@ func TestConvert(t *testing.T) {
 		// json.
 		{types.Int(32), types.JSON(), nil, nil, true, nil},
 		{types.Int(32), types.JSON(), nil, json.Value(`null`), false, nil},
+		{types.Object([]types.Property{{Name: "foo", Type: types.String(), ReadOptional: true}}), types.JSON(), map[string]any{}, json.Value(`{}`), false, nil},
+		{types.Object([]types.Property{{Name: "foo", Type: types.String(), ReadOptional: true}}), types.JSON(), map[string]any{}, json.Value(`{}`), true, nil},
 		{types.JSON(), types.JSON(), json.Value(`{"foo":5}`), json.Value(`{"foo":5}`), true, nil},
 		{types.JSON(), types.JSON(), json.Value("null"), json.Value(`null`), true, nil},
 		{types.String(), types.JSON(), "", json.Value(`""`), false, nil},
@@ -264,7 +298,7 @@ func TestConvert(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		got, err := convert(test.value, test.t1, test.t2, test.nullable, false, Create)
+		got, err := convert(test.value, test.t1, test.t2, test.nullable, Create)
 		if err != nil {
 			if test.err != nil {
 				if test.err != err {
@@ -368,31 +402,32 @@ func TestConvertArrayUniqueness(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got, err := convert(test.value, test.source, test.destination, false, false, None)
+			got, err := convert(test.value, test.source, test.destination, false, None)
 			if err != nil {
 				if !test.wantError {
-					t.Fatalf("expected no error, got %v", err)
+					t.Fatal(err)
 				}
 				if err != errInvalidConversion {
 					t.Fatalf("expected error %v, got %v", errInvalidConversion, err)
 				}
 				if !cmp.Equal(got, test.value) {
-					t.Fatalf("expected original value %#v with error, got %#v", test.value, got)
+					t.Fatalf("got value %#v with error, want original value %#v", got, test.value)
 				}
 				return
 			}
 			if test.wantError {
-				t.Fatalf("expected error %v, got value %#v", errInvalidConversion, got)
+				t.Fatalf("got value %#v, want an error", got)
 			}
 			if !cmp.Equal(got, test.expected) {
-				t.Fatalf("expected value %#v, got %#v", test.expected, got)
+				t.Fatalf("got value %#v, want %#v", got, test.expected)
 			}
 		})
 	}
 
 }
 
-// TestConvertStringToDate checks parsing of various date formats.
+// TestConvertStringToDate checks YYYY-MM-DD dates, Excel serial dates, and
+// error handling for invalid dates and out-of-range years.
 func TestConvertStringToDate(t *testing.T) {
 	tests := []struct {
 		in  string
@@ -400,23 +435,83 @@ func TestConvertStringToDate(t *testing.T) {
 		err error
 	}{
 		{"2023-05-24", time.Date(2023, 5, 24, 0, 0, 0, 0, time.UTC), nil},
-		{"05/24/2023", time.Date(2023, 5, 24, 0, 0, 0, 0, time.UTC), nil},
-		{"05.24.2023", time.Date(2023, 5, 24, 0, 0, 0, 0, time.UTC), nil},
+		{"05/24/2023", time.Time{}, errParseConversion},
+		{"05.24.2023", time.Time{}, errParseConversion},
+		{"23-05-24", time.Time{}, errParseConversion},
+		{"05/24/23", time.Time{}, errParseConversion},
+		{"05.24.23", time.Time{}, errParseConversion},
+		{"abcd-12-31", time.Time{}, errParseConversion},
+		{"2023-ab-24", time.Time{}, errParseConversion},
+		{"2023-05-cd", time.Time{}, errParseConversion},
+		{"2023-5-24", time.Time{}, errParseConversion},
+		{"2023-05-4", time.Time{}, errParseConversion},
+		{"2023/05/24", time.Time{}, errParseConversion},
+		{"2023.05.24", time.Time{}, errParseConversion},
+		{" 2023-05-24", time.Time{}, errParseConversion},
+		{"2023-05-24 ", time.Time{}, errParseConversion},
+		{"2023-05-24T00:00:00Z", time.Time{}, errParseConversion},
+		{"2023-05-24Z", time.Time{}, errParseConversion},
+		{"0025-12-31", time.Date(25, 12, 31, 0, 0, 0, 0, time.UTC), nil},
+		{"2000-02-29", time.Date(2000, 2, 29, 0, 0, 0, 0, time.UTC), nil},
+		{"0001-01-01", time.Date(1, 1, 1, 0, 0, 0, 0, time.UTC), nil},
+		{"9999-12-31", time.Date(9999, 12, 31, 0, 0, 0, 0, time.UTC), nil},
+		{"1.0", time.Date(1900, 1, 1, 0, 0, 0, 0, time.UTC), nil},
+		{"59.99999999999999999999", time.Date(1900, 2, 28, 0, 0, 0, 0, time.UTC), nil},
+		{"61.0", time.Date(1900, 3, 1, 0, 0, 0, 0, time.UTC), nil},
 		{"44927", time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC), nil},
+		{"44927.50", time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC), nil},
+		{"44927.5000", time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC), nil},
+		{"00044927", time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC), nil},
+		{"0000044927", time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC), nil},
+		{"44927.99999999999999999999", time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC), nil},
+		{"106752", time.Date(2192, 4, 9, 0, 0, 0, 0, time.UTC), nil},
+		{"106753", time.Date(2192, 4, 10, 0, 0, 0, 0, time.UTC), nil},
+		{"200000.0", time.Date(2447, 7, 30, 0, 0, 0, 0, time.UTC), nil},
+		{"200000.000", time.Date(2447, 7, 30, 0, 0, 0, 0, time.UTC), nil},
+		{"2958465", time.Date(9999, 12, 31, 0, 0, 0, 0, time.UTC), nil},
+		{"2958465.99999999999999999999", time.Date(9999, 12, 31, 0, 0, 0, 0, time.UTC), nil},
+		{"060", time.Time{}, errParseConversion},
 		{"60.0", time.Time{}, errParseConversion},
+		{"60.5", time.Time{}, errParseConversion},
+		{"60.99999999999999999999", time.Time{}, errParseConversion},
+		{"2958466", time.Time{}, errYearRangeConversion},
+		{"10000000", time.Time{}, errYearRangeConversion},
+		{"1000000000", time.Time{}, errYearRangeConversion},
+		{"9223372036854775808", time.Time{}, errYearRangeConversion},
 		{"2023-13-01", time.Time{}, errParseConversion},
+		{"1900-02-29", time.Time{}, errParseConversion},
+		{"2023/05-24", time.Time{}, errParseConversion},
+		{"2023-05/24", time.Time{}, errParseConversion},
 		{"0000-01-01", time.Time{}, errYearRangeConversion},
 		{"2000-02-30", time.Time{}, errParseConversion},
+		{"-1.0", time.Time{}, errParseConversion},
+		{"1e3", time.Time{}, errParseConversion},
+		{"1.2.3", time.Time{}, errParseConversion},
+		{"", time.Time{}, errParseConversion},
 		{"abc", time.Time{}, errParseConversion},
 	}
 	for _, tt := range tests {
-		got, err := convertStringToDate(tt.in)
-		if tt.err != err {
-			t.Fatalf("%s: expected error %v, got %v", tt.in, tt.err, err)
+		name := tt.in
+		if name == "" {
+			name = "<empty>"
 		}
-		if !tt.t.Equal(got) {
-			t.Fatalf("%s: expected %v, got %v", tt.in, tt.t, got)
-		}
+		t.Run(name, func(t *testing.T) {
+			got, err := convertStringToDate(tt.in)
+			if err != nil {
+				if err != tt.err {
+					t.Fatalf("expected error %v, got %v", tt.err, err)
+				}
+			}
+			if err == nil && tt.err != nil {
+				t.Fatalf("expected error %v, got nil", tt.err)
+			}
+			if !got.Equal(tt.t) {
+				t.Errorf("expected %v, got %v", tt.t, got)
+			}
+			if got.Location() != time.UTC {
+				t.Errorf("expected UTC location, got %v", got.Location())
+			}
+		})
 	}
 }
 

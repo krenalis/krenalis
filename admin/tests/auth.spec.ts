@@ -36,7 +36,7 @@ test('Login', async ({ page }) => {
 	await page.goto(`${adminURL}/`);
 	await page.getByRole('textbox', { name: 'email' }).fill('test@krenalis.com');
 	await page.getByRole('textbox', { name: 'password' }).fill('krenalis-password');
-	await page.click('sl-button');
+	await page.click('wa-button');
 	await page.getByText('Test workspace', { exact: true }).click();
 	await expect(page.locator(LOGOUT_BUTTON_CLASS)).toBeAttached();
 	await logout(page);

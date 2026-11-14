@@ -1,5 +1,6 @@
-import { getHierarchicalPaths, TransformedPipeline, FlatSchema } from '../../../lib/core/pipeline';
+import { getHierarchicalPaths, TransformedPipeline } from '../../../lib/core/pipeline';
 import TransformedConnection from '../../../lib/core/connection';
+import { Property } from '../../../lib/api/types/types';
 import { SampleIdentifiers } from './Pipeline.types';
 
 type PipelineObjectLabelMode = 'compact' | 'full' | 'plural';
@@ -138,14 +139,20 @@ const updateMappingPropertyError = (
 	return p;
 };
 
-const checkIfPropertyExists = (property: string, schema: FlatSchema, toHide?: string[]): string => {
-	if (schema == null || property === '' || property == null) {
-		return '';
+const propertyAnnotationSeparator = ' – ';
+
+// propertyAnnotation returns the display name and the description of a
+// property, combined in the text that accompanies its name.
+const propertyAnnotation = (property: Property): string => {
+	const displayName = property.displayName ?? '';
+	const description = property.description ?? '';
+	if (description === '') {
+		return displayName;
 	}
-	if (schema[property] == null || toHide?.includes(property)) {
-		return `Property "${property}" does not exist`;
+	if (displayName === '') {
+		return description;
 	}
-	return '';
+	return `${displayName}${propertyAnnotationSeparator}${description}`;
 };
 
 const firstNameIdentifiers = [
@@ -207,7 +214,8 @@ const getSampleIdentifiers = (sample: Record<string, any>): SampleIdentifiers | 
 export {
 	updateMappingProperty,
 	updateMappingPropertyError,
-	checkIfPropertyExists,
 	getSampleIdentifiers,
 	pipelineObjectLabels,
+	propertyAnnotation,
+	propertyAnnotationSeparator,
 };

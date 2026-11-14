@@ -70,7 +70,7 @@ func TestSimulatedDestinationClaimSurvivesResourceDelete(t *testing.T) {
 		ID string `json:"id"`
 	}
 	k.Call("POST", "/v1/workspaces", http.Header{"Krenalis-Workspace": nil}, map[string]any{
-		"name": "Simulated claim deletion", "environment": "development", "profileSchema": profileSchema,
+		"name": "Simulated claim deletion", "environment": "development", "profileSchema": krenalistester.ProfileSchema{Schema: profileSchema},
 		"warehouse": map[string]any{"platform": "PostgreSQL", "mode": "Normal", "settings": warehouseSettings},
 	}, &workspace)
 	k.SetWorkspaceID(workspace.ID)

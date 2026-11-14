@@ -68,7 +68,7 @@ func TestSimulatedApplicationUsesAdmittedAccount(t *testing.T) {
 	}
 	k.Call("POST", "/v1/workspaces", http.Header{"Krenalis-Workspace": nil}, map[string]any{
 		"name": "Simulated Application PostgreSQL", "environment": "development",
-		"profileSchema": profileSchema,
+		"profileSchema": krenalistester.ProfileSchema{Schema: profileSchema},
 		"warehouse":     map[string]any{"platform": "PostgreSQL", "mode": "Normal", "settings": warehouseSettings},
 	}, &workspace)
 	k.SetWorkspaceID(workspace.ID)
@@ -205,7 +205,7 @@ func TestSimulatedApplicationUsesAdmittedAccount(t *testing.T) {
 	}
 	k.WaitForRunsCompletionAllowFailed(firstRun)
 	firstRunResult := k.PipelineRun(firstRun)
-	if firstRunResult.Failed != [7]int{} {
+	if firstRunResult.Failed != [9]int{} {
 		k.RestartServer(t.Context())
 		var message string
 		k.QueryRowTestDatabase(t.Context(), &message,

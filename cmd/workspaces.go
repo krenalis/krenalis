@@ -31,16 +31,16 @@ func (workspace workspace) AddConsentPurpose(w http.ResponseWriter, r *http.Requ
 	if err != nil {
 		return nil, err
 	}
-	var body struct {
-		Code string `json:"code"`
-		Name string `json:"name"`
-	}
-	err = json.Decode(r.Body, &body)
+	var purpose core.ConsentPurposeToSet
+	err = json.Decode(r.Body, &purpose)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	err = ws.AddConsentPurpose(r.Context(), body.Code, body.Name)
-	return nil, err
+	id, err := ws.AddConsentPurpose(r.Context(), purpose)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]string{"id": id}, nil
 }
 
 // AlterProfileSchema alters the profile schema of a workspace.
@@ -53,16 +53,14 @@ func (workspace workspace) AlterProfileSchema(_ http.ResponseWriter, r *http.Req
 		return nil, err
 	}
 	var body struct {
-		Schema         types.Type                  `json:"schema"`
-		AssignedRoles  core.ProfileRoleAssignments `json:"assignedRoles"`
-		PrimarySources map[string]string           `json:"primarySources"`
-		RePaths        map[string]any              `json:"rePaths"`
+		core.ProfileSchema
+		RePaths map[string]any `json:"rePaths"`
 	}
 	err = json.Decode(r.Body, &body)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	err = ws.AlterProfileSchema(r.Context(), body.Schema, body.AssignedRoles, body.PrimarySources, body.RePaths)
+	err = ws.AlterProfileSchema(r.Context(), body.ProfileSchema, body.RePaths)
 	return nil, err
 }
 
@@ -158,10 +156,10 @@ func (workspace workspace) CreateEventListener(_ http.ResponseWriter, r *http.Re
 		return nil, err
 	}
 	var body struct {
-		Connection       *string                `json:"connection"`
-		Size             *int                   `json:"size"`
-		Filter           *core.Filter           `json:"filter"`
-		RequiredConsents *core.RequiredConsents `json:"requiredConsents"`
+		Connection       *string                     `json:"connection"`
+		Size             *int                        `json:"size"`
+		Filter           *core.Filter                `json:"filter"`
+		RequiredConsents *core.EventListenerConsents `json:"requiredConsents"`
 	}
 	err = json.Decode(r.Body, &body)
 	if err != nil {
@@ -198,7 +196,7 @@ func (workspace workspace) DeleteConsentPurpose(_ http.ResponseWriter, r *http.R
 	if err != nil {
 		return nil, err
 	}
-	err = ws.DeleteConsentPurpose(r.Context(), r.PathValue("code"))
+	err = ws.DeleteConsentPurpose(r.Context(), r.PathValue("id"))
 	return nil, err
 }
 
@@ -304,6 +302,105 @@ func (workspace workspace) Identities(_ http.ResponseWriter, r *http.Request) (a
 	}, nil
 }
 
+// IdentityMetricsPerDate returns daily identity metrics for the current
+// workspace over a date interval.
+func (workspace workspace) IdentityMetricsPerDate(_ http.ResponseWriter, r *http.Request) (any, error) {
+
+	ws, err := workspace.admitWorkspaceRequest(r, x1)
+	if err != nil {
+		return nil, err
+	}
+
+	// Parse start and end.
+	start, err := time.Parse(time.DateOnly, r.PathValue("start"))
+	if err != nil {
+		return nil, errors.NotFound("start is not valid")
+	}
+	end, err := time.Parse(time.DateOnly, r.PathValue("end"))
+	if err != nil {
+		return nil, errors.NotFound("end is not valid")
+	}
+
+	// Parse the connection selection.
+	var connectionSelection *string
+	query := r.URL.Query()
+	if values, ok := query["connection"]; ok {
+		if len(values) != 1 {
+			return nil, errors.BadRequest("only one 'connection' parameter is allowed")
+		}
+		connectionSelection = &values[0]
+	}
+
+	return ws.IdentityMetricsPerDate(r.Context(), start, end, connectionSelection)
+}
+
+// IdentityResolutionMetricsPerDate returns daily successful Identity Resolution
+// metrics for the current workspace over a date interval.
+func (workspace workspace) IdentityResolutionMetricsPerDate(_ http.ResponseWriter, r *http.Request) (any, error) {
+	ws, err := workspace.admitWorkspaceRequest(r, x1)
+	if err != nil {
+		return nil, err
+	}
+	start, err := time.Parse(time.DateOnly, r.PathValue("start"))
+	if err != nil {
+		return nil, errors.NotFound("start is not valid")
+	}
+	end, err := time.Parse(time.DateOnly, r.PathValue("end"))
+	if err != nil {
+		return nil, errors.NotFound("end is not valid")
+	}
+	return ws.IdentityResolutionMetricsPerDate(r.Context(), start, end)
+}
+
+// IdentityResolutionRuns returns Identity Resolution runs for the current
+// workspace, newest first.
+func (workspace workspace) IdentityResolutionRuns(_ http.ResponseWriter, r *http.Request) (any, error) {
+
+	ws, err := workspace.admitWorkspaceRequest(r, x1)
+	if err != nil {
+		return nil, err
+	}
+
+	query := r.URL.Query()
+
+	// Parse pagination.
+	first, limit := 0, 100
+	if values, ok := query["first"]; ok {
+		if len(values) != 1 {
+			return nil, errors.BadRequest("only one 'first' parameter is allowed")
+		}
+		first, err = strconv.Atoi(values[0])
+		if err != nil {
+			return nil, errors.BadRequest("'first' parameter is not valid")
+		}
+	}
+	if values, ok := query["limit"]; ok {
+		if len(values) != 1 {
+			return nil, errors.BadRequest("only one 'limit' parameter is allowed")
+		}
+		limit, err = strconv.Atoi(values[0])
+		if err != nil {
+			return nil, errors.BadRequest("'limit' parameter is not valid")
+		}
+	}
+
+	// Parse status.
+	var status string
+	if values, ok := query["status"]; ok {
+		if len(values) != 1 {
+			return nil, errors.BadRequest("only one 'status' parameter is allowed")
+		}
+		status = values[0]
+	}
+
+	runs, err := ws.IdentityResolutionRuns(r.Context(), first, limit, core.IdentityResolutionRunStatus(status))
+	if err != nil {
+		return nil, err
+	}
+
+	return map[string]any{"runs": runs}, nil
+}
+
 // ProfilePropertiesSuitableAsIdentifiers returns the properties of the profile
 // schema that can be used as identifiers in the Identity Resolution.
 func (workspace workspace) ProfilePropertiesSuitableAsIdentifiers(_ http.ResponseWriter, r *http.Request) (any, error) {
@@ -331,6 +428,18 @@ func (workspace workspace) IngestEvents(w http.ResponseWriter, r *http.Request) 
 	return nil, nil
 }
 
+// LatestIdentityMetric returns the latest identity metric for the current
+// workspace.
+func (workspace workspace) LatestIdentityMetric(_ http.ResponseWriter, r *http.Request) (any, error) {
+
+	ws, err := workspace.admitWorkspaceRequest(r, x1)
+	if err != nil {
+		return nil, err
+	}
+
+	return ws.LatestIdentityMetric(r.Context())
+}
+
 // LatestIdentityResolution returns information about the latest Identity
 // Resolution of a workspace.
 func (workspace workspace) LatestIdentityResolution(_ http.ResponseWriter, r *http.Request) (any, error) {
@@ -346,6 +455,16 @@ func (workspace workspace) LatestIdentityResolution(_ http.ResponseWriter, r *ht
 		"startTime": startTime,
 		"endTime":   endTime,
 	}, nil
+}
+
+// LatestIdentityResolutionMetric returns the latest successful Identity
+// Resolution metric for the current workspace.
+func (workspace workspace) LatestIdentityResolutionMetric(_ http.ResponseWriter, r *http.Request) (any, error) {
+	ws, err := workspace.admitWorkspaceRequest(r, x1)
+	if err != nil {
+		return nil, err
+	}
+	return ws.LatestIdentityResolutionMetric(r.Context())
 }
 
 // LatestAlterProfileSchema returns information about the latest altering of the
@@ -548,6 +667,21 @@ func (workspace workspace) PreviewAlterProfileSchema(_ http.ResponseWriter, r *h
 	return map[string][]string{"queries": queries}, nil
 }
 
+// RefreshIdentityMetrics observes and stores identity metrics for the current
+// workspace.
+func (workspace workspace) RefreshIdentityMetrics(_ http.ResponseWriter, r *http.Request) (any, error) {
+	if err := validateForbiddenBody(r); err != nil {
+		return nil, err
+	}
+	ws, err := workspace.admitWorkspaceRequest(r, x1)
+	if err != nil {
+		return nil, err
+	}
+	err = ws.RefreshIdentityMetrics(r.Context())
+
+	return nil, err
+}
+
 // RepairWarehouse repairs the database objects needed by Krenalis on a
 // workspace's data warehouse.
 func (workspace workspace) RepairWarehouse(_ http.ResponseWriter, r *http.Request) (any, error) {
@@ -645,19 +779,23 @@ func (workspace workspace) Attributes(_ http.ResponseWriter, r *http.Request) (a
 	if err != nil {
 		return nil, err
 	}
-	kpid := r.PathValue("kpid")
-	var schema types.Type
-	err = json.Unmarshal([]byte(r.URL.Query().Get("schema")), &schema)
-	if err != nil {
-		return nil, errors.BadRequest("invalid schema")
-	}
-	attributes, err := ws.Attributes(r.Context(), kpid, schema)
+	err = validateRequiredBody(r, false)
 	if err != nil {
 		return nil, err
 	}
-	return map[string]any{
-		"attributes": attributes,
-	}, nil
+	kpid := r.PathValue("kpid")
+	var params struct {
+		Schema types.Type `json:"schema"`
+	}
+	err = json.Decode(r.Body, &params)
+	if err != nil {
+		return nil, errors.BadRequest("%s", err)
+	}
+	attributes, err := ws.Attributes(r.Context(), kpid, params.Schema)
+	if err != nil {
+		return nil, err
+	}
+	return map[string]any{"attributes": attributes}, nil
 }
 
 // Update updates the name of a workspace.
@@ -697,12 +835,12 @@ func (workspace workspace) UpdateConsentPurpose(w http.ResponseWriter, r *http.R
 	if err != nil {
 		return nil, err
 	}
-	var purpose core.ConsentPurpose
+	var purpose core.ConsentPurposeToSet
 	err = json.Decode(r.Body, &purpose)
 	if err != nil {
 		return nil, errors.BadRequest("%s", err)
 	}
-	err = ws.UpdateConsentPurpose(r.Context(), r.PathValue("code"), purpose)
+	err = ws.UpdateConsentPurpose(r.Context(), r.PathValue("id"), purpose)
 	return nil, err
 }
 
@@ -833,33 +971,27 @@ func (workspace workspace) ProfileSchema(_ http.ResponseWriter, r *http.Request)
 	return ws.ProfileSchema, nil
 }
 
-// ProfileCount returns the number of profiles matched by the optional filter.
+// ProfileCount returns the number of profiles of a workspace.
 func (workspace workspace) ProfileCount(_ http.ResponseWriter, r *http.Request) (any, error) {
 
 	ws, err := workspace.admitWorkspaceRequest(r, x1)
 	if err != nil {
 		return nil, err
 	}
+	err = validateRequiredBody(r, false)
+	if err != nil {
+		return nil, err
+	}
 
-	q := r.URL.Query()
-	var filter *core.Filter
-	if f := q.Get("filter"); f != "" {
-		err = json.Unmarshal([]byte(f), &filter)
-		if err != nil {
-			return nil, errors.BadRequest("invalid filter")
-		}
-		if filter == nil {
-			return nil, errors.BadRequest("filter cannot be null")
-		}
+	var params struct {
+		Filter *core.Filter `json:"filter"`
+		Schema types.Type   `json:"schema"`
 	}
-	var schema types.Type
-	if value, ok := q["schema"]; ok {
-		err = json.Unmarshal([]byte(value[0]), &schema)
-		if err != nil {
-			return nil, errors.BadRequest("invalid schema")
-		}
+	err = json.Decode(r.Body, &params)
+	if err != nil {
+		return nil, errors.BadRequest("%s", err)
 	}
-	total, err := ws.ProfileCount(r.Context(), filter, schema)
+	total, err := ws.ProfileCount(r.Context(), params.Filter, params.Schema)
 	if err != nil {
 		return nil, err
 	}
@@ -868,56 +1000,35 @@ func (workspace workspace) ProfileCount(_ http.ResponseWriter, r *http.Request) 
 }
 
 // Profiles returns profiles, an estimate of their total number without applying
-// first and limit, and the continuation state.
+// first and limit, and the continuation state of a workspace.
 func (workspace workspace) Profiles(w http.ResponseWriter, r *http.Request) (any, error) {
 
 	ws, err := workspace.admitWorkspaceRequest(r, x1)
 	if err != nil {
 		return nil, err
 	}
-
-	// Read and parse the parameters from the query string.
-	q := r.URL.Query()
-	properties := splitQueryParameters(q["properties"])
-	if _, present := q["properties"]; present && properties == nil {
-		properties = []string{}
-	}
-	var filter *core.Filter
-	if f := q.Get("filter"); f != "" {
-		err := json.Unmarshal([]byte(f), &filter)
-		if err != nil {
-			return nil, errors.BadRequest("invalid filter")
-		}
-		if filter == nil {
-			return nil, errors.BadRequest("filter cannot be null")
-		}
-	}
-	order := q.Get("order")
-	orderDesc := q.Get("orderDesc") == "true"
-	var first int
-	if f := q.Get("first"); f != "" {
-		first, err = strconv.Atoi(f)
-		if err != nil {
-			return nil, errors.BadRequest("invalid first")
-		}
-	}
-	var limit int
-	if l := q.Get("limit"); l != "" {
-		limit, err = strconv.Atoi(l)
-		if err != nil {
-			return nil, errors.BadRequest("invalid limit")
-		}
-	} else {
-		limit = 100
-	}
-
-	var schema types.Type
-	err = json.Unmarshal([]byte(q.Get("schema")), &schema)
+	err = validateRequiredBody(r, false)
 	if err != nil {
-		return nil, errors.BadRequest("invalid schema")
+		return nil, err
 	}
-	profiles, total, hasNext, err := ws.Profiles(
-		r.Context(), schema, properties, filter, order, orderDesc, first, limit)
+
+	var params struct {
+		Schema     types.Type   `json:"schema"`
+		Properties []string     `json:"properties"`
+		Filter     *core.Filter `json:"filter"`
+		Order      string       `json:"order"`
+		OrderDesc  bool         `json:"orderDesc"`
+		First      int          `json:"first"`
+		Limit      int          `json:"limit"`
+	}
+	params.Limit = 100
+	err = json.Decode(r.Body, &params)
+	if err != nil {
+		return nil, errors.BadRequest("%s", err)
+	}
+
+	profiles, total, hasNext, err := ws.Profiles(r.Context(),
+		params.Schema, params.Properties, params.Filter, params.Order, params.OrderDesc, params.First, params.Limit)
 	if err != nil {
 		return nil, err
 	}
@@ -934,7 +1045,7 @@ func (workspace workspace) Profiles(w http.ResponseWriter, r *http.Request) (any
 		buf := b.availableBuffer()
 		b.write(profile.UpdatedAt.AppendFormat(buf, time.RFC3339Nano))
 		b.writeString(`","attributes":`)
-		s, _ := types.Marshal(profile.Attributes, schema)
+		s, _ := types.Marshal(profile.Attributes, params.Schema)
 		b.write(s)
 		b.writeByte('}')
 	}

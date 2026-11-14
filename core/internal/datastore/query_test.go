@@ -38,6 +38,54 @@ func TestConvertWhereSimple(t *testing.T) {
 	}
 }
 
+// TestConvertWhereJSONBooleanOperators verifies that conversion preserves JSON
+// paths for both boolean operators.
+func TestConvertWhereJSONBooleanOperators(t *testing.T) {
+
+	tests := []struct {
+		name       string
+		columnPath string
+		property   []string
+		keys       []string
+	}{
+		{"column", "j", []string{"j"}, nil},
+		{"key", "j", []string{"j", "enabled"}, []string{"enabled"}},
+		{"nested keys", "j", []string{"j", "a", "b"}, []string{"a", "b"}},
+		{"literal dot", "j", []string{"j", "a.b"}, []string{"a.b"}},
+		{"nested literal dot", "j", []string{"j", "a.b", "c"}, []string{"a.b", "c"}},
+		{"object column", "obj.j", []string{"obj", "j"}, nil},
+		{"object column keys", "obj.j", []string{"obj", "j", "a", "b"}, []string{"a", "b"}},
+	}
+	for _, tt := range tests {
+		for _, operator := range []state.WhereOperator{state.OpIsTrue, state.OpIsFalse} {
+			t.Run(tt.name+"/"+operator.String(), func(t *testing.T) {
+
+				column := warehouses.Column{Name: "json_column", Type: types.JSON()}
+				where := &state.Where{
+					Operator: state.OpAnd,
+					Rules: []state.WhereRule{
+						&state.WhereCondition{Property: tt.property, Operator: operator},
+					},
+				}
+
+				got, err := convertWhere(where, map[string]warehouses.Column{tt.columnPath: column})
+				if err != nil {
+					t.Fatalf("expected no error, got %v", err)
+				}
+
+				operand := warehouses.NewBaseExpr(column, warehouses.Operator(operator))
+				operand.Keys = tt.keys
+				want := warehouses.NewMultiExpr(warehouses.OpAnd, []warehouses.Expr{operand})
+				if !reflect.DeepEqual(want, got) {
+					t.Fatalf("expected %#v, got %#v", want, got)
+				}
+
+			})
+		}
+	}
+
+}
+
 // TestConvertWhereMultiple tests convertWhere with multiple conditions.
 func TestConvertWhereMultiple(t *testing.T) {
 	colA := warehouses.Column{Name: "a", Type: types.Int(32)}
@@ -315,6 +363,32 @@ func TestConvertWhereRejectsMissingRules(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestConvertWhereRejectsNestedPropertyOnBooleanColumn verifies that nested
+// properties cannot be accessed on a boolean column.
+func TestConvertWhereRejectsNestedPropertyOnBooleanColumn(t *testing.T) {
+
+	where := &state.Where{
+		Operator: state.OpAnd,
+		Rules: []state.WhereRule{
+			&state.WhereCondition{Property: []string{"j", "enabled"}, Operator: state.OpIsTrue},
+		},
+	}
+	columns := map[string]warehouses.Column{
+		"j": {Name: "j", Type: types.Boolean()},
+	}
+	expected := `property "j.enabled" does not map to any warehouse columns`
+
+	_, err := convertWhere(where, columns)
+	if err != nil {
+		if err.Error() != expected {
+			t.Fatalf("expected error %q, got %q", expected, err)
+		}
+		return
+	}
+	t.Fatalf("expected error %q, got nil", expected)
+
 }
 
 // TestConvertWhereRejectsUnsupportedObjectOperator tests convertWhere with an

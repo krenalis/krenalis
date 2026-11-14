@@ -111,10 +111,20 @@ type DataDecoder struct {
 }
 
 const (
+	// maxValueSize is the largest byte or entry count an MMDB size header can encode.
+	maxValueSize = 65_821 + (1<<24 - 1)
 	// This is the value used in libmaxminddb.
 	maximumDataStructureDepth = 512
-	pointerBase2              = 2048
-	pointerBase3              = 526336
+	// Container-shaped reflection decoding receives a fixed work allowance
+	// equivalent to 2 MiB in 64-byte units while its result is materialized.
+	decodeExpansionBudgetBytes = 2 << 20
+	// String and byte payloads receive a separate exact 2 MiB allowance.
+	decodePayloadBudgetBytes = 2 << 20
+	// Container children cost one 64-byte work unit.
+	decodeBudgetUnitShift        = 6
+	containerPreflightValueCount = 1024
+	pointerBase2                 = 2048
+	pointerBase3                 = 526336
 )
 
 // NewDataDecoder creates a [DataDecoder].
@@ -125,9 +135,28 @@ func NewDataDecoder(buffer []byte) DataDecoder {
 	}
 }
 
+// NewDataDecoderWithoutStringCache creates a DataDecoder that does not retain
+// decoded strings. It is intended for one-shot decoding where cache setup
+// would cost more than repeated string allocation.
+func NewDataDecoderWithoutStringCache(buffer []byte) DataDecoder {
+	return DataDecoder{buffer: buffer}
+}
+
 // getBuffer returns the underlying buffer for direct access.
 func (d *DataDecoder) getBuffer() []byte {
 	return d.buffer
+}
+
+// extendedKind returns the kind for an extended type byte. Type bytes 1
+// through 8 give kinds 8 through 15. Type byte 0 wraps to 255 before the
+// widening, so it and bytes 9 through 255 give unknown kinds above 15. The
+// spec does not define type byte 0, and kinds 0 through 7 have their own
+// control-byte encoding. This has no branch, so it adds no cost to lookups.
+// For type bytes 1 through 255, the kind is the spec's type number, the byte
+// plus 7. Type byte 0 gives kind 263, so an "unknown type: 263" error means
+// type byte 0.
+func extendedKind(typeByte byte) Kind {
+	return Kind(typeByte-1) + 8
 }
 
 // decodeCtrlData decodes the control byte and data info at the given offset.
@@ -149,7 +178,7 @@ func (d *DataDecoder) decodeCtrlData(offset uint) (Kind, uint, uint, error) {
 		if newOffset >= bufferLen {
 			return 0, 0, 0, mmdberrors.NewOffsetError()
 		}
-		kindNum = Kind(d.buffer[newOffset] + 7)
+		kindNum = extendedKind(d.buffer[newOffset])
 		newOffset++
 	}
 
@@ -157,12 +186,17 @@ func (d *DataDecoder) decodeCtrlData(offset uint) (Kind, uint, uint, error) {
 	if size < 29 {
 		return kindNum, size, newOffset, nil
 	}
+	// Pointer control bits encode the pointer width and high address bits, not
+	// an extended value size. Width-four pointers may use all three high address
+	// bits even though they are ignored, producing raw values 29 through 31.
+	if kindNum == KindPointer {
+		return kindNum, size, newOffset, nil
+	}
 
 	endOffset := newOffset + size - 28
 	if endOffset > bufferLen {
 		return 0, 0, 0, mmdberrors.NewOffsetError()
 	}
-
 	switch size {
 	case 29:
 		return kindNum, 29 + uint(d.buffer[newOffset]), newOffset + 1, nil
@@ -176,6 +210,10 @@ func (d *DataDecoder) decodeCtrlData(offset uint) (Kind, uint, uint, error) {
 		return kindNum, 65821 + value, endOffset, nil
 	}
 }
+
+var errDecodedRecordTooLarge error = mmdberrors.NewInvalidDatabaseError(
+	"exceeded maximum decoded record size; database is likely corrupt",
+)
 
 // decodeBytes decodes a byte slice from the given offset with the given size.
 func (d *DataDecoder) decodeBytes(size, offset uint) ([]byte, uint, error) {
@@ -192,10 +230,7 @@ func (d *DataDecoder) decodeBytes(size, offset uint) ([]byte, uint, error) {
 // DecodeFloat64 decodes a 64-bit float from the given offset.
 func (d *DataDecoder) decodeFloat64(size, offset uint) (float64, uint, error) {
 	if size != 8 {
-		return 0, 0, mmdberrors.NewInvalidDatabaseError(
-			"the MaxMind DB file's data section contains bad data (float 64 size of %v)",
-			size,
-		)
+		return 0, 0, invalidScalarSizeError("float 64", size)
 	}
 	if offset+size > uint(len(d.buffer)) {
 		return 0, 0, mmdberrors.NewOffsetError()
@@ -209,10 +244,7 @@ func (d *DataDecoder) decodeFloat64(size, offset uint) (float64, uint, error) {
 // DecodeFloat32 decodes a 32-bit float from the given offset.
 func (d *DataDecoder) decodeFloat32(size, offset uint) (float32, uint, error) {
 	if size != 4 {
-		return 0, 0, mmdberrors.NewInvalidDatabaseError(
-			"the MaxMind DB file's data section contains bad data (float32 size of %v)",
-			size,
-		)
+		return 0, 0, invalidScalarSizeError("float32", size)
 	}
 	if offset+size > uint(len(d.buffer)) {
 		return 0, 0, mmdberrors.NewOffsetError()
@@ -226,21 +258,26 @@ func (d *DataDecoder) decodeFloat32(size, offset uint) (float32, uint, error) {
 // DecodeInt32 decodes a 32-bit signed integer from the given offset.
 func (d *DataDecoder) decodeInt32(size, offset uint) (int32, uint, error) {
 	if size > 4 {
-		return 0, 0, mmdberrors.NewInvalidDatabaseError(
-			"the MaxMind DB file's data section contains bad data (int32 size of %v)",
-			size,
-		)
+		return 0, 0, invalidScalarSizeError("int32", size)
 	}
 	if offset+size > uint(len(d.buffer)) {
 		return 0, 0, mmdberrors.NewOffsetError()
 	}
 
 	newOffset := offset + size
-	var val int32
-	for _, b := range d.buffer[offset:newOffset] {
-		val = (val << 8) | int32(b)
+	switch size {
+	case 0:
+		return 0, newOffset, nil
+	case 1:
+		return int32(d.buffer[offset]), newOffset, nil
+	case 2:
+		return int32(binary.BigEndian.Uint16(d.buffer[offset:newOffset])), newOffset, nil
+	case 3:
+		b := d.buffer[offset:newOffset]
+		return int32(b[0])<<16 | int32(b[1])<<8 | int32(b[2]), newOffset, nil
+	default:
+		return int32(binary.BigEndian.Uint32(d.buffer[offset:newOffset])), newOffset, nil
 	}
-	return val, newOffset, nil
 }
 
 // DecodePointer decodes a pointer from the given offset.
@@ -253,106 +290,221 @@ func (d *DataDecoder) decodePointer(
 	if newOffset > uint(len(d.buffer)) {
 		return 0, 0, mmdberrors.NewOffsetError()
 	}
-	pointerBytes := d.buffer[offset:newOffset]
-	var prefix uint
-	if pointerSize == 4 {
-		prefix = 0
-	} else {
-		prefix = size & 0x7
-	}
-	unpacked := uintFromBytes(prefix, pointerBytes)
-
-	var pointerValueOffset uint
+	b := d.buffer[offset:newOffset]
+	var pointer uint
 	switch pointerSize {
-	case 1, 4:
-		pointerValueOffset = 0
+	case 1:
+		pointer = (size&0x7)<<8 | uint(b[0])
 	case 2:
-		pointerValueOffset = pointerBase2
+		pointer = ((size&0x7)<<16 | uint(binary.BigEndian.Uint16(b))) + pointerBase2
 	case 3:
-		pointerValueOffset = pointerBase3
+		pointer = ((size&0x7)<<24 | uint(b[0])<<16 | uint(b[1])<<8 | uint(b[2])) + pointerBase3
 	default:
-		return 0, 0, mmdberrors.NewInvalidDatabaseError("invalid pointer size: %d", pointerSize)
+		pointer = uint(binary.BigEndian.Uint32(b))
 	}
-
-	pointer := unpacked + pointerValueOffset
-
 	return pointer, newOffset, nil
 }
 
 // DecodeBool decodes a boolean from the given offset.
 func (*DataDecoder) decodeBool(size, offset uint) (bool, uint, error) {
 	if size > 1 {
-		return false, 0, mmdberrors.NewInvalidDatabaseError(
-			"the MaxMind DB file's data section contains bad data (bool size of %v)",
-			size,
-		)
+		return false, 0, invalidScalarSizeError("bool", size)
 	}
 	value, newOffset := decodeBool(size, offset)
 	return value, newOffset, nil
 }
 
 // DecodeString decodes a string from the given offset.
-func (d *DataDecoder) decodeString(size, offset uint) (string, uint, error) {
-	if offset+size > uint(len(d.buffer)) {
+func (d *DataDecoder) decodeString(size, dataOffset uint) (string, uint, error) {
+	if dataOffset+size > uint(len(d.buffer)) {
 		return "", 0, mmdberrors.NewOffsetError()
 	}
 
-	newOffset := offset + size
-	value := d.stringCache.internAt(offset, size, d.buffer)
+	newOffset := dataOffset + size
+	if d.stringCache == nil {
+		return string(d.buffer[dataOffset:newOffset]), newOffset, nil
+	}
+	headerSize := uint(1)
+	if size >= 29 {
+		headerSize = 2
+		if size >= 285 {
+			headerSize = 3
+			if size >= 65821 {
+				headerSize = 4
+			}
+		}
+	}
+	if dataOffset < headerSize {
+		return "", 0, mmdberrors.NewOffsetError()
+	}
+	cacheOffset := dataOffset - headerSize
+	value := d.stringCache.internAt(cacheOffset, d.buffer[dataOffset:newOffset])
 	return value, newOffset, nil
+}
+
+// decodeCompactString decodes a string whose one-byte header and complete
+// payload have already been validated by the caller. Keeping this common case
+// separate avoids repeating the range check and header-width calculation in
+// decodeString.
+func (d *DataDecoder) decodeCompactString(size, dataOffset uint) string {
+	return d.decodeStringBytes(dataOffset-1, d.buffer[dataOffset:dataOffset+size])
+}
+
+// decodeStringBytes copies or interns a validated string payload. Accepting
+// the control-record offset and payload directly keeps this helper inlinable.
+func (d *DataDecoder) decodeStringBytes(controlOffset uint, value []byte) string {
+	if d.stringCache == nil {
+		return string(value)
+	}
+	return d.stringCache.internAt(controlOffset, value)
+}
+
+// decodeStringValue decodes a string or one pointer to a string and returns
+// the successor in the original containing stream for the legacy decoder.
+//
+//nolint:nestif // Keep common compact encodings inline on this hot path.
+func (d *DataDecoder) decodeStringValue(offset uint) (string, uint, error) {
+	bufferLen := uint(len(d.buffer))
+	if offset < bufferLen {
+		ctrlByte := d.buffer[offset]
+		kind := Kind(ctrlByte >> 5)
+		size := uint(ctrlByte & 0x1f)
+		switch kind {
+		case KindString:
+			if size < 29 {
+				dataOffset := offset + 1
+				nextOffset := dataOffset + size
+				if nextOffset <= bufferLen {
+					return d.decodeStringBytes(
+						dataOffset-1,
+						d.buffer[dataOffset:dataOffset+size],
+					), nextOffset, nil
+				}
+			}
+		case KindPointer:
+			if size < 8 && offset+2 <= bufferLen {
+				pointer := (size&0x7)<<8 | uint(d.buffer[offset+1])
+				if pointer < bufferLen {
+					pointedCtrlByte := d.buffer[pointer]
+					if Kind(pointedCtrlByte>>5) == KindString {
+						pointedSize := uint(pointedCtrlByte & 0x1f)
+						dataOffset := pointer + 1
+						if pointedSize < 29 && dataOffset+pointedSize <= bufferLen {
+							return d.decodeStringBytes(
+								dataOffset-1,
+								d.buffer[dataOffset:dataOffset+pointedSize],
+							), offset + 2, nil
+						}
+					}
+				}
+			}
+			if size >= 8 {
+				payloadOffset := offset + 1
+				pointerSize := ((size >> 3) & 0x3) + 1
+				pointerEnd := payloadOffset + pointerSize
+				if pointerEnd <= bufferLen {
+					var pointer uint
+					switch pointerSize {
+					case 2:
+						pointer = ((size&0x7)<<16 |
+							uint(d.buffer[payloadOffset])<<8 |
+							uint(d.buffer[payloadOffset+1])) + pointerBase2
+					case 3:
+						pointer = ((size&0x7)<<24 |
+							uint(d.buffer[payloadOffset])<<16 |
+							uint(d.buffer[payloadOffset+1])<<8 |
+							uint(d.buffer[payloadOffset+2])) + pointerBase3
+					case 4:
+						pointer = uint(d.buffer[payloadOffset])<<24 |
+							uint(d.buffer[payloadOffset+1])<<16 |
+							uint(d.buffer[payloadOffset+2])<<8 |
+							uint(d.buffer[payloadOffset+3])
+					}
+					if pointer < bufferLen {
+						pointedCtrlByte := d.buffer[pointer]
+						if Kind(pointedCtrlByte>>5) == KindString {
+							pointedSize := uint(pointedCtrlByte & 0x1f)
+							dataOffset := pointer + 1
+							if pointedSize < 29 && pointedSize <= bufferLen-dataOffset {
+								return d.decodeStringBytes(
+									dataOffset-1,
+									d.buffer[dataOffset:dataOffset+pointedSize],
+								), pointerEnd, nil
+							}
+						}
+					}
+				}
+			}
+		default:
+		}
+	}
+
+	kind, size, dataOffset, nextOffset, err := d.resolveCtrlData(offset)
+	if err != nil {
+		return "", 0, err
+	}
+	if nextOffset == 0 {
+		nextOffset = dataOffset + size
+	}
+	if kind != KindString {
+		return "", 0, unexpectedKindErr(KindString, kind)
+	}
+	value, _, err := d.decodeString(size, dataOffset)
+	if err != nil {
+		return "", 0, err
+	}
+	return value, nextOffset, nil
 }
 
 // DecodeUint16 decodes a 16-bit unsigned integer from the given offset.
 func (d *DataDecoder) decodeUint16(size, offset uint) (uint16, uint, error) {
 	if size > 2 {
-		return 0, 0, mmdberrors.NewInvalidDatabaseError(
-			"the MaxMind DB file's data section contains bad data (uint16 size of %v)",
-			size,
-		)
+		return 0, 0, invalidScalarSizeError("uint16", size)
 	}
 	if offset+size > uint(len(d.buffer)) {
 		return 0, 0, mmdberrors.NewOffsetError()
 	}
 
 	newOffset := offset + size
-	bytes := d.buffer[offset:newOffset]
-
-	var val uint16
-	for _, b := range bytes {
-		val = (val << 8) | uint16(b)
+	switch size {
+	case 0:
+		return 0, newOffset, nil
+	case 1:
+		return uint16(d.buffer[offset]), newOffset, nil
+	default:
+		return binary.BigEndian.Uint16(d.buffer[offset:newOffset]), newOffset, nil
 	}
-	return val, newOffset, nil
 }
 
 // DecodeUint32 decodes a 32-bit unsigned integer from the given offset.
 func (d *DataDecoder) decodeUint32(size, offset uint) (uint32, uint, error) {
 	if size > 4 {
-		return 0, 0, mmdberrors.NewInvalidDatabaseError(
-			"the MaxMind DB file's data section contains bad data (uint32 size of %v)",
-			size,
-		)
+		return 0, 0, invalidScalarSizeError("uint32", size)
 	}
 	if offset+size > uint(len(d.buffer)) {
 		return 0, 0, mmdberrors.NewOffsetError()
 	}
 
 	newOffset := offset + size
-	bytes := d.buffer[offset:newOffset]
-
-	var val uint32
-	for _, b := range bytes {
-		val = (val << 8) | uint32(b)
+	switch size {
+	case 0:
+		return 0, newOffset, nil
+	case 1:
+		return uint32(d.buffer[offset]), newOffset, nil
+	case 2:
+		return uint32(binary.BigEndian.Uint16(d.buffer[offset:newOffset])), newOffset, nil
+	case 3:
+		b := d.buffer[offset:newOffset]
+		return uint32(b[0])<<16 | uint32(b[1])<<8 | uint32(b[2]), newOffset, nil
+	default:
+		return binary.BigEndian.Uint32(d.buffer[offset:newOffset]), newOffset, nil
 	}
-	return val, newOffset, nil
 }
 
 // DecodeUint64 decodes a 64-bit unsigned integer from the given offset.
 func (d *DataDecoder) decodeUint64(size, offset uint) (uint64, uint, error) {
 	if size > 8 {
-		return 0, 0, mmdberrors.NewInvalidDatabaseError(
-			"the MaxMind DB file's data section contains bad data (uint64 size of %v)",
-			size,
-		)
+		return 0, 0, invalidScalarSizeError("uint64", size)
 	}
 	if offset+size > uint(len(d.buffer)) {
 		return 0, 0, mmdberrors.NewOffsetError()
@@ -372,10 +524,7 @@ func (d *DataDecoder) decodeUint64(size, offset uint) (uint64, uint, error) {
 // Returns the value as high and low 64-bit unsigned integers.
 func (d *DataDecoder) decodeUint128(size, offset uint) (hi, lo uint64, newOffset uint, err error) {
 	if size > 16 {
-		return 0, 0, 0, mmdberrors.NewInvalidDatabaseError(
-			"the MaxMind DB file's data section contains bad data (uint128 size of %v)",
-			size,
-		)
+		return 0, 0, 0, invalidScalarSizeError("uint128", size)
 	}
 	if offset+size > uint(len(d.buffer)) {
 		return 0, 0, 0, mmdberrors.NewOffsetError()
@@ -397,148 +546,164 @@ func append64(val uint64, b byte) (uint64, byte) {
 	return (val << 8) | uint64(b), byte(val >> 56)
 }
 
-// decodePointerKeyFast is an allocation-free inline of decodePointer followed
-// by decodeKey for the dominant case of a map key encoded as a pointer to a
-// short string. On success, returns the key bytes (aliasing d.buffer) and the
-// offset past the pointer. On any deviation from the fast-path shape it
-// returns ok=false, signaling the caller to fall through to the slow path —
-// this is not an error and is re-validated downstream:
-//
-//   - bail-outs for OOB pointer reads are re-encountered by decodeCtrlData /
-//     decodePointer in the slow path and surfaced as typed errors.
-//   - pointedSize >= 29 selects the extended-size encoding, which requires
-//     additional control bytes the slow path knows how to read.
-//   - non-KindString targets and pointer-to-pointer chains are spec violations
-//     that the slow path reports.
-//
-// pointerSize == 4 uses no bias (pointerBase 0); sizes 2 and 3 use
-// pointerBase2 / pointerBase3. Size 1 also has no bias.
-func (d *DataDecoder) decodePointerKeyFast(offset, ctrlByte, bufferLen uint) ([]byte, uint, bool) {
-	size := ctrlByte & 0x1f
-	pointerSize := ((size >> 3) & 0x3) + 1
-	newOffset := offset + 1 + pointerSize
-	if newOffset > bufferLen {
-		return nil, 0, false
-	}
-	var prefix uint
-	if pointerSize == 4 {
-		prefix = 0
-	} else {
-		prefix = size & 0x7
-	}
-	pointerBytes := d.buffer[offset+1 : newOffset]
-	unpacked := uintFromBytes(prefix, pointerBytes)
-
-	var pointerValueOffset uint
-	switch pointerSize {
-	case 1, 4:
-		pointerValueOffset = 0
-	case 2:
-		pointerValueOffset = pointerBase2
-	case 3:
-		pointerValueOffset = pointerBase3
-	default:
-		return nil, 0, false
-	}
-
-	pointer := unpacked + pointerValueOffset
-	if pointer >= bufferLen {
-		return nil, 0, false
-	}
-	pointedCtrlByte := d.buffer[pointer]
-	if Kind(pointedCtrlByte>>5) != KindString {
-		return nil, 0, false
-	}
-	pointedSize := uint(pointedCtrlByte & 0x1f)
-	if pointedSize >= 29 {
-		return nil, 0, false
-	}
-	dataOffset := pointer + 1
-	if dataOffset+pointedSize > bufferLen {
-		return nil, 0, false
-	}
-	return d.buffer[dataOffset : dataOffset+pointedSize], newOffset, true
+//go:noinline
+func invalidScalarSizeError(typeName string, size uint) error {
+	return mmdberrors.NewInvalidDatabaseError(
+		"the MaxMind DB file's data section contains bad data (%s size of %v)",
+		typeName,
+		size,
+	)
 }
 
-// DecodeKey decodes a map key into []byte slice. We use a []byte so that we
+// decodeKey decodes a map key into a []byte slice. We use []byte so that we
 // can take advantage of https://github.com/golang/go/issues/3512 to avoid
 // copying the bytes when decoding a struct. Previously, we achieved this by
 // using unsafe.
 func (d *DataDecoder) decodeKey(offset uint) ([]byte, uint, error) {
-	bufferLen := uint(len(d.buffer))
+	key, _, nextOffset, err := d.decodeKeyAt(offset)
+	return key, nextOffset, err
+}
+
+// decodeStringKey validates and decodes a map key while preserving the source
+// control-record offset needed by the string cache. Returned strings never
+// alias d.buffer.
+//
+// Reflection decoding with an active expansion budget charges large keys before
+// copying or interning them. This method handles unbudgeted decoding.
+func (d *DataDecoder) decodeStringKey(offset uint) (string, uint, error) {
+	key, cacheOffset, nextOffset, err := d.decodeKeyAt(offset)
+	if err != nil {
+		return "", 0, err
+	}
+	return d.decodeStringBytes(cacheOffset, key), nextOffset, nil
+}
+
+// decodeKeyAt also returns the key's control-record offset for callers that
+// need to retain a safe copy through the string cache.
+//
+//nolint:nestif // Inline pointer decoding keeps map key lookups fast.
+func (d *DataDecoder) decodeKeyAt(offset uint) ([]byte, uint, uint, error) {
+	buffer := d.buffer
+	bufferLen := uint(len(buffer))
 	if offset >= bufferLen {
-		return nil, 0, mmdberrors.NewOffsetError()
+		return nil, 0, 0, mmdberrors.NewOffsetError()
 	}
 
-	ctrlByte := d.buffer[offset]
-	kind := Kind(ctrlByte >> 5)
-	// Fast paths for the two dominant key shapes. Everything else — including
-	// KindString with size >= 29 (extended encoding) and any fast-path
-	// bail-out — falls through to the slow path below.
-	switch kind {
+	ctrlByte := buffer[offset]
+	size := uint(ctrlByte & 0x1f)
+	// Fast paths for the two dominant key shapes (inline short string or
+	// pointer to short string across all 4 pointer widths). Everything else —
+	// including KindString with size >= 29 (extended encoding) and any
+	// fast-path bail-out — falls through to decodeKeyAtSlow.
+	switch Kind(ctrlByte >> 5) {
 	case KindString:
-		size := uint(ctrlByte & 0x1f)
 		if size < 29 {
 			dataOffset := offset + 1
 			newOffset := dataOffset + size
 			if newOffset > bufferLen {
-				return nil, 0, mmdberrors.NewOffsetError()
+				return nil, 0, 0, mmdberrors.NewOffsetError()
 			}
-			return d.buffer[dataOffset:newOffset], newOffset, nil
+			return buffer[dataOffset:newOffset], offset, newOffset, nil
 		}
 	case KindPointer:
-		if key, newOffset, ok := d.decodePointerKeyFast(offset, uint(ctrlByte), bufferLen); ok {
-			return key, newOffset, nil
+		if size < 8 {
+			newOffset := offset + 2
+			if newOffset <= bufferLen {
+				pointer := (size&0x7)<<8 | uint(buffer[offset+1])
+				if pointer < bufferLen {
+					pointedCtrlByte := buffer[pointer]
+					if Kind(pointedCtrlByte>>5) == KindString {
+						pointedSize := uint(pointedCtrlByte & 0x1f)
+						dataOffset := pointer + 1
+						if pointedSize < 29 && dataOffset+pointedSize <= bufferLen {
+							return buffer[dataOffset : dataOffset+pointedSize],
+								pointer, newOffset, nil
+						}
+					}
+				}
+			}
+		} else {
+			pointerSize := (size >> 3) + 1
+			newOffset := offset + 1 + pointerSize
+			if newOffset <= bufferLen {
+				b := buffer[offset+1 : newOffset]
+				var pointer uint
+				switch pointerSize {
+				case 2:
+					pointer = ((size&0x7)<<16 | uint(binary.BigEndian.Uint16(b))) + pointerBase2
+				case 3:
+					pointer = ((size&0x7)<<24 | uint(b[0])<<16 | uint(b[1])<<8 | uint(b[2])) + pointerBase3
+				default:
+					pointer = uint(binary.BigEndian.Uint32(b))
+				}
+				if pointer < bufferLen {
+					pointedCtrlByte := buffer[pointer]
+					if Kind(pointedCtrlByte>>5) == KindString {
+						pointedSize := uint(pointedCtrlByte & 0x1f)
+						dataOffset := pointer + 1
+						if pointedSize < 29 && dataOffset+pointedSize <= bufferLen {
+							return buffer[dataOffset : dataOffset+pointedSize],
+								pointer, newOffset, nil
+						}
+					}
+				}
+			}
 		}
 	default:
 	}
 
-	kindNum, size, dataOffset, err := d.decodeCtrlData(offset)
+	return d.decodeKeyAtSlow(offset, bufferLen)
+}
+
+//go:noinline
+func (d *DataDecoder) decodeKeyAtSlow(offset, bufferLen uint) ([]byte, uint, uint, error) {
+	kindNum, size, dataOffset, nextOffset, err := d.resolveCtrlData(offset)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, 0, err
 	}
-
-	// Follow pointer if present (but only once, per spec)
-	nextOffset := dataOffset + size // default return offset
-	if kindNum == KindPointer {
-		pointer, newNextOffset, err := d.decodePointer(size, dataOffset)
-		if err != nil {
-			return nil, 0, err
-		}
-		nextOffset = newNextOffset
-
-		// Decode the pointed-to data
-		kindNum, size, dataOffset, err = d.decodeCtrlData(pointer)
-		if err != nil {
-			return nil, 0, err
-		}
-
-		// Check for pointer-to-pointer, which is invalid per spec
-		if kindNum == KindPointer {
-			return nil, 0, mmdberrors.NewInvalidDatabaseError(
-				"invalid pointer to pointer at offset %d",
-				pointer,
-			)
-		}
+	if nextOffset == 0 {
+		nextOffset = dataOffset + size
 	}
 
 	if kindNum != KindString {
-		return nil, 0, mmdberrors.NewInvalidDatabaseError(
-			"unexpected type when decoding string: %v",
-			kindNum,
-		)
+		return nil, 0, 0, d.unexpectedMapKeyKind(offset, kindNum)
 	}
 	newOffset := dataOffset + size
 	if newOffset > bufferLen {
-		return nil, 0, mmdberrors.NewOffsetError()
+		return nil, 0, 0, mmdberrors.NewOffsetError()
 	}
-	return d.buffer[dataOffset:newOffset], nextOffset, nil
+	headerSize := uint(1)
+	if size >= 29 {
+		headerSize = 2
+		if size >= 285 {
+			headerSize = 3
+			if size >= 65821 {
+				headerSize = 4
+			}
+		}
+	}
+	if dataOffset < headerSize {
+		return nil, 0, 0, mmdberrors.NewOffsetError()
+	}
+	return d.buffer[dataOffset:newOffset], dataOffset - headerSize, nextOffset, nil
+}
+
+//go:noinline
+func (d *DataDecoder) unexpectedMapKeyKind(offset uint, kind Kind) error {
+	if !kind.IsContainer() {
+		validator := newStructuralValidator(d)
+		if _, err := validator.validateValue(offset, 0, false); err != nil {
+			return err
+		}
+	}
+	return mmdberrors.NewInvalidDatabaseError("unexpected map key type: %s", kind)
 }
 
 // NextValueOffset skips ahead to the next value without decoding
 // the one at the offset passed in. The size bits have different meanings for
 // different data types.
 func (d *DataDecoder) nextValueOffset(offset, numberToSkip uint) (uint, error) {
+	bufferLen := uint(len(d.buffer))
 	for numberToSkip > 0 {
 		kindNum, size, newOffset, err := d.decodeCtrlData(offset)
 		if err != nil {
@@ -557,12 +722,21 @@ func (d *DataDecoder) nextValueOffset(offset, numberToSkip uint) (uint, error) {
 			}
 			newOffset = ptrEndOffset
 		case KindMap:
+			if size > (^uint(0)-numberToSkip)/2 {
+				return 0, mmdberrors.NewInvalidDatabaseError("container size overflow")
+			}
 			numberToSkip += 2 * size
 		case KindSlice:
+			if size > ^uint(0)-numberToSkip {
+				return 0, mmdberrors.NewInvalidDatabaseError("container size overflow")
+			}
 			numberToSkip += size
 		case KindBool:
 			// size encodes the boolean; nothing else to skip
 		default:
+			if !hasBufferRange(bufferLen, newOffset, size) {
+				return 0, mmdberrors.NewOffsetError()
+			}
 			newOffset += size
 		}
 
@@ -572,14 +746,10 @@ func (d *DataDecoder) nextValueOffset(offset, numberToSkip uint) (uint, error) {
 	return offset, nil
 }
 
-func decodeBool(size, offset uint) (bool, uint) {
-	return size != 0, offset
+func hasBufferRange(bufferLen, offset, size uint) bool {
+	return size <= bufferLen && offset <= bufferLen-size
 }
 
-func uintFromBytes(prefix uint, uintBytes []byte) uint {
-	val := prefix
-	for _, b := range uintBytes {
-		val = (val << 8) | uint(b)
-	}
-	return val
+func decodeBool(size, offset uint) (bool, uint) {
+	return size != 0, offset
 }

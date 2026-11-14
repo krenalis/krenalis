@@ -1,16 +1,16 @@
-import React, { useState, useEffect, useContext, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useContext, useLayoutEffect, useMemo, useRef, useId } from 'react';
 import { useProfileDrawer } from './useProfileDrawer';
 import { ProfileTab } from './Profiles.types';
 import AppContext from '../../../context/AppContext';
 import ProfilesContext from '../../../context/ProfilesContext';
-import SlTab from '@shoelace-style/shoelace/dist/react/tab/index.js';
-import SlTabGroup from '@shoelace-style/shoelace/dist/react/tab-group/index.js';
-import SlCopyButton from '@shoelace-style/shoelace/dist/react/copy-button/index.js';
-import SlTabPanel from '@shoelace-style/shoelace/dist/react/tab-panel/index.js';
-import SlIconButton from '@shoelace-style/shoelace/dist/react/icon-button/index.js';
-import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
-import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
+import WaTab from '@awesome.me/webawesome/dist/react/tab/index.js';
+import WaTabGroup from '@awesome.me/webawesome/dist/react/tab-group/index.js';
+import WaCopyButton from '@awesome.me/webawesome/dist/react/copy-button/index.js';
+import WaTabPanel from '@awesome.me/webawesome/dist/react/tab-panel/index.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
+import WaTooltip from '@awesome.me/webawesome/dist/react/tooltip/index.js';
 import toJSDate from '../../../utils/toJSDate';
 import { Link } from '../../base/Link/Link';
 import { PROFILES_EXPANDED_ATTRIBUTES_KEY, PROFILES_TAB_KEY } from '../../../constants/storage';
@@ -19,13 +19,24 @@ import { CONNECTORS_ASSETS_PATH } from '../../../constants/paths';
 import { ProfileSchemaProperties } from './Profiles.types';
 import { getProfileAttributeString, getProfilePropertyLabel } from './Profiles.helpers';
 import { ProfileThumbnail } from './ProfileThumbnail';
+import { ResponseProfile } from '../../../lib/api/types/responses';
+
+interface ClosingProfile {
+	context: string;
+	id: string;
+	resources: ReturnType<typeof useProfileDrawer>;
+	summary?: ResponseProfile;
+}
 
 const ProfileDrawer = () => {
+	const drawerID = useId();
 	const [selectedTab, setSelectedTab] = useState<ProfileTab>();
+	const [closingProfile, setClosingProfile] = useState<ClosingProfile>();
+	const drawerRef = useRef<HTMLElement | null>(null);
 
 	const { connections, workspaces, selectedWorkspace } = useContext(AppContext);
 	const {
-		activeProfileID,
+		activeProfileID: selectedProfileID,
 		canNavigateNextProfile,
 		canNavigatePreviousProfile,
 		profileSchema,
@@ -37,6 +48,23 @@ const ProfileDrawer = () => {
 		profiles,
 		setActiveProfileID,
 	} = useContext(ProfilesContext);
+	const profileContext = `${selectedWorkspace}:${profilesExecutionID}:${profilesQueryKey}`;
+	const isClosing = selectedProfileID === '' && closingProfile?.context === profileContext;
+	const activeProfileID = isClosing ? closingProfile.id : selectedProfileID;
+
+	useEffect(() => {
+		setClosingProfile((current) =>
+			selectedProfileID !== '' || current?.context !== profileContext ? undefined : current,
+		);
+	}, [profileContext, selectedProfileID]);
+
+	const currentResources = useProfileDrawer(
+		selectedProfileID,
+		selectedTab,
+		profileSchema,
+		`${profilesExecutionID}:${profilesQueryKey}`,
+		markProfileSchemaNotAligned,
+	);
 	const {
 		attributes,
 		events,
@@ -45,13 +73,22 @@ const ProfileDrawer = () => {
 		isEventsLoading,
 		isIdentitiesLoading,
 		isProfileMissing,
-	} = useProfileDrawer(
-		activeProfileID,
-		selectedTab,
-		profileSchema,
-		`${profilesExecutionID}:${profilesQueryKey}`,
-		markProfileSchemaNotAligned,
-	);
+	} = isClosing ? closingProfile.resources : currentResources;
+
+	useLayoutEffect(() => {
+		if (drawerRef.current == null || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+			return;
+		}
+		const animations = Array.from(
+			drawerRef.current.querySelectorAll('.profile-drawer__top-section, wa-tab-group'),
+			(element) => element.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 180, easing: 'ease-out' }),
+		);
+		return () => {
+			for (const animation of animations) {
+				animation.cancel();
+			}
+		};
+	}, [activeProfileID, attributes, events, identities, isProfileMissing]);
 
 	const workspace = useMemo(
 		() => workspaces.find((w) => w.id === selectedWorkspace),
@@ -86,22 +123,34 @@ const ProfileDrawer = () => {
 		setSelectedTab(e.detail.name);
 	};
 
-	const summary = profiles.find((profile) => profile.kpid === activeProfileID);
+	const summary = isClosing ? closingProfile.summary : profiles.find((profile) => profile.kpid === activeProfileID);
 	const displayedAttributes = isProfileMissing ? undefined : (attributes ?? summary?.attributes);
-	const profilePhoto = getProfileAttributeString(displayedAttributes, workspace?.assignedRoles.photo ?? '');
-	const profileFirstName = getProfileAttributeString(displayedAttributes, workspace?.assignedRoles.firstName ?? '');
-	const profileLastName = getProfileAttributeString(displayedAttributes, workspace?.assignedRoles.lastName ?? '');
-	const profileEmail = getProfileAttributeString(displayedAttributes, workspace?.assignedRoles.email ?? '');
+	const profilePhoto = getProfileAttributeString(
+		displayedAttributes,
+		workspace?.profileSchema.propertyRoles.photo ?? '',
+	);
+	const profileFirstName = getProfileAttributeString(
+		displayedAttributes,
+		workspace?.profileSchema.propertyRoles.firstName ?? '',
+	);
+	const profileLastName = getProfileAttributeString(
+		displayedAttributes,
+		workspace?.profileSchema.propertyRoles.lastName ?? '',
+	);
+	const profileEmail = getProfileAttributeString(
+		displayedAttributes,
+		workspace?.profileSchema.propertyRoles.email ?? '',
+	);
 
 	const spinner = (
-		<SlSpinner
+		<WaSpinner
 			style={
 				{
 					fontSize: '3rem',
 					'--track-width': '6px',
 				} as React.CSSProperties
 			}
-		></SlSpinner>
+		></WaSpinner>
 	);
 
 	if (activeProfileID === '') {
@@ -109,26 +158,61 @@ const ProfileDrawer = () => {
 	}
 
 	return (
-		<aside className='profile-drawer' aria-label='Profile details'>
+		<aside
+			ref={(element) => {
+				drawerRef.current = element;
+				if (element != null) {
+					element.inert = isClosing;
+				}
+			}}
+			className={`profile-drawer${isClosing ? ' profile-drawer--closing' : ''}`}
+			aria-label='Profile details'
+			aria-hidden={isClosing}
+			onAnimationEnd={(event) => {
+				if (
+					event.target === event.currentTarget &&
+					event.animationName === 'profile-drawer-exit' &&
+					isClosing
+				) {
+					setClosingProfile(undefined);
+				}
+			}}
+		>
 			<div className='profile-drawer__navigation'>
-				<SlIconButton
-					name='chevron-left'
-					label='Previous profile'
+				<WaButton
+					className='icon-button'
+					appearance='plain'
+					aria-label='Previous profile'
 					disabled={!canNavigatePreviousProfile}
 					onClick={() => navigateProfile('previous')}
-				/>
-				<SlIconButton
-					name='chevron-right'
-					label='Next profile'
+				>
+					<WaIcon name='chevron-left' label='Previous profile' />
+				</WaButton>
+				<WaButton
+					className='icon-button'
+					appearance='plain'
+					aria-label='Next profile'
 					disabled={!canNavigateNextProfile}
 					onClick={() => navigateProfile('next')}
-				/>
-				<SlIconButton
-					className='profile-drawer__close'
-					name='x-lg'
-					label='Close profile details'
-					onClick={() => setActiveProfileID('')}
-				/>
+				>
+					<WaIcon name='chevron-right' label='Next profile' />
+				</WaButton>
+				<WaButton
+					appearance='plain'
+					className='icon-button profile-drawer__close'
+					aria-label='Close profile details'
+					onClick={() => {
+						setClosingProfile({
+							context: profileContext,
+							id: activeProfileID,
+							resources: currentResources,
+							summary,
+						});
+						setActiveProfileID('');
+					}}
+				>
+					<WaIcon name='x-lg' label='Close profile details' />
+				</WaButton>
 			</div>
 			<div className='profile-drawer__top-section'>
 				<ProfileThumbnail
@@ -139,20 +223,20 @@ const ProfileDrawer = () => {
 					profileID={activeProfileID}
 				/>
 				<div className='profile-drawer__profile-properties'>
-					<span className='profile-drawer__first-name'>{profileFirstName ?? ''}</span>{' '}
-					<span className='profile-drawer__last-name'>{profileLastName ?? ''}</span>
+					{profileFirstName == null && profileLastName == null ? (
+						<span className='profile-drawer__name--unavailable'>Name not available</span>
+					) : (
+						<>
+							<span className='profile-drawer__first-name'>{profileFirstName ?? ''}</span>{' '}
+							<span className='profile-drawer__last-name'>{profileLastName ?? ''}</span>
+						</>
+					)}
 					<div className='profile-drawer__email'>{profileEmail ?? ''}</div>
 					<span className='profile-drawer__kpid'>
-						<SlTooltip
-							content='Krenalis Profile ID'
-							onSlHide={(e) => {
-								// Prevent the event from bubbling up and
-								// causing the drawer to close.
-								e.stopPropagation();
-							}}
-						>
-							<SlIcon name='info-circle-fill' />
-						</SlTooltip>
+						<WaTooltip className='app-tooltip' for={`${drawerID}-kpid`}>
+							Krenalis Profile ID
+						</WaTooltip>
+						<WaIcon id={`${drawerID}-kpid`} name='info-circle-fill' />
 						KPID: <span className='profile-drawer__kpid-value'>{activeProfileID}</span>
 					</span>
 				</div>
@@ -160,21 +244,21 @@ const ProfileDrawer = () => {
 			{isProfileMissing && (
 				<p role='status'>This profile no longer exists. You can continue browsing or refresh the list.</p>
 			)}
-			<SlTabGroup onSlTabShow={onSelectTab}>
-				<SlTab slot='nav' panel='attributes' active={selectedTab === 'attributes'}>
+			<WaTabGroup active={selectedTab} onWaTabShow={onSelectTab}>
+				<WaTab slot='nav' panel='attributes'>
 					Attributes
-				</SlTab>
-				<SlTab slot='nav' panel='events' active={selectedTab === 'events'}>
+				</WaTab>
+				<WaTab slot='nav' panel='events'>
 					Events
-				</SlTab>
-				<SlTab slot='nav' panel='identities' active={selectedTab === 'identities'}>
+				</WaTab>
+				<WaTab slot='nav' panel='identities'>
 					Identities
-				</SlTab>
-				<SlTabPanel name='attributes'>
+				</WaTab>
+				<WaTabPanel name='attributes'>
 					<div className='profile-drawer__attributes'>
 						{isAttributesLoading && attributes == null ? (
 							spinner
-						) : displayedAttributes && Object.keys(displayedAttributes).length > 0 ? (
+						) : displayedAttributes != null && Object.keys(displayedAttributes).length > 0 ? (
 							Object.entries(displayedAttributes).map(([name, value]) => {
 								const path = name;
 								if (typeof value === 'object') {
@@ -206,8 +290,8 @@ const ProfileDrawer = () => {
 							</div>
 						)}
 					</div>
-				</SlTabPanel>
-				<SlTabPanel name='events'>
+				</WaTabPanel>
+				<WaTabPanel name='events'>
 					<div
 						className={`profile-drawer__events${selectedTab === 'events' ? ' profile-drawer__events--selected' : ''}`}
 					>
@@ -235,8 +319,8 @@ const ProfileDrawer = () => {
 							<div className='profile-drawer__no-events'>No events associated to this profile</div>
 						)}
 					</div>
-				</SlTabPanel>
-				<SlTabPanel name='identities'>
+				</WaTabPanel>
+				<WaTabPanel name='identities'>
 					<div
 						className={`profile-drawer__identities${selectedTab === 'identities' ? ' profile-drawer__identities--selected' : ''}`}
 					>
@@ -251,8 +335,12 @@ const ProfileDrawer = () => {
 								return (
 									<div className='profile-drawer__identity' key={identity.updatedAt}>
 										<div className='profile-drawer__identity-head'>
-											<SlTooltip className='profile-drawer__action' placement='left' hoist>
-												<div slot='content'>
+											<WaTooltip
+												className='profile-drawer__action'
+												for={`${drawerID}-${identity.updatedAt}`}
+												placement='left'
+											>
+												<div>
 													Imported from pipeline{' '}
 													<span className='profile-drawer__identity-pipeline-link'>
 														<Link
@@ -262,18 +350,17 @@ const ProfileDrawer = () => {
 														</Link>
 													</span>
 												</div>
-												<Link
-													path={`connections/${connection.id}/pipelines`}
-													className='profile-drawer__identity-connection'
-												>
-													<div className='profile-drawer__identity-connection-logo'>
-														{logo}
-													</div>
-													<div className='profile-drawer__identity-connection-name'>
-														{connection.name}
-													</div>
-												</Link>
-											</SlTooltip>
+											</WaTooltip>
+											<Link
+												id={`${drawerID}-${identity.updatedAt}`}
+												path={`connections/${connection.id}/pipelines`}
+												className='profile-drawer__identity-connection'
+											>
+												<div className='profile-drawer__identity-connection-logo'>{logo}</div>
+												<div className='profile-drawer__identity-connection-name'>
+													{connection.name}
+												</div>
+											</Link>
 											<div className='profile-drawer__identity-updated-at'>
 												{toJSDate(identity.updatedAt).toLocaleString()}
 											</div>
@@ -299,8 +386,8 @@ const ProfileDrawer = () => {
 							</div>
 						)}
 					</div>
-				</SlTabPanel>
-			</SlTabGroup>
+				</WaTabPanel>
+			</WaTabGroup>
 		</aside>
 	);
 };
@@ -346,7 +433,7 @@ const DrawerAttribute = ({ label, value, isParent, isIndented, isExpanded, setIs
 			}}
 		>
 			<span className='drawer-attribute__property-padding'>
-				{isParent && <SlIcon className='drawer-attribute__property-caret' name='caret-right-fill' />}
+				{isParent && <WaIcon className='drawer-attribute__property-caret' name='caret-right-fill' />}
 			</span>
 			<span className='profile-drawer__attribute-key'>
 				{isIndented && <span className='profile-drawer__indentation-icon' />}
@@ -361,13 +448,12 @@ const DrawerAttribute = ({ label, value, isParent, isIndented, isExpanded, setIs
 			) : (
 				<span className='drawer-attribute__value'>
 					{value}
-					<SlCopyButton
+					<WaCopyButton
 						className='drawer-attribute__value-copy'
 						value={value}
 						copyLabel='Click to copy'
 						successLabel='✓ Copied'
 						errorLabel='Copying to clipboard is not supported by your browser'
-						hoist={true}
 					/>
 				</span>
 			)}

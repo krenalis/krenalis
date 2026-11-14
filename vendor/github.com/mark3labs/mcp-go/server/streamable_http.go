@@ -10,7 +10,6 @@ import (
 	"maps"
 	"mime"
 	"net/http"
-	"net/http/httptest"
 	"os"
 	"strings"
 	"sync"
@@ -329,6 +328,10 @@ type StreamableHTTPServer struct {
 	// the server emit CORS headers and answer preflight requests. See
 	// WithStreamableHTTPCORS.
 	corsConfig *CORSConfig
+
+	// protocolVersions restricts the protocol versions advertised through
+	// server/discover. Empty means every version this SDK implements.
+	protocolVersions []string
 }
 
 // NewStreamableHTTPServer creates a new streamable-http server instance
@@ -573,6 +576,20 @@ func (s *StreamableHTTPServer) handlePost(w HTTPResponseWriter, r *HTTPRequest) 
 		return
 	}
 
+	isInitializeRequest := jsonMessage.Method == mcp.MethodInitialize
+
+	// Decide which protocol era this message belongs to before branching on
+	// its shape. Protocol version 2026-07-28 removed protocol-level sessions,
+	// so a modern message never carries, mints, or echoes a session ID
+	// (SEP-2567), and must not reach a session-dependent path.
+	era := detectRequestEra(r.header(), rawData)
+
+	// The header is only required after initialize, which negotiates the
+	// version itself. Responses posted by the client are checked as well.
+	if !era.modern && !isInitializeRequest && rejectUnsupportedProtocolVersion(w, era.headerVersion) {
+		return
+	}
+
 	// detect empty ping response, skip session ID validation
 	isEmptyResponse := jsonMessage.Method == "" && jsonMessage.ID != nil &&
 		(isJSONEmpty(jsonMessage.Result) && isJSONEmpty(jsonMessage.Error))
@@ -596,10 +613,27 @@ func (s *StreamableHTTPServer) handlePost(w HTTPResponseWriter, r *HTTPRequest) 
 	isSamplingResponse := jsonMessage.Method == "" && jsonMessage.ID != nil &&
 		(jsonMessage.Result != nil || jsonMessage.Error != nil)
 
-	isInitializeRequest := jsonMessage.Method == mcp.MethodInitialize
+	var requestID any
+	if len(jsonMessage.ID) > 0 {
+		_ = json.Unmarshal(jsonMessage.ID, &requestID)
+	}
 
-	// Handle sampling responses separately
+	// Handle sampling responses separately.
+	//
+	// A client-to-server response answers a server-initiated request, which
+	// protocol version 2026-07-28 replaced with multi round-trip requests
+	// (SEP-2322). Accepting one from a modern client would let a valid
+	// Mcp-Session-Id steer a modern message onto the legacy, session-scoped
+	// delivery path, so it is refused.
 	if isSamplingResponse {
+		if era.modern {
+			s.writeJSONRPCErrorStatus(w, requestID, mcp.INVALID_REQUEST,
+				"client-to-server responses are not supported in protocol version "+
+					mcp.ProtocolVersion20260728+
+					": server-initiated requests were replaced by multi round-trip requests",
+				http.StatusBadRequest)
+			return
+		}
 		if err := s.handleSamplingResponse(w, r, jsonMessage); err != nil {
 			s.logger.Error("Failed to handle sampling response", "err", err)
 			// HTTP Status code is already set in handleSamplingResponse, just return here
@@ -611,30 +645,44 @@ func (s *StreamableHTTPServer) handlePost(w HTTPResponseWriter, r *HTTPRequest) 
 	// The session is ephemeral. Its life is the same as the request. It's only created
 	// for interaction with the mcp server.
 	var sessionID string
-	sessionIdManager := s.resolveSessionIdManager(r)
-	if isInitializeRequest {
-		// generate a new one for initialize request
-		sessionID = sessionIdManager.Generate()
+	listening := false
+	if era.modern {
+		if !s.validateModernRequest(w, r, era, requestID) {
+			return
+		}
+		// The Mcp-Session-Id header is ignored, and no session ID is minted.
+		// Each modern request is served by its own ephemeral session.
+		isInitializeRequest = false
+		// A subscriptions/listen stream is where a modern client receives
+		// the notifications the server broadcasts, such as
+		// notifications/tools/list_changed.
+		listening = jsonMessage.Method == mcp.MethodSubscriptionsListen && requestID != nil
 	} else {
-		// Get session ID from header.
-		// Stateful servers need the client to carry the session ID.
-		sessionID = r.header().Get(HeaderKeySessionID)
-		isTerminated, err := sessionIdManager.Validate(sessionID)
-		if err != nil {
-			writeHTTPError(w, "Invalid session ID", http.StatusNotFound)
-			return
+		sessionIdManager := s.resolveSessionIdManager(r)
+		if isInitializeRequest {
+			// generate a new one for initialize request
+			sessionID = sessionIdManager.Generate()
+		} else {
+			// Get session ID from header.
+			// Stateful servers need the client to carry the session ID.
+			sessionID = r.header().Get(HeaderKeySessionID)
+			isTerminated, err := sessionIdManager.Validate(sessionID)
+			if err != nil {
+				writeHTTPError(w, "Invalid session ID", http.StatusNotFound)
+				return
+			}
+			if isTerminated {
+				writeHTTPError(w, "Session terminated", http.StatusNotFound)
+				return
+			}
 		}
-		if isTerminated {
-			writeHTTPError(w, "Session terminated", http.StatusNotFound)
-			return
-		}
-	}
 
-	s.touchSession(sessionID)
+		s.touchSession(sessionID)
+	}
 
 	// For non-initialize requests, try to reuse existing registered session
 	var session *streamableHttpSession
-	if !isInitializeRequest {
+	if !isInitializeRequest && !era.modern {
 		if sessionValue, ok := s.server.sessions.Load(sessionID); ok {
 			if existingSession, ok := sessionValue.(*streamableHttpSession); ok {
 				session = existingSession
@@ -644,7 +692,7 @@ func (s *StreamableHTTPServer) handlePost(w HTTPResponseWriter, r *HTTPRequest) 
 
 	// Check if a persistent session exists (for sampling support), otherwise create ephemeral session
 	// Persistent sessions are created by GET (continuous listening) connections
-	if session == nil {
+	if session == nil && !era.modern {
 		if sessionInterface, exists := s.activeSessions.Load(sessionID); exists {
 			if persistentSession, ok := sessionInterface.(*streamableHttpSession); ok {
 				session = persistentSession
@@ -657,8 +705,19 @@ func (s *StreamableHTTPServer) handlePost(w HTTPResponseWriter, r *HTTPRequest) 
 		session = newStreamableHttpSession(sessionID, s.sessionTools, s.sessionResources, s.sessionResourceTemplates, s.sessionLogLevels, &s.requestIDCounter)
 	}
 
+	// Broadcasts only reach sessions the server knows of, and a modern
+	// request's session is known nowhere else. A listen stream's session is
+	// made reachable while the request runs; it receives nothing until
+	// subscriptions/listen records the types the client asked for.
+	if listening {
+		session.serveSubscriptionStream()
+		s.server.registerListenSession(session)
+		defer s.server.unregisterListenSession(session)
+	}
+
 	// Set the client context before handling the message
 	ctx := s.server.WithContext(r.ctx(), session)
+	ctx = WithSupportedProtocolVersions(ctx, s.supportedProtocolVersions())
 	if s.contextFunc != nil {
 		ctx = s.contextFunc(ctx, r.asHTTPRequest())
 	}
@@ -675,6 +734,11 @@ func (s *StreamableHTTPServer) handlePost(w HTTPResponseWriter, r *HTTPRequest) 
 	// any notifications will be buffered and flushed at the end as a single
 	// application/json response (the upgrade simply won't fire).
 	canStream := w.CanStream()
+
+	// Stream resumability was removed in protocol version 2026-07-28
+	// (SEP-2575), and a modern request carries no session ID to key a stored
+	// stream on, so replay is confined to legacy requests.
+	resumable := s.eventStore != nil && !era.modern
 
 	// Request stream for resumability, created lazily when the first SSE
 	// message for this request is delivered. Guarded by mu. Stored events
@@ -710,8 +774,14 @@ func (s *StreamableHTTPServer) handlePost(w HTTPResponseWriter, r *HTTPRequest) 
 	// are written to this POST's SSE stream, per the Streamable HTTP guidance
 	// that server requests on a POST stream should relate to the originating
 	// request. The standalone GET stream remains the path for everything else.
+	//
+	// Protocol version 2026-07-28 removed both mechanisms this block depends
+	// on: server-initiated requests (SEP-2322) and stream resumability
+	// (SEP-2575). A modern request also has no session ID, so registering it
+	// would key every concurrent request on "" and let a response reach the
+	// wrong one.
 	var scopedRequests chan mcp.JSONRPCRequest
-	if canStream {
+	if canStream && !era.modern {
 		scopedRequests = make(chan mcp.JSONRPCRequest, 8)
 		// Registration makes responses to request-scoped server requests
 		// routable when nothing else has registered the session (stateless
@@ -747,6 +817,9 @@ func (s *StreamableHTTPServer) handlePost(w HTTPResponseWriter, r *HTTPRequest) 
 		for {
 			select {
 			case nt := <-session.notificationChannel:
+				if listening {
+					nt = tagSubscription(nt, requestID)
+				}
 				func() {
 					mu.Lock()
 					defer mu.Unlock()
@@ -755,7 +828,7 @@ func (s *StreamableHTTPServer) handlePost(w HTTPResponseWriter, r *HTTPRequest) 
 					case <-done:
 						// The notification is already off the channel; with an
 						// event store it must still be recorded.
-						if s.eventStore != nil && canStream {
+						if resumable && canStream {
 							deliverResumable(nt, false)
 						}
 						return
@@ -769,7 +842,7 @@ func (s *StreamableHTTPServer) handlePost(w HTTPResponseWriter, r *HTTPRequest) 
 					}
 					defer w.Flush()
 
-					if s.eventStore != nil {
+					if resumable {
 						deliverResumable(nt, false)
 						return
 					}
@@ -797,7 +870,7 @@ func (s *StreamableHTTPServer) handlePost(w HTTPResponseWriter, r *HTTPRequest) 
 						// The request is already off the channel; with an
 						// event store it must still be recorded so a resuming
 						// client sees it.
-						if s.eventStore != nil {
+						if resumable {
 							deliverResumable(req, false)
 						}
 						return
@@ -805,7 +878,7 @@ func (s *StreamableHTTPServer) handlePost(w HTTPResponseWriter, r *HTTPRequest) 
 					}
 					defer w.Flush()
 
-					if s.eventStore != nil {
+					if resumable {
 						deliverResumable(req, false)
 						return
 					}
@@ -831,6 +904,10 @@ func (s *StreamableHTTPServer) handlePost(w HTTPResponseWriter, r *HTTPRequest) 
 
 	// Process message through MCPServer
 	response := s.server.HandleMessage(ctx, rawData)
+	if listening {
+		// Stop broadcasts before draining what is already queued.
+		s.server.unregisterListenSession(session)
+	}
 	if response == nil {
 		mu.Lock()
 		close(done)
@@ -848,7 +925,7 @@ func (s *StreamableHTTPServer) handlePost(w HTTPResponseWriter, r *HTTPRequest) 
 	// With an event store, stop the forwarder before draining so that exactly
 	// one consumer records whatever notifications remain, preserving their
 	// order ahead of the response.
-	if s.eventStore != nil {
+	if resumable {
 		close(done)
 		<-forwarderExited
 	}
@@ -861,7 +938,10 @@ drainLoop:
 			if !canStream {
 				continue
 			}
-			if s.eventStore != nil {
+			if listening {
+				nt = tagSubscription(nt, requestID)
+			}
+			if resumable {
 				deliverResumable(nt, false)
 				w.Flush()
 				continue
@@ -882,8 +962,13 @@ drainLoop:
 		}
 	}
 
-	// close the done chan before unlocking to signal the goroutine to stop
-	if s.eventStore == nil {
+	// close the done chan before unlocking to signal the goroutine to stop.
+	// This is the exact complement of the resumable branch above, which
+	// already closed it: a request that is not resumable - including a modern
+	// request on a server that has an event store configured - must still stop
+	// its forwarder here, or the forwarder outlives the request and races the
+	// final response write.
+	if !resumable {
 		close(done)
 	}
 	mu.Unlock()
@@ -891,7 +976,7 @@ drainLoop:
 		// The connection is gone, but with an event store the response of an
 		// interrupted SSE request is still recorded so that a resuming client
 		// can be redelivered it.
-		if s.eventStore != nil && (rst != nil || (session.upgradeToSSE.Load() && canStream)) {
+		if resumable && (rst != nil || (session.upgradeToSSE.Load() && canStream)) {
 			mu.Lock()
 			deliverResumable(response, true)
 			mu.Unlock()
@@ -902,7 +987,7 @@ drainLoop:
 	// Also check upgradedHeader: a notification during HandleMessage processing
 	// may have already written SSE headers on this response, so we must continue
 	// in SSE mode to avoid writing JSON on top of SSE data.
-	if s.eventStore != nil && (rst != nil || (session.upgradeToSSE.Load() && canStream)) {
+	if resumable && (rst != nil || (session.upgradeToSSE.Load() && canStream)) {
 		mu.Lock()
 		deliverResumable(response, true)
 		mu.Unlock()
@@ -924,7 +1009,16 @@ drainLoop:
 			// send the session ID back to the client
 			w.Header().Set(HeaderKeySessionID, sessionID)
 		}
-		w.WriteHeader(http.StatusOK)
+		// Protocol version 2026-07-28 maps JSON-RPC error codes onto HTTP
+		// status codes, so that intermediaries can act on failures without
+		// parsing the body.
+		status := http.StatusOK
+		if era.modern {
+			if errResponse, ok := response.(mcp.JSONRPCError); ok {
+				status = httpStatusForJSONRPCError(errResponse.Error.Code)
+			}
+		}
+		w.WriteHeader(status)
 		err := json.NewEncoder(w).Encode(response)
 		if err != nil {
 			s.logger.Error("Failed to write response", "err", err)
@@ -948,6 +1042,16 @@ drainLoop:
 }
 
 func (s *StreamableHTTPServer) handleGet(w HTTPResponseWriter, r *HTTPRequest) {
+	// Protocol version 2026-07-28 removed the standalone GET stream: clients
+	// receive server-initiated messages through subscriptions/listen instead.
+	if isModernHTTPRequest(r) {
+		s.rejectModernSessionMethod(w, http.MethodGet)
+		return
+	}
+	if rejectUnsupportedProtocolVersion(w, r.header().Get(mcp.HeaderProtocolVersion)) {
+		return
+	}
+
 	// get request is for listening to notifications
 	// https://modelcontextprotocol.io/specification/2025-03-26/basic/transports#listening-for-messages-from-the-server
 	if s.disableStreaming {
@@ -1148,6 +1252,16 @@ func (s *StreamableHTTPServer) handleGet(w HTTPResponseWriter, r *HTTPRequest) {
 }
 
 func (s *StreamableHTTPServer) handleDelete(w HTTPResponseWriter, r *HTTPRequest) {
+	// Protocol version 2026-07-28 removed protocol-level sessions, so there is
+	// nothing for a DELETE to terminate.
+	if isModernHTTPRequest(r) {
+		s.rejectModernSessionMethod(w, http.MethodDelete)
+		return
+	}
+	if rejectUnsupportedProtocolVersion(w, r.header().Get(mcp.HeaderProtocolVersion)) {
+		return
+	}
+
 	// delete request terminate the session
 	sessionID := r.header().Get(HeaderKeySessionID)
 	sessionIdManager := s.resolveSessionIdManager(r)
@@ -1164,6 +1278,18 @@ func (s *StreamableHTTPServer) handleDelete(w HTTPResponseWriter, r *HTTPRequest
 	s.cleanupSessionState(r.ctx(), sessionID)
 
 	w.WriteHeader(http.StatusOK)
+}
+
+// tagSubscription tags a notification with the ID of the
+// subscriptions/listen request whose stream carries it, as every notification
+// on a subscription stream must be. The _meta map is copied, because a
+// broadcast shares it with the copies sent to every other session.
+func tagSubscription(notification mcp.JSONRPCNotification, id any) mcp.JSONRPCNotification {
+	meta := make(map[string]any, len(notification.Params.Meta)+1)
+	maps.Copy(meta, notification.Params.Meta)
+	meta[mcp.MetaKeySubscriptionID] = id
+	notification.Params.Meta = meta
+	return notification
 }
 
 func writeSSEEvent(w io.Writer, data any) error {
@@ -1324,12 +1450,17 @@ func (s *StreamableHTTPServer) nextRequestID(sessionID string) int64 {
 
 // touchSession records the current time as the last activity for the given session.
 // It is a no-op when the sweeper is disabled (sessionIdleTTL <= 0) or sessionID is empty.
+// It runs on every request, so a known session is found with Load and touched
+// without allocating; only a session's first touch pays for LoadOrStore.
 func (s *StreamableHTTPServer) touchSession(sessionID string) {
 	if sessionID == "" || s.sessionIdleTTL <= 0 {
 		return
 	}
 	now := time.Now().UnixNano()
-	actual, _ := s.sessionLastActive.LoadOrStore(sessionID, new(atomic.Int64))
+	actual, ok := s.sessionLastActive.Load(sessionID)
+	if !ok {
+		actual, _ = s.sessionLastActive.LoadOrStore(sessionID, new(atomic.Int64))
+	}
 	actual.(*atomic.Int64).Store(now)
 }
 
@@ -1654,6 +1785,12 @@ type streamableHttpSession struct {
 
 	samplingRequests sync.Map      // requestID -> pending sampling request context
 	requestIDCounter *atomic.Int64 // shared per server so IDs stay unique across sessions with the same session ID
+
+	// Whether the session serves a subscriptions/listen stream, and the
+	// notification types that stream opted in to.
+	subscriptionMu     sync.RWMutex
+	listening          bool
+	subscriptionFilter mcp.SubscriptionFilter
 }
 
 func newStreamableHttpSession(sessionID string, toolStore *sessionToolsStore, resourcesStore *sessionResourcesStore, templatesStore *sessionResourceTemplatesStore, levels *sessionLogLevelsStore, requestIDCounter *atomic.Int64) *streamableHttpSession {
@@ -1747,6 +1884,31 @@ func (s *streamableHttpSession) UpgradeToSSEWhenReceiveNotification() {
 
 var _ SessionWithStreamableHTTPConfig = (*streamableHttpSession)(nil)
 
+func (s *streamableHttpSession) SetSubscriptionFilter(filter mcp.SubscriptionFilter) {
+	s.subscriptionMu.Lock()
+	defer s.subscriptionMu.Unlock()
+	s.subscriptionFilter = filter
+}
+
+// SubscriptionFilter reports a session serving a subscriptions/listen stream as
+// filtered for as long as it serves it, so that it receives nothing before its
+// filter is recorded or after it is cleared. Other sessions are unfiltered.
+func (s *streamableHttpSession) SubscriptionFilter() (mcp.SubscriptionFilter, bool) {
+	s.subscriptionMu.RLock()
+	defer s.subscriptionMu.RUnlock()
+	return s.subscriptionFilter, s.listening
+}
+
+// serveSubscriptionStream marks the session as serving a subscriptions/listen
+// stream.
+func (s *streamableHttpSession) serveSubscriptionStream() {
+	s.subscriptionMu.Lock()
+	defer s.subscriptionMu.Unlock()
+	s.listening = true
+}
+
+var _ SessionWithSubscriptionFilter = (*streamableHttpSession)(nil)
+
 // RequestSampling implements SessionWithSampling interface for HTTP transport
 func (s *streamableHttpSession) RequestSampling(ctx context.Context, request mcp.CreateMessageRequest) (*mcp.CreateMessageResult, error) {
 	// Generate unique request ID
@@ -1792,13 +1954,11 @@ func (s *streamableHttpSession) RequestSampling(ctx context.Context, request mcp
 
 		// Parse content from map[string]any to proper Content type (TextContent, ImageContent, AudioContent)
 		// HTTP transport unmarshals Content as map[string]any, we need to convert it to the proper type
-		if contentMap, ok := result.Content.(map[string]any); ok {
-			content, err := mcp.ParseContent(contentMap)
-			if err != nil {
-				return nil, fmt.Errorf("failed to parse sampling response content: %w", err)
-			}
-			result.Content = content
+		content, err := mcp.ParseSamplingContent(result.Content)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse sampling response content: %w", err)
 		}
+		result.Content = content
 
 		return &result, nil
 	case <-ctx.Done():
@@ -2043,13 +2203,6 @@ func (s *InsecureStatefulSessionIdManager) Terminate(sessionID string) (isNotAll
 	s.terminated.Store(sessionID, true)
 	s.sessions.Delete(sessionID)
 	return false, nil
-}
-
-// NewTestStreamableHTTPServer creates a test server for testing purposes
-func NewTestStreamableHTTPServer(server *MCPServer, opts ...StreamableHTTPOption) *httptest.Server {
-	sseServer := NewStreamableHTTPServer(server, opts...)
-	testServer := httptest.NewServer(sseServer)
-	return testServer
 }
 
 // isJSONEmpty reports whether the provided JSON value is "empty":

@@ -1,13 +1,14 @@
 import { Identifiers } from './identifiers';
+import { ObjectType } from './types';
 import { WarehouseMode } from './warehouse';
 
 type PrimarySources = Record<string, string>;
 
 type WorkspaceEnvironment = 'production' | 'development';
 
-type ProfileRoleID = 'firstName' | 'lastName' | 'email' | 'country' | 'photo';
+type ProfilePropertyRoleID = 'firstName' | 'lastName' | 'email' | 'country' | 'photo';
 
-interface ProfileRoleAssignments {
+interface ProfilePropertyRoles {
 	firstName: string;
 	lastName: string;
 	email: string;
@@ -16,13 +17,18 @@ interface ProfileRoleAssignments {
 }
 
 interface Workspace {
-	assignedRoles: ProfileRoleAssignments;
+	profileSchema: ProfileSchema;
 	id: string;
 	name: string;
 	environment: WorkspaceEnvironment;
 	resolveIdentitiesOnBatchImport: boolean;
 	identifiers: Identifiers;
 	warehouseMode: WarehouseMode;
+}
+
+interface ProfileSchema {
+	schema: ObjectType;
+	propertyRoles: ProfilePropertyRoles;
 	primarySources: PrimarySources;
 }
 
@@ -35,6 +41,20 @@ interface LatestIdentityResolution {
 	endTime: string | null;
 }
 
+type IdentityResolutionRunStatus = 'running' | 'successful' | 'failed';
+
+interface IdentityResolutionRun {
+	id: string;
+	status: IdentityResolutionRunStatus;
+	startTime: string;
+	endTime: string | null;
+	error: string | null;
+}
+
+interface IdentityResolutionRunsResponse {
+	runs: IdentityResolutionRun[];
+}
+
 interface LatestAlterProfileSchema {
 	startTime: string | null;
 	endTime: string | null;
@@ -42,8 +62,19 @@ interface LatestAlterProfileSchema {
 }
 
 interface ConsentPurpose {
-	code: string;
+	id: string;
 	name: string;
+	eventConsentLocations: EventConsentLocation[];
+	profileConsentLocation: ProfileConsentLocation | null;
+}
+
+interface EventConsentLocation {
+	purposeCode: string;
+}
+
+interface ProfileConsentLocation {
+	property: string;
+	jsonKey?: string;
 }
 
 export default Workspace;
@@ -51,9 +82,15 @@ export type {
 	CreateWorkspaceResponse,
 	PrimarySources,
 	LatestIdentityResolution,
+	IdentityResolutionRun,
+	IdentityResolutionRunsResponse,
+	IdentityResolutionRunStatus,
 	LatestAlterProfileSchema,
 	ConsentPurpose,
-	ProfileRoleAssignments,
-	ProfileRoleID,
 	WorkspaceEnvironment,
+	ProfilePropertyRoles,
+	ProfilePropertyRoleID,
+	ProfileSchema,
+	EventConsentLocation,
+	ProfileConsentLocation,
 };

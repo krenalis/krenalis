@@ -1,7 +1,7 @@
 import React, { useState, ReactNode, useEffect } from 'react';
 import './Fullscreen.css';
 import { FullscreenContext } from '../../../context/FullscreenContext';
-import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
+import WaSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
 
 interface FullscreenProps {
 	onClose: () => void;
@@ -43,7 +43,7 @@ const Fullscreen = ({ onClose, isLoading, className, children }: FullscreenProps
 				onAnimationEnd={onAnimationEnd}
 			>
 				{isLoading ? (
-					<SlSpinner
+					<WaSpinner
 						style={
 							{
 								fontSize: '5rem',

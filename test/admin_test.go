@@ -19,7 +19,6 @@ import (
 
 	"github.com/testcontainers/testcontainers-go"
 	_postgres "github.com/testcontainers/testcontainers-go/modules/postgres"
-	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 // passUIFlagToPlaywright, when set to true, passes the '--ui' flag to the
@@ -35,11 +34,6 @@ import (
 const passUIFlagToPlaywright = false
 
 func TestAdmin(t *testing.T) {
-
-	// See https://github.com/krenalis/krenalis/issues/2116.
-	if os.Getenv("KRENALIS_TEST_SKIP_ADMIN_TESTS") == "true" {
-		t.Skip("Admin test skipped as KRENALIS_TEST_SKIP_ADMIN_TESTS is set to true")
-	}
 
 	fsTempDir := krenalistester.NewTempStorage(t)
 
@@ -68,10 +62,7 @@ func TestAdmin(t *testing.T) {
 			_postgres.WithDatabase(dbDatabase),
 			_postgres.WithUsername(dbUsername),
 			_postgres.WithPassword(dbPassword),
-			testcontainers.WithWaitStrategy(
-				wait.ForLog("database system is ready to accept connections").
-					WithOccurrence(2).
-					WithStartupTimeout(60*time.Second)),
+			_postgres.BasicWaitStrategies(),
 		)
 		defer func() {
 			err := testcontainers.TerminateContainer(container)
@@ -131,9 +122,9 @@ func TestAdmin(t *testing.T) {
 	var simulatedWorkspace struct{ ID string }
 	k.Call("POST", "/v1/workspaces", http.Header{"Krenalis-Workspace": nil}, map[string]any{
 		"name": "Simulated selector", "environment": "development",
-		"profileSchema": map[string]any{"kind": "object", "properties": []map[string]any{{
-			"name": "email", "type": map[string]any{"kind": "string", "semantic": "email"}, "readOptional": true,
-		}}},
+		"profileSchema": map[string]any{"schema": map[string]any{"kind": "object", "properties": []map[string]any{{
+			"name": "email", "type": map[string]any{"kind": "string", "semantics": "email"}, "readOptional": true,
+		}}}},
 		"warehouse": map[string]any{"platform": "PostgreSQL", "mode": "Normal", "settings": map[string]any{
 			"host": dbHost, "port": dbPort, "username": dbUsername, "password": dbPassword,
 			"database": dbDatabase, "schema": "simulated_selector",
@@ -181,9 +172,7 @@ func TestAdmin(t *testing.T) {
 		}, nil)
 	}
 
-	// TODO(Gianluca): commented as workaround for https://github.com/krenalis/krenalis/issues/2164.
-	// run(t, "npm", []string{"install"}, adminDir, fsTempDir.Root())
-
+	run(t, "npm", []string{"install"}, adminDir, fsTempDir.Root())
 	run(t, "npx", []string{"playwright", "install", "chromium"}, adminDir, fsTempDir.Root())
 	if passUIFlagToPlaywright {
 		run(t, "npx", []string{"playwright", "test", "--ui"}, adminDir, fsTempDir.Root())

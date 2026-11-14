@@ -113,10 +113,6 @@ interface FindProfilesResponse {
 	hasNext: boolean;
 }
 
-interface CountProfilesResponse {
-	total: number;
-}
-
 interface ApplicationUsersResponse {
 	users: Record<string, any>[];
 	cursor: string;
@@ -206,6 +202,7 @@ interface PublicMetadata {
 	telemetryLevel: TelemetryLevel;
 	workosClientID: string;
 	workosDevMode: boolean;
+	version: string;
 }
 
 export type {
@@ -229,7 +226,6 @@ export type {
 	ExecQueryResponse,
 	PipelineRun,
 	FindProfilesResponse,
-	CountProfilesResponse,
 	Member,
 	MemberAvatar,
 	MemberInvitationResponse,

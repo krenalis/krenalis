@@ -39,12 +39,18 @@ export default defineConfig({
 		{
 			name: 'schema.spec.ts',
 			use: { ...devices['Desktop Chrome'] },
-			testMatch: ['tests/schema.spec.ts', 'tests/schema-reordering.spec.ts'],
+			testMatch: ['tests/schema.spec.ts', 'tests/schema-consents.spec.ts', 'tests/schema-reordering.spec.ts'],
 		},
 		{
 			name: 'profiles.spec.ts',
 			use: { ...devices['Desktop Chrome'] },
-			testMatch: ['tests/profiles.spec.ts', 'tests/profiles-sequence.spec.ts'],
+			testMatch: [
+				'tests/countries.spec.ts',
+				'tests/profiles.spec.ts',
+				'tests/profiles-sequence.spec.ts',
+				'tests/profiles-refresh.spec.ts',
+				'tests/profiles-filters.spec.ts',
+			],
 		},
 		{
 			name: 'connections.spec.ts',
@@ -65,6 +71,21 @@ export default defineConfig({
 			name: 'simulated-systems.spec.ts',
 			use: { ...devices['Desktop Chrome'] },
 			testMatch: ['tests/simulatedSystems.spec.ts', 'tests/simulatedApplicationSelector.spec.ts'],
+		},
+		{
+			name: 'profile-drawer.spec.ts',
+			use: { ...devices['Desktop Chrome'] },
+			testMatch: ['tests/profile-drawer.spec.ts'],
+		},
+		{
+			name: 'identity-overview.spec.ts',
+			use: { ...devices['Desktop Chrome'] },
+			testMatch: ['tests/identity-overview.spec.ts'],
+		},
+		{
+			name: 'segmented-date-range-control.spec.ts',
+			use: { ...devices['Desktop Chrome'] },
+			testMatch: ['tests/segmented-date-range-control.spec.ts'],
 		},
 
 		// {

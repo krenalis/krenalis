@@ -58,8 +58,10 @@ func TestSuitableAsIdentifier(t *testing.T) {
 		{name: "string", typ: types.String(), want: true},
 		{name: "boolean", typ: types.Boolean(), want: false},
 		{name: "int16", typ: types.Int(16), want: true},
+		{name: "int16 year", typ: types.Int(16).AsYear(), want: true},
 		{name: "int32", typ: types.Int(32), want: true},
 		{name: "int64", typ: types.Int(64), want: true},
+		{name: "unsigned int64 year", typ: types.Int(64).Unsigned().AsYear(), want: true},
 		{name: "uint8", typ: types.Int(8).Unsigned(), want: true},
 		{name: "uint32", typ: types.Int(32).Unsigned(), want: true},
 		{name: "float32", typ: types.Float(32), want: false},
@@ -70,7 +72,6 @@ func TestSuitableAsIdentifier(t *testing.T) {
 		{name: "datetime", typ: types.DateTime(), want: false},
 		{name: "date", typ: types.Date(), want: false},
 		{name: "time", typ: types.Time(), want: false},
-		{name: "year", typ: types.Year(), want: false},
 		{name: "UUID", typ: types.UUID(), want: true},
 		{name: "IP", typ: types.IP(), want: true},
 		{name: "string array", typ: types.Array(types.String()), want: false},
@@ -112,8 +113,8 @@ func TestWorkspaceEncodeJSON(t *testing.T) {
 		{
 			name: "empty collections",
 			workspace: Workspace{
-				PrimarySources: map[string]string{},
-				Identifiers:    []string{},
+				ProfileSchema: ProfileSchema{PrimarySources: map[string]string{}},
+				Identifiers:   []string{},
 			},
 			wantPrimarySources: "{}",
 			wantIdentifiers:    "[]",
@@ -127,7 +128,17 @@ func TestWorkspaceEncodeJSON(t *testing.T) {
 				t.Fatalf("json.Encode() error = %v", err)
 			}
 			value := json.Value(encoded.Bytes())
-			primarySources, ok := value.Get([]string{"primarySources"})
+			for _, field := range []string{"schema", "propertyRoles", "primarySources"} {
+				if _, ok := value.Get([]string{"profileSchema", field}); !ok {
+					t.Fatalf("expected profileSchema.%s, got missing field", field)
+				}
+			}
+			for _, field := range []string{"propertyRoles", "primarySources"} {
+				if _, ok := value.Get([]string{field}); ok {
+					t.Fatalf("expected %s only inside profileSchema, got a top-level field", field)
+				}
+			}
+			primarySources, ok := value.Get([]string{"profileSchema", "primarySources"})
 			if !ok {
 				t.Fatal("json.Encode() omitted PrimarySources")
 			}
@@ -143,33 +154,4 @@ func TestWorkspaceEncodeJSON(t *testing.T) {
 			}
 		})
 	}
-}
-
-// TestWorkspaceMarshalJSON verifies that json.Marshal encodes nil Workspace
-// collection fields using their empty JSON representations.
-func TestWorkspaceMarshalJSON(t *testing.T) {
-
-	value, err := json.Marshal(Workspace{})
-	if err != nil {
-		t.Fatalf("json.Marshal() error = %v", err)
-	}
-
-	tests := []struct {
-		name string
-		want string
-	}{
-		{name: "primarySources", want: "{}"},
-		{name: "identifiers", want: "[]"},
-	}
-
-	for _, test := range tests {
-		got, ok := value.Get([]string{test.name})
-		if !ok {
-			t.Fatalf("json.Marshal() omitted %s", test.name)
-		}
-		if string(got) != test.want {
-			t.Fatalf("json.Marshal() %s = %q, want %q", test.name, got, test.want)
-		}
-	}
-
 }

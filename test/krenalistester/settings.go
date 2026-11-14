@@ -19,13 +19,13 @@ import (
 )
 
 type TestsSettings struct {
-	HTTP                *HTTPSettings
-	Database            *DBSettings
-	NATS                *NATSSettings
-	PythonExecutable    string
-	WarehousePlatform   string
-	Warehouse           *DBSettings
-	OrganizationsAPIKey string
+	HTTP                     *HTTPSettings
+	Database                 *DBSettings
+	NATS                     *NATSSettings
+	PythonExecutable         string
+	WarehousePlatform        string
+	Warehouse                *DBSettings
+	PlatformManagementAPIKey string
 }
 
 type HTTPSettings struct {
@@ -91,7 +91,7 @@ func init() {
 			Password: "test_warehouse",
 			Schema:   "public",
 		},
-		OrganizationsAPIKey: "org_TgLrbS9Si51e3KSzPN6g4Zr5NUgbx8q7TCWtVtiFvR2",
+		PlatformManagementAPIKey: "plat_TgLrbS9Si51e3KSzPN6g4Zr5NUgbx8q7TCWtVtiFvR2",
 	}
 	pyExecutable, err := lookupPythonExecPath()
 	if err != nil {
@@ -119,7 +119,7 @@ func init() {
 func lookupPythonExecPath() (string, error) {
 	// TODO: Keep in sync with other copies of this function, scattered
 	// throughout the code, that have the same name.
-	pythonNames := []string{"python", "python3", "python3.14"}
+	pythonNames := []string{"python", "python3", "python3.15"}
 	for _, name := range pythonNames {
 		path, err := exec.LookPath(name)
 		if err == nil {

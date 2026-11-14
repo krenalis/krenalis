@@ -92,6 +92,11 @@ const (
 	ErrCodeEmptyToken = 260020
 	// ErrCodeHostWithScheme is an error code for the case where the host includes a URL scheme (e.g. "https://")
 	ErrCodeHostWithScheme = 260021
+	// ErrCodeWifNonSnowflakeHost is an error code for the case where WORKLOAD_IDENTITY is configured with a non-Snowflake host
+	ErrCodeWifNonSnowflakeHost = 260022
+	// ErrCodeInvalidAccountIdentifier is an error code for the case where the account or region
+	// configuration value cannot be used as a hostname component
+	ErrCodeInvalidAccountIdentifier = 260023
 
 	/* network */
 
@@ -158,6 +163,17 @@ const (
 	ErrNotImplemented = 264011
 	// ErrInvalidPadding is an error code denoting the invalid padding of decryption key
 	ErrInvalidPadding = 264012
+	// ErrGetStreamMultipleFiles is an error code denoting a streaming GET whose stage path
+	// matched more than one file, so it cannot be streamed into a single writer.
+	ErrGetStreamMultipleFiles = 264013
+	// ErrDownloadStreamLocalFS is an error code denoting DownloadStream used with a LOCAL_FS stage
+	ErrDownloadStreamLocalFS = 264014
+	// ErrDownloadStreamInvalidArg is an error code denoting a missing stage or file name for DownloadStream
+	ErrDownloadStreamInvalidArg = 264015
+	// ErrFailedToDecrypt is an error code denoting CSE metadata or decryption failed for a stage download
+	ErrFailedToDecrypt = 264016
+	// ErrDownloadStreamDecompress is an error code denoting gzip decompression failed while reading a DownloadStream
+	ErrDownloadStreamDecompress = 264017
 
 	/* binding */
 
@@ -265,6 +281,12 @@ const (
 	ErrMsgNoResultIDs                        = "no result IDs returned with the multi-statement query"
 	ErrMsgQueryStatus                        = "server ErrorCode=%s, ErrorMessage=%s"
 	ErrMsgInvalidPadding                     = "invalid padding on input"
+	ErrMsgGetStreamMultipleFiles             = "GET matched more than one file; specify a single object"
+	ErrMsgDownloadStreamLocalFS              = "DownloadStream is only supported for remote stages"
+	ErrMsgDownloadStreamInvalidArg           = "DownloadStream requires a non-empty stage name and source file name"
+	ErrMsgDownloadStreamFileNotFound         = "File not found: %v"
+	ErrMsgFailedToDecrypt                    = "failed to decrypt downloaded stage object"
+	ErrMsgDownloadStreamDecompress           = "failed to decompress downloaded stream: %v"
 	ErrMsgClientConfigFailed                 = "client configuration failed: %v"
 	ErrMsgNullValueInArray                   = "for handling null values in arrays use WithArrayValuesNullable(ctx)"
 	ErrMsgNullValueInMap                     = "for handling null values in maps use WithMapValuesNullable(ctx)"
@@ -275,6 +297,8 @@ const (
 	ErrMsgNonArrowResponseInArrowBatches     = "arrow batches enabled, but the response is not Arrow based"
 	ErrMsgMissingTLSConfig                   = "TLS config not found: %v"
 	ErrMsgHostWithScheme                     = "host includes a URL scheme (e.g. \"https://\"). Specify the hostname only, without a scheme prefix. Use \"myorg-myaccount.snowflakecomputing.com\" instead of \"https://myorg-myaccount.snowflakecomputing.com\". Got: %v"
+	ErrMsgWifNonSnowflakeHost                = "WORKLOAD_IDENTITY requires a recognized Snowflake host (*.snowflakecomputing.com, .cn or .mil). Got: %v"
+	ErrMsgInvalidAccountIdentifier           = "invalid %v: %q is not usable as a hostname component. It must be a dot-separated list of non-empty labels containing only letters, digits, '_' and '-', for example \"myorg-myaccount\" or \"myaccount.us-east-1\""
 )
 
 // ErrEmptyAccount is returned if a DSN doesn't include account parameter.
@@ -282,6 +306,20 @@ func ErrEmptyAccount() *SnowflakeError {
 	return &SnowflakeError{
 		Number:  ErrCodeEmptyAccountCode,
 		Message: "account is empty",
+	}
+}
+
+// ErrInvalidAccountIdentifier is returned when the account or region configuration value
+// cannot be used as a hostname component, i.e. it is not a dot-separated list of non-empty
+// labels built from letters, digits, '_' and '-'. field is "account" or "region".
+//
+// This is intentionally a distinct code from ErrCodeEmptyAccountCode: an empty account keeps
+// returning ErrEmptyAccount so callers that switch on the error number see no change.
+func ErrInvalidAccountIdentifier(field, value string) *SnowflakeError {
+	return &SnowflakeError{
+		Number:      ErrCodeInvalidAccountIdentifier,
+		Message:     ErrMsgInvalidAccountIdentifier,
+		MessageArgs: []any{field, value},
 	}
 }
 
@@ -330,6 +368,15 @@ func ErrHostWithScheme(host string) *SnowflakeError {
 	return &SnowflakeError{
 		Number:      ErrCodeHostWithScheme,
 		Message:     ErrMsgHostWithScheme,
+		MessageArgs: []any{host},
+	}
+}
+
+// ErrWifNonSnowflakeHost is returned if WORKLOAD_IDENTITY is configured with a host that does not belong to Snowflake.
+func ErrWifNonSnowflakeHost(host string) *SnowflakeError {
+	return &SnowflakeError{
+		Number:      ErrCodeWifNonSnowflakeHost,
+		Message:     ErrMsgWifNonSnowflakeHost,
 		MessageArgs: []any{host},
 	}
 }

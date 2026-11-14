@@ -318,14 +318,14 @@ func propertyType(t *sql.ColumnType) (types.Type, string, error) {
 		}
 		return types.Decimal(int(precision), int(scale)), "", nil
 	case "DOUBLE":
-		return types.Float(64), "", nil
+		return types.Float(64).Real(), "", nil
 	case "ENUM":
 		return types.String(), "", nil
 	// TODO(marco): SET can be implemented as an array(T), but the driver only returns the first element of the set.
 	//case "SET":
 	//return types.Array(types.String()), "", nil
 	case "FLOAT":
-		return types.Float(32), "", nil
+		return types.Float(32).Real(), "", nil
 	case "UNSIGNED MEDIUMINT":
 		return types.Int(24).Unsigned(), "", nil
 	case "MEDIUMINT":
@@ -367,7 +367,7 @@ func propertyType(t *sql.ColumnType) (types.Type, string, error) {
 	case "TINYINT":
 		return types.Int(8), "", nil
 	case "YEAR":
-		return types.Year(), "", nil
+		return types.Int(16).WithIntRange(0, 2155).AsYear(), "", nil
 	}
 	issue := fmt.Sprintf("Column %q has an unsupported type %q.", t.Name(), t.DatabaseTypeName())
 	return types.Type{}, issue, nil

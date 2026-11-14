@@ -41,8 +41,8 @@ func TestOrganizationDisabled(t *testing.T) {
 	}
 
 	// Test that the call to the method that sets the state of an organization
-	// fails if the platform management API key is not provided.
-	t.Run("set status without platform management API key is rejected", func(t *testing.T) {
+	// fails if the Platform Management API key is not provided.
+	t.Run("set status without Platform Management API key is rejected", func(t *testing.T) {
 		err := k.TrySetOrganizationStatus(orgID, false, http.Header{"Krenalis-Workspace": nil})
 		statusErr, ok := err.(*krenalistester.StatusCodeError)
 		if !ok {
@@ -55,6 +55,25 @@ func TestOrganizationDisabled(t *testing.T) {
 		// before it could change anything.
 		if !k.Organization(orgID).Enabled {
 			t.Fatal("the unauthenticated request must not have changed the organization status")
+		}
+	})
+
+	// Test that the call to the method that sets the state of an organization
+	// fails if the "enabled" field is missing or null.
+	t.Run("set status without enabled is rejected", func(t *testing.T) {
+		for _, body := range []map[string]any{{}, {"enabled": nil}} {
+			err := k.TrySetOrganizationStatusWithBody(orgID, body)
+			if err != nil {
+				statusErr, ok := err.(*krenalistester.StatusCodeError)
+				if !ok {
+					t.Fatalf("expected *StatusCodeError, got %T: %v", err, err)
+				}
+				if statusErr.Response.Code != http.StatusBadRequest {
+					t.Fatalf("expected HTTP status %d, got %d: %s", http.StatusBadRequest, statusErr.Response.Code, statusErr.Response.Text)
+				}
+				continue
+			}
+			t.Fatalf("expected an error for body %v, got nil", body)
 		}
 	})
 
@@ -314,7 +333,7 @@ func TestOrganizationDisabled(t *testing.T) {
 		}
 	})
 
-	// Updating the organization's name uses the platform management API key, so
+	// Updating the organization's name uses the Platform Management API key, so
 	// it must remain functional even while the organization is disabled.
 	t.Run("update organization name still works", func(t *testing.T) {
 		k.UpdateOrganization(orgID, "ACME inc (renamed while disabled)", krenalistester.DefaultOrganizationLimits)

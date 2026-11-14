@@ -6,6 +6,7 @@ package transformers
 
 import (
 	"bytes"
+	jsonv1 "encoding/json"
 	"fmt"
 	"maps"
 	"math"
@@ -18,9 +19,149 @@ import (
 
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/tools/decimal"
+	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 )
+
+// TestUnmarshalPhone checks canonical output, nested string leaves and
+// post-normalization uniqueness.
+func TestUnmarshalPhone(t *testing.T) {
+
+	phone := types.String().AsPhone()
+	tests := []struct {
+		typ  types.Type
+		data string
+		want any
+	}{
+		{types.Array(types.Map(phone)), `[{"home":"+39 02-36618 300"}]`, []any{map[string]any{"home": "+390236618300"}}},
+		{
+			types.Array(phone).WithMaxElements(2), `["+39 02-36618 300","+12001230101"]`,
+			[]any{"+390236618300", "+12001230101"},
+		},
+		{types.Array(phone).WithUnique(), `["+390236618300","+39 02-36618 300"]`, nil},
+		{types.Array(phone), `["+390236618300","+39 02-36618 300"]`, []any{"+390236618300", "+390236618300"}},
+	}
+	for _, test := range tests {
+		schema := types.Object([]types.Property{{Name: "phone", Type: test.typ}})
+		for _, language := range []state.Language{state.JavaScript, state.Python} {
+			records := make([]Record, 1)
+			input := strings.NewReader(`{"records":[{"value":{"phone":` + test.data + `}}]}`)
+			err := Unmarshal(input, records, schema, language, false)
+			if err != nil {
+				t.Fatalf("expected no error for %s and %s, got %v", language, test.data, err)
+			}
+			if err := records[0].Err; err != nil {
+				if test.want != nil {
+					t.Fatalf("expected no record error, got %v", err)
+				}
+				continue
+			}
+			if test.want == nil || !reflect.DeepEqual(records[0].Attributes["phone"], test.want) {
+				t.Fatalf("expected phone %#v, got %#v", test.want, records[0].Attributes["phone"])
+			}
+		}
+	}
+
+}
+
+// TestUnmarshalSemanticsValidation verifies that unmarshaling applies semantic
+// rules to scalar and nested values for both JavaScript and Python.
+func TestUnmarshalSemanticsValidation(t *testing.T) {
+
+	alpha2Country := types.String().AsCountry(types.ISO3166Alpha2)
+	alpha3Country := types.String().AsCountry(types.ISO3166Alpha3)
+	phone := types.String().AsPhone()
+	tests := []struct {
+		name     string
+		typ      types.Type
+		value    string
+		expected string
+		valid    bool
+	}{
+		{"current alpha-2 country", alpha2Country, "US", "US", true},
+		{"current alpha-3 country", alpha3Country, "USA", "USA", true},
+		{"unknown alpha-3 country", alpha3Country, "ZZZ", "", false},
+		{"unknown alpha-2 country", alpha2Country, "ZZ", "", false},
+		{"empty alpha-2 country", alpha2Country, "", "", false},
+		{"formatted phone", phone, "+39 02-36618 300", "+390236618300", true},
+		{"empty phone", phone, "", "", false},
+		{"non-phone text", phone, "a (b)", "", false},
+	}
+
+	for _, test := range tests {
+
+		t.Run(test.name, func(t *testing.T) {
+			valueJSON, err := jsonv1.Marshal(test.value)
+			if err != nil {
+				t.Fatalf("expected value to be JSON-encodable, got %v", err)
+			}
+
+			for _, shape := range []string{"string", "array", "map", "nested", "object"} {
+
+				t.Run(shape, func(t *testing.T) {
+
+					typ := test.typ
+					var value any = test.expected
+					data := string(valueJSON)
+					switch shape {
+					case "array":
+						typ = types.Array(typ)
+						value = []any{test.expected}
+						data = "[" + data + "]"
+					case "map":
+						typ = types.Map(typ)
+						value = map[string]any{"home": test.expected}
+						data = "{\"home\":" + data + "}"
+					case "nested":
+						typ = types.Array(types.Map(types.Array(typ)))
+						value = []any{map[string]any{"home": []any{test.expected}}}
+						data = "[{\"home\":[" + data + "]}]"
+					case "object":
+						typ = types.Object([]types.Property{{Name: "inner", Type: typ}})
+						value = map[string]any{"inner": test.expected}
+						data = "{\"inner\":" + data + "}"
+					}
+					schema := types.Object([]types.Property{{Name: "value", Type: typ}})
+					for _, language := range []state.Language{state.JavaScript, state.Python} {
+
+						t.Run(language.String(), func(t *testing.T) {
+
+							records := make([]Record, 1)
+							input := strings.NewReader("{\"records\":[{\"value\":{\"value\":" + data + "}}]}")
+							err := Unmarshal(input, records, schema, language, false)
+							if err != nil {
+								t.Fatalf("expected Unmarshal to succeed, got %v", err)
+							}
+							if err := records[0].Err; err != nil {
+								if test.valid {
+									t.Fatalf("expected no record error, got %v", err)
+								}
+								if _, ok := errors.AsType[RecordValidationError](err); !ok {
+									t.Fatalf("expected RecordValidationError, got %T: %v", err, err)
+								}
+								return
+							}
+							if !test.valid {
+								t.Fatalf("expected invalid value to be rejected, got attributes %#v", records[0].Attributes)
+							}
+							if !reflect.DeepEqual(records[0].Attributes["value"], value) {
+								t.Fatalf("expected value %#v, got %#v", value, records[0].Attributes["value"])
+							}
+
+						})
+
+					}
+
+				})
+
+			}
+
+		})
+
+	}
+
+}
 
 func Test_Unmarshal(t *testing.T) {
 
@@ -57,6 +198,10 @@ func Test_Unmarshal(t *testing.T) {
 		{
 			Name: "Int16",
 			Type: types.Int(16),
+		},
+		{
+			Name: "Int16_Year",
+			Type: types.Int(16).AsYear(),
 		},
 		{
 			Name: "Int24",
@@ -127,10 +272,6 @@ func Test_Unmarshal(t *testing.T) {
 			Type: types.Time(),
 		},
 		{
-			Name: "Year",
-			Type: types.Year(),
-		},
-		{
 			Name: "UUID",
 			Type: types.UUID(),
 		},
@@ -194,6 +335,7 @@ func Test_Unmarshal(t *testing.T) {
 				"Boolean":             true,
 				"Int8":                -12,
 				"Int16":               8023,
+				"Int16_Year":          2023,
 				"Int24":               -2880217,
 				"Int32":               1307298102,
 				"Int64":               927041163082605,
@@ -211,7 +353,6 @@ func Test_Unmarshal(t *testing.T) {
 				"DateTime":            time.Date(2023, 10, 17, 9, 34, 25, 836540129, time.UTC),
 				"Date":                time.Date(2023, 10, 17, 0, 0, 0, 0, time.UTC),
 				"Time":                time.Date(1970, 01, 01, 9, 34, 25, 836540129, time.UTC),
-				"Year":                2023,
 				"UUID":                "550e8400-e29b-41d4-a716-446655440000",
 				"JSON":                json.Value(`{"foo": 5,"boo": true}`),
 				"JSON_null":           json.Value(`null`),
@@ -238,7 +379,7 @@ func Test_Unmarshal(t *testing.T) {
 			schema:       schema,
 			preserveJSON: false,
 			timeTruncate: time.Nanosecond,
-			data:         `{"records":[{"value":{"String":"some text","String_nil":null,"Boolean":true,"Int8":-12,"Int16":8023,"Int24":-2880217,"Int32":1307298102,"Int64":"927041163082605","Uint8":12,"Uint16":8023,"Uint24":2880217,"Uint32":1307298102,"Uint64":"927041163082605","Float32":57.16038,"Float64":18372.36240184391,"Float64_NaN":"NaN","Float64_Infinity":"Infinity","Float64_NegInfinity":"-Infinity","Decimal":"1752.064","DateTime":"2023-10-17T09:34:25.836540129Z","Date":"2023-10-17","Time":"09:34:25.836540129","Year":2023,"UUID":"550e8400-e29b-41d4-a716-446655440000","JSON":{"foo": 5,"boo": true},"JSON_null":null,"IP":"192.158.1.38","Array":["foo","boo"],"Object":{"a":false,"b":9},"Map":{"a":1,"b":2,"c":3}}}]}`,
+			data:         `{"records":[{"value":{"String":"some text","String_nil":null,"Boolean":true,"Int8":-12,"Int16":8023,"Int16_Year":2023,"Int24":-2880217,"Int32":1307298102,"Int64":"927041163082605","Uint8":12,"Uint16":8023,"Uint24":2880217,"Uint32":1307298102,"Uint64":"927041163082605","Float32":57.16038,"Float64":18372.36240184391,"Float64_NaN":"NaN","Float64_Infinity":"Infinity","Float64_NegInfinity":"-Infinity","Decimal":"1752.064","DateTime":"2023-10-17T09:34:25.836540129Z","Date":"2023-10-17","Time":"09:34:25.836540129","UUID":"550e8400-e29b-41d4-a716-446655440000","JSON":{"foo": 5,"boo": true},"JSON_null":null,"IP":"192.158.1.38","Array":["foo","boo"],"Object":{"a":false,"b":9},"Map":{"a":1,"b":2,"c":3}}}]}`,
 			records:      records,
 		},
 		{
@@ -246,7 +387,7 @@ func Test_Unmarshal(t *testing.T) {
 			schema:       schema,
 			preserveJSON: true,
 			timeTruncate: time.Nanosecond,
-			data:         `{"records":[{"value":{"String":"some text","String_nil":null,"Boolean":true,"Int8":-12,"Int16":8023,"Int24":-2880217,"Int32":1307298102,"Int64":"927041163082605","Uint8":12,"Uint16":8023,"Uint24":2880217,"Uint32":1307298102,"Uint64":"927041163082605","Float32":57.16038,"Float64":18372.36240184391,"Float64_NaN":"NaN","Float64_Infinity":"Infinity","Float64_NegInfinity":"-Infinity","Decimal":"1752.064","DateTime":"2023-10-17T09:34:25.836540129Z","Date":"2023-10-17","Time":"09:34:25.836540129","Year":2023,"UUID":"550e8400-e29b-41d4-a716-446655440000","JSON":"{\"foo\": 5,\"boo\": true}","JSON_null":"null","IP":"192.158.1.38","Array":["foo","boo"],"Object":{"a":false,"b":9},"Map":{"a":1,"b":2,"c":3}}}]}`,
+			data:         `{"records":[{"value":{"String":"some text","String_nil":null,"Boolean":true,"Int8":-12,"Int16":8023,"Int16_Year":2023,"Int24":-2880217,"Int32":1307298102,"Int64":"927041163082605","Uint8":12,"Uint16":8023,"Uint24":2880217,"Uint32":1307298102,"Uint64":"927041163082605","Float32":57.16038,"Float64":18372.36240184391,"Float64_NaN":"NaN","Float64_Infinity":"Infinity","Float64_NegInfinity":"-Infinity","Decimal":"1752.064","DateTime":"2023-10-17T09:34:25.836540129Z","Date":"2023-10-17","Time":"09:34:25.836540129","UUID":"550e8400-e29b-41d4-a716-446655440000","JSON":"{\"foo\": 5,\"boo\": true}","JSON_null":"null","IP":"192.158.1.38","Array":["foo","boo"],"Object":{"a":false,"b":9},"Map":{"a":1,"b":2,"c":3}}}]}`,
 			records:      records,
 		},
 		{
@@ -254,7 +395,7 @@ func Test_Unmarshal(t *testing.T) {
 			schema:       schema,
 			preserveJSON: false,
 			timeTruncate: time.Microsecond,
-			data:         `{"records":[{"value":{"String":"some text","String_nil":null,"Boolean":true,"Int8":-12,"Int16":8023,"Int24":-2880217,"Int32":1307298102,"Int64":927041163082605,"Uint8":12,"Uint16":8023,"Uint24":2880217,"Uint32":1307298102,"Uint64":927041163082605,"Float32":57.16038,"Float64":18372.36240184391,"Float64_NaN":"NaN","Float64_Infinity":"Infinity","Float64_NegInfinity":"-Infinity","Decimal":"1752.064","DateTime":"2023-10-17 09:34:25.83654","Date":"2023-10-17","Time":"09:34:25.83654","Year":2023,"UUID":"550e8400-e29b-41d4-a716-446655440000","JSON":{"foo": 5,"boo": true},"JSON_null":null,"IP":"192.158.1.38","Array":["foo","boo"],"Object":{"a":false,"b":9},"Map":{"a":1,"b":2,"c":3}}}]}`,
+			data:         `{"records":[{"value":{"String":"some text","String_nil":null,"Boolean":true,"Int8":-12,"Int16":8023,"Int16_Year":2023,"Int24":-2880217,"Int32":1307298102,"Int64":927041163082605,"Uint8":12,"Uint16":8023,"Uint24":2880217,"Uint32":1307298102,"Uint64":927041163082605,"Float32":57.16038,"Float64":18372.36240184391,"Float64_NaN":"NaN","Float64_Infinity":"Infinity","Float64_NegInfinity":"-Infinity","Decimal":"1752.064","DateTime":"2023-10-17 09:34:25.83654","Date":"2023-10-17","Time":"09:34:25.83654","UUID":"550e8400-e29b-41d4-a716-446655440000","JSON":{"foo": 5,"boo": true},"JSON_null":null,"IP":"192.158.1.38","Array":["foo","boo"],"Object":{"a":false,"b":9},"Map":{"a":1,"b":2,"c":3}}}]}`,
 			records:      records,
 		},
 		{
@@ -262,7 +403,7 @@ func Test_Unmarshal(t *testing.T) {
 			schema:       schema,
 			preserveJSON: true,
 			timeTruncate: time.Microsecond,
-			data:         `{"records":[{"value":{"String":"some text","String_nil":null,"Boolean":true,"Int8":-12,"Int16":8023,"Int24":-2880217,"Int32":1307298102,"Int64":927041163082605,"Uint8":12,"Uint16":8023,"Uint24":2880217,"Uint32":1307298102,"Uint64":927041163082605,"Float32":57.16038,"Float64":18372.36240184391,"Float64_NaN":"NaN","Float64_Infinity":"Infinity","Float64_NegInfinity":"-Infinity","Decimal":"1752.064","DateTime":"2023-10-17 09:34:25.83654","Date":"2023-10-17","Time":"09:34:25.83654","Year":2023,"UUID":"550e8400-e29b-41d4-a716-446655440000","JSON":"{\"foo\": 5,\"boo\": true}","JSON_null":"null","IP":"192.158.1.38","Array":["foo","boo"],"Object":{"a":false,"b":9},"Map":{"a":1,"b":2,"c":3}}}]}`,
+			data:         `{"records":[{"value":{"String":"some text","String_nil":null,"Boolean":true,"Int8":-12,"Int16":8023,"Int16_Year":2023,"Int24":-2880217,"Int32":1307298102,"Int64":927041163082605,"Uint8":12,"Uint16":8023,"Uint24":2880217,"Uint32":1307298102,"Uint64":927041163082605,"Float32":57.16038,"Float64":18372.36240184391,"Float64_NaN":"NaN","Float64_Infinity":"Infinity","Float64_NegInfinity":"-Infinity","Decimal":"1752.064","DateTime":"2023-10-17 09:34:25.83654","Date":"2023-10-17","Time":"09:34:25.83654","UUID":"550e8400-e29b-41d4-a716-446655440000","JSON":"{\"foo\": 5,\"boo\": true}","JSON_null":"null","IP":"192.158.1.38","Array":["foo","boo"],"Object":{"a":false,"b":9},"Map":{"a":1,"b":2,"c":3}}}]}`,
 			records:      records,
 		},
 		{
@@ -375,6 +516,24 @@ func Test_Unmarshal(t *testing.T) {
 			schema:   schema,
 			data:     `{"records":[{"value":{"Object":{"b":false}}}]}`,
 			records:  []Record{{Err: newRecordValidationError("Object.b", `property «Object.b» has a value that is not of type «number»`)}},
+		},
+		{
+			language: state.JavaScript,
+			schema:   schema,
+			data:     `{"records":[{"value":{"Array":[1]}}]}`,
+			records:  []Record{{Err: newRecordValidationError("Array[0]", `property «Array[0]» has a value that is not of type «string»`)}},
+		},
+		{
+			language: state.JavaScript,
+			schema:   schema,
+			data:     `{"records":[{"value":{"Map":{"home":"x"}}}]}`,
+			records:  []Record{{Err: newRecordValidationError(`Map["home"]`, `property «Map["home"]» has a value that is not of type «number»`)}},
+		},
+		{
+			language: state.JavaScript,
+			schema:   types.Object([]types.Property{{Name: "Nested", Type: types.Array(types.Map(types.Array(types.Int(32))))}}),
+			data:     `{"records":[{"value":{"Nested":[{"home":["x"]}]}}]}`,
+			records:  []Record{{Err: newRecordValidationError(`Nested[0]["home"][0]`, `property «Nested[0]["home"][0]» has a value that is not of type «number»`)}},
 		},
 		{
 			language: state.JavaScript,
@@ -678,25 +837,128 @@ func Test_UnmarshalEdgeCases(t *testing.T) {
 		less := strings.NewReader(`{"records":[{"value":{"a":[1]}}]}`)
 		err := Unmarshal(less, rec, sch, state.JavaScript, false)
 		if err != nil {
-			t.Fatalf("expected no error, got %v", err)
+			t.Fatal(err)
 		}
 		if rec[0].Err == nil || rec[0].Err.Error() != "property «a» contains less than 2 elements" {
-			t.Fatalf("expected record error %q, got %v", "property «a» contains less than 2 elements", rec[0].Err)
+			t.Fatalf("unexpected error for less elements: %v", rec[0].Err)
 		}
 		rec[0].Err = nil
 		rec[0].Attributes = nil
 		more := strings.NewReader(`{"records":[{"value":{"a":[1,2,3,4]}}]}`)
 		err = Unmarshal(more, rec, sch, state.JavaScript, false)
 		if err != nil {
-			t.Fatalf("expected no error, got %v", err)
+			t.Fatalf("unexpected error for more elements: %v", err)
 		}
-		if rec[0].Err == nil || rec[0].Err.Error() != "property «a» contains more than 3 elements" {
-			t.Fatalf("expected record error %q, got %v", "property «a» contains more than 3 elements", rec[0].Err)
-		}
-		if rec[0].Attributes != nil {
-			t.Fatalf("expected nil attributes, got %#v", rec[0].Attributes)
+		want := "property «a» contains more than 3 elements"
+		if rec[0].Err == nil || rec[0].Err.Error() != want {
+			t.Fatalf("expected %q, got %v", want, rec[0].Err)
 		}
 	})
+}
+
+// Test_UnmarshalFloatRanges checks how float ranges handle infinities and NaN.
+func Test_UnmarshalFloatRanges(t *testing.T) {
+	tests := []struct {
+		name     string
+		min, max float64
+		input    string
+		want     float64
+		wantErr  string
+	}{
+		{
+			name:    "positive infinity with finite bounds",
+			min:     0,
+			max:     1,
+			input:   `"Infinity"`,
+			wantErr: "is greater than 1",
+		},
+		{
+			name:    "negative infinity with finite bounds",
+			min:     0,
+			max:     1,
+			input:   `"-Infinity"`,
+			wantErr: "is less than 0",
+		},
+		{
+			name:  "positive infinity with infinite upper bound",
+			min:   0,
+			max:   math.Inf(1),
+			input: `"Infinity"`,
+			want:  math.Inf(1),
+		},
+		{
+			name:    "negative infinity below finite lower bound",
+			min:     0,
+			max:     math.Inf(1),
+			input:   `"-Infinity"`,
+			wantErr: "is less than 0",
+		},
+		{
+			name:    "positive infinity above finite upper bound",
+			min:     math.Inf(-1),
+			max:     0,
+			input:   `"Infinity"`,
+			wantErr: "is greater than 0",
+		},
+		{
+			name:  "negative infinity with infinite lower bound",
+			min:   math.Inf(-1),
+			max:   0,
+			input: `"-Infinity"`,
+			want:  math.Inf(-1),
+		},
+		{
+			name:  "NaN with finite bounds",
+			min:   0,
+			max:   1,
+			input: `"NaN"`,
+			want:  math.NaN(),
+		},
+	}
+	for _, size := range []int{32, 64} {
+		for _, test := range tests {
+			t.Run(fmt.Sprintf("float%d/%s", size, test.name), func(t *testing.T) {
+				typ := types.Float(size).WithFloatRange(test.min, test.max)
+				schema := types.Object([]types.Property{{Name: "value", Type: typ}})
+				for _, language := range []state.Language{state.JavaScript, state.Python} {
+					t.Run(language.String(), func(t *testing.T) {
+						records := make([]Record, 1)
+						input := strings.NewReader(`{"records":[{"value":{"value":` + test.input + `}}]}`)
+						err := Unmarshal(input, records, schema, language, false)
+						if err != nil {
+							t.Fatalf("expected no response error, got %v", err)
+						}
+						if err := records[0].Err; err != nil {
+							if test.wantErr == "" {
+								t.Fatalf("expected no record error, got %v", err)
+							}
+							if _, ok := errors.AsType[RecordValidationError](err); !ok {
+								t.Fatalf("expected a RecordValidationError, got %T: %v", err, err)
+							}
+							if !strings.Contains(err.Error(), test.wantErr) {
+								t.Fatalf("expected error containing %q, got %q", test.wantErr, err)
+							}
+							return
+						}
+						if test.wantErr != "" {
+							t.Fatalf("expected record error containing %q, got no error", test.wantErr)
+						}
+						got, ok := records[0].Attributes["value"].(float64)
+						if !ok {
+							t.Fatalf("expected a float64 value, got %#v", records[0].Attributes["value"])
+						}
+						if math.IsNaN(test.want) {
+							if !math.IsNaN(got) {
+								t.Fatalf("expected NaN, got %g", got)
+							}
+						} else if got != test.want {
+							t.Fatalf("expected value %g, got %g", test.want, got)
+						}
+					})
+				}
+			})
+		}
+	}
 }
 
 // equalValues reports whether v1 and v2 are equal according to the type t.

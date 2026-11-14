@@ -33,10 +33,10 @@ import (
 // an error is returned.
 func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) ([]warehouses.AlterOperation, error) {
 
-	if oldSchema.Kind() != types.ObjectKind {
+	if !oldSchema.IsObject() {
 		panic("not an object")
 	}
-	if newSchema.Kind() != types.ObjectKind {
+	if !newSchema.IsObject() {
 		panic("not an object")
 	}
 
@@ -111,7 +111,7 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 			oldName := propPathToName(oldPath)
 			oldProp, _ := oldProperties.ByName(oldName)
 			newProp, _ := newProperties.ByName(addedName)
-			if newProp.Type.Kind() == types.ObjectKind {
+			if newProp.Type.IsObject() {
 				if !types.Equal(oldProp.Type, newProp.Type) {
 					return nil, fmt.Errorf("it is not possible to rename an object property (%q, renamed to %q) and simultaneously make changes to its descendant properties", appendPath(path, oldName), appendPath(path, addedName))
 
@@ -139,7 +139,7 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 		// New properties, whose name did not already exist in the schema.
 		// They do not appear in "rePaths".
 		p, _ := newProperties.ByName(addedName)
-		if p.Type.Kind() == types.ObjectKind {
+		if p.Type.IsObject() {
 			for _, c := range util.PropertiesToColumns(p.Type.Properties()) {
 				operations = append(operations, warehouses.AlterOperation{
 					Operation: warehouses.OperationAddColumn,
@@ -185,7 +185,7 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 		// Deleted properties, whose name has not been reused by any property.
 		// They do not appear in "rePaths".
 		droppedProp, _ := oldProperties.ByName(droppedName)
-		if droppedProp.Type.Kind() == types.ObjectKind {
+		if droppedProp.Type.IsObject() {
 			for _, p := range propertyPaths(droppedProp.Type) {
 				operations = append(operations, warehouses.AlterOperation{
 					Operation: warehouses.OperationDropColumn,
@@ -246,7 +246,7 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 				// New properties with the same name as a deleted property. They
 				// appear in "rePaths" (the key is the name of the created
 				// property, the value is nil).
-				if oldProp.Type.Kind() == types.ObjectKind {
+				if oldProp.Type.IsObject() {
 					for _, p := range propertyPaths(oldProp.Type) {
 						operations = append(operations, warehouses.AlterOperation{
 							Operation: warehouses.OperationDropColumn,
@@ -260,7 +260,7 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 					})
 				}
 			}
-			if newProp.Type.Kind() == types.ObjectKind {
+			if newProp.Type.IsObject() {
 				for _, c := range util.PropertiesToColumns(newProp.Type.Properties()) {
 					operations = append(operations, warehouses.AlterOperation{
 						Operation: warehouses.OperationAddColumn,
@@ -283,7 +283,7 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 		// They appear in "rePaths" (the key is the name of the property that
 		// "occupied the name", the value is the name of the deleted property).
 		if oldPath, ok := rePaths[keptPath].(string); ok {
-			if oldProp.Type.Kind() == types.ObjectKind {
+			if oldProp.Type.IsObject() {
 				for _, p := range propertyPaths(oldProp.Type) {
 					operations = append(operations, warehouses.AlterOperation{
 						Operation: warehouses.OperationDropColumn,
@@ -304,7 +304,7 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 			if !types.Equal(renamedProp.Type, newProp.Type) {
 				return nil, fmt.Errorf("error on property %q (renamed to %q): type changes are not supported", appendPath(path, oldName), keptPath)
 			}
-			if newProp.Type.Kind() == types.ObjectKind {
+			if newProp.Type.IsObject() {
 				for _, c := range util.PropertiesToColumns(newProp.Type.Properties()) {
 					operations = append(operations, warehouses.AlterOperation{
 						Operation: warehouses.OperationRenameColumn,
@@ -325,7 +325,7 @@ func Diff(oldSchema, newSchema types.Type, rePaths map[string]any, path string) 
 		// Unchanged properties, that are properties that have not been
 		// added/dropped or renamed. They do not appear in "rePaths".
 
-		if oldProp.Type.Kind() == types.ObjectKind && newProp.Type.Kind() == types.ObjectKind {
+		if oldProp.Type.IsObject() && newProp.Type.IsObject() {
 			ops, err := Diff(oldProp.Type, newProp.Type, rePaths, appendPath(path, keptName))
 			if err != nil {
 				return nil, err
@@ -391,7 +391,7 @@ func propPathToName(path string) string {
 func propertyPaths(obj types.Type) []string {
 	paths := []string{}
 	for _, p := range obj.Properties().All() {
-		if p.Type.Kind() == types.ObjectKind {
+		if p.Type.IsObject() {
 			for _, sub := range propertyPaths(p.Type) {
 				paths = append(paths, appendPath(p.Name, sub))
 			}

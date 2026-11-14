@@ -1,23 +1,23 @@
 import React from 'react';
 import { getCountryName } from '../../helpers/countries';
 import { CountryFormat } from '../../../lib/api/types/types';
-import { ProfileRoleAssignments } from '../../../lib/api/types/workspace';
+import { ProfilePropertyRoles } from '../../../lib/api/types/workspace';
 import { getProfileAttributeString } from './Profiles.helpers';
 import { ProfileThumbnail } from './ProfileThumbnail';
 
 interface ProfileCellProps {
-	assignedRoles?: ProfileRoleAssignments;
+	propertyRoles?: ProfilePropertyRoles;
 	attributes: Record<string, unknown>;
 	countryFormat?: CountryFormat;
 	profileID: string;
 }
 
-const ProfileCell = ({ assignedRoles, attributes, countryFormat, profileID }: ProfileCellProps) => {
-	const firstName = getProfileAttributeString(attributes, assignedRoles?.firstName ?? '');
-	const lastName = getProfileAttributeString(attributes, assignedRoles?.lastName ?? '');
-	const countryCode = getProfileAttributeString(attributes, assignedRoles?.country ?? '');
+const ProfileCell = ({ propertyRoles, attributes, countryFormat, profileID }: ProfileCellProps) => {
+	const firstName = getProfileAttributeString(attributes, propertyRoles?.firstName ?? '');
+	const lastName = getProfileAttributeString(attributes, propertyRoles?.lastName ?? '');
+	const countryCode = getProfileAttributeString(attributes, propertyRoles?.country ?? '');
 	const country = getCountryName(countryCode, countryFormat);
-	const photo = getProfileAttributeString(attributes, assignedRoles?.photo ?? '');
+	const photo = getProfileAttributeString(attributes, propertyRoles?.photo ?? '');
 	const name = [firstName, lastName].filter((value) => value != null).join(' ');
 
 	return (
@@ -29,12 +29,14 @@ const ProfileCell = ({ assignedRoles, attributes, countryFormat, profileID }: Pr
 				photo={photo}
 				profileID={profileID}
 			/>
-			{(name !== '' || country != null) && (
-				<div className='profiles-list__profile-details'>
-					{name !== '' && <div className='profiles-list__profile-name'>{name}</div>}
-					{country != null && <div className='profiles-list__profile-country'>{country}</div>}
+			<div className='profiles-list__profile-details'>
+				<div
+					className={`profiles-list__profile-name${name === '' ? ' profiles-list__profile-name--unavailable' : ''}`}
+				>
+					{name === '' ? 'Name not available' : name}
 				</div>
-			)}
+				{country != null && <div className='profiles-list__profile-country'>{country}</div>}
+			</div>
 		</div>
 	);
 };

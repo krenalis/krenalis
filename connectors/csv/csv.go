@@ -122,6 +122,7 @@ func (c *CSV) Read(ctx context.Context, r io.Reader, sheet string, records conne
 						}
 					}
 					columns[i].Name = name
+					columns[i].DisplayName = header
 					nameOfHeader[header] = name
 				} else {
 					name := columnNumberToName(i + 1)
@@ -296,8 +297,6 @@ func toString(v any, t types.Type) string {
 		return v.(time.Time).Format(time.DateOnly)
 	case types.TimeKind:
 		return v.(time.Time).Format("15:04:05.999999999Z07:00")
-	case types.YearKind:
-		return strconv.Itoa(v.(int))
 	case types.JSONKind:
 		return string(v.(json.Value))
 	case types.ArrayKind, types.ObjectKind, types.MapKind:

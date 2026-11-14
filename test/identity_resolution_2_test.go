@@ -169,6 +169,18 @@ func TestIdentityResolution2(t *testing.T) {
 	if duration > 1*time.Hour {
 		t.Fatalf("expected an Identity Resolution duration less than 1 hour, got a duration of %v", duration)
 	}
+	runs := k.IdentityResolutionRuns(0, 5, "successful")
+	if len(runs) != 1 {
+		t.Fatalf("expected one successful Identity Resolution run, got %d", len(runs))
+	}
+	if runs[0].Status != "successful" || runs[0].EndTime == nil || runs[0].Error != nil {
+		t.Fatalf("expected a successful terminal run, got %#v", runs[0])
+	}
+	if !runs[0].StartTime.Equal(*startTime) || !runs[0].EndTime.Equal(*endTime) {
+		t.Fatalf("expected run lifecycle %s/%s, got %s/%s",
+			*startTime, *endTime, runs[0].StartTime, *runs[0].EndTime)
+	}
+	firstRun := runs[0]
 
 	// Check that there is only one profile, and that its properties have been
 	// merged correctly.
@@ -204,6 +216,31 @@ func TestIdentityResolution2(t *testing.T) {
 	k.AlterProfileSchemaAndWait(schema, primarySources, nil)
 
 	k.RunIdentityResolutionAndWait()
+	runs = k.IdentityResolutionRuns(0, 5, "")
+	if len(runs) != 2 {
+		t.Fatalf("expected both accepted Identity Resolution runs in history, got %d", len(runs))
+	}
+	if runs[0].Status != "successful" || runs[1].Status != "successful" ||
+		runs[0].EndTime == nil || runs[0].Error != nil {
+		t.Fatalf("expected successful runs, got %#v", runs)
+	}
+	if !runs[0].StartTime.After(runs[1].StartTime) {
+		t.Fatalf("expected newest run first, got %s then %s", runs[0].StartTime, runs[1].StartTime)
+	}
+	if !reflect.DeepEqual(runs[1], firstRun) {
+		t.Fatalf("expected first run to remain unchanged as %#v, got %#v", firstRun, runs[1])
+	}
+	if firstRun.ID == "" || runs[0].ID == "" || runs[0].ID == firstRun.ID {
+		t.Fatalf("expected non-empty distinct run IDs, got %q and %q", firstRun.ID, runs[0].ID)
+	}
+	startTime, endTime = k.LatestIdentityResolution()
+	if startTime == nil || endTime == nil {
+		t.Fatalf("expected completed latest Identity Resolution, got start %v and end %v", startTime, endTime)
+	}
+	if !runs[0].StartTime.Equal(*startTime) || !runs[0].EndTime.Equal(*endTime) {
+		t.Fatalf("expected run lifecycle %s/%s, got %s/%s",
+			*startTime, *endTime, runs[0].StartTime, *runs[0].EndTime)
+	}
 
 	profiles, total = k.Profiles(schema.Properties().Names(), "", false, 0, 100)
 	if total != 1 {
@@ -221,6 +258,17 @@ func TestIdentityResolution2(t *testing.T) {
 	}
 	if !reflect.DeepEqual(profile.Attributes, expected) {
 		t.Fatalf("expected profile attributes %#v, got %#v", expected, profile)
+	}
+
+	// Check the successful filter against running and failed history fixtures.
+	k.ExecQueryTestDatabase(t.Context(),
+		`INSERT INTO identity_resolution_runs (id, workspace, start_time, end_time, error)
+		VALUES ('11111111-1111-1111-1111-111111111111', $1, $2, NULL, NULL),
+			('22222222-2222-2222-2222-222222222222', $1, $2, $3, 'warehouse failure')`,
+		k.WorkspaceID(), firstRun.StartTime, *firstRun.EndTime)
+	successfulRuns := k.IdentityResolutionRuns(0, 5, "successful")
+	if !reflect.DeepEqual(successfulRuns, runs) {
+		t.Fatalf("expected only successful runs %#v, got %#v", runs, successfulRuns)
 	}
 
 	storage.Remove()

@@ -88,7 +88,7 @@ func TestDiff(t *testing.T) {
 			expectedOps: []warehouses.AlterOperation{},
 		},
 		{
-			name: "Semantic removed from existing property",
+			name: "Semantics removed from existing property",
 			fromSchema: types.Object([]types.Property{
 				{Name: "a", Type: types.String().AsEmail(), Nullable: true},
 			}),

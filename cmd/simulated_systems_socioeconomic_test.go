@@ -91,7 +91,7 @@ func testSimulatedSystemDestinationRoundTrip(t *testing.T, storedPolicy string) 
 		ID string `json:"id"`
 	}
 	k.Call("POST", "/v1/workspaces", http.Header{"Krenalis-Workspace": nil}, map[string]any{
-		"name": "Generated socioeconomic round trip", "environment": "development", "profileSchema": profileSchema,
+		"name": "Generated socioeconomic round trip", "environment": "development", "profileSchema": krenalistester.ProfileSchema{Schema: profileSchema},
 		"warehouse": map[string]any{"platform": "PostgreSQL", "mode": "Normal", "settings": settings},
 	}, &workspace)
 	k.SetWorkspaceID(workspace.ID)
@@ -411,9 +411,9 @@ func TestSimulatedSystemSocioeconomicLifecycle(t *testing.T) {
 	}
 	k.Call("POST", "/v1/workspaces", http.Header{"Krenalis-Workspace": nil}, map[string]any{
 		"name": "socioeconomic", "environment": "development",
-		"profileSchema": types.Object([]types.Property{
+		"profileSchema": krenalistester.ProfileSchema{Schema: types.Object([]types.Property{
 			{Name: "email", Type: types.String().AsEmail(), ReadOptional: true},
-		}),
+		})},
 		"warehouse": map[string]any{"platform": "PostgreSQL", "mode": "Normal", "settings": settings},
 	}, &workspace)
 	k.SetWorkspaceID(workspace.ID)

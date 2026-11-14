@@ -66,7 +66,7 @@ type BatchIdentityWriter struct {
 //
 // If the pipeline's output schema does not align with the profile schema, it
 // returns a *schemas.Error error.
-func newBatchIdentityWriter(store *Store, pipeline *state.Pipeline, purge bool) (*BatchIdentityWriter, error) {
+func newBatchIdentityWriter(store *Store, pipeline *state.Pipeline, purge bool, metrics PipelineMetrics) (*BatchIdentityWriter, error) {
 
 	connection := pipeline.Connection()
 	run, ok := pipeline.Run()
@@ -109,7 +109,7 @@ func newBatchIdentityWriter(store *Store, pipeline *state.Pipeline, purge bool) 
 		MaxFlushLatency:  15 * time.Second,
 		IdleFlushDelay:   2 * time.Second,
 		RateAlpha:        0.3,
-		MetricsFinalizer: store.ds.metrics.FinalizePassed,
+		MetricsFinalizer: metrics.FinalizePassed,
 		LogError:         w.logError,
 	}
 	w.flusher = newFlusher(opts, store.mc.StartOperation, func(ctx context.Context, identities []map[string]any) error {
@@ -125,14 +125,18 @@ func newBatchIdentityWriter(store *Store, pipeline *state.Pipeline, purge bool) 
 // writes, discards pending ones, and returns.
 //
 // If purge needs to be done, it purges all identities of the pipeline for which
-// neither the Write method nor the Keep method has been called. If Keep was
-// called with an empty identifier, the purge is skipped and ErrPurgeSkipped is
-// returned.
+// neither the Write method nor the Keep method has been called.
 //
 // When Close is called, no other calls to EventIdentityWriter's methods should
 // be in progress and no other shall be made.
 //
 // After Close is called, subsequent calls to Close or Stop do nothing.
+//
+// If Keep was called with an empty identifier, the purge is skipped and
+// ErrPurgeSkipped is returned.
+//
+// If a data warehouse error occurs, it returns a *WarehouseError wrapping the
+// cause, which may be *warehouses.SettingsError if the settings are invalid.
 func (w *BatchIdentityWriter) Close(ctx context.Context) error {
 	if w.closed.Swap(true) {
 		return nil
