@@ -1,7 +1,6 @@
 # Ignore the binaries produced by `go build`.
 /krenalis
 /krenalis.exe
-/.gocache/
 
 # Since '.env' files are used for Krenalis configuration and may contain
 # critical information, it's convenient to add this repository-wide exclusion
