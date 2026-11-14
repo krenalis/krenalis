@@ -38,12 +38,17 @@ func (warehouse *PostgreSQL) AlterProfileSchema(ctx context.Context, opID string
 	var operationErr *warehouses.OperationError
 	err = warehouse.alterProfileSchema(ctx, columns, operations)
 	if err != nil {
+		if ctx.Err() != nil {
+			err = fmt.Errorf("operation interrupted: %w", context.Cause(ctx))
+		}
 		operationErr = warehouses.NewOperationError(err)
 	}
+	ctx, cancel := withDelayedCancellation(ctx, finalizationGracePeriod)
+	defer cancel()
 	bo := backoff.New(200)
 	bo.SetCap(time.Second)
 	for bo.Next(ctx) {
-		err2 := warehouse.setOperationAsCompleted(ctx, pool, opID, operationErr)
+		err2 := warehouse.setOperationAsCompleted(ctx, pool, opID, nil, operationErr)
 		if err2 != nil {
 			slog.Error("cannot set alter profile columns operation as completed, retrying",
 				"err", err2, "operationError", operationErr)
@@ -288,8 +293,6 @@ func typeToPostgresType(t types.Type) string {
 		return "date"
 	case types.TimeKind:
 		return "time without time zone"
-	case types.YearKind:
-		return "smallint"
 	case types.UUIDKind:
 		return "uuid"
 	case types.JSONKind:

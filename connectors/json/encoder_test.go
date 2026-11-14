@@ -48,7 +48,7 @@ func TestEncoder(t *testing.T) {
 		{Name: "datetime", Type: types.DateTime()},
 		{Name: "date", Type: types.Date()},
 		{Name: "time", Type: types.Time()},
-		{Name: "year", Type: types.Year()},
+		{Name: "year", Type: types.Int(16).AsYear()},
 		{Name: "uuid", Type: types.UUID()},
 		{Name: "json", Type: types.JSON()},
 		{Name: "ip", Type: types.IP()},

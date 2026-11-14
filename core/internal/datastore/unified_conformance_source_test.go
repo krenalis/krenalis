@@ -161,7 +161,7 @@ func testUnifiedConformanceSources(t *testing.T, store *Store, dw warehouses.War
 						if !fault || result != nil || !strings.Contains(err.Error(), "occurrence source violates") {
 							t.Fatalf("expected source fault=%t without partial result, got %+v, %v", fault, result, err)
 						}
-						if _, ok := errors.AsType[*UnavailableError](err); !ok {
+						if _, ok := errors.AsType[*WarehouseError](err); !ok {
 							t.Fatalf("expected opaque execution failure, got %T", err)
 						}
 					}

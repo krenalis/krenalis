@@ -258,9 +258,8 @@ INSERT INTO krenalis_events
 		otherSettings.Database = "test_mcp_other"
 		schema := types.Object([]types.Property{{Name: "email", Type: types.String(), ReadOptional: true}})
 		k.Call("POST", "/v1/workspaces", http.Header{"Krenalis-Workspace": nil}, map[string]any{
-			"name": "Other MCP workspace", "profileSchema": schema,
-			"warehouse":     map[string]any{"platform": "PostgreSQL", "settings": otherSettings},
-			"uiPreferences": krenalistester.UIPreferences{},
+			"name": "Other MCP workspace", "profileSchema": map[string]any{"schema": schema},
+			"warehouse": map[string]any{"platform": "PostgreSQL", "settings": otherSettings},
 		}, &otherWorkspace)
 		var otherKey struct {
 			Token string `json:"token"`

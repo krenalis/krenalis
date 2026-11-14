@@ -86,7 +86,7 @@ func DecodeFilterOperand(value json.Value, typ types.Type, operator WhereOperato
 		default:
 			return nil, fmt.Errorf("core/internal/state: unexpected filter operand type %s", typ)
 		}
-	case types.IntKind, types.YearKind:
+	case types.IntKind:
 		if !value.IsNumber() {
 			return nil, errors.New("integer filter operand must be a JSON Number")
 		}
@@ -100,9 +100,6 @@ func DecodeFilterOperand(value json.Value, typ types.Type, operator WhereOperato
 		v, err := strconv.ParseInt(string(value), 10, 64)
 		if err != nil {
 			return nil, errors.New("filter operand is not a valid integer")
-		}
-		if typ.Kind() == types.YearKind && (v < types.MinYear || v > types.MaxYear) {
-			return nil, errors.New("filter year operand is out of range")
 		}
 		return int(v), nil
 	case types.FloatKind:

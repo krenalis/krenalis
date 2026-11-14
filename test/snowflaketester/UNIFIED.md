@@ -1624,15 +1624,16 @@ applied before the target pool opens. If result metadata is missing, both
 adapters close the cursor and check its stored error before reporting a schema
 mismatch. PostgreSQL tests require the original 57014 timeout code or the context
 cancellation cause, without a textual schema-mismatch exception. The public
-`UnavailableError` stays opaque and no partial result is returned. Cancellation
+API error stays opaque and no partial result is returned. Cancellation
 also requires the target to disappear before the 30-second UDF delay could
 complete naturally.
 
 The vendored Snowflake driver currently sends cancellation synchronously,
 without a separate cleanup deadline. Measured cancellation latency includes
 this step; the test's observation bounds do not establish a production latency
-guarantee. The datastore retains its opaque `UnavailableError`, so cancellation
-is not identifiable through `errors.Is` above that boundary. The later resource
+guarantee. The datastore wraps execution failures in `WarehouseError`, preserving their
+causes internally. Core exposes an opaque API error, so callers cannot identify
+cancellation through `errors.Is` above the public API boundary. The later resource
 supplement covers local mode transitions and a driver-level chunk fault after
 query completion; neither is part of these running-query fixtures. Actual
 network outages and credit/resource controls remain outside these fixtures.

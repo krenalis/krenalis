@@ -19,7 +19,7 @@ import (
 
 func TestExplainUnifiedProfilePreparedValidation(t *testing.T) {
 	store := &Store{mc: newModeCoordinator(state.Normal)}
-	store.wh.Store(&postgresql.PostgreSQL{})
+	store.wh.Store(wrapWarehouse(&postgresql.PostgreSQL{}))
 	// An invalid physical column models a binding defect, not a warehouse outage.
 	store.columnByProperty.user = map[string]warehouses.Column{
 		"country": {Name: "invalid.column", Type: types.String(), Nullable: true},
@@ -28,7 +28,7 @@ func TestExplainUnifiedProfilePreparedValidation(t *testing.T) {
 	result, err := store.ExplainUnifiedProfile(t.Context(), &rule, unified.Bindings{},
 		time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC), unifiedTestID(1))
 	if err != nil {
-		if _, unavailable := errors.AsType[*UnavailableError](err); unavailable || result != nil ||
+		if _, unavailable := errors.AsType[*WarehouseError](err); unavailable || result != nil ||
 			!strings.Contains(err.Error(), "invalid prepared Record qualification") {
 			t.Fatalf("expected internal prepared-filter failure without result, got %+v, %v", result, err)
 		}

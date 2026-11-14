@@ -69,7 +69,7 @@ CREATE TABLE "KRENALIS_EVENTS" ("KPID" VARCHAR(36),"MESSAGE_ID" VARCHAR COLLATE 
 	execUnifiedFixture(t, dw, "INSERT INTO "+quoteUnifiedRecordIdentifier(platform, "profiles")+
 		" VALUES ('"+unifiedTestID(1)+"'),('"+unifiedTestID(2)+"')")
 	store := &Store{mc: newModeCoordinator(state.Normal)}
-	store.wh.Store(dw)
+	store.wh.Store(wrapWarehouse(dw))
 	at := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
 	scope := unified.Scope{Event: "Order Completed", Grain: "registered-message",
 		Start: at.Add(-24 * time.Hour), End: at}
@@ -172,7 +172,7 @@ CREATE TABLE "KRENALIS_EVENTS" ("KPID" VARCHAR(36),"MESSAGE_ID" VARCHAR COLLATE 
 			result, err := store.UnifiedProfiles(gosnowflake.WithQueryTag(t.Context(), snowflaketester.RecordQueryTag),
 				root, unified.Bindings{}, at, unified.Page{Limit: 10})
 			if err != nil {
-				if _, ok := errors.AsType[*UnavailableError](err); !ok || !(test.fault || test.otherFault) ||
+				if _, ok := errors.AsType[*WarehouseError](err); !ok || !(test.fault || test.otherFault) ||
 					result != nil || !strings.Contains(err.Error(), "occurrence source violates") {
 					t.Fatalf("expected source failure=%t without partial results, got %+v, %v",
 						test.fault || test.otherFault, result, err)
@@ -210,7 +210,7 @@ CREATE TABLE "KRENALIS_EVENTS" ("KPID" VARCHAR(36),"MESSAGE_ID" VARCHAR COLLATE 
 					gosnowflake.WithQueryTag(t.Context(), snowflaketester.RecordExplanationTag),
 					root, unified.Bindings{}, at, unifiedTestID(profile))
 				if err != nil {
-					if _, ok := errors.AsType[*UnavailableError](err); !ok || !fault || explained != nil ||
+					if _, ok := errors.AsType[*WarehouseError](err); !ok || !fault || explained != nil ||
 						!strings.Contains(err.Error(), "occurrence source violates") {
 						t.Fatalf("expected profile %d source failure=%t without explanation, got %+v, %v",
 							profile, fault, explained, err)

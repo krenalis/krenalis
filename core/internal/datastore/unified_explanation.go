@@ -17,7 +17,7 @@ import (
 // ExplainUnifiedProfile evaluates every node for one determined profile.
 // It returns nil for a missing profile, ErrUnifiedUnavailable for an unverified
 // backend, *unified.UnsupportedError for unavailable language capabilities,
-// mode errors when unavailable, and *UnavailableError on execution failure.
+// mode errors when unavailable, and *WarehouseError on execution failure.
 // It assumes a coherent source view, as does UnifiedProfiles.
 func (store *Store) ExplainUnifiedProfile(ctx context.Context, root *unified.Rule, bindings unified.Bindings, at time.Time, profile string) (*unified.Explanation, error) {
 	store.mustBeOpen()
@@ -48,7 +48,7 @@ func (store *Store) ExplainUnifiedProfile(ctx context.Context, root *unified.Rul
 	}
 	nodes, err := backend.ExplainProfileFilter(ctx, filter, source.Profiles, profile)
 	if err != nil {
-		return nil, unavailableError(err)
+		return nil, err
 	}
 	if len(nodes) == 0 {
 		return nil, nil

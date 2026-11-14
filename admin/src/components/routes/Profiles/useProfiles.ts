@@ -37,7 +37,7 @@ const useProfiles = () => {
 		// fetch the profile schema.
 		let schema: ObjectType;
 		try {
-			schema = await api.workspaces.profileSchema();
+			schema = (await api.workspaces.profileSchema()).schema;
 		} catch (err) {
 			setTimeout(() => {
 				setIsLoading(false);

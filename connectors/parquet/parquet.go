@@ -477,11 +477,6 @@ func convertToParquetData(schema types.Type, record map[string]any) (map[string]
 				converted[p.Name] = ts.UnixMicro()
 				continue
 			}
-		case types.YearKind:
-			if y, ok := record[p.Name].(int); ok {
-				converted[p.Name] = int32(y)
-				continue
-			}
 		case types.UUIDKind:
 			if u, ok := record[p.Name].(string); ok {
 				array := [16]byte(uuid.MustParse(u))
@@ -721,8 +716,6 @@ func objectToColumns(obj types.Type) ([]*parquetschema.ColumnDefinition, error) 
 			col.SchemaElement.LogicalType.TIME.IsAdjustedToUTC = true
 			col.SchemaElement.LogicalType.TIME.Unit = parquet.NewTimeUnit()
 			col.SchemaElement.LogicalType.TIME.Unit.MICROS = parquet.NewMicroSeconds()
-		case types.YearKind:
-			col.SchemaElement.Type = parquet.TypePtr(parquet.Type_INT32)
 		case types.UUIDKind:
 			col.SchemaElement.Type = parquet.TypePtr(parquet.Type_FIXED_LEN_BYTE_ARRAY)
 			typeLength := int32(16)

@@ -5,7 +5,7 @@ import { UnprocessableError } from '../../../lib/api/errors';
 import ConnectionContext from '../../../context/ConnectionContext';
 import { GridColumn, GridRow } from '../../base/Grid/Grid.types';
 import { Identity } from '../../../lib/api/types/profile';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import { Link } from '../../base/Link/Link';
 
 const useConnectionIdentities = () => {
@@ -79,7 +79,7 @@ const useConnectionIdentities = () => {
 						identity.userId
 					) : (
 						<span className='connection-identities__anonymous-identity'>
-							<SlIcon name='incognito' />
+							<WaIcon name='incognito' />
 							anonymous
 						</span>
 					),

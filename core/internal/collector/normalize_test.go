@@ -57,7 +57,7 @@ func TestNormalizeJSON(t *testing.T) {
 		{name: "datetime", value: `"2026-11-04T12:00:00.100000+01:00"`, schema: types.DateTime(), want: `"2026-11-04T11:00:00.100Z"`},
 		{name: "date", value: `"2026-11-04"`, schema: types.Date(), want: `"2026-11-04"`},
 		{name: "time", value: `"12:30:00.100000"`, schema: types.Time(), want: `"12:30:00.100"`},
-		{name: "year", value: `2026`, schema: types.Year(), want: `2026`},
+		{name: "year", value: `2026`, schema: types.Int(16).AsYear(), want: `2026`},
 		{name: "uuid", value: `"550E8400-E29B-41D4-A716-446655440000"`, schema: types.UUID(), want: `"550e8400-e29b-41d4-a716-446655440000"`},
 		{name: "ip", value: `"::ffff:192.0.2.1"`, schema: types.IP(), want: `"192.0.2.1"`},
 		{name: "json null", value: `null`, schema: types.JSON(), want: `null`},

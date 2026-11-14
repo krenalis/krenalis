@@ -901,24 +901,24 @@ func prepareFilterCondition(cond *FilterCondition, validation *filterValidation)
 
 	// Validate the operator for the property kind.
 	//
-	// is                          : int, float, decimal, datetime, date, time, year, uuid, json, ip, string
-	// is not                      : int, float, decimal, datetime, date, time, year, uuid, json, ip, string
+	// is                          : int, float, decimal, datetime, date, time, uuid, json, ip, string
+	// is not                      : int, float, decimal, datetime, date, time, uuid, json, ip, string
 	// is less than                : int, float, decimal, json, string [^1]
 	// is less than or equal to    : int, float, decimal, json, string [^1]
 	// is greater than             : int, float, decimal, json, string [^1]
 	// is greater than or equal to : int, float, decimal, json, string [^1]
-	// is between                  : int, float, decimal, year, datetime, date, time, json, string [^1]
-	// is not between              : int, float, decimal, year, datetime, date, time, json, string [^1]
+	// is between                  : int, float, decimal, datetime, date, time, json, string [^1]
+	// is not between              : int, float, decimal, datetime, date, time, json, string [^1]
 	// contains                    : json, string, array [^2]
 	// does not contain            : json, string, array [^2]
-	// is one of                   : int, float, decimal, year, datetime, date, time, json, string
-	// is not one of               : int, float, decimal, year, datetime, date, time, json, string
+	// is one of                   : int, float, decimal, datetime, date, time, json, string
+	// is not one of               : int, float, decimal, datetime, date, time, json, string
 	// starts with                 : json, string [^1]
 	// ends with                   : json, string [^1]
-	// is before                   : datetime, date, time, year
-	// is on or before             : datetime, date, time, year
-	// is after                    : datetime, date, time, year
-	// is on or after              : datetime, date, time, year
+	// is before                   : datetime, date, time
+	// is on or before             : datetime, date, time
+	// is after                    : datetime, date, time
+	// is on or after              : datetime, date, time
 	// is true                     : boolean, json
 	// is false                    : boolean, json
 	// is empty                    : json, string, array, map
@@ -990,7 +990,6 @@ func prepareFilterCondition(cond *FilterCondition, validation *filterValidation)
 	case OpIsBefore, OpIsAfter, OpIsOnOrBefore, OpIsOnOrAfter:
 		switch kind {
 		case types.DateTimeKind, types.DateKind, types.TimeKind:
-		case types.YearKind:
 		default:
 			return nil, "", fmt.Errorf("operator %q cannot be used with %s properties", op, kind)
 		}

@@ -2,9 +2,9 @@ import React, { useState, useEffect, useContext } from 'react';
 import Flex from '../../base/Flex/Flex';
 import AppContext from '../../../context/AppContext';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
-import SlCopyButton from '@shoelace-style/shoelace/dist/react/copy-button/index.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaInput from '@awesome.me/webawesome/dist/react/input/index.js';
+import WaCopyButton from '@awesome.me/webawesome/dist/react/copy-button/index.js';
 import TransformedConnection from '../../../lib/core/connection';
 
 interface KeysProps {
@@ -92,23 +92,28 @@ const ConnectionKeys = ({ connection: c }: KeysProps) => {
 					return (
 						<Flex key={key} alignItems='center' gap={30}>
 							<div className='connection-settings__key-copy'>
-								<SlInput readonly value={key} filled />
-								<SlCopyButton value={key} />
+								<WaInput readonly value={key} appearance='filled' />
+								<WaCopyButton value={key} />
 							</div>
-							<SlButton variant='danger' onClick={() => onDeleteWriteKey(key)}>
+							<WaButton variant='danger' onClick={() => onDeleteWriteKey(key)}>
 								Revoke
-							</SlButton>
+							</WaButton>
 						</Flex>
 					);
 				})}
 			</div>
-			<SlButton variant='neutral' onClick={onAddKey}>
+			<WaButton variant='neutral' onClick={onAddKey}>
 				Generate new key
-			</SlButton>
+			</WaButton>
 			<div className='connection-settings__keys-endpoint'>
 				<div className='connection-settings__keys-endpoint-copy'>
-					<SlInput readonly label='Endpoint' value={`${window.location.origin}/v1/events`} filled />
-					<SlCopyButton value={`${window.location.origin}/v1/events`} />
+					<WaInput
+						readonly
+						label='Endpoint'
+						value={`${window.location.origin}/v1/events`}
+						appearance='filled'
+					/>
+					<WaCopyButton value={`${window.location.origin}/v1/events`} />
 				</div>
 			</div>
 		</>

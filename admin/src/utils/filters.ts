@@ -68,6 +68,8 @@ const MAX_UNSIGNED = BigInt('18446744073709551615');
 const MAX_FLOAT32 = 3.4028234663852885981170418348451692544e38;
 const MIN_YEAR = 1;
 const MAX_YEAR = 9999;
+const MAX_DECIMAL_PRECISION = 76;
+const MAX_DECIMAL_SCALE = 37;
 
 // formatText formats a string value as a string.
 const formatString = (str: string): string => {
@@ -109,7 +111,14 @@ const isDate = (s: string): boolean => {
 // can be used as a filter value.
 const isDateTime = (s: string): boolean => {
 	const match = s.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d{1,9})?([+-]\d{2}:\d{2}|Z)?$/);
-	if (match == null || !isDate(match[1]) || Number(match[2]) > 23 || Number(match[3]) > 59 || Number(match[4]) > 59)
+	if (
+		match == null ||
+		match[5] === '-00:00' ||
+		!isDate(match[1]) ||
+		Number(match[2]) > 23 ||
+		Number(match[3]) > 59 ||
+		Number(match[4]) > 59
+	)
 		return false;
 	const date = new Date(match[5] == null ? s + 'Z' : s);
 	return Number.isFinite(date.valueOf()) && date.getUTCFullYear() >= MIN_YEAR && date.getUTCFullYear() <= MAX_YEAR;
@@ -118,6 +127,27 @@ const isDateTime = (s: string): boolean => {
 // isDecimal checks whether the string s represents a valid decimal value that
 // can be used as a filter value.
 const isDecimal = (s: string): boolean => {
+	const m = s.match(/^[+-]?(0|[1-9]\d*)?(?:\.(\d*))?(?:[eE]([+-]?\d+))?$/);
+	if (m == null) {
+		return false;
+	}
+	const [, integer = '', fraction = '', exponent = '0'] = m;
+	if (integer === '' && fraction === '') {
+		return false;
+	}
+	const digits = (integer + fraction).replace(/^0+/, '');
+	if (digits === '') {
+		return true;
+	}
+	const significant = digits.replace(/0+$/, '');
+	const scale = fraction.length - (digits.length - significant.length) - Number(exponent);
+	const precision = Math.max(significant.length - scale, 0) + Math.max(scale, 0);
+	return precision <= MAX_DECIMAL_PRECISION && scale <= MAX_DECIMAL_SCALE;
+};
+
+// isFloatingPoint checks whether the string s represents a valid floating-point
+// value.
+const isFloatingPoint = (s: string): boolean => {
 	if (s === '') {
 		return false;
 	}
@@ -179,26 +209,11 @@ const isInt = (s: string): boolean => {
 	return MIN_INT <= n && n <= MAX_INT;
 };
 
-// isYear checks whether the string s represents a valid year value that can be
-// used as a filter value.
-const isYear = (s: string): boolean => {
-	if (s === '' || s.length > 4) {
-		return false;
-	}
-	for (const c of s) {
-		if (c < '0' || c > '9') {
-			return false;
-		}
-	}
-	const year = parseInt(s);
-	return MIN_YEAR <= year && year <= MAX_YEAR;
-};
-
 // isFloat checks whether the string s represents a valid float value with the
 // specified bit size, which can be either 32 or 64, and can be used as a filter
 // value.
 const isFloat = (s: string, bitSize: number): boolean => {
-	if (!isDecimal(s)) {
+	if (!isFloatingPoint(s)) {
 		return false;
 	}
 	const n = parseFloat(s);
@@ -211,8 +226,8 @@ const isFloat = (s: string, bitSize: number): boolean => {
 // isTime checks whether the string s represents a valid time value that can be
 // used as a filter value.
 const isTime = (s: string): boolean => {
-	const m = s.match(/^(\d{2}):(\d{2}):(\d{2})(?:\.\d{1,9})?$/);
-	if (m == null) {
+	const m = s.match(/^(\d{2}):(\d{2}):(\d{2})/);
+	if (m == null || (s[8] === '.' && !/^\.\d{1,9}/.test(s.slice(8)))) {
 		return false;
 	}
 	const [hour, minute, second] = [Number(m[1]), Number(m[2]), Number(m[3])];
@@ -346,9 +361,6 @@ const parseFilterOperand = (input: string, type: Type, operator: FilterOperator)
 		case 'int':
 			valid = type.unsigned ? isUnsigned(input) : isInt(input);
 			break;
-		case 'year':
-			valid = isYear(input);
-			break;
 		case 'float':
 			valid = isFloat(input, type.bitSize);
 			break;
@@ -374,7 +386,7 @@ const parseFilterOperand = (input: string, type: Type, operator: FilterOperator)
 			throw new Error(`Operands are not supported for ${type.kind}`);
 	}
 	if (!valid) throw new Error(`Invalid ${type.kind} filter value`);
-	if (type.kind === 'int' || type.kind === 'year' || type.kind === 'float' || type.kind === 'decimal') {
+	if (type.kind === 'int' || type.kind === 'float' || type.kind === 'decimal') {
 		const text = input.replace(/^\+/, '').replace(/^(-?)0+(?=\d)/, '$1');
 		return filterNumber(text, type.kind === 'decimal');
 	}
@@ -580,7 +592,6 @@ export {
 	isUUID,
 	isUnsigned,
 	isValidPropertyPath,
-	isYear,
 	parseText,
 	serializeFilter,
 };

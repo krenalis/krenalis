@@ -247,7 +247,7 @@ func testUnifiedInterruption(t *testing.T, name, profile string) {
 	}
 	dw := newJSONFilterTestWarehouse(t, name)
 	store := &Store{mc: newModeCoordinator(state.Normal)}
-	store.wh.Store(dw)
+	store.wh.Store(wrapWarehouse(dw))
 	var random [16]byte
 	_, err := rand.Read(random[:])
 	if err != nil {
@@ -362,12 +362,9 @@ SELECT * FROM krenalis_events_base WHERE delay_probe(message_id,30)`)
 			}
 			if result.err != nil {
 
-				unavailable, ok := errors.AsType[*UnavailableError](result.err)
+				unavailable, ok := errors.AsType[*WarehouseError](result.err)
 				if !ok || result.partial {
-					t.Fatalf("expected UnavailableError without partial data, got %T, partial=%t", result.err, result.partial)
-				}
-				if errors.Is(result.err, context.Canceled) {
-					t.Fatal("expected opaque UnavailableError, got exported cancellation identity")
+					t.Fatalf("expected WarehouseError without partial data, got %T, partial=%t", result.err, result.partial)
 				}
 				if profile == "cancellation" {
 					if !errors.Is(unavailable.Err, context.Canceled) {

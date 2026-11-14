@@ -31,7 +31,7 @@ func TestUnifiedChunkFaultSnowflake(t *testing.T) {
 CREATE VIEW "PROFILES" AS SELECT * FROM "PROFILE_DATA"`)
 	populateUnifiedChunkProfiles(t, "Snowflake", dw)
 	store := &Store{mc: newModeCoordinator(state.Normal)}
-	store.wh.Store(dw)
+	store.wh.Store(wrapWarehouse(dw))
 	store.columnByProperty.user = map[string]warehouses.Column{
 		"_kpid": {Name: "_kpid", Type: types.UUID()}, "payload": {Name: "payload", Type: types.String()},
 	}
@@ -42,7 +42,7 @@ CREATE VIEW "PROFILES" AS SELECT * FROM "PROFILE_DATA"`)
 	result, err := store.UnifiedProfiles(ctx, nil, unified.Bindings{}, fixture.at,
 		unified.Page{Limit: 1000, Properties: []string{"payload"}})
 	if err != nil {
-		unavailable, ok := errors.AsType[*UnavailableError](err)
+		unavailable, ok := errors.AsType[*WarehouseError](err)
 		if !ok || result != nil || !errors.Is(unavailable.Err, gosnowflake.ErrChunkFault) || ctx.Err() != nil {
 			t.Fatalf("expected exhausted driver failure with live caller and no result, got %T, result=%t, canceled=%t",
 				err, result != nil, ctx.Err() != nil)

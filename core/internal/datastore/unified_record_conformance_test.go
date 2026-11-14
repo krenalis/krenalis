@@ -39,7 +39,7 @@ func newUnifiedRecordFixture(t *testing.T, platform string, columns []warehouses
 		t.Fatalf("expected warehouse initialization, got %v", err)
 	}
 	store := &Store{mc: newModeCoordinator(state.Normal)}
-	store.wh.Store(dw)
+	store.wh.Store(wrapWarehouse(dw))
 	store.columnByProperty.user = map[string]warehouses.Column{
 		"_kpid": {Name: "_kpid", Type: types.UUID()},
 	}

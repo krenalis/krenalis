@@ -72,7 +72,7 @@ CREATE TABLE "KRENALIS_EVENTS" ("KPID" VARCHAR(36),"MESSAGE_ID" VARCHAR,"TYPE" V
 		" FROM " + q("profile_data")
 	execUnifiedFixture(t, dw, view)
 	store := &Store{mc: newModeCoordinator(state.Normal)}
-	store.wh.Store(dw)
+	store.wh.Store(wrapWarehouse(dw))
 	store.columnByProperty.user = map[string]warehouses.Column{
 		"_kpid": {Name: "_kpid", Type: types.UUID()}, "payload": {Name: "payload", Type: types.String()},
 	}
@@ -170,9 +170,9 @@ CREATE TABLE "KRENALIS_EVENTS" ("KPID" VARCHAR(36),"MESSAGE_ID" VARCHAR,"TYPE" V
 					" FROM "+q("profile_data"))
 				present, err := operation.call(t)
 				if err != nil {
-					unavailable, ok := errors.AsType[*UnavailableError](err)
+					unavailable, ok := errors.AsType[*WarehouseError](err)
 					if !ok || present {
-						t.Fatalf("expected opaque server error without partial result, got %T and present=%t", err, present)
+						t.Fatalf("expected server error without partial result, got %T and present=%t", err, present)
 					}
 					switch platform {
 					case "PostgreSQL":
@@ -211,7 +211,7 @@ CREATE TABLE "KRENALIS_EVENTS" ("KPID" VARCHAR(36),"MESSAGE_ID" VARCHAR,"TYPE" V
 		result, err := store.UnifiedProfiles(gosnowflake.WithQueryTag(t.Context(), snowflaketester.RecordQueryTag),
 			root, unified.Bindings{}, fixture.at, unified.Page{Limit: 10})
 		if err != nil {
-			if _, ok := errors.AsType[*UnavailableError](err); !ok || result != nil {
+			if _, ok := errors.AsType[*WarehouseError](err); !ok || result != nil {
 				t.Fatalf("expected malformed identity failure without result, got %T and present=%t", err, result != nil)
 			}
 			return

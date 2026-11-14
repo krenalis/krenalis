@@ -9,7 +9,7 @@
 .icon-wrapper--moat {
 	background-color: var(--bg-gray);
 	border-radius: calc(var(--radius) + var(--outer-padding));
-	box-shadow: inset var(--sl-shadow-small);
+	box-shadow: inset var(--wa-shadow-s);
 }
 
 .icon-wrapper__inner-wrapper {
@@ -20,9 +20,9 @@
 	height: calc(var(--icon-size) + 15px);
 	background-color: var(--bg-primary);
 	border-radius: var(--radius);
-	box-shadow: var(--sl-shadow-small);
+	box-shadow: var(--wa-shadow-s);
 }
 
-.icon-wrapper sl-icon {
+.icon-wrapper wa-icon {
 	font-size: var(--icon-size);
 }

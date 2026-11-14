@@ -279,7 +279,7 @@ export function parseFilter(s: string, schema?: ObjectType): EditorFilter {
 		const controls = values.map((token) => {
 			if (!token.isQuoted) return token.text;
 			if (type?.kind === 'json' || type == null) return quoteFilterText(token.text);
-			if (type.kind === 'int' || type.kind === 'year' || type.kind === 'float' || type.kind === 'decimal') {
+			if (type.kind === 'int' || type.kind === 'float' || type.kind === 'decimal') {
 				return quoteFilterText(token.text);
 			}
 			return propertyType.kind === 'string' && propertyType.values != null

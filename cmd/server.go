@@ -73,7 +73,7 @@ func Run(ctx context.Context, config *Config, assetsFS fs.FS, initDBIfEmpty, ini
 		}
 		return err
 	}
-	defer core.Close(ctx)
+	defer core.Close(ctx, errors.New("node is shutting down"))
 
 	// Destroy the NATS private key.
 	for i := range conf.NATS.NKey {

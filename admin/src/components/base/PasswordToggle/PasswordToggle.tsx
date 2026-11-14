@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import './PasswordToggle.css';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
 
 interface PasswordToggleInterface {
 	password: string;
@@ -19,9 +19,9 @@ const PasswordToggle = ({ password }: PasswordToggleInterface) => {
 		<div className='password-toggle'>
 			<p className='password-toggle__password'>{isVisible ? password : '●'.repeat(password.length)}</p>
 			<div className='password-toggle__toggle-button'>
-				<SlButton variant='default' size='small' onClick={onToggle}>
+				<WaButton appearance='outlined' size='s' onClick={onToggle}>
 					{isVisible ? 'Hide' : 'Show'}
-				</SlButton>
+				</WaButton>
 			</div>
 		</div>
 	);

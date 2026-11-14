@@ -25,7 +25,7 @@ func TestUnifiedProfilesPostgreSQL(t *testing.T) {
 
 	dw := newJSONFilterTestWarehouse(t, "PostgreSQL")
 	store := &Store{mc: newModeCoordinator(state.Normal)}
-	store.wh.Store(dw)
+	store.wh.Store(wrapWarehouse(dw))
 	// Publish coherent fixture views before any filtering request.
 	// Its identity, time and profile attribution are determined; no writer or
 	// Identity Resolution operation runs concurrently with these tests.
@@ -457,7 +457,7 @@ func TestUnifiedProfilesSnowflakeGate(t *testing.T) {
 		}
 	})
 	store := &Store{mc: newModeCoordinator(state.Normal)}
-	store.wh.Store(dw)
+	store.wh.Store(wrapWarehouse(dw))
 	result, err := store.UnifiedProfiles(t.Context(), nil, unified.Bindings{}, time.Date(2026, 1, 1, 0, 0, 0, 0,
 		time.UTC), unified.Page{Limit: 1})
 	if err != nil {

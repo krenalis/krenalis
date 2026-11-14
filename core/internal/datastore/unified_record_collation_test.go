@@ -62,7 +62,7 @@ CREATE TABLE "KRENALIS_EVENTS" ("KPID" VARCHAR(36),"MESSAGE_ID" VARCHAR,"TYPE" V
 		t.Fatalf("expected supported warehouse, got %s", platform)
 	}
 	store := &Store{mc: newModeCoordinator(state.Normal)}
-	store.wh.Store(dw)
+	store.wh.Store(wrapWarehouse(dw))
 	store.columnByProperty.user = map[string]warehouses.Column{
 		"_kpid":       {Name: "_kpid", Type: types.UUID()},
 		"binary":      {Name: "binary", Type: types.String(), Nullable: true},
@@ -145,7 +145,7 @@ UPDATE "PROFILES" SET "UNSUPPORTED"='abc'`)
 			result, err := store.UnifiedProfiles(t.Context(), root, unified.Bindings{}, fixture.at,
 				unified.Page{Limit: 10})
 			if err != nil {
-				if _, ok := errors.AsType[*UnavailableError](err); !ok || result != nil {
+				if _, ok := errors.AsType[*WarehouseError](err); !ok || result != nil {
 					t.Fatalf("expected complete execution failure, got %+v, %v", result, err)
 				}
 				return
@@ -214,7 +214,7 @@ UPDATE "PROFILES" SET "UNSUPPORTED"='abc'`)
 	result, err := store.UnifiedProfiles(t.Context(), nil, unified.Bindings{}, fixture.at,
 		unified.Page{Limit: 10, Properties: []string{"real_number"}})
 	if err != nil {
-		if _, ok := errors.AsType[*UnavailableError](err); !ok || result != nil {
+		if _, ok := errors.AsType[*WarehouseError](err); !ok || result != nil {
 			t.Fatalf("expected no partial Real projection, got %+v, %v", result, err)
 		}
 	}

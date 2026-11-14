@@ -1,5 +1,5 @@
 .danger-zone {
-	border: 1px solid var(--sl-color-danger-500);
+	border: 1px solid var(--wa-color-danger-50);
 	border-radius: 5px;
 	padding: 30px;
 	position: relative;

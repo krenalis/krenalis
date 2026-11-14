@@ -339,6 +339,18 @@ func Test_renderExpr(t *testing.T) {
 			wantErr: "decimal operand exceeds precision 76 or scale 37",
 		},
 		{
+			name: "JSON array contains",
+			expr: newJSONFilterExpr(warehouses.Column{Name: "values", Type: types.Array(types.JSON())},
+				warehouses.OpContains, json.Value(`"foo"`)),
+			query: `CASE WHEN "values" IS NOT NULL THEN (EXISTS (SELECT 1 FROM unnest("values") AS krenalis_json_element(value) WHERE krenalis_json_element.value = '"foo"'::jsonb)) ELSE NULL END`,
+		},
+		{
+			name: "JSON array does not contain",
+			expr: newJSONFilterExpr(warehouses.Column{Name: "values", Type: types.Array(types.JSON())},
+				warehouses.OpDoesNotContain, json.Value(`"foo"`)),
+			query: `CASE WHEN "values" IS NOT NULL THEN NOT (EXISTS (SELECT 1 FROM unnest("values") AS krenalis_json_element(value) WHERE krenalis_json_element.value = '"foo"'::jsonb)) ELSE NULL END`,
+		},
+		{
 			name: "JSON numeric text without number",
 			expr: newJSONFilterExpr(warehouses.Column{Name: "values", Type: types.JSON()}, warehouses.OpIs,
 				json.Value("\"1e999999\"")),

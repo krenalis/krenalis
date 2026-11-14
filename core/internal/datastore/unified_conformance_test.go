@@ -50,7 +50,7 @@ func testUnifiedConformance(t *testing.T, name string) {
 	t.Helper()
 	dw := newJSONFilterTestWarehouse(t, name)
 	store := &Store{mc: newModeCoordinator(state.Normal)}
-	store.wh.Store(dw)
+	store.wh.Store(wrapWarehouse(dw))
 	switch name {
 	case "PostgreSQL":
 		execUnifiedFixture(t, dw, `CREATE TABLE profiles (_kpid uuid PRIMARY KEY);

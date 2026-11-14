@@ -4,6 +4,11 @@
 	align-items: center;
 }
 
+/* Keeps the width while the confirmation icon is the only content. */
+.feedback-button::part(base) {
+	width: 100%;
+}
+
 .feedback-button::part(label) {
 	transition: transform var(--scale-animation-duration);
 	will-change: transform;
@@ -13,13 +18,18 @@
 	transform: scale(1.8);
 }
 
+.feedback-button__tooltip {
+	--wa-tooltip-border-color: var(--wa-color-neutral-70);
+	--wa-tooltip-border-width: 1px;
+}
+
 .feedback-button__tooltip::part(base) {
-	background-color: var(--sl-color-neutral-300);
+	background-color: var(--wa-color-neutral-70);
 }
 
 .feedback-button__tooltip::part(body) {
 	background-color: var(--bg-gray);
-	border: 1px solid var(--sl-color-neutral-300);
+	border: 1px solid var(--wa-color-neutral-70);
 	pointer-events: all;
 	padding: 0;
 	color: var(--text-primary);
@@ -27,40 +37,37 @@
 
 .feedback-button__tooltip::part(base__popup) {
 	pointer-events: all;
-	box-shadow: var(--sl-shadow-x-large);
+	box-shadow: var(--wa-shadow-xl);
 }
 
 .feedback-button__tooltip::part(base__arrow) {
 	background-color: var(--bg-gray);
-	border: 1px solid var(--sl-color-neutral-300);
 	z-index: 10;
-	border-right: 0;
-	border-bottom: 0;
 }
 
 .feedback-button__tooltip-content {
 	font-size: 12px;
 	padding: 30px;
 	position: relative;
-	box-shadow: var(--sl-shadow-x-large);
+	box-shadow: var(--wa-shadow-xl);
 	display: flex;
 	gap: 12px;
 	overflow: auto;
 }
 
-.feedback-button__tooltip-content sl-button {
+.feedback-button__tooltip-content wa-button {
 	display: block;
 	margin-top: 8px;
 }
 
-.feedback-button__tooltip-content sl-button::part(base) {
+.feedback-button__tooltip-content wa-button::part(button) {
 	height: unset;
 	min-height: unset;
 	line-height: unset;
 	padding: 2px 0;
 }
 
-.feedback-button__tooltip-content sl-button::part(label) {
+.feedback-button__tooltip-content wa-button::part(label) {
 	font-size: 11px;
 }
 
@@ -74,11 +81,11 @@
 }
 
 .feedback-button__tooltip-content .feedback-button__tooltip-icon-error {
-	color: var(--sl-color-danger-500);
+	color: var(--wa-color-danger-50);
 }
 
 .feedback-button__tooltip-content .feedback-button__tooltip-icon-info {
-	color: var(--sl-color-primary-500);
+	color: var(--wa-color-brand-50);
 }
 
 .feedback-button__tooltip-icon-close {

@@ -78,7 +78,7 @@ func (this *Workspace) ObservedEventFields(ctx context.Context, query EventField
 		if errors.Is(err, datastore.ErrMaintenanceMode) {
 			return EventFieldDiscoveryResult{}, errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
 		}
-		if _, ok := errors.AsType[*datastore.UnavailableError](err); ok {
+		if _, ok := errors.AsType[*datastore.WarehouseError](err); ok {
 			return EventFieldDiscoveryResult{}, errors.Unavailable("event field inspection failed")
 		}
 		return EventFieldDiscoveryResult{}, errors.New("core: event field inspection failed")
@@ -114,7 +114,7 @@ func (this *Workspace) ObservedEventSources(ctx context.Context, query EventSour
 		if errors.Is(err, datastore.ErrMaintenanceMode) {
 			return EventSourceDiscoveryResult{}, errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
 		}
-		if _, ok := errors.AsType[*datastore.UnavailableError](err); ok {
+		if _, ok := errors.AsType[*datastore.WarehouseError](err); ok {
 			return EventSourceDiscoveryResult{}, errors.Unavailable("event source discovery failed")
 		}
 		return EventSourceDiscoveryResult{}, errors.New("core: event source discovery failed")

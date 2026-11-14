@@ -27,10 +27,10 @@ func TestChangeProfileSchema(t *testing.T) {
 	defer k.Stop()
 
 	ws := k.Workspace()
-	if n := ws.ProfileSchema.Properties().Len(); n != 10 {
+	if n := ws.ProfileSchema.Schema.Properties().Len(); n != 10 {
 		t.Fatalf("expected 10 properties in the \"profiles\" schema, got %d", n)
 	}
-	if err := checkSchemaProperties(ws.ProfileSchema); err != nil {
+	if err := checkSchemaProperties(ws.ProfileSchema.Schema); err != nil {
 		t.Fatalf("invalid profile schema: %s", err)
 	}
 
@@ -65,10 +65,10 @@ func TestChangeProfileSchema(t *testing.T) {
 	k.AlterProfileSchemaAndWait(file.Schema, file.PrimarySources, file.RePaths)
 
 	ws = k.Workspace()
-	if n := ws.ProfileSchema.Properties().Len(); n != 10 {
+	if n := ws.ProfileSchema.Schema.Properties().Len(); n != 10 {
 		t.Fatalf("expected 10 properties in the \"profiles\" schema, got %d", n)
 	}
-	if err := checkSchemaProperties(ws.ProfileSchema); err != nil {
+	if err := checkSchemaProperties(ws.ProfileSchema.Schema); err != nil {
 		t.Fatalf("invalid profile schema: %s", err)
 	}
 	if !slices.Equal(identifiers, ws.Identifiers) {
@@ -86,7 +86,7 @@ func TestChangeProfileSchema(t *testing.T) {
 	k.AlterProfileSchemaAndWait(descriptionSchema, file.PrimarySources, nil)
 
 	ws = k.Workspace()
-	if !types.Equal(descriptionSchema, ws.ProfileSchema) {
+	if !types.Equal(descriptionSchema, ws.ProfileSchema.Schema) {
 		t.Fatal("expected the metadata-only schema change to be persisted")
 	}
 	if !slices.Equal(identifiers, ws.Identifiers) {
@@ -111,10 +111,10 @@ func TestChangeProfileSchema(t *testing.T) {
 	k.AlterProfileSchemaAndWait(schema, nil, nil)
 
 	ws = k.Workspace()
-	if n := ws.ProfileSchema.Properties().Len(); n != 11 {
+	if n := ws.ProfileSchema.Schema.Properties().Len(); n != 11 {
 		t.Fatalf("expected 11 properties in the \"profiles\" schema, got %d", n)
 	}
-	if err := checkSchemaProperties(ws.ProfileSchema); err != nil {
+	if err := checkSchemaProperties(ws.ProfileSchema.Schema); err != nil {
 		t.Fatalf("invalid profile schema: %s", err)
 	}
 	if !slices.Equal(identifiers, ws.Identifiers) {
@@ -158,22 +158,22 @@ func TestChangeProfileSchema(t *testing.T) {
 	identifiers = []string{"android.identifier"}
 
 	ws = k.Workspace()
-	if n := ws.ProfileSchema.Properties().Len(); n != 10 {
+	if n := ws.ProfileSchema.Schema.Properties().Len(); n != 10 {
 		t.Fatalf("expected 10 properties in the \"profiles\" schema, got %d", n)
 	}
-	if err := checkSchemaProperties(ws.ProfileSchema); err != nil {
+	if err := checkSchemaProperties(ws.ProfileSchema.Schema); err != nil {
 		t.Fatalf("invalid profile schema: %s", err)
 	}
-	if p, ok := ws.ProfileSchema.Properties().ByName("email"); ok {
+	if p, ok := ws.ProfileSchema.Schema.Properties().ByName("email"); ok {
 		t.Fatalf("expected no \"email\" property, got property %#v", p)
 	}
-	if p, err := ws.ProfileSchema.Properties().ByPath("android.id"); err == nil {
+	if p, err := ws.ProfileSchema.Schema.Properties().ByPath("android.id"); err == nil {
 		t.Fatalf("expected no \"android.id\" property, got property %#v", p)
 	}
-	if _, err := ws.ProfileSchema.Properties().ByPath("android.identifier"); err != nil {
+	if _, err := ws.ProfileSchema.Schema.Properties().ByPath("android.identifier"); err != nil {
 		t.Fatalf("expected property \"android.identifier\", got no property: %s", err)
 	}
-	if !types.Equal(schema, ws.ProfileSchema) {
+	if !types.Equal(schema, ws.ProfileSchema.Schema) {
 		t.Fatalf("expected equal schemas, got different schemas")
 	}
 	if !slices.Equal(identifiers, ws.Identifiers) {
@@ -212,20 +212,20 @@ func TestChangeProfileSchema(t *testing.T) {
 	k.AlterProfileSchemaAndWait(schema, nil, nil)
 
 	ws = k.Workspace()
-	if n := ws.ProfileSchema.Properties().Len(); n != 10 {
+	if n := ws.ProfileSchema.Schema.Properties().Len(); n != 10 {
 		t.Fatalf("expected 10 properties in the \"profiles\" schema, got %d", n)
 	}
-	p, _ := ws.ProfileSchema.Properties().ByName("android")
+	p, _ := ws.ProfileSchema.Schema.Properties().ByName("android")
 	if n := p.Type.Properties().Len(); n != 2 {
 		t.Fatalf("expected 2 properties in the \"android\" object of the \"profiles\" schema, got %d", n)
 	}
-	if err := checkSchemaProperties(ws.ProfileSchema); err != nil {
+	if err := checkSchemaProperties(ws.ProfileSchema.Schema); err != nil {
 		t.Fatalf("invalid profile schema: %s", err)
 	}
-	if p, err := ws.ProfileSchema.Properties().ByPath("android.identifier"); err == nil {
+	if p, err := ws.ProfileSchema.Schema.Properties().ByPath("android.identifier"); err == nil {
 		t.Fatalf("expected no \"android.identifier\" property, got property %#v", p)
 	}
-	if !types.Equal(schema, ws.ProfileSchema) {
+	if !types.Equal(schema, ws.ProfileSchema.Schema) {
 		t.Fatalf("expected equal schemas, got different schemas")
 	}
 	if ws.Identifiers == nil || len(ws.Identifiers) != 0 {
@@ -285,10 +285,10 @@ func TestChangeProfileSchema(t *testing.T) {
 	primarySources := map[string]string{firstProperty: primarySource}
 	k.AlterProfileSchemaAndWait(file.Schema, primarySources, nil)
 	ws = k.Workspace()
-	if !maps.Equal(primarySources, ws.PrimarySources) {
-		t.Fatalf("expected primary sources %#v, got %#v", primarySources, ws.PrimarySources)
+	if !maps.Equal(primarySources, ws.ProfileSchema.PrimarySources) {
+		t.Fatalf("expected primary sources %#v, got %#v", primarySources, ws.ProfileSchema.PrimarySources)
 	}
-	if err := checkSchemaProperties(ws.ProfileSchema); err != nil {
+	if err := checkSchemaProperties(ws.ProfileSchema.Schema); err != nil {
 		t.Fatalf("invalid profile schema: %s", err)
 	}
 
@@ -331,7 +331,7 @@ func TestChangeProfileSchemaUpdatesIdentifiersForPropertiesWithUnderscores(t *te
 	// property "food_preferences" to "preferences".
 	ws := k.Workspace()
 	var properties []types.Property
-	for _, p := range ws.ProfileSchema.Properties().All() {
+	for _, p := range ws.ProfileSchema.Schema.Properties().All() {
 		switch p.Name {
 		case "dummy_id":
 			p.Name = "dummy_identifier"
@@ -346,7 +346,7 @@ func TestChangeProfileSchemaUpdatesIdentifiersForPropertiesWithUnderscores(t *te
 	identifiers = []string{"dummy_identifier", "preferences.drink", "android.id"}
 
 	ws = k.Workspace()
-	if !types.Equal(schema, ws.ProfileSchema) {
+	if !types.Equal(schema, ws.ProfileSchema.Schema) {
 		t.Fatal("expected equal schemas, got different schemas")
 	}
 	if !slices.Equal(identifiers, ws.Identifiers) {
@@ -366,7 +366,7 @@ func TestChangeProfileSchemaUpdatesIdentifiersForPropertiesWithUnderscores(t *te
 	identifiers = []string{"preferences.drink", "android.id"}
 
 	ws = k.Workspace()
-	if !types.Equal(schema, ws.ProfileSchema) {
+	if !types.Equal(schema, ws.ProfileSchema.Schema) {
 		t.Fatal("expected equal schemas, got different schemas")
 	}
 	if !slices.Equal(identifiers, ws.Identifiers) {

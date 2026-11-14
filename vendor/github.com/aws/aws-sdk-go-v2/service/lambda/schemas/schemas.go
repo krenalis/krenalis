@@ -1033,10 +1033,12 @@ var ChainedInvokeFailedDetails_Error *smithy.Schema
 var ChainedInvokeOptions = smithy.NewSchema(smithy.ShapeID{
 	Namespace: "com.amazonaws.lambda",
 	Name:      "ChainedInvokeOptions",
-}, smithy.ShapeTypeStructure, 2)
+}, smithy.ShapeTypeStructure, 3)
 var ChainedInvokeOptions_FunctionName *smithy.Schema
 
 var ChainedInvokeOptions_TenantId *smithy.Schema
+
+var ChainedInvokeOptions_XAmznTraceId *smithy.Schema
 
 var ChainedInvokeStartedDetails = smithy.NewSchema(smithy.ShapeID{
 	Namespace: "com.amazonaws.lambda",
@@ -2480,6 +2482,14 @@ var _ItemCount = smithy.NewSchema(smithy.ShapeID{
 	Name:      "ItemCount",
 }, smithy.ShapeTypeInteger, 0)
 
+var KafkaEventSourceMappingConsumptionMode = smithy.NewSchema(smithy.ShapeID{
+	Namespace: "com.amazonaws.lambda",
+	Name:      "KafkaEventSourceMappingConsumptionMode",
+}, smithy.ShapeTypeEnum, 2)
+var KafkaEventSourceMappingConsumptionMode_Stream *smithy.Schema
+
+var KafkaEventSourceMappingConsumptionMode_Queue *smithy.Schema
+
 var KafkaSchemaRegistryAccessConfig = smithy.NewSchema(smithy.ShapeID{
 	Namespace: "com.amazonaws.lambda",
 	Name:      "KafkaSchemaRegistryAccessConfig",
@@ -3686,10 +3696,12 @@ var SelfManagedEventSource_Endpoints *smithy.Schema
 var SelfManagedKafkaEventSourceConfig = smithy.NewSchema(smithy.ShapeID{
 	Namespace: "com.amazonaws.lambda",
 	Name:      "SelfManagedKafkaEventSourceConfig",
-}, smithy.ShapeTypeStructure, 2)
+}, smithy.ShapeTypeStructure, 3)
 var SelfManagedKafkaEventSourceConfig_ConsumerGroupId *smithy.Schema
 
 var SelfManagedKafkaEventSourceConfig_SchemaRegistryConfig *smithy.Schema
+
+var SelfManagedKafkaEventSourceConfig_ConsumptionMode *smithy.Schema
 
 var _SensitiveString = smithy.NewSchema(smithy.ShapeID{
 	Namespace: "com.amazonaws.lambda",
@@ -6235,6 +6247,8 @@ func init() {
 
 	ChainedInvokeOptions_TenantId = ChainedInvokeOptions.AddMember("TenantId", _TenantId)
 
+	ChainedInvokeOptions_XAmznTraceId = ChainedInvokeOptions.AddMember("XAmznTraceId", _XAmznTraceId)
+
 	EventInput_Payload = EventInput.AddMember("Payload", _InputPayload)
 
 	EventInput_Truncated = EventInput.AddMember("Truncated", _Truncated)
@@ -6865,9 +6879,15 @@ func init() {
 
 	_FunctionResponseTypeList_member = _FunctionResponseTypeList.AddMember("member", FunctionResponseType)
 
+	KafkaEventSourceMappingConsumptionMode_Stream = KafkaEventSourceMappingConsumptionMode.AddMember("Stream", smithyprelude.Unit)
+
+	KafkaEventSourceMappingConsumptionMode_Queue = KafkaEventSourceMappingConsumptionMode.AddMember("Queue", smithyprelude.Unit)
+
 	SelfManagedKafkaEventSourceConfig_ConsumerGroupId = SelfManagedKafkaEventSourceConfig.AddMember("ConsumerGroupId", _URI)
 
 	SelfManagedKafkaEventSourceConfig_SchemaRegistryConfig = SelfManagedKafkaEventSourceConfig.AddMember("SchemaRegistryConfig", KafkaSchemaRegistryConfig)
+
+	SelfManagedKafkaEventSourceConfig_ConsumptionMode = SelfManagedKafkaEventSourceConfig.AddMember("ConsumptionMode", KafkaEventSourceMappingConsumptionMode)
 
 	ProvisionedPollerConfig_MinimumPollers = ProvisionedPollerConfig.AddMember("MinimumPollers", _MinimumNumberOfPollers)
 

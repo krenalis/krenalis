@@ -31,7 +31,7 @@ func TestUnifiedProfileRecordPostgreSQL(t *testing.T) {
 	)
 	dw := newJSONFilterTestWarehouse(t, "PostgreSQL")
 	store := &Store{mc: newModeCoordinator(state.Normal)}
-	store.wh.Store(dw)
+	store.wh.Store(wrapWarehouse(dw))
 	schema := types.Object([]types.Property{
 		{Name: "country", Type: types.String(), ReadOptional: true},
 		{Name: "profile_id", Type: types.String(), ReadOptional: true},
@@ -229,8 +229,8 @@ INSERT INTO krenalis_events
 			{Record: &state.WhereCondition{Property: []string{"profile_id"}, Operator: state.OpDoesNotExist}}}}
 		result, err := store.UnifiedProfiles(t.Context(), &root, bindings, at, page)
 		if err != nil {
-			if _, ok := errors.AsType[*UnavailableError](err); !ok {
-				t.Fatalf("expected occurrence source UnavailableError, got %T (%v)", err, err)
+			if _, ok := errors.AsType[*WarehouseError](err); !ok {
+				t.Fatalf("expected occurrence source WarehouseError, got %T (%v)", err, err)
 			}
 			if !strings.Contains(err.Error(), "occurrence source violates the prepared occurrence contract") {
 				t.Fatalf("expected occurrence source contract failure, got %v", err)

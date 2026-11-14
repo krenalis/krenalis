@@ -1,7 +1,7 @@
 import React, { useContext, useState, useLayoutEffect } from 'react';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
-import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaSelect from '@awesome.me/webawesome/dist/react/select/index.js';
+import WaOption from '@awesome.me/webawesome/dist/react/option/index.js';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
 import { Warehouse } from './DataWarehouse.helpers';
 import appContext from '../../../context/AppContext';
@@ -102,31 +102,31 @@ const DataWarehouseSettings = ({
 					padded={true}
 					annotated={true}
 				>
-					<SlSelect className='warehouse-settings__mode' value={mode} onSlChange={onChangeMode}>
-						<SlOption value='Normal'>
+					<WaSelect className='warehouse-settings__mode' value={mode} onChange={onChangeMode}>
+						<WaOption value='Normal'>
 							<div className='warehouse-settings__mode-title'>Normal</div>
 							<div className='warehouse-settings__mode-description'>
 								{' '}
 								<span className='warehouse-settings__mode-separator'>-</span> Full read and write access
 							</div>
-						</SlOption>
-						<SlOption value='Inspection'>
+						</WaOption>
+						<WaOption value='Inspection'>
 							<div className='warehouse-settings__mode-title'>Inspection</div>
 							<div className='warehouse-settings__mode-description'>
 								{' '}
 								<span className='warehouse-settings__mode-separator'>-</span> Read-only for data
 								inspection
 							</div>
-						</SlOption>
-						<SlOption value='Maintenance'>
+						</WaOption>
+						<WaOption value='Maintenance'>
 							<div className='warehouse-settings__mode-title'>Maintenance</div>
 							<div className='warehouse-settings__mode-description'>
 								{' '}
 								<span className='warehouse-settings__mode-separator'>-</span> Init and alter schema
 								operations only
 							</div>
-						</SlOption>
-					</SlSelect>
+						</WaOption>
+					</WaSelect>
 				</Section>
 				<Section
 					title={warehouseSectionTexts.main.title}
@@ -148,29 +148,29 @@ const DataWarehouseSettings = ({
 				</Section>
 			</div>
 			<div className='warehouse-settings__buttons'>
-				<SlButton
+				<WaButton
 					disabled={isCheckLoading || isPipelineButtonLoading}
-					variant='default'
+					appearance='outlined'
 					onClick={onCancelClick}
 				>
 					Cancel
-				</SlButton>
-				<SlButton
+				</WaButton>
+				<WaButton
 					disabled={isCheckLoading || isPipelineButtonLoading}
 					loading={isCheckLoading}
-					variant='default'
+					appearance='outlined'
 					onClick={onCheck}
 				>
 					Check
-				</SlButton>
-				<SlButton
+				</WaButton>
+				<WaButton
 					disabled={isCheckLoading || isPipelineButtonLoading}
 					loading={isPipelineButtonLoading}
-					variant='primary'
+					variant='brand'
 					onClick={onSave}
 				>
 					Save
-				</SlButton>
+				</WaButton>
 			</div>
 		</div>
 	);

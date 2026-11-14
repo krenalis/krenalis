@@ -29,7 +29,7 @@ func TestUnifiedLastPreviousCopiesPostgreSQL(t *testing.T) {
 
 	dw := newJSONFilterTestWarehouse(t, "PostgreSQL")
 	store := &Store{mc: newModeCoordinator(state.Normal)}
-	store.wh.Store(dw)
+	store.wh.Store(wrapWarehouse(dw))
 	execUnifiedFixture(t, dw, `CREATE TABLE profiles (_kpid uuid PRIMARY KEY);
 CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,timestamp timestamp,properties jsonb);
 INSERT INTO profiles VALUES ('00000000-0000-0000-0000-000000000001'),('00000000-0000-0000-0000-000000000002')`)
@@ -133,7 +133,7 @@ func TestUnifiedLastPreviousOraclePostgreSQL(t *testing.T) {
 
 	dw := newJSONFilterTestWarehouse(t, "PostgreSQL")
 	store := &Store{mc: newModeCoordinator(state.Normal)}
-	store.wh.Store(dw)
+	store.wh.Store(wrapWarehouse(dw))
 	execUnifiedFixture(t, dw, `CREATE TABLE profiles (_kpid uuid PRIMARY KEY);
 CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,timestamp timestamp,properties jsonb)`)
 	at := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
@@ -246,7 +246,7 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,tim
 func TestUnifiedLastPreviousPostgreSQL(t *testing.T) {
 	dw := newJSONFilterTestWarehouse(t, "PostgreSQL")
 	store := &Store{mc: newModeCoordinator(state.Normal)}
-	store.wh.Store(dw)
+	store.wh.Store(wrapWarehouse(dw))
 	execUnifiedFixture(t, dw, `CREATE TABLE profiles (_kpid uuid PRIMARY KEY);
 CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,timestamp timestamp,properties jsonb)`)
 	at := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)

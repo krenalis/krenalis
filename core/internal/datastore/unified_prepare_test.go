@@ -86,10 +86,16 @@ func TestUnifiedPrepare(t *testing.T) {
 		t.Fatalf("expected explicit unbounded start and resolved T without changing input, got %+v", preparedHistory)
 	}
 	for _, platform := range []string{"PostgreSQL", "Snowflake"} {
-		dw := warehouses.Registered(platform).New(newTestSettingsLoader(nil), nil)
+		dw := newWarehouse(platform, newTestSettingsLoader(nil), nil)
 		backend, ok := dw.(warehouses.ProfileFilterWarehouse)
 		if !ok || backend.ProfileFilterVerified() != (platform == "PostgreSQL") {
 			t.Fatalf("expected mirrored interfaces and verification gates, got %s", platform)
+		}
+		if _, ok := dw.(warehouses.ProfileFilterExplanationWarehouse); !ok {
+			t.Fatalf("expected explanation capability through warehouse factory, got %s", platform)
+		}
+		if _, ok := dw.(warehouses.EventDiscoveryWarehouse); !ok {
+			t.Fatalf("expected discovery capability through warehouse factory, got %s", platform)
 		}
 		err := dw.Close()
 		if err != nil {
@@ -306,7 +312,7 @@ func TestUnifiedPreparedBudget(t *testing.T) {
 		}
 	})
 	store := &Store{mc: newModeCoordinator(state.Normal)}
-	store.wh.Store(dw)
+	store.wh.Store(wrapWarehouse(dw))
 	properties := make([]types.Property, 170)
 	for i := range properties {
 		properties[i] = types.Property{Name: fmt.Sprintf("field%d", i), Type: types.String(), ReadOptional: true}
@@ -328,7 +334,7 @@ func TestUnifiedPreparedBudget(t *testing.T) {
 	// The unconfigured backend requires no connection for this rejection.
 	result, err := store.UnifiedProfiles(t.Context(), &root, unified.Bindings{}, at, page)
 	if err != nil {
-		if _, unavailable := errors.AsType[*UnavailableError](err); unavailable {
+		if _, unavailable := errors.AsType[*WarehouseError](err); unavailable {
 			t.Fatalf("expected filter admission error, got warehouse failure %v", err)
 		}
 		if !strings.Contains(err.Error(), "exceeds structural budget") {

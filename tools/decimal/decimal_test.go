@@ -79,6 +79,47 @@ func Test_Decimal_Cmp(t *testing.T) {
 
 }
 
+// Test_Decimal_Float32 checks rounding and exactness of float32 conversions.
+func Test_Decimal_Float32(t *testing.T) {
+
+	tests := []struct {
+		name     string
+		value    Decimal
+		expected float32
+		exact    bool
+	}{
+		{"zero", Decimal{}, 0, true},
+		{"scaled zero", New(0, MinScale), 0, true},
+		{"exact", MustParse("1.5"), 1.5, true},
+		{"no double rounding", MustParse("1.0000000596046448"), 1.0000001192092896, false},
+		{"negative no double rounding", MustParse("-1.0000000596046448"), -1.0000001192092896, false},
+		{"tie to even", MustParse("1.000000059604644775390625"), 1, false},
+		{"maximum", MustParse("340282346638528859811704183484516925440"), math.MaxFloat32, true},
+		{"overflow", MustParse("3.5e38"), float32(math.Inf(1)), false},
+		{"negative overflow", MustParse("-3.5e38"), float32(math.Inf(-1)), false},
+		{"minimum scale", New(1, MinScale), float32(math.Inf(1)), false},
+		{"negative minimum scale", New(-1, MinScale), float32(math.Inf(-1)), false},
+		{"exact subnormal", MustParse("1.40129846432481707092372958328991613128026194187651577175706828388979108268586060148663818836212158203125e-45"), math.SmallestNonzeroFloat32, true},
+		{"rounded subnormal", MustParse("9e-46"), math.SmallestNonzeroFloat32, false},
+		{"negative underflow", MustParse("-1e-46"), float32(math.Copysign(0, -1)), false},
+		{"maximum scale", New(1, MaxScale), 0, false},
+		{"negative maximum scale", New(-1, MaxScale), float32(math.Copysign(0, -1)), false},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, exact := test.value.Float32()
+			if math.Float32bits(got) != math.Float32bits(test.expected) {
+				t.Fatalf("expected %g, got %g", test.expected, got)
+			}
+			if exact != test.exact {
+				t.Fatalf("expected exact %t, got %t", test.exact, exact)
+			}
+		})
+	}
+
+}
+
 func Test_Decimal_Int64(t *testing.T) {
 
 	tests := []struct {
@@ -477,7 +518,44 @@ func Test_Float64(t *testing.T) {
 		{23.78, 4, 2, "23.78", nil},
 		{23.78, 2, 0, "24", nil},
 		{23.49, 4, 0, "23", nil},
+		{1.239, 5, 2, "1.24", nil},
+		{-1.239, 5, 2, "-1.24", nil},
+		{1.125, 4, 2, "1.12", nil},
+		{1.375, 4, 2, "1.38", nil},
+		{-1.125, 4, 2, "-1.12", nil},
+		{-1.375, 4, 2, "-1.38", nil},
 		{0.001, 3, 3, "0.001", nil},
+		{0.001, 5, 2, "0", nil},
+		{-0.001, 5, 2, "0", nil},
+		{0.0001, 5, 2, "0", nil},
+		{-0.0001, 5, 2, "0", nil},
+		{0.05, 5, 1, "0.1", nil},
+		{-0.05, 5, 1, "-0.1", nil},
+		{0.5, 1, 0, "0", nil},
+		{-0.5, 1, 0, "0", nil},
+		{math.Nextafter(0.5, 1), 1, 0, "1", nil},
+		{0.5, 1, 1, "0.5", nil},
+		{0.001, 2, 2, "0", nil},
+		{0.999, 2, 2, "", ErrRange},
+		{999.99, 5, 2, "999.99", nil},
+		{-999.99, 5, 2, "-999.99", nil},
+		{1234.5, 5, 2, "", ErrRange},
+		{99999, 5, 2, "", ErrRange},
+		{999.995, 5, 2, "", ErrRange},
+		{-999.995, 5, 2, "", ErrRange},
+		{9.5, 1, 0, "", ErrRange},
+		{-9.5, 1, 0, "", ErrRange},
+		{-5, 1, -1, "0", nil},
+		{125, 2, -1, "120", nil},
+		{135, 2, -1, "140", nil},
+		{995, 2, -1, "", ErrRange},
+		{123456789012345.125, 17, 2, "123456789012345.12", nil},
+		{math.SmallestNonzeroFloat64, 324, 324, "5e-324", nil},
+		{math.SmallestNonzeroFloat64, 323, 323, "0", nil},
+		{math.MaxFloat64, 308, 0, "", ErrRange},
+		{math.MaxFloat64, 1, MinScale, "0", nil},
+		{0.5, MaxPrecision, MaxScale, "0.5", nil},
+		{1, MaxPrecision, MaxScale, "", ErrRange},
 		{14627436592.089, 14, 3, "14627436592.089", nil},
 		{14627436592.089, 13, 2, "14627436592.09", nil},
 		{14627436592.089, 12, 1, "14627436592.1", nil},
@@ -485,19 +563,46 @@ func Test_Float64(t *testing.T) {
 		{-22.951, 7, 5, "-22.951", nil},
 		{330.164, 5, 3, "", ErrRange},
 		{1, 1, 2, "", ErrRange},
-		{math.NaN(), 1, 2, "", ErrRange},
-		{math.Inf(-1), 1, 2, "", ErrRange},
-		{math.Inf(1), 1, 2, "", ErrRange},
+		{1, 0, 0, "", ErrRange},
+		{1, MaxPrecision + 1, 0, "", ErrRange},
+		{1, 1, MinScale - 1, "", ErrRange},
+		{1, MaxPrecision, MaxScale + 1, "", ErrRange},
+		{math.NaN(), 1, 0, "", ErrRange},
+		{math.Inf(-1), 1, 0, "", ErrRange},
+		{math.Inf(1), 1, 0, "", ErrRange},
 	}
 
 	for _, test := range tests {
-		got, err := Float64(test.f, test.precision, test.scale)
-		if !reflect.DeepEqual(test.err, err) {
-			t.Fatalf("expected error '%#v', got error '%#v'", test.err, err)
-		}
-		if test.expected != "" && !MustParse(test.expected).Equal(got) {
-			t.Fatalf("Float64(%f, %d, %d): expected %q, got %q", test.f, test.precision, test.scale, test.expected, got)
-		}
+		t.Run(fmt.Sprintf("%g/%d/%d", test.f, test.precision, test.scale), func(t *testing.T) {
+
+			got, err := Float64(test.f, test.precision, test.scale)
+			if err != nil {
+				if err != test.err {
+					t.Fatalf("expected error %v, got %v", test.err, err)
+				}
+				return
+			}
+			if test.err != nil {
+				t.Fatalf("expected error %v, got nil", test.err)
+			}
+			if !got.b.IsFinite() {
+				t.Fatalf("expected a finite decimal, got %q", got)
+			}
+			if !MustParse(test.expected).Equal(got) {
+				t.Fatalf("expected %q, got %q", test.expected, got)
+			}
+
+			if test.expected == "0" {
+				b, err := got.MarshalJSON()
+				if err != nil {
+					t.Fatalf("expected JSON 0, got error %v", err)
+				}
+				if string(b) != "0" {
+					t.Fatalf("expected JSON %q, got %q", "0", b)
+				}
+			}
+
+		})
 	}
 
 }
@@ -609,6 +714,7 @@ func Test_Parse(t *testing.T) {
 		{"0", 1, 1, "0", "0", nil},
 		{"-0", 1, 0, "0", "0", nil},
 		{"+0", 1, 0, "0", "0", nil},
+		{"0.", 1, 0, "0", "0", nil},
 		{"0.0", 1, 0, "0", "0", nil},
 		{"0.00", 1, 0, "0", "0", nil},
 		{"0.00", 1, 1, "0", "0", nil},
@@ -725,6 +831,9 @@ func Test_Parse(t *testing.T) {
 		{"6.5.7", 20, 5, "", "", ErrSyntax},
 		{"+", 20, 5, "", "", ErrSyntax},
 		{"-", 20, 5, "", "", ErrSyntax},
+		{".", 0, 0, "", "", ErrSyntax},
+		{"e" + strconv.Itoa(decimal.MaxScale+1), 0, 0, "", "", ErrSyntax},
+		{".e" + strconv.Itoa(decimal.MaxScale+1), 0, 0, "", "", ErrSyntax},
 		{"1e", 0, 0, "", "", ErrSyntax},
 		{"1e+", 0, 0, "", "", ErrSyntax},
 		{"1e-", 0, 0, "", "", ErrSyntax},

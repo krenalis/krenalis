@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import ReactDOM from 'react-dom/client';
 import JSONbig from 'json-bigint';
-import '@shoelace-style/shoelace/dist/themes/light.css';
+import '@awesome.me/webawesome/dist/styles/layers.css';
+import '@awesome.me/webawesome/dist/styles/themes/default.css';
 import '../src/components/routes/PipelineWrapper/Pipeline.css';
 import API from '../src/lib/api/api';
 import AppContext from '../src/context/AppContext';

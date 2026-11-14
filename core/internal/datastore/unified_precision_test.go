@@ -54,7 +54,7 @@ func testUnifiedTimestampPrecision(t *testing.T, platform string) {
 	execUnifiedFixture(t, dw, "CREATE TABLE "+q("profiles")+" ("+q("_kpid")+" VARCHAR(36));"+
 		"INSERT INTO "+q("profiles")+" VALUES ('"+unifiedTestID(1)+"')")
 	store := &Store{mc: newModeCoordinator(state.Normal)}
-	store.wh.Store(dw)
+	store.wh.Store(wrapWarehouse(dw))
 	fixture := &unifiedRecordFixture{store: store, warehouse: dw}
 
 	for _, precision := range precisions {

@@ -29,7 +29,7 @@ var ErrUnifiedUnavailable = errors.New("Unified filtering is unavailable on this
 // and event attribution supply that view; it does not implement that guarantee.
 // It returns *unified.UnsupportedError for unimplemented capabilities, mode
 // errors when the operation is unavailable (including ErrUnifiedUnavailable),
-// and *UnavailableError on execution failure. Prepared-filter limits are
+// and *WarehouseError on execution failure. Prepared-filter limits are
 // checked before backend execution. ErrProfileProjectionTooWide and
 // ErrProfileResultTooLarge distinguish request-dependent page limits.
 // No partial result is returned on failure.
@@ -80,7 +80,7 @@ func (store *Store) UnifiedProfiles(ctx context.Context, root *unified.Rule, bin
 		if errors.Is(err, warehouses.ErrProfileResultTooLarge) {
 			return nil, ErrProfileResultTooLarge
 		}
-		return nil, unavailableError(err)
+		return nil, err
 	}
 	profiles := make([]unified.Profile, len(result.Profiles))
 	for i, profile := range result.Profiles {

@@ -269,7 +269,7 @@ func (this *Workspace) ExplainProfileFilter(ctx context.Context, kpid string, fi
 		if errors.Is(err, datastore.ErrMaintenanceMode) {
 			return nil, errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
 		}
-		if _, ok := errors.AsType[*datastore.UnavailableError](err); ok {
+		if _, ok := errors.AsType[*datastore.WarehouseError](err); ok {
 			return nil, errors.Unavailable("data warehouse profile explanation failed")
 		}
 		return nil, errors.New("core: profile explanation failed")

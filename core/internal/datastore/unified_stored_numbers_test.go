@@ -39,7 +39,7 @@ func testUnifiedStoredNumbers(t *testing.T, name string) {
 	t.Helper()
 	dw := newJSONFilterTestWarehouse(t, name)
 	store := &Store{mc: newModeCoordinator(state.Normal)}
-	store.wh.Store(dw)
+	store.wh.Store(wrapWarehouse(dw))
 	// Fixtures are coherent and fully attributed before querying. This tests
 	// their numeric transport, not publication or asynchronous attribution.
 	switch name {

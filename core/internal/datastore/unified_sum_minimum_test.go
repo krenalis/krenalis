@@ -21,7 +21,7 @@ func TestUnifiedSumMinimumPostgreSQL(t *testing.T) {
 
 	dw := newJSONFilterTestWarehouse(t, "PostgreSQL")
 	store := &Store{mc: newModeCoordinator(state.Normal)}
-	store.wh.Store(dw)
+	store.wh.Store(wrapWarehouse(dw))
 	// Publish a coherent view; multiply physical rows without adding identities.
 	execUnifiedFixture(t, dw, `CREATE TABLE profiles (_kpid uuid PRIMARY KEY);
 INSERT INTO profiles SELECT ('00000000-0000-0000-0000-'||lpad(n::text,12,'0'))::uuid FROM generate_series(1,3) n;

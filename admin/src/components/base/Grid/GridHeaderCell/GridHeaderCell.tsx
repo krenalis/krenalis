@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useId } from 'react';
 import './GridHeaderCell.css';
-import SlTooltip from '@shoelace-style/shoelace/dist/react/tooltip/index.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import WaTooltip from '@awesome.me/webawesome/dist/react/tooltip/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 
 interface GridHeaderCellProps {
 	value: string;
@@ -11,6 +11,7 @@ interface GridHeaderCellProps {
 }
 
 const GridHeaderCell = ({ value, alignment, explanation, className }: GridHeaderCellProps) => {
+	const explanationID = useId();
 	return (
 		<div
 			className={`${className}${value === '' ? ' grid__header-cell--empty' : ''}${alignment != null ? ` grid__cell--${alignment}` : ''}`}
@@ -18,9 +19,12 @@ const GridHeaderCell = ({ value, alignment, explanation, className }: GridHeader
 			<div className='grid__cell-content'>
 				{value}
 				{explanation && (
-					<SlTooltip className='grid__header-explanation-tooltip' content={explanation} placement='top'>
-						<SlIcon className='grid__header-explanation-icon' name='info-circle-fill' />
-					</SlTooltip>
+					<>
+						<WaTooltip className='grid__header-explanation-tooltip' for={explanationID} placement='top'>
+							{explanation}
+						</WaTooltip>
+						<WaIcon id={explanationID} className='grid__header-explanation-icon' name='info-circle-fill' />
+					</>
 				)}
 			</div>
 		</div>

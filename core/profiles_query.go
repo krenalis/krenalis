@@ -180,7 +180,7 @@ func (this *Workspace) QueryProfiles(ctx context.Context, query ProfileQuery) (*
 		if errors.Is(err, datastore.ErrMaintenanceMode) {
 			return nil, errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
 		}
-		if _, ok := errors.AsType[*datastore.UnavailableError](err); ok {
+		if _, ok := errors.AsType[*datastore.WarehouseError](err); ok {
 			return nil, errors.Unavailable("data warehouse profile query failed")
 		}
 		return nil, errors.New("core: profile query failed")
@@ -281,7 +281,7 @@ func (this *Workspace) profiles(ctx context.Context, properties []string, filter
 		if err == datastore.ErrMaintenanceMode {
 			return nil, types.Type{}, 0, errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
 		}
-		if err, ok := err.(*datastore.UnavailableError); ok {
+		if err, ok := err.(*datastore.WarehouseError); ok {
 			return nil, types.Type{}, 0, errors.Unavailable("%s", err)
 		}
 		return nil, types.Type{}, 0, err

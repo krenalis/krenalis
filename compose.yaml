@@ -3,9 +3,10 @@
 
 services:
   krenalis:
-    image: krenalis/krenalis:v0.46.0
+    image: krenalis/krenalis:v0.48.0
     command: -init-db-if-empty -init-docker-member
     restart: on-failure
+    stop_grace_period: 30s # the 10s default may cut the shutdown short
     ports:
       - ${KRENALIS_DOCKER_COMPOSE_PORT-2022}:2022
     environment:

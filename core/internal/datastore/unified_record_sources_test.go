@@ -98,7 +98,7 @@ ALTER TABLE krenalis_events ALTER COLUMN name TYPE varchar COLLATE krenalis_ci;
 CREATE VIEW events AS SELECT * FROM krenalis_events`)
 	}
 	store := &Store{mc: newModeCoordinator(state.Normal)}
-	store.wh.Store(dw)
+	store.wh.Store(wrapWarehouse(dw))
 	fixture := &unifiedRecordFixture{store: store, warehouse: dw,
 		at: time.Date(2026, 2, 1, 0, 0, 0, 123456000, time.UTC)}
 	execUnifiedFixture(t, dw, "INSERT INTO "+quoteUnifiedRecordIdentifier(platform, "krenalis_profiles_0")+

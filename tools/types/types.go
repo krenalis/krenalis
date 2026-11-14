@@ -54,8 +54,8 @@ const (
 	MaxDecimalScale     = 37             // Maximum scale for a decimal type
 	MaxElements         = math.MaxInt32  // Maximum number of elements of an array type
 	MaxStringLen        = math.MaxUint32 // Maximum length in bytes and characters for a string type
-	MaxYear             = 9999           // Maximum year for datetime, date and year types
-	MinYear             = 1              // Minimum year for datetime, date and year types
+	MaxYear             = 9999           // Maximum year for date and datetime types
+	MinYear             = 1              // Minimum year for date and datetime types
 
 	MaxInt16  = math.MaxInt16
 	MaxInt24  = 1<<23 - 1
@@ -86,7 +86,6 @@ const (
 	DateTimeKind
 	DateKind
 	TimeKind
-	YearKind
 	UUIDKind
 	JSONKind
 	IPKind
@@ -104,7 +103,6 @@ var kindName = []string{
 	"datetime",
 	"date",
 	"time",
-	"year",
 	"uuid",
 	"json",
 	"ip",
@@ -297,11 +295,6 @@ func Time() Type {
 	return Type{kind: TimeKind}
 }
 
-// Year returns the year type.
-func Year() Type {
-	return Type{kind: YearKind}
-}
-
 // UUID returns the uuid type.
 func UUID() Type {
 	return Type{kind: UUIDKind}
@@ -395,8 +388,8 @@ func ObjectOf(properties []Property) (Type, error) {
 }
 
 // Real returns t but as a real number. As a real number, t does not allow NaN,
-// +Inf and -Inf values. t must be a float type. t cannot be already real and
-// cannot have a range. It panics if previous restrictions are not met.
+// +Inf and -Inf values. t must be a float type. t cannot be already real.
+// It panics if previous restrictions are not met.
 func (t Type) Real() Type {
 	if t.kind != FloatKind {
 		panic("type is not a float type")
@@ -404,10 +397,14 @@ func (t Type) Real() Type {
 	if t.real {
 		panic("type is already real")
 	}
-	if _, ok := t.vl.(floatRange); ok {
-		panic("type has a range")
-	}
 	t.real = true
+	if f, ok := t.vl.(floatRange); ok {
+		var err error
+		t, err = t.withFloatRange(f.min, f.max)
+		if err != nil {
+			panic(err.Error())
+		}
+	}
 	return t
 }
 
@@ -515,11 +512,6 @@ func (t Type) IsTime() bool {
 // IsUUID reports whether t is a UUID type.
 func (t Type) IsUUID() bool {
 	return t.kind == UUIDKind
-}
-
-// IsYear reports whether t is a year type.
-func (t Type) IsYear() bool {
-	return t.kind == YearKind
 }
 
 // Valid indicates if t is valid.
@@ -736,6 +728,13 @@ func (t Type) FloatRange() (min, max float64) {
 		panic("type is not a float type")
 	}
 	if f, ok := t.vl.(floatRange); ok {
+		if t.real {
+			limit := math.MaxFloat64
+			if t.size == 3 {
+				limit = math.MaxFloat32
+			}
+			return math.Max(f.min, -limit), math.Min(f.max, limit)
+		}
 		return f.min, f.max
 	}
 	if t.real {
@@ -750,44 +749,18 @@ func (t Type) FloatRange() (min, max float64) {
 }
 
 // WithFloatRange returns t but with values in [min,max]. t must be a float
-// type. min cannot be greater than max. min and max cannot be NaN, and if r is
-// real they cannot be ±Inf. It panics if previous restrictions are not met.
+// type. min cannot be greater than max. min and max cannot be NaN. min cannot
+// be +Inf and max cannot be -Inf. Finite bounds are rounded to t's precision
+// and clamped to its finite limits. It panics if previous restrictions are not
+// met.
 func (t Type) WithFloatRange(min, max float64) Type {
 	if t.kind != FloatKind {
 		panic("type is not a float type")
 	}
-	if math.IsNaN(min) || math.IsNaN(max) {
-		panic("min and max cannot be NaN")
+	t, err := t.withFloatRange(min, max)
+	if err != nil {
+		panic(err.Error())
 	}
-	if t.real && (math.IsInf(min, 0) || math.IsInf(max, 0)) {
-		panic("min and max cannot be ±Inf")
-	}
-	if math.IsInf(min, -1) && math.IsInf(max, 1) {
-		return t
-	}
-	if max < min {
-		panic("max cannot be less than min")
-	}
-	var minS, maxS string
-	if t.size == 3 {
-		// 32 bits.
-		min, max = float64(float32(min)), float64(float32(max))
-		if !math.IsInf(min, -1) {
-			minS = strconv.FormatFloat(min, 'f', -1, 32)
-		}
-		if !math.IsInf(max, 1) {
-			maxS = strconv.FormatFloat(max, 'f', -1, 32)
-		}
-	} else {
-		// 64 bits.
-		if !math.IsInf(min, -1) {
-			minS = strconv.FormatFloat(min, 'f', -1, 64)
-		}
-		if !math.IsInf(max, 1) {
-			maxS = strconv.FormatFloat(max, 'f', -1, 64)
-		}
-	}
-	t.vl = floatRange{min: min, max: max, minS: minS, maxS: maxS}
 	return t
 }
 
@@ -1120,6 +1093,74 @@ func (t Type) Elem() Type {
 		panic("cannot get the element type for a non-array and non-map type")
 	}
 	return t.vl.(Type)
+}
+
+// withFloatRange returns t with its explicit bounds replaced by [min,max].
+// It rounds bounds to t's precision, clamps finite bounds to t's finite
+// limits, omits bounds implied by real, and returns an error if the bounds
+// are invalid. t must be a float type.
+func (t Type) withFloatRange(min, max float64) (Type, error) {
+
+	if math.IsNaN(min) || math.IsNaN(max) {
+		return Type{}, errors.New("min and max cannot be NaN")
+	}
+	if math.IsInf(min, 1) {
+		return Type{}, errors.New("min cannot be +Inf")
+	}
+	if math.IsInf(max, -1) {
+		return Type{}, errors.New("max cannot be -Inf")
+	}
+	if max < min {
+		return Type{}, errors.New("max cannot be less than min")
+	}
+	if t.size == 3 {
+		// 32 bits.
+		min32, max32 := float64(float32(min)), float64(float32(max))
+		if math.IsInf(min32, 0) && !math.IsInf(min, 0) {
+			min32 = math.Copysign(math.MaxFloat32, min)
+		}
+		if math.IsInf(max32, 0) && !math.IsInf(max, 0) {
+			max32 = math.Copysign(math.MaxFloat32, max)
+		}
+		min, max = min32, max32
+	}
+
+	// Omit bounds implied by the real type.
+	if t.real {
+		limit := math.MaxFloat64
+		if t.size == 3 {
+			limit = math.MaxFloat32
+		}
+		if min == -limit {
+			min = math.Inf(-1)
+		}
+		if max == limit {
+			max = math.Inf(1)
+		}
+	}
+	if math.IsInf(min, -1) && math.IsInf(max, 1) {
+		t.vl = nil
+		return t, nil
+	}
+
+	// Normalize signed zeros.
+	if min == 0 {
+		min = 0
+	}
+	if max == 0 {
+		max = 0
+	}
+	var minS, maxS string
+	size := bitSize[t.size]
+	if !math.IsInf(min, -1) {
+		minS = strconv.FormatFloat(min, 'f', -1, size)
+	}
+	if !math.IsInf(max, 1) {
+		maxS = strconv.FormatFloat(max, 'f', -1, size)
+	}
+	t.vl = floatRange{min: min, max: max, minS: minS, maxS: maxS}
+
+	return t, nil
 }
 
 // normalizedUTF8 returns s as a normalized UTF-8 encoded string. Returns an

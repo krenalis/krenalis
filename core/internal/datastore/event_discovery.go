@@ -95,7 +95,7 @@ func (store *Store) ObservedEventFields(ctx context.Context, request warehouses.
 
 	sample, err := backend.SampleEventFields(ctx, request)
 	if err != nil {
-		return EventFieldDiscoveryResult{}, unavailableError(err)
+		return EventFieldDiscoveryResult{}, err
 	}
 	result, err := inspectEventFields(request, sample)
 	if err != nil {
@@ -103,7 +103,7 @@ func (store *Store) ObservedEventFields(ctx context.Context, request warehouses.
 	}
 	err = ctx.Err()
 	if err != nil {
-		return EventFieldDiscoveryResult{}, unavailableError(err)
+		return EventFieldDiscoveryResult{}, wrapWarehouseError(err)
 	}
 
 	return result, nil
@@ -131,11 +131,11 @@ func (store *Store) ObservedEventSources(ctx context.Context, request warehouses
 	}
 	page, err := backend.DiscoverEventSources(ctx, request)
 	if err != nil {
-		return EventSourceDiscoveryResult{}, unavailableError(err)
+		return EventSourceDiscoveryResult{}, err
 	}
 	if len(page.Sources) > request.Limit || page.OmittedLongNames < 0 ||
 		page.OmittedLongNames > request.Limit-len(page.Sources) {
-		return EventSourceDiscoveryResult{}, unavailableError(
+		return EventSourceDiscoveryResult{}, wrapWarehouseError(
 			errors.New("core/internal/datastore: invalid event source page"))
 	}
 	result := EventSourceDiscoveryResult{Window: request.Window, Sources: []warehouses.ObservedEventSource{},
@@ -146,7 +146,7 @@ func (store *Store) ObservedEventSources(ctx context.Context, request warehouses
 		if source.Type != "track" && source.Type != "page" && source.Type != "screen" ||
 			source.RecordedName != nil && (len(*source.RecordedName) > warehouses.MaxEventDiscoveryNameBytes ||
 				!utf8.ValidString(*source.RecordedName)) {
-			return EventSourceDiscoveryResult{}, unavailableError(
+			return EventSourceDiscoveryResult{}, wrapWarehouseError(
 				errors.New("core/internal/datastore: invalid observed event source"))
 		}
 		// Measure the escaping used by the MCP SDK's encoder.
@@ -164,7 +164,7 @@ func (store *Store) ObservedEventSources(ctx context.Context, request warehouses
 
 	err = ctx.Err()
 	if err != nil {
-		return EventSourceDiscoveryResult{}, unavailableError(err)
+		return EventSourceDiscoveryResult{}, wrapWarehouseError(err)
 	}
 
 	return result, nil
@@ -198,7 +198,7 @@ func inspectEventFields(request warehouses.EventFieldSampleRequest, sample wareh
 		Sample: EventDiscoverySample{Rows: len(sample.Rows), Limit: request.Limit, HasMoreRows: sample.HasMoreRows},
 		Roots:  map[string]ObservedEventRoot{}, Fields: []ObservedEventField{}}
 	if len(sample.Rows) > request.Limit {
-		return EventFieldDiscoveryResult{}, unavailableError(
+		return EventFieldDiscoveryResult{}, wrapWarehouseError(
 			errors.New("core/internal/datastore: event sample exceeds row limit"))
 	}
 	indices := map[string]int{}
@@ -216,7 +216,7 @@ func inspectEventFields(request warehouses.EventFieldSampleRequest, sample wareh
 			if !root.Present && (root.Uninspected || root.Value != nil) ||
 				root.Uninspected && root.Value != nil || len(root.Value) > warehouses.MaxEventDiscoveryRootBytes ||
 				len(root.Value) > warehouses.MaxEventDiscoverySampleBytes-sampleBytes {
-				return EventFieldDiscoveryResult{}, unavailableError(
+				return EventFieldDiscoveryResult{}, wrapWarehouseError(
 					errors.New("core/internal/datastore: invalid event sample root"))
 			}
 			sampleBytes += len(root.Value)
@@ -231,7 +231,7 @@ func inspectEventFields(request warehouses.EventFieldSampleRequest, sample wareh
 				continue
 			}
 			if !json.Valid(root.Value) {
-				return EventFieldDiscoveryResult{}, unavailableError(
+				return EventFieldDiscoveryResult{}, wrapWarehouseError(
 					errors.New("core/internal/datastore: invalid observed event JSON"))
 			}
 			value := json.Value(root.Value)

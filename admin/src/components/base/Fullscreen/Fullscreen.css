@@ -43,7 +43,7 @@
 	align-items: center;
 }
 
-.fullscreen--loading sl-spinner {
+.fullscreen--loading wa-spinner {
 	position: relative;
 	top: -50px;
 }

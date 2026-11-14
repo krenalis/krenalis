@@ -76,7 +76,7 @@ func TestEventDiscoveryFailure(t *testing.T) {
 					backend.cancel = cancel
 				}
 				store := &Store{mc: newModeCoordinator(state.Normal)}
-				store.wh.Store(backend)
+				store.wh.Store(wrapWarehouse(backend))
 				var err error
 				partial := false
 				if name == "sources" {
@@ -89,7 +89,7 @@ func TestEventDiscoveryFailure(t *testing.T) {
 					err, partial = readErr, result.Fields != nil || result.Roots != nil
 				}
 				if err != nil {
-					_, ok := errors.AsType[*UnavailableError](err)
+					_, ok := errors.AsType[*WarehouseError](err)
 					if !ok || partial || backend.queries != 1 {
 						t.Fatalf("expected one failed read without partial data, got %v, partial=%t", err, partial)
 					}
@@ -265,7 +265,7 @@ func TestEventDiscoveryStore(t *testing.T) {
 		t.Run(fmt.Sprint(mode), func(t *testing.T) {
 			backend := &eventDiscoveryTestWarehouse{}
 			store := &Store{mc: newModeCoordinator(mode)}
-			store.wh.Store(backend)
+			store.wh.Store(wrapWarehouse(backend))
 			_, err := store.ObservedEventFields(t.Context(), request)
 			if err != nil {
 				if mode != state.Maintenance || !errors.Is(err, ErrMaintenanceMode) || backend.queries != 0 {
@@ -286,7 +286,7 @@ func TestEventDiscoveryStore(t *testing.T) {
 				warehouses.ObservedEventSource{Type: "page", RecordedName: &name})
 		}
 		store := &Store{mc: newModeCoordinator(state.Normal)}
-		store.wh.Store(backend)
+		store.wh.Store(wrapWarehouse(backend))
 		page, err := store.ObservedEventSources(t.Context(), warehouses.EventSourceDiscoveryRequest{
 			Window: request.Window, Limit: 500,
 		})
@@ -310,11 +310,11 @@ func TestEventDiscoveryTimeout(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
 		backend := &eventDiscoveryTestWarehouse{wait: true}
 		store := &Store{mc: newModeCoordinator(state.Normal)}
-		store.wh.Store(backend)
+		store.wh.Store(wrapWarehouse(backend))
 		start := time.Now()
 		_, err := store.ObservedEventFields(t.Context(), eventDiscoveryTestSampleRequest())
 		if err != nil {
-			unavailable, ok := errors.AsType[*UnavailableError](err)
+			unavailable, ok := errors.AsType[*WarehouseError](err)
 			if !ok || !errors.Is(unavailable.Err, context.DeadlineExceeded) || time.Since(start) != 30*time.Second {
 				t.Fatalf("expected 30-second datastore deadline, got %v after %v", err, time.Since(start))
 			}

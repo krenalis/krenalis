@@ -120,7 +120,7 @@ func testEventDiscoveryWarehouse(t *testing.T, platform string) {
 		t.Fatalf("expected event discovery fixtures, got %v", err)
 	}
 	store := &Store{mc: newModeCoordinator(state.Normal)}
-	store.wh.Store(warehouse)
+	store.wh.Store(wrapWarehouse(warehouse))
 	list := func(t *testing.T, typ, contains string, limit int) EventSourceDiscoveryResult {
 		t.Helper()
 		page, err := store.ObservedEventSources(t.Context(), warehouses.EventSourceDiscoveryRequest{
@@ -294,7 +294,7 @@ SELECT * FROM event_discovery_base WHERE event_discovery_delay(message_id,30)`)
 		}
 		if result.err != nil {
 
-			failure, ok := errors.AsType[*UnavailableError](result.err)
+			failure, ok := errors.AsType[*WarehouseError](result.err)
 			if !ok || !errors.Is(failure.Err, context.Canceled) || result.page.Sources != nil {
 				t.Fatalf("expected cancellation without partial sources, got %v, %+v", result.err, result.page)
 			}

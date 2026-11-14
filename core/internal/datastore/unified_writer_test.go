@@ -270,7 +270,7 @@ func TestUnifiedWritersPostgreSQL(t *testing.T) {
 		t.Fatalf("expected completed event writes, got %v", err)
 	}
 
-	err = store.ResolveIdentities(ctx, "fb43b3c4-dcc6-42ca-99e7-83679cbd5644")
+	_, err = store.ResolveIdentities(ctx, "fb43b3c4-dcc6-42ca-99e7-83679cbd5644")
 	if err != nil {
 		t.Fatalf("expected completed profile publication and attribution, got %v", err)
 	}
@@ -529,7 +529,7 @@ func TestUnifiedWritersPostgreSQL(t *testing.T) {
 			if err != nil {
 				t.Fatalf("expected completed elapsed event writes, got %v", err)
 			}
-			err = store.ResolveIdentities(ctx, season.operation)
+			_, err = store.ResolveIdentities(ctx, season.operation)
 			if err != nil {
 				t.Fatalf("expected completed elapsed event attribution, got %v", err)
 			}

@@ -107,7 +107,7 @@ func ValueCases() []ValueCase {
 			[]any{offset.Add(time.Microsecond)}, []any{instant.Add(time.Microsecond)}, true},
 		{"array date", types.Array(types.Date()), warehouses.OpContains, []any{day}, []any{day}, true},
 		{"array time", types.Array(types.Time()), warehouses.OpContains, []any{clock}, []any{clock}, true},
-		{"array year", types.Array(types.Year()), warehouses.OpContains, []any{2026}, []any{2026}, true},
+		{"array year", types.Array(types.Int(16).AsYear()), warehouses.OpContains, []any{2026}, []any{2026}, true},
 		{"empty array", types.Array(types.String()), warehouses.OpContains, []any{"foo"}, []any{}, false},
 	}
 	for _, c := range cases {

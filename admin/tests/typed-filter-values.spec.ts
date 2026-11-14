@@ -52,7 +52,7 @@ const schema: ObjectType = {
 		property('unsigned', { kind: 'int', bitSize: 64, unsigned: true }),
 		property('amount', { kind: 'decimal', precision: 5, scale: 2 }),
 		property('ratio', { kind: 'float', bitSize: 64 }),
-		property('year', { kind: 'year' }),
+		property('year', { kind: 'int', bitSize: 16, unsigned: false, semantics: 'year', minimum: 1, maximum: 9999 }),
 		property('when', { kind: 'datetime' }),
 		property('date', { kind: 'date' }),
 		property('time', { kind: 'time' }),
@@ -209,8 +209,9 @@ test('decimal and JSON limits do not narrow float or column-independent threshol
 	}
 	expect(encodeFilter(prepareEditorFilter(draft('amount', ['1000.00']), schema))).toContain('"values":[1000]');
 	expect(encodeFilter(prepareEditorFilter(draft('ratio', ['1e100']), schema))).toContain('"values":[1e+100]');
-	for (const raw of ['100.0', '1e2', '0', '10000'])
-		expect(() => prepareEditorFilter(draft('year', [raw]), schema)).toThrow();
+	for (const raw of ['100.0', '1e2']) expect(() => prepareEditorFilter(draft('year', [raw]), schema)).toThrow();
+	for (const raw of ['0', '10000'])
+		expect(encodeFilter(prepareEditorFilter(draft('year', [raw]), schema))).toContain(`"values":[${raw}]`);
 	const float32: ObjectType = { kind: 'object', properties: [property('ratio', { kind: 'float', bitSize: 32 })] };
 	expect(() => prepareEditorFilter(draft('ratio', ['1e100']), float32)).toThrow();
 });
@@ -467,7 +468,10 @@ test('HTTP bodies, query strings and nested connection filters share the lossles
 				: init?.method === 'GET' && url.endsWith('/connections/connection')
 					? connection
 					: '{"id":"pipeline"}';
-		return new Response(body, { status: 200, headers: { 'Content-Type': 'application/json' } });
+		return new Response(body, {
+			status: 200,
+			headers: { 'Content-Type': 'application/json', 'Sync-Token': 'typed-filter-fixture' },
+		});
 	};
 	try {
 		const list = await api.workspaces.connections.find();
@@ -505,7 +509,10 @@ test('HTTP bodies and query strings preserve 76 digits, scale 37 and float thres
 	const requests: { url: string; body?: string }[] = [];
 	globalThis.fetch = async (input, init) => {
 		requests.push({ url: String(input), body: init?.body as string });
-		return new Response('{"id":"pipeline"}', { status: 200, headers: { 'Content-Type': 'application/json' } });
+		return new Response('{"id":"pipeline"}', {
+			status: 200,
+			headers: { 'Content-Type': 'application/json', 'Sync-Token': 'typed-filter-fixture' },
+		});
 	};
 	try {
 		for (const [name, text] of [

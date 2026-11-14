@@ -4,8 +4,8 @@ import Arrow from '../../base/Arrow/Arrow';
 import { getConnectionsBlocks } from './ConnectionsMap.helpers';
 import AppContext from '../../../context/AppContext';
 import ConnectionMapContext from '../../../context/ConnectionMapContext';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import TransformedConnection from '../../../lib/core/connection';
 import { Link } from '../../base/Link/Link';
 import LittleLogo from '../../base/LittleLogo/LittleLogo';
@@ -171,16 +171,20 @@ const ConnectionsMap = () => {
 					<div className='connections-map__content'>
 						<div className='connections-map__buttons'>
 							<Link path={`connectors?role=Source`}>
-								<SlButton className='connections-map__add-source' variant='text'>
-									<SlIcon slot='suffix' name='plus-circle' />
+								<WaButton className='connections-map__add-source' variant='brand' appearance='plain'>
+									<WaIcon slot='end' name='plus-circle' />
 									Add a new source
-								</SlButton>
+								</WaButton>
 							</Link>
 							<Link path={`connectors?role=Destination`}>
-								<SlButton className='connections-map__add-destination' variant='text'>
-									<SlIcon slot='suffix' name='plus-circle' />
+								<WaButton
+									className='connections-map__add-destination'
+									variant='brand'
+									appearance='plain'
+								>
+									<WaIcon slot='end' name='plus-circle' />
 									Add a new destination
-								</SlButton>
+								</WaButton>
 							</Link>
 						</div>
 						<div className='connections-map__map'>
