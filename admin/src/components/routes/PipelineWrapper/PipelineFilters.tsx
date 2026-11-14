@@ -314,8 +314,6 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 				name={`property-${id}`}
 				items={getFilterPropertyComboboxItems(
 					pipelineType.inputSchema,
-					connection,
-					pipeline.target,
 					propertiesToHide,
 				)}
 				isExpression={false}

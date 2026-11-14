@@ -60,3 +60,41 @@ This table is based on the following principles:
 [^arraymapcomposite]: Supporting `array(T)` or `map(T)`, where `T` is of type `array`, `object` or `map`, would open up major implementation issues, especially in the Admin console, which would need to expose a way to handle the creation and mapping to these types. However, it should be noted that it is not yet clear whether such types could actually be supported and used in data warehouses, and so it might not be worth the effort anyway.
 
 [^issue-956]: Currently, the minimum and maximum value for numeric types is allowed for profile schema properties but cannot be specified when declaring types using the Admin console. See the issue [#956](https://github.com/krenalis/krenalis/issues/956) for more details.
+
+## JSON filters
+
+JSON filters use the semantics of `core/internal/filters.Applies`, both in memory and when converted from `state.Where` into `warehouses.Expr`. The [public filter documentation](https://www.krenalis.com/docs/filters.md) describes paths, boolean operators, and emptiness; the evaluator and its tests also specify the dual interpretation of operands and the behavior of negative operators.
+
+| Property | Supported operators |
+|----------|---------------------|
+| `json`, including an object path inside JSON | `is`, `is not`, ordered comparisons, `is between`, `is not between`, `contains`, `does not contain`, `is one of`, `is not one of`, `starts with`, `ends with`, `is true`, `is false`, `is empty`, `is not empty`, `is null`, `is not null`, `exists`, `does not exist` |
+| `array(json)` | `contains`, `does not contain`, `is empty`, `is not empty`, `is null`, `is not null`, `exists`, `does not exist` |
+| `map(json)` | `is empty`, `is not empty`, `is null`, `is not null`, `exists`, `does not exist` |
+
+The ordinary schema restrictions still apply: existence on a column requires a read-optional property, and null checks on non-JSON properties require a nullable property. An internal JSON path may always test existence. Temporal operators do not apply to JSON. Paths traverse literal object keys, without array indexing or automatic array unwrapping; container elements cannot be addressed through a schema property path. Public filters reject empty operands; the lower-level expression and evaluator tests also cover empty strings without changing that validation rule.
+
+An operand is text, optionally also parsed as an exact decimal. JSON strings compare with the original text; JSON numbers compare only with the decimal interpretation. Thus `5`, `5.0`, and `5e0` match the same JSON numbers but different JSON strings. Equality never interprets operands as JSON objects, arrays, booleans, or null. `contains` searches a substring in a JSON string or a matching scalar among the immediate elements of a JSON array or `array(json)`. String comparisons use UTF-8 byte order, including on databases with a different default collation.
+
+Negative operators are boolean complements, including for absent values and JSON kinds on which the positive operator does not match. Empty means absent, null, or an empty string, array, or object. `is null` means present JSON null; `is not null` also matches an absent JSON property. Existence and null therefore require distinct expression operators. All profile columns are nullable, but profile schema properties are non-nullable: SQL NULL represents absence, and JSON null is a present value. Object existence remains an OR over the SQL presence of descendant columns, including JSON and JSON containers.
+
+### Representation limits
+
+SQL generation preserves exact comparison semantics for decimal operands with precision up to 76 and scale up to 37, regardless of the property's precision and scale. Comparisons use the numeric representation available from the warehouse and cannot recover information already lost during storage.
+
+PostgreSQL compares JSON numbers as `numeric`. Snowflake converts their `TO_JSON` representation to `DECFLOAT`. Stored Snowflake JSON numbers have up to 38 significant digits, so this conversion is exact. An operand with more than 38 significant digits therefore cannot equal a stored Snowflake JSON number.
+
+For ordered comparisons, such operands are truncated toward zero to 38 significant digits. No stored number lies strictly between the original operand and the truncated bound. The comparison operator is adjusted to make the bound inclusive or exclusive according to the operand's sign. Membership comparisons exclude these operands from the numeric branch while preserving their original text in the string branch.
+
+* [Snowflake `PARSE_JSON`](https://docs.snowflake.com/en/sql-reference/functions/parse_json) stores scientific notation and decimals outside its fixed-point range as DOUBLE. Distinct original decimals can consequently become the same stored value. Exact equivalence with the original input is impossible after that conversion. Its JSON numeric output is the reference for comparisons with stored values.
+* [PostgreSQL `jsonb`](https://www.postgresql.org/docs/current/datatype-json.html) has the range limits of `numeric` and cannot store NUL in JSON strings. The existing warehouse encoder removes NUL; comparisons with an original string containing it cannot preserve that information.
+* Flattened object columns do not retain an independent presence bit for an empty object. Existence on such objects follows the descendant-column contract above, rather than recovering their original presence before flattening.
+
+These are storage limits, not additional JSON operator restrictions. Changes to the storage representations would be required to guarantee equivalence for every original JSON input.
+
+### Verification
+
+`warehouses/postgresql/jsonexpr_test.go` and `warehouses/snowflake/jsonexpr_test.go` run the same truth table defined in `test/warehouseexpr`, verifying matching IDs and counts through `Merge` and `Query`. In addition, `core/internal/datastore/query_json_test.go` compares warehouse results with `filters.Applies` across operators, scalar kinds, containers, literal keys, nested paths, numeric spellings, and Unicode strings.
+
+The test reloads the fixtures from the warehouse before evaluating them in Go, so that expected results account for any rounding during storage. Batched counts verify exact membership by checking both the expected number of matches and the absence of unexpected matching IDs.
+
+Run the local tests with `KRENALIS_SKIP_SNOWFLAKE_TESTS=true`. With the usual `KRENALIS_SNOWFLAKE_TESTER_*` credentials, run both JSON database suites together with `go test -p 1 ./warehouses/snowflake ./core/internal/datastore -run '^(TestJSONExpressions|TestJSONFilters)$' -count=1`. Each suite reuses its environment for all cases, so Snowflake can remain active throughout the run.

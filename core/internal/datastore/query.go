@@ -50,12 +50,11 @@ type Query struct {
 	Limit int
 }
 
-// convertWhere converts a state.Where expression into a warehouses.Expr.
-// "exists" and "does not exist" operators are mapped to warehouses.OpIsNotNull
-// and warehouses.OpIsNull, respectively. For object properties, "exists"
-// matches if any descendant column is non-null, while "does not exist" matches
-// if all descendant columns are null. For "is true" and "is false" on JSON,
-// path segments after the column are stored in warehouses.BaseExpr.Keys.
+// convertWhere converts a state.Where expression into a warehouses.Expr,
+// preserving condition operators. For object properties, "exists" is an OR of
+// descendant existence checks, while "does not exist" is an AND of descendant
+// absence checks. JSON path segments after the column are stored in
+// warehouses.BaseExpr.Keys.
 func convertWhere(where *state.Where, columnByProperty map[string]warehouses.Column) (warehouses.Expr, error) {
 
 	if where == nil {
@@ -97,25 +96,22 @@ func convertWhere(where *state.Where, columnByProperty map[string]warehouses.Col
 				return nil, fmt.Errorf("invalid operator %d for property %q in where expression",
 					int(rule.Operator), path)
 			}
-			if column, ok := columnByProperty[path]; ok {
-				var op warehouses.Operator
-				switch rule.Operator {
-				case state.OpExists:
-					op = warehouses.OpIsNotNull
-				case state.OpDoesNotExist:
-					op = warehouses.OpIsNull
-				default:
-					op = warehouses.Operator(rule.Operator)
+			values := slices.Clone(rule.Values)
+			for j, value := range values {
+				if value, ok := value.(state.JSONConditionValue); ok {
+					values[j] = warehouses.JSONConditionValue{String: value.String, Number: value.Number}
 				}
-				expr.Operands[i] = warehouses.NewBaseExpr(column, op, rule.Values...)
+			}
+			if column, ok := columnByProperty[path]; ok {
+				expr.Operands[i] = warehouses.NewBaseExpr(column, warehouses.Operator(rule.Operator), values...)
 				continue
 			}
-			if len(rule.Property) > 1 && (rule.Operator == state.OpIsTrue || rule.Operator == state.OpIsFalse) {
+			if len(rule.Property) > 1 {
 				parentPath := path
 				for n := len(rule.Property) - 1; n > 0; n-- {
 					parentPath = parentPath[:len(parentPath)-len(rule.Property[n])-1]
 					if column, ok := columnByProperty[parentPath]; ok && column.Type.IsJSON() {
-						operand := warehouses.NewBaseExpr(column, warehouses.Operator(rule.Operator))
+						operand := warehouses.NewBaseExpr(column, warehouses.Operator(rule.Operator), values...)
 						operand.Keys = rule.Property[n:]
 						expr.Operands[i] = operand
 						break
@@ -137,14 +133,11 @@ func convertWhere(where *state.Where, columnByProperty map[string]warehouses.Col
 			}
 			// The property is an object; apply the condition to all descendant columns.
 			var logicalOp warehouses.LogicalOperator
-			var op warehouses.Operator
 			switch rule.Operator {
 			case state.OpExists:
 				logicalOp = warehouses.OpOr
-				op = warehouses.OpIsNotNull
 			case state.OpDoesNotExist:
 				logicalOp = warehouses.OpAnd
-				op = warehouses.OpIsNull
 			default:
 				return nil, fmt.Errorf("operator %q cannot be used with object property %q in where expression",
 					rule.Operator, path)
@@ -154,7 +147,7 @@ func convertWhere(where *state.Where, columnByProperty map[string]warehouses.Col
 			})
 			operands := make([]warehouses.Expr, len(descendantColumns))
 			for j, column := range descendantColumns {
-				operands[j] = warehouses.NewBaseExpr(column, op)
+				operands[j] = warehouses.NewBaseExpr(column, warehouses.Operator(rule.Operator))
 			}
 			expr.Operands[i] = warehouses.NewMultiExpr(logicalOp, operands)
 
