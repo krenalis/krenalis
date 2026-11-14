@@ -307,7 +307,6 @@ func (worker *simulatedSystemWorker) prepare(ctx context.Context, account *state
 
 // process handles pending systems and reports whether a retry is needed.
 func (worker *simulatedSystemWorker) process(ctx context.Context) bool {
-
 	retry := false
 	accounts := worker.accountsToProcess()
 	for _, account := range accounts {
@@ -318,8 +317,10 @@ func (worker *simulatedSystemWorker) process(ctx context.Context) bool {
 		if !ok || current.Status != state.SimulatedSystemPreparing && current.Status != state.SimulatedSystemDeleting {
 			continue
 		}
-		persisted, err := worker.readPersistentAccount(ctx, current)
+		attemptCtx, cancel := context.WithCancel(ctx)
+		persisted, err := worker.readPersistentAccount(attemptCtx, current)
 		if err != nil {
+			cancel()
 			if ctx.Err() != nil {
 				return false
 			}
@@ -330,13 +331,15 @@ func (worker *simulatedSystemWorker) process(ctx context.Context) bool {
 			continue
 		}
 		if persisted.Status != state.SimulatedSystemPreparing && persisted.Status != state.SimulatedSystemDeleting {
+			cancel()
 			continue
 		}
 		if persisted.Status == state.SimulatedSystemDeleting {
-			err = worker.delete(ctx, persisted)
+			err = worker.delete(attemptCtx, persisted)
 		} else {
-			err = worker.prepare(ctx, persisted)
+			err = worker.prepare(attemptCtx, persisted)
 		}
+		cancel()
 		if err != nil {
 			if ctx.Err() != nil {
 				return false
@@ -345,7 +348,6 @@ func (worker *simulatedSystemWorker) process(ctx context.Context) bool {
 			slog.Warn("cannot process simulated system; will retry", "account", account.ID)
 		}
 	}
-
 	return retry
 }
 

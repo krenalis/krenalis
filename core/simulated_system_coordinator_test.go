@@ -165,7 +165,6 @@ func TestSimulatedSystemCoordinatorRetry(t *testing.T) {
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			synctest.Test(t, func(t *testing.T) {
-
 				var passes atomic.Int64
 				c := newSimulatedSystemCoordinator(t.Context(), func(context.Context) bool {
 					return passes.Add(1) < int64(test.completeAt)
@@ -194,7 +193,6 @@ func TestSimulatedSystemCoordinatorRetry(t *testing.T) {
 				if actual := passes.Load(); actual != int64(test.completeAt) {
 					t.Fatalf("expected no retry after successful processing, got %d passes", actual)
 				}
-
 			})
 		})
 	}

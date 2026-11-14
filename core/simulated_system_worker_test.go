@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -29,6 +30,47 @@ import (
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 )
+
+type simulatedWorkerWarehouse struct {
+	warehouses.Warehouse
+	blocked  atomic.Bool
+	fences   atomic.Int64
+	deletes  atomic.Int64
+	contexts chan context.Context
+}
+
+// Close releases the test warehouse.
+func (w *simulatedWorkerWarehouse) Close() error {
+	return nil
+}
+
+// Counts reports an empty test warehouse.
+func (w *simulatedWorkerWarehouse) Counts(context.Context, string, []warehouses.Expr) ([]int, error) {
+	return []int{0}, nil
+}
+
+// DeleteSimulatedSystemRecords records completed cleanup.
+func (w *simulatedWorkerWarehouse) DeleteSimulatedSystemRecords(context.Context, string, int64) error {
+	w.deletes.Add(1)
+	return nil
+}
+
+// FenceSimulatedSystem simulates a temporary failure during finalization.
+func (w *simulatedWorkerWarehouse) FenceSimulatedSystem(ctx context.Context, _ string, _ int64) error {
+	w.contexts <- ctx
+	w.fences.Add(1)
+	if w.blocked.Load() {
+		return errors.New("test fence unavailable")
+	}
+	return nil
+}
+
+// MergeSimulatedSystemRecords is unused by the failure and cleanup scenarios.
+func (w *simulatedWorkerWarehouse) MergeSimulatedSystemRecords(context.Context, string, int64, warehouses.Table, [][]any) error {
+	panic("core: unexpected generation in worker finalization test")
+}
+
+var simulatedWorkerWarehouseNumber atomic.Int64
 
 // TestSimulatedSystemWorkerNotifications uses two replicated states to check
 // follower requests, retry without new events, and takeover of pending work.
@@ -57,7 +99,9 @@ func TestSimulatedSystemWorkerNotifications(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected container port, got %v", err)
 	}
-	options := db.Options{Host: host, Port: int(port.Num()), Username: "krenalis", Password: "krenalis", Database: "krenalis"}
+	options := db.Options{
+		Host: host, Port: int(port.Num()), Username: "krenalis", Password: "krenalis", Database: "krenalis",
+	}
 	database, err := db.Open(&options)
 	if err != nil {
 		t.Fatalf("expected database pool, got %v", err)
@@ -71,7 +115,7 @@ func TestSimulatedSystemWorkerNotifications(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected initialized schema, got %v", err)
 	}
-	remote := &simulatedWorkerWarehouse{}
+	remote := &simulatedWorkerWarehouse{contexts: make(chan context.Context, 16)}
 	remote.blocked.Store(true)
 	platform := fmt.Sprintf("SimulatedWorkerTest%d", simulatedWorkerWarehouseNumber.Add(1))
 	warehouses.Register(warehouses.Platform{Name: platform}, func(warehouses.SettingsLoader, warehouses.DialWith) *simulatedWorkerWarehouse {
@@ -196,7 +240,8 @@ func TestSimulatedSystemWorkerNotifications(t *testing.T) {
 	facade := &Workspace{core: nodes[follower], workspace: ws, store: store}
 	create := func() string {
 		t.Helper()
-		id, err := facade.CreateSimulatedSystem(t.Context(), "from follower", json.Value("1"), nil, json.Value(`{"IT":100}`))
+		id, err := facade.CreateSimulatedSystem(t.Context(), "from follower",
+			json.Value("1"), nil, json.Value(`{"IT":100}`))
 		if err != nil {
 			t.Fatalf("expected follower creation, got %v", err)
 		}
@@ -215,6 +260,15 @@ func TestSimulatedSystemWorkerNotifications(t *testing.T) {
 	if !ok || account.Status != state.SimulatedSystemPreparing || account.GenerationError == "" {
 		t.Fatal("expected Preparing with persisted failure intent, got different state")
 	}
+	operationCtx := <-remote.contexts
+	select {
+	case <-operationCtx.Done():
+	default:
+		t.Fatal("expected completed attempt context to be canceled, got retained operation context")
+	}
+	if !nodes[leader].state.IsLeader() || nodes[leader].close.ctx.Err() != nil {
+		t.Fatal("expected active leadership after the attempt, got stopped leader")
+	}
 	remote.blocked.Store(false)
 	waitPass(false)
 	wait(func() bool {
@@ -222,7 +276,8 @@ func TestSimulatedSystemWorkerNotifications(t *testing.T) {
 		return ok && account.Status == state.SimulatedSystemFailed
 	})
 
-	_, err = database.Exec(t.Context(), "UPDATE simulated_systems SET claimed_run = '222222222222', writer_generation = 2 WHERE id = $1", id)
+	_, err = database.Exec(t.Context(), "UPDATE simulated_systems SET claimed_run = '222222222222',"+
+		" writer_generation = 2 WHERE id = $1", id)
 	if err != nil {
 		t.Fatalf("expected active writer claim, got %v", err)
 	}
@@ -256,43 +311,79 @@ func TestSimulatedSystemWorkerNotifications(t *testing.T) {
 		t.Fatal("expected takeover to finish pending failure, got different state")
 	}
 
-}
-
-var simulatedWorkerWarehouseNumber atomic.Int64
-
-type simulatedWorkerWarehouse struct {
-	warehouses.Warehouse
-	blocked atomic.Bool
-	fences  atomic.Int64
-	deletes atomic.Int64
-}
-
-// Close releases the test warehouse.
-func (w *simulatedWorkerWarehouse) Close() error {
-	return nil
-}
-
-// Counts reports an empty test warehouse.
-func (w *simulatedWorkerWarehouse) Counts(context.Context, string, []warehouses.Expr) ([]int, error) {
-	return []int{0}, nil
-}
-
-// DeleteSimulatedSystemRecords records completed cleanup.
-func (w *simulatedWorkerWarehouse) DeleteSimulatedSystemRecords(context.Context, string, int64) error {
-	w.deletes.Add(1)
-	return nil
-}
-
-// FenceSimulatedSystem simulates a temporary failure during finalization.
-func (w *simulatedWorkerWarehouse) FenceSimulatedSystem(context.Context, string, int64) error {
-	w.fences.Add(1)
-	if w.blocked.Load() {
-		return errors.New("test fence unavailable")
+	entered, release := make(chan struct{}), make(chan struct{})
+	releaseDispatch := sync.OnceFunc(func() { close(release) })
+	t.Cleanup(releaseDispatch)
+	node := nodes[leader]
+	node.state.Freeze()
+	node.state.AddListener(func(n state.UpdateSimulatedSystemGeneration) {
+		if n.Workspace == workspace && n.Status == state.SimulatedSystemPreparing && n.GenerationError != "" {
+			close(entered)
+			<-release
+		}
+	})
+	node.state.Unfreeze()
+	committed := create()
+	select {
+	case <-entered:
+	case <-time.After(15 * time.Second):
+		t.Fatal("expected suspended application of failure intent, got timeout")
 	}
-	return nil
-}
+	var persisted bool
+	var committedVersion int
+	err = database.QueryRow(t.Context(), `SELECT status = 'Preparing' AND generation_error <> '',
+		(SELECT MAX(version) FROM notifications WHERE name = 'UpdateSimulatedSystemGeneration'
+		 AND payload::jsonb->>'ID' = $1) FROM simulated_systems WHERE id = $1`, committed).
+		Scan(&persisted, &committedVersion)
+	if err != nil {
+		t.Fatalf("expected committed failure intent, got %v", err)
+	}
+	if !persisted || node.state.Version() >= committedVersion {
+		t.Fatal("expected committed intent awaiting local application, got different state")
+	}
+	select {
+	case actual := <-passes:
+		t.Fatalf("expected worker waiting for application, got completed pass %+v", actual)
+	default:
+	}
+	closed := make(chan struct{})
+	go func() {
+		node.simulatedWorker.Close()
+		close(closed)
+	}()
+	select {
+	case <-closed:
+	case <-time.After(5 * time.Second):
+		t.Fatal("expected worker shutdown during the version wait, got timeout")
+	}
+	if node.state.Version() >= committedVersion || node.close.ctx.Err() != nil {
+		t.Fatal("expected suspended application and active Core after worker shutdown, got different state")
+	}
+	releaseDispatch()
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+	defer cancel()
+	err = node.state.WaitVersion(ctx, committedVersion)
+	if err != nil {
+		t.Fatalf("expected released application, got %v", err)
+	}
+	node.state.Freeze()
+	node.simulatedWorker = newSimulatedSystemWorker(node)
+	node.state.AddListener(node.simulatedWorker.onCreateSimulatedSystem)
+	node.state.AddListener(node.simulatedWorker.onMarkSimulatedSystemDeleting)
+	node.simulatedWorker.Start()
+	node.state.Unfreeze()
+	wait(func() bool {
+		account, ok := node.state.SimulatedSystem(committed)
+		return ok && account.Status == state.SimulatedSystemFailed && account.GenerationError != ""
+	})
+	var finalStatus string
+	err = database.QueryRow(t.Context(), "SELECT status::text FROM simulated_systems WHERE id = $1", committed).
+		Scan(&finalStatus)
+	if err != nil {
+		t.Fatalf("expected recovered persisted status, got %v", err)
+	}
+	if finalStatus != "Failed" {
+		t.Fatalf("expected recovered Failed status, got %s", finalStatus)
+	}
 
-// MergeSimulatedSystemRecords is unused by the failure and cleanup scenarios.
-func (w *simulatedWorkerWarehouse) MergeSimulatedSystemRecords(context.Context, string, int64, warehouses.Table, [][]any) error {
-	panic("core: unexpected generation in worker finalization test")
 }
