@@ -61,7 +61,7 @@ type databaseConnection interface {
 	//   '{"boo": 5}'
 	//   '2025-12-09 12:53:45.730139'
 	//   '2025-12-09'
-	SQLLiteral(v any, t types.Type) string
+	SQLLiteral(v any, t types.Type) (string, error)
 }
 
 // Database represents the database of a database connection.
@@ -280,12 +280,17 @@ func (database *Database) Records(ctx context.Context, pipeline *state.Pipeline,
 
 // UpdatedAtPlaceholder returns the value used for the updated_at placeholder
 // for the provided pipeline.
+// If the connector returns an error, it returns an *UnavailableError error.
 func (database *Database) UpdatedAtPlaceholder(pipeline *state.Pipeline) (string, error) {
 	if database.err != nil {
 		return "", database.err
 	}
 	if pipeline == nil {
-		return database.inner.SQLLiteral(nil, types.Type{}), nil
+		literal, err := database.inner.SQLLiteral(nil, types.Type{})
+		if err != nil {
+			return "", connectorError(err)
+		}
+		return literal, nil
 	}
 	run, ok := pipeline.Run()
 	if !ok {
@@ -294,7 +299,11 @@ func (database *Database) UpdatedAtPlaceholder(pipeline *state.Pipeline) (string
 	cursor := run.Cursor
 	property := pipeline.UpdatedAtColumn
 	if property == "" || cursor.IsZero() {
-		return database.inner.SQLLiteral(nil, types.Type{}), nil
+		literal, err := database.inner.SQLLiteral(nil, types.Type{})
+		if err != nil {
+			return "", connectorError(err)
+		}
+		return literal, nil
 	}
 	p, _ := pipeline.InSchema.Properties().ByName(property)
 	var value any
@@ -306,7 +315,11 @@ func (database *Database) UpdatedAtPlaceholder(pipeline *state.Pipeline) (string
 	case types.DateKind:
 		value = time.Date(cursor.Year(), cursor.Month(), cursor.Day(), 0, 0, 0, 0, time.UTC)
 	}
-	return database.inner.SQLLiteral(value, p.Type), nil
+	literal, err := database.inner.SQLLiteral(value, p.Type)
+	if err != nil {
+		return "", connectorError(err)
+	}
+	return literal, nil
 }
 
 // Writer returns a Writer to create and update users.

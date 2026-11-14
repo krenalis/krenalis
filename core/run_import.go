@@ -52,17 +52,22 @@ func (this *Pipeline) importUsers(ctx context.Context) error {
 	case state.Database:
 		database := this.database()
 		defer database.Close()
+		var updatedAt string
+		if run.Incremental {
+			updatedAt, err = database.UpdatedAtPlaceholder(pipeline)
+		} else {
+			updatedAt, err = database.UpdatedAtPlaceholder(nil)
+		}
+		if err != nil {
+			return newPipelineError(metrics.InputValidationStep, err)
+		}
 		replacer := func(name string) (string, bool) {
 			switch name {
 			case "updated_at":
-				var v string
 				if run.Incremental {
 					purge = run.Cursor.IsZero()
-					v, _ = database.UpdatedAtPlaceholder(pipeline)
-				} else {
-					v, _ = database.UpdatedAtPlaceholder(nil)
 				}
-				return v, true
+				return updatedAt, true
 			case "limit":
 				return strconv.FormatUint(math.MaxInt64, 10), true
 			}

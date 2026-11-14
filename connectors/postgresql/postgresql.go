@@ -137,13 +137,13 @@ func (pg *PostgreSQL) Query(ctx context.Context, query string) (connectors.Rows,
 // SQLLiteral returns the SQL literal representation of v according to the
 // provided Krenalis type t. It supports nil values and the following Krenalis
 // types: string, datetime, date, and json.
-func (pg *PostgreSQL) SQLLiteral(value any, typ types.Type) string {
+func (pg *PostgreSQL) SQLLiteral(value any, typ types.Type) (string, error) {
 	if value == nil {
-		return "NULL"
+		return "NULL", nil
 	}
 	var b strings.Builder
 	quoteValue(&b, value, typ)
-	return b.String()
+	return b.String(), nil
 }
 
 type withCloseError struct {
