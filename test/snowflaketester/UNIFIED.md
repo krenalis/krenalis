@@ -1236,15 +1236,16 @@ Observed server execution was 2.424 ms versus 3.826 ms. These are single smoke
 observations, not production performance estimates or a reason to weaken
 identity semantics.
 
-The private DDL probe also confirmed an activation issue outside this reader
-fix. Under schema default `en-ci-rtrim`, an unspecified column collation and
-`COLLATE ''` both inherit the non-binary setting; explicit `COLLATE 'utf8'`
-keeps case-distinct IDs separate. INFORMATION_SCHEMA.COLUMNS.COLLATION_NAME
+The private DDL probe also confirmed a pre-existing main limitation outside
+this reader fix. Under schema default `en-ci-rtrim`, an unspecified column
+collation and `COLLATE ''` both inherit the non-binary setting; explicit
+`COLLATE 'utf8'` keeps case-distinct IDs separate. INFORMATION_SCHEMA.COLUMNS.COLLATION_NAME
 reported those settings. Changing the inherited column to an uncollated
 VARCHAR with ALTER COLUMN was rejected with code 040053, incompatible collations.
-This does not establish a general migration procedure. Merge and identity
-resolution SQL remain outside this correction and need a separate decision
-before activation, as listed below. The production gate stays false.
+This does not establish a general migration procedure. Collation in managed
+writes and identity resolution is tracked on main, as recorded below; it is
+not an activation decision for this branch. The literal Unified reader
+corrections remain in place. The production gate stays false.
 
 ## Failure and resource supplement
 
@@ -1531,6 +1532,21 @@ python3 test/snowflaketester/run.py --require-schemas \
   -run '^TestUnifiedRecordEnumSnowflake$' -timeout=5m
 ```
 
+## Known limitation tracked on main
+
+On 2026-11-15 the user excluded managed Snowflake identifier collation from
+this branch. Writes, purges, identity resolution, event attribution and counts
+can still apply inherited non-binary column comparison rules. This is a
+pre-existing main defect, handled by the user on main; it is not a pending
+decision or prerequisite for activating Unified on this branch. No code or
+further study of that defect is planned here.
+
+The literal technical source selectors and message-identity comparisons
+already implemented in the Unified reader remain unchanged. They prevent
+query-side identity merging but cannot recover rows previously replaced or
+misattributed by managed operations. A detected copy conflict remains a
+technical failure, not semantic UNKNOWN.
+
 ## Coverage still required before activation
 
 Passing the commands above is necessary, but is not the complete acceptance
@@ -1547,14 +1563,6 @@ In particular, the following work remains explicit:
   distinct; the repeatable chunk workflow above remains separate from real
   transport faults and explanation/HTTP/MCP chunk coverage.
   Running-query timeout/cancellation evidence is recorded separately below.
-- Decide how managed identity columns retain literal identity in writes and
-  attribution under non-binary collation, including existing warehouses.
-  The N1 reader correction above prevents query-side identity merging, but
-  does not repair Merge or identity-resolution comparisons, or recover rows
-  already replaced. Both are pre-existing behavior outside Unified; a schema
-  guarantee with detection or explicit local corrections remains a separate
-  product/upgrade decision before activation. A detected copy conflict is a
-  technical failure, not semantic UNKNOWN.
 - Timestamp input formats beyond AUTO and environment-level resource controls.
   UTC and America/Los_Angeles with NTZ/AUTO and per-session 60-second statement
   limits are covered above; these runs do not verify resource-monitor policies

@@ -75,6 +75,15 @@ null/missing and empty-array rules, state operators, Kleene composition and othe
 existing Record contexts remain unchanged. A future uniform native-text policy
 requires a separate compatibility decision.
 
+Managed Snowflake identifier collation is a known pre-existing main limitation:
+writes, purges, identity resolution, event attribution and counts can still
+follow inherited non-binary column comparison rules. On 2026-11-15 the user
+excluded that defect from this branch and is handling it on main. It is not a
+pending decision or prerequisite for activating this branch.
+The Unified reader's literal source selectors and message-identity comparisons
+remain in place; they do not recover rows previously replaced or misattributed
+by managed operations. No code or further study of that defect is planned here.
+
 ## Admitted subset and evidence contract
 
 - Profile Record conditions and Count share the root AND/OR tree: at most four
