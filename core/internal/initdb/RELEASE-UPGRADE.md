@@ -23,13 +23,13 @@ base release. See `.agents/skills/release-upgrade/SKILL.md`.
   nested groups, and conditions on other types. Complete both schema and
   filter conversions in the same upgrade transaction before loading state.
 
-- Account for typed operands in `pipelines.filter` and pipeline state
-  notifications. JSON property operands now preserve their JSON kind instead
-  of storing a string interpreted as both text and, optionally, a number.
-  Existing JSON filter operands require an explicit decision about their
-  intended kind before release. This change provides no conversion or legacy
-  reader; the release must address persisted filters before using the new
-  format. Ordinary integer operands remain JSON numbers at every bit size.
+- Preserve existing JSON String operands in `pipelines.filter`. They are now
+  read as typed JSON Strings rather than both text and, optionally, a number.
+  Do not infer numeric kinds or rewrite filters to preserve the previous
+  behavior; no operand conversion is required for this change. Document in
+  the release notes that existing filters may return different results under
+  typed comparisons and the current rules for absent or inapplicable values.
+  Ordinary integer operands remain JSON numbers at every bit size.
 - Remove `workspaces.warehouse_mcp_settings` and
   `workspaces.kms_encrypted_warehouse_mcp_settings_key`, discarding the stored
   warehouse MCP credentials and their dedicated encryption key without
