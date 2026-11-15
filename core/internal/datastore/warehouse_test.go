@@ -161,6 +161,44 @@ func TestWarehouseErrors(t *testing.T) {
 	}
 }
 
+// TestWarehouseMissingCapabilities fails without calling an absent backend.
+func TestWarehouseMissingCapabilities(t *testing.T) {
+	dw := &warehouse{inner: &errorWarehouse{}}
+	if dw.ProfileFilterVerified() {
+		t.Fatal("expected closed gate without profile capability, got open gate")
+	}
+	tests := []struct {
+		name string
+		call func() error
+	}{
+		{"profiles", func() error {
+			_, err := dw.ProfileOutcomes(t.Context(), warehouses.Filter{}, warehouses.ProfileOutcomeRequest{})
+			return err
+		}},
+		{"explanation", func() error {
+			_, err := dw.ExplainProfileFilter(t.Context(), warehouses.Filter{}, warehouses.ProfileSource{}, "profile")
+			return err
+		}},
+		{"sources", func() error {
+			_, err := dw.DiscoverEventSources(t.Context(), warehouses.EventSourceDiscoveryRequest{})
+			return err
+		}},
+		{"sample", func() error {
+			_, err := dw.SampleEventFields(t.Context(), warehouses.EventFieldSampleRequest{})
+			return err
+		}},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			err := test.call()
+			if err != nil {
+				return
+			}
+			t.Fatal("expected missing capability error, got success")
+		})
+	}
+}
+
 // TestWarehouseOptionalCapabilities exposes only capabilities the provider has.
 func TestWarehouseOptionalCapabilities(t *testing.T) {
 	base := &errorWarehouse{}
@@ -205,44 +243,6 @@ func TestWarehouseOptionalCapabilities(t *testing.T) {
 			if profiles && !filter.ProfileFilterVerified() {
 				t.Fatal("expected forwarded verification gate, got closed gate")
 			}
-		})
-	}
-}
-
-// TestWarehouseMissingCapabilities fails without calling an absent backend.
-func TestWarehouseMissingCapabilities(t *testing.T) {
-	dw := &warehouse{inner: &errorWarehouse{}}
-	if dw.ProfileFilterVerified() {
-		t.Fatal("expected closed gate without profile capability, got open gate")
-	}
-	tests := []struct {
-		name string
-		call func() error
-	}{
-		{"profiles", func() error {
-			_, err := dw.ProfileOutcomes(t.Context(), warehouses.Filter{}, warehouses.ProfileOutcomeRequest{})
-			return err
-		}},
-		{"explanation", func() error {
-			_, err := dw.ExplainProfileFilter(t.Context(), warehouses.Filter{}, warehouses.ProfileSource{}, "profile")
-			return err
-		}},
-		{"sources", func() error {
-			_, err := dw.DiscoverEventSources(t.Context(), warehouses.EventSourceDiscoveryRequest{})
-			return err
-		}},
-		{"sample", func() error {
-			_, err := dw.SampleEventFields(t.Context(), warehouses.EventFieldSampleRequest{})
-			return err
-		}},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			err := test.call()
-			if err != nil {
-				return
-			}
-			t.Fatal("expected missing capability error, got success")
 		})
 	}
 }
