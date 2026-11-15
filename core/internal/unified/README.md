@@ -709,6 +709,12 @@ on local PostgreSQL with the race detector and on Snowflake on 2026-11-12:
 each configuration, without skips or failures. Arrow/JSON nested numeric transport
 passed through both readers, and the Arrow native-type probe passed. The JSON
 native-type probe confirmed FLOAT/BOOLEAN incompatibilities and remains failed.
+That pre-existing main defect is tracked in
+[#2770](https://github.com/krenalis/krenalis/issues/2770). On 2026-11-15 the user
+excluded its correction from this branch and assigned it to main. It is not a
+pending decision or prerequisite for activating this branch. The recorded
+failure is preserved; no correction or production result-format change is
+introduced here.
 The runbook records per-query format evidence, source/session checks, independent
 schema inventories and coverage still required before activation.
 Per-query format evidence for those runs applies only to the six numeric-transport blocks.

@@ -1532,7 +1532,9 @@ python3 test/snowflaketester/run.py --require-schemas \
   -run '^TestUnifiedRecordEnumSnowflake$' -timeout=5m
 ```
 
-## Known limitation tracked on main
+## Known limitations tracked on main
+
+### Managed identifier collation
 
 On 2026-11-15 the user excluded managed Snowflake identifier collation from
 this branch. Writes, purges, identity resolution, event attribution and counts
@@ -1547,15 +1549,22 @@ query-side identity merging but cannot recover rows previously replaced or
 misattributed by managed operations. A detected copy conflict remains a
 technical failure, not semantic UNKNOWN.
 
+### Native FLOAT/BOOLEAN with JSON results
+
+The native JSON transport failure is tracked in
+[#2770](https://github.com/krenalis/krenalis/issues/2770). On 2026-11-15 the
+user excluded this pre-existing main defect from this branch; its correction
+will be handled on main. It is not a pending transport-policy decision or
+prerequisite for activating Unified on this branch. The recorded JSON probe
+remains failed, and the passing Arrow probe does not certify JSON equivalence.
+No correction or change to the production result-format setting is made here.
+
 ## Coverage still required before activation
 
 Passing the commands above is necessary, but is not the complete acceptance
 checklist. Record actual results against each block in the Unified README.
 In particular, the following work remains explicit:
 
-- Decide how native FLOAT/BOOLEAN compatibility with JSON results affects the
-  supported transport contract. Nested numeric fixtures and the Arrow native
-  path passed above; the failed JSON native probe does not certify equivalence.
 - The failure/resource supplement above covers limits, a malformed identity,
   real server errors and recovery, a driver-level chunk fault, native timestamp
   precisions, local mode changes and a bounded load smoke test. Controlled
