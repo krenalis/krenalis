@@ -31,7 +31,7 @@ interface ProfilesContext {
 	goToProfilesPage: (first: number) => void;
 	markProfileSchemaNotAligned: (message?: string) => void;
 	navigateProfile: (direction: 'previous' | 'next') => void;
-	refreshProfiles: () => void;
+	refreshProfiles: () => Promise<void>;
 	reorderProfilesProperties: (properties: ProfileProperty[]) => void;
 	setActiveProfileID: (profileID: string) => void;
 	setProfilesPageSize: (limit: number) => void;

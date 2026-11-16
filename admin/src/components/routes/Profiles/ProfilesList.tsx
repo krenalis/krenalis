@@ -20,6 +20,7 @@ import { RelativeTime } from '../../base/RelativeTime/RelativeTime';
 import { formatNumber } from '../../../utils/formatNumber';
 import { ProfilesPagination } from './ProfilesPagination';
 import { ProfilesFilters } from './ProfilesFilters';
+import { ProfilesRefreshButton } from './ProfilesRefreshButton';
 import { getPropertyPathDisplayValue } from '../../helpers/getPropertyPathDisplayValue';
 
 const ProfilesList = () => {
@@ -291,15 +292,11 @@ const ProfilesList = () => {
 								<div ref={setFilterGridActionContainer} className='profiles-list__filter-grid-action' />
 							</div>
 							<div className='profiles-list__toolbar-actions'>
-								<WaButton
-									appearance='outlined'
-									size='s'
-									onClick={refreshProfiles}
+								<ProfilesRefreshButton
+									key={selectedWorkspace}
 									disabled={isLoading || isApplyingFilter}
-								>
-									<WaIcon slot='start' name='arrow-clockwise' />
-									Refresh
-								</WaButton>
+									onRefresh={refreshProfiles}
+								/>
 								<WaDropdown
 									className='profiles-list__toggle-columns'
 									placement='bottom-end'

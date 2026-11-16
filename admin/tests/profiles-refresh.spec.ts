@@ -80,6 +80,48 @@ test.beforeEach(async ({ page }) => {
 	await page.addStyleTag({ content: componentStyles });
 });
 
+test('Keep Refresh loading visible for at least 400 ms after a fast response', async ({ page }) => {
+	let queryReads = 0;
+	await page.clock.install({ time: new Date('2026-11-12T12:00:00Z') });
+	await page.route('**/v1/profiles/query', (route) => {
+		queryReads++;
+		return route.fulfill({
+			json: {
+				profiles: [
+					{
+						...profiles[0],
+						attributes: {
+							...profiles[0].attributes,
+							email: queryReads === 1 ? 'profile-1@example.test' : 'Updated profile-1@example.test',
+						},
+					},
+				],
+				total: 1,
+				hasNext: false,
+			},
+		});
+	});
+	await page.addScriptTag({ content: componentScript });
+	const row = page.locator('.profiles-list .grid__row--clickable');
+	await expect(row).toContainText('profile-1@example.test');
+	const refresh = page.locator('.profiles-list__toolbar-actions > wa-button');
+	const refreshButton = refresh.getByRole('button', { name: 'Refresh', exact: true });
+	await expect(refreshButton).toBeEnabled();
+	await page.clock.pauseAt(new Date('2026-11-12T12:01:00Z'));
+	await refreshButton.click();
+	await expect(row).toContainText('Updated profile-1@example.test');
+	const spinner = refresh.locator('wa-spinner');
+	await expect(spinner).toBeVisible();
+	await expect(refreshButton).toBeDisabled();
+	await page.clock.runFor(399);
+	await expect(spinner).toBeVisible();
+	await expect(refreshButton).toBeDisabled();
+	await page.clock.runFor(1);
+	await expect(spinner).toHaveCount(0);
+	await expect(refreshButton).toBeEnabled();
+	expect(queryReads).toBe(2);
+});
+
 for (const failure of [
 	{ status: 503, code: 'ServiceUnavailable', message: 'Data warehouse unavailable' },
 	{
@@ -89,6 +131,8 @@ for (const failure of [
 	},
 ]) {
 	test(`Preserve the profile view after Refresh fails with ${failure.code} and allow a retry`, async ({ page }) => {
+		await page.emulateMedia({ reducedMotion: 'reduce' });
+		await page.clock.install({ time: new Date('2026-11-12T12:00:00Z') });
 		let refreshReads = 0;
 		let markRefreshStarted = () => {};
 		let releaseRefresh = () => {};
@@ -131,13 +175,21 @@ for (const failure of [
 		await expect(page.locator('.profile-drawer')).toContainText('profile-51');
 		const displayedProfileIDs = await rows.evaluateAll((rows) => rows.map((row) => row.getAttribute('data-id')));
 
-		await page.getByRole('button', { name: 'Refresh', exact: true }).click();
+		const refreshButton = page.getByRole('button', { name: 'Refresh', exact: true });
+		await page.clock.pauseAt(new Date('2026-11-12T12:01:00Z'));
+		await refreshButton.click();
 		await refreshStarted;
-		await expect(rows).toHaveCount(50);
-		await expect(page.locator('.profiles-list__pagination-range')).toHaveText('51–100 of 120');
-		await expect(rows.first()).toHaveClass(/grid__row--active/);
-		await expect(page.locator('.profile-drawer')).toContainText('profile-51');
-		releaseRefresh();
+		try {
+			await page.clock.runFor(400);
+			await expect(refreshButton).toBeDisabled();
+			await expect(page.locator('.profiles-list__toolbar-actions > wa-button wa-spinner')).toBeVisible();
+			await expect(rows).toHaveCount(50);
+			await expect(page.locator('.profiles-list__pagination-range')).toHaveText('51–100 of 120');
+			await expect(rows.first()).toHaveClass(/grid__row--active/);
+			await expect(page.locator('.profile-drawer')).toContainText('profile-51');
+		} finally {
+			releaseRefresh();
+		}
 
 		if (failure.code === 'SchemaNotAligned') {
 			const notice = page.locator('.profiles-list__stale-notice');
@@ -152,6 +204,7 @@ for (const failure of [
 		} else {
 			await expect(page.getByRole('alert')).toContainText(failure.message);
 		}
+		await expect(refreshButton).toBeEnabled();
 		await expect(rows).toHaveCount(50);
 		expect(await rows.evaluateAll((rows) => rows.map((row) => row.getAttribute('data-id')))).toEqual(
 			displayedProfileIDs,
@@ -169,6 +222,8 @@ for (const failure of [
 		await expect(rows).toHaveCount(50);
 		await expect(page.locator('.profile-drawer')).toHaveCount(0);
 		await expect(page.locator('.profiles-list__stale-notice')).toHaveCount(0);
+		await page.clock.runFor(400);
+		await expect(refreshButton).toBeEnabled();
 		expect(refreshReads).toBe(3);
 	});
 }

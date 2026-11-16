@@ -538,8 +538,8 @@ const useProfiles = () => {
 		],
 	);
 
-	const refreshProfiles = useCallback(() => {
-		void replaceProfilesExecution({
+	const refreshProfiles = useCallback(async () => {
+		await replaceProfilesExecution({
 			activeProfileID: '',
 			isRefresh: true,
 			filter: appliedFilterRef.current,
