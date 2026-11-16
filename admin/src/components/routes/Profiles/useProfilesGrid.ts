@@ -68,7 +68,7 @@ const useProfilesGrid = (
 		// compute the columns for the grid component.
 		const profileColumns: GridColumn[] = [];
 		profileColumns.push({
-			key: 'profile',
+			key: '$profile',
 			name: 'Profile',
 		});
 		for (const p of profilesProperties) {

@@ -429,7 +429,20 @@ test(`Reorder profile columns without reloading their data and preserve the orde
 			gridRequests++;
 		}
 	});
-	await mockProfiles(page);
+	// A property named profile must not collide with the fixed Profile column.
+	await mockProfiles(page, {
+		propertyRoles: { ...propertyRoles, email: 'profile' },
+		responseProfiles: profiles.map((profile) => ({
+			...profile,
+			attributes: { ...profile.attributes, profile: profile.attributes.email },
+		})),
+		schema: {
+			...profileSchema,
+			properties: profileSchema.properties.map((property) =>
+				property.name === 'email' ? { ...property, name: 'profile', displayName: 'email' } : property,
+			),
+		},
+	});
 	await page.goto(`${adminURL}/profile-unification/profiles`);
 
 	const headers = page.locator('.profiles-list .grid__header-cell');
@@ -501,7 +514,7 @@ test(`Reorder profile columns without reloading their data and preserve the orde
 	await page.evaluate(() => new Promise<void>((resolve) => setTimeout(resolve, 0)));
 	await page.keyboard.press('ArrowLeft');
 	await expect(page.locator('[role="status"][aria-live="assertive"]')).toContainText(
-		'Draggable item last_name was moved over droppable area email.',
+		'Draggable item last_name was moved over droppable area profile.',
 	);
 	await page.keyboard.press('Space');
 
