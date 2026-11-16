@@ -20,7 +20,7 @@ sulla conversione dei Decimal del catalogo nel collector.
 | 2 | P2: operandi numerici Record senza limite lessicale | Il secondo intervento limita a 4096 byte i token Decimal e JSON Number, prima della conversione, in `DecodeFilterOperand`. Copre anche array e rilettura dei filtri salvati; i controlli di precisione 76/scala 37 rimangono. I letterali monetari avevano già lo stesso limite. |
 | 2a | P2: token Decimal nel collector senza limite lessicale | Anche questo percorso nasce nel branch: la base manteneva properties come JSON grezzo. Limitare a 4096 byte i token scalari Decimal prima di `types.Decode`, restituendo un errore di validazione. L'ottimizzazione del parser generico resta separata su main. |
 | 3 | P2: il test dei writer altera il registro globale | Il test ora usa la piattaforma PostgreSQL esistente e salva le impostazioni cifrate nel workspace di prova. Non registra più una piattaforma fittizia e conserva il percorso reale del datastore e dei writer. Il test preesistente della risoluzione delle identità resta invariato. |
-| 4 | P3: riordino degli endpoint | Il rumore è introdotto dalla risoluzione del merge. Ripristinare l'ordine della base, mantenendo la nuova rotta della spiegazione. |
+| 4 | P3: riordino degli endpoint | Ripristinato l'ordine della base per la rotta iniziale, le metriche e le organizzazioni. In `cmd/endpoints.go` resta soltanto l'aggiunta della rotta della spiegazione rispetto a json-filter-support. |
 | 5 | P3: `Filter.HasCount` senza chiamanti di produzione | Il metodo nasce nel branch ed è stato sostituito da `RequiresUnified`. Rimuovere l'API inutilizzata e semplificare la visita; aggiornare tutti i test che lo chiamano. |
 | 6 | P3: documentazione del catalogo inesatta | Il README MCP nega effetti sull'ingresso, ma il decoder valida e normalizza. Documentare il comportamento effettivo e le conseguenze di compatibilità secondo la decisione sul P1. |
 
@@ -213,6 +213,31 @@ state lette credenziali Snowflake né eseguite prove remote. Log del
 controesempio e delle verifiche in
 `/private/tmp/krenalis-review-p2-writers-28hq4gqd/`.
 L'intervento è pronto per la revisione; gli altri rilievi non sono modificati.
+
+Il revisore ha approvato `7a8ec77e3`, confermando la copertura dei writer e
+ripetendo la suite completa con gli stessi risultati. Il P2 sull'isolamento
+del test dei writer è chiuso.
+
+## P3: ordine degli endpoint
+
+Ripristinato in `cmd/endpoints.go` l'ordine precedente al merge: `GET /{$}`
+prima delle altre rotte GET, le metriche della risoluzione delle identità
+prima di quelle delle identità e `/organizations/{id}` prima di
+`/organizations`. La rotta `filter-explanation` resta nella posizione attuale.
+
+Verifiche:
+
+- I 123 abbinamenti tra rotte e handler sono identici a quelli del parent.
+  Rimuovendo la sola riga `filter-explanation`, il file è identico byte per
+  byte alla base json-filter-support `fece0a984`.
+- `go test -mod=vendor ./cmd -short -race -count=1 -json`: 220 nodi PASS,
+  nessun FAIL o SKIP.
+- `go vet -mod=vendor ./cmd`, gofmt e controllo del diff: puliti.
+
+Log e risultato del confronto in
+`/private/tmp/krenalis-review-p3-endpoints-he953412/`.
+L'intervento è pronto per la revisione. `Filter.HasCount` e la documentazione
+residua non sono stati modificati.
 
 ## Nota da riportare nel rilascio
 
