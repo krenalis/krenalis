@@ -129,6 +129,11 @@ func TestLoad(t *testing.T) {
 			expectedAbsent: []string{"KRENALIS SPACE\tKEY"},
 		},
 		{
+			name:           "skip commented-out variables",
+			envContent:     []byte("#KRENALIS_COMMENTED=value\n  #KRENALIS_COMMENTED_SPACED=value\n#=value\n"),
+			expectedAbsent: []string{"#KRENALIS_COMMENTED", "#KRENALIS_COMMENTED_SPACED", "#"},
+		},
+		{
 			name:           "skip value containing NUL",
 			envContent:     []byte("KRENALIS_KEY=zero\x00value\n"),
 			expectedAbsent: []string{"KRENALIS_KEY=zero\x00value"},

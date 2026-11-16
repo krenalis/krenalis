@@ -83,6 +83,10 @@ func Load(name string) error {
 	for line := 1; len(rest) > 0; line++ {
 
 		v, rest, _ = bytes.Cut(rest, []byte("\n"))
+		// Skip comment lines.
+		if bytes.HasPrefix(bytes.TrimLeft(v, " \t"), []byte("#")) {
+			continue
+		}
 		k, v, found = bytes.Cut(v, []byte("="))
 		if !found {
 			continue
