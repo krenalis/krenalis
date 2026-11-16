@@ -134,12 +134,20 @@ convertibile come dato assente e non si allarga silenziosamente il tipo a JSON.
 Le regole future saranno valutate sui casi del catalogo e confrontate con i
 mapping senza obbligo di condividere implementazione o tutte le conversioni.
 
-Il collector attualmente scarta l'intero evento che non supera la validazione,
-senza una segnalazione dedicata dello scarto. La decisione fra rifiuto e
-conservazione del campo non conforme, e la relativa osservabilità, è stata
-esplicitamente rinviata da Marco dopo la revisione. Questo incremento non
-modifica tale politica. Prima di esporre i dettagli degli errori sarà necessario
-anche limitarne i valori e rendere i messaggi adatti all'utente.
+Il 16 novembre 2026 Marco ha confermato lo scarto dell'intero evento che non
+supera la validazione, senza una segnalazione osservabile dedicata. Il collector
+continua a rispondere con successo: non restituisce un errore al client e non
+registra lo scarto in log, metriche o osservatore Admin. L'evento non raggiunge
+le pipeline e non contribuisce all'import o al collegamento delle identità.
+In un batch gli altri eventi continuano a essere elaborati.
+
+Questa è una modifica di compatibilità dell'ingresso per tutti i workspace:
+anche payload accettati prima del catalogo possono essere scartati. Per esempio,
+`traits.company: "Acme"`, `traits.email: null`, `properties.title: null` su page
+e `properties.total: "10.50"` su Order Completed non rispettano gli schemi.
+Gli eventi conformi sono normalizzati; non viene conservata una copia del JSON
+precedente alla normalizzazione. Non si introduce una conversione automatica
+delle rappresentazioni non conformi.
 
 Le eventuali tabelle per evento e per gli elementi degli array restano future.
 Una rappresentazione a sole colonne potrebbe accorpare assenza e null esplicito:

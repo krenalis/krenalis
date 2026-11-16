@@ -52,6 +52,21 @@ func TestDecoderWorkspaceEventCatalog(t *testing.T) {
 			errorPath: "properties.total",
 		},
 		{
+			name:      "textual order total",
+			body:      `{"type":"track","event":"Order Completed","userId":"u","properties":{"total":"10.50"}}`,
+			errorPath: "properties.total",
+		},
+		{
+			name:      "order total beyond scale four",
+			body:      `{"type":"track","event":"Order Completed","userId":"u","properties":{"total":10.12345}}`,
+			errorPath: "properties.total",
+		},
+		{
+			name:      "textual product price",
+			body:      `{"type":"track","event":"Order Completed","userId":"u","properties":{"products":[{"price":"9.99"}]}}`,
+			errorPath: "properties.products[0].price",
+		},
+		{
 			name:      "nullable does not apply to every field",
 			body:      `{"type":"track","event":"Order Completed","userId":"u","properties":{"total":null}}`,
 			errorPath: "properties.total",
@@ -127,6 +142,51 @@ func TestDecoderWorkspaceEventCatalog(t *testing.T) {
 			traits: `{"birthday":"2000-01-02","createdAt":"2026-11-04T11:00:00Z","extra":null}`,
 		},
 		{
+			name:      "textual company",
+			body:      `{"type":"identify","userId":"u","traits":{"company":"Acme"}}`,
+			errorPath: "traits.company",
+		},
+		{
+			name:      "textual address",
+			body:      `{"type":"identify","userId":"u","traits":{"address":"Via Roma 1"}}`,
+			errorPath: "traits.address",
+		},
+		{
+			name:      "null email",
+			body:      `{"type":"identify","userId":"u","traits":{"email":null}}`,
+			errorPath: "traits.email",
+		},
+		{
+			name:      "null first and last names",
+			body:      `{"type":"identify","userId":"u","traits":{"firstName":null,"lastName":null}}`,
+			errorPath: "traits.firstName",
+		},
+		{
+			name:      "birthday as JavaScript date JSON",
+			body:      `{"type":"identify","userId":"u","traits":{"birthday":"1990-01-01T00:00:00.000Z"}}`,
+			errorPath: "traits.birthday",
+		},
+		{
+			name:      "textual age",
+			body:      `{"type":"identify","userId":"u","traits":{"age":"30"}}`,
+			errorPath: "traits.age",
+		},
+		{
+			name:      "numeric phone",
+			body:      `{"type":"identify","userId":"u","traits":{"phone":5551234}}`,
+			errorPath: "traits.phone",
+		},
+		{
+			name:      "numeric person identifier",
+			body:      `{"type":"identify","userId":"u","traits":{"id":123}}`,
+			errorPath: "traits.id",
+		},
+		{
+			name:      "numeric account creation timestamp",
+			body:      `{"type":"identify","userId":"u","traits":{"createdAt":1700000000}}`,
+			errorPath: "traits.createdAt",
+		},
+		{
 			name:   "company text identifier",
 			body:   `{"type":"identify","userId":"u","traits":{"company":{"id":"acme-42"}}}`,
 			traits: `{"company":{"id":"acme-42"}}`,
@@ -172,6 +232,11 @@ func TestDecoderWorkspaceEventCatalog(t *testing.T) {
 			properties: `{"title":"Welcome","extra":null}`, traits: `{}`,
 		},
 		{
+			name:      "null page title",
+			body:      `{"type":"page","userId":"u","properties":{"title":null}}`,
+			errorPath: "properties.title",
+		},
+		{
 			name:       "named screen preserves keys outside native grammar",
 			body:       `{"type":"screen","userId":"u","name":"Home","properties":{"Feed Type":"news"}}`,
 			properties: `{"Feed Type":"news"}`, traits: `{}`,
@@ -180,6 +245,11 @@ func TestDecoderWorkspaceEventCatalog(t *testing.T) {
 			name:       "proposed types remain unconstrained",
 			body:       `{"type":"track","event":"Order Created","userId":"u","properties":{"total":"custom representation"}}`,
 			properties: `{"total":"custom representation"}`, traits: `{}`,
+		},
+		{
+			name:      "textual common revenue",
+			body:      `{"type":"track","event":"Signed In","userId":"u","properties":{"revenue":"1"}}`,
+			errorPath: "properties.revenue",
 		},
 		{
 			name:       "unknown track unchanged",

@@ -44,7 +44,12 @@ raw JSON predicate semantics. It explicitly excludes inferred capabilities for
 arrays, sums, governed bindings and identity definitions. For page/screen Count,
 the generic catalog definition supplies metadata; the source uses `type` and an
 optional recorded `name`, never the catalog ID or display label.
-The catalog does not change invalid-event handling or ingestion conversions.
+At ingestion, the decoder validates and normalizes catalog-defined traits and
+properties. A schema violation discards the entire event, including identity
+processing, without a dedicated log, metric, observer entry or client error;
+the collector still returns success. Valid values use the existing scalar
+decoding rules, with no additional coercions. The catalog does not certify
+historical data.
 
 ## Access and connections
 

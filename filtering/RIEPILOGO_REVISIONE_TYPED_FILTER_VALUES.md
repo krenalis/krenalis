@@ -100,6 +100,16 @@ compatibilità esatta con i filtri precedenti.
 Il commit `1e95ed5bf` e RELEASE-UPGRADE.md registrano questa decisione. Lo studio
 di una migrazione conservativa è stato interrotto: non è un'attività pendente.
 
+Il catalogo introduce anche una modifica di compatibilità nell'ingresso eventi,
+comune a tutti i workspace. Il decoder valida e normalizza traits e properties
+quando la definizione corrispondente ne specifica lo schema. Il 16 novembre
+l'utente ha confermato lo scarto dell'intero evento non conforme, senza log,
+metriche, osservatore o errore al client dedicati: la richiesta resta riuscita.
+Si perde anche l'elaborazione delle identità di quell'evento. I payload conformi
+possono cambiare rappresentazione, per esempio date in UTC, decimali canonici
+e ordine delle chiavi. Questo effetto va comunicato nelle note di rilascio;
+gli eventi storici non vengono rivalidati o riscritti.
+
 Rispetto a json-filter-support, la modifica strutturale di schema.sql è la
 rimozione delle due colonne delle credenziali MCP. Le note di rilascio mantengono
 anche i passi Year già previsti dalla base. La base dichiarata nelle note è
@@ -132,10 +142,10 @@ delta. Le revisioni incrementali sono evidenze utili, non una prova globale.
 | Admin | Precisione nel browser e nel trasporto, richieste e query string, editor/parser, Sync-Token e mancata reintroduzione delle impostazioni MCP ritirate. |
 | Documentazione | Guida MCP e messaggi devono descrivere le capacità effettive, i significati di ordine/spesa, i limiti e i cambiamenti di accesso. Distinguere le evidenze storiche dalla verifica del codice integrato. |
 
-Nel collector, gli errori di validazione fanno oggi proseguire il ciclo senza
-inoltrare l'evento. La decisione sull'osservabilità e sulla politica degli
-scarti era stata rinviata. Il revisore deve rendere esplicito questo effetto
-dell'integrazione del catalogo; questo documento non ne decide una modifica.
+Nel collector, gli errori di validazione fanno proseguire il ciclo senza
+inoltrare l'evento. Lo scarto senza segnalazione osservabile è ora una scelta
+esplicita dell'utente, confermata il 16 novembre 2026 dopo la revisione
+approfondita. Le conseguenze sono descritte nella compatibilità di rilascio.
 
 ## Verifiche già disponibili
 
@@ -166,8 +176,10 @@ Sono artefatti locali temporanei, non sostituti dei test ripetibili nel reposito
 
 Le esecuzioni live precedenti, con commit e formati osservati, sono riportate
 nel runbook. Non vanno presentate come nuove prove remote dopo il merge.
-La campagna del 16 novembre verifica invece il codice integrato. Dopo le prove
-sono aggiornati solo questo documento, il README Unified e il runbook.
+La campagna del 16 novembre verifica invece il codice integrato. Il commit
+`45c6a9f12` aggiorna solo questo documento, il README Unified e il runbook.
+Il successivo intervento sul P1 aggiunge test e documenta la politica di scarto
+confermata dall'utente, senza cambiare il comportamento di produzione.
 
 ## Snowflake e lavori separati
 
