@@ -801,7 +801,6 @@ const ProfilesFilters = ({
 								<FilterEditor
 									errors={validationErrors}
 									filter={session.draft}
-									hoistMenus={true}
 									onChange={onDraftChange}
 									onCommit={onDraftCommit}
 									role='Destination'

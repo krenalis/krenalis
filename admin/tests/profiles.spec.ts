@@ -652,7 +652,7 @@ test(`Apply a completed filter explicitly`, async ({ page }) => {
 			viewportBottom: window.innerHeight,
 		};
 	});
-	expect(propertyMenuLayout.position).toBe('fixed');
+	expect(propertyMenuLayout.position).toBe('absolute');
 	expect(propertyMenuLayout.lastItemBottom).toBeLessThanOrEqual(propertyMenuLayout.viewportBottom);
 	expect(propertyMenuLayout.lastItemIsVisible).toBe(true);
 	await property.locator('input').fill('First');

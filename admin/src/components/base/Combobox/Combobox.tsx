@@ -37,7 +37,6 @@ interface ComboboxProps {
 	controlled?: boolean;
 	autoResize?: boolean;
 	disabled?: boolean;
-	hoist?: boolean;
 	indentation?: number;
 	children?: ReactNode;
 	label?: string;
@@ -68,7 +67,6 @@ const Combobox = ({
 	controlled = false,
 	autoResize,
 	disabled = false,
-	hoist = false,
 	indentation,
 	children,
 	label,
@@ -275,44 +273,14 @@ const Combobox = ({
 			return;
 		}
 		const list = listRef.current;
-		const positionList = () => {
-			if (hoist) {
-				const inputRect = inputRef.current.getBoundingClientRect();
-				const viewportSpacing = parseFloat(getComputedStyle(list).getPropertyValue('--wa-space-s'));
-				const spacing = Number.isFinite(viewportSpacing) ? viewportSpacing : 8;
-				const width = Math.min(Math.max(inputRect.width, listWidth ?? 0), window.innerWidth - spacing * 2);
-				list.style.width = `${width}px`;
-				const listRect = list.getBoundingClientRect();
-				const placeAbove =
-					listRect.height > window.innerHeight - inputRect.bottom &&
-					inputRect.top > window.innerHeight - inputRect.bottom;
-				const preferredTop = placeAbove ? inputRect.top - listRect.height : inputRect.bottom;
-				const top = Math.max(spacing, Math.min(preferredTop, window.innerHeight - listRect.height - spacing));
-				list.style.left = `${Math.max(spacing, Math.min(inputRect.left, window.innerWidth - width - spacing))}px`;
-				list.style.top = `${top}px`;
-				list.style.bottom = 'auto';
-				list.classList.remove('combobox-list--top');
-			} else {
-				const rect = list.getBoundingClientRect();
-				list.classList.toggle('combobox-list--top', rect.bottom > window.innerHeight);
-			}
-		};
-
 		list.classList.add('combobox-list--computing-position');
 		const timeoutID = window.setTimeout(() => {
-			positionList();
+			const rect = list.getBoundingClientRect();
+			list.classList.toggle('combobox-list--top', rect.bottom > window.innerHeight);
 			list.classList.remove('combobox-list--computing-position');
 		}, 20);
-		if (hoist) {
-			window.addEventListener('resize', positionList);
-			window.addEventListener('scroll', positionList, true);
-		}
-		return () => {
-			window.clearTimeout(timeoutID);
-			window.removeEventListener('resize', positionList);
-			window.removeEventListener('scroll', positionList, true);
-		};
-	}, [hoist, isOpen, listWidth]);
+		return () => window.clearTimeout(timeoutID);
+	}, [isOpen, listWidth]);
 
 	useLayoutEffect(() => {
 		if (enumValues == null) {
@@ -626,7 +594,7 @@ const Combobox = ({
 
 	return (
 		<div
-			className={`combobox${isOpen ? ' combobox--open' : ''}${isExpression ? ' combobox--expression' : ''}${caret ? ' combobox--caret' : ''}${hoist ? ' combobox--hoist' : ''}${className ? ` ${className}` : ''}`}
+			className={`combobox${isOpen ? ' combobox--open' : ''}${isExpression ? ' combobox--expression' : ''}${caret ? ' combobox--caret' : ''}${className ? ` ${className}` : ''}`}
 			data-id={name}
 			style={
 				{

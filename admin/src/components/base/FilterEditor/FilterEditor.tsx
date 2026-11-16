@@ -82,7 +82,6 @@ interface FilterEditorProps {
 	emptyFilterFocusRef?: RefObject<HTMLElement>;
 	errors?: Record<string, string>;
 	filter: Filter | null;
-	hoistMenus?: boolean;
 	onChange: (filter: Filter | null) => void;
 	onCommit?: (filter: Filter | null) => void;
 	propertiesToHide?: string[];
@@ -100,7 +99,6 @@ const FilterEditor = ({
 	emptyFilterFocusRef,
 	errors,
 	filter,
-	hoistMenus = false,
 	onChange,
 	onCommit,
 	propertiesToHide = NO_HIDDEN_PROPERTIES,
@@ -487,7 +485,6 @@ const FilterEditor = ({
 				caret={true}
 				controlled={true}
 				autoResize={true}
-				hoist={hoistMenus}
 				error={
 					errors == null &&
 					condition.property !== '' &&

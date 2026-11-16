@@ -261,6 +261,16 @@ html.profiles-columns-transition::view-transition-new(*):only-child {
 	overflow: hidden;
 }
 
+.profiles-list__filters--expanded .profiles-list__filter-disclosure-clip {
+	animation: profiles-list__filter-overflow 0s var(--wa-transition-normal) forwards;
+}
+
+@keyframes profiles-list__filter-overflow {
+	to {
+		overflow: visible;
+	}
+}
+
 .profiles-list__filter-expanded-content {
 	column-gap: 26px;
 	display: grid;
@@ -316,6 +326,11 @@ html.profiles-columns-transition::view-transition-new(*):only-child {
 }
 
 @media (prefers-reduced-motion: reduce) {
+	.profiles-list__filters--expanded .profiles-list__filter-disclosure-clip {
+		animation: none;
+		overflow: visible;
+	}
+
 	.profiles-list__filter-summary-content,
 	.profiles-list__filter-editor-disclosure,
 	.profiles-list__filters--expanded .profiles-list__filter-summary-content,
