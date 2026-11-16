@@ -22,6 +22,7 @@ import (
 // It does not enforce cardinality, string limits, or allowed string values.
 // Integer thresholds use 64-bit ranges; decimal thresholds use the global
 // precision and scale limits, independently of the property's narrower range.
+// Decimal and JSON Number tokens are limited to 4096 bytes before conversion.
 func DecodeFilterOperand(value json.Value, typ types.Type, operator WhereOperator) (any, error) {
 
 	if !typ.Valid() || operator < OpIs || operator > OpDoesNotExist {
@@ -111,6 +112,9 @@ func DecodeFilterOperand(value json.Value, typ types.Type, operator WhereOperato
 		if !value.IsNumber() {
 			return nil, errors.New("decimal filter operand must be a JSON Number")
 		}
+		if len(value) > 4096 {
+			return nil, errors.New("decimal operand exceeds the input length limit")
+		}
 		v, err := value.Decimal(0, 0)
 		if err != nil {
 			return nil, err
@@ -126,6 +130,9 @@ func DecodeFilterOperand(value json.Value, typ types.Type, operator WhereOperato
 		case json.Number:
 			if operator == OpStartsWith || operator == OpEndsWith {
 				return nil, errors.New("JSON prefix and suffix operands must be strings")
+			}
+			if len(value) > 4096 {
+				return nil, errors.New("JSON number operand exceeds the input length limit")
 			}
 			v, err := value.Decimal(0, 0)
 			if err != nil {

@@ -159,7 +159,8 @@ type FilterCondition struct {
 
 	// Values are JSON operands whose kinds must match the property's type.
 	// String operands are limited to 80 runes without NUL, except allowed values.
-	// Decimal and JSON Number operands must fit precision 76 and scale 37.
+	// Decimal and JSON Number tokens are limited to 4096 bytes and must fit
+	// precision 76 and scale 37.
 	Values []json.Value `json:"values,omitzero"`
 }
 

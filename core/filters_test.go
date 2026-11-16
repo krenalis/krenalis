@@ -1127,6 +1127,37 @@ func TestDecodeFilterUnsignedOperand(t *testing.T) {
 	}
 }
 
+// TestPrepareFilterNumberInputLimit bounds scalar and array numeric operands.
+func TestPrepareFilterNumberInputLimit(t *testing.T) {
+	for _, typ := range []types.Type{
+		types.Decimal(5, 2), types.JSON(), types.Array(types.Decimal(5, 2)), types.Array(types.JSON()),
+	} {
+		for _, length := range []int{4096, 4097} {
+			t.Run(fmt.Sprintf("%s/%d", typ, length), func(t *testing.T) {
+				schema := types.Object([]types.Property{{Name: "value", Type: typ}})
+				op := OpIs
+				if typ.IsArray() {
+					op = OpContains
+				}
+				filter := &Filter{Operator: OpAnd, Rules: []FilterRule{
+					&FilterCondition{Property: "value", Operator: op,
+						Values: []json.Value{json.Value("0." + strings.Repeat("0", length-2))}},
+				}}
+				_, _, err := prepareFilter(filter, schema)
+				if err != nil {
+					if length == 4096 || !strings.Contains(err.Error(), "input length limit") {
+						t.Fatalf("expected input length error only above 4096 bytes, got %v", err)
+					}
+					return
+				}
+				if length > 4096 {
+					t.Fatal("expected input length error, got nil")
+				}
+			})
+		}
+	}
+}
+
 // Test_resolveFilterProperty verifies resolution of filter property paths.
 func Test_resolveFilterProperty(t *testing.T) {
 

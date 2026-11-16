@@ -5,7 +5,7 @@ Valutazione del 16 novembre 2026 sul commit
 json-filter-support (`fece0a984eb1e89c33de71fe16512fcfd4beb262`) e main locale
 (`f796b4f57a280bb70767479cb142132c121f7ea9`).
 
-La [revisione approfondita di Claude](filtering/claude/revisione-approfondita-typed-filter-values.md)
+La revisione approfondita di Claude
 non segnala difetti nella semantica Unified. Individua sei rilievi da gestire
 in questo branch. Alcuni coinvolgono codice preesistente, ma il comportamento
 problematico è introdotto o esposto dalle modifiche del branch.
@@ -15,7 +15,7 @@ problematico è introdotto o esposto dalle modifiche del branch.
 | Ordine | Rilievo | Valutazione e intervento |
 | --- | --- | --- |
 | 1 | P1: scarto degli eventi non conformi al catalogo | L'applicazione obbligatoria dei nuovi schemi amplia gli scarti rispetto alla base. Il 16 novembre l'utente ha confermato lo scarto dell'intero evento senza segnalazione osservabile. Il comportamento attuale resta; il primo intervento ne esplicita la compatibilità e aggiunge i casi della revisione ai test. |
-| 2 | P2: operandi numerici Record senza limite lessicale | Main e la base limitavano anche gli operandi numerici a 80 caratteri. Il nuovo percorso tipizzato ha perso questa protezione. Il limite va applicato prima della conversione decimale; i letterali monetari hanno già un controllo di 4096 byte. |
+| 2 | P2: operandi numerici Record senza limite lessicale | Il secondo intervento limita a 4096 byte i token Decimal e JSON Number, prima della conversione, in `DecodeFilterOperand`. Copre anche array e rilettura dei filtri salvati; i controlli di precisione 76/scala 37 rimangono. I letterali monetari avevano già lo stesso limite. |
 | 3 | P2: il test dei writer altera il registro globale | La piattaforma fittizia registrata dal nuovo test fa fallire il test preesistente della risoluzione delle identità. La correzione preferita è isolare il nuovo test evitando la registrazione globale, conservando la copertura dei writer reali. |
 | 4 | P3: riordino degli endpoint | Il rumore è introdotto dalla risoluzione del merge. Ripristinare l'ordine della base, mantenendo la nuova rotta della spiegazione. |
 | 5 | P3: `Filter.HasCount` senza chiamanti di produzione | Il metodo nasce nel branch ed è stato sostituito da `RequiresUnified`. Rimuovere l'API inutilizzata e semplificare la visita; aggiornare tutti i test che lo chiamano. |
@@ -54,8 +54,9 @@ che quell'evento non raggiunge pipeline e identità e che i batch proseguono
 con gli altri eventi. I test coprono i 14 esempi della revisione con il
 catalogo di produzione, verificando l'errore e l'assenza dell'evento decodificato.
 La documentazione del catalogo segnalata nel P3 viene allineata per la parte
-necessaria al P1. Gli altri interventi restano da affrontare dopo la revisione
-di questo primo passo.
+necessaria al P1. Il revisore ha approvato il primo intervento, commit
+`3a3c0a646`, senza rilievi bloccanti. La posizione di questo documento nella
+root è richiesta dall'utente; il link al rapporto locale non tracciato è rimosso.
 
 ## Verifiche del primo intervento
 
@@ -67,7 +68,43 @@ di questo primo passo.
 
 Sono aggiunti 14 casi di rifiuto; nessun file Go di produzione cambia.
 I log locali sono in `/private/tmp/krenalis-review-p1-agkcn7ee/collector.jsonl`.
-Il primo intervento è pronto per la revisione. Non sono iniziati gli altri.
+Il revisore ha ripetuto test e controlli in una worktree pulita, confermando
+questi risultati. Il primo intervento è approvato.
+
+## Secondo intervento: limite degli operandi numerici
+
+`DecodeFilterOperand` controlla la lunghezza dei token Decimal e JSON Number
+prima di chiamare il parser decimale. Il limite è 4096 byte, dopo la rimozione
+degli spazi esterni. I token entro il limite restano soggetti ai normali
+controlli di precisione e scala. La conversione e la gestione degli altri tipi
+non cambiano; il parser generico resta oggetto della issue #2774 su main.
+
+I test coprono il confine 4096/4097, zeri rappresentabili con molti decimali,
+numeri che superano la precisione, spazi esterni, array e filtri persistiti.
+Una String JSON lunga non viene trattata come un Number. Sonde e mutanti
+esterni verificano anche l'ordine del controllo rispetto alla conversione.
+Gli altri rilievi restano sospesi fino alla revisione di questo intervento.
+
+### Verifiche del secondo intervento
+
+- Test mirati con race detector: 89 PASS.
+- `go test -mod=vendor ./core/internal/state ./core ./cmd/internal/mcp -short -race -count=1 -json`:
+  2.595 PASS (561 state, 1.997 core, 37 MCP) e 5 SKIP dei test d'integrazione
+  esclusi da `-short`. I test PostgreSQL di state usano container locali.
+- Una sonda esterna interrompe il test se un token oltre 4096 byte raggiunge
+  `json.Value.Decimal`: 25 PASS con l'implementazione corretta.
+- Tre mutanti sono rilevati: eliminazione delle guardie, uso di `>= 4096`
+  e controllo spostato dopo il parsing. Quest'ultimo è eseguito con la sonda
+  precedente, senza misurare tempi di esecuzione.
+- Vet dei tre pacchetti, gofmt dei file Go modificati e controllo del diff:
+  puliti.
+
+La prima regressione era stata bloccata dai permessi della sandbox su Docker
+e sulle porte locali; la ripetizione autorizzata è quella riuscita. Log,
+overlay e risultati dei mutanti sono in
+`/private/tmp/krenalis-review-p2-numbers-meq8snaj/`.
+Questo intervento è pronto per la revisione; il test dei writer e le altre
+correzioni non sono stati modificati.
 
 ## Nota da riportare nel rilascio
 

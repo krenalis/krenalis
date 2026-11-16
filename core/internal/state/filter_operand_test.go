@@ -5,6 +5,7 @@
 package state
 
 import (
+	"fmt"
 	"math"
 	"reflect"
 	"strconv"
@@ -87,6 +88,7 @@ func TestDecodeFilterOperand(t *testing.T) {
 		{"JSON exponent", types.JSON(), OpIs, json.Value("1e2"), json.Value("100"), false},
 		{"JSON extreme zero", types.JSON(), OpIs, json.Value("-0.00e-20000000000000000000"), json.Value("0"), false},
 		{"JSON String", types.JSON(), OpIs, json.Value(`"100"`), json.Value(`"100"`), false},
+		{"JSON long String", types.JSON(), OpIs, json.Value(`"` + strings.Repeat("7", 4097) + `"`), json.Value(`"` + strings.Repeat("7", 4097) + `"`), false},
 		{"JSON empty String", types.JSON(), OpContains, json.Value(`""`), json.Value(`""`), false},
 		{"JSON Number precision", types.JSON(), OpIs, json.Value("1e76"), nil, true},
 		{"JSON Number scale", types.JSON(), OpIs, json.Value("1e-38"), nil, true},
@@ -146,6 +148,44 @@ func TestDecodeFilterOperand(t *testing.T) {
 				t.Fatalf("expected %#v, got %#v", test.want, got)
 			}
 		})
+	}
+}
+
+// TestDecodeFilterOperandInputLimit bounds work before decimal conversion.
+func TestDecodeFilterOperandInputLimit(t *testing.T) {
+	for _, operand := range []struct {
+		name, prefix string
+		typ          types.Type
+		zero         any
+	}{
+		{"decimal", "decimal operand", types.Decimal(5, 2), decimal.MustParse("0")},
+		{"JSON", "JSON number operand", types.JSON(), json.Value("0")},
+	} {
+		for _, test := range []struct {
+			name, raw, errorMessage string
+		}{
+			{"at limit", "0." + strings.Repeat("0", 4094), ""},
+			{"at limit with whitespace", " \n0." + strings.Repeat("0", 4094) + "\t ", ""},
+			{"above limit", "0." + strings.Repeat("0", 4095), operand.prefix + " exceeds the input length limit"},
+			{"at limit exceeds precision", strings.Repeat("7", 4096), operand.prefix + " exceeds precision 76 or scale 37"},
+			{"above limit exceeds precision", strings.Repeat("7", 4097), operand.prefix + " exceeds the input length limit"},
+		} {
+			t.Run(operand.name+"/"+test.name, func(t *testing.T) {
+				got, err := DecodeFilterOperand(json.Value(test.raw), operand.typ, OpIs)
+				if err != nil {
+					if err.Error() != test.errorMessage {
+						t.Fatalf("expected error %q, got %v", test.errorMessage, err)
+					}
+					return
+				}
+				if test.errorMessage != "" {
+					t.Fatalf("expected error %q, got nil", test.errorMessage)
+				}
+				if !reflect.DeepEqual(got, operand.zero) {
+					t.Fatalf("expected zero operand %#v, got %#v", operand.zero, got)
+				}
+			})
+		}
 	}
 }
 
@@ -267,6 +307,29 @@ func TestWhereTypedPersistence(t *testing.T) {
 	}
 	if !loaded.Equal(again) {
 		t.Fatal("expected equivalent persisted filters, got unequal values")
+	}
+}
+
+// TestWhereTypedPersistenceNumberInputLimit bounds persisted numeric tokens.
+func TestWhereTypedPersistenceNumberInputLimit(t *testing.T) {
+	for _, typ := range []types.Type{types.Decimal(5, 2), types.JSON()} {
+		for _, length := range []int{4096, 4097} {
+			t.Run(fmt.Sprintf("%s/%d", typ, length), func(t *testing.T) {
+				schema := types.Object([]types.Property{{Name: "value", Type: typ}})
+				data := `{"operator":"And","rules":[{"property":["value"],"operator":"Is","values":[0.` +
+					strings.Repeat("0", length-2) + `]}]}`
+				_, err := unmarshalWhere([]byte(data), schema)
+				if err != nil {
+					if length == 4096 || !strings.Contains(err.Error(), "input length limit") {
+						t.Fatalf("expected input length error only above 4096 bytes, got %v", err)
+					}
+					return
+				}
+				if length > 4096 {
+					t.Fatal("expected input length error, got nil")
+				}
+			})
+		}
 	}
 }
 
