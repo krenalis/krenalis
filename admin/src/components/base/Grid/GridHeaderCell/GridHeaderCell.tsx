@@ -9,18 +9,18 @@ interface GridHeaderCellProps {
 	className?: string;
 	explanation?: string;
 	reorderHandle?: ReactNode;
-	semanticCell?: boolean;
+	isInteractiveGrid?: boolean;
 	style?: CSSProperties;
 }
 
 const GridHeaderCell = forwardRef<HTMLDivElement, GridHeaderCellProps>(
-	({ value, alignment, explanation, className, reorderHandle, semanticCell, style }, ref) => {
+	({ value, alignment, explanation, className, reorderHandle, isInteractiveGrid, style }, ref) => {
 		const explanationID = useId();
 		return (
 			<div
 				ref={ref}
-				role={semanticCell ? 'columnheader' : undefined}
-				aria-label={semanticCell && reorderHandle != null ? value : undefined}
+				role={isInteractiveGrid ? 'columnheader' : undefined}
+				aria-label={isInteractiveGrid && reorderHandle != null ? value : undefined}
 				className={`${className}${value === '' ? ' grid__header-cell--empty' : ''}${alignment != null ? ` grid__cell--${alignment}` : ''}`}
 				style={style}
 			>

@@ -28,10 +28,10 @@ interface SortableGridHeaderCellProps {
 	className: string;
 	column: GridColumn;
 	columnKey: string;
-	semanticCell?: boolean;
+	isInteractiveGrid?: boolean;
 }
 
-const SortableGridHeaderCell = ({ className, column, columnKey, semanticCell }: SortableGridHeaderCellProps) => {
+const SortableGridHeaderCell = ({ className, column, columnKey, isInteractiveGrid }: SortableGridHeaderCellProps) => {
 	const { attributes, isDragging, listeners, setActivatorNodeRef, setNodeRef, transform, transition } = useSortable({
 		id: columnKey,
 	});
@@ -59,7 +59,7 @@ const SortableGridHeaderCell = ({ className, column, columnKey, semanticCell }: 
 					<WaIcon name='grip-vertical' aria-hidden='true' />
 				</button>
 			}
-			semanticCell={semanticCell}
+			isInteractiveGrid={isInteractiveGrid}
 			style={style}
 		/>
 	);
@@ -68,10 +68,10 @@ const SortableGridHeaderCell = ({ className, column, columnKey, semanticCell }: 
 interface GridHeaderRowProps {
 	columns: GridColumn[];
 	onSortColumn?: (overColumnKey: string, movedColumnKey: string) => void;
-	semanticRow?: boolean;
+	isInteractiveGrid?: boolean;
 }
 
-const GridHeaderRow = ({ columns, onSortColumn, semanticRow }: GridHeaderRowProps) => {
+const GridHeaderRow = ({ columns, onSortColumn, isInteractiveGrid }: GridHeaderRowProps) => {
 	const [activeColumnKey, setActiveColumnKey] = useState<string>();
 	const sensors = useSensors(
 		useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
@@ -94,7 +94,7 @@ const GridHeaderRow = ({ columns, onSortColumn, semanticRow }: GridHeaderRowProp
 					className={`grid__header-cell ${className}`}
 					column={column}
 					columnKey={column.key}
-					semanticCell={semanticRow}
+					isInteractiveGrid={isInteractiveGrid}
 				/>,
 			);
 			continue;
@@ -106,13 +106,13 @@ const GridHeaderRow = ({ columns, onSortColumn, semanticRow }: GridHeaderRowProp
 				value={column.name}
 				alignment={column.alignment}
 				explanation={column.explanation}
-				semanticCell={semanticRow}
+				isInteractiveGrid={isInteractiveGrid}
 			/>,
 		);
 	}
 
 	const headerRow = (
-		<div className='grid__header-row' role={semanticRow ? 'row' : undefined}>
+		<div className='grid__header-row' role={isInteractiveGrid ? 'row' : undefined}>
 			{gridHeaderCells}
 		</div>
 	);

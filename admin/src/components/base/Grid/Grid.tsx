@@ -194,7 +194,7 @@ const Grid = forwardRef<GridRef, GridProps>(
 						domID={
 							gridID != null && row.id != null ? `${gridID}-row-${encodeURIComponent(row.id)}` : undefined
 						}
-						semanticRow={hasControlledActiveItem}
+						isInteractiveGrid={hasControlledActiveItem}
 					/>
 				);
 				const sortableRow = row as SortableGridRow;
@@ -270,7 +270,7 @@ const Grid = forwardRef<GridRef, GridProps>(
 						<GridHeaderRow
 							columns={columns}
 							onSortColumn={onSortColumn}
-							semanticRow={hasControlledActiveItem}
+							isInteractiveGrid={hasControlledActiveItem}
 						/>
 						{rows.length === 0 && noRowsMessage ? (
 							<div className='grid__no-rows'>

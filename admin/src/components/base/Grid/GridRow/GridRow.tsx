@@ -9,10 +9,10 @@ interface GridRowProps {
 	columns: GridColumn[];
 	className?: string;
 	domID?: string;
-	semanticRow?: boolean;
+	isInteractiveGrid?: boolean;
 }
 
-const GridRow = ({ row, columns, className, domID, semanticRow }: GridRowProps) => {
+const GridRow = ({ row, columns, className, domID, isInteractiveGrid }: GridRowProps) => {
 	const cellComponents = [] as ReactNode[];
 	for (const [i, cell] of row.cells.entries()) {
 		const type = columns[i].type;
@@ -24,7 +24,7 @@ const GridRow = ({ row, columns, className, domID, semanticRow }: GridRowProps) 
 				key={columns[i].key ?? i}
 				cell={typedCell}
 				className={`grid__cell ${className}`}
-				semanticCell={semanticRow}
+				isInteractiveGrid={isInteractiveGrid}
 			/>,
 		);
 	}
@@ -32,8 +32,8 @@ const GridRow = ({ row, columns, className, domID, semanticRow }: GridRowProps) 
 	return (
 		<div
 			id={domID}
-			role={semanticRow ? 'row' : undefined}
-			aria-selected={semanticRow ? row.active === true : undefined}
+			role={isInteractiveGrid ? 'row' : undefined}
+			aria-selected={isInteractiveGrid ? row.active === true : undefined}
 			className={`${className}${row.onClick ? ' grid__row--clickable' : ''}${row.active ? ' grid__row--active' : ''}${row.selected ? ' grid__row--selected' : ''}`}
 			onClick={row.onClick}
 			data-animation={row.animation}
