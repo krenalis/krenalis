@@ -184,7 +184,6 @@ const ProfilesList = () => {
 		setIsLoadingIdentityResolution(true);
 		setAskResolveIdentitiesConfirmation(false);
 		setSecondsSinceIRStart(undefined);
-		setLastIRExecutionEnd(undefined);
 		try {
 			await api.workspaces.startIdentityResolution();
 		} catch (err) {
