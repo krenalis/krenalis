@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"log"
 	"net"
 	"reflect"
 	"strings"
@@ -96,7 +95,7 @@ func Test_Merge_Query(t *testing.T) {
 	)
 	defer func() {
 		if err := testcontainers.TerminateContainer(clickHouseContainer); err != nil {
-			log.Printf("failed to terminate container: %s", err)
+			t.Logf("failed to terminate container: %s", err)
 		}
 	}()
 	if err != nil {
