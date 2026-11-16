@@ -134,6 +134,10 @@ convertibile come dato assente e non si allarga silenziosamente il tipo a JSON.
 Le regole future saranno valutate sui casi del catalogo e confrontate con i
 mapping senza obbligo di condividere implementazione o tutte le conversioni.
 
+I token scalari dei campi Decimal sono limitati a 4096 byte prima della
+conversione, escludendo gli spazi esterni. Il superamento del limite produce
+un errore di validazione anche se il valore numerico sarebbe rappresentabile.
+
 Il 16 novembre 2026 Marco ha confermato lo scarto dell'intero evento che non
 supera la validazione, senza una segnalazione osservabile dedicata. Il collector
 continua a rispondere con successo: non restituisce un errore al client e non

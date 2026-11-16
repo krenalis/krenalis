@@ -54,6 +54,7 @@ func (err *jsonValidationError) withProperty(name string) *jsonValidationError {
 // Input representations and scalar normalization follow types.Decode/Marshal;
 // additional conversions are deferred. Invalid input returns a ValidationError
 // whose property path starts with name.
+// Decimal scalar tokens are limited to 4096 bytes before conversion.
 func normalizeJSON(name string, v json.Value, t types.Type) (json.Value, error) {
 	if !t.Valid() || t.Generic() {
 		return nil, errors.New("core/internal/collector: invalid JSON normalization schema")
@@ -113,6 +114,9 @@ func normalizeJSONValue(v json.Value, t types.Type) (json.Value, error) {
 		return out.Value()
 	}
 	if !t.IsObject() {
+		if t.IsDecimal() && len(json.TrimSpace(v)) > 4096 {
+			return nil, &jsonValidationError{err: errors.New("decimal value exceeds the input length limit")}
+		}
 		value, err := types.Decode[any](bytes.NewReader(v), t)
 		if err != nil {
 			return nil, &jsonValidationError{err: err}

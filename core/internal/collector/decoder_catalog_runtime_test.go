@@ -42,6 +42,26 @@ func TestDecoderWorkspaceEventCatalog(t *testing.T) {
 			properties: `{"total":12345678901234.1234}`, traits: `{}`,
 		},
 		{
+			name:       "order total at input limit",
+			body:       `{"type":"track","event":"Order Completed","userId":"u","properties":{"total":0.` + strings.Repeat("0", 4094) + `}}`,
+			properties: `{"total":0}`, traits: `{}`,
+		},
+		{
+			name:      "order total above input limit",
+			body:      `{"type":"track","event":"Order Completed","userId":"u","properties":{"total":0.` + strings.Repeat("0", 4095) + `}}`,
+			errorPath: "properties.total",
+		},
+		{
+			name:      "oversized order total within request budget",
+			body:      `{"type":"track","event":"Order Completed","userId":"u","properties":{"total":` + strings.Repeat("7", 490_000) + `}}`,
+			errorPath: "properties.total",
+		},
+		{
+			name:      "product price above input limit",
+			body:      `{"type":"track","event":"Order Completed","userId":"u","properties":{"products":[{"price":0.` + strings.Repeat("0", 4095) + `}]}}`,
+			errorPath: "properties.products[0].price",
+		},
+		{
 			name:       "removal does not change quantity sign",
 			body:       `{"type":"track","event":"Product Removed","userId":"u","properties":{"quantity":-2.5}}`,
 			properties: `{"quantity":-2.5}`, traits: `{}`,

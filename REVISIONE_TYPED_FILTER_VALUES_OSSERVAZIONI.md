@@ -9,6 +9,8 @@ La revisione approfondita di Claude
 non segnala difetti nella semantica Unified. Individua sei rilievi da gestire
 in questo branch. Alcuni coinvolgono codice preesistente, ma il comportamento
 problematico è introdotto o esposto dalle modifiche del branch.
+Nella verifica del secondo intervento il revisore ha aggiunto un P2 analogo
+sulla conversione dei Decimal del catalogo nel collector.
 
 ## Rilievi del branch
 
@@ -16,6 +18,7 @@ problematico è introdotto o esposto dalle modifiche del branch.
 | --- | --- | --- |
 | 1 | P1: scarto degli eventi non conformi al catalogo | L'applicazione obbligatoria dei nuovi schemi amplia gli scarti rispetto alla base. Il 16 novembre l'utente ha confermato lo scarto dell'intero evento senza segnalazione osservabile. Il comportamento attuale resta; il primo intervento ne esplicita la compatibilità e aggiunge i casi della revisione ai test. |
 | 2 | P2: operandi numerici Record senza limite lessicale | Il secondo intervento limita a 4096 byte i token Decimal e JSON Number, prima della conversione, in `DecodeFilterOperand`. Copre anche array e rilettura dei filtri salvati; i controlli di precisione 76/scala 37 rimangono. I letterali monetari avevano già lo stesso limite. |
+| 2a | P2: token Decimal nel collector senza limite lessicale | Anche questo percorso nasce nel branch: la base manteneva properties come JSON grezzo. Limitare a 4096 byte i token scalari Decimal prima di `types.Decode`, restituendo un errore di validazione. L'ottimizzazione del parser generico resta separata su main. |
 | 3 | P2: il test dei writer altera il registro globale | La piattaforma fittizia registrata dal nuovo test fa fallire il test preesistente della risoluzione delle identità. La correzione preferita è isolare il nuovo test evitando la registrazione globale, conservando la copertura dei writer reali. |
 | 4 | P3: riordino degli endpoint | Il rumore è introdotto dalla risoluzione del merge. Ripristinare l'ordine della base, mantenendo la nuova rotta della spiegazione. |
 | 5 | P3: `Filter.HasCount` senza chiamanti di produzione | Il metodo nasce nel branch ed è stato sostituito da `RequiresUnified`. Rimuovere l'API inutilizzata e semplificare la visita; aggiornare tutti i test che lo chiamano. |
@@ -83,7 +86,8 @@ I test coprono il confine 4096/4097, zeri rappresentabili con molti decimali,
 numeri che superano la precisione, spazi esterni, array e filtri persistiti.
 Una String JSON lunga non viene trattata come un Number. Sonde e mutanti
 esterni verificano anche l'ordine del controllo rispetto alla conversione.
-Gli altri rilievi restano sospesi fino alla revisione di questo intervento.
+Il revisore ha approvato il commit `bad4e815f` per questo percorso, confermando
+anche le prove e segnalando il residuo nel collector descritto sotto.
 
 ### Verifiche del secondo intervento
 
@@ -103,8 +107,45 @@ La prima regressione era stata bloccata dai permessi della sandbox su Docker
 e sulle porte locali; la ripetizione autorizzata è quella riuscita. Log,
 overlay e risultati dei mutanti sono in
 `/private/tmp/krenalis-review-p2-numbers-meq8snaj/`.
-Questo intervento è pronto per la revisione; il test dei writer e le altre
-correzioni non sono stati modificati.
+Questo intervento è approvato; il test dei writer e le altre correzioni
+non sono stati modificati.
+
+## Residuo P2: Decimal del catalogo nel collector
+
+Il limite va applicato anche qui: la nuova normalizzazione del catalogo
+espone il costo del parser a payload che nella base restavano JSON grezzo.
+La correzione è nel branch, distinta dalla issue generale #2774 su main.
+
+`normalizeJSONValue` verifica i 4096 byte del token scalare Decimal, dopo la
+rimozione degli spazi esterni e prima di `types.Decode`. Il superamento produce
+un `jsonValidationError`, con il percorso completo del campo. L'evento viene
+scartato secondo la politica già confermata. Il controllo raggiunge anche i
+campi Decimal degli oggetti in array, come `products[0].price`. Non modifica
+il package types o il parser generico, né limita JSON opaco e campi extra.
+
+I test coprono il confine 4096/4097 e gli spazi esterni nel normalizzatore,
+gli stessi limiti sul totale con il catalogo di produzione, un prezzo annidato
+e un totale di 490.000 cifre entro il budget della richiesta. Controllano anche
+che JSON opaco e campi extra mantengano numeri oltre il limite dei Decimal.
+Il test dei writer e gli altri rilievi restano sospesi fino alla revisione
+di questo intervento.
+
+### Verifiche del residuo nel collector
+
+- `go test -mod=vendor ./core/internal/collector -short -race -count=1 -json`:
+  322 PASS, compresi 51 casi del catalogo di produzione; 1 SKIP MaxMind per
+  `KRENALIS_TEST_MAXMIND_DB_PATH` assente.
+- Una sonda esterna interrompe l'esecuzione se `types.Decode` passa al parser
+  decimale un token oltre 4096 byte: 132 PASS sui test del normalizzatore e
+  del catalogo, incluso il totale di 490.000 cifre.
+- La stessa sonda rileva guardia rimossa e controllo spostato dopo il parsing;
+  il mutante `>= 4096` fallisce sui valori validi al limite.
+- Vet del collector, gofmt e controllo del diff: puliti.
+
+Log, overlay e risultati sono in
+`/private/tmp/krenalis-review-p2-collector-bx6aklni/`.
+Il residuo P2 è pronto per la revisione; gli interventi successivi non sono
+iniziati.
 
 ## Nota da riportare nel rilascio
 
