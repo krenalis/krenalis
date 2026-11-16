@@ -13,6 +13,7 @@ import (
 	"github.com/krenalis/krenalis/core/internal/state"
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
+	"github.com/krenalis/krenalis/tools/types"
 )
 
 // TestDecoderWorkspaceEventCatalog exercises the production catalog through
@@ -332,4 +333,54 @@ func TestDecoderWorkspaceEventCatalog(t *testing.T) {
 
 		})
 	}
+}
+
+// TestDecoderWorkspaceEventCatalogDecimalShapes keeps Decimal conversions in
+// the paths protected by the normalizer's input limit.
+func TestDecoderWorkspaceEventCatalogDecimalShapes(t *testing.T) {
+
+	type node struct {
+		typ     types.Type
+		path    string
+		guarded bool
+	}
+
+	var workspace state.Workspace
+	decimals := 0
+	for _, definition := range workspace.EventDefinitions() {
+		for _, schema := range []node{
+			{definition.Schemas.Traits, "traits", true},
+			{definition.Schemas.Properties, "properties", true},
+		} {
+			if !schema.typ.Valid() {
+				continue
+			}
+			stack := []node{schema}
+			for len(stack) > 0 {
+				current := stack[len(stack)-1]
+				stack = stack[:len(stack)-1]
+				if current.typ.IsDecimal() {
+					decimals++
+					if !current.guarded {
+						t.Fatalf("expected a guarded Decimal at %s.%s, got a conversion inside an unsupported container",
+							definition.ID, current.path)
+					}
+				}
+				if current.typ.IsObject() {
+					for _, property := range current.typ.Properties().All() {
+						stack = append(stack, node{property.Type, current.path + "." + property.Name, current.guarded})
+					}
+				} else if current.typ.IsArray() || current.typ.IsMap() {
+					elem := current.typ.Elem()
+					guarded := current.guarded && current.typ.IsArray() && elem.IsObject()
+					stack = append(stack, node{elem, current.path + "[]", guarded})
+				}
+			}
+		}
+	}
+	if decimals == 0 {
+		t.Fatal("expected Decimal fields in the production catalog, got none")
+	}
+	t.Logf("checked %d guarded Decimal fields", decimals)
+
 }

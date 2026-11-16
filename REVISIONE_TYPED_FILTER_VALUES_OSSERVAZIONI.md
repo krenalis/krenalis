@@ -147,6 +147,39 @@ Log, overlay e risultati sono in
 Il residuo P2 è pronto per la revisione; gli interventi successivi non sono
 iniziati.
 
+### Approvazione e verifiche permanenti del residuo
+
+Il revisore ha approvato `fef459bec`, ripetendo le verifiche e confermando
+che il controllo copre tutte le forme attuali del catalogo. Le due note
+non bloccanti vengono affrontate con soli test, prima di proseguire:
+
+- Un token di 4097 cifre `7` deve produrre l'errore di lunghezza, non quello
+  del decoder sul valore fuori range. Questo rileva il controllo spostato
+  dopo la gestione dell'errore di `types.Decode`; non dimostra da solo che
+  la conversione non sia stata eseguita. La sonda esterna resta la verifica
+  dell'ingresso nel parser.
+- Un test del catalogo attraversa traits, properties e i contenitori. Un
+  Decimal è ammesso solo sui percorsi che raggiungono il normalizzatore e
+  la sua guardia, compresi gli oggetti negli array. Se in futuro comparissero
+  Decimal dentro map o array delegati interamente a `types.Decode`, il test
+  richiederebbe di estendere la protezione. Gli altri tipi restano ammessi.
+
+Nessun file Go di produzione cambia in questo completamento. Il test dei
+writer e le altre correzioni restano sospesi per la revisione.
+
+Verifiche del completamento:
+
+- Suite del collector con `-short -race -count=1`: 324 PASS e 1 SKIP MaxMind.
+- Il controllo del catalogo visita 152 posizioni Decimal negli schemi runtime
+  di traits e properties, tutte protette dalla normalizzazione scalare.
+- Un mutante che sposta la guardia dopo il ritorno dell'errore di decodifica
+  fallisce sul nuovo controllo del messaggio.
+- Quattro sonde con cataloghi alterati sono rifiutate dal test delle forme:
+  array di Decimal, map di Decimal, array annidati con oggetti Decimal e
+  map di oggetti con campi Decimal. Non sono errori di compilazione.
+- Vet, gofmt e controllo del diff: puliti. Evidenze locali in
+  `/private/tmp/krenalis-review-p2-collector-tests-4s91ov0j/`.
+
 ## Nota da riportare nel rilascio
 
 Il catalogo predefinito introduce validazione e normalizzazione all'ingresso

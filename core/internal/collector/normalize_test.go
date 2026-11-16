@@ -42,12 +42,13 @@ func TestNormalizeJSON(t *testing.T) {
 	large := strings.Repeat("9", 90)
 
 	for _, test := range []struct {
-		name    string
-		value   string
-		schema  types.Type
-		want    string
-		invalid bool
-		path    string
+		name         string
+		value        string
+		schema       types.Type
+		want         string
+		invalid      bool
+		path         string
+		errorMessage string
 	}{
 		{name: "string", value: `"hello"`, schema: types.String(), want: `"hello"`},
 		{name: "boolean", value: `true`, schema: types.Boolean(), want: `true`},
@@ -57,6 +58,7 @@ func TestNormalizeJSON(t *testing.T) {
 		{name: "decimal at input limit", value: `0.` + strings.Repeat("0", 4094), schema: types.Decimal(18, 4), want: `0`},
 		{name: "decimal at input limit with whitespace", value: " \n0." + strings.Repeat("0", 4094) + "\t ", schema: types.Decimal(18, 4), want: `0`},
 		{name: "decimal above input limit", value: `0.` + strings.Repeat("0", 4095), schema: types.Decimal(18, 4), invalid: true},
+		{name: "decimal input limit before range error", value: strings.Repeat("7", 4097), schema: types.Decimal(18, 4), invalid: true, errorMessage: "exceeds the input length limit"},
 		{name: "datetime", value: `"2026-11-04T12:00:00.100000+01:00"`, schema: types.DateTime(), want: `"2026-11-04T11:00:00.100Z"`},
 		{name: "date", value: `"2026-11-04"`, schema: types.Date(), want: `"2026-11-04"`},
 		{name: "time", value: `"12:30:00.100000"`, schema: types.Time(), want: `"12:30:00.100"`},
@@ -140,6 +142,9 @@ func TestNormalizeJSON(t *testing.T) {
 				validation, ok := errors.AsType[ValidationError](err)
 				if !ok {
 					t.Fatalf("expected ValidationError, got %T: %v", err, err)
+				}
+				if test.errorMessage != "" && !strings.Contains(err.Error(), test.errorMessage) {
+					t.Fatalf("expected error containing %q, got %v", test.errorMessage, err)
 				}
 				path := "properties"
 				if test.path != "" {
