@@ -12,13 +12,24 @@ problematico è introdotto o esposto dalle modifiche del branch.
 Nella verifica del secondo intervento il revisore ha aggiunto un P2 analogo
 sulla conversione dei Decimal del catalogo nel collector.
 
+## Esito finale
+
+Tutti i rilievi della revisione approfondita sono chiusi. Il revisore ha
+approvato i nove commit correttivi da `3a3c0a646` a `d977e0c3c`, ripetendo
+le verifiche sugli interventi che modificavano codice e confermando anche
+le ultime correzioni documentali.
+
+Restano separati il merge su main, la conferma della base di rilascio
+`v0.48.0` con la preparazione dell'updater e l'attivazione del gate Snowflake.
+Il gate resta chiuso (`profileFilterVerified = false`).
+
 ## Rilievi del branch
 
 | Ordine | Rilievo | Valutazione e intervento |
 | --- | --- | --- |
 | 1 | P1: scarto degli eventi non conformi al catalogo | L'applicazione obbligatoria dei nuovi schemi amplia gli scarti rispetto alla base. Il 16 novembre l'utente ha confermato lo scarto dell'intero evento senza segnalazione osservabile. Il comportamento attuale resta; il primo intervento ne esplicita la compatibilità e aggiunge i casi della revisione ai test. |
 | 2 | P2: operandi numerici Record senza limite lessicale | Il secondo intervento limita a 4096 byte i token Decimal e JSON Number, prima della conversione, in `DecodeFilterOperand`. Copre anche array e rilettura dei filtri salvati; i controlli di precisione 76/scala 37 rimangono. I letterali monetari avevano già lo stesso limite. |
-| 2a | P2: token Decimal nel collector senza limite lessicale | Anche questo percorso nasce nel branch: la base manteneva properties come JSON grezzo. Limitare a 4096 byte i token scalari Decimal prima di `types.Decode`, restituendo un errore di validazione. L'ottimizzazione del parser generico resta separata su main. |
+| 2a | P2: token Decimal nel collector senza limite lessicale | Token scalari Decimal limitati a 4096 byte prima di `types.Decode`, con errore di validazione. I test permanenti proteggono il messaggio e le forme del catalogo. L'ottimizzazione del parser generico resta separata su main. |
 | 3 | P2: il test dei writer altera il registro globale | Il test ora usa la piattaforma PostgreSQL esistente e salva le impostazioni cifrate nel workspace di prova. Non registra più una piattaforma fittizia e conserva il percorso reale del datastore e dei writer. Il test preesistente della risoluzione delle identità resta invariato. |
 | 4 | P3: riordino degli endpoint | Ripristinato l'ordine della base per la rotta iniziale, le metriche e le organizzazioni. In `cmd/endpoints.go` resta soltanto l'aggiunta della rotta della spiegazione rispetto a json-filter-support. |
 | 5 | P3: `Filter.HasCount` senza chiamanti di produzione | Rimosso il metodo e la modalità dedicata a Count in `hasBehavior`. I sette test che lo chiamavano ora verificano soltanto `RequiresUnified`, mantenendo la copertura della visita limitata dell'albero. |
@@ -314,7 +325,8 @@ alfabetico. Verificato contro `normalizeJSONValue` e i casi esistenti di
 `TestNormalizeJSON`, compreso `arbitrary extra keys`.
 
 Cambiano soltanto tre file Markdown. Diff pulito; nessuna suite ripetuta per
-questa correzione documentale. Le correzioni sono pronte per la revisione.
+questa correzione documentale. Il revisore ha approvato `d977e0c3c`, chiudendo
+entrambi i rilievi documentali senza altre osservazioni.
 
 ## Nota da riportare nel rilascio
 
