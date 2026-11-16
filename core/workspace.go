@@ -1310,60 +1310,6 @@ func (this *Workspace) PipelineRuns(ctx context.Context) ([]*PipelineRun, error)
 	return runs, nil
 }
 
-// ProfileCount returns the number of profiles matching filter. If filter is
-// nil, it returns the total number of profiles.
-//
-// If filter is not nil, schema must be an object type with the properties used
-// by filter. If filter is nil, schema can be the invalid type.
-//
-// It returns an errors.NotFoundError error if the workspace does not exist.
-// It returns an errors.UnprocessableError error with code
-//   - MaintenanceMode, if the data warehouse is in maintenance mode.
-//   - PropertyNotExist, if a property in filter does not exist in schema.
-//   - SchemaNotAligned, if schema is valid and is not aligned with the profile
-//     schema.
-func (this *Workspace) ProfileCount(ctx context.Context, filter *Filter, schema types.Type) (int, error) {
-
-	this.core.mustBeOpen()
-
-	if filter != nil && !schema.Valid() {
-		return 0, errors.BadRequest("schema is required")
-	}
-	if schema.Valid() && !schema.IsObject() {
-		return 0, errors.BadRequest("schema is not an object type")
-	}
-
-	var where *state.Where
-	if filter != nil {
-		_, err := validateFilter(filter, schema, state.Destination, state.TargetUser)
-		if err != nil {
-			if err, ok := errors.AsType[types.PathNotExistError](err); ok {
-				return 0, errors.Unprocessable(PropertyNotExist, "filter's property %s does not exist", err.Path)
-			}
-			return 0, errors.BadRequest("filter is not valid: %s", err)
-		}
-		where = convertFilterToWhere(filter, schema)
-	}
-	total, err := this.store.ProfileCount(ctx, where, schema)
-	if err != nil {
-		if errors.Is(err, datastore.ErrWorkspaceNotExist) {
-			return 0, errors.NotFound("workspace %s does not exist", this.workspace.ID)
-		}
-		if errors.Is(err, datastore.ErrMaintenanceMode) {
-			return 0, errors.Unprocessable(MaintenanceMode, "data warehouse is in maintenance mode")
-		}
-		if err, ok := errors.AsType[*schemas.Error](err); ok {
-			return 0, errors.Unprocessable(SchemaNotAligned, "%s", err)
-		}
-		if err, ok := errors.AsType[*datastore.WarehouseError](err); ok {
-			return 0, errors.Unavailable("%s", err)
-		}
-		return 0, err
-	}
-
-	return total, nil
-}
-
 // ProfilePropertiesSuitableAsIdentifiers returns the properties of the profile
 // schema that can be used as identifiers in the Identity Resolution.
 // If none of the properties can be an identifier, this method returns the

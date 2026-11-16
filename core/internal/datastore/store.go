@@ -563,53 +563,6 @@ func (store *Store) PurgePipelines(ctx context.Context, pipelines []string) erro
 	return store.warehouse().Delete(ctx, "krenalis_destination_profiles", where)
 }
 
-// ProfileCount returns the number of profiles matched by where. schema must
-// have the properties in where and may be invalid only when where is nil.
-//
-// It returns *schemas.Error if schema is not aligned, ErrWorkspaceNotExist if
-// the workspace no longer exists, or ErrMaintenanceMode in maintenance mode.
-//
-// If a data warehouse error occurs, it returns a *WarehouseError wrapping the
-// cause, which may be *warehouses.SettingsError if the settings are invalid.
-func (store *Store) ProfileCount(ctx context.Context, where *state.Where, schema types.Type) (int, error) {
-
-	store.mustBeOpen()
-
-	if (where != nil || schema.Valid()) && !schema.IsObject() {
-		return 0, errors.New("core/internal/datastore: schema is not an object type")
-	}
-	ctx, done, err := store.mc.StartOperation(ctx, normalMode|inspectionMode)
-	if err != nil {
-		return 0, err
-	}
-	defer done()
-
-	if schema.Valid() {
-		workspace, ok := store.ds.state.Workspace(store.workspace)
-		if !ok {
-			return 0, ErrWorkspaceNotExist
-		}
-		err = schemas.CheckAlignment(schema, workspace.ProfileSchema, nil)
-		if err != nil {
-			return 0, err
-		}
-	}
-
-	var expression warehouses.Expr
-	if where != nil {
-		expression, err = convertWhere(where, profileColumnByProperty(schema))
-		if err != nil {
-			return 0, err
-		}
-	}
-	counts, err := store.warehouse().Counts(ctx, "profiles", []warehouses.Expr{expression})
-	if err != nil {
-		return 0, err
-	}
-
-	return counts[0], nil
-}
-
 // Repair repairs the database objects on the data warehouse needed by Krenalis.
 // The given profile schema will be used to repair the user tables.
 //

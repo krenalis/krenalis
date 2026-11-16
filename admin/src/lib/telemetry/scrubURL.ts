@@ -132,7 +132,6 @@ const REQUEST_PATTERNS = [
 	'/profiles/!kpid/attributes/query',
 	'/profiles/!kpid/events',
 	'/profiles/!kpid/identities',
-	'/profiles/count',
 	'/profiles/query',
 	'/profiles/schema',
 	'/profiles/schema/latest-alter',

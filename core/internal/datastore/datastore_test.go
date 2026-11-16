@@ -17,21 +17,11 @@ import (
 )
 
 // profileQueryWarehouse records the last query and the number of Query calls.
-// Query returns empty results, and Counts returns zero unless an error is
-// configured.
+// Query returns empty results.
 type profileQueryWarehouse struct {
 	warehouses.Warehouse
 	query warehouses.RowQuery
 	calls int
-	err   error
-}
-
-// Counts returns zero or the configured error.
-func (w *profileQueryWarehouse) Counts(_ context.Context, _ string, _ []warehouses.Expr) ([]int, error) {
-	if w.err != nil {
-		return nil, w.err
-	}
-	return []int{0}, nil
 }
 
 // Query records the query and returns empty results.
@@ -77,23 +67,6 @@ func TestCountIdentitiesEmptyPipelines(t *testing.T) {
 		t.Fatalf("expected three empty identity count maps, got %#v", counts)
 	}
 
-}
-
-// TestProfileCountWarehouseError verifies the classification of Counts errors
-// without requiring a schema or workspace state for an unfiltered count.
-func TestProfileCountWarehouseError(t *testing.T) {
-	warehouseErr := errors.New("warehouse count failed")
-	store := &Store{mc: newModeCoordinator(state.Normal)}
-	store.wh.Store(warehouses.Warehouse(&warehouse{inner: &profileQueryWarehouse{err: warehouseErr}}))
-	_, err := store.ProfileCount(t.Context(), nil, types.Type{})
-	if err != nil {
-		wrapped, ok := errors.AsType[*WarehouseError](err)
-		if !ok || wrapped.Err != warehouseErr {
-			t.Fatalf("expected WarehouseError with cause %v, got %v", warehouseErr, err)
-		}
-		return
-	}
-	t.Fatal("expected a warehouse error, got nil")
 }
 
 // TestProfileQueryArguments verifies that invalid arguments are rejected and

@@ -116,23 +116,17 @@ func TestProfilesPagination(t *testing.T) {
 	if _, ok := summaryResponse["schema"]; ok {
 		t.Fatalf("expected no schema in profiles response, got %v", summaryResponse["schema"])
 	}
-	var countResponse struct {
-		Total int `json:"total"`
-	}
 	email, ok := firstPage[0].Attributes["email"].(string)
 	if !ok {
 		t.Fatalf("expected a string email, got %T", firstPage[0].Attributes["email"])
 	}
-	filter, err := json.Marshal(map[string]any{
+	filter := map[string]any{
 		"operator": "and",
 		"rules": []any{map[string]any{
 			"property": "email",
 			"operator": "is",
 			"values":   []string{email},
 		}},
-	})
-	if err != nil {
-		t.Fatal(err)
 	}
 
 	// POST requests carry large schemas in the body instead of the URL.
@@ -157,16 +151,6 @@ func TestProfilesPagination(t *testing.T) {
 	k.Call("POST", "/v1/profiles/query", nil, map[string]any{"schema": postSchema}, &postPage)
 	if len(postPage.Profiles) != 100 {
 		t.Fatalf("expected the default limit of 100 profiles, got %d", len(postPage.Profiles))
-	}
-	for _, body := range []map[string]any{{}, {"schema": postSchema, "filter": json.Value(filter)}} {
-		k.Call("POST", "/v1/profiles/count", nil, body, &countResponse)
-		want := expectedTotal
-		if body["filter"] != nil {
-			want = 1
-		}
-		if countResponse.Total != want {
-			t.Fatalf("expected POST count %d, got %d", want, countResponse.Total)
-		}
 	}
 	var postAttributes struct {
 		Attributes map[string]any `json:"attributes"`
@@ -278,10 +262,6 @@ func TestProfilesPagination(t *testing.T) {
 		emailProperty,
 		{Name: "no_longer_present", Type: types.String()},
 	})
-	k.Call("POST", "/v1/profiles/count", nil, map[string]any{"schema": requestSchema}, &countResponse)
-	if countResponse.Total != expectedTotal {
-		t.Fatalf("expected %d profiles, got %d", expectedTotal, countResponse.Total)
-	}
 
 	// Check schema alignment, including unused properties, and invalid arguments.
 	for _, tc := range []struct {
@@ -294,10 +274,9 @@ func TestProfilesPagination(t *testing.T) {
 		message string
 	}{
 		{name: "removed GET profiles", path: "/v1/profiles", status: http.StatusNotFound},
-		{name: "GET count is not allowed", path: "/v1/profiles/count", status: http.StatusMethodNotAllowed},
 		{name: "removed GET attributes", path: "/v1/profiles/" + firstPage[0].KPID.String() + "/attributes", status: http.StatusNotFound},
 		{name: "POST missing body", method: "POST", path: "/v1/profiles/query", status: http.StatusBadRequest},
-		{name: "POST invalid body", method: "POST", path: "/v1/profiles/count", body: "invalid", status: http.StatusBadRequest},
+		{name: "POST invalid body", method: "POST", path: "/v1/profiles/query", body: "invalid", status: http.StatusBadRequest},
 		{name: "POST missing schema", method: "POST", path: "/v1/profiles/query", body: map[string]any{}, status: http.StatusBadRequest, code: "BadRequest", message: "schema is required"},
 		{name: "POST invalid limit", method: "POST", path: "/v1/profiles/query", body: map[string]any{"schema": postSchema, "limit": 0}, status: http.StatusBadRequest},
 		{
@@ -343,7 +322,7 @@ func TestProfilesPagination(t *testing.T) {
 			method: "POST",
 			path:   "/v1/profiles/query",
 			body: map[string]any{"schema": unrelatedSchema,
-				"properties": []string{"email"}, "filter": json.Value(filter), "order": "email"},
+				"properties": []string{"email"}, "filter": filter, "order": "email"},
 			status: http.StatusUnprocessableEntity,
 			code:   "SchemaNotAligned",
 		},
@@ -353,31 +332,6 @@ func TestProfilesPagination(t *testing.T) {
 			path:   "/v1/profiles/query",
 			body: map[string]any{"schema": unrelatedSchema,
 				"properties": []string{"email"}, "order": "no_longer_present"},
-			status: http.StatusUnprocessableEntity,
-			code:   "SchemaNotAligned",
-		},
-		{
-			name:    "count needs filter schema",
-			method:  "POST",
-			path:    "/v1/profiles/count",
-			body:    map[string]any{"filter": json.Value(filter)},
-			status:  http.StatusBadRequest,
-			code:    "BadRequest",
-			message: "schema is required",
-		},
-		{
-			name:   "count checks unused schema with filter",
-			method: "POST",
-			path:   "/v1/profiles/count",
-			body:   map[string]any{"schema": unrelatedSchema, "filter": json.Value(filter)},
-			status: http.StatusUnprocessableEntity,
-			code:   "SchemaNotAligned",
-		},
-		{
-			name:   "count checks schema without filter",
-			method: "POST",
-			path:   "/v1/profiles/count",
-			body:   map[string]any{"schema": unrelatedSchema},
 			status: http.StatusUnprocessableEntity,
 			code:   "SchemaNotAligned",
 		},
@@ -443,8 +397,7 @@ func TestProfilesPagination(t *testing.T) {
 		path string
 		body any
 	}{
-		{path: "/v1/profiles/query", body: map[string]any{"schema": changedSchema}},
-		{path: "/v1/profiles/count", body: map[string]any{"schema": changedSchema, "filter": json.Value(numericFilter)}},
+		{path: "/v1/profiles/query", body: map[string]any{"schema": changedSchema, "filter": json.Value(numericFilter)}},
 		{path: attributesPath, body: map[string]any{"schema": changedSchema}},
 	} {
 		err = k.TryCall("POST", tc.path, nil, tc.body, nil)
@@ -530,6 +483,7 @@ func TestProfilesPagination(t *testing.T) {
 		Profiles []struct {
 			Attributes map[string]any `json:"attributes"`
 		} `json:"profiles"`
+		Total int `json:"total"`
 	}
 	k.Call("POST", "/v1/profiles/query", nil, map[string]any{
 		"schema": nestedSchema, "properties": []string{"android"}, "filter": json.Value(nestedFilter),
@@ -537,15 +491,12 @@ func TestProfilesPagination(t *testing.T) {
 	if len(nestedResponse.Profiles) != 1 {
 		t.Fatalf("expected one nested match, got %d", len(nestedResponse.Profiles))
 	}
+	if nestedResponse.Total != 1 {
+		t.Fatalf("expected one nested match in total, got %d", nestedResponse.Total)
+	}
 	nested, ok := nestedResponse.Profiles[0].Attributes["android"].(map[string]any)
 	if !ok || len(nested) != 1 || nested["id"] != "nested-id" {
 		t.Fatalf("expected only android.id nested-id, got %v", nestedResponse.Profiles[0].Attributes["android"])
-	}
-	k.Call("POST", "/v1/profiles/count", nil, map[string]any{
-		"schema": nestedSchema, "filter": json.Value(nestedFilter),
-	}, &countResponse)
-	if countResponse.Total != 1 {
-		t.Fatalf("expected one nested count match, got %d", countResponse.Total)
 	}
 
 	_, err = pool.Exec(t.Context(), "DELETE FROM profiles WHERE _kpid = $1", firstPage[0].KPID.String())
@@ -562,9 +513,9 @@ func TestProfilesPagination(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected a missing profile error, got nil")
 	}
-	k.Call("POST", "/v1/profiles/count", nil, map[string]any{}, &countResponse)
-	if countResponse.Total != expectedTotal-1 {
-		t.Fatalf("expected the live count %d, got %d", expectedTotal-1, countResponse.Total)
+	_, total, _ := k.ProfilesWithSchema(requestSchema, []string{"email"}, "", true, 0, 1)
+	if total != expectedTotal-1 {
+		t.Fatalf("expected the live count %d, got %d", expectedTotal-1, total)
 	}
 
 }

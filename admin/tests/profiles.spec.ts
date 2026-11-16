@@ -542,13 +542,10 @@ test(`Keep a reopened operator menu open and respect focus moved to another cont
 });
 
 test(`Apply a completed filter explicitly`, async ({ page }) => {
-	const countRequests: Request[] = [];
 	const gridRequests: Request[] = [];
 	page.on('request', (request) => {
 		const url = new URL(request.url());
-		if (url.pathname.endsWith('/v1/profiles/count')) {
-			countRequests.push(request);
-		} else if (url.pathname.endsWith('/v1/profiles/query')) {
+		if (url.pathname.endsWith('/v1/profiles/query')) {
 			gridRequests.push(request);
 		}
 	});
@@ -608,7 +605,6 @@ test(`Apply a completed filter explicitly`, async ({ page }) => {
 	await expect(editor.locator('.filter-editor__filter')).toHaveCount(1);
 	await expect(filters.getByRole('button', { name: 'Undo', exact: true })).toBeDisabled();
 	await expect.poll(() => gridRequests.length).toBe(1);
-	await expect.poll(() => countRequests.length).toBe(0);
 	await expect(page.locator('.profiles-list__layout')).not.toHaveAttribute('inert');
 	expect(await editor.evaluate((element) => getComputedStyle(element).overflowY)).toBe('visible');
 	const expandedLayout = await page.locator('.profiles-list__layout').boundingBox();
@@ -693,7 +689,6 @@ test(`Apply a completed filter explicitly`, async ({ page }) => {
 	await operatorSelect.locator('wa-option[value="0"]').click();
 	const valueInput = condition.locator('.filter-editor__value-input input');
 	await valueInput.fill('Grace');
-	await expect.poll(() => countRequests.length).toBe(0);
 	await valueInput.press('Enter');
 	await expect(page.locator('.profiles-list__grid-summary')).toContainText('4 profiles');
 	await expect(editor).toBeVisible();
@@ -737,7 +732,6 @@ test(`Apply a completed filter explicitly`, async ({ page }) => {
 		operator: 'and',
 		rules: [{ property: 'first_name', operator: 'is', values: ['Grace'] }],
 	});
-	expect(countRequests).toHaveLength(0);
 
 	const removeCondition = filters.getByRole('button', { name: 'Remove condition 1', exact: true });
 	await expect(removeCondition).toHaveCount(1);
@@ -779,7 +773,7 @@ test(`Enable Apply filters when there are unapplied changes`, async ({ page }) =
 	const profileRequests: URL[] = [];
 	page.on('request', (request) => {
 		const url = new URL(request.url());
-		if (url.pathname.endsWith('/v1/profiles/count') || url.pathname.endsWith('/v1/profiles/query')) {
+		if (url.pathname.endsWith('/v1/profiles/query')) {
 			profileRequests.push(url);
 		}
 	});
@@ -1135,13 +1129,10 @@ test(`Reopen the property menu after collapsing a nested property filter`, async
 });
 
 test(`Remove an applied filter from its collapsed chip, update the grid, and preserve history`, async ({ page }) => {
-	const countRequests: URL[] = [];
 	const gridRequests: Request[] = [];
 	page.on('request', (request) => {
 		const url = new URL(request.url());
-		if (url.pathname.endsWith('/v1/profiles/count')) {
-			countRequests.push(url);
-		} else if (url.pathname.endsWith('/v1/profiles/query')) {
+		if (url.pathname.endsWith('/v1/profiles/query')) {
 			gridRequests.push(request);
 		}
 	});
@@ -1165,7 +1156,6 @@ test(`Remove an applied filter from its collapsed chip, update the grid, and pre
 	).toHaveText('First name is "Grace"');
 	await expect(page.locator('.profiles-list__grid-summary')).toContainText('1 profile');
 
-	const countRequestsBeforeRemoval = countRequests.length;
 	const gridRequestsBeforeRemoval = gridRequests.length;
 	await filters.getByRole('button', { name: 'Remove condition: First name is "Grace"', exact: true }).click();
 
@@ -1177,7 +1167,6 @@ test(`Remove an applied filter from its collapsed chip, update the grid, and pre
 		'profiles-list__grid-summary-success',
 	);
 	await expect(page.locator('.profiles-list .grid__row--clickable')).toHaveCount(4);
-	expect(countRequests).toHaveLength(countRequestsBeforeRemoval);
 	expect(gridRequests).toHaveLength(gridRequestsBeforeRemoval + 1);
 	expect(gridRequests.at(-1)?.postDataJSON().filter ?? null).toBeNull();
 
@@ -1190,13 +1179,11 @@ test(`Remove an applied filter from its collapsed chip, update the grid, and pre
 	await expect(editor.locator('.filter-editor__property input')).toHaveValue('First name');
 	await expect(editor.locator('.filter-editor__value-input input')).toHaveValue('Grace');
 	await expect(page.getByRole('button', { name: 'Apply filters', exact: true })).toBeEnabled();
-	expect(countRequests).toHaveLength(countRequestsBeforeRemoval);
 	await expect(redo).toBeEnabled();
 	await redo.click();
 	await expect(editor.locator('.filter-editor__property input')).toHaveValue('');
 	await expect(page.getByRole('button', { name: 'Apply filters', exact: true })).toBeDisabled();
 	await expect(undo).toBeEnabled();
-	expect(countRequests).toHaveLength(countRequestsBeforeRemoval);
 });
 
 test(`Keep failed grid updates accessible after collapsing and discard the error after Undo`, async ({ page }) => {
@@ -1329,7 +1316,7 @@ test(`Keep incomplete filters open when attempting to collapse the editor`, asyn
 	const profileRequests: URL[] = [];
 	page.on('request', (request) => {
 		const url = new URL(request.url());
-		if (url.pathname.endsWith('/v1/profiles/count') || url.pathname.endsWith('/v1/profiles/query')) {
+		if (url.pathname.endsWith('/v1/profiles/query')) {
 			profileRequests.push(url);
 		}
 	});
@@ -1363,7 +1350,7 @@ test(`Undo and redo confirmed filters without changing the grid`, async ({ page 
 	const profileRequests: URL[] = [];
 	page.on('request', (request) => {
 		const url = new URL(request.url());
-		if (url.pathname.endsWith('/v1/profiles/count') || url.pathname.endsWith('/v1/profiles/query')) {
+		if (url.pathname.endsWith('/v1/profiles/query')) {
 			profileRequests.push(url);
 		}
 	});

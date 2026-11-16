@@ -959,34 +959,6 @@ func (workspace workspace) ProfileSchema(_ http.ResponseWriter, r *http.Request)
 	return ws.ProfileSchema, nil
 }
 
-// ProfileCount returns the number of profiles of a workspace.
-func (workspace workspace) ProfileCount(_ http.ResponseWriter, r *http.Request) (any, error) {
-
-	ws, err := workspace.admitWorkspaceRequest(r, x1)
-	if err != nil {
-		return nil, err
-	}
-	err = validateRequiredBody(r, false)
-	if err != nil {
-		return nil, err
-	}
-
-	var params struct {
-		Filter *core.Filter `json:"filter"`
-		Schema types.Type   `json:"schema"`
-	}
-	err = json.Decode(r.Body, &params)
-	if err != nil {
-		return nil, errors.BadRequest("%s", err)
-	}
-	total, err := ws.ProfileCount(r.Context(), params.Filter, params.Schema)
-	if err != nil {
-		return nil, err
-	}
-
-	return map[string]any{"total": total}, nil
-}
-
 // Profiles returns profiles, an estimate of their total number without applying
 // first and limit, and the continuation state of a workspace.
 func (workspace workspace) Profiles(w http.ResponseWriter, r *http.Request) (any, error) {

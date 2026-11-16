@@ -46,9 +46,6 @@ test.beforeAll(async () => {
 
 test.beforeEach(async ({ page }) => {
 	await page.route('**/*', (route) => route.abort());
-	await page.route('**/v1/profiles/count', (route) => {
-		expect(route.request().url(), 'expected no separate count request').toBe('');
-	});
 	await page.route('https://example.test/', (route) =>
 		route.fulfill({ contentType: 'text/html', body: '<div id="root"></div>' }),
 	);
