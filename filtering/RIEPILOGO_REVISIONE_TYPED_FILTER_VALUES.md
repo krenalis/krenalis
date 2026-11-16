@@ -6,11 +6,11 @@ una fase di revisione approfondita prima di valutare il merge.
 
 ## Riferimenti
 
-Stato rilevato il 15 novembre 2026, repository `/Users/marco/src/cluster`:
+Stato rilevato il 16 novembre 2026, repository `/Users/marco/src/cluster`:
 
 | Riferimento | Commit |
 | --- | --- |
-| Branch da revisionare | `1e95ed5bfcd6c8ce10a58fd6181669da49e5e76b` |
+| Commit del branch verificato nella campagna live | `4928f87fb70a9ed81a9721406546d44628362d3a` |
 | Base del confronto: json-filter-support | `fece0a984eb1e89c33de71fe16512fcfd4beb262` |
 | Main locale, prima dell'integrazione attesa | `f796b4f57a280bb70767479cb142132c121f7ea9` |
 | Merge json-filter-support nel branch, già revisionato | `8ac0127976b34e9d8e5043eb1300261eb6a57307` |
@@ -20,20 +20,20 @@ Il confronto funzionale va quindi fatto con quella base, non con il main
 locale precedente. Il merge entrante è già concluso; il trasferimento di
 typed-filter-values su main resta da decidere dopo la revisione.
 
-Il delta rispetto alla base comprende 401 file al commit indicato. Questo
+Il delta rispetto alla base comprende 402 file al commit indicato. Questo
 numero include documentazione, catalogo generato e test: non misura la quantità
 di logica da revisionare. Nessun file sotto vendor cambia rispetto alla base;
 fra le dipendenze Admin viene aggiunto bignumber.js.
 
 ```sh
-git -C /Users/marco/src/cluster diff --name-status fece0a984eb1e89c33de71fe16512fcfd4beb262 1e95ed5bfcd6c8ce10a58fd6181669da49e5e76b
+git -C /Users/marco/src/cluster diff --name-status fece0a984eb1e89c33de71fe16512fcfd4beb262 4928f87fb70a9ed81a9721406546d44628362d3a
 ```
 
 Year come semantica intera, PropertyRoles e Web Awesome appartengono già alla
 base. Le risoluzioni del merge li hanno collegati agli operandi tipizzati e
 alle nuove capacità del datastore; non sono funzionalità introdotte da questo
 branch. Dopo il merge revisionato sono cambiati soltanto l'ordine di due test
-e tre file di documentazione.
+e la documentazione.
 
 ## Capacità introdotte
 
@@ -152,6 +152,7 @@ e non vanno sommati fra esecuzioni sovrapposte.
 | Qualità e generazione | Build, vet, gofmt, TypeScript, Prettier e controllo generatore del catalogo passati nelle esecuzioni documentate. |
 | Revisione indipendente del merge | 481 nodi mirati con race, 1.764 numerici, 102 schema/normalizzatore e TypeScript passati; P3 sull'ordine dei test corretto in `2858693db`. |
 | Preparazione post-merge | Overlay Arrow normale e con guasto preparati e compilati, anche con tag e race. Compilazione soltanto: nessuna prova remota o test di comportamento. |
+| Snowflake live post-merge, 16 novembre | 17 blocchi riusciti con race detector, più inventario indipendente. Conformance completa UTC: 435 nodi distinti; sottoinsieme LA: 22. HTTP e MCP in entrambi i fusi; chunk, enum, Record, identità, risorse, discovery e interruzioni passati. Dettagli e limiti nel runbook. |
 
 Il rapporto dettagliato del merge e quello indipendente sono rispettivamente:
 
@@ -165,14 +166,14 @@ Sono artefatti locali temporanei, non sostituti dei test ripetibili nel reposito
 
 Le esecuzioni live precedenti, con commit e formati osservati, sono riportate
 nel runbook. Non vanno presentate come nuove prove remote dopo il merge.
-In questa preparazione non sono state ripetute suite già passate; il delta
-successivo al codice verificato è documentale, salvo il riordino di test.
+La campagna del 16 novembre verifica invece il codice integrato. Dopo le prove
+sono aggiornati solo questo documento, il README Unified e il runbook.
 
 ## Snowflake e lavori separati
 
-La finestra live è chiusa e l'ultima indicazione è di proseguire solo in locale.
-Il gate `profileFilterVerified` resta `false`. Le tre prove prioritarie pronte
-per la prossima finestra sono:
+La campagna live prevista è conclusa. Il gate `profileFilterVerified` resta
+`false`; revisione approfondita, attivazione e merge sono passi separati.
+Le tre prove prioritarie sono passate:
 
 1. `TestUnifiedResourcesSnowflake/chunk_payload`: almeno due chunk remoti e
    verifica di tutti i payload al limite esatto.
@@ -181,10 +182,17 @@ per la prossima finestra sono:
 3. `TestUnifiedRecordEnumSnowflake`: confronti contains/does not contain sulle
    colonne degli eventi e sulle colonne String con valori ammessi.
 
-Serve inoltre una regressione remota selezionata del codice integrato. Il
-runbook distingue ulteriori limiti di copertura su guasti di rete, chunk nelle
-spiegazioni/HTTP/MCP, formati temporali e controlli ambientali delle risorse.
-Tre test verdi non equivalgono automaticamente all'approvazione dell'attivazione.
+È passata anche la regressione remota selezionata del codice integrato,
+compresi i percorsi pubblici HTTP/MCP. Tutti i 29 schemi creati sono stati
+eliminati; l'inventario indipendente conferma zero residui della campagna.
+Il runbook conserva il primo tentativo interrotto dal timeout di 15 minuti,
+escluso dai blocchi riusciti, e le evidenze della sua pulizia.
+
+Log, manifest e overlay sono conservati anche nell'archivio privato
+`/Users/marco/src/krenalis-test-evidence/snowflake-completion-20261116-4928f87fb.tar.gz`.
+Hash e risultati sono nel runbook. Restano espliciti i limiti di copertura su
+guasti di rete, chunk nelle spiegazioni/HTTP/MCP, formati temporali e controlli
+ambientali delle risorse. Le prove riuscite non approvano l'attivazione.
 
 Sono esclusi da codice e nuovi studi su questo branch:
 

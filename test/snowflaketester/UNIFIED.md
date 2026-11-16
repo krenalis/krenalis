@@ -1431,10 +1431,11 @@ normal build excludes the tagged fault test.
 The first `local` run was refused by the sandbox's Docker permissions and is
 replaced by `local-final`. The live normal probe (`live-chunks`) was refused
 at authentication with Snowflake error 390422, before schema creation or any
-application SELECT. It is not a remote pass. The new normal and fault commands
-remain pending until the next authorized live window; the fault command was
-not attempted. The earlier private probe's remote success does not certify
-the new retry-exhaustion path.
+application SELECT. It is not a remote pass. At that point the fault command
+had not been attempted. Both repeatable commands passed in the
+[2026-11-16 completion campaign](#post-integration-completion-on-2026-11-16).
+The earlier private probe's remote success does not certify the new
+retry-exhaustion path.
 
 ## Approved native-text policy (2026-11-13)
 
@@ -1522,8 +1523,8 @@ in both positive and negative Count predicates.
 The local PostgreSQL run passed nine test nodes with the race detector. The same
 test before the correction failed with SQLSTATE 42883. Both warehouse renderer
 snapshots cover the allowed-value String case; the existing ordinary String and
-JSON snapshots stay unchanged. The Snowflake fixture is prepared but has not
-been executed remotely. Add it to the next authorized live campaign:
+JSON snapshots stay unchanged. The Snowflake fixture passed in both session
+timezones on 2026-11-16, as recorded below. Repeat it with fresh evidence:
 
 ```sh
 python3 test/snowflaketester/run.py --require-schemas \
@@ -1746,3 +1747,71 @@ the shared compiler, vet and build. Three overlay mutants were detected: reuse
 of the target query tag, and removal of error preservation in each PostgreSQL
 adapter. Full datastore and full remote numeric/calendar campaigns were not
 repeated for these changes; their prior evidence remains separate.
+
+## Post-integration completion on 2026-11-16
+
+The authorized campaign tested `4928f87fb70a9ed81a9721406546d44628362d3a`, after
+the reviewed json-filter-support integration. Production sources and the closed
+gate remained unchanged. All accepted blocks used the race detector, stable
+source/overlay hashes and verified session parameters.
+
+| Block | UTC PASS | America/Los_Angeles PASS |
+| --- | ---: | ---: |
+| Normal remote chunks | 2 | — |
+| Retry-exhaustion chunk fault and recovery | 1 | — |
+| Event enum substring regression | 9 | 9 |
+| Added conformance groups | 392 | — |
+| Baseline conformance and stored numbers | 44 | — |
+| Reduced conformance: periods, pages, protocol | — | 22 |
+| Record, states, sources, identity, resources and timestamp precision | 211 | — |
+| Reduced Record matrix and collation | — | 17 |
+| Reduced identity, resources and precision | — | 11 |
+| Public Profiles HTTP | 9 | 9 |
+| Profiles MCP | 6 | 6 |
+| Recorded-event discovery and MCP tools | 8 | — |
+| Running-query timeout | 3 | — |
+| Running-query cancellation | 3 | — |
+| Independent read-only inventory | 1 | — |
+
+These are test/subtest nodes, not query counts. The two complete UTC conformance
+blocks overlap only on their parent and cover 435 distinct nodes. The LA subset
+does not repeat the full conformance matrix. The 211-node block skips only the
+normal chunk subtest, already run separately.
+
+The normal chunk test checked every byte of 512 profiles, exactly 1 MiB, with
+three remote chunks observed. The fault test observed 48 delivered rows, three
+chunks and six attempts before retry exhaustion, with no partial result and a
+live caller context. The following unmarked read on the same pool returned all
+profiles and payloads. This is a driver-level injected fault, not a network outage.
+
+HTTP observed exactly 7/3/2 query/explanation/Record SELECT responses per timezone;
+MCP observed 3/2/2. Every tagged SELECT response was Arrow. Conformance-only
+overlays add query tags at the two datastore entry points without changing SQL
+or assertions. Discovery and interruption retain their original tags and do not
+attest per-response formats; their requested ARROW settings are verified.
+Timeout and cancellation observed terminal server codes 630 and 604 respectively,
+followed by exact recovery results on the same pools.
+
+The first `conformance-utc` attempt hit its 15-minute Go test timeout after 351
+passing nodes. It is incomplete and excluded from the accepted blocks. Its one
+owned schema was checked and removed by a separate cleanup test. That test passed,
+while its wrapper exited 4 because its DROP belongs to the CREATE in the earlier
+block. The final cross-block ledger reconciles all 29 CREATEs and 29 DROPs with
+no issues. Independent server inventory found zero remaining campaign schemas;
+the 23 other visible test schemas were untouched.
+
+Evidence is under `/private/tmp/krenalis-snowflake-completion-20261116-aahdvrho/`.
+The durable private archive is
+`/Users/marco/src/krenalis-test-evidence/snowflake-completion-20261116-4928f87fb.tar.gz`.
+SHA-256: `64c0075ac7c47b0ce7cd3f84e75a2469ea6f4dc108b70edd35e6d7cb0b13be6c`.
+Its 159 files include masked logs, manifests, overlays, launchers, final audits
+and a hashed `archive-index.json`; credentials, binaries and Admin assets are
+excluded. Output checks found zero credential values in the recorded raw/JSON/Go
+escaped forms, zero signed-URL markers and zero workspace-key markers. Every
+selected text file was checked again before archival.
+
+This completes the planned live regression of the integrated branch. The coverage
+limits above remain explicit: it does not certify explanation/HTTP/MCP chunk
+faults, actual network outages, other timestamp input formats or environment-level
+resource controls. The main-only limitations remain outside this branch. The
+production gate stays closed; the whole-branch review precedes activation or merge.

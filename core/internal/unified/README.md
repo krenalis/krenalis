@@ -8,6 +8,13 @@ Admin and destination connections do not expose it yet. The prepared-filter
 boundary refines the SQL transport described in report 14 §5.4: generated SQL is
 now an internal detail of the warehouse implementation.
 
+The post-integration Snowflake campaign completed on 2026-11-16, including
+the repeatable chunk checks, enum regression, bounded conformance and public
+HTTP/MCP paths. Results, provenance and coverage limits are recorded in the
+[runbook](../../../test/snowflaketester/UNIFIED.md#post-integration-completion-on-2026-11-16).
+The production gate remains closed pending the separate branch review and
+activation decision.
+
 ## Executable path
 
 `Workspace.QueryProfiles` receives one `core.Filter`, decoded using the
