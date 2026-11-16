@@ -78,6 +78,12 @@ func Test_Merge(t *testing.T) {
 		KrenalisValue any
 	}{
 		{types.String(), "foo"},
+		{types.String(), "O'Brien"},
+		{types.String(), "a'"},
+		{types.String(), "a''b"},
+		{types.String(), "'x'"},
+		{types.String(), "a\rb"},
+		{types.String(), "a\\b"},
 		{types.Boolean(), true},
 		{types.Int(8), 103},
 		{types.Int(16), 8030},
