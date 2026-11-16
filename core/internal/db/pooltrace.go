@@ -99,7 +99,7 @@ func (acquireTracer) TraceQueryEnd(ctx context.Context, conn *pgx.Conn, data pgx
 // TraceAcquireStart implements pgxpool.AcquireTracer. It records the start time
 // in the context so we can compute how long the acquire took.
 func (acquireTracer) TraceAcquireStart(ctx context.Context, pool *pgxpool.Pool, _ pgxpool.TraceAcquireStartData) context.Context {
-	slog.InfoContext(ctx, "pgxpool: try acquire")
+	slog.Info("pgxpool: try acquire")
 	return context.WithValue(ctx, t0Key, time.Now())
 }
 
@@ -113,7 +113,7 @@ func (acquireTracer) TraceAcquireEnd(ctx context.Context, pool *pgxpool.Pool, da
 	}
 
 	if data.Err != nil {
-		slog.ErrorContext(ctx, "pgxpool: acquire failed", "waited", wait, "error", data.Err)
+		slog.Error("pgxpool: acquire failed", "waited", wait, "error", data.Err)
 		return
 	}
 
@@ -124,7 +124,7 @@ func (acquireTracer) TraceAcquireEnd(ctx context.Context, pool *pgxpool.Pool, da
 
 	// Take a snapshot of pool statistics for logging.
 	s := pool.Stat()
-	slog.InfoContext(ctx, "pgxpool: acquired", "pid", pid, "waited", wait,
+	slog.Info("pgxpool: acquired", "pid", pid, "waited", wait,
 		"acquired", s.AcquiredConns(), "idle", s.IdleConns(), "total", s.TotalConns())
 
 	// Track the hold in our map and pprof profile so we can see “live” holds.
