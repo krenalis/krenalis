@@ -33,8 +33,8 @@ func TestFilterAverageBudget(t *testing.T) {
 		for i := range root.Rules {
 			root.Rules[i] = &condition
 		}
-		if !root.RequiresUnified() || root.HasCount() {
-			t.Fatal("expected Unified requirement without a Count, got incorrect detection")
+		if !root.RequiresUnified() {
+			t.Fatal("expected Unified requirement, got false")
 		}
 		nodes := 0
 		_, err := prepareUnifiedRule(root, schema, 0, &nodes)

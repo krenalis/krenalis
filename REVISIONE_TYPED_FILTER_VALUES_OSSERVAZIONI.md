@@ -21,7 +21,7 @@ sulla conversione dei Decimal del catalogo nel collector.
 | 2a | P2: token Decimal nel collector senza limite lessicale | Anche questo percorso nasce nel branch: la base manteneva properties come JSON grezzo. Limitare a 4096 byte i token scalari Decimal prima di `types.Decode`, restituendo un errore di validazione. L'ottimizzazione del parser generico resta separata su main. |
 | 3 | P2: il test dei writer altera il registro globale | Il test ora usa la piattaforma PostgreSQL esistente e salva le impostazioni cifrate nel workspace di prova. Non registra più una piattaforma fittizia e conserva il percorso reale del datastore e dei writer. Il test preesistente della risoluzione delle identità resta invariato. |
 | 4 | P3: riordino degli endpoint | Ripristinato l'ordine della base per la rotta iniziale, le metriche e le organizzazioni. In `cmd/endpoints.go` resta soltanto l'aggiunta della rotta della spiegazione rispetto a json-filter-support. |
-| 5 | P3: `Filter.HasCount` senza chiamanti di produzione | Il metodo nasce nel branch ed è stato sostituito da `RequiresUnified`. Rimuovere l'API inutilizzata e semplificare la visita; aggiornare tutti i test che lo chiamano. |
+| 5 | P3: `Filter.HasCount` senza chiamanti di produzione | Rimosso il metodo e la modalità dedicata a Count in `hasBehavior`. I sette test che lo chiamavano ora verificano soltanto `RequiresUnified`, mantenendo la copertura della visita limitata dell'albero. |
 | 6 | P3: documentazione del catalogo inesatta | Il README MCP nega effetti sull'ingresso, ma il decoder valida e normalizza. Documentare il comportamento effettivo e le conseguenze di compatibilità secondo la decisione sul P1. |
 
 ## Interventi generali separati
@@ -238,6 +238,35 @@ Log e risultato del confronto in
 `/private/tmp/krenalis-review-p3-endpoints-he953412/`.
 L'intervento è pronto per la revisione. `Filter.HasCount` e la documentazione
 residua non sono stati modificati.
+
+Il revisore ha approvato `f9b7dbac7`, confermando l'identità con la base salvo
+la nuova rotta e ripetendo i test e i controlli. Il P3 sull'ordine degli
+endpoint è chiuso.
+
+## P3: rimozione di Filter.HasCount
+
+Rimosso `Filter.HasCount`, che non aveva chiamanti di produzione. La visita
+`hasBehavior` mantiene soltanto la modalità usata da `RequiresUnified`, senza
+modificare il riconoscimento delle condizioni o i limiti dell'albero.
+
+Sono aggiornati tutti i sette test chiamanti: sei conservano l'asserzione
+su `RequiresUnified`; quello dedicato alla visita è rinominato
+`TestFilterRequiresUnified`. Conserva i casi Record, Count, profondità,
+ampiezza, nil e cicli, e verifica anche Sum, Average, experience, latestN,
+lastVersusPrevious, occurredIn e money. Non restano riferimenti a HasCount
+nel codice Go del repository fuori da vendor.
+
+Verifiche:
+
+- `go test -mod=vendor ./core ./cmd -short -race -count=1 -json`:
+  2.224 nodi PASS (2.004 core e 220 cmd), 5 SKIP dei test d'integrazione
+  esclusi da `-short`, nessun FAIL.
+- `go vet -mod=vendor ./core ./cmd`, gofmt dei file modificati e controllo
+  del diff: puliti.
+
+Log in `/private/tmp/krenalis-review-p3-hascount-uy858zsm/`.
+L'intervento è pronto per la revisione; la documentazione residua resta
+rinviata al passo successivo.
 
 ## Nota da riportare nel rilascio
 

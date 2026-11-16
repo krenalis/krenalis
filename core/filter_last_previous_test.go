@@ -145,8 +145,8 @@ func TestFilterLastPreviousCodec(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected public pair decoding, got %v", err)
 	}
-	if !filter.RequiresUnified() || filter.HasCount() {
-		t.Fatal("expected Unified without Count, got incorrect detection")
+	if !filter.RequiresUnified() {
+		t.Fatal("expected Unified requirement, got false")
 	}
 	encoded, err := json.Marshal(&filter)
 	if err != nil {

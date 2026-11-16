@@ -204,7 +204,7 @@ func TestFilterSumRoundTrip(t *testing.T) {
 		if err != nil {
 			t.Fatalf("expected Sum encoding, got %v", err)
 		}
-		if string(before) != input || !filter.RequiresUnified() || filter.HasCount() {
+		if string(before) != input || !filter.RequiresUnified() {
 			t.Fatalf("expected unchanged Sum document requiring Unified, got %s", before)
 		}
 		nodes := 0

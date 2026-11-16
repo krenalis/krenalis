@@ -114,8 +114,8 @@ func TestFilterExperienceCodec(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected experience decoded, got %v", err)
 	}
-	if !filter.RequiresUnified() || filter.HasCount() {
-		t.Fatal("expected Unified requirement without Count, got wrong detection")
+	if !filter.RequiresUnified() {
+		t.Fatal("expected Unified requirement, got false")
 	}
 	before, err := json.Marshal(&filter)
 	if err != nil {

@@ -46,12 +46,6 @@ type FilterRule interface {
 	filterRule()
 }
 
-// HasCount reports whether a Count occurs within the admitted main-tree bounds.
-// It does not validate the filter; malformed trees still require preparation.
-func (filter *Filter) HasCount() bool {
-	return filter.hasBehavior(false)
-}
-
 // MarshalJSON returns the JSON representation of filter.
 func (filter *Filter) MarshalJSON() ([]byte, error) {
 	if filter == nil {
@@ -68,7 +62,7 @@ func (filter *Filter) MarshalJSON() ([]byte, error) {
 // RequiresUnified reports behavioral conditions in the main-tree bounds.
 // It does not validate the filter.
 func (filter *Filter) RequiresUnified() bool {
-	return filter.hasBehavior(true)
+	return filter.hasBehavior()
 }
 
 // UnmarshalJSON sets filter to the filter group represented by data.
@@ -85,7 +79,7 @@ func (filter *Filter) UnmarshalJSON(data []byte) error {
 // filterRule marks Filter as a filter rule.
 func (*Filter) filterRule() {}
 
-func (filter *Filter) hasBehavior(includeExtended bool) bool {
+func (filter *Filter) hasBehavior() bool {
 	type entry struct {
 		group *Filter
 		depth int
@@ -104,14 +98,10 @@ func (filter *Filter) hasBehavior(includeExtended bool) bool {
 				return false
 			}
 			switch rule := rule.(type) {
-			case *FilterCountCondition:
-				return true
-			case *FilterSumCondition, *FilterAverageCondition, *FilterExperienceCondition, *FilterLatestNCondition,
-				*FilterLastVersusPreviousCondition,
+			case *FilterCountCondition, *FilterSumCondition, *FilterAverageCondition, *FilterExperienceCondition,
+				*FilterLatestNCondition, *FilterLastVersusPreviousCondition,
 				*FilterOccurredInCondition, *FilterMoneyCondition:
-				if includeExtended {
-					return true
-				}
+				return true
 			case *Filter:
 				stack = append(stack, entry{rule, current.depth + 1})
 			default:

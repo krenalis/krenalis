@@ -15,7 +15,7 @@ import (
 	"github.com/krenalis/krenalis/tools/types"
 )
 
-func TestFilterHasCount(t *testing.T) {
+func TestFilterRequiresUnified(t *testing.T) {
 	count := &FilterCountCondition{}
 	record := &FilterCondition{Property: "email", Operator: OpExists}
 	deep := &Filter{Operator: OpAnd, Rules: []FilterRule{count}}
@@ -32,6 +32,13 @@ func TestFilterHasCount(t *testing.T) {
 		{"nil", nil, false},
 		{"Record", &Filter{Operator: OpAnd, Rules: []FilterRule{record}}, false},
 		{"mixed", &Filter{Operator: OpOr, Rules: []FilterRule{record, count}}, true},
+		{"Sum", &Filter{Rules: []FilterRule{&FilterSumCondition{}}}, true},
+		{"Average", &Filter{Rules: []FilterRule{&FilterAverageCondition{}}}, true},
+		{"experience", &Filter{Rules: []FilterRule{&FilterExperienceCondition{}}}, true},
+		{"latestN", &Filter{Rules: []FilterRule{&FilterLatestNCondition{}}}, true},
+		{"lastVersusPrevious", &Filter{Rules: []FilterRule{&FilterLastVersusPreviousCondition{}}}, true},
+		{"occurredIn", &Filter{Rules: []FilterRule{&FilterOccurredInCondition{}}}, true},
+		{"money", &Filter{Rules: []FilterRule{&FilterMoneyCondition{}}}, true},
 		{"four levels", deep, true},
 		{"typed nil", &Filter{Rules: []FilterRule{(*Filter)(nil)}}, false},
 		{"nil Count", &Filter{Rules: []FilterRule{(*FilterCountCondition)(nil)}}, true},
@@ -40,8 +47,8 @@ func TestFilterHasCount(t *testing.T) {
 		{"too wide", &Filter{Rules: make([]FilterRule, 101)}, false},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			if got := test.root.HasCount(); got != test.want {
-				t.Fatalf("expected HasCount %t, got %t", test.want, got)
+			if got := test.root.RequiresUnified(); got != test.want {
+				t.Fatalf("expected RequiresUnified %t, got %t", test.want, got)
 			}
 		})
 	}

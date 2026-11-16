@@ -110,7 +110,7 @@ func TestFilterCountCurrencyRoundTrip(t *testing.T) {
 			if err != nil {
 				t.Fatalf("expected encoded currency Count, got %v", err)
 			}
-			if string(encoded) != input || !filter.HasCount() || !filter.RequiresUnified() {
+			if string(encoded) != input || !filter.RequiresUnified() {
 				t.Fatalf("expected unchanged Count document %s requiring Unified, got %s", input, encoded)
 			}
 			nodes := 0

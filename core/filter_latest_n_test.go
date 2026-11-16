@@ -110,8 +110,8 @@ func TestFilterLatestNCodec(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected latestN fixture, got %v", err)
 	}
-	if !filter.RequiresUnified() || filter.HasCount() {
-		t.Fatal("expected Unified without Count, got wrong detection")
+	if !filter.RequiresUnified() {
+		t.Fatal("expected Unified requirement, got false")
 	}
 	encoded, err := json.Marshal(&filter)
 	if err != nil {
