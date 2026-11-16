@@ -105,10 +105,12 @@ comune a tutti i workspace. Il decoder valida e normalizza traits e properties
 quando la definizione corrispondente ne specifica lo schema. Il 16 novembre
 l'utente ha confermato lo scarto dell'intero evento non conforme, senza log,
 metriche, osservatore o errore al client dedicati: la richiesta resta riuscita.
-Si perde anche l'elaborazione delle identità di quell'evento. I payload conformi
-possono cambiare rappresentazione, per esempio date in UTC, decimali canonici
-e ordine delle chiavi. Questo effetto va comunicato nelle note di rilascio;
-gli eventi storici non vengono rivalidati o riscritti.
+Si perde anche l'elaborazione delle identità di quell'evento. La normalizzazione
+può, per esempio, esprimere i timestamp in UTC, rendere canonici Float e Decimal,
+cambiare la rappresentazione dei valori Time e IP e riordinare le chiavi degli
+oggetti. Le chiavi dichiarate seguono l'ordine dello schema; quelle non
+dichiarate vengono poi ordinate alfabeticamente. Questo effetto va comunicato
+nelle note di rilascio; gli eventi storici non vengono rivalidati o riscritti.
 
 L'accesso MCP usa la connessione principale anche per le chiavi già esistenti.
 I limiti del precedente ruolo o warehouse dedicato non si trasferiscono

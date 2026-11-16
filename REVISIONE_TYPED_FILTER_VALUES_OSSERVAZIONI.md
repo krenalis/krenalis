@@ -22,7 +22,7 @@ sulla conversione dei Decimal del catalogo nel collector.
 | 3 | P2: il test dei writer altera il registro globale | Il test ora usa la piattaforma PostgreSQL esistente e salva le impostazioni cifrate nel workspace di prova. Non registra più una piattaforma fittizia e conserva il percorso reale del datastore e dei writer. Il test preesistente della risoluzione delle identità resta invariato. |
 | 4 | P3: riordino degli endpoint | Ripristinato l'ordine della base per la rotta iniziale, le metriche e le organizzazioni. In `cmd/endpoints.go` resta soltanto l'aggiunta della rotta della spiegazione rispetto a json-filter-support. |
 | 5 | P3: `Filter.HasCount` senza chiamanti di produzione | Rimosso il metodo e la modalità dedicata a Count in `hasBehavior`. I sette test che lo chiamavano ora verificano soltanto `RequiresUnified`, mantenendo la copertura della visita limitata dell'albero. |
-| 6 | P3: documentazione del catalogo inesatta | README e riepilogo sono stati allineati nel P1. Le note per il rilascio ora descrivono lo scarto e la normalizzazione all'ingresso; completata anche la nota sui limiti delle precedenti credenziali MCP. |
+| 6 | P3: documentazione del catalogo inesatta | README e riepilogo sono stati allineati nel P1. Riepilogo e osservazioni conservano la nota di rilascio su scarto e normalizzazione; la voce impropria sul catalogo è rimossa da RELEASE-UPGRADE.md. Completata anche la nota sui limiti delle precedenti credenziali MCP. |
 
 ## Interventi generali separati
 
@@ -275,7 +275,7 @@ copertura dei test e le verifiche ripetute. Il P3 su `Filter.HasCount` è chiuso
 ## P3: documentazione residua
 
 Il comportamento del catalogo era già stato documentato nel primo intervento.
-Le note per il prossimo rilascio ora richiedono di comunicarne l'effetto
+Il riepilogo e la nota di rilascio in questo documento ne descrivono l'effetto
 sull'ingresso in tutti i workspace: scarto dell'intero evento non conforme,
 compresa l'elaborazione delle identità, richiesta ancora riuscita e nessuna
 segnalazione dedicata. Descrivono anche la normalizzazione dei valori conformi
@@ -299,6 +299,23 @@ ripetute suite o prove remote per questo intervento documentale.
 Questo ultimo intervento è pronto per la revisione. Il gate Snowflake resta
 chiuso; attivazione, merge e preparazione del rilascio rimangono separati.
 
+### Correzioni dopo la verifica documentale
+
+Il revisore ha approvato nella sostanza `18055c47a`, chiedendo due precisazioni
+sulla voce del catalogo. Rimossa da `RELEASE-UPGRADE.md`: non descrive una
+migrazione del database e quel file viene eliminato quando si prepara
+l'updater. La nota destinata al rilascio resta nel riepilogo e in questo
+documento. La voce MCP resta legata alla rimozione delle colonne.
+
+Gli effetti della normalizzazione sono presentati come esempi, inclusi Float,
+Decimal, Time e IP. L'ordine può cambiare per tutte le chiavi degli oggetti:
+prima quelle dichiarate nell'ordine dello schema, poi quelle extra in ordine
+alfabetico. Verificato contro `normalizeJSONValue` e i casi esistenti di
+`TestNormalizeJSON`, compreso `arbitrary extra keys`.
+
+Cambiano soltanto tre file Markdown. Diff pulito; nessuna suite ripetuta per
+questa correzione documentale. Le correzioni sono pronte per la revisione.
+
 ## Nota da riportare nel rilascio
 
 Il catalogo predefinito introduce validazione e normalizzazione all'ingresso
@@ -308,8 +325,9 @@ dedicati. Per esempio un identify con `traits.company: "Acme"` o
 `traits.email: null`, una page con `properties.title: null` e un Order Completed
 con `properties.total: "10.50"` non rispettano gli schemi. Gli eventi scartati
 non contribuiscono neppure all'elaborazione delle identità. Per gli eventi
-conformi possono cambiare la rappresentazione delle date, dei decimali e
-l'ordine delle chiavi. Non sono previste conversioni aggiuntive né una
+conformi possono cambiare, per esempio, la rappresentazione di timestamp,
+Float, Decimal, Time e IP e l'ordine delle chiavi degli oggetti, comprese
+quelle non dichiarate. Non sono previste conversioni aggiuntive né una
 rivalidazione degli eventi storici; non serve una migrazione del database.
 
 Il gate Snowflake resta chiuso. Revisione, attivazione e merge sono passi
