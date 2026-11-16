@@ -70,6 +70,12 @@ profile properties and supported event conditions through the main connection.
 Administrators must review existing MCP keys when upgrading and revoke keys that
 should no longer have this access. No new key is created or re-scoped automatically.
 
+Resource limits attached to the former role or dedicated warehouse do not
+transfer automatically to the main connection. Review statement timeouts and,
+on Snowflake, the main virtual warehouse and its resource monitor. MCP argument,
+response and rate limits do not bound how long an individual query runs or how
+much warehouse work it performs.
+
 The warehouse settings API no longer returns `mcpSettings`. Its update/test PUTs
 accept omission or null for that retired field and reject any non-null value
 with HTTP 400; credential payloads cannot silently configure MCP access.
@@ -113,9 +119,8 @@ integer pagination and rejection of unknown/null arguments. The default limit
 is 20; core retains the range 1–1000. Arguments are limited to 500 KiB. The full
 result JSON, including schema and metadata, is limited to 128 KiB before any
 content is returned. Oversize yields `ProfileResultTooLarge` and advice to reduce
-limit/projection; no rows are truncated. The underlying HTTP/core/warehouse
-budgets are unchanged. The response budget is not a new warehouse scan budget
-for the legacy Record path.
+limit/projection; no rows are truncated. The response budget does not bound
+warehouse scans for the legacy Record path.
 
 Every MCP POST has a separate **1 MiB HTTP body limit**, including the JSON-RPC
 envelope. A declared length above that limit is rejected before reading; actual

@@ -110,6 +110,13 @@ possono cambiare rappresentazione, per esempio date in UTC, decimali canonici
 e ordine delle chiavi. Questo effetto va comunicato nelle note di rilascio;
 gli eventi storici non vengono rivalidati o riscritti.
 
+L'accesso MCP usa la connessione principale anche per le chiavi già esistenti.
+I limiti del precedente ruolo o warehouse dedicato non si trasferiscono
+automaticamente. Gli amministratori devono verificare gli statement timeout
+e, su Snowflake, il warehouse principale e il suo resource monitor. I budget
+di argomenti e risposta e il rate limit MCP non limitano la durata o il lavoro
+eseguito dal warehouse per la singola query.
+
 Rispetto a json-filter-support, la modifica strutturale di schema.sql è la
 rimozione delle due colonne delle credenziali MCP. Le note di rilascio mantengono
 anche i passi Year già previsti dalla base. La base dichiarata nelle note è

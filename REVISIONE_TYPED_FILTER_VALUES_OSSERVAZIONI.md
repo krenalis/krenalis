@@ -22,7 +22,7 @@ sulla conversione dei Decimal del catalogo nel collector.
 | 3 | P2: il test dei writer altera il registro globale | Il test ora usa la piattaforma PostgreSQL esistente e salva le impostazioni cifrate nel workspace di prova. Non registra più una piattaforma fittizia e conserva il percorso reale del datastore e dei writer. Il test preesistente della risoluzione delle identità resta invariato. |
 | 4 | P3: riordino degli endpoint | Ripristinato l'ordine della base per la rotta iniziale, le metriche e le organizzazioni. In `cmd/endpoints.go` resta soltanto l'aggiunta della rotta della spiegazione rispetto a json-filter-support. |
 | 5 | P3: `Filter.HasCount` senza chiamanti di produzione | Rimosso il metodo e la modalità dedicata a Count in `hasBehavior`. I sette test che lo chiamavano ora verificano soltanto `RequiresUnified`, mantenendo la copertura della visita limitata dell'albero. |
-| 6 | P3: documentazione del catalogo inesatta | Il README MCP nega effetti sull'ingresso, ma il decoder valida e normalizza. Documentare il comportamento effettivo e le conseguenze di compatibilità secondo la decisione sul P1. |
+| 6 | P3: documentazione del catalogo inesatta | README e riepilogo sono stati allineati nel P1. Le note per il rilascio ora descrivono lo scarto e la normalizzazione all'ingresso; completata anche la nota sui limiti delle precedenti credenziali MCP. |
 
 ## Interventi generali separati
 
@@ -35,8 +35,9 @@ sulla conversione dei Decimal del catalogo nel collector.
   separato su main. Gli envelope malformati erano già saltati senza una
   segnalazione dedicata; questo non risolve la nuova politica del catalogo.
 - **Timeout e governo delle risorse:** una politica generale richiede un
-  intervento separato. In questo branch va documentato che i limiti delle
-  precedenti credenziali MCP non si trasferiscono alla connessione principale.
+  intervento separato. La documentazione chiarisce che i limiti delle
+  precedenti credenziali MCP non si trasferiscono automaticamente alla
+  connessione principale.
 
 Nessuno dei sei rilievi richiede una correzione su json-filter-support.
 Restano fuori dal branch la collation degli identificativi gestiti Snowflake
@@ -267,6 +268,36 @@ Verifiche:
 Log in `/private/tmp/krenalis-review-p3-hascount-uy858zsm/`.
 L'intervento è pronto per la revisione; la documentazione residua resta
 rinviata al passo successivo.
+
+Il revisore ha approvato `f95d90b61`, confermando la rimozione completa, la
+copertura dei test e le verifiche ripetute. Il P3 su `Filter.HasCount` è chiuso.
+
+## P3: documentazione residua
+
+Il comportamento del catalogo era già stato documentato nel primo intervento.
+Le note per il prossimo rilascio ora richiedono di comunicarne l'effetto
+sull'ingresso in tutti i workspace: scarto dell'intero evento non conforme,
+compresa l'elaborazione delle identità, richiesta ancora riuscita e nessuna
+segnalazione dedicata. Descrivono anche la normalizzazione dei valori conformi
+e precisano che non comporta una migrazione dei dati storici.
+
+README MCP, riepilogo della revisione e note per il rilascio chiariscono che
+i limiti del precedente ruolo o warehouse dedicato non si trasferiscono
+automaticamente alla connessione principale. Gli amministratori devono
+verificare gli statement timeout e il warehouse Snowflake principale con il
+suo resource monitor. I budget MCP di argomenti, risposta e rate limit non
+limitano la durata o il lavoro eseguito dal warehouse per la singola query.
+Il README non afferma più genericamente che i budget del warehouse restano
+invariati.
+
+Verifica documentale contro il decoder, il collector e il percorso MCP/core
+che usa il contesto della richiesta. Riletti i testi in italiano e inglese;
+controllo del diff pulito. Cambiano soltanto quattro file Markdown: nessun
+codice Go, SQL, configurazione, base di rilascio o updater. Non sono state
+ripetute suite o prove remote per questo intervento documentale.
+
+Questo ultimo intervento è pronto per la revisione. Il gate Snowflake resta
+chiuso; attivazione, merge e preparazione del rilascio rimangono separati.
 
 ## Nota da riportare nel rilascio
 

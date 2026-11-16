@@ -30,6 +30,15 @@ base release. See `.agents/skills/release-upgrade/SKILL.md`.
   the release notes that existing filters may return different results under
   typed comparisons and the current rules for absent or inapplicable values.
   Ordinary integer operands remain JSON numbers at every bit size.
+- Document the default event catalog's ingestion change in the release notes.
+  In every workspace, the collector validates and normalizes traits and
+  properties when a matching definition specifies a schema. A schema
+  violation discards the entire event, including identity processing; the
+  request still succeeds, with no dedicated log, metric or Admin observer
+  entry. Normalization can change timestamps to UTC, decimal representation
+  and the order of known object keys. It introduces no additional coercions
+  and does not rewrite historical events. This ingestion change needs no
+  database upgrade.
 - Remove `workspaces.warehouse_mcp_settings` and
   `workspaces.kms_encrypted_warehouse_mcp_settings_key`, discarding the stored
   warehouse MCP credentials and their dedicated encryption key without
@@ -40,3 +49,8 @@ base release. See `.agents/skills/release-upgrade/SKILL.md`.
   existing keys without warehouse MCP settings and keys formerly restricted
   by read-only warehouse grants. Document this access change in the release
   notes so administrators can review and revoke existing keys as needed.
+  Limits on the former role or dedicated warehouse do not transfer
+  automatically to the main connection: review statement timeouts and the
+  main Snowflake warehouse and its resource monitor separately. MCP argument,
+  response and rate limits do not bound the duration or warehouse work of an
+  individual query.
