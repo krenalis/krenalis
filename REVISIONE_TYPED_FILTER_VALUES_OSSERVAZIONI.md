@@ -19,7 +19,7 @@ sulla conversione dei Decimal del catalogo nel collector.
 | 1 | P1: scarto degli eventi non conformi al catalogo | L'applicazione obbligatoria dei nuovi schemi amplia gli scarti rispetto alla base. Il 16 novembre l'utente ha confermato lo scarto dell'intero evento senza segnalazione osservabile. Il comportamento attuale resta; il primo intervento ne esplicita la compatibilità e aggiunge i casi della revisione ai test. |
 | 2 | P2: operandi numerici Record senza limite lessicale | Il secondo intervento limita a 4096 byte i token Decimal e JSON Number, prima della conversione, in `DecodeFilterOperand`. Copre anche array e rilettura dei filtri salvati; i controlli di precisione 76/scala 37 rimangono. I letterali monetari avevano già lo stesso limite. |
 | 2a | P2: token Decimal nel collector senza limite lessicale | Anche questo percorso nasce nel branch: la base manteneva properties come JSON grezzo. Limitare a 4096 byte i token scalari Decimal prima di `types.Decode`, restituendo un errore di validazione. L'ottimizzazione del parser generico resta separata su main. |
-| 3 | P2: il test dei writer altera il registro globale | La piattaforma fittizia registrata dal nuovo test fa fallire il test preesistente della risoluzione delle identità. La correzione preferita è isolare il nuovo test evitando la registrazione globale, conservando la copertura dei writer reali. |
+| 3 | P2: il test dei writer altera il registro globale | Il test ora usa la piattaforma PostgreSQL esistente e salva le impostazioni cifrate nel workspace di prova. Non registra più una piattaforma fittizia e conserva il percorso reale del datastore e dei writer. Il test preesistente della risoluzione delle identità resta invariato. |
 | 4 | P3: riordino degli endpoint | Il rumore è introdotto dalla risoluzione del merge. Ripristinare l'ordine della base, mantenendo la nuova rotta della spiegazione. |
 | 5 | P3: `Filter.HasCount` senza chiamanti di produzione | Il metodo nasce nel branch ed è stato sostituito da `RequiresUnified`. Rimuovere l'API inutilizzata e semplificare la visita; aggiornare tutti i test che lo chiamano. |
 | 6 | P3: documentazione del catalogo inesatta | Il README MCP nega effetti sull'ingresso, ma il decoder valida e normalizza. Documentare il comportamento effettivo e le conseguenze di compatibilità secondo la decisione sul P1. |
@@ -179,6 +179,40 @@ Verifiche del completamento:
   map di oggetti con campi Decimal. Non sono errori di compilazione.
 - Vet, gofmt e controllo del diff: puliti. Evidenze locali in
   `/private/tmp/krenalis-review-p2-collector-tests-4s91ov0j/`.
+
+Il revisore ha approvato `50bbfb7bf`, ripetendo la suite e i mutanti. Il
+residuo P2 del collector è chiuso; si passa all'isolamento del test dei writer.
+
+## P2: isolamento del test dei writer
+
+`TestUnifiedWritersPostgreSQL` non registra più la piattaforma fittizia nel
+registro globale. Il workspace di prova usa PostgreSQL e impostazioni cifrate
+con il normale Cipher e il KMS locale del test. Il datastore crea il provider
+tramite la factory di produzione e carica le impostazioni dallo state;
+writer, pubblicazione delle identità e query Unified restano reali.
+
+La correzione riguarda solo il nuovo test. Non modifica il registro, il
+datastore di produzione né il test preesistente della risoluzione delle
+identità. I rilievi successivi restano sospesi fino alla revisione.
+
+Verifiche:
+
+- Prima della correzione, l'esecuzione congiunta dei test dei writer e della
+  risoluzione delle identità riproduce il panic sulla piattaforma fittizia.
+- Dopo la correzione, la stessa esecuzione con `-race -count=1` passa:
+  57 nodi PASS e 1 SKIP, quello Snowflake disabilitato esplicitamente.
+- `go test -mod=vendor ./core/internal/datastore -race -count=1 -timeout=20m -json`,
+  senza `-short` e senza selettori: 6.171 nodi PASS, 16 SKIP Snowflake, nessun
+  FAIL. Il pacchetto completa l'esecuzione in circa 386 secondi.
+- `go vet -mod=vendor ./core/internal/datastore`, gofmt e controllo del diff:
+  puliti.
+
+Entrambe le esecuzioni successive alla correzione usano
+`KRENALIS_SKIP_SNOWFLAKE_TESTS=true` e PostgreSQL locale usa e getta. Non sono
+state lette credenziali Snowflake né eseguite prove remote. Log del
+controesempio e delle verifiche in
+`/private/tmp/krenalis-review-p2-writers-28hq4gqd/`.
+L'intervento è pronto per la revisione; gli altri rilievi non sono modificati.
 
 ## Nota da riportare nel rilascio
 

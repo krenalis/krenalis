@@ -14,6 +14,7 @@ import (
 
 	_ "github.com/krenalis/krenalis/connectors/dummy"
 	_ "github.com/krenalis/krenalis/connectors/segment"
+	"github.com/krenalis/krenalis/core/internal/cipher"
 	"github.com/krenalis/krenalis/core/internal/db"
 	"github.com/krenalis/krenalis/core/internal/initdb"
 	"github.com/krenalis/krenalis/core/internal/schemas"
@@ -93,9 +94,6 @@ func TestUnifiedWritersPostgreSQL(t *testing.T) {
 			t.Errorf("expected warehouse cleanup, got %v", err)
 		}
 	})
-	platform := fmt.Sprintf("UnifiedWriterTest%d", time.Now().UnixNano())
-	warehouses.Register(warehouses.Platform{Name: platform},
-		func(warehouses.SettingsLoader, warehouses.DialWith) warehouses.Warehouse { return warehouse })
 
 	schema := types.Object([]types.Property{
 		{Name: "fixture", Type: types.String(), ReadOptional: true},
@@ -115,6 +113,12 @@ func TestUnifiedWritersPostgreSQL(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected schema encoding, got %v", err)
 	}
+	c := cipher.New(manager)
+	t.Cleanup(c.Close)
+	encryptedSettings, settingsKey, err := c.Encrypt(t.Context(), settings)
+	if err != nil {
+		t.Fatalf("expected encrypted warehouse settings, got %v", err)
+	}
 
 	const workspaceID = "111111111111"
 	const batchConnection = "222222222222"
@@ -124,8 +128,8 @@ func TestUnifiedWritersPostgreSQL(t *testing.T) {
 	_, err = database.Exec(t.Context(), `INSERT INTO workspaces
 (id,organization,name,warehouse_name,warehouse_mode,warehouse_settings,
  kms_encrypted_warehouse_settings_key,profile_schema,identifiers)
- SELECT $1,id,'Unified Writers',$2,'Normal','','',$3,ARRAY[]::text[] FROM organizations`,
-		workspaceID, platform, encodedSchema)
+ SELECT $1,id,'Unified Writers',$2,'Normal',$3,$4,$5,ARRAY[]::text[] FROM organizations`,
+		workspaceID, "PostgreSQL", encryptedSettings, settingsKey, encodedSchema)
 	if err != nil {
 		t.Fatalf("expected workspace state, got %v", err)
 	}
