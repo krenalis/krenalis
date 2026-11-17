@@ -43,14 +43,14 @@ func testEventDiscoveryWarehouse(t *testing.T, platform string) {
 	t.Helper()
 	warehouse := newJSONFilterTestWarehouse(t, platform)
 	tag := "krenalis-discovery/" + rand.Text()
-	observer := newUnifiedInterruptionObserver(t, warehouse, platform, tag, "cancellation")
+	observer := newBehavioralInterruptionObserver(t, warehouse, platform, tag, "cancellation")
 	q := func(name string) string { return `"` + name + `"` }
 	jsonType, timestampType, textType := "jsonb", "timestamp(6)", "VARCHAR"
 	if platform == "Snowflake" {
 		q = func(name string) string { return `"` + strings.ToUpper(name) + `"` }
 		jsonType, timestampType, textType = "VARIANT", "TIMESTAMP_NTZ(6)", "VARCHAR COLLATE 'en-ci'"
 	}
-	execUnifiedFixtureStatement(t, warehouse, fmt.Sprintf(`CREATE TABLE %s (
+	execBehavioralFixtureStatement(t, warehouse, fmt.Sprintf(`CREATE TABLE %s (
 %s %s PRIMARY KEY,%s %s,%s %s,%s %s,%s %s,%s %s,%s %s)`,
 		q("krenalis_events"), q("message_id"), "VARCHAR", q("timestamp"), timestampType,
 		q("type"), textType, q("event"), textType, q("name"), textType,
@@ -242,18 +242,18 @@ func testEventDiscoveryWarehouse(t *testing.T, platform string) {
 
 		switch platform {
 		case "PostgreSQL":
-			execUnifiedFixtureStatement(t, warehouse, `CREATE FUNCTION event_discovery_delay(id text, seconds double precision)
+			execBehavioralFixtureStatement(t, warehouse, `CREATE FUNCTION event_discovery_delay(id text, seconds double precision)
 RETURNS boolean LANGUAGE plpgsql VOLATILE AS $$ BEGIN PERFORM pg_sleep(seconds); RETURN true; END $$`)
 		case "Snowflake":
-			execUnifiedFixtureStatement(t, warehouse, `CREATE FUNCTION event_discovery_delay(id VARCHAR, seconds FLOAT)
+			execBehavioralFixtureStatement(t, warehouse, `CREATE FUNCTION event_discovery_delay(id VARCHAR, seconds FLOAT)
 RETURNS BOOLEAN LANGUAGE JAVASCRIPT VOLATILE AS $$
 var until = Date.now() + SECONDS * 1000; while (Date.now() < until) {} return true; $$`)
 		default:
 			t.Fatalf("expected supported warehouse, got %s", platform)
 		}
-		execUnifiedFixtureStatement(t, warehouse, `SELECT event_discovery_delay('warm',0.001)`)
-		execUnifiedFixtureStatement(t, warehouse, `ALTER TABLE krenalis_events RENAME TO event_discovery_base`)
-		execUnifiedFixtureStatement(t, warehouse, `CREATE VIEW krenalis_events AS
+		execBehavioralFixtureStatement(t, warehouse, `SELECT event_discovery_delay('warm',0.001)`)
+		execBehavioralFixtureStatement(t, warehouse, `ALTER TABLE krenalis_events RENAME TO event_discovery_base`)
+		execBehavioralFixtureStatement(t, warehouse, `CREATE VIEW krenalis_events AS
 SELECT * FROM event_discovery_base WHERE event_discovery_delay(message_id,30)`)
 		request := warehouses.EventSourceDiscoveryRequest{Window: window, Type: "track", NameContains: "Frequent", Limit: 1}
 		ctx, cancel := context.WithCancel(gosnowflake.WithQueryTag(t.Context(), tag))
@@ -307,7 +307,7 @@ SELECT * FROM event_discovery_base WHERE event_discovery_delay(message_id,30)`)
 			t.Logf("discovery cancellation server_code=%d total_elapsed_ms=%d", terminal.code,
 				time.Since(started).Milliseconds())
 
-			execUnifiedFixtureStatement(t, warehouse, `CREATE OR REPLACE VIEW krenalis_events AS
+			execBehavioralFixtureStatement(t, warehouse, `CREATE OR REPLACE VIEW krenalis_events AS
 SELECT * FROM event_discovery_base`)
 			page, err := store.ObservedEventSources(t.Context(), request)
 			if err != nil {

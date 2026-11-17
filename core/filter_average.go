@@ -7,7 +7,7 @@ package core
 import (
 	"bytes"
 
-	"github.com/krenalis/krenalis/core/internal/unified"
+	"github.com/krenalis/krenalis/core/internal/behavioral"
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 )
@@ -57,22 +57,22 @@ func (condition *FilterAverageCondition) UnmarshalJSON(data []byte) error {
 
 func (*FilterAverageCondition) filterRule() {}
 
-func prepareFilterAverage(condition *FilterAverageCondition, calendar *unified.Calendar) (unified.Rule, error) {
+func prepareFilterAverage(condition *FilterAverageCondition, calendar *behavioral.Calendar) (behavioral.Rule, error) {
 	if condition == nil {
-		return unified.Rule{}, errors.New("Average condition cannot be nil")
+		return behavioral.Rule{}, errors.New("Average condition cannot be nil")
 	}
 	if condition.Average.Minimum == nil {
-		return unified.Rule{}, errors.New("Average requires a positive sample minimum")
+		return behavioral.Rule{}, errors.New("Average requires a positive sample minimum")
 	}
 	rule, err := prepareFilterSum(&FilterSumCondition{Sum: condition.Average,
 		Operator: condition.Operator, Values: condition.Values}, calendar)
 	if err != nil {
-		return unified.Rule{}, err
+		return behavioral.Rule{}, err
 	}
-	average := &unified.Average{Sum: *rule.Sum}
+	average := &behavioral.Average{Sum: *rule.Sum}
 	err = average.ValidateThreshold()
 	if err != nil {
-		return unified.Rule{}, err
+		return behavioral.Rule{}, err
 	}
-	return unified.Rule{Average: average}, nil
+	return behavioral.Rule{Average: average}, nil
 }

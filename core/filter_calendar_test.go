@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/krenalis/krenalis/core/internal/unified"
+	"github.com/krenalis/krenalis/core/internal/behavioral"
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
@@ -31,9 +31,9 @@ func TestFilterCalendarInvalidBeforeUnsupported(t *testing.T) {
 	}
 	schema := types.Object([]types.Property{{Name: "country", Type: types.String()}})
 	nodes := 0
-	_, err = prepareUnifiedRule(&root, schema, 0, &nodes)
+	_, err = prepareBehavioralRule(&root, schema, 0, &nodes)
 	if err != nil {
-		if _, ok := errors.AsType[*unified.UnsupportedError](err); !ok {
+		if _, ok := errors.AsType[*behavioral.UnsupportedError](err); !ok {
 			t.Fatalf("expected a genuinely unavailable sibling, got %v", err)
 		}
 	}
@@ -51,9 +51,9 @@ func TestFilterCalendarInvalidBeforeUnsupported(t *testing.T) {
 		}
 		filter := &Filter{Operator: OpAnd, Rules: rules, DefaultCalendar: root.DefaultCalendar}
 		nodes = 0
-		_, err := prepareUnifiedRule(filter, schema, 0, &nodes)
+		_, err := prepareBehavioralRule(filter, schema, 0, &nodes)
 		if err != nil {
-			if _, ok := errors.AsType[*unified.UnsupportedError](err); ok {
+			if _, ok := errors.AsType[*behavioral.UnsupportedError](err); ok {
 				t.Fatalf("expected invalid calendar before unavailable sibling, got %v", err)
 			}
 			continue
@@ -82,7 +82,7 @@ func TestFilterCalendarRoundTrip(t *testing.T) {
 
 	nodes := 0
 	schema := types.Object([]types.Property{{Name: "country", Type: types.String()}})
-	root, err := prepareUnifiedRule(&filter, schema, 0, &nodes)
+	root, err := prepareBehavioralRule(&filter, schema, 0, &nodes)
 	if err != nil {
 		t.Fatalf("expected inherited calendar preparation, got %v", err)
 	}
@@ -91,7 +91,7 @@ func TestFilterCalendarRoundTrip(t *testing.T) {
 		!scope.Start.IsZero() || !scope.End.IsZero() || nodes != 3 {
 		t.Fatalf("expected unresolved relative calendar at unchanged depth, got %+v and %d nodes", scope, nodes)
 	}
-	err = unified.Validate(&root, time.Date(2026, 11, 6, 12, 0, 0, 0, time.UTC), unified.Page{Limit: 1})
+	err = behavioral.Validate(&root, time.Date(2026, 11, 6, 12, 0, 0, 0, time.UTC), behavioral.Page{Limit: 1})
 	if err != nil {
 		t.Fatalf("expected admitted calendar filter, got %v", err)
 	}
@@ -178,15 +178,15 @@ func TestFilterCalendarValidation(t *testing.T) {
 			err := json.Unmarshal([]byte(input), &filter)
 			if err == nil {
 				nodes := 0
-				var root unified.Rule
-				root, err = prepareUnifiedRule(&filter,
+				var root behavioral.Rule
+				root, err = prepareBehavioralRule(&filter,
 					types.Object([]types.Property{{Name: "country", Type: types.String()}}), 0, &nodes)
 				if err == nil {
-					err = unified.Validate(&root, time.Date(2026, 11, 6, 12, 0, 0, 0, time.UTC), unified.Page{Limit: 1})
+					err = behavioral.Validate(&root, time.Date(2026, 11, 6, 12, 0, 0, 0, time.UTC), behavioral.Page{Limit: 1})
 				}
 			}
 			if err != nil {
-				_, unsupported := errors.AsType[*unified.UnsupportedError](err)
+				_, unsupported := errors.AsType[*behavioral.UnsupportedError](err)
 				if unsupported != test.unsupported {
 					t.Fatalf("expected unsupported=%v, got %v", test.unsupported, err)
 				}

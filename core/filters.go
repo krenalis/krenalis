@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/krenalis/krenalis/core/internal/behavioral"
 	"github.com/krenalis/krenalis/core/internal/state"
-	"github.com/krenalis/krenalis/core/internal/unified"
 	"github.com/krenalis/krenalis/core/internal/util"
 	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/errors"
@@ -46,6 +46,13 @@ type FilterRule interface {
 	filterRule()
 }
 
+// HasBehavioralConditions reports behavioral conditions in the main-tree
+// bounds.
+// It does not validate the filter.
+func (filter *Filter) HasBehavioralConditions() bool {
+	return filter.hasBehavior()
+}
+
 // MarshalJSON returns the JSON representation of filter.
 func (filter *Filter) MarshalJSON() ([]byte, error) {
 	if filter == nil {
@@ -57,12 +64,6 @@ func (filter *Filter) MarshalJSON() ([]byte, error) {
 		return nil, err
 	}
 	return b.Bytes(), nil
-}
-
-// RequiresUnified reports behavioral conditions in the main-tree bounds.
-// It does not validate the filter.
-func (filter *Filter) RequiresUnified() bool {
-	return filter.hasBehavior()
 }
 
 // UnmarshalJSON sets filter to the filter group represented by data.
@@ -237,7 +238,7 @@ const (
 // filterValidation contains the state shared while validating a filter tree.
 type filterValidation struct {
 	maxDepth   int
-	source     *unified.Scope
+	source     *behavioral.Scope
 	paths      []string
 	properties types.Properties
 	ruleCount  int
@@ -1113,7 +1114,7 @@ func prepareFilterGroup(filter *Filter, validation *filterValidation, depth int)
 			}
 			group, err := prepareFilterGroup(rule, validation, depth+1)
 			if err != nil {
-				if _, unsupported := errors.AsType[*unified.UnsupportedError](err); !unsupported {
+				if _, unsupported := errors.AsType[*behavioral.UnsupportedError](err); !unsupported {
 					return nil, err
 				}
 				unavailable = err
@@ -1140,7 +1141,7 @@ func prepareFilterGroup(filter *Filter, validation *filterValidation, depth int)
 			if err != nil {
 				return nil, err
 			}
-			unavailable = &unified.UnsupportedError{Capability: "money in occurrence qualification"}
+			unavailable = &behavioral.UnsupportedError{Capability: "money in occurrence qualification"}
 		case *FilterCountCondition:
 			return nil, errors.New("Count requires Unified profile filtering")
 		case *FilterSumCondition:

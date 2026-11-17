@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/krenalis/krenalis/core/internal/behavioral"
 	"github.com/krenalis/krenalis/core/internal/state"
-	"github.com/krenalis/krenalis/core/internal/unified"
 	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
@@ -23,18 +23,18 @@ import (
 // TestExplainCountMoney retains monetary metadata in the complete explanation.
 func TestExplainCountMoney(t *testing.T) {
 
-	field, err := unified.ResolveMonetaryField("commerce.order_completed.total", "1")
+	field, err := behavioral.ResolveMonetaryField("commerce.order_completed.total", "1")
 	if err != nil {
 		t.Fatalf("expected resolved monetary field, got %v", err)
 	}
-	currency, err := unified.ResolveNativeCurrency("commerce.order_completed.currency", "1", "USD", "Order Completed")
+	currency, err := behavioral.ResolveNativeCurrency("commerce.order_completed.currency", "1", "USD", "Order Completed")
 	if err != nil {
 		t.Fatalf("expected resolved Count currency, got %v", err)
 	}
-	record := unified.OccurrencePredicate{Record: &state.WhereCondition{
+	record := behavioral.OccurrencePredicate{Record: &state.WhereCondition{
 		Property: []string{"properties", "flag"}, Operator: state.OpIsTrue}}
-	money := unified.OccurrencePredicate{Money: &unified.Money{Field: field, NativeCurrency: "EUR",
-		Test: unified.SumTest{Operator: unified.Greater, Value: decimal.MustParse("9007199254740.00001")}}}
+	money := behavioral.OccurrencePredicate{Money: &behavioral.Money{Field: field, NativeCurrency: "EUR",
+		Test: behavioral.SumTest{Operator: behavioral.Greater, Value: decimal.MustParse("9007199254740.00001")}}}
 	at := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
 	physical := &warehouses.IndependentOccurrenceCount{Start: at.Add(-time.Hour), End: at}
 	nodes := []warehouses.FilterNodeOutcome{{Truth: warehouses.FilterUnknown,
@@ -42,18 +42,18 @@ func TestExplainCountMoney(t *testing.T) {
 
 	for _, test := range []struct {
 		name  string
-		where *unified.OccurrencePredicate
+		where *behavioral.OccurrencePredicate
 		path  []int
 	}{
-		{"Record only", &unified.OccurrencePredicate{Children: []unified.OccurrencePredicate{record}}, nil},
-		{"money", &unified.OccurrencePredicate{Operator: state.OpOr, Children: []unified.OccurrencePredicate{record, money}}, []int{1}},
-		{"nested money", &unified.OccurrencePredicate{Operator: state.OpOr, Children: []unified.OccurrencePredicate{record,
-			{Children: []unified.OccurrencePredicate{money}}}}, []int{1, 0}},
+		{"Record only", &behavioral.OccurrencePredicate{Children: []behavioral.OccurrencePredicate{record}}, nil},
+		{"money", &behavioral.OccurrencePredicate{Operator: state.OpOr, Children: []behavioral.OccurrencePredicate{record, money}}, []int{1}},
+		{"nested money", &behavioral.OccurrencePredicate{Operator: state.OpOr, Children: []behavioral.OccurrencePredicate{record,
+			{Children: []behavioral.OccurrencePredicate{money}}}}, []int{1, 0}},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 
-			semantic := unified.Rule{Count: &unified.Count{Currency: currency, Where: test.where,
-				Test: unified.CountTest{Operator: unified.GreaterOrEqual, Value: 3}}}
+			semantic := behavioral.Rule{Count: &behavioral.Count{Currency: currency, Where: test.where,
+				Test: behavioral.CountTest{Operator: behavioral.GreaterOrEqual, Value: 3}}}
 			index := 0
 			result, err := explainProfileRule(physical, semantic, nodes, &index, at)
 			if err != nil {
@@ -102,7 +102,7 @@ func TestExplainCountMoney(t *testing.T) {
 func TestExplainExperienceNth(t *testing.T) {
 	for _, position := range []int{1, 3, 10} {
 		physical := &warehouses.SelectedOccurrence{Nth: position}
-		semantic := unified.Rule{Experience: &unified.Experience{Nth: position}}
+		semantic := behavioral.Rule{Experience: &behavioral.Experience{Nth: position}}
 		nodes := []warehouses.FilterNodeOutcome{{Truth: warehouses.FilterMatch,
 			Experience: &warehouses.OccurrenceSelection{Candidates: 2}}}
 		index := 0
@@ -143,7 +143,7 @@ func TestExplainExperienceSelection(t *testing.T) {
 		}
 		index := 0
 		rule := &warehouses.SelectedOccurrence{First: test.first}
-		semantic := unified.Rule{Experience: &unified.Experience{First: test.first}}
+		semantic := behavioral.Rule{Experience: &behavioral.Experience{First: test.first}}
 		result, err := explainProfileRule(rule, semantic, nodes, &index, time.Time{})
 		if err != nil {
 			t.Fatalf("expected experience explanation, got %v", err)
@@ -162,50 +162,50 @@ func TestExplainExperienceSelection(t *testing.T) {
 
 // TestExplainMoneyLiterals maps each new test into Count and E explanations.
 func TestExplainMoneyLiterals(t *testing.T) {
-	field, err := unified.ResolveMonetaryField("commerce.order_completed.total", "1")
+	field, err := behavioral.ResolveMonetaryField("commerce.order_completed.total", "1")
 	if err != nil {
 		t.Fatalf("expected resolved monetary field, got %v", err)
 	}
 	for _, test := range []struct {
 		name                    string
 		operator                FilterOperator
-		comparison              unified.Comparison
+		comparison              behavioral.Comparison
 		value, upper, low, high string
 		domain                  string
 	}{
-		{"equality", OpIs, unified.Equal, "100.00000", "", "100", "", ""},
-		{"different", OpIsNot, unified.Different, "100", "", "100", "", ""},
-		{"interval", OpIsBetween, unified.Between, "50.00001", "100.00009", "50.0001", "100", ""},
-		{"collapsed interval", OpIsBetween, unified.Between, "99.99995", "100.00004", "100", "100", ""},
-		{"no readable equality", OpIs, unified.Equal, "100.00001", "", "", "", "none"},
-		{"all readable different", OpIsNot, unified.Different, "100.00001", "", "", "", "all"},
-		{"no readable interval", OpIsBetween, unified.Between, "100.00001", "100.00009", "", "", "none"},
-		{"all readable interval", OpIsBetween, unified.Between, "-1e20", "1e20", "", "", "all"},
+		{"equality", OpIs, behavioral.Equal, "100.00000", "", "100", "", ""},
+		{"different", OpIsNot, behavioral.Different, "100", "", "100", "", ""},
+		{"interval", OpIsBetween, behavioral.Between, "50.00001", "100.00009", "50.0001", "100", ""},
+		{"collapsed interval", OpIsBetween, behavioral.Between, "99.99995", "100.00004", "100", "100", ""},
+		{"no readable equality", OpIs, behavioral.Equal, "100.00001", "", "", "", "none"},
+		{"all readable different", OpIsNot, behavioral.Different, "100.00001", "", "", "", "all"},
+		{"no readable interval", OpIsBetween, behavioral.Between, "100.00001", "100.00009", "", "", "none"},
+		{"all readable interval", OpIsBetween, behavioral.Between, "-1e20", "1e20", "", "", "all"},
 	} {
 		for _, kind := range []string{"count", "experience", "latestN"} {
 			t.Run(test.name+"/"+kind, func(t *testing.T) {
 				requested := []decimal.Decimal{decimal.MustParse(test.value)}
-				money := &unified.Money{Field: field, NativeCurrency: "EUR",
-					Test: unified.SumTest{Operator: test.comparison, Value: requested[0]}}
+				money := &behavioral.Money{Field: field, NativeCurrency: "EUR",
+					Test: behavioral.SumTest{Operator: test.comparison, Value: requested[0]}}
 				if test.upper != "" {
 					money.Test.Upper = decimal.MustParse(test.upper)
 					requested = append(requested, money.Test.Upper)
 				}
-				body := &unified.OccurrencePredicate{Children: []unified.OccurrencePredicate{
-					{Operator: state.OpOr, Children: []unified.OccurrencePredicate{{Money: money}}},
+				body := &behavioral.OccurrencePredicate{Children: []behavioral.OccurrencePredicate{
+					{Operator: state.OpOr, Children: []behavioral.OccurrencePredicate{{Money: money}}},
 				}}
 				var physical warehouses.FilterCondition = &warehouses.IndependentOccurrenceCount{}
-				semantic := unified.Rule{Count: &unified.Count{Where: body}}
+				semantic := behavioral.Rule{Count: &behavioral.Count{Where: body}}
 				nodes := []warehouses.FilterNodeOutcome{{Truth: warehouses.FilterUnknown,
 					Count: &warehouses.OccurrenceCountBounds{Possible: 1}}}
 				if kind == "experience" {
 					physical = &warehouses.SelectedOccurrence{}
-					semantic = unified.Rule{Experience: &unified.Experience{Verify: body}}
+					semantic = behavioral.Rule{Experience: &behavioral.Experience{Verify: body}}
 					nodes[0].Experience = &warehouses.OccurrenceSelection{Candidates: 1, AbsencePossible: true}
 				}
 				if kind == "latestN" {
 					physical = &warehouses.LatestOccurrences{Size: 1}
-					semantic = unified.Rule{LatestN: &unified.LatestN{Size: 1, Predicate: body}}
+					semantic = behavioral.Rule{LatestN: &behavioral.LatestN{Size: 1, Predicate: body}}
 					nodes[0].Experience = &warehouses.OccurrenceSelection{Candidates: 1, AbsencePossible: true}
 				}
 				index := 0

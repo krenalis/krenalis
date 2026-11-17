@@ -15,7 +15,7 @@ import (
 	"github.com/krenalis/krenalis/tools/types"
 )
 
-func TestFilterRequiresUnified(t *testing.T) {
+func TestFilterRequiresBehavioral(t *testing.T) {
 	count := &FilterCountCondition{}
 	record := &FilterCondition{Property: "email", Operator: OpExists}
 	deep := &Filter{Operator: OpAnd, Rules: []FilterRule{count}}
@@ -47,8 +47,8 @@ func TestFilterRequiresUnified(t *testing.T) {
 		{"too wide", &Filter{Rules: make([]FilterRule, 101)}, false},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			if got := test.root.RequiresUnified(); got != test.want {
-				t.Fatalf("expected RequiresUnified %t, got %t", test.want, got)
+			if got := test.root.HasBehavioralConditions(); got != test.want {
+				t.Fatalf("expected HasBehavioralConditions %t, got %t", test.want, got)
 			}
 		})
 	}

@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/krenalis/krenalis/core/internal/unified"
+	"github.com/krenalis/krenalis/core/internal/behavioral"
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
@@ -72,7 +72,7 @@ func TestFilterOccurredInCodec(t *testing.T) {
 			t.Fatalf("expected temporal filter encoded, got %v", err)
 		}
 		nodes := 0
-		prepared, err := prepareUnifiedRule(&filter,
+		prepared, err := prepareBehavioralRule(&filter,
 			types.Object([]types.Property{{Name: "country", Type: types.String()}}), 0, &nodes)
 		if err != nil {
 			t.Fatalf("expected temporal filter prepared, got %v", err)
@@ -153,10 +153,10 @@ func TestFilterOccurredInInvalidBeforeUnsupported(t *testing.T) {
 					t.Fatalf("expected decoded validity fixture, got %v", err)
 				}
 				nodes := 0
-				_, err = prepareUnifiedRule(&filter,
+				_, err = prepareBehavioralRule(&filter,
 					types.Object([]types.Property{{Name: "country", Type: types.String()}}), 0, &nodes)
 				if err != nil {
-					if _, unsupported := errors.AsType[*unified.UnsupportedError](err); unsupported {
+					if _, unsupported := errors.AsType[*behavioral.UnsupportedError](err); unsupported {
 						t.Fatalf("expected invalidity before missing capability, got %v", err)
 					}
 					continue
@@ -185,11 +185,11 @@ func TestFilterOccurredInInvalidBeforeUnsupported(t *testing.T) {
 				t.Fatalf("expected valid calendar syntax, got %v", err)
 			}
 			nodes := 0
-			_, err = prepareUnifiedRule(&filter,
+			_, err = prepareBehavioralRule(&filter,
 				types.Object([]types.Property{{Name: "country", Type: types.String()}}), 0, &nodes)
 			if err != nil {
 				if test.unsupported {
-					if _, unsupported := errors.AsType[*unified.UnsupportedError](err); !unsupported {
+					if _, unsupported := errors.AsType[*behavioral.UnsupportedError](err); !unsupported {
 						t.Fatalf("expected missing calendar capability, got %v", err)
 					}
 					return
@@ -213,9 +213,9 @@ func TestFilterOccurredInInvalidBeforeUnsupported(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected valid history prepared for semantic validation, got %v", err)
 	}
-	err = unified.Validate(&rule, time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC), unified.Page{Limit: 1})
+	err = behavioral.Validate(&rule, time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC), behavioral.Page{Limit: 1})
 	if err != nil {
-		if _, unsupported := errors.AsType[*unified.UnsupportedError](err); !unsupported {
+		if _, unsupported := errors.AsType[*behavioral.UnsupportedError](err); !unsupported {
 			t.Fatalf("expected valid but unimplemented period, got %v", err)
 		}
 		return
@@ -257,7 +257,7 @@ func TestFilterOccurredInOwner(t *testing.T) {
 		t.Fatal("expected temporal leaf rejected in Record pipeline, got success")
 	}
 	nodes := 0
-	_, err = prepareUnifiedRule(filter, types.Object([]types.Property{{Name: "country", Type: types.String()}}), 0, &nodes)
+	_, err = prepareBehavioralRule(filter, types.Object([]types.Property{{Name: "country", Type: types.String()}}), 0, &nodes)
 	if err == nil {
 		t.Fatal("expected temporal leaf rejected on Profiles root, got success")
 	}

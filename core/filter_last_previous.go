@@ -7,9 +7,9 @@ package core
 import (
 	"bytes"
 
+	"github.com/krenalis/krenalis/core/internal/behavioral"
 	"github.com/krenalis/krenalis/core/internal/schemas"
 	"github.com/krenalis/krenalis/core/internal/state"
-	"github.com/krenalis/krenalis/core/internal/unified"
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 )
@@ -60,21 +60,21 @@ func (check *FilterLastPreviousCheck) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func (check FilterLastPreviousCheck) prepare() (unified.LastPreviousCheck, error) {
-	result := unified.LastPreviousCheck{}
+func (check FilterLastPreviousCheck) prepare() (behavioral.LastPreviousCheck, error) {
+	result := behavioral.LastPreviousCheck{}
 	switch check.Kind {
 	case "sameValue", "differentValue":
 		if check.Operator != "" || check.Values != nil {
 			return result, errors.New("lastVersusPrevious value checks admit only kind")
 		}
-		result.Kind = unified.LastPreviousSameValue
+		result.Kind = behavioral.LastPreviousSameValue
 		if check.Kind == "differentValue" {
-			result.Kind = unified.LastPreviousDifferentValue
+			result.Kind = behavioral.LastPreviousDifferentValue
 		}
 	case "difference", "ratio":
-		result.Kind = unified.LastPreviousDifference
+		result.Kind = behavioral.LastPreviousDifference
 		if check.Kind == "ratio" {
-			result.Kind = unified.LastPreviousRatio
+			result.Kind = behavioral.LastPreviousRatio
 		}
 		test, err := prepareMonetaryTest(check.Operator, check.Values)
 		if err != nil {
@@ -172,9 +172,9 @@ func (condition *FilterLastVersusPreviousCondition) UnmarshalJSON(data []byte) e
 func (*FilterLastVersusPreviousCondition) filterRule() {}
 
 // prepareFilterLastVersusPrevious validates the full request before admission.
-func prepareFilterLastVersusPrevious(condition *FilterLastVersusPreviousCondition, calendar *unified.Calendar) (unified.Rule, error) {
+func prepareFilterLastVersusPrevious(condition *FilterLastVersusPreviousCondition, calendar *behavioral.Calendar) (behavioral.Rule, error) {
 	if condition == nil {
-		return unified.Rule{}, errors.New("filter lastVersusPrevious condition cannot be nil")
+		return behavioral.Rule{}, errors.New("filter lastVersusPrevious condition cannot be nil")
 	}
 	last := condition.LastVersusPrevious
 	base := last.Base
@@ -182,67 +182,67 @@ func prepareFilterLastVersusPrevious(condition *FilterLastVersusPreviousConditio
 	scope, err := base.Period.scope(base.Source, calendar)
 	var unavailable error
 	if err != nil {
-		if _, unsupported := errors.AsType[*unified.UnsupportedError](err); !unsupported {
-			return unified.Rule{}, err
+		if _, unsupported := errors.AsType[*behavioral.UnsupportedError](err); !unsupported {
+			return behavioral.Rule{}, err
 		}
 		unavailable = err
 	}
-	field, err := unified.ResolveMonetaryField(last.Field.Definition, last.Field.MeaningRevision)
+	field, err := behavioral.ResolveMonetaryField(last.Field.Definition, last.Field.MeaningRevision)
 	if err != nil {
-		return unified.Rule{}, err
+		return behavioral.Rule{}, err
 	}
 	if base.Source.Type != "" && base.Source.Type != "track" || base.Source.Name != "Order Completed" {
-		return unified.Rule{}, errors.New("lastVersusPrevious field is incompatible with the occurrence source")
+		return behavioral.Rule{}, errors.New("lastVersusPrevious field is incompatible with the occurrence source")
 	}
 	check, err := last.Check.prepare()
 	if err != nil {
-		return unified.Rule{}, err
+		return behavioral.Rule{}, err
 	}
 	// Prepare the independent Record qualification.
 	var where *state.Where
 	if base.Where != nil {
-		source := unified.Scope{Type: base.Source.Type, Event: base.Source.Name, Grain: base.Source.Grain}
+		source := behavioral.Scope{Type: base.Source.Type, Event: base.Source.Name, Grain: base.Source.Grain}
 		validation := filterValidation{maxDepth: 2, properties: schemas.Event.Properties(), source: &source}
 		where, err = prepareFilterGroup(base.Where, &validation, 1)
 		if err != nil {
-			if _, unsupported := errors.AsType[*unified.UnsupportedError](err); !unsupported {
-				return unified.Rule{}, err
+			if _, unsupported := errors.AsType[*behavioral.UnsupportedError](err); !unsupported {
+				return behavioral.Rule{}, err
 			}
 			unavailable = err
 		}
 	}
 	// Resolve the pair as a whole before checking available capabilities.
-	var currency *unified.NativeCurrency
+	var currency *behavioral.NativeCurrency
 	if (base.CurrencyField == nil) != (base.NativeCurrency == nil) {
-		return unified.Rule{}, errors.New("lastVersusPrevious base requires currencyField and nativeCurrency together")
+		return behavioral.Rule{}, errors.New("lastVersusPrevious base requires currencyField and nativeCurrency together")
 	}
 	if base.CurrencyField != nil {
-		currency, err = unified.ResolveNativeCurrency(base.CurrencyField.Definition, base.CurrencyField.MeaningRevision,
+		currency, err = behavioral.ResolveNativeCurrency(base.CurrencyField.Definition, base.CurrencyField.MeaningRevision,
 			*base.NativeCurrency, base.Source.Name)
 		if err != nil {
-			return unified.Rule{}, err
+			return behavioral.Rule{}, err
 		}
 	}
 	err = field.ValidateWhere(where)
 	if err != nil {
-		if _, unsupported := errors.AsType[*unified.UnsupportedError](err); !unsupported {
-			return unified.Rule{}, err
+		if _, unsupported := errors.AsType[*behavioral.UnsupportedError](err); !unsupported {
+			return behavioral.Rule{}, err
 		}
 		unavailable = err
 	}
 	if currency == nil {
-		unavailable = &unified.UnsupportedError{Capability: "lastVersusPrevious without base currency"}
+		unavailable = &behavioral.UnsupportedError{Capability: "lastVersusPrevious without base currency"}
 	}
 	_, err = check.NormalizedTest()
 	if err != nil {
-		if _, unsupported := errors.AsType[*unified.UnsupportedError](err); !unsupported {
-			return unified.Rule{}, err
+		if _, unsupported := errors.AsType[*behavioral.UnsupportedError](err); !unsupported {
+			return behavioral.Rule{}, err
 		}
 		unavailable = err
 	}
 	if unavailable != nil {
-		return unified.Rule{}, unavailable
+		return behavioral.Rule{}, unavailable
 	}
-	return unified.Rule{LastVersusPrevious: &unified.LastVersusPrevious{
+	return behavioral.Rule{LastVersusPrevious: &behavioral.LastVersusPrevious{
 		Scope: scope, Where: where, Currency: currency, Field: field, Check: check}}, nil
 }

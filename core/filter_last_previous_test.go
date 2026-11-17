@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/krenalis/krenalis/core/internal/unified"
+	"github.com/krenalis/krenalis/core/internal/behavioral"
 	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
@@ -128,7 +128,7 @@ func TestFilterLastPreviousChecks(t *testing.T) {
 			}
 			_, err = prepareFilterLastVersusPrevious(&condition, nil)
 			if err != nil {
-				if _, unavailable := errors.AsType[*unified.UnsupportedError](err); unavailable {
+				if _, unavailable := errors.AsType[*behavioral.UnsupportedError](err); unavailable {
 					t.Fatalf("expected invalid parameter before unsupported check/currency, got %v", err)
 				}
 				continue
@@ -145,7 +145,7 @@ func TestFilterLastPreviousCodec(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected public pair decoding, got %v", err)
 	}
-	if !filter.RequiresUnified() {
+	if !filter.HasBehavioralConditions() {
 		t.Fatal("expected Unified requirement, got false")
 	}
 	encoded, err := json.Marshal(&filter)
@@ -233,7 +233,7 @@ func TestFilterLastPreviousValidation(t *testing.T) {
 			}
 			_, err = prepareFilterLastVersusPrevious(&condition, nil)
 			if err != nil {
-				_, unsupported := errors.AsType[*unified.UnsupportedError](err)
+				_, unsupported := errors.AsType[*behavioral.UnsupportedError](err)
 				if unsupported != test.unavailable {
 					t.Fatalf("expected unavailable=%v, got %v", test.unavailable, err)
 				}
@@ -248,9 +248,9 @@ func TestFilterLastPreviousValidation(t *testing.T) {
 			schema := types.Object([]types.Property{{Name: "x", Type: types.Int(64)}})
 			for _, rules := range [][]FilterRule{{&condition, invalid}, {invalid, &condition}} {
 				nodes := 0
-				_, err := prepareUnifiedRule(&Filter{Operator: OpAnd, Rules: rules}, schema, 0, &nodes)
+				_, err := prepareBehavioralRule(&Filter{Operator: OpAnd, Rules: rules}, schema, 0, &nodes)
 				if err != nil {
-					if _, unsupported := errors.AsType[*unified.UnsupportedError](err); unsupported {
+					if _, unsupported := errors.AsType[*behavioral.UnsupportedError](err); unsupported {
 						t.Fatalf("expected invalid sibling first, got %v", err)
 					}
 					continue

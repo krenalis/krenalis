@@ -8,9 +8,9 @@ import (
 	"bytes"
 	"math"
 
+	"github.com/krenalis/krenalis/core/internal/behavioral"
 	"github.com/krenalis/krenalis/core/internal/schemas"
 	"github.com/krenalis/krenalis/core/internal/state"
-	"github.com/krenalis/krenalis/core/internal/unified"
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 )
@@ -147,40 +147,40 @@ func (field *FilterSumField) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func prepareFilterSum(condition *FilterSumCondition, calendar *unified.Calendar) (unified.Rule, error) {
+func prepareFilterSum(condition *FilterSumCondition, calendar *behavioral.Calendar) (behavioral.Rule, error) {
 
 	if condition == nil {
-		return unified.Rule{}, errors.New("Sum condition cannot be nil")
+		return behavioral.Rule{}, errors.New("Sum condition cannot be nil")
 	}
 	sum := condition.Sum
 	scope, err := sum.Period.scope(sum.Source, calendar)
 	var unavailable error
 	if err != nil {
-		if _, ok := errors.AsType[*unified.UnsupportedError](err); !ok {
-			return unified.Rule{}, err
+		if _, ok := errors.AsType[*behavioral.UnsupportedError](err); !ok {
+			return behavioral.Rule{}, err
 		}
 		unavailable = err
 	}
-	field, err := unified.ResolveMonetaryField(sum.Field.Definition, sum.Field.MeaningRevision)
+	field, err := behavioral.ResolveMonetaryField(sum.Field.Definition, sum.Field.MeaningRevision)
 	if err != nil {
-		return unified.Rule{}, err
+		return behavioral.Rule{}, err
 	}
 	if sum.Source.Type != "" && sum.Source.Type != "track" || sum.Source.Name != "Order Completed" {
-		return unified.Rule{}, errors.New("monetary field is incompatible with the occurrence source")
+		return behavioral.Rule{}, errors.New("monetary field is incompatible with the occurrence source")
 	}
 	if len(sum.NativeCurrency) != 3 {
-		return unified.Rule{}, errors.New("nativeCurrency requires three uppercase letters")
+		return behavioral.Rule{}, errors.New("nativeCurrency requires three uppercase letters")
 	}
 	for _, c := range sum.NativeCurrency {
 		if c < 'A' || c > 'Z' {
-			return unified.Rule{}, errors.New("nativeCurrency requires three uppercase letters")
+			return behavioral.Rule{}, errors.New("nativeCurrency requires three uppercase letters")
 		}
 	}
 
 	// Prepare the exact comparison operands.
 	test, err := prepareMonetaryTest(condition.Operator, condition.Values)
 	if err != nil {
-		return unified.Rule{}, err
+		return behavioral.Rule{}, err
 	}
 
 	// Validate optional forms before reporting unavailable capabilities.
@@ -188,41 +188,41 @@ func prepareFilterSum(condition *FilterSumCondition, calendar *unified.Calendar)
 	if sum.Minimum != nil {
 		minimum, err = parseFilterCountInteger(sum.Minimum)
 		if err != nil {
-			return unified.Rule{}, errors.New("sample minimum must be a positive JSON integer")
+			return behavioral.Rule{}, errors.New("sample minimum must be a positive JSON integer")
 		}
 		if minimum == "0" {
-			return unified.Rule{}, errors.New("sample minimum must be positive")
+			return behavioral.Rule{}, errors.New("sample minimum must be positive")
 		}
 	}
 	var where *state.Where
 	if sum.Where != nil {
-		source := unified.Scope{Type: sum.Source.Type, Event: sum.Source.Name, Grain: sum.Source.Grain}
+		source := behavioral.Scope{Type: sum.Source.Type, Event: sum.Source.Name, Grain: sum.Source.Grain}
 		validation := filterValidation{maxDepth: 2, properties: schemas.Event.Properties(), source: &source}
 		var err error
 		where, err = prepareFilterGroup(sum.Where, &validation, 1)
 		if err != nil {
-			if _, unsupported := errors.AsType[*unified.UnsupportedError](err); !unsupported {
-				return unified.Rule{}, err
+			if _, unsupported := errors.AsType[*behavioral.UnsupportedError](err); !unsupported {
+				return behavioral.Rule{}, err
 			}
 			unavailable = err
 		}
 	}
 	err = field.ValidateWhere(where)
 	if err != nil {
-		return unified.Rule{}, err
+		return behavioral.Rule{}, err
 	}
 	if unavailable != nil {
-		return unified.Rule{}, unavailable
+		return behavioral.Rule{}, unavailable
 	}
 	m, ok := minimum.uint64()
 	if !ok || m > math.MaxInt64 {
-		return unified.Rule{}, &unified.UnsupportedError{
+		return behavioral.Rule{}, &behavioral.UnsupportedError{
 			Capability: "monetary sample minimum exceeds the execution integer range"}
 	}
-	if test.Operator == unified.Equal || test.Operator == unified.Different || test.Operator == unified.Between {
-		return unified.Rule{}, &unified.UnsupportedError{Capability: "monetary equality or interval comparisons"}
+	if test.Operator == behavioral.Equal || test.Operator == behavioral.Different || test.Operator == behavioral.Between {
+		return behavioral.Rule{}, &behavioral.UnsupportedError{Capability: "monetary equality or interval comparisons"}
 	}
 
-	return unified.Rule{Sum: &unified.Sum{Scope: scope, Field: field, NativeCurrency: sum.NativeCurrency,
+	return behavioral.Rule{Sum: &behavioral.Sum{Scope: scope, Field: field, NativeCurrency: sum.NativeCurrency,
 		Where: where, Minimum: m, Test: test}}, nil
 }

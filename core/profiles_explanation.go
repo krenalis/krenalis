@@ -10,8 +10,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/krenalis/krenalis/core/internal/behavioral"
 	"github.com/krenalis/krenalis/core/internal/datastore"
-	"github.com/krenalis/krenalis/core/internal/unified"
 	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
@@ -247,23 +247,23 @@ func (this *Workspace) ExplainProfileFilter(ctx context.Context, kpid string, fi
 		}
 	}
 	nodes := 0
-	root, err := prepareUnifiedRule(filter, this.workspace.ProfileSchema, 0, &nodes)
+	root, err := prepareBehavioralRule(filter, this.workspace.ProfileSchema, 0, &nodes)
 	if err != nil {
 		if missing, ok := errors.AsType[types.PathNotExistError](err); ok {
 			return nil, errors.Unprocessable(PropertyNotExist, "filter's property %s does not exist", missing.Path)
 		}
-		if unavailable, ok := errors.AsType[*unified.UnsupportedError](err); ok {
+		if unavailable, ok := errors.AsType[*behavioral.UnsupportedError](err); ok {
 			return nil, errors.Unprocessable(FilterCapabilityNotImplemented, "%s", unavailable)
 		}
 		return nil, errors.BadRequest("filter is not valid: %s", err)
 	}
 
-	result, err := this.store.ExplainUnifiedProfile(ctx, &root, unified.Bindings{}, instant, profile)
+	result, err := this.store.ExplainProfileFilter(ctx, &root, behavioral.Bindings{}, instant, profile)
 	if err != nil {
-		if errors.Is(err, datastore.ErrUnifiedUnavailable) {
+		if errors.Is(err, datastore.ErrBehavioralFilteringUnavailable) {
 			return nil, errors.Unprocessable(UnifiedFilteringUnavailable, "Unified filtering is unavailable on this warehouse")
 		}
-		if unavailable, ok := errors.AsType[*unified.UnsupportedError](err); ok {
+		if unavailable, ok := errors.AsType[*behavioral.UnsupportedError](err); ok {
 			return nil, errors.Unprocessable(FilterCapabilityNotImplemented, "%s", unavailable)
 		}
 		if errors.Is(err, datastore.ErrMaintenanceMode) {
@@ -290,7 +290,7 @@ func (this *Workspace) ExplainProfileFilter(ctx context.Context, kpid string, fi
 }
 
 // explainMoneyPredicates retains each monetary leaf and its normalized test.
-func explainMoneyPredicates(verify *unified.OccurrencePredicate, path []int) ([]ProfileMoneyExplanation, error) {
+func explainMoneyPredicates(verify *behavioral.OccurrencePredicate, path []int) ([]ProfileMoneyExplanation, error) {
 	if verify == nil {
 		return nil, nil
 	}
@@ -301,21 +301,21 @@ func explainMoneyPredicates(verify *unified.OccurrencePredicate, path []int) ([]
 			return nil, errors.New("core: unresolved money explanation comparison")
 		}
 		definition, revision := money.Field.Reference()
-		operators := map[unified.Comparison]FilterOperator{
-			unified.Equal: OpIs, unified.Different: OpIsNot, unified.Between: OpIsBetween,
-			unified.Greater: OpIsGreaterThan, unified.GreaterOrEqual: OpIsGreaterThanOrEqualTo,
-			unified.Less: OpIsLessThan, unified.LessOrEqual: OpIsLessThanOrEqualTo,
+		operators := map[behavioral.Comparison]FilterOperator{
+			behavioral.Equal: OpIs, behavioral.Different: OpIsNot, behavioral.Between: OpIsBetween,
+			behavioral.Greater: OpIsGreaterThan, behavioral.GreaterOrEqual: OpIsGreaterThanOrEqualTo,
+			behavioral.Less: OpIsLessThan, behavioral.LessOrEqual: OpIsLessThanOrEqualTo,
 		}
 		requested := ProfileMoneyComparison{Operator: operators[money.Test.Operator],
 			Values: []decimal.Decimal{money.Test.Value}}
-		if money.Test.Operator == unified.Between {
+		if money.Test.Operator == behavioral.Between {
 			requested.Values = append(requested.Values, money.Test.Upper)
 		}
 		effective := ProfileNormalizedMoneyComparison{ReadableAmounts: normalized.ReadableAmounts}
 		if comparison := normalized.Comparison; comparison != nil {
 			effective.Operator = operators[comparison.Operator]
 			effective.Values = []decimal.Decimal{comparison.Value}
-			if comparison.Operator == unified.Between {
+			if comparison.Operator == behavioral.Between {
 				effective.Values = append(effective.Values, comparison.Upper)
 			}
 		}
@@ -337,7 +337,7 @@ func explainMoneyPredicates(verify *unified.OccurrencePredicate, path []int) ([]
 }
 
 // explainOccurrencePeriods attaches resolved windows to their input positions.
-func explainOccurrencePeriods(verify *unified.OccurrencePredicate, at time.Time, path []int) ([]ProfileOccurredInExplanation, error) {
+func explainOccurrencePeriods(verify *behavioral.OccurrencePredicate, at time.Time, path []int) ([]ProfileOccurredInExplanation, error) {
 	if verify == nil {
 		return nil, nil
 	}
@@ -361,7 +361,7 @@ func explainOccurrencePeriods(verify *unified.OccurrencePredicate, at time.Time,
 
 // explainProfileRule attaches measured outcomes and resolved references to the
 // unchanged prepared filter shape, without reevaluating conditions.
-func explainProfileRule(rule warehouses.FilterCondition, semantic unified.Rule, nodes []warehouses.FilterNodeOutcome, index *int, at time.Time) (ProfileRuleExplanation, error) {
+func explainProfileRule(rule warehouses.FilterCondition, semantic behavioral.Rule, nodes []warehouses.FilterNodeOutcome, index *int, at time.Time) (ProfileRuleExplanation, error) {
 
 	if *index >= len(nodes) {
 		return ProfileRuleExplanation{}, errors.New("core: incomplete profile explanation")
@@ -408,9 +408,9 @@ func explainProfileRule(rule warehouses.FilterCondition, semantic unified.Rule, 
 		if err != nil {
 			return ProfileRuleExplanation{}, errors.New("core: unresolved difference explanation")
 		}
-		comparisonOperators := map[unified.Comparison]FilterOperator{unified.Less: OpIsLessThan,
-			unified.LessOrEqual: OpIsLessThanOrEqualTo, unified.Greater: OpIsGreaterThan,
-			unified.GreaterOrEqual: OpIsGreaterThanOrEqualTo}
+		comparisonOperators := map[behavioral.Comparison]FilterOperator{behavioral.Less: OpIsLessThan,
+			behavioral.LessOrEqual: OpIsLessThanOrEqualTo, behavioral.Greater: OpIsGreaterThan,
+			behavioral.GreaterOrEqual: OpIsGreaterThanOrEqualTo}
 		selection := ProfileExperienceSelection{Kind: "ambiguous", Absence: "impossible", Candidates: node.Pair.Candidates}
 		if node.Pair.AbsencePossible {
 			selection.Absence = "possible"
@@ -457,17 +457,17 @@ func explainProfileRule(rule warehouses.FilterCondition, semantic unified.Rule, 
 			Quantifier: FilterLatestNQuantifier{Kind: "all"}, Selection: selection}
 		quantifier := semantic.LatestN.Quantifier
 		switch quantifier.Kind {
-		case unified.LatestAll:
+		case behavioral.LatestAll:
 			// The zero value preserves existing All explanations.
-		case unified.LatestSome:
+		case behavioral.LatestSome:
 			result.LatestN.Quantifier.Kind = "some"
-		case unified.LatestCardinality:
-			operators := map[unified.Comparison]FilterOperator{unified.Equal: OpIs,
-				unified.GreaterOrEqual: OpIsGreaterThanOrEqualTo, unified.LessOrEqual: OpIsLessThanOrEqualTo,
-				unified.Between: OpIsBetween}
+		case behavioral.LatestCardinality:
+			operators := map[behavioral.Comparison]FilterOperator{behavioral.Equal: OpIs,
+				behavioral.GreaterOrEqual: OpIsGreaterThanOrEqualTo, behavioral.LessOrEqual: OpIsLessThanOrEqualTo,
+				behavioral.Between: OpIsBetween}
 			result.LatestN.Quantifier = FilterLatestNQuantifier{Kind: "cardinality",
 				Operator: operators[quantifier.Operator], Values: []json.Value{json.Value(quantifier.Value)}}
-			if quantifier.Operator == unified.Between {
+			if quantifier.Operator == behavioral.Between {
 				result.LatestN.Quantifier.Values = append(result.LatestN.Quantifier.Values, json.Value(quantifier.Upper))
 			}
 		default:

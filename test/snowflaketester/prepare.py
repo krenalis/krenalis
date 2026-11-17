@@ -135,23 +135,23 @@ def main():
                  'assets := os.DirFS(' + json.dumps(str(assets)) + ')'),
             ]),
             ("core/profiles_query.go", [
-                ('"github.com/krenalis/krenalis/core/internal/unified"',
-                 '"github.com/krenalis/krenalis/core/internal/unified"\n' +
+                ('"github.com/krenalis/krenalis/core/internal/behavioral"',
+                 '"github.com/krenalis/krenalis/core/internal/behavioral"\n' +
                  '\t"github.com/krenalis/krenalis/test/snowflaketester"'),
                 ('\t\tprofiles, schema, total, err := this.profiles(ctx, query.Properties, filter,',
                  '\t\tctx = snowflaketester.ServiceContext(ctx, snowflaketester.ServiceRecordTag)\n' +
                  '\t\tprofiles, schema, total, err := this.profiles(ctx, query.Properties, filter,'),
-                ('\tresult, err := this.store.UnifiedProfiles(ctx, &root, unified.Bindings{}, at, unified.Page{',
+                ('\tresult, err := this.store.QueryProfiles(ctx, &root, behavioral.Bindings{}, at, behavioral.Page{',
                  '\tctx = snowflaketester.ServiceContext(ctx, snowflaketester.ServiceQueryTag)\n' +
-                 '\tresult, err := this.store.UnifiedProfiles(ctx, &root, unified.Bindings{}, at, unified.Page{'),
+                 '\tresult, err := this.store.QueryProfiles(ctx, &root, behavioral.Bindings{}, at, behavioral.Page{'),
             ]),
             ("core/profiles_explanation.go", [
-                ('"github.com/krenalis/krenalis/core/internal/unified"',
-                 '"github.com/krenalis/krenalis/core/internal/unified"\n' +
+                ('"github.com/krenalis/krenalis/core/internal/behavioral"',
+                 '"github.com/krenalis/krenalis/core/internal/behavioral"\n' +
                  '\t"github.com/krenalis/krenalis/test/snowflaketester"'),
-                ('\tresult, err := this.store.ExplainUnifiedProfile(ctx, &root, unified.Bindings{}, instant, profile)',
+                ('\tresult, err := this.store.ExplainProfileFilter(ctx, &root, behavioral.Bindings{}, instant, profile)',
                  '\tctx = snowflaketester.ServiceContext(ctx, snowflaketester.ServiceExplanationTag)\n' +
-                 '\tresult, err := this.store.ExplainUnifiedProfile(ctx, &root, unified.Bindings{}, instant, profile)'),
+                 '\tresult, err := this.store.ExplainProfileFilter(ctx, &root, behavioral.Bindings{}, instant, profile)'),
             ]),
         ]:
             source = root / name

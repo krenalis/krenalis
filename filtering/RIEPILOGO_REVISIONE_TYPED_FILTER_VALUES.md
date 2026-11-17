@@ -238,7 +238,7 @@ Le specifiche sono:
 
 Per il sottoinsieme eseguibile e le decisioni successive usare anche:
 
-- `/Users/marco/src/cluster/core/internal/unified/README.md`;
+- `/Users/marco/src/cluster/core/internal/behavioral/README.md`;
 - `/Users/marco/src/cluster/cmd/internal/mcp/profile_filter.md`;
 - `/Users/marco/src/cluster/cmd/internal/mcp/README.md`;
 - `/Users/marco/src/cluster/test/snowflaketester/UNIFIED.md`;

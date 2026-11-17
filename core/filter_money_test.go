@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/krenalis/krenalis/core/internal/unified"
+	"github.com/krenalis/krenalis/core/internal/behavioral"
 	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
@@ -65,7 +65,7 @@ func TestFilterMoneyAdmission(t *testing.T) {
 				t.Fatalf("expected decodable admission case, got %v", err)
 			}
 			nodes := 0
-			rule, err := prepareUnifiedRule(&filter,
+			rule, err := prepareBehavioralRule(&filter,
 				types.Object([]types.Property{{Name: "country", Type: types.String()}}), 0, &nodes)
 			if err != nil {
 				if !test.invalid {
@@ -76,9 +76,9 @@ func TestFilterMoneyAdmission(t *testing.T) {
 			if test.invalid {
 				t.Fatal("expected invalid parameters, got success")
 			}
-			err = unified.Validate(&rule, time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC), unified.Page{Limit: 1})
+			err = behavioral.Validate(&rule, time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC), behavioral.Page{Limit: 1})
 			if err != nil {
-				if _, unsupported := errors.AsType[*unified.UnsupportedError](err); !test.unavailable || !unsupported {
+				if _, unsupported := errors.AsType[*behavioral.UnsupportedError](err); !test.unavailable || !unsupported {
 					t.Fatalf("expected unavailable=%v, got %v", test.unavailable, err)
 				}
 				return
@@ -148,16 +148,16 @@ func TestFilterMoneyDependencies(t *testing.T) {
 						t.Fatalf("expected dependency fixture decoded, got %v", err)
 					}
 					nodes := 0
-					rule, err := prepareUnifiedRule(&filter,
+					rule, err := prepareBehavioralRule(&filter,
 						types.Object([]types.Property{{Name: "country", Type: types.String()}}), 0, &nodes)
 					if err != nil {
 						t.Fatalf("expected valid dependency shape, got %v", err)
 					}
-					err = unified.Validate(&rule, time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC), unified.Page{Limit: 1})
+					err = behavioral.Validate(&rule, time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC), behavioral.Page{Limit: 1})
 					blocked := path == "properties" || path == "properties.total" || path == "properties.total.x" ||
 						path == "properties.currency" || path == "properties.currency.x"
 					if err != nil {
-						if _, unsupported := errors.AsType[*unified.UnsupportedError](err); !blocked || !unsupported {
+						if _, unsupported := errors.AsType[*behavioral.UnsupportedError](err); !blocked || !unsupported {
 							t.Fatalf("expected blocked=%v, got %v", blocked, err)
 						}
 						return
@@ -210,7 +210,7 @@ func TestFilterMoneyInvalidBeforeUnsupported(t *testing.T) {
 					}
 				}
 				nodes := 0
-				_, err = prepareUnifiedRule(&filter,
+				_, err = prepareBehavioralRule(&filter,
 					types.Object([]types.Property{{Name: "country", Type: types.String()}}), 0, &nodes)
 				if err != nil {
 					missing, ok := errors.AsType[types.PathNotExistError](err)
@@ -241,10 +241,10 @@ func TestFilterMoneyReductionOperators(t *testing.T) {
 				t.Fatalf("expected valid reduction comparison, got %v", err)
 			}
 			nodes := 0
-			_, err = prepareUnifiedRule(&filter,
+			_, err = prepareBehavioralRule(&filter,
 				types.Object([]types.Property{{Name: "country", Type: types.String()}}), 0, &nodes)
 			if err != nil {
-				unavailable, unsupported := errors.AsType[*unified.UnsupportedError](err)
+				unavailable, unsupported := errors.AsType[*behavioral.UnsupportedError](err)
 				if !unsupported || unavailable.Capability != "monetary equality or interval comparisons" {
 					t.Fatalf("expected unsupported reduction comparison, got %v", err)
 				}
@@ -302,7 +302,7 @@ func TestFilterMoneyWhere(t *testing.T) {
 				t.Fatalf("expected unavailable where with invalid sibling decoded, got %v", err)
 			}
 			nodes := 0
-			_, err = prepareUnifiedRule(&filter,
+			_, err = prepareBehavioralRule(&filter,
 				types.Object([]types.Property{{Name: "country", Type: types.String()}}), 0, &nodes)
 			if err != nil {
 				missing, ok := errors.AsType[types.PathNotExistError](err)
@@ -319,10 +319,10 @@ func TestFilterMoneyWhere(t *testing.T) {
 			t.Fatalf("expected decodable unavailable where, got %v", err)
 		}
 		nodes := 0
-		_, err = prepareUnifiedRule(&filter,
+		_, err = prepareBehavioralRule(&filter,
 			types.Object([]types.Property{{Name: "country", Type: types.String()}}), 0, &nodes)
 		if err != nil {
-			if _, unsupported := errors.AsType[*unified.UnsupportedError](err); !unsupported {
+			if _, unsupported := errors.AsType[*behavioral.UnsupportedError](err); !unsupported {
 				t.Fatalf("expected valid but unavailable monetary qualification, got %v", err)
 			}
 			continue
@@ -366,7 +366,7 @@ func TestFilterMoneyWhereParameters(t *testing.T) {
 		}
 		_, err = prepareFilterCount(&condition, nil)
 		if err != nil {
-			_, unsupported := errors.AsType[*unified.UnsupportedError](err)
+			_, unsupported := errors.AsType[*behavioral.UnsupportedError](err)
 			if test.valid || unsupported != test.unsupported {
 				t.Fatalf("expected unsupported=%v after parameter validation, got %v", test.unsupported, err)
 			}

@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/krenalis/krenalis/core/internal/unified"
+	"github.com/krenalis/krenalis/core/internal/behavioral"
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
@@ -33,11 +33,11 @@ func TestFilterAverageBudget(t *testing.T) {
 		for i := range root.Rules {
 			root.Rules[i] = &condition
 		}
-		if !root.RequiresUnified() {
+		if !root.HasBehavioralConditions() {
 			t.Fatal("expected Unified requirement, got false")
 		}
 		nodes := 0
-		_, err := prepareUnifiedRule(root, schema, 0, &nodes)
+		_, err := prepareBehavioralRule(root, schema, 0, &nodes)
 		if err != nil {
 			if size == 100 {
 				t.Fatalf("expected 100 Average descendants, got %v", err)
@@ -52,7 +52,7 @@ func TestFilterAverageBudget(t *testing.T) {
 	for depth := 1; depth <= 5; depth++ {
 		root = &Filter{Operator: OpAnd, Rules: []FilterRule{root}}
 		nodes := 0
-		_, err := prepareUnifiedRule(root, schema, 0, &nodes)
+		_, err := prepareBehavioralRule(root, schema, 0, &nodes)
 		if err != nil {
 			if depth <= 4 {
 				t.Fatalf("expected up to four groups, got %v", err)
@@ -82,7 +82,7 @@ func TestFilterAverageCodec(t *testing.T) {
 	}
 	nodes := 0
 	schema := types.Object([]types.Property{{Name: "country", Type: types.String()}})
-	prepared, err := prepareUnifiedRule(&root, schema, 0, &nodes)
+	prepared, err := prepareBehavioralRule(&root, schema, 0, &nodes)
 	if err != nil {
 		t.Fatalf("expected Average prepared, got %v", err)
 	}
@@ -135,7 +135,7 @@ func TestFilterAverageDiagnostics(t *testing.T) {
 			}
 			_, err = prepareFilterAverage(&condition, nil)
 			if err != nil {
-				if _, unsupported := errors.AsType[*unified.UnsupportedError](err); unsupported != test.unsupported {
+				if _, unsupported := errors.AsType[*behavioral.UnsupportedError](err); unsupported != test.unsupported {
 					t.Fatalf("expected unsupported=%v, got %v", test.unsupported, err)
 				}
 				if !strings.Contains(err.Error(), test.message) || strings.Contains(err.Error(), "Sum") {
@@ -199,9 +199,9 @@ func TestFilterAverageInvalidBeforeUnsupported(t *testing.T) {
 				t.Fatalf("expected syntax decoded before validation, got %v", err)
 			}
 			nodes := 0
-			_, err = prepareUnifiedRule(&root, schema, 0, &nodes)
+			_, err = prepareBehavioralRule(&root, schema, 0, &nodes)
 			if err != nil {
-				if _, unsupported := errors.AsType[*unified.UnsupportedError](err); unsupported {
+				if _, unsupported := errors.AsType[*behavioral.UnsupportedError](err); unsupported {
 					t.Fatalf("expected invalidity before unavailable precision, got %v", err)
 				}
 				continue
@@ -230,7 +230,7 @@ func TestFilterAverageThresholds(t *testing.T) {
 			}
 			_, err = prepareFilterAverage(&condition, nil)
 			if err != nil {
-				if _, unsupported := errors.AsType[*unified.UnsupportedError](err); !unsupported || !test.unsupported {
+				if _, unsupported := errors.AsType[*behavioral.UnsupportedError](err); !unsupported || !test.unsupported {
 					t.Fatalf("expected unsupported=%v, got %v", test.unsupported, err)
 				}
 				return

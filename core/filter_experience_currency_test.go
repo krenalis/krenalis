@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/krenalis/krenalis/core/internal/unified"
+	"github.com/krenalis/krenalis/core/internal/behavioral"
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
@@ -54,7 +54,7 @@ func TestFilterExperienceCurrencyAdmission(t *testing.T) {
 			}
 			rule, err := prepareFilterExperience(&condition, nil)
 			if err != nil {
-				if _, unsupported := errors.AsType[*unified.UnsupportedError](err); !test.invalid &&
+				if _, unsupported := errors.AsType[*behavioral.UnsupportedError](err); !test.invalid &&
 					(!test.unsupported || !unsupported) || test.invalid && unsupported {
 					t.Fatalf("expected invalid=%v unsupported=%v, got %v", test.invalid, test.unsupported, err)
 				}
@@ -63,9 +63,9 @@ func TestFilterExperienceCurrencyAdmission(t *testing.T) {
 			if test.invalid {
 				t.Fatal("expected invalid base currency, got success")
 			}
-			err = unified.Validate(&rule, time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC), unified.Page{Limit: 1})
+			err = behavioral.Validate(&rule, time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC), behavioral.Page{Limit: 1})
 			if err != nil {
-				if _, unsupported := errors.AsType[*unified.UnsupportedError](err); !test.unsupported || !unsupported {
+				if _, unsupported := errors.AsType[*behavioral.UnsupportedError](err); !test.unsupported || !unsupported {
 					t.Fatalf("expected unsupported=%v, got %v", test.unsupported, err)
 				}
 				return
@@ -146,11 +146,11 @@ func TestFilterExperienceCurrencyDependencies(t *testing.T) {
 				}
 				rule, err := prepareFilterExperience(&condition, nil)
 				if err == nil {
-					err = unified.Validate(&rule, time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC), unified.Page{Limit: 1})
+					err = behavioral.Validate(&rule, time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC), behavioral.Page{Limit: 1})
 				}
 				blocked := path == "properties" || path == "properties.currency" || path == "properties.currency.x"
 				if err != nil {
-					if _, unsupported := errors.AsType[*unified.UnsupportedError](err); !blocked || !unsupported {
+					if _, unsupported := errors.AsType[*behavioral.UnsupportedError](err); !blocked || !unsupported {
 						t.Fatalf("expected overlap=%v for %s, got %v", blocked, path, err)
 					}
 				}

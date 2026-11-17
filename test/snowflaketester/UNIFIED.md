@@ -6,7 +6,7 @@ branch review and the live HTTP/MCP checks on 2026-11-17, recorded in
 Historical campaign records below retain their original closed-gate state.
 Local compilation, PostgreSQL results and skipped Snowflake tests are not remote passes.
 The complete acceptance checklist is in
-[the Unified README](../../core/internal/unified/README.md#consolidated-snowflake-verification-campaign).
+[the Unified README](../../core/internal/behavioral/README.md#consolidated-snowflake-verification-campaign).
 
 ## Local preparation
 
@@ -19,7 +19,7 @@ export GOPROXY=off GOSUMDB=off
 export GOCACHE="$PWD/.gocache"
 export KRENALIS_SKIP_SNOWFLAKE_TESTS=true
 
-go test ./core/internal/unified ./warehouses/internal/profilefilter \
+go test ./core/internal/behavioral ./warehouses/internal/profilefilter \
   ./warehouses/snowflake ./connectors/snowflake ./core/internal/connections \
   ./cmd/internal/mcp -short -count=1 -json > /tmp/unified-local.jsonl
 
@@ -33,7 +33,7 @@ go test ./test/snowflaketester -race -count=1
 python3 -B -m unittest discover -s test/snowflaketester -p 'test_*.py'
 ```
 
-`TestUnifiedConformancePostgreSQL/Snowflake` shares fixture data, expected results
+`TestBehavioralConformancePostgreSQL/Snowflake` shares fixture data, expected results
 and assertions. Backend-specific SQL is confined to table setup and fixture
 writes. Events go through the real Merge writer; copies are inserted into tables
 without identity constraints so that a primary key cannot hide deduplication
@@ -63,7 +63,7 @@ The bounded fixture complements the full PostgreSQL completion oracles; it does
 not replace them. It avoids running the exhaustive suites remotely. Its selection
 block has 22 main batched membership checks and 204 individual explanations, rather
 than thousands of remote oracle queries. The named subtests can be selected
-separately, for example `-run '^TestUnifiedConformancePostgreSQL$/periods'`.
+separately, for example `-run '^TestBehavioralConformancePostgreSQL$/periods'`.
 The remote sequence isolates the four new groups in `unified-new-groups.jsonl`.
 The subsequent `unified-snowflake.jsonl` block keeps the baseline stored-number,
 selection, period and page/screen fixtures; its `-skip` excludes the four groups
@@ -98,8 +98,8 @@ KRENALIS_SKIP_SNOWFLAKE_TESTS=true go test \
   ./warehouses/snowflake -run '^TestProfileSchemaFailures$' -race -count=1
 ```
 
-Test production verification separately without an overlay (`TestUnifiedPrepare`
-above). `TestUnifiedProfilesUnavailableBackend` retains the rejection check for
+Test production verification separately without an overlay (`TestBehavioralPrepare`
+above). `TestBehavioralProfilesUnavailableBackend` retains the rejection check for
 an explicitly unverified test provider. Keep remote runs limited to the named
 blocks rather than the whole datastore package. There is no runtime bypass.
 Run the remote blocks once with UTC, then in a fresh campaign directory prepared
@@ -206,14 +206,14 @@ KRENALIS_SKIP_SNOWFLAKE_TESTS=false python3 test/snowflaketester/run.py --requir
 KRENALIS_SKIP_SNOWFLAKE_TESTS=false python3 test/snowflaketester/run.py --require-schemas \
   --require-session-timezone "$session_timezone" "$campaign_dir/unified-new-groups.jsonl" -- \
   -overlay "$campaign_dir/overlay.json" ./core/internal/datastore \
-  -run '^TestUnifiedConformanceSnowflake$/(count-money|guards|sources|protocol)$' \
+  -run '^TestBehavioralConformanceSnowflake$/(count-money|guards|sources|protocol)$' \
   -timeout=45m
 
 KRENALIS_SKIP_SNOWFLAKE_TESTS=false python3 test/snowflaketester/run.py --require-schemas \
   --require-session-timezone "$session_timezone" "$campaign_dir/unified-snowflake.jsonl" -- \
   -overlay "$campaign_dir/overlay.json" \
   ./core/internal/datastore -run '^TestUnified(StoredNumbers|Conformance)Snowflake$' \
-  -skip '^TestUnifiedConformanceSnowflake$/(count-money|guards|sources|protocol)$' \
+  -skip '^TestBehavioralConformanceSnowflake$/(count-money|guards|sources|protocol)$' \
   -timeout=45m
 
 # The PostgreSQL arm is skipped: this block isolates real Snowflake Record reads.
@@ -540,7 +540,7 @@ campaign's test output. No implementation or production gate changed.
 
 ## Public Profiles service
 
-`TestUnifiedServicePostgreSQL` and `TestUnifiedServiceSnowflake` use the same
+`TestBehavioralServicePostgreSQL` and `TestBehavioralServiceSnowflake` use the same
 six profiles, thirteen recorded messages and handwritten public JSON oracles.
 Both initialize their warehouse with production `Initialize` and publish the
 fixtures through `Merge`. The application database remains a disposable local
@@ -583,7 +583,7 @@ for service_timezone in UTC America/Los_Angeles; do
     --require-result-tag krenalis-transport/service-explanation \
     --require-result-tag krenalis-transport/service-record \
     "$service_dir/service.jsonl" -- -overlay "$service_dir/overlay.json" ./core \
-    -run '^TestUnifiedServiceSnowflake$' -race -timeout=15m
+    -run '^TestBehavioralServiceSnowflake$' -race -timeout=15m
 done
 ```
 
@@ -966,9 +966,9 @@ production Unified gate.
 
 ## Record, collation and native Float campaign
 
-The shared fixtures `TestUnifiedRecordConformancePostgreSQL/Snowflake`,
-`TestUnifiedRecordSourcesPostgreSQL/Snowflake` and
-`TestUnifiedRecordCollationPostgreSQL/Snowflake` extend the campaign without
+The shared fixtures `TestBehavioralRecordConformancePostgreSQL/Snowflake`,
+`TestBehavioralRecordSourcesPostgreSQL/Snowflake` and
+`TestBehavioralRecordCollationPostgreSQL/Snowflake` extend the campaign without
 opening the production gate. Run PostgreSQL first, then the full UTC block and
 a reduced America/Los_Angeles block. Each remote block creates and tears down
 its own test schemas; do not run it against an application or demo schema.
@@ -983,7 +983,7 @@ its own test schemas; do not run it against an application or demo schema.
   reads require 161 Unified SELECTs, 46 explanations and 20 legacy queries
   (two SELECTs each), for 247 SELECTs, excluding initialization and writes.
   It also checks empty pages and pure Record after dropping the event table.
-- `TestUnifiedRecordStatesPostgreSQL/Snowflake` separately checks the six
+- `TestBehavioralRecordStatesPostgreSQL/Snowflake` separately checks the six
   native state operators on SQL NULL, empty and populated String/Array values.
   Each query and all three explanations assert both leaves and their group:
   six queries and eighteen explanations, or 24 extra SELECTs. Native `is null`
@@ -1161,7 +1161,7 @@ Repeat the UTC supplement with the standard UTC ARROW overlay and both
 For the LA supplement, use the LA overlay, the same two tags and:
 
 ```sh
--run '^TestUnifiedRecordCollationSnowflake$/^(false_AND_unknown|true_OR_unknown|unknown_AND_true|unknown_OR_false)$'
+-run '^TestBehavioralRecordCollationSnowflake$/^(false_AND_unknown|true_OR_unknown|unknown_AND_true|unknown_OR_false)$'
 ```
 
 Local isolated mutants replacing native array emptiness with `length=0`,
@@ -1181,7 +1181,7 @@ keeps byte-distinct IDs separate. NULL diagnostics, genuine-copy deduplication,
 source fault rules, profile UUID comparisons and user Record rendering are
 unchanged. Query SQL changes intentionally; timestamp arguments do not.
 
-`TestUnifiedIdentityPostgreSQL/Snowflake` shares ten cases under PostgreSQL
+`TestBehavioralIdentityPostgreSQL/Snowflake` shares ten cases under PostgreSQL
 non-deterministic ICU and Snowflake `en-ci-rtrim`. Controlled DML, rather than
 Merge, preserves every physical fixture row, and a row count checks this before
 each read. Cases cover case variants, trailing space, composed/decomposed
@@ -1220,11 +1220,11 @@ KRENALIS_SKIP_SNOWFLAKE_TESTS=false python3 test/snowflaketester/run.py --requir
   --require-result-tag krenalis-transport/record-query \
   --require-result-tag krenalis-transport/record-explanation "$campaign_dir/identity-utc.jsonl" -- \
   -overlay "$campaign_dir/identity-utc/overlay.json" ./core/internal/datastore -race \
-  -run '^TestUnifiedIdentitySnowflake$' -timeout=8m
+  -run '^TestBehavioralIdentitySnowflake$' -timeout=8m
 ```
 
 The reduced LA identity selection is
-`^TestUnifiedIdentitySnowflake$/^(tied_identities|other_profile_fault)$`, with
+`^TestBehavioralIdentitySnowflake$/^(tied_identities|other_profile_fault)$`, with
 the LA overlay and required timezone. Its repeat does not include the private
 DDL probe, so it produces three passing nodes rather than four.
 
@@ -1256,7 +1256,7 @@ corrections remain in place. The production gate stays false.
 
 ## Failure and resource supplement
 
-`TestUnifiedResourcesPostgreSQL/Snowflake` shares the physical budget, server
+`TestBehavioralResourcesPostgreSQL/Snowflake` shares the physical budget, server
 failure and bounded-load cases. It checks one oversized String, a cumulative
 two-row overflow, exact 1 MiB success, UTF-8 overflow and exact UTF-8 success.
 After each size rejection, a request without the oversized projection must
@@ -1273,7 +1273,7 @@ The load smoke test uses 128 profiles and 16,384 messages with eight rules.
 It checks a final matching page, an empty page with retained totals, all nine
 explanation outcomes and exact Count/Sum/Average metadata. It is not a benchmark.
 
-`TestUnifiedTimestampPrecisionPostgreSQL/Snowflake` checks Count, First and Last
+`TestBehavioralTimestampPrecisionPostgreSQL/Snowflake` checks Count, First and Last
 on both sides of each half-open border and exactly on it, with one stored tick
 of separation. Both warehouses run native precisions 3 and 6; only Snowflake
 runs precision 9 because PostgreSQL cannot store nanosecond timestamps. This
@@ -1366,7 +1366,7 @@ private cancellation marker.
 
 ### Repeatable chunk checks
 
-The shared `TestUnifiedResourcesPostgreSQL/Snowflake/chunk_payload` case now
+The shared `TestBehavioralResourcesPostgreSQL/Snowflake/chunk_payload` case now
 loads the same 512 digest payloads and verifies every ID and byte at the exact
 1 MiB budget. The normal observer generated by `prepare.py --result-format`
 also prints the number of remote chunk descriptors and the statement kind for
@@ -1409,7 +1409,7 @@ KRENALIS_SKIP_SNOWFLAKE_TESTS=false python3 test/snowflaketester/run.py --requir
   --require-result-tag krenalis-transport/record-query \
   --require-remote-chunks krenalis-transport/record-query "$campaign_dir/chunks.jsonl" -- \
   -overlay "$campaign_dir/chunks/overlay.json" ./core/internal/datastore -race \
-  -run '^TestUnifiedResourcesSnowflake$/^chunk_payload$' -timeout=5m
+  -run '^TestBehavioralResourcesSnowflake$/^chunk_payload$' -timeout=5m
 
 python3 -B test/snowflaketester/prepare.py "$campaign_dir/chunk-fault" \
   --timezone UTC --result-format ARROW --chunk-fault
@@ -1418,7 +1418,7 @@ KRENALIS_SKIP_SNOWFLAKE_TESTS=false python3 test/snowflaketester/run.py --requir
   --require-result-tag krenalis-transport/record-query \
   --require-remote-chunks krenalis-transport/record-query "$campaign_dir/chunk-fault.jsonl" -- \
   -overlay "$campaign_dir/chunk-fault/overlay.json" -tags krenalis_chunkfault ./core/internal/datastore -race \
-  -run '^TestUnifiedChunkFaultSnowflake$' -timeout=5m
+  -run '^TestBehavioralChunkFaultSnowflake$' -timeout=5m
 ```
 
 The Python preparation tests run the actual driver's retry path locally with
@@ -1519,7 +1519,7 @@ The review is `filtering/claude/revisione-deroga-testo-nativo.md`.
 The enum issue is not covered by the collation exception. The Array(String)
 extension does not admit other differences in array semantics or change code.
 
-`TestUnifiedRecordEnumPostgreSQL/Snowflake` is the shared regression for the
+`TestBehavioralRecordEnumPostgreSQL/Snowflake` is the shared regression for the
 enum correction. It initializes the real managed event table, writes events
 through Merge and uses the actual Event column descriptors for `type`,
 `context.browser.name` and `context.os.name`. Both substring operators check
@@ -1537,7 +1537,7 @@ timezones on 2026-11-16, as recorded below. Repeat it with fresh evidence:
 python3 test/snowflaketester/run.py --require-schemas \
   --require-session-timezone "$session_timezone" "$campaign_dir/record-enum.jsonl" -- \
   -overlay "$campaign_dir/overlay.json" ./core/internal/datastore -race \
-  -run '^TestUnifiedRecordEnumSnowflake$' -timeout=5m
+  -run '^TestBehavioralRecordEnumSnowflake$' -timeout=5m
 ```
 
 ## Known limitations tracked on main
@@ -1616,12 +1616,12 @@ python3 -B test/snowflaketester/prepare.py "$campaign_dir/cancellation-overlay" 
 KRENALIS_SKIP_SNOWFLAKE_TESTS=false python3 test/snowflaketester/run.py --require-schemas \
   --require-session-timezone UTC --require-session-profile timeout "$campaign_dir/timeout.jsonl" -- \
   -overlay "$campaign_dir/timeout-overlay/overlay.json" ./core/internal/datastore \
-  -run '^TestUnifiedTimeoutSnowflake$' -timeout=4m
+  -run '^TestBehavioralTimeoutSnowflake$' -timeout=4m
 
 KRENALIS_SKIP_SNOWFLAKE_TESTS=false python3 test/snowflaketester/run.py --require-schemas \
   --require-session-timezone UTC --require-session-profile cancellation "$campaign_dir/cancellation.jsonl" -- \
   -overlay "$campaign_dir/cancellation-overlay/overlay.json" ./core/internal/datastore \
-  -run '^TestUnifiedCancellationSnowflake$' -timeout=4m
+  -run '^TestBehavioralCancellationSnowflake$' -timeout=4m
 
 # Local counterpart; no Snowflake credentials are used.
 KRENALIS_SKIP_SNOWFLAKE_TESTS=true go test ./core/internal/datastore \

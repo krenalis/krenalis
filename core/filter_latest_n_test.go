@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/krenalis/krenalis/core/internal/unified"
+	"github.com/krenalis/krenalis/core/internal/behavioral"
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
@@ -88,7 +88,7 @@ func TestExplainLatestNSelection(t *testing.T) {
 	} {
 		index := 0
 		result, err := explainProfileRule(&warehouses.LatestOccurrences{Size: 2, End: at},
-			unified.Rule{LatestN: &unified.LatestN{Size: 2}}, []warehouses.FilterNodeOutcome{{Truth: warehouses.FilterUnknown,
+			behavioral.Rule{LatestN: &behavioral.LatestN{Size: 2}}, []warehouses.FilterNodeOutcome{{Truth: warehouses.FilterUnknown,
 				Experience: &warehouses.OccurrenceSelection{Candidates: test.candidates, AbsencePossible: test.absent}}},
 			&index, at)
 		if err != nil {
@@ -110,7 +110,7 @@ func TestFilterLatestNCodec(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected latestN fixture, got %v", err)
 	}
-	if !filter.RequiresUnified() {
+	if !filter.HasBehavioralConditions() {
 		t.Fatal("expected Unified requirement, got false")
 	}
 	encoded, err := json.Marshal(&filter)
@@ -221,7 +221,7 @@ func TestFilterLatestNQuantifiers(t *testing.T) {
 			}
 			rule, err := prepareFilterLatestN(&condition, nil)
 			if err != nil {
-				if _, unsupported := errors.AsType[*unified.UnsupportedError](err); unsupported || !test.invalid {
+				if _, unsupported := errors.AsType[*behavioral.UnsupportedError](err); unsupported || !test.invalid {
 					t.Fatalf("expected invalid=%v, got %v", test.invalid, err)
 				}
 				return
@@ -229,11 +229,11 @@ func TestFilterLatestNQuantifiers(t *testing.T) {
 			if test.invalid || rule.LatestN == nil {
 				t.Fatalf("expected invalid=%v, got %+v", test.invalid, rule)
 			}
-			want := unified.LatestAll
+			want := behavioral.LatestAll
 			if condition.LatestN.Quantifier.Kind == "some" {
-				want = unified.LatestSome
+				want = behavioral.LatestSome
 			} else if condition.LatestN.Quantifier.Kind == "cardinality" {
-				want = unified.LatestCardinality
+				want = behavioral.LatestCardinality
 			}
 			if rule.LatestN.Quantifier.Kind != want {
 				t.Fatalf("expected quantifier kind %d, got %+v", want, rule.LatestN.Quantifier)
@@ -266,7 +266,7 @@ func TestFilterLatestNValidation(t *testing.T) {
 			}
 			rule, err := prepareFilterLatestN(&modified, nil)
 			if err != nil {
-				if _, unsupported := errors.AsType[*unified.UnsupportedError](err); unsupported || !test.invalid {
+				if _, unsupported := errors.AsType[*behavioral.UnsupportedError](err); unsupported || !test.invalid {
 					t.Fatalf("expected invalid=%v for size %s, got %v", test.invalid, test.size, err)
 				}
 				return
@@ -309,10 +309,10 @@ func TestFilterLatestNValidation(t *testing.T) {
 	invalid.LatestN.Size = json.Value("0")
 	for _, rules := range [][]FilterRule{{&unsupported, &invalid}, {&invalid, &unsupported}} {
 		nodes := 0
-		_, err := prepareUnifiedRule(&Filter{Operator: OpAnd, Rules: rules},
+		_, err := prepareBehavioralRule(&Filter{Operator: OpAnd, Rules: rules},
 			types.Object([]types.Property{{Name: "x", Type: types.String()}}), 0, &nodes)
 		if err != nil {
-			if _, unsupported := errors.AsType[*unified.UnsupportedError](err); unsupported {
+			if _, unsupported := errors.AsType[*behavioral.UnsupportedError](err); unsupported {
 				t.Fatalf("expected invalid sibling before unavailable, got %v", err)
 			}
 			continue
@@ -322,7 +322,7 @@ func TestFilterLatestNValidation(t *testing.T) {
 	unsupported.LatestN.Base.Source.Name = ""
 	_, err = prepareFilterLatestN(&unsupported, nil)
 	if err != nil {
-		if _, unavailable := errors.AsType[*unified.UnsupportedError](err); unavailable {
+		if _, unavailable := errors.AsType[*behavioral.UnsupportedError](err); unavailable {
 			t.Fatalf("expected invalid base before quantifier availability, got %v", err)
 		}
 		return

@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/krenalis/krenalis/core/internal/unified"
+	"github.com/krenalis/krenalis/core/internal/behavioral"
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
@@ -36,7 +36,7 @@ func TestFilterSumBudget(t *testing.T) {
 			root.Rules[i] = &condition
 		}
 		nodes := 0
-		_, err := prepareUnifiedRule(root, schema, 0, &nodes)
+		_, err := prepareBehavioralRule(root, schema, 0, &nodes)
 		if err != nil {
 			if size == 100 {
 				t.Fatalf("expected 100 Sum descendants, got %v", err)
@@ -51,7 +51,7 @@ func TestFilterSumBudget(t *testing.T) {
 	for depth := 1; depth <= 5; depth++ {
 		root = &Filter{Operator: OpAnd, Rules: []FilterRule{root}}
 		nodes := 0
-		_, err := prepareUnifiedRule(root, schema, 0, &nodes)
+		_, err := prepareBehavioralRule(root, schema, 0, &nodes)
 		if err != nil {
 			if depth < 5 {
 				t.Fatalf("expected four levels including root, got %v", err)
@@ -79,9 +79,9 @@ func TestFilterSumInvalidBeforeUnsupported(t *testing.T) {
 			}
 			nodes := 0
 			schema := types.Object([]types.Property{{Name: "country", Type: types.String()}})
-			_, err = prepareUnifiedRule(&filter, schema, 0, &nodes)
+			_, err = prepareBehavioralRule(&filter, schema, 0, &nodes)
 			if err != nil {
-				if _, unsupported := errors.AsType[*unified.UnsupportedError](err); unsupported {
+				if _, unsupported := errors.AsType[*behavioral.UnsupportedError](err); unsupported {
 					t.Fatalf("expected invalidity before unavailable Sum, got %v", err)
 				}
 				continue
@@ -133,7 +133,7 @@ func TestFilterSumMinimum(t *testing.T) {
 		}
 		_, err = prepareFilterSum(&condition, nil)
 		if err != nil {
-			if _, unsupported := errors.AsType[*unified.UnsupportedError](err); !unsupported {
+			if _, unsupported := errors.AsType[*behavioral.UnsupportedError](err); !unsupported {
 				t.Fatalf("expected unsupported large minimum, got %v", err)
 			}
 			continue
@@ -155,10 +155,10 @@ func TestFilterSumMinimum(t *testing.T) {
 				t.Fatalf("expected decodable minimum fixture, got %v", err)
 			}
 			nodes := 0
-			_, err = prepareUnifiedRule(&filter, types.Object([]types.Property{{Name: "country", Type: types.String()}}),
+			_, err = prepareBehavioralRule(&filter, types.Object([]types.Property{{Name: "country", Type: types.String()}}),
 				0, &nodes)
 			if err != nil {
-				if _, unsupported := errors.AsType[*unified.UnsupportedError](err); unsupported {
+				if _, unsupported := errors.AsType[*behavioral.UnsupportedError](err); unsupported {
 					t.Fatalf("expected invalidity before unsupported minimum, got %v", err)
 				}
 				continue
@@ -204,16 +204,16 @@ func TestFilterSumRoundTrip(t *testing.T) {
 		if err != nil {
 			t.Fatalf("expected Sum encoding, got %v", err)
 		}
-		if string(before) != input || !filter.RequiresUnified() {
+		if string(before) != input || !filter.HasBehavioralConditions() {
 			t.Fatalf("expected unchanged Sum document requiring Unified, got %s", before)
 		}
 		nodes := 0
 		schema := types.Object([]types.Property{{Name: "country", Type: types.String()}})
-		root, err := prepareUnifiedRule(&filter, schema, 0, &nodes)
+		root, err := prepareBehavioralRule(&filter, schema, 0, &nodes)
 		if err != nil {
 			t.Fatalf("expected prepared Sum, got %v", err)
 		}
-		err = unified.Validate(&root, time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC), unified.Page{Limit: 1})
+		err = behavioral.Validate(&root, time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC), behavioral.Page{Limit: 1})
 		if err != nil {
 			t.Fatalf("expected admitted Sum, got %v", err)
 		}
@@ -279,7 +279,7 @@ func TestFilterSumValidation(t *testing.T) {
 				_, err = prepareFilterSum(&condition, nil)
 			}
 			if err != nil {
-				_, unavailable := errors.AsType[*unified.UnsupportedError](err)
+				_, unavailable := errors.AsType[*behavioral.UnsupportedError](err)
 				if unavailable != test.unsupported {
 					t.Fatalf("expected unsupported=%v, got %v", test.unsupported, err)
 				}
@@ -322,7 +322,7 @@ func TestFilterSumWhere(t *testing.T) {
 			}
 			rule, err := prepareFilterSum(&condition, nil)
 			if err != nil {
-				if _, unsupported := errors.AsType[*unified.UnsupportedError](err); !test.unsupported || !unsupported {
+				if _, unsupported := errors.AsType[*behavioral.UnsupportedError](err); !test.unsupported || !unsupported {
 					t.Fatalf("expected unsupported=%v, got %v", test.unsupported, err)
 				}
 			}
@@ -348,9 +348,9 @@ func TestFilterSumWhere(t *testing.T) {
 				}
 				nodes := 0
 				schema := types.Object([]types.Property{{Name: "country", Type: types.String()}})
-				_, err = prepareUnifiedRule(&filter, schema, 0, &nodes)
+				_, err = prepareBehavioralRule(&filter, schema, 0, &nodes)
 				if err != nil {
-					if _, unsupported := errors.AsType[*unified.UnsupportedError](err); unsupported {
+					if _, unsupported := errors.AsType[*behavioral.UnsupportedError](err); unsupported {
 						t.Fatalf("expected invalidity before availability in either order, got %v", err)
 					}
 					continue
@@ -374,7 +374,7 @@ func TestFilterSumWhere(t *testing.T) {
 		}
 		_, err = prepareFilterSum(&condition, nil)
 		if err != nil {
-			if _, unsupported := errors.AsType[*unified.UnsupportedError](err); unsupported {
+			if _, unsupported := errors.AsType[*behavioral.UnsupportedError](err); unsupported {
 				t.Fatalf("expected invalid where before availability, got %v", err)
 			}
 			continue

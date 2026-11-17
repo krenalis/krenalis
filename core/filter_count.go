@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/krenalis/krenalis/core/internal/unified"
+	"github.com/krenalis/krenalis/core/internal/behavioral"
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 )
@@ -311,106 +311,106 @@ func (period *FilterPeriod) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func (period FilterPeriod) scope(source FilterCountSource, calendar *unified.Calendar) (unified.Scope, error) {
+func (period FilterPeriod) scope(source FilterCountSource, calendar *behavioral.Calendar) (behavioral.Scope, error) {
 	if source.Kind != "recordedEvents" {
-		return unified.Scope{}, errors.New("invalid recorded event source kind")
+		return behavioral.Scope{}, errors.New("invalid recorded event source kind")
 	}
-	scope, err := unified.RecordedScope(source.Type, source.Name, source.Grain)
+	scope, err := behavioral.RecordedScope(source.Type, source.Name, source.Grain)
 	if err != nil {
-		return unified.Scope{}, err
+		return behavioral.Scope{}, err
 	}
 	var older, newer filterCountInteger
 	if period.Kind != "lastCompleteCalendarPeriods" && (period.Unit != "" || period.Count != nil) {
-		return unified.Scope{}, errors.New("calendar period fields require lastCompleteCalendarPeriods")
+		return behavioral.Scope{}, errors.New("calendar period fields require lastCompleteCalendarPeriods")
 	}
 	if period.Kind != "fullRelevantHistory" && period.History != nil {
-		return unified.Scope{}, errors.New("history reference requires fullRelevantHistory")
+		return behavioral.Scope{}, errors.New("history reference requires fullRelevantHistory")
 	}
 	switch period.Kind {
 	case "fullRelevantHistory":
 		if period.History == nil || period.Start != nil || period.End != nil || period.Duration != nil ||
 			period.Older != nil || period.Newer != nil {
-			return unified.Scope{}, errors.New("full relevant history requires only a history reference")
+			return behavioral.Scope{}, errors.New("full relevant history requires only a history reference")
 		}
-		history, err := unified.ResolveHistory(period.History.Definition, period.History.MeaningRevision)
+		history, err := behavioral.ResolveHistory(period.History.Definition, period.History.MeaningRevision)
 		if err != nil {
-			return unified.Scope{}, err
+			return behavioral.Scope{}, err
 		}
 		scope.History = history
 	case "lastCompleteCalendarPeriods":
 		if period.Start != nil || period.End != nil || period.Duration != nil ||
 			period.Older != nil || period.Newer != nil || calendar == nil {
-			return unified.Scope{}, errors.New("complete calendar periods require defaultCalendar, unit and count only")
+			return behavioral.Scope{}, errors.New("complete calendar periods require defaultCalendar, unit and count only")
 		}
 		switch period.Unit {
 		case "day", "week", "month":
 		default:
-			return unified.Scope{}, errors.New("invalid calendar period unit")
+			return behavioral.Scope{}, errors.New("invalid calendar period unit")
 		}
 		count, err := parseFilterCountInteger(period.Count)
 		if err != nil {
-			return unified.Scope{}, fmt.Errorf("invalid calendar period count: %w", err)
+			return behavioral.Scope{}, fmt.Errorf("invalid calendar period count: %w", err)
 		}
 		if count == "0" {
-			return unified.Scope{}, errors.New("calendar period count must be positive")
+			return behavioral.Scope{}, errors.New("calendar period count must be positive")
 		}
 		n, ok := count.uint64()
 		if !ok {
-			return unified.Scope{}, &unified.UnsupportedError{Capability: "calendar count beyond 64-bit representation"}
+			return behavioral.Scope{}, &behavioral.UnsupportedError{Capability: "calendar count beyond 64-bit representation"}
 		}
-		scope.Calendar = &unified.CalendarPeriod{Calendar: calendar, Unit: period.Unit, Count: n}
+		scope.Calendar = &behavioral.CalendarPeriod{Calendar: calendar, Unit: period.Unit, Count: n}
 	case "absoluteHalfOpen":
 		if period.Start == nil || period.End == nil || period.Duration != nil ||
 			period.Older != nil || period.Newer != nil {
-			return unified.Scope{}, errors.New("absolute period requires only start and end")
+			return behavioral.Scope{}, errors.New("absolute period requires only start and end")
 		}
 		scope.Start, scope.End = *period.Start, *period.End
 		for _, bound := range []time.Time{scope.Start, scope.End} {
 			if bound.IsZero() || bound.UTC().Year() < 1 || bound.UTC().Year() > 9999 {
-				return unified.Scope{}, errors.New("invalid Unified timestamp")
+				return behavioral.Scope{}, errors.New("invalid Unified timestamp")
 			}
 		}
 		if !scope.Start.Before(scope.End) {
-			return unified.Scope{}, errors.New("invalid absolute observation period")
+			return behavioral.Scope{}, errors.New("invalid absolute observation period")
 		}
 	case "elapsedLookback":
 		if period.Duration == nil || period.Start != nil || period.End != nil ||
 			period.Older != nil || period.Newer != nil {
-			return unified.Scope{}, errors.New("elapsed lookback requires only duration")
+			return behavioral.Scope{}, errors.New("elapsed lookback requires only duration")
 		}
 		var err error
 		older, err = period.Duration.elapsed()
 		if err != nil {
-			return unified.Scope{}, err
+			return behavioral.Scope{}, err
 		}
 		newer = "0"
 	case "elapsedAgoBand":
 		if period.Older == nil || period.Newer == nil || period.Start != nil ||
 			period.End != nil || period.Duration != nil {
-			return unified.Scope{}, errors.New("elapsed ago band requires only older and newer")
+			return behavioral.Scope{}, errors.New("elapsed ago band requires only older and newer")
 		}
 		var err error
 		older, err = period.Older.elapsed()
 		if err != nil {
-			return unified.Scope{}, err
+			return behavioral.Scope{}, err
 		}
 		newer, err = period.Newer.elapsed()
 		if err != nil {
-			return unified.Scope{}, err
+			return behavioral.Scope{}, err
 		}
 	default:
-		return unified.Scope{}, errors.New("invalid filter period kind")
+		return behavioral.Scope{}, errors.New("invalid filter period kind")
 	}
 	if older != "" {
 		if older.compare(newer) <= 0 {
-			return unified.Scope{}, errors.New("invalid elapsed observation period")
+			return behavioral.Scope{}, errors.New("invalid elapsed observation period")
 		}
 		old, ook := older.uint64()
 		recent, rok := newer.uint64()
 		if !ook || !rok || old > math.MaxInt64 || recent > math.MaxInt64 {
-			return unified.Scope{}, &unified.UnsupportedError{Capability: "elapsed duration beyond time.Duration range"}
+			return behavioral.Scope{}, &behavioral.UnsupportedError{Capability: "elapsed duration beyond time.Duration range"}
 		}
-		scope.Elapsed = &unified.ElapsedPeriod{Older: time.Duration(old), Newer: time.Duration(recent)}
+		scope.Elapsed = &behavioral.ElapsedPeriod{Older: time.Duration(old), Newer: time.Duration(recent)}
 	}
 	return scope, nil
 }
@@ -497,126 +497,126 @@ func parseFilterInstant(text string) (time.Time, error) {
 	return instant, nil
 }
 
-func prepareFilterCount(condition *FilterCountCondition, calendar *unified.Calendar) (unified.Rule, error) {
+func prepareFilterCount(condition *FilterCountCondition, calendar *behavioral.Calendar) (behavioral.Rule, error) {
 
 	if condition == nil {
-		return unified.Rule{}, errors.New("filter count condition cannot be nil")
+		return behavioral.Rule{}, errors.New("filter count condition cannot be nil")
 	}
 	if len(condition.Operator) > 64 {
-		return unified.Rule{}, errors.New("invalid Count operator")
+		return behavioral.Rule{}, errors.New("invalid Count operator")
 	}
 	// Validate the operator and arity.
-	var operator unified.Comparison
+	var operator behavioral.Comparison
 	switch condition.Operator {
 	case OpIs:
-		operator = unified.Equal
+		operator = behavioral.Equal
 	case OpIsNot:
-		operator = unified.Different
+		operator = behavioral.Different
 	case OpIsLessThan:
-		operator = unified.Less
+		operator = behavioral.Less
 	case OpIsLessThanOrEqualTo:
-		operator = unified.LessOrEqual
+		operator = behavioral.LessOrEqual
 	case OpIsGreaterThan:
-		operator = unified.Greater
+		operator = behavioral.Greater
 	case OpIsGreaterThanOrEqualTo:
-		operator = unified.GreaterOrEqual
+		operator = behavioral.GreaterOrEqual
 	case OpIsBetween:
-		operator = unified.Between
+		operator = behavioral.Between
 	default:
-		return unified.Rule{}, fmt.Errorf("operator %q cannot be used with Count", condition.Operator)
+		return behavioral.Rule{}, fmt.Errorf("operator %q cannot be used with Count", condition.Operator)
 	}
 	arity := 1
-	if operator == unified.Between {
+	if operator == behavioral.Between {
 		arity = 2
 	}
 	if len(condition.Values) != arity {
-		return unified.Rule{}, fmt.Errorf("Count operator requires %d operands", arity)
+		return behavioral.Rule{}, fmt.Errorf("Count operator requires %d operands", arity)
 	}
 
 	// Validate exact operands and the sample minimum before execution limits.
 	value, err := parseFilterCountInteger(condition.Values[0])
 	if err != nil {
-		return unified.Rule{}, err
+		return behavioral.Rule{}, err
 	}
 	upper := filterCountInteger("0")
 	if arity == 2 {
 		upper, err = parseFilterCountInteger(condition.Values[1])
 		if err != nil {
-			return unified.Rule{}, err
+			return behavioral.Rule{}, err
 		}
 		if upper.compare(value) < 0 {
-			return unified.Rule{}, errors.New("invalid Count terminal")
+			return behavioral.Rule{}, errors.New("invalid Count terminal")
 		}
 	}
 	minimum := filterCountInteger("0")
 	if condition.Count.Minimum != nil {
 		minimum, err = parseFilterCountInteger(condition.Count.Minimum)
 		if err != nil {
-			return unified.Rule{}, errors.New("Count sample minimum must be a positive JSON integer")
+			return behavioral.Rule{}, errors.New("Count sample minimum must be a positive JSON integer")
 		}
 		if minimum == "0" {
-			return unified.Rule{}, errors.New("Count sample minimum must be positive")
+			return behavioral.Rule{}, errors.New("Count sample minimum must be positive")
 		}
 	}
-	if minimum != "0" && ((operator == unified.Equal && value.compare(minimum) < 0) ||
-		(operator == unified.Less && value.compare(minimum) <= 0) ||
-		(operator == unified.LessOrEqual && value.compare(minimum) < 0) ||
-		(operator == unified.Between && upper.compare(minimum) < 0)) {
-		return unified.Rule{}, errors.New("Count sample minimum and terminal are statically incompatible")
+	if minimum != "0" && ((operator == behavioral.Equal && value.compare(minimum) < 0) ||
+		(operator == behavioral.Less && value.compare(minimum) <= 0) ||
+		(operator == behavioral.LessOrEqual && value.compare(minimum) < 0) ||
+		(operator == behavioral.Between && upper.compare(minimum) < 0)) {
+		return behavioral.Rule{}, errors.New("Count sample minimum and terminal are statically incompatible")
 	}
 
 	// Validate the period, source and occurrence qualification before availability.
 	scope, periodErr := condition.Count.Period.scope(condition.Count.Source, calendar)
 	if periodErr != nil {
-		if _, unsupported := errors.AsType[*unified.UnsupportedError](periodErr); !unsupported {
-			return unified.Rule{}, periodErr
+		if _, unsupported := errors.AsType[*behavioral.UnsupportedError](periodErr); !unsupported {
+			return behavioral.Rule{}, periodErr
 		}
 		// Preserve the validated source while deferring period availability.
 		scope.Type, scope.Event, scope.Grain = condition.Count.Source.Type, condition.Count.Source.Name,
 			condition.Count.Source.Grain
 	}
-	rule, err := prepareUnifiedCount(scope, condition.Count.Where, unified.CountTest{})
+	rule, err := prepareBehavioralCount(scope, condition.Count.Where, behavioral.CountTest{})
 	var unavailable error
 	if err != nil {
-		if _, unsupported := errors.AsType[*unified.UnsupportedError](err); !unsupported {
-			return unified.Rule{}, err
+		if _, unsupported := errors.AsType[*behavioral.UnsupportedError](err); !unsupported {
+			return behavioral.Rule{}, err
 		}
 		unavailable = err
 	}
 	count := condition.Count
 	if (count.CurrencyField == nil) != (count.NativeCurrency == nil) {
-		return unified.Rule{}, errors.New("Count requires currencyField and nativeCurrency together")
+		return behavioral.Rule{}, errors.New("Count requires currencyField and nativeCurrency together")
 	}
 	if count.CurrencyField != nil {
 		if count.Source.Type != "" && count.Source.Type != "track" {
-			return unified.Rule{}, errors.New("currency field is incompatible with the occurrence source")
+			return behavioral.Rule{}, errors.New("currency field is incompatible with the occurrence source")
 		}
-		rule.Count.Currency, err = unified.ResolveNativeCurrency(count.CurrencyField.Definition,
+		rule.Count.Currency, err = behavioral.ResolveNativeCurrency(count.CurrencyField.Definition,
 			count.CurrencyField.MeaningRevision, *count.NativeCurrency, count.Source.Name)
 		if err != nil {
-			return unified.Rule{}, err
+			return behavioral.Rule{}, err
 		}
 	}
 	err = rule.Count.ValidateWhere()
 	if err != nil {
-		if _, unsupported := errors.AsType[*unified.UnsupportedError](err); !unsupported {
-			return unified.Rule{}, err
+		if _, unsupported := errors.AsType[*behavioral.UnsupportedError](err); !unsupported {
+			return behavioral.Rule{}, err
 		}
 		unavailable = err
 	}
 	if periodErr != nil {
-		return unified.Rule{}, periodErr
+		return behavioral.Rule{}, periodErr
 	}
 	if unavailable != nil {
-		return unified.Rule{}, unavailable
+		return behavioral.Rule{}, unavailable
 	}
 	v, vok := value.uint64()
 	u, uok := upper.uint64()
 	m, mok := minimum.uint64()
 	if !vok || !uok || !mok {
-		return unified.Rule{}, &unified.UnsupportedError{Capability: "Count integer beyond 64-bit representation"}
+		return behavioral.Rule{}, &behavioral.UnsupportedError{Capability: "Count integer beyond 64-bit representation"}
 	}
-	rule.Count.Test = unified.CountTest{Operator: operator, Value: v, Upper: u}
+	rule.Count.Test = behavioral.CountTest{Operator: operator, Value: v, Upper: u}
 	rule.Count.Minimum = m
 
 	return rule, nil

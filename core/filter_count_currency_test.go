@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/krenalis/krenalis/core/internal/unified"
+	"github.com/krenalis/krenalis/core/internal/behavioral"
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
@@ -80,7 +80,7 @@ func TestFilterCountCurrencyLiteralErrors(t *testing.T) {
 			} {
 				t.Run(test.name, func(t *testing.T) {
 					if test.err != nil {
-						_, unsupported := errors.AsType[*unified.UnsupportedError](test.err)
+						_, unsupported := errors.AsType[*behavioral.UnsupportedError](test.err)
 						if unsupported || test.err.Error() != "nativeCurrency requires three uppercase letters" {
 							t.Fatalf("expected actionable invalid currency error, got %v", test.err)
 						}
@@ -110,16 +110,16 @@ func TestFilterCountCurrencyRoundTrip(t *testing.T) {
 			if err != nil {
 				t.Fatalf("expected encoded currency Count, got %v", err)
 			}
-			if string(encoded) != input || !filter.RequiresUnified() {
+			if string(encoded) != input || !filter.HasBehavioralConditions() {
 				t.Fatalf("expected unchanged Count document %s requiring Unified, got %s", input, encoded)
 			}
 			nodes := 0
 			schema := types.Object([]types.Property{{Name: "country", Type: types.String()}})
-			root, err := prepareUnifiedRule(&filter, schema, 0, &nodes)
+			root, err := prepareBehavioralRule(&filter, schema, 0, &nodes)
 			if err != nil {
 				t.Fatalf("expected resolved currency Count, got %v", err)
 			}
-			err = unified.Validate(&root, time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC), unified.Page{Limit: 1})
+			err = behavioral.Validate(&root, time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC), behavioral.Page{Limit: 1})
 			if err != nil {
 				t.Fatalf("expected admitted currency Count, got %v", err)
 			}
@@ -179,7 +179,7 @@ func TestFilterCountCurrencyValidation(t *testing.T) {
 			}
 			_, err = prepareFilterCount(&condition, nil)
 			if err != nil {
-				_, unsupported := errors.AsType[*unified.UnsupportedError](err)
+				_, unsupported := errors.AsType[*behavioral.UnsupportedError](err)
 				if unsupported != test.unsupported || test.supported {
 					t.Fatalf("expected unsupported=%v/supported=%v, got %v", test.unsupported, test.supported, err)
 				}
@@ -218,7 +218,7 @@ func TestFilterCountCurrencyInvalidBeforeUnsupported(t *testing.T) {
 						}
 						_, err = prepareFilterCount(&leaf, nil)
 						if err != nil {
-							if _, unsupported := errors.AsType[*unified.UnsupportedError](err); !unsupported {
+							if _, unsupported := errors.AsType[*behavioral.UnsupportedError](err); !unsupported {
 								t.Fatalf("expected unsupported fixture, got %v", err)
 							}
 						}
@@ -236,9 +236,9 @@ func TestFilterCountCurrencyInvalidBeforeUnsupported(t *testing.T) {
 						}
 						nodes := 0
 						schema := types.Object([]types.Property{{Name: "country", Type: types.String()}})
-						_, err = prepareUnifiedRule(&filter, schema, 0, &nodes)
+						_, err = prepareBehavioralRule(&filter, schema, 0, &nodes)
 						if err != nil {
-							if _, unsupported := errors.AsType[*unified.UnsupportedError](err); unsupported {
+							if _, unsupported := errors.AsType[*behavioral.UnsupportedError](err); unsupported {
 								t.Fatalf("expected invalidity before unavailable currency qualification, got %v", err)
 							}
 							return

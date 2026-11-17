@@ -7,7 +7,7 @@ package core
 import (
 	"bytes"
 
-	"github.com/krenalis/krenalis/core/internal/unified"
+	"github.com/krenalis/krenalis/core/internal/behavioral"
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 )
@@ -150,28 +150,28 @@ func (quantifier *FilterLatestNQuantifier) UnmarshalJSON(data []byte) error {
 
 // prepare reads natural operands once and retains their canonical digits.
 // The semantic quantifier validates compatibility and normalizes execution.
-func (quantifier FilterLatestNQuantifier) prepare(size int) (unified.LatestNQuantifier, error) {
-	result := unified.LatestNQuantifier{}
+func (quantifier FilterLatestNQuantifier) prepare(size int) (behavioral.LatestNQuantifier, error) {
+	result := behavioral.LatestNQuantifier{}
 	switch quantifier.Kind {
 	case "all", "some":
 		if quantifier.Operator != "" || quantifier.Values != nil {
 			return result, errors.New("latestN all and some admit only kind")
 		}
 		if quantifier.Kind == "some" {
-			result.Kind = unified.LatestSome
+			result.Kind = behavioral.LatestSome
 		}
 	case "cardinality":
-		result.Kind = unified.LatestCardinality
+		result.Kind = behavioral.LatestCardinality
 		arity := 1
 		switch quantifier.Operator {
 		case OpIs:
-			result.Operator = unified.Equal
+			result.Operator = behavioral.Equal
 		case OpIsGreaterThanOrEqualTo:
-			result.Operator = unified.GreaterOrEqual
+			result.Operator = behavioral.GreaterOrEqual
 		case OpIsLessThanOrEqualTo:
-			result.Operator = unified.LessOrEqual
+			result.Operator = behavioral.LessOrEqual
 		case OpIsBetween:
-			result.Operator, arity = unified.Between, 2
+			result.Operator, arity = behavioral.Between, 2
 		default:
 			return result, errors.New("latestN cardinality accepts only is, is greater than or equal to, " +
 				"is less than or equal to, and is between")
@@ -198,27 +198,27 @@ func (quantifier FilterLatestNQuantifier) prepare(size int) (unified.LatestNQuan
 	return result, err
 }
 
-func prepareFilterLatestN(condition *FilterLatestNCondition, calendar *unified.Calendar) (unified.Rule, error) {
+func prepareFilterLatestN(condition *FilterLatestNCondition, calendar *behavioral.Calendar) (behavioral.Rule, error) {
 	if condition == nil || condition.LatestN.Predicate == nil {
-		return unified.Rule{}, errors.New("latestN requires predicate")
+		return behavioral.Rule{}, errors.New("latestN requires predicate")
 	}
 	latest := condition.LatestN
 	size, err := parseFilterCountInteger(latest.Size)
 	if err != nil {
-		return unified.Rule{}, errors.New("latestN size must be an integer from 1 to 10")
+		return behavioral.Rule{}, errors.New("latestN size must be an integer from 1 to 10")
 	}
 	if size == "0" || size.compare("10") > 0 {
-		return unified.Rule{}, errors.New("latestN size must be an integer from 1 to 10")
+		return behavioral.Rule{}, errors.New("latestN size must be an integer from 1 to 10")
 	}
 	n, _ := size.uint64() // The validated size is at most 10.
 	quantifier, err := latest.Quantifier.prepare(int(n))
 	if err != nil {
-		return unified.Rule{}, err
+		return behavioral.Rule{}, err
 	}
 	base, err := prepareFilterSelection(latest.Base, latest.Predicate, calendar, occurrenceFilterRule)
 	if err != nil {
-		return unified.Rule{}, err
+		return behavioral.Rule{}, err
 	}
-	return unified.Rule{LatestN: &unified.LatestN{Size: int(n), Quantifier: quantifier,
+	return behavioral.Rule{LatestN: &behavioral.LatestN{Size: int(n), Quantifier: quantifier,
 		Scope: base.Scope, Where: base.Where, Currency: base.Currency, Predicate: base.Verify}}, nil
 }

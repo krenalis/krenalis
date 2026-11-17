@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/krenalis/krenalis/core/internal/unified"
+	"github.com/krenalis/krenalis/core/internal/behavioral"
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
@@ -76,7 +76,7 @@ func TestFilterExperienceBudget(t *testing.T) {
 			root.Rules[i] = &condition
 		}
 		nodes := 0
-		_, err := prepareUnifiedRule(root, schema, 0, &nodes)
+		_, err := prepareBehavioralRule(root, schema, 0, &nodes)
 		if err != nil {
 			if size == 100 {
 				t.Fatalf("expected 100 descendants, got %v", err)
@@ -92,7 +92,7 @@ func TestFilterExperienceBudget(t *testing.T) {
 	for depth := 1; depth <= 5; depth++ {
 		rule = &Filter{Operator: OpAnd, Rules: []FilterRule{rule}}
 		nodes := 0
-		_, err := prepareUnifiedRule(rule, schema, 0, &nodes)
+		_, err := prepareBehavioralRule(rule, schema, 0, &nodes)
 		if err != nil {
 			if depth <= 4 {
 				t.Fatalf("expected four groups allowed, got %v", err)
@@ -114,7 +114,7 @@ func TestFilterExperienceCodec(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected experience decoded, got %v", err)
 	}
-	if !filter.RequiresUnified() {
+	if !filter.HasBehavioralConditions() {
 		t.Fatal("expected Unified requirement, got false")
 	}
 	before, err := json.Marshal(&filter)
@@ -123,7 +123,7 @@ func TestFilterExperienceCodec(t *testing.T) {
 	}
 	nodes := 0
 	schema := types.Object([]types.Property{{Name: "country", Type: types.String()}})
-	prepared, err := prepareUnifiedRule(&filter, schema, 0, &nodes)
+	prepared, err := prepareBehavioralRule(&filter, schema, 0, &nodes)
 	if err != nil {
 		t.Fatalf("expected experience prepared, got %v", err)
 	}
@@ -184,7 +184,7 @@ func TestFilterExperienceInvalidBeforeUnsupported(t *testing.T) {
 	}
 	_, err = prepareFilterExperience(&sibling, nil)
 	if err != nil {
-		if _, unsupported := errors.AsType[*unified.UnsupportedError](err); !unsupported {
+		if _, unsupported := errors.AsType[*behavioral.UnsupportedError](err); !unsupported {
 			t.Fatalf("expected unavailable sibling, got %v", err)
 		}
 	}
@@ -212,9 +212,9 @@ func TestFilterExperienceInvalidBeforeUnsupported(t *testing.T) {
 					t.Fatalf("expected syntax decoded before validation, got %v", err)
 				}
 				nodes := 0
-				_, err = prepareUnifiedRule(&filter, schema, 0, &nodes)
+				_, err = prepareBehavioralRule(&filter, schema, 0, &nodes)
 				if err != nil {
-					if _, unsupported := errors.AsType[*unified.UnsupportedError](err); unsupported {
+					if _, unsupported := errors.AsType[*behavioral.UnsupportedError](err); unsupported {
 						t.Fatalf("expected invalidity before unimplemented capability, got %v", err)
 					}
 					return

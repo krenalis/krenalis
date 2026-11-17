@@ -9,9 +9,9 @@ import (
 	"math"
 	"time"
 
+	"github.com/krenalis/krenalis/core/internal/behavioral"
 	"github.com/krenalis/krenalis/core/internal/datastore"
 	"github.com/krenalis/krenalis/core/internal/state"
-	"github.com/krenalis/krenalis/core/internal/unified"
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
@@ -61,13 +61,13 @@ func (this *Workspace) QueryProfiles(ctx context.Context, query ProfileQuery) (*
 
 	this.core.mustBeOpen()
 
-	if !query.Filter.RequiresUnified() {
+	if !query.Filter.HasBehavioralConditions() {
 		if query.At != "" {
 			return nil, errors.BadRequest("at requires a behavioral filter")
 		}
 		filter := query.Filter
 		if filter != nil && filter.DefaultCalendar != nil {
-			_, err := unified.ResolveCalendar(filter.DefaultCalendar.Definition, filter.DefaultCalendar.MeaningRevision)
+			_, err := behavioral.ResolveCalendar(filter.DefaultCalendar.Definition, filter.DefaultCalendar.MeaningRevision)
 			if err != nil {
 				return nil, errors.BadRequest("filter is not valid: %s", err)
 			}
@@ -148,17 +148,17 @@ func (this *Workspace) QueryProfiles(ctx context.Context, query ProfileQuery) (*
 		}
 	}
 	nodes := 0
-	root, err := prepareUnifiedRule(query.Filter, schema, 0, &nodes)
+	root, err := prepareBehavioralRule(query.Filter, schema, 0, &nodes)
 	if err != nil {
 		if missing, ok := errors.AsType[types.PathNotExistError](err); ok {
 			return nil, errors.Unprocessable(PropertyNotExist, "filter's property %s does not exist", missing.Path)
 		}
-		if unavailable, ok := errors.AsType[*unified.UnsupportedError](err); ok {
+		if unavailable, ok := errors.AsType[*behavioral.UnsupportedError](err); ok {
 			return nil, errors.Unprocessable(FilterCapabilityNotImplemented, "%s", unavailable)
 		}
 		return nil, errors.BadRequest("filter is not valid: %s", err)
 	}
-	result, err := this.store.UnifiedProfiles(ctx, &root, unified.Bindings{}, at, unified.Page{
+	result, err := this.store.QueryProfiles(ctx, &root, behavioral.Bindings{}, at, behavioral.Page{
 		Properties: append([]string{"_updated_at"}, properties...), OrderBy: order, OrderDesc: query.OrderDesc,
 		First: query.First, Limit: query.Limit, MatchingOnly: true})
 	if err != nil {
@@ -171,10 +171,10 @@ func (this *Workspace) QueryProfiles(ctx context.Context, query ProfileQuery) (*
 			return nil, errors.Unprocessable(ProfileResultTooLarge,
 				"profile page exceeds the supported size; reduce limit or request fewer properties")
 		}
-		if errors.Is(err, datastore.ErrUnifiedUnavailable) {
+		if errors.Is(err, datastore.ErrBehavioralFilteringUnavailable) {
 			return nil, errors.Unprocessable(UnifiedFilteringUnavailable, "Unified filtering is unavailable on this warehouse")
 		}
-		if unavailable, ok := errors.AsType[*unified.UnsupportedError](err); ok {
+		if unavailable, ok := errors.AsType[*behavioral.UnsupportedError](err); ok {
 			return nil, errors.Unprocessable(FilterCapabilityNotImplemented, "%s", unavailable)
 		}
 		if errors.Is(err, datastore.ErrMaintenanceMode) {

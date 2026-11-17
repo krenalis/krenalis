@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/krenalis/krenalis/core/internal/unified"
+	"github.com/krenalis/krenalis/core/internal/behavioral"
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
@@ -58,9 +58,9 @@ func TestFilterCountSourceInvalidBeforeUnsupported(t *testing.T) {
 					}
 					nodes := 0
 					schema := types.Object([]types.Property{{Name: "country", Type: types.String()}})
-					_, err = prepareUnifiedRule(&filter, schema, 0, &nodes)
+					_, err = prepareBehavioralRule(&filter, schema, 0, &nodes)
 					if err != nil {
-						if _, unsupported := errors.AsType[*unified.UnsupportedError](err); unsupported {
+						if _, unsupported := errors.AsType[*behavioral.UnsupportedError](err); unsupported {
 							t.Fatalf("expected invalid non-track monetary source before capability, got %v", err)
 						}
 						return
@@ -108,7 +108,7 @@ func TestFilterCountSources(t *testing.T) {
 			}
 			prepared, err := prepareFilterCount(&condition, nil)
 			if err != nil {
-				if _, unsupported := errors.AsType[*unified.UnsupportedError](err); unsupported || !test.invalid {
+				if _, unsupported := errors.AsType[*behavioral.UnsupportedError](err); unsupported || !test.invalid {
 					t.Fatalf("expected invalid=%v, got %v", test.invalid, err)
 				}
 				return

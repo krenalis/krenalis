@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/krenalis/krenalis/core/internal/unified"
+	"github.com/krenalis/krenalis/core/internal/behavioral"
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
@@ -54,10 +54,10 @@ func TestFilterCountMoneyAdmission(t *testing.T) {
 				t.Fatalf("expected filter encoding, got %v", err)
 			}
 			nodes := 0
-			root, err := prepareUnifiedRule(&filter, types.Object([]types.Property{{Name: "country", Type: types.String()}}),
+			root, err := prepareBehavioralRule(&filter, types.Object([]types.Property{{Name: "country", Type: types.String()}}),
 				0, &nodes)
 			if err != nil {
-				_, unsupported := errors.AsType[*unified.UnsupportedError](err)
+				_, unsupported := errors.AsType[*behavioral.UnsupportedError](err)
 				if test.invalid && unsupported || !test.invalid && (!test.unsupported || !unsupported) {
 					t.Fatalf("expected invalid=%v unsupported=%v, got %v", test.invalid, test.unsupported, err)
 				}
@@ -66,7 +66,7 @@ func TestFilterCountMoneyAdmission(t *testing.T) {
 			if test.invalid || test.unsupported {
 				t.Fatal("expected input rejected, got success")
 			}
-			err = unified.Validate(&root, time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC), unified.Page{Limit: 1})
+			err = behavioral.Validate(&root, time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC), behavioral.Page{Limit: 1})
 			if err != nil {
 				t.Fatalf("expected admitted Count, got %v", err)
 			}
@@ -100,7 +100,7 @@ func TestFilterCountMoneyInvalidFirst(t *testing.T) {
 	}
 	_, err = prepareFilterCount(&candidate, nil)
 	if err != nil {
-		if _, unsupported := errors.AsType[*unified.UnsupportedError](err); !unsupported {
+		if _, unsupported := errors.AsType[*behavioral.UnsupportedError](err); !unsupported {
 			t.Fatalf("expected unavailable repeated money, got %v", err)
 		}
 	}
@@ -177,7 +177,7 @@ func TestFilterCountMoneyDependencies(t *testing.T) {
 			}
 			_, err = prepareFilterCount(&sibling, nil)
 			if err != nil {
-				if _, unsupported := errors.AsType[*unified.UnsupportedError](err); !unsupported {
+				if _, unsupported := errors.AsType[*behavioral.UnsupportedError](err); !unsupported {
 					t.Fatalf("expected unavailable path %s, got %v", path, err)
 				}
 			}
@@ -192,10 +192,10 @@ func TestFilterCountMoneyDependencies(t *testing.T) {
 					t.Fatalf("expected decoded sibling order, got %v", err)
 				}
 				nodes := 0
-				_, err = prepareUnifiedRule(&filter, types.Object([]types.Property{{Name: "country", Type: types.String()}}),
+				_, err = prepareBehavioralRule(&filter, types.Object([]types.Property{{Name: "country", Type: types.String()}}),
 					0, &nodes)
 				if err != nil {
-					if _, unsupported := errors.AsType[*unified.UnsupportedError](err); unsupported {
+					if _, unsupported := errors.AsType[*behavioral.UnsupportedError](err); unsupported {
 						t.Fatalf("expected invalidity before dependent path %s, got %v", path, err)
 					}
 					continue
@@ -215,7 +215,7 @@ func TestFilterCountMoneyDependencies(t *testing.T) {
 		}
 		_, err = prepareFilterCount(&condition, nil)
 		if err != nil {
-			if _, unsupported := errors.AsType[*unified.UnsupportedError](err); !unsupported {
+			if _, unsupported := errors.AsType[*behavioral.UnsupportedError](err); !unsupported {
 				t.Fatalf("expected repeated money unavailable, got %v", err)
 			}
 			continue

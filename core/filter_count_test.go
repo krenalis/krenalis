@@ -13,8 +13,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/krenalis/krenalis/core/internal/behavioral"
 	"github.com/krenalis/krenalis/core/internal/schemas"
-	"github.com/krenalis/krenalis/core/internal/unified"
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
@@ -180,9 +180,9 @@ func TestFilterCountInstants(t *testing.T) {
 				if err != nil {
 					t.Fatalf("expected exact Count preparation, got %v", err)
 				}
-				err = unified.Validate(&rule, time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC), unified.Page{Limit: 1})
+				err = behavioral.Validate(&rule, time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC), behavioral.Page{Limit: 1})
 				if err != nil {
-					if _, unsupported := errors.AsType[*unified.UnsupportedError](err); !unsupported || test.nanos%1000 == 0 {
+					if _, unsupported := errors.AsType[*behavioral.UnsupportedError](err); !unsupported || test.nanos%1000 == 0 {
 						t.Fatalf("expected only submicrosecond precision unsupported, got %v", err)
 					}
 					return
@@ -279,12 +279,12 @@ func TestFilterCountInvalidBeforeUnsupported(t *testing.T) {
 					rules[0], rules[1] = rules[1], rules[0]
 				}
 				nodes := 0
-				rule, err := prepareUnifiedRule(&Filter{Operator: OpAnd, Rules: rules}, schema, 0, &nodes)
+				rule, err := prepareBehavioralRule(&Filter{Operator: OpAnd, Rules: rules}, schema, 0, &nodes)
 				if err == nil {
-					err = unified.Validate(&rule, time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC), unified.Page{Limit: 1})
+					err = behavioral.Validate(&rule, time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC), behavioral.Page{Limit: 1})
 				}
 				if err != nil {
-					if _, unsupported := errors.AsType[*unified.UnsupportedError](err); unsupported {
+					if _, unsupported := errors.AsType[*behavioral.UnsupportedError](err); unsupported {
 						t.Fatalf("expected invalidity before unavailable capability, got %v", err)
 					}
 					return
@@ -302,9 +302,9 @@ func TestFilterCountInvalidBeforeUnsupported(t *testing.T) {
 			rules[0], rules[1] = rules[1], rules[0]
 		}
 		nodes := 0
-		_, err := prepareUnifiedRule(&Filter{Operator: OpAnd, Rules: rules}, schema, 0, &nodes)
+		_, err := prepareBehavioralRule(&Filter{Operator: OpAnd, Rules: rules}, schema, 0, &nodes)
 		if err != nil {
-			if _, unsupported := errors.AsType[*unified.UnsupportedError](err); unsupported {
+			if _, unsupported := errors.AsType[*behavioral.UnsupportedError](err); unsupported {
 				t.Fatalf("expected invalid Record sibling in either order, got %v", err)
 			}
 			continue
@@ -363,7 +363,7 @@ func TestFilterCountIntegerArithmetic(t *testing.T) {
 		}
 		_, err := prepareFilterCount(c, nil)
 		if err != nil {
-			_, unsupported := errors.AsType[*unified.UnsupportedError](err)
+			_, unsupported := errors.AsType[*behavioral.UnsupportedError](err)
 			if unsupported == invalid {
 				t.Fatalf("expected invalid=%t before execution range, got %v", invalid, err)
 			}
@@ -462,19 +462,19 @@ func TestFilterCountNulls(t *testing.T) {
 			}
 			var filter Filter
 			err := json.Unmarshal([]byte(`{"operator":"and","rules":[`+test.condition+`]}`), &filter)
-			var prepared unified.Rule
+			var prepared behavioral.Rule
 			if err == nil {
 				nodes := 0
-				prepared, err = prepareUnifiedRule(&filter, schema, 0, &nodes)
+				prepared, err = prepareBehavioralRule(&filter, schema, 0, &nodes)
 			}
 			if err == nil {
-				err = unified.Validate(&prepared, time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC), unified.Page{Limit: 1})
+				err = behavioral.Validate(&prepared, time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC), behavioral.Page{Limit: 1})
 			}
 			if err != nil {
 				if test.valid {
 					t.Fatalf("expected admitted null/omission semantics, got %v", err)
 				}
-				if _, unsupported := errors.AsType[*unified.UnsupportedError](err); unsupported {
+				if _, unsupported := errors.AsType[*behavioral.UnsupportedError](err); unsupported {
 					t.Fatalf("expected invalid configuration, got %v", err)
 				}
 				return
@@ -520,10 +520,10 @@ func TestFilterCountPeriodRanges(t *testing.T) {
 			count.Count.Period.Duration = &FilterDuration{Value: json.Value(test.value), Unit: test.unit}
 			rule, err := prepareFilterCount(count, nil)
 			if err == nil {
-				err = unified.Validate(&rule, time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC), unified.Page{Limit: 1})
+				err = behavioral.Validate(&rule, time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC), behavioral.Page{Limit: 1})
 			}
 			if err != nil {
-				if _, unsupported := errors.AsType[*unified.UnsupportedError](err); !unsupported || test.valid {
+				if _, unsupported := errors.AsType[*behavioral.UnsupportedError](err); !unsupported || test.valid {
 					t.Fatalf("expected valid=%v at duration boundary, got %v", test.valid, err)
 				}
 				return
@@ -581,10 +581,10 @@ func TestFilterCountPeriods(t *testing.T) {
 			test.change(condition)
 			rule, err := prepareFilterCount(condition, nil)
 			if err == nil {
-				err = unified.Validate(&rule, time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC), unified.Page{Limit: 1})
+				err = behavioral.Validate(&rule, time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC), behavioral.Page{Limit: 1})
 			}
 			if err != nil {
-				_, unsupported := errors.AsType[*unified.UnsupportedError](err)
+				_, unsupported := errors.AsType[*behavioral.UnsupportedError](err)
 				if unsupported != test.unsupported {
 					t.Fatalf("expected unsupported=%v, got %v", test.unsupported, err)
 				}
@@ -617,12 +617,12 @@ func TestFilterCountRoundTrip(t *testing.T) {
 
 	schema := types.Object([]types.Property{{Name: "country", Type: types.String()}})
 	nodes := 0
-	rule, err := prepareUnifiedRule(&filter, schema, 0, &nodes)
+	rule, err := prepareBehavioralRule(&filter, schema, 0, &nodes)
 	if err != nil {
 		t.Fatalf("expected mixed preparation, got %v", err)
 	}
 	at := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
-	err = unified.Validate(&rule, at, unified.Page{Limit: 1})
+	err = behavioral.Validate(&rule, at, behavioral.Page{Limit: 1})
 	if err != nil {
 		t.Fatalf("expected admitted mixed filter, got %v", err)
 	}
@@ -683,10 +683,10 @@ func TestPrepareFilterCount(t *testing.T) {
 			condition.Values = []json.Value{json.Value(test.value)}
 			rule, err := prepareFilterCount(condition, nil)
 			if err == nil {
-				err = unified.Validate(&rule, time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC), unified.Page{Limit: 1})
+				err = behavioral.Validate(&rule, time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC), behavioral.Page{Limit: 1})
 			}
 			if err != nil {
-				_, unsupported := errors.AsType[*unified.UnsupportedError](err)
+				_, unsupported := errors.AsType[*behavioral.UnsupportedError](err)
 				if unsupported != test.unsupported {
 					t.Fatalf("expected unsupported=%v, got %v", test.unsupported, err)
 				}

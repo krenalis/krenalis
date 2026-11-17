@@ -7,8 +7,8 @@ package core
 import (
 	"bytes"
 
+	"github.com/krenalis/krenalis/core/internal/behavioral"
 	"github.com/krenalis/krenalis/core/internal/state"
-	"github.com/krenalis/krenalis/core/internal/unified"
 	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
@@ -92,11 +92,11 @@ func (condition *FilterMoneyCondition) UnmarshalJSON(data []byte) error {
 
 func (*FilterMoneyCondition) filterRule() {}
 
-func prepareFilterMoney(condition *FilterMoneyCondition, source unified.Scope) (*unified.Money, error) {
+func prepareFilterMoney(condition *FilterMoneyCondition, source behavioral.Scope) (*behavioral.Money, error) {
 	if condition == nil {
 		return nil, errors.New("filter money condition cannot be nil")
 	}
-	field, err := unified.ResolveMonetaryField(condition.Money.Field.Definition, condition.Money.Field.MeaningRevision)
+	field, err := behavioral.ResolveMonetaryField(condition.Money.Field.Definition, condition.Money.Field.MeaningRevision)
 	if err != nil {
 		return nil, err
 	}
@@ -104,10 +104,10 @@ func prepareFilterMoney(condition *FilterMoneyCondition, source unified.Scope) (
 	if err != nil {
 		return nil, err
 	}
-	money := &unified.Money{Field: field, NativeCurrency: condition.Money.NativeCurrency, Test: test}
+	money := &behavioral.Money{Field: field, NativeCurrency: condition.Money.NativeCurrency, Test: test}
 	err = money.Validate(source)
 	if err != nil {
-		if _, unsupported := errors.AsType[*unified.UnsupportedError](err); !unsupported {
+		if _, unsupported := errors.AsType[*behavioral.UnsupportedError](err); !unsupported {
 			return nil, err
 		}
 	}
@@ -115,35 +115,35 @@ func prepareFilterMoney(condition *FilterMoneyCondition, source unified.Scope) (
 }
 
 // prepareMonetaryTest reads a literal test with the shared monetary limits.
-func prepareMonetaryTest(operator FilterOperator, operands []json.Value) (unified.SumTest, error) {
-	comparison, ok := map[FilterOperator]unified.Comparison{
-		OpIs: unified.Equal, OpIsNot: unified.Different, OpIsLessThan: unified.Less,
-		OpIsLessThanOrEqualTo: unified.LessOrEqual, OpIsGreaterThan: unified.Greater,
-		OpIsGreaterThanOrEqualTo: unified.GreaterOrEqual, OpIsBetween: unified.Between,
+func prepareMonetaryTest(operator FilterOperator, operands []json.Value) (behavioral.SumTest, error) {
+	comparison, ok := map[FilterOperator]behavioral.Comparison{
+		OpIs: behavioral.Equal, OpIsNot: behavioral.Different, OpIsLessThan: behavioral.Less,
+		OpIsLessThanOrEqualTo: behavioral.LessOrEqual, OpIsGreaterThan: behavioral.Greater,
+		OpIsGreaterThanOrEqualTo: behavioral.GreaterOrEqual, OpIsBetween: behavioral.Between,
 	}[operator]
 	if !ok {
-		return unified.SumTest{}, errors.New("invalid monetary comparison")
+		return behavioral.SumTest{}, errors.New("invalid monetary comparison")
 	}
 	arity := 1
-	if comparison == unified.Between {
+	if comparison == behavioral.Between {
 		arity = 2
 	}
 	if len(operands) != arity {
-		return unified.SumTest{}, errors.New("invalid monetary operand count")
+		return behavioral.SumTest{}, errors.New("invalid monetary operand count")
 	}
 	var values [2]decimal.Decimal
 	for i, value := range operands {
 		if len(value) > 4096 {
-			return unified.SumTest{}, errors.New("monetary literal exceeds the input length limit")
+			return behavioral.SumTest{}, errors.New("monetary literal exceeds the input length limit")
 		}
 		decoded, err := state.DecodeFilterOperand(value, types.Decimal(18, 4), state.OpIs)
 		if err != nil {
-			return unified.SumTest{}, err
+			return behavioral.SumTest{}, err
 		}
 		values[i] = decoded.(decimal.Decimal)
 	}
 	if arity == 2 && values[1].Less(values[0]) {
-		return unified.SumTest{}, errors.New("invalid monetary interval")
+		return behavioral.SumTest{}, errors.New("invalid monetary interval")
 	}
-	return unified.SumTest{Operator: comparison, Value: values[0], Upper: values[1]}, nil
+	return behavioral.SumTest{Operator: comparison, Value: values[0], Upper: values[1]}, nil
 }

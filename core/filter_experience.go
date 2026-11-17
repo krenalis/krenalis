@@ -7,9 +7,9 @@ package core
 import (
 	"bytes"
 
+	"github.com/krenalis/krenalis/core/internal/behavioral"
 	"github.com/krenalis/krenalis/core/internal/schemas"
 	"github.com/krenalis/krenalis/core/internal/state"
-	"github.com/krenalis/krenalis/core/internal/unified"
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 )
@@ -192,10 +192,10 @@ func (selector *FilterExperienceSelector) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func prepareFilterExperience(condition *FilterExperienceCondition, calendar *unified.Calendar) (unified.Rule, error) {
+func prepareFilterExperience(condition *FilterExperienceCondition, calendar *behavioral.Calendar) (behavioral.Rule, error) {
 
 	if condition == nil || condition.Experience.Verify == nil {
-		return unified.Rule{}, errors.New("experience requires verify")
+		return behavioral.Rule{}, errors.New("experience requires verify")
 	}
 	experience := condition.Experience
 	selector := experience.Select
@@ -203,38 +203,38 @@ func prepareFilterExperience(condition *FilterExperienceCondition, calendar *uni
 	switch selector.Kind {
 	case "last", "first":
 		if selector.Position != nil {
-			return unified.Rule{}, errors.New("position requires nth selector")
+			return behavioral.Rule{}, errors.New("position requires nth selector")
 		}
 	case "nth":
 		position, err := parseFilterCountInteger(selector.Position)
 		if err != nil {
-			return unified.Rule{}, errors.New("nth position must be an integer from 1 to 10")
+			return behavioral.Rule{}, errors.New("nth position must be an integer from 1 to 10")
 		}
 		if position == "0" || position.compare("10") > 0 {
-			return unified.Rule{}, errors.New("nth position must be an integer from 1 to 10")
+			return behavioral.Rule{}, errors.New("nth position must be an integer from 1 to 10")
 		}
 		value, _ := position.uint64() // The validated position is at most 10.
 		nth = int(value)
 	default:
-		return unified.Rule{}, errors.New("invalid experience selector")
+		return behavioral.Rule{}, errors.New("invalid experience selector")
 	}
 
 	prepared, err := prepareFilterSelection(experience.Base, experience.Verify, calendar, selectedFilterRule)
 	if err != nil {
-		return unified.Rule{}, err
+		return behavioral.Rule{}, err
 	}
 	prepared.First, prepared.Nth = selector.Kind == "first", nth
 
-	return unified.Rule{Experience: prepared}, nil
+	return behavioral.Rule{Experience: prepared}, nil
 }
 
 // prepareFilterSelection shares the base and local-body rules of E selections.
-func prepareFilterSelection(base FilterExperienceBase, predicate *Filter, calendar *unified.Calendar, context filterRuleContext) (*unified.Experience, error) {
+func prepareFilterSelection(base FilterExperienceBase, predicate *Filter, calendar *behavioral.Calendar, context filterRuleContext) (*behavioral.Experience, error) {
 
 	scope, err := base.Period.scope(base.Source, calendar)
 	var unavailable error
 	if err != nil {
-		if _, ok := errors.AsType[*unified.UnsupportedError](err); !ok {
+		if _, ok := errors.AsType[*behavioral.UnsupportedError](err); !ok {
 			return nil, err
 		}
 		unavailable = err
@@ -243,12 +243,12 @@ func prepareFilterSelection(base FilterExperienceBase, predicate *Filter, calend
 	// Prepare base qualification and selected-record verification separately.
 	var where *state.Where
 	if base.Where != nil {
-		source := unified.Scope{Type: base.Source.Type, Event: base.Source.Name,
+		source := behavioral.Scope{Type: base.Source.Type, Event: base.Source.Name,
 			Grain: base.Source.Grain}
 		validation := filterValidation{maxDepth: 2, properties: schemas.Event.Properties(), source: &source}
 		where, err = prepareFilterGroup(base.Where, &validation, 1)
 		if err != nil {
-			if _, unsupported := errors.AsType[*unified.UnsupportedError](err); !unsupported {
+			if _, unsupported := errors.AsType[*behavioral.UnsupportedError](err); !unsupported {
 				return nil, err
 			}
 			unavailable = err
@@ -258,12 +258,12 @@ func prepareFilterSelection(base FilterExperienceBase, predicate *Filter, calend
 	verify, err := prepareOccurrencePredicate(predicate, &validation, 1,
 		base.Source, calendar, context)
 	if err != nil {
-		if _, unsupported := errors.AsType[*unified.UnsupportedError](err); !unsupported {
+		if _, unsupported := errors.AsType[*behavioral.UnsupportedError](err); !unsupported {
 			return nil, err
 		}
 		unavailable = err
 	}
-	var currency *unified.NativeCurrency
+	var currency *behavioral.NativeCurrency
 	if (base.CurrencyField == nil) != (base.NativeCurrency == nil) {
 		return nil, errors.New("experience base requires currencyField and nativeCurrency together")
 	}
@@ -271,14 +271,14 @@ func prepareFilterSelection(base FilterExperienceBase, predicate *Filter, calend
 		if base.Source.Type != "" && base.Source.Type != "track" {
 			return nil, errors.New("currency field is incompatible with the occurrence source")
 		}
-		currency, err = unified.ResolveNativeCurrency(base.CurrencyField.Definition,
+		currency, err = behavioral.ResolveNativeCurrency(base.CurrencyField.Definition,
 			base.CurrencyField.MeaningRevision, *base.NativeCurrency, base.Source.Name)
 		if err != nil {
 			return nil, err
 		}
 		err = currency.ValidateWhere(where)
 		if err != nil {
-			if _, unsupported := errors.AsType[*unified.UnsupportedError](err); !unsupported {
+			if _, unsupported := errors.AsType[*behavioral.UnsupportedError](err); !unsupported {
 				return nil, err
 			}
 			unavailable = err
@@ -288,5 +288,5 @@ func prepareFilterSelection(base FilterExperienceBase, predicate *Filter, calend
 		return nil, unavailable
 	}
 
-	return &unified.Experience{Scope: scope, Where: where, Currency: currency, Verify: verify}, nil
+	return &behavioral.Experience{Scope: scope, Where: where, Currency: currency, Verify: verify}, nil
 }

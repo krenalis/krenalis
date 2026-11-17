@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/krenalis/krenalis/core/internal/unified"
+	"github.com/krenalis/krenalis/core/internal/behavioral"
 	"github.com/krenalis/krenalis/tools/errors"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
@@ -40,7 +40,7 @@ func TestFilterHistoryRoundTrip(t *testing.T) {
 
 	nodes := 0
 	schema := types.Object([]types.Property{{Name: "country", Type: types.String()}})
-	root, err := prepareUnifiedRule(&filter, schema, 0, &nodes)
+	root, err := prepareBehavioralRule(&filter, schema, 0, &nodes)
 	if err != nil {
 		t.Fatalf("expected resolved history reference, got %v", err)
 	}
@@ -48,7 +48,7 @@ func TestFilterHistoryRoundTrip(t *testing.T) {
 	if scope.History == nil || !scope.Start.IsZero() || !scope.End.IsZero() || nodes != 2 {
 		t.Fatalf("expected history descriptor without invented bounds at two nodes, got %+v and %d", scope, nodes)
 	}
-	err = unified.Validate(&root, time.Date(2026, 11, 6, 0, 0, 0, 0, time.UTC), unified.Page{Limit: 1})
+	err = behavioral.Validate(&root, time.Date(2026, 11, 6, 0, 0, 0, 0, time.UTC), behavioral.Page{Limit: 1})
 	if err != nil {
 		t.Fatalf("expected admitted history scope, got %v", err)
 	}
@@ -101,7 +101,7 @@ func TestFilterHistoryValidation(t *testing.T) {
 				_, err = prepareFilterCount(condition, nil)
 			}
 			if err != nil {
-				if _, unsupported := errors.AsType[*unified.UnsupportedError](err); unsupported {
+				if _, unsupported := errors.AsType[*behavioral.UnsupportedError](err); unsupported {
 					t.Fatalf("expected invalid history configuration, got %v", err)
 				}
 				return
