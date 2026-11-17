@@ -11,8 +11,8 @@ unavailable capabilities must be reported without a fallback query language.
 and optional `at`, and returns the ordered rule tree with ternary outcomes and
 resolved periods, occurrence counters and monetary bounds. It uses the same workspace-scoped MCP key and main connection as
 `query-profiles`. No event payloads are returned. It is a new
-evaluation, not a snapshot or an alternative segment-membership policy; all
-explanations remain unavailable on the unverified Snowflake backend.
+evaluation, not a snapshot or an alternative segment-membership policy.
+Explanations are available on PostgreSQL and Snowflake.
 
 `lastVersusPrevious` compares the reported total of the last two recorded
 Order Completed messages in one governed native currency. Its base is shared
@@ -20,7 +20,6 @@ with experience/latestN; only difference with four ordered comparisons executes.
 Explanations describe the ordered pair's candidate union, absence and uniqueness,
 and requested/normalized tests, without returning amounts or witnesses. The
 guide distinguishes this population from the last two messages of all currencies.
-The Snowflake gate remains closed for this form too.
 
 ## Event catalog
 
@@ -81,16 +80,16 @@ accept omission or null for that retired field and reject any non-null value
 with HTTP 400; credential payloads cannot silently configure MCP access.
 
 On Snowflake this selects the main virtual warehouse. Record-only queries use the
-existing Record path. Behavioral queries and explanations retain the unverified
-backend gate and return an actionable capability error. Local tests do not
-establish Snowflake runtime conformance.
+existing Record path. Behavioral queries and explanations are enabled on both
+PostgreSQL and Snowflake. The activation candidate's final live HTTP/MCP check
+is tracked in [the activation plan](../../../filtering/SNOWFLAKE_UNIFIED_ACTIVATION.md).
 
 The event catalog describes known definitions. `list-observed-event-sources`
 lists stored track/page/screen names in a bounded interval, with optional literal
 case-sensitive `nameContains`. `inspect-event-fields` describes a recent bounded
 sample's paths, JSON kinds and presence, including events outside the catalog.
 Both use the main connection and the workspace MCP key. They have no dependency
-on the Unified profile-filter gate and do not open it on Snowflake.
+on the Unified profile-filter gate.
 
 Observed `recordedName` is an exact nullable name, not a Count source. SQL NULL,
 empty and named pages remain distinct. Root `uninspected` counters distinguish
@@ -178,7 +177,7 @@ does not test recency of the historical Nth; use full history plus occurredIn
 for that request. Explanations retain kind nth and position, including Nth(1).
 Raw overlaps with the base currency are unavailable in both base.where and verify;
 the amount remains independent unless money reads it. Old experiences omit the
-new fields. Snowflake retains its unverified-backend gate.
+new fields.
 
 Count supports track (the default), page and screen. Page/screen may omit the
 name to count all messages of that type. A named source certainly excludes
@@ -211,4 +210,4 @@ the selected set, not the internal order of tied messages.
 There is no occurredIn in this block predicate; trailing-window existence can
 use Count with the same population. See profile-filter-doc for the distinction
 from Count of passing messages and the two meanings of currency in the base
-versus in the predicate. The Snowflake gate remains closed.
+versus in the predicate.

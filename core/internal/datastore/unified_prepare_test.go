@@ -88,8 +88,8 @@ func TestUnifiedPrepare(t *testing.T) {
 	for _, platform := range []string{"PostgreSQL", "Snowflake"} {
 		dw := newWarehouse(platform, newTestSettingsLoader(nil), nil)
 		backend, ok := dw.(warehouses.ProfileFilterWarehouse)
-		if !ok || backend.ProfileFilterVerified() != (platform == "PostgreSQL") {
-			t.Fatalf("expected mirrored interfaces and verification gates, got %s", platform)
+		if !ok || !backend.ProfileFilterVerified() {
+			t.Fatalf("expected verified profile capability through warehouse factory, got %s", platform)
 		}
 		if _, ok := dw.(warehouses.ProfileFilterExplanationWarehouse); !ok {
 			t.Fatalf("expected explanation capability through warehouse factory, got %s", platform)

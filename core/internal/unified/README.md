@@ -12,8 +12,10 @@ The post-integration Snowflake campaign completed on 2026-11-16, including
 the repeatable chunk checks, enum regression, bounded conformance and public
 HTTP/MCP paths. Results, provenance and coverage limits are recorded in the
 [runbook](../../../test/snowflaketester/UNIFIED.md#post-integration-completion-on-2026-11-16).
-The production gate remains closed pending the separate branch review and
-activation decision.
+The branch review is complete. This activation candidate enables the production
+gate; transfer to typed-filter-values remains pending the live check described in
+[the activation plan](../../../filtering/SNOWFLAKE_UNIFIED_ACTIVATION.md).
+Historical verification sections below retain the gate state of those campaigns.
 
 ## Executable path
 
@@ -971,7 +973,7 @@ as the HTTP query parameter. A valid workspace-scoped MCP key grants access on
 the main datastore connection, without separate warehouse credentials or an
 additional workspace enablement switch. Former MCP database permissions do not
 limit the profile properties or supported event conditions read by this path.
-Snowflake uses the main virtual warehouse; its Count gate remains closed.
+Snowflake uses the main virtual warehouse for the supported Unified forms.
 The SQL tool is removed. The catalog supplies known definitions, while custom
 names and fields require user input until a dedicated discovery tool exists. See
 [`cmd/internal/mcp/README.md`](../../../cmd/internal/mcp/README.md) and the

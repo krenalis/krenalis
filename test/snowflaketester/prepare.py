@@ -2,7 +2,7 @@
 # Use of this source code is governed by an Elastic License 2.0
 # that can be found in the LICENSE file.
 
-"""Prepare a test-only Snowflake gate and session overlay from current sources."""
+"""Prepare a test-only Snowflake session overlay using the production gate."""
 
 import argparse
 import json
@@ -74,7 +74,9 @@ def main():
         source = root / name
         text = source.read_text()
         if name.endswith("profile_filter.go"):
-            edits = [("const profileFilterVerified = false", "const profileFilterVerified = true")]
+            if text.count("const profileFilterVerified = true") != 1:
+                parser.error("requires an open production gate; gate overlays are not allowed")
+            continue
         else:
             qualifier = "" if name.startswith("test/") else "snowflaketester."
             edits = [

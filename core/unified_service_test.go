@@ -60,7 +60,7 @@ func TestUnifiedServicePostgreSQL(t *testing.T) {
 	testUnifiedService(t, "PostgreSQL")
 }
 
-// TestUnifiedServiceSnowflake requires an isolated gate-overlay build.
+// TestUnifiedServiceSnowflake uses an isolated Snowflake warehouse.
 func TestUnifiedServiceSnowflake(t *testing.T) {
 	if testing.Short() || os.Getenv("KRENALIS_SKIP_SNOWFLAKE_TESTS") == "true" {
 		t.Skip("remote Snowflake tests are disabled")
@@ -72,7 +72,7 @@ func TestUnifiedServiceSnowflake(t *testing.T) {
 		t.Fatalf("expected unopened warehouse cleanup, got %v", err)
 	}
 	if !verified {
-		t.Skip("Snowflake verification requires an isolated test-overlay build")
+		t.Fatal("expected verified Snowflake provider, got closed gate")
 	}
 	testUnifiedService(t, "Snowflake")
 }

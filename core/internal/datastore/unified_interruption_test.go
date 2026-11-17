@@ -242,7 +242,7 @@ func testUnifiedInterruption(t *testing.T, name, profile string) {
 			t.Fatalf("expected unopened warehouse cleanup, got %v", err)
 		}
 		if !verified {
-			t.Skip("Snowflake verification requires an isolated test-overlay build")
+			t.Fatal("expected verified Snowflake provider, got closed gate")
 		}
 	}
 	dw := newJSONFilterTestWarehouse(t, name)

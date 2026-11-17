@@ -447,15 +447,9 @@ jsonb_build_object('currency',(1/(length(message_id)-length(message_id)))::text)
 
 }
 
-// TestUnifiedProfilesSnowflakeGate refuses the unverified remote path.
-func TestUnifiedProfilesSnowflakeGate(t *testing.T) {
-	dw := warehouses.Registered("Snowflake").New(newTestSettingsLoader(json.Value(`{}`)), nil)
-	t.Cleanup(func() {
-		err := dw.Close()
-		if err != nil {
-			t.Errorf("expected warehouse close, got %v", err)
-		}
-	})
+// TestUnifiedProfilesUnavailableBackend refuses an unverified provider.
+func TestUnifiedProfilesUnavailableBackend(t *testing.T) {
+	dw := &capabilityWarehouse{}
 	store := &Store{mc: newModeCoordinator(state.Normal)}
 	store.wh.Store(wrapWarehouse(dw))
 	result, err := store.UnifiedProfiles(t.Context(), nil, unified.Bindings{}, time.Date(2026, 1, 1, 0, 0, 0, 0,

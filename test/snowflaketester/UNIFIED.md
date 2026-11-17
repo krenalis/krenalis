@@ -1,8 +1,11 @@
 # Unified Filtering: Snowflake campaign
 
-Run commands from the repository root. This is a test runbook, not an activation
-of Unified Filtering on Snowflake. The production gate remains false. Local
-compilation, PostgreSQL results and skipped Snowflake tests are not remote passes.
+Run commands from the repository root. This activation candidate enables the
+production gate only in its separate branch. Transfer to typed-filter-values
+requires the pending live HTTP/MCP check in
+[the activation plan](../../filtering/SNOWFLAKE_UNIFIED_ACTIVATION.md).
+Historical campaign records below retain their original closed-gate state.
+Local compilation, PostgreSQL results and skipped Snowflake tests are not remote passes.
 The complete acceptance checklist is in
 [the Unified README](../../core/internal/unified/README.md#consolidated-snowflake-verification-campaign).
 
@@ -22,7 +25,7 @@ go test ./core/internal/unified ./warehouses/internal/profilefilter \
   ./cmd/internal/mcp -short -count=1 -json > /tmp/unified-local.jsonl
 
 go test ./core/internal/datastore \
-  -run '^TestUnified(Conformance(PostgreSQL|Snowflake)|StoredNumbers(PostgreSQL|Snowflake)|ProfilesSnowflakeGate)$' \
+  -run '^TestUnified(Prepare|Conformance(PostgreSQL|Snowflake)|StoredNumbers(PostgreSQL|Snowflake)|ProfilesUnavailableBackend)$' \
   -count=1 -timeout=5m -json > /tmp/unified-fixtures-postgresql.jsonl
 
 go test ./test -run '^TestEqualityOfMergeFiles$' -count=1
@@ -68,12 +71,13 @@ selection, period and page/screen fixtures; its `-skip` excludes the four groups
 already run. Both blocks use the same overlay, session/schema audits and timeout,
 and together cover the complete bounded fixture without repeating the new groups.
 
-## Preparing an isolated gate and session overlay
+## Preparing an isolated session overlay
 
-Prepare this only for testing. The helper copies the current sources, opens the
-gate in the overlay and sets login parameters in all three connection factories:
-warehouse, connector and schema-creation helper. Tracked production sources stay
-unchanged. Regenerate after source changes; do not reuse old implementation copies.
+Prepare this only for testing. The helper requires the production gate to be open
+and never replaces its source file. It sets login parameters in all three
+connection factories: warehouse, connector and schema-creation helper. Tracked
+production sources stay unchanged. Regenerate after source changes; do not reuse
+old implementation copies.
 
 ```sh
 session_timezone=UTC
@@ -87,17 +91,18 @@ KRENALIS_SKIP_SNOWFLAKE_TESTS=true go test -overlay "$campaign_dir/overlay.json"
 ```
 
 This last command must report SKIP for both tests. The database/sql cursor
-failure regression uses an in-memory driver and can run with this overlay
-without credentials or network access:
+failure regression uses an in-memory driver and runs without credentials,
+network access or an overlay:
 
 ```sh
-KRENALIS_SKIP_SNOWFLAKE_TESTS=true go test -overlay "$campaign_dir/overlay.json" \
+KRENALIS_SKIP_SNOWFLAKE_TESTS=true go test \
   ./warehouses/snowflake -run '^TestProfileSchemaFailures$' -race -count=1
 ```
 
-Test the production gate separately without an overlay (`TestUnifiedProfilesSnowflakeGate` above). Do not
-run the whole datastore package with the gate overlaid: gate-contract assertions
-intentionally expect it to be closed. There is no runtime bypass.
+Test production verification separately without an overlay (`TestUnifiedPrepare`
+above). `TestUnifiedProfilesUnavailableBackend` retains the rejection check for
+an explicitly unverified test provider. Keep remote runs limited to the named
+blocks rather than the whole datastore package. There is no runtime bypass.
 Run the remote blocks once with UTC, then in a fresh campaign directory prepared
 after setting `session_timezone=America/Los_Angeles`. This DST zone differs from the Rome calendar
 used by the fixtures. Both runs use the same expectations and cover half-open

@@ -29,7 +29,7 @@ func TestUnifiedStoredNumbersPostgreSQL(t *testing.T) {
 func TestUnifiedStoredNumbersSnowflake(t *testing.T) {
 	dw := warehouses.Registered("Snowflake").New(newTestSettingsLoader(json.Value(`{}`)), nil)
 	if !dw.(warehouses.ProfileFilterWarehouse).ProfileFilterVerified() {
-		t.Skip("Snowflake verification requires an isolated test-overlay build")
+		t.Fatal("expected verified Snowflake provider, got closed gate")
 	}
 	testUnifiedStoredNumbers(t, "Snowflake")
 }

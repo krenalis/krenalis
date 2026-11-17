@@ -14,12 +14,9 @@ import (
 )
 
 // TestProfileSchemaFailures checks database/sql cursor failures before a schema
-// mismatch. It needs a gate overlay, but uses no network or credentials.
+// mismatch without network access or credentials.
 func TestProfileSchemaFailures(t *testing.T) {
 
-	if !profileFilterVerified {
-		t.Skip("requires an isolated gate-overlay build, without remote access")
-	}
 	const profile = "00000000-0000-0000-0000-000000000001"
 	population := warehouses.ProfileSource{Table: "profiles", Key: warehouses.Column{Name: "_kpid", Type: types.UUID()}}
 	filter := warehouses.Filter{Root: &warehouses.RecordFilter{

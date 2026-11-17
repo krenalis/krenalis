@@ -36,8 +36,12 @@ class PrepareTest(unittest.TestCase):
             options.append("--http")
         if http_assets is not None:
             options.extend(["--http-assets", str(http_assets)])
-        return subprocess.run([sys.executable, "-B", str(PREPARE), str(directory), "--timezone", timezone, "--profile", profile, *options],
-                              cwd=ROOT, env=self.environment, capture_output=True, text=True)
+        result = subprocess.run([sys.executable, "-B", str(PREPARE), str(directory), "--timezone", timezone, "--profile", profile, *options],
+                                cwd=ROOT, env=self.environment, capture_output=True, text=True)
+        if result.returncode == 0:
+            replacements = json.loads((directory / "overlay.json").read_text())["Replace"]
+            self.assertNotIn(str(ROOT / "warehouses/snowflake/profile_filter.go"), replacements)
+        return result
 
     def test_entry_points_do_not_write_bytecode(self):
         directory = self.directory / "scripts"
@@ -54,7 +58,24 @@ class PrepareTest(unittest.TestCase):
                 self.assertEqual(result.returncode, 0, result.stderr)
                 self.assertFalse(list(directory.rglob("*.pyc")))
 
-    def test_gate_and_all_connection_paths(self):
+    def test_closed_production_gate_is_rejected(self):
+        root = self.directory / "closed-root"
+        scripts = root / "test/snowflaketester"
+        scripts.mkdir(parents=True)
+        for name in ("prepare.py", "transport.py", "chunk_fault.py"):
+            (scripts / name).write_bytes(PREPARE.with_name(name).read_bytes())
+        gate = root / "warehouses/snowflake/profile_filter.go"
+        gate.parent.mkdir(parents=True)
+        gate.write_text("const profileFilterVerified = false\n")
+        directory = self.directory / "closed-output"
+        result = subprocess.run([sys.executable, "-B", str(scripts / "prepare.py"),
+                                 str(directory), "--timezone", "UTC"],
+                                env=self.environment, capture_output=True, text=True)
+        self.assertEqual(result.returncode, 2, result.stderr)
+        self.assertIn("requires an open production gate", result.stderr)
+        self.assertFalse(directory.exists())
+
+    def test_production_gate_and_all_connection_paths(self):
         for timezone in ["UTC", "America/Los_Angeles"]:
             with self.subTest(timezone=timezone):
                 directory = (self.directory / timezone.replace("/", "-")).resolve()
@@ -62,28 +83,24 @@ class PrepareTest(unittest.TestCase):
                 self.assertEqual(result.returncode, 0, result.stderr)
                 overlay = directory / "overlay.json"
                 replacements = json.loads(overlay.read_text())["Replace"]
-                self.assertEqual(len(replacements), 4)
+                self.assertEqual(len(replacements), 3)
                 for original, target in replacements.items():
                     original, target = Path(original), Path(target)
                     source = original.read_text()
                     text = target.read_text()
                     self.assertTrue(target.is_relative_to(directory))
                     self.assertEqual(target.stat().st_mode & 0o777, 0o600)
-                    if original.name == "profile_filter.go":
-                        self.assertEqual(text, source.replace("const profileFilterVerified = false",
-                                                             "const profileFilterVerified = true"))
+                    for name, value in [("TIMEZONE", timezone), ("TIMESTAMP_TYPE_MAPPING", "TIMESTAMP_NTZ"),
+                                        ("TIMESTAMP_INPUT_FORMAT", "AUTO"), ("STATEMENT_TIMEOUT_IN_SECONDS", "60")]:
+                        self.assertEqual(len(re.findall('"' + name + r'":\s+new\("' + value + r'"\)', text)), 1)
+                    self.assertEqual(text.count("SessionConnector{"), 1)
+                    self.assertEqual(text.count('Timezone: "' + timezone + '"'), 1)
+                    if original.parent.name == "snowflaketester":
+                        self.assertNotIn('"github.com/krenalis/krenalis/test/snowflaketester"', text)
                     else:
-                        for name, value in [("TIMEZONE", timezone), ("TIMESTAMP_TYPE_MAPPING", "TIMESTAMP_NTZ"),
-                                            ("TIMESTAMP_INPUT_FORMAT", "AUTO"), ("STATEMENT_TIMEOUT_IN_SECONDS", "60")]:
-                            self.assertEqual(len(re.findall('"' + name + r'":\s+new\("' + value + r'"\)', text)), 1)
-                        self.assertEqual(text.count("SessionConnector{"), 1)
-                        self.assertEqual(text.count('Timezone: "' + timezone + '"'), 1)
-                        if original.parent.name == "snowflaketester":
-                            self.assertNotIn('"github.com/krenalis/krenalis/test/snowflaketester"', text)
-                        else:
-                            self.assertEqual(text.count('"github.com/krenalis/krenalis/test/snowflaketester"'), 1)
-                        self.assertNotIn("SessionConnector{", source)
-                        self.assertNotIn('"STATEMENT_TIMEOUT_IN_SECONDS"', source)
+                        self.assertEqual(text.count('"github.com/krenalis/krenalis/test/snowflaketester"'), 1)
+                    self.assertNotIn("SessionConnector{", source)
+                    self.assertNotIn('"STATEMENT_TIMEOUT_IN_SECONDS"', source)
                 formatted = subprocess.run(["gofmt", "-l", *replacements.values()], capture_output=True, text=True)
                 self.assertEqual((formatted.returncode, formatted.stdout, formatted.stderr), (0, "", ""))
                 self.assertEqual(overlay.stat().st_mode & 0o777, 0o600)
@@ -97,8 +114,6 @@ class PrepareTest(unittest.TestCase):
                 self.assertEqual(json.loads(result.stdout)["profile"], profile)
                 replacements = json.loads((directory / "overlay.json").read_text())["Replace"]
                 for original, target in replacements.items():
-                    if Path(original).name == "profile_filter.go":
-                        continue
                     text = Path(target).read_text()
                     self.assertRegex(text, r'"STATEMENT_TIMEOUT_IN_SECONDS":\s+new\("' + timeout + r'"\)')
                     self.assertRegex(text, r'"USE_CACHED_RESULT":\s+new\("false"\)')
@@ -117,7 +132,7 @@ class PrepareTest(unittest.TestCase):
                 result = self.prepare(directory, "UTC", result_format=requested)
                 self.assertEqual(result.returncode, 0, result.stderr)
                 replacements = json.loads((directory / "overlay.json").read_text())["Replace"]
-                self.assertEqual(len(replacements), 6)
+                self.assertEqual(len(replacements), 5)
                 instrumented = Path(replacements[str(driver)]).read_text()
                 self.assertEqual(instrumented.replace(RESULT_OBSERVER, ""), driver.read_text())
                 for name in ["warehouses/snowflake/warehouse.go", "connectors/snowflake/snowflake.go",
@@ -207,7 +222,7 @@ func TestTransportOverlayObservation(t *testing.T) {
         self.assertTrue(json.loads(result.stdout)["chunk_fault"])
         overlay = directory / "overlay.json"
         replacements = json.loads(overlay.read_text())["Replace"]
-        self.assertEqual(len(replacements), 9)
+        self.assertEqual(len(replacements), 8)
         self.assertFalse((ROOT / DRIVER / "chunk_fault.go").exists())
         probe = directory / "chunk_fault_overlay_test.go"
         probe.write_text('''package gosnowflake
@@ -297,7 +312,7 @@ func TestChunkFaultOverlay(t *testing.T) {
         result = self.prepare(directory, "UTC", result_format="ARROW", http=True, http_assets=assets)
         self.assertEqual(result.returncode, 0, result.stderr)
         replacements = json.loads((directory / "overlay.json").read_text())["Replace"]
-        self.assertEqual(len(replacements), 9)
+        self.assertEqual(len(replacements), 8)
         original = ROOT / "test/krenalistester/krenalistester.go"
         text = Path(replacements[str(original)]).read_text()
         self.assertEqual(text.count("const launchKrenalisExternally = false"), 1)

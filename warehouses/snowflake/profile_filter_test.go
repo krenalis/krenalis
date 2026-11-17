@@ -136,7 +136,7 @@ func TestProfileFilterSQL(t *testing.T) {
 		"ORDER BY profile_id LIMIT 10 OFFSET 20") || !strings.Contains(query.SQL, "WHERE truth=TRUE") {
 		t.Fatalf("expected identity checks and complete page protocol, got %s", query.SQL)
 	}
-	if !profileFilterVerified && strings.Count(query.SQL, "?") != len(values) {
+	if strings.Count(query.SQL, "?") != len(values) {
 		t.Fatalf("expected positional binds used exactly once, got %s", query.SQL)
 	}
 	_, err = profilefilter.Build(filter, request, profilefilter.Dialect{})

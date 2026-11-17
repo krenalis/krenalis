@@ -44,6 +44,15 @@ func (s unifiedTestSettings) Load(ctx context.Context, value any) error {
 	return json.Unmarshal(s.json, value)
 }
 
+type unverifiedTestWarehouse struct {
+	*snowflake.Snowflake
+}
+
+// ProfileFilterVerified keeps the test provider deliberately unverified.
+func (*unverifiedTestWarehouse) ProfileFilterVerified() bool {
+	return false
+}
+
 // TestUnifiedWorkspacePostgreSQL exercises the internal service with real
 // state.
 func TestUnifiedWorkspacePostgreSQL(t *testing.T) {
@@ -136,10 +145,11 @@ INSERT INTO unified_v.krenalis_events VALUES
 	if err != nil {
 		t.Fatalf("expected workspace state fixture, got %v", err)
 	}
-	unverified := warehouses.Registered("Snowflake").New(unifiedTestSettings{json.Value(`{}`)}, nil).(*snowflake.Snowflake)
+	unopened := warehouses.Registered("Snowflake").New(unifiedTestSettings{json.Value(`{}`)}, nil)
+	unverified := &unverifiedTestWarehouse{Snowflake: unopened.(*snowflake.Snowflake)}
 	unverifiedPlatform := platform + "Unverified"
 	warehouses.Register(warehouses.Platform{Name: unverifiedPlatform},
-		func(warehouses.SettingsLoader, warehouses.DialWith) *snowflake.Snowflake { return unverified })
+		func(warehouses.SettingsLoader, warehouses.DialWith) *unverifiedTestWarehouse { return unverified })
 	_, err = database.Exec(t.Context(), `INSERT INTO workspaces
  (id,organization,name,warehouse_name,warehouse_mode,warehouse_settings,
  kms_encrypted_warehouse_settings_key,profile_schema,identifiers)

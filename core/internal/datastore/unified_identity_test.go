@@ -29,7 +29,7 @@ func TestUnifiedIdentityPostgreSQL(t *testing.T) {
 	testUnifiedIdentity(t, "PostgreSQL")
 }
 
-// TestUnifiedIdentitySnowflake requires an isolated gate-overlay build.
+// TestUnifiedIdentitySnowflake uses an isolated Snowflake warehouse.
 func TestUnifiedIdentitySnowflake(t *testing.T) {
 	if testing.Short() {
 		t.Skip("requires explicitly configured Snowflake")
@@ -41,7 +41,7 @@ func TestUnifiedIdentitySnowflake(t *testing.T) {
 		t.Fatalf("expected unopened warehouse cleanup, got %v", err)
 	}
 	if !verified {
-		t.Skip("Snowflake verification requires an isolated test-overlay build")
+		t.Fatal("expected verified Snowflake provider, got closed gate")
 	}
 	testUnifiedIdentity(t, "Snowflake")
 }

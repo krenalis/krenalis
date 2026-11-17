@@ -134,9 +134,9 @@ permissions. Revoke any key that should no longer have this workspace access.
 Revocation is checked on subsequent calls, including in an initialized session;
 it does not cancel an already admitted query.
 
-On Snowflake the tools use the main virtual warehouse. Record queries remain
-available; Count, Sum, Average and all selected-experience forms are currently
-unavailable until the backend gate is enabled. SQL execution is not provided.
+On Snowflake the tools use the main virtual warehouse. Both PostgreSQL and
+Snowflake support the Record, Count, Sum, Average and selected-experience forms
+documented here. SQL execution is not provided.
 Never bypass an unavailable capability through direct warehouse access.
 
 ## Arguments and results
@@ -166,7 +166,7 @@ server even though the filter compares their canonical values. A profile can
 match `value > 100` while its returned JSON shows 100. Do not reclassify the
 profile by reevaluating that displayed value; explain the precision limit if
 it accounts for a visible discrepancy. Integer and decimal JSON digits remain
-exact. This does not change the Snowflake capability gate.
+exact.
 
 `at` is a nonfuture RFC3339 instant, exactly representable at microsecond
 precision. Omission fixes T once. Reuse the returned `evaluation.at` for subsequent
@@ -1016,8 +1016,7 @@ is unique exactly when absence is impossible and candidates equals size: it
 describes the set, not its internal order. Three certain tied messages selected
 with size=3 form a unique set. An unknown predicate can still make its result
 UNKNOWN. Latest(1)/All and Latest(1)/Some have Last's outcome and selection
-metadata, while retaining the requested latestN form. Snowflake remains
-unavailable pending real tests.
+metadata, while retaining the requested latestN form.
 
 ## Last versus Previous: a reported monetary difference
 
@@ -1096,7 +1095,7 @@ certain messages, otherwise impossible. Certain shortage is NO_MATCH; possible
 shortage prevents MATCH but gives NO_MATCH if no compatible pair can pass.
 Unique means one **ordered** identity pair and impossible absence. No amounts,
 difference extrema or witnesses are returned. Technical faults fail the complete
-operation. Snowflake remains unavailable pending real execution tests.
+operation.
 
 ## Examples
 
@@ -1126,7 +1125,7 @@ segment listing.
 The tool uses the same MCP enablement and main connection as query-profiles.
 It returns `ProfileNotFound` for a missing KPID; technical errors return no
 partial explanation. Explanations, including Record-only ones, require the
-verified Unified backend and are currently unavailable on Snowflake.
+verified Unified backend, available on PostgreSQL and Snowflake.
 
 The following are filter documents; pass each as the text of `filter`. Names and
 paths are examples: verify them against the actual workspace.

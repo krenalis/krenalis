@@ -87,7 +87,7 @@ func TestUnifiedRecordConformancePostgreSQL(t *testing.T) {
 	testUnifiedRecordConformance(t, "PostgreSQL")
 }
 
-// TestUnifiedRecordConformanceSnowflake requires an isolated gate overlay.
+// TestUnifiedRecordConformanceSnowflake uses an isolated Snowflake warehouse.
 func TestUnifiedRecordConformanceSnowflake(t *testing.T) {
 	if testing.Short() {
 		t.Skip("requires explicitly configured Snowflake")
@@ -99,7 +99,7 @@ func TestUnifiedRecordConformanceSnowflake(t *testing.T) {
 		t.Fatalf("expected unopened warehouse cleanup, got %v", err)
 	}
 	if !verified {
-		t.Skip("Snowflake verification requires an isolated test-overlay build")
+		t.Fatal("expected verified Snowflake provider, got closed gate")
 	}
 	testUnifiedRecordConformance(t, "Snowflake")
 }

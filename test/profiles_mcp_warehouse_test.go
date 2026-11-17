@@ -37,7 +37,7 @@ func TestProfilesMCPSnowflake(t *testing.T) {
 		t.Fatalf("expected unopened warehouse cleanup, got %v", err)
 	}
 	if !verified {
-		t.Skip("Snowflake MCP verification requires the isolated gate overlay")
+		t.Fatal("expected verified Snowflake provider, got closed gate")
 	}
 	testProfilesMCPWarehouse(t, "Snowflake")
 }
