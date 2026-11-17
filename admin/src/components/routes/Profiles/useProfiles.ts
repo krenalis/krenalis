@@ -22,6 +22,7 @@ import {
 } from './profilesSequence';
 
 const DEFAULT_PROFILE_LIMIT = 50;
+const COLUMN_VISIBILITY_CELL_CLASS = 'profiles-list__column-transition-cell';
 const COLUMN_VISIBILITY_TRANSITION_CLASS = 'profiles-columns-transition';
 
 let activeColumnVisibilityTransition: ViewTransition | undefined;
@@ -52,7 +53,9 @@ type ProfileNavigationDirection = 'previous' | 'next';
 type DestinationActiveProfile = 'first' | 'last' | 'none';
 
 const runColumnVisibilityTransition = (update: () => void) => {
+	const grid = document.querySelector<HTMLElement>('.profiles-list__grid');
 	if (
+		grid == null ||
 		typeof document.startViewTransition !== 'function' ||
 		window.matchMedia('(prefers-reduced-motion: reduce)').matches
 	) {
@@ -60,6 +63,28 @@ const runColumnVisibilityTransition = (update: () => void) => {
 		return;
 	}
 
+	const markVisibleCells = () => {
+		const bounds = grid.getBoundingClientRect();
+		const cells = Array.from(
+			grid.querySelectorAll<HTMLElement>(
+				'.grid__header-cell:not(.grid-el--first) > .grid__cell-content, .grid__cell:not(.grid-el--first) > .grid__cell-content',
+			),
+		);
+		// Measure all cells before changing classes to avoid repeated style calculations.
+		const visible = cells.map((cell) => {
+			const rect = cell.getBoundingClientRect();
+			return (
+				rect.right > Math.max(bounds.left, 0) &&
+				rect.left < Math.min(bounds.right, window.innerWidth) &&
+				rect.bottom > Math.max(bounds.top, 0) &&
+				rect.top < Math.min(bounds.bottom, window.innerHeight)
+			);
+		});
+		for (const [index, cell] of cells.entries()) {
+			cell.classList.toggle(COLUMN_VISIBILITY_CELL_CLASS, visible[index]);
+		}
+	};
+	markVisibleCells();
 	document.documentElement.classList.add(COLUMN_VISIBILITY_TRANSITION_CLASS);
 	const transition = document.startViewTransition(async () => {
 		flushSync(update);
@@ -67,6 +92,7 @@ const runColumnVisibilityTransition = (update: () => void) => {
 		// Grid measures its column widths in the next task. Wait for that measurement before the browser captures
 		// the new layout.
 		await new Promise<void>((resolve) => window.setTimeout(resolve));
+		markVisibleCells();
 	});
 	activeColumnVisibilityTransition = transition;
 	const finish = () => {
@@ -75,6 +101,9 @@ const runColumnVisibilityTransition = (update: () => void) => {
 		}
 		activeColumnVisibilityTransition = undefined;
 		document.documentElement.classList.remove(COLUMN_VISIBILITY_TRANSITION_CLASS);
+		for (const cell of Array.from(grid.querySelectorAll(`.${COLUMN_VISIBILITY_CELL_CLASS}`))) {
+			cell.classList.remove(COLUMN_VISIBILITY_CELL_CLASS);
+		}
 	};
 	void transition.finished.then(finish, finish);
 };

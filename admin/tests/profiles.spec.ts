@@ -329,6 +329,10 @@ test(`Keep the column chooser within a narrow viewport with long labels`, async 
 });
 
 test(`Toggle a column locally when its profile property is already loaded`, async ({ page }) => {
+	const responseProfiles = Array.from({ length: 1000 }, (_, index) => ({
+		...profiles[index % profiles.length],
+		kpid: `column-profile-${index + 1}`,
+	}));
 	let profileRequests = 0;
 	let loadedProjection: string[] = [];
 	page.on('request', (request) => {
@@ -339,26 +343,72 @@ test(`Toggle a column locally when its profile property is already loaded`, asyn
 		profileRequests++;
 		loadedProjection = request.postDataJSON().properties ?? [];
 	});
-	await mockProfiles(page);
+	await mockProfiles(page, { responseProfiles });
 	await page.goto(`${adminURL}/profile-unification/profiles`);
+	await expect(page.locator('.profiles-list .grid__row--clickable')).toHaveCount(50);
+	await page.locator('.profiles-list__grid').evaluate((grid) => {
+		grid.scrollLeft = grid.scrollWidth;
+		grid.scrollTop = grid.scrollHeight;
+	});
+	const snapshots = await page.evaluateHandle(() => {
+		interface ColumnSnapshot {
+			captured: number;
+			outside: number;
+		}
+		const snapshots: ColumnSnapshot[] = [];
+		const capture = () => {
+			const grid = document.querySelector('.profiles-list__grid');
+			const bounds = grid.getBoundingClientRect();
+			const cells = Array.from(grid.querySelectorAll('.grid__cell-content'));
+			const captured = cells.filter((cell) => getComputedStyle(cell).viewTransitionName !== 'none');
+			const outside = captured.filter((cell) => {
+				const rect = cell.getBoundingClientRect();
+				return (
+					rect.right <= Math.max(bounds.left, 0) ||
+					rect.left >= Math.min(bounds.right, innerWidth) ||
+					rect.bottom <= Math.max(bounds.top, 0) ||
+					rect.top >= Math.min(bounds.bottom, innerHeight)
+				);
+			});
+			snapshots.push({ captured: captured.length, outside: outside.length });
+		};
+		const startViewTransition = document.startViewTransition.bind(document);
+		document.startViewTransition = (update) => {
+			if (typeof update !== 'function') {
+				throw new Error('Expected a view transition update callback');
+			}
+			capture();
+			return startViewTransition(async () => {
+				await update();
+				capture();
+			});
+		};
+		return snapshots;
+	});
 
 	const columns = page.locator('.profiles-list__toggle-columns');
 	await columns.getByRole('button', { name: 'Columns', exact: true }).click();
-	const shippingAddressColumn = columns.locator('wa-checkbox', { hasText: 'shipping_address › City' });
+	const billingAddressColumn = columns.locator('wa-checkbox', { hasText: 'Billing address › City' });
 	const requestsBeforeToggle = profileRequests;
-	expect(loadedProjection).toContain('shipping_address');
+	expect(loadedProjection).toContain('billing_address');
 
-	await shippingAddressColumn.click();
-	await expect(page.locator('.profiles-list .grid__header-cell', { hasText: 'shipping_address › City' })).toHaveCount(
+	await billingAddressColumn.click();
+	await expect(page.locator('.profiles-list .grid__header-cell', { hasText: 'Billing address › City' })).toHaveCount(
 		0,
 	);
-	await shippingAddressColumn.click();
-	await expect(page.locator('.profiles-list .grid__header-cell', { hasText: 'shipping_address › City' })).toHaveCount(
+	await billingAddressColumn.click();
+	await expect(page.locator('.profiles-list .grid__header-cell', { hasText: 'Billing address › City' })).toHaveCount(
 		1,
 	);
 	await expect(page.locator('.profiles-list .grid__loading')).toHaveCount(0);
-	await page.evaluate(() => new Promise(requestAnimationFrame));
+	await expect(page.locator('html')).not.toHaveClass(/profiles-columns-transition/);
 	expect(profileRequests).toBe(requestsBeforeToggle);
+	const capturedSnapshots = await snapshots.jsonValue();
+	expect(capturedSnapshots).toHaveLength(4);
+	for (const snapshot of capturedSnapshots) {
+		expect(snapshot.captured).toBeGreaterThan(0);
+		expect(snapshot.outside).toBe(0);
+	}
 });
 
 test(`Keep the profile grid stable while loading a newly selected property`, async ({ page }) => {

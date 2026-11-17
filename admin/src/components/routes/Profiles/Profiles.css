@@ -152,8 +152,7 @@ html.profiles-columns-transition {
 	view-transition-name: none;
 }
 
-html.profiles-columns-transition .profiles-list__grid .grid__header-cell:not(.grid-el--first) > .grid__cell-content,
-html.profiles-columns-transition .profiles-list__grid .grid__cell:not(.grid-el--first) > .grid__cell-content {
+html.profiles-columns-transition .profiles-list__column-transition-cell {
 	view-transition-name: match-element;
 }
 
