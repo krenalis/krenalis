@@ -13,8 +13,10 @@ import (
 	"github.com/krenalis/krenalis/tools/errors"
 )
 
-// Migrate migrates an initialized Krenalis PostgreSQL database to the current
-// schema, in a single transaction. It is idempotent, and it is safe to call it
+// Migrate migrates an initialized Krenalis PostgreSQL database from the base
+// release to the current schema, in a single transaction. The migration exists
+// only while a release is prepared; otherwise, Migrate only checks that the
+// database is initialized. It is idempotent, and it is safe to call it
 // concurrently from several Krenalis instances.
 func Migrate(ctx context.Context, database *db.DB) error {
 	err := database.Transaction(ctx, func(tx *db.Tx) error {
@@ -36,7 +38,7 @@ func Migrate(ctx context.Context, database *db.DB) error {
 	if err != nil {
 		return err
 	}
-	slog.Info("PostgreSQL database migrated successfully")
+	slog.Info("PostgreSQL database migration completed")
 	return nil
 }
 

@@ -2209,8 +2209,10 @@ func IsValidID(id string) bool {
 	return len(id) == 12 && base58.IsValid(id)
 }
 
-// MigrateDB migrates Krenalis's PostgreSQL database to the current schema. It
-// is idempotent, and it is safe to call it concurrently from several Krenalis
+// MigrateDB migrates Krenalis's PostgreSQL database from the base release to
+// the current schema. The migration exists only while a release is prepared;
+// otherwise, MigrateDB only checks that the database is initialized. It is
+// idempotent, and it is safe to call it concurrently from several Krenalis
 // instances.
 func MigrateDB(ctx context.Context, conf *Config) error {
 
