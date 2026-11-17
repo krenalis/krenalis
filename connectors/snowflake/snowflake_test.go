@@ -172,6 +172,12 @@ func Test_Merge_Query(t *testing.T) {
 		{"VARIANT", "100.000000000000001", types.JSON(), json.Value(`1.00000000000000001E2`)},
 		{"VARIANT", "1.1", types.JSON(), json.Value(`1.1E0`)},
 		{"VARCHAR", "foo", types.String().WithMaxBytes(16_777_216).WithMaxLength(16_777_216), "foo"},
+		{"VARCHAR", "O'Brien", types.String().WithMaxBytes(16_777_216).WithMaxLength(16_777_216), "O'Brien"},
+		{"VARCHAR", "a'", types.String().WithMaxBytes(16_777_216).WithMaxLength(16_777_216), "a'"},
+		{"VARCHAR", "a''b", types.String().WithMaxBytes(16_777_216).WithMaxLength(16_777_216), "a''b"},
+		{"VARCHAR", "'x'", types.String().WithMaxBytes(16_777_216).WithMaxLength(16_777_216), "'x'"},
+		{"VARCHAR", "a\rb", types.String().WithMaxBytes(16_777_216).WithMaxLength(16_777_216), "a\rb"},
+		{"VARCHAR", "a\\b", types.String().WithMaxBytes(16_777_216).WithMaxLength(16_777_216), "a\\b"},
 		{"ARRAY", "[\n  {\n    \"foo\": \"boo\"\n  },\n  [\n    1,\n    2,\n    3\n  ]\n]", types.Array(types.JSON()), []any{json.Value(`{"foo":"boo"}`), json.Value(`[1, 2, 3]`)}},
 	}
 
