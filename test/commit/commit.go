@@ -125,35 +125,35 @@ func main() {
 		if cliOptions.short {
 			args = append(args, "-short")
 		}
-		// In the case of -concurrent, we want to minimize noise in the output;
-		// in other cases, since the tests are executed sequentially, the output
-		// printed by -v is convenient and informative.
-		if !cliOptions.concurrent {
-			args = append(args, "-v")
-		}
-		var pkgPaths []string
-		for _, pkg := range packages {
-			if cliOptions.noConnectorTests && strings.HasPrefix(pkg, "connectors"+string(os.PathSeparator)) {
-				continue // skip this package.
-			}
-			// With -concurrent, collect the packages to test them with a single
-			// 'go test' command.
-			if cliOptions.concurrent {
-				pkgPaths = append(pkgPaths, "./"+filepath.ToSlash(pkg))
-				continue
-			}
-			cmd := NewCmd("go", args...).InDir(repo, pkg)
-			if cliOptions.noSnowflakeTests {
-				cmd = cmd.WithEnv("KRENALIS_SKIP_SNOWFLAKE_TESTS", "true")
-			}
-			cmd.Run()
-		}
 		if cliOptions.concurrent {
+			// Test all the packages with a single 'go test' command, without -v
+			// to minimize noise in the output.
+			var pkgPaths []string
+			for _, pkg := range packages {
+				if cliOptions.noConnectorTests && strings.HasPrefix(pkg, "connectors"+string(os.PathSeparator)) {
+					continue // skip this package.
+				}
+				pkgPaths = append(pkgPaths, "./"+filepath.ToSlash(pkg))
+			}
 			cmd := NewCmd("go", append(args, pkgPaths...)...).InDir(repo)
 			if cliOptions.noSnowflakeTests {
 				cmd = cmd.WithEnv("KRENALIS_SKIP_SNOWFLAKE_TESTS", "true")
 			}
 			cmd.Run()
+		} else {
+			// Test the packages one at a time; since they run sequentially, the
+			// output printed by -v is convenient and informative.
+			args = append(args, "-v")
+			for _, pkg := range packages {
+				if cliOptions.noConnectorTests && strings.HasPrefix(pkg, "connectors"+string(os.PathSeparator)) {
+					continue // skip this package.
+				}
+				cmd := NewCmd("go", args...).InDir(repo, pkg)
+				if cliOptions.noSnowflakeTests {
+					cmd = cmd.WithEnv("KRENALIS_SKIP_SNOWFLAKE_TESTS", "true")
+				}
+				cmd.Run()
+			}
 		}
 	}
 
