@@ -88,7 +88,7 @@ const ProfileDrawer = () => {
 				animation.cancel();
 			}
 		};
-	}, [activeProfileID, attributes, events, identities, isProfileMissing]);
+	}, [activeProfileID, attributes, isProfileMissing]);
 
 	const workspace = useMemo(
 		() => workspaces.find((w) => w.id === selectedWorkspace),

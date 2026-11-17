@@ -135,6 +135,13 @@ test('animates closing before removing the drawer and reopens with reduced motio
 });
 
 test('fades profile changes without remounting the drawer and cancels superseded animations', async ({ page }) => {
+	const pendingResponses: (() => void)[] = [];
+	for (const resource of ['events', 'identities']) {
+		await page.route(`**/v1/profiles/*/${resource}*`, async (route) => {
+			await new Promise<void>((resolve) => pendingResponses.push(resolve));
+			await route.fulfill({ json: { [resource]: [] } });
+		});
+	}
 	await page.emulateMedia({ reducedMotion: 'reduce' });
 	await page.evaluate(() => {
 		window.profileDrawerAttributes = { person: { given: 'Ada', family: 'Lovelace' } };
@@ -170,6 +177,20 @@ test('fades profile changes without remounting the drawer and cancels superseded
 	expect(frame.opacity).toBeLessThan(1);
 	expect(await drawer.evaluate((element) => element.getAnimations().length)).toBe(0);
 	expect(await tabs.evaluate((element) => element.isConnected)).toBe(true);
+
+	for (const tab of ['Events', 'Identities']) {
+		await drawer.getByRole('tab', { name: tab, exact: true }).click();
+		const content = drawer.locator(`.profile-drawer__${tab.toLowerCase()}`);
+		await expect(content.locator('wa-spinner')).toBeVisible();
+		await expect.poll(() => pendingResponses.length).toBe(1);
+		expect(await previousAnimation.evaluate((animation) => animation.playState)).toBe('paused');
+		pendingResponses.shift()!();
+		await expect(content).toContainText(`No ${tab.toLowerCase()} associated to this profile`);
+		expect(await previousAnimation.evaluate((animation) => animation.playState)).toBe('paused');
+	}
+	await drawer.getByRole('tab', { name: 'Attributes', exact: true }).click();
+	await expect(drawer.locator('wa-tab-panel[name="attributes"]')).toBeVisible();
+	expect(await previousAnimation.evaluate((animation) => animation.playState)).toBe('paused');
 
 	await page.evaluate(() => {
 		window.profileDrawerAttributes = { person: { given: 'Ada', family: 'Lovelace' } };
