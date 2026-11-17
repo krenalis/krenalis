@@ -19,8 +19,8 @@ import (
 // call it concurrently from several Krenalis instances.
 func Migrate(ctx context.Context, database *db.DB) error {
 	err := database.Transaction(ctx, func(tx *db.Tx) error {
-		// Serialize the migration with the migration of other Krenalis
-		// instances.
+		// Serialize the migration with the initialization and the migration
+		// of other Krenalis instances.
 		_, err := tx.Exec(ctx, "SELECT pg_advisory_xact_lock($1)", initLockKey)
 		if err != nil {
 			return fmt.Errorf("cannot lock PostgreSQL database for migration: %s", err)
