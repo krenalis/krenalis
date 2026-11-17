@@ -7,7 +7,7 @@ package db
 import (
 	"context"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 	_ "net/http/pprof" // registers /debug/pprof handlers
 	"runtime/pprof"
@@ -45,7 +45,7 @@ func init() {
 		go func() {
 			// ListenAndServe returns only on error; log it to avoid silent failures.
 			if err := http.ListenAndServe("localhost:6060", nil); err != nil {
-				log.Printf("pprof server stopped: %v", err)
+				slog.Error("pprof server stopped", "error", err)
 			}
 		}()
 	}
@@ -99,7 +99,7 @@ func (acquireTracer) TraceQueryEnd(ctx context.Context, conn *pgx.Conn, data pgx
 // TraceAcquireStart implements pgxpool.AcquireTracer. It records the start time
 // in the context so we can compute how long the acquire took.
 func (acquireTracer) TraceAcquireStart(ctx context.Context, pool *pgxpool.Pool, _ pgxpool.TraceAcquireStartData) context.Context {
-	log.Print("[pgxpool] try acquire")
+	slog.Info("pgxpool: try acquire")
 	return context.WithValue(ctx, t0Key, time.Now())
 }
 
@@ -113,7 +113,7 @@ func (acquireTracer) TraceAcquireEnd(ctx context.Context, pool *pgxpool.Pool, da
 	}
 
 	if data.Err != nil {
-		log.Printf("[pgxpool] acquire FAILED after %s: %v", wait, data.Err)
+		slog.Error("pgxpool: acquire failed", "waited", wait, "error", data.Err)
 		return
 	}
 
@@ -124,8 +124,8 @@ func (acquireTracer) TraceAcquireEnd(ctx context.Context, pool *pgxpool.Pool, da
 
 	// Take a snapshot of pool statistics for logging.
 	s := pool.Stat()
-	log.Printf("[pgxpool] acquired pid=%d waited=%s acquired=%d idle=%d total=%d",
-		pid, wait, s.AcquiredConns(), s.IdleConns(), s.TotalConns())
+	slog.Info("pgxpool: acquired", "pid", pid, "waited", wait,
+		"acquired", s.AcquiredConns(), "idle", s.IdleConns(), "total", s.TotalConns())
 
 	// Track the hold in our map and pprof profile so we can see “live” holds.
 	if data.Conn != nil {
@@ -152,8 +152,8 @@ func (acquireTracer) TraceRelease(pool *pgxpool.Pool, data pgxpool.TraceReleaseD
 	}
 
 	s := pool.Stat()
-	log.Printf("[pgxpool] release pid=%d acquired=%d idle=%d total=%d",
-		pid, s.AcquiredConns(), s.IdleConns(), s.TotalConns())
+	slog.Info("pgxpool: release", "pid", pid,
+		"acquired", s.AcquiredConns(), "idle", s.IdleConns(), "total", s.TotalConns())
 
 	// Remove the hold (if any) and drop it from the pprof profile.
 	if data.Conn != nil {

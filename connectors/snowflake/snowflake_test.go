@@ -169,6 +169,12 @@ func Test_Merge_Query(t *testing.T) {
 		{"TIME", time.Date(1, 1, 1, 17, 29, 46, 320176551, time.UTC), types.Time(), time.Date(1970, 1, 1, 17, 29, 46, 320176551, time.UTC)},
 		{"VARIANT", "{\n  \"foo\": \"boo\"\n}", types.JSON(), json.Value(`{"foo":"boo"}`)},
 		{"VARCHAR", "foo", types.String().WithMaxBytes(16_777_216).WithMaxLength(16_777_216), "foo"},
+		{"VARCHAR", "O'Brien", types.String().WithMaxBytes(16_777_216).WithMaxLength(16_777_216), "O'Brien"},
+		{"VARCHAR", "a'", types.String().WithMaxBytes(16_777_216).WithMaxLength(16_777_216), "a'"},
+		{"VARCHAR", "a''b", types.String().WithMaxBytes(16_777_216).WithMaxLength(16_777_216), "a''b"},
+		{"VARCHAR", "'x'", types.String().WithMaxBytes(16_777_216).WithMaxLength(16_777_216), "'x'"},
+		{"VARCHAR", "a\rb", types.String().WithMaxBytes(16_777_216).WithMaxLength(16_777_216), "a\rb"},
+		{"VARCHAR", "a\\b", types.String().WithMaxBytes(16_777_216).WithMaxLength(16_777_216), "a\\b"},
 		{"ARRAY", "[\n  {\n    \"foo\": \"boo\"\n  },\n  [\n    1,\n    2,\n    3\n  ]\n]", types.Array(types.JSON()), []any{json.Value(`{"foo":"boo"}`), json.Value(`[1, 2, 3]`)}},
 	}
 

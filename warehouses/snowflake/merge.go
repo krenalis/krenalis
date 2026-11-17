@@ -257,8 +257,8 @@ func quoteCSVBytes(b *bytes.Buffer, s []byte) {
 }
 
 // quoteCSVString quotes the string s for use in a CSV file and writes it to b.
-// A string must be quoted if is empty, or starts with the character "'", or
-// contains characters "," or "\n".
+// A string must be quoted if it is empty, or contains characters "'", ","
+// or "\n".
 func quoteCSVString(b *bytes.Buffer, s string) {
 	b.WriteByte('\'')
 	for len(s) > 0 {
@@ -278,7 +278,7 @@ func serializeValueToCSV(b *bytes.Buffer, t types.Type, v any) error {
 	switch v := v.(type) {
 	case nil:
 	case string:
-		if v == "" || v[0] == '\'' || strings.ContainsAny(v, ",\n") {
+		if v == "" || strings.ContainsAny(v, "',\n") {
 			quoteCSVString(b, v)
 		} else {
 			b.WriteString(v)
