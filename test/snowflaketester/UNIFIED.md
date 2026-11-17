@@ -1,4 +1,7 @@
-# Unified Filtering: Snowflake campaign
+# Behavioral filtering: Snowflake campaign
+
+Current commands use the `behavioral` package and `TestBehavioral*` names.
+Historical results retain their original names, commits and evidence hashes.
 
 Run commands from the repository root. The production gate is enabled after
 branch review and the live HTTP/MCP checks on 2026-11-17, recorded in
@@ -6,7 +9,7 @@ branch review and the live HTTP/MCP checks on 2026-11-17, recorded in
 Historical campaign records below retain their original closed-gate state.
 Local compilation, PostgreSQL results and skipped Snowflake tests are not remote passes.
 The complete acceptance checklist is in
-[the Unified README](../../core/internal/behavioral/README.md#consolidated-snowflake-verification-campaign).
+[the behavioral filter README](../../core/internal/behavioral/README.md#consolidated-snowflake-verification-campaign).
 
 ## Local preparation
 
@@ -24,7 +27,7 @@ go test ./core/internal/behavioral ./warehouses/internal/profilefilter \
   ./cmd/internal/mcp -short -count=1 -json > /tmp/unified-local.jsonl
 
 go test ./core/internal/datastore \
-  -run '^TestUnified(Prepare|Conformance(PostgreSQL|Snowflake)|StoredNumbers(PostgreSQL|Snowflake)|ProfilesUnavailableBackend)$' \
+  -run '^TestBehavioral(Prepare|Conformance(PostgreSQL|Snowflake)|StoredNumbers(PostgreSQL|Snowflake)|ProfilesUnavailableBackend)$' \
   -count=1 -timeout=5m -json > /tmp/unified-fixtures-postgresql.jsonl
 
 go test ./test -run '^TestEqualityOfMergeFiles$' -count=1
@@ -57,7 +60,7 @@ the sequence below.
 | `guards` | Seventeen batched populations for eight Sum/Average tests: independent where/currency uncertainty, positive and negative amounts, unknown amounts counted toward minimum, certainly excluded unreadable amounts, Kleene counterexamples, exact sums beyond binary64 precision and physical-copy deduplication. Handwritten expectations check every profile's exact inputs/bounds and ternary outcome. |
 | `sources` | Relevant qualification, attribution, period, exact timestamp, readability and amount conflicts across Count, Sum, Average, selected experiences, Latest N and LastVersusPrevious; equivalent unreadable values and excluded identities; missing identity; unrelated-profile explanation isolation. Readback verifies physical copies were retained. NULL timestamps test only selected readers' existing runtime guards: known timestamps remain a source precondition for reductions. |
 | `protocol` | Six mixed Record/occurrence explanation layouts checked on all nine profiles; nonempty, partial and empty matching pages, exact totals/T, projected fields and deterministic identity tie-breaking in both sort directions. Pure Record membership/explanation works after dropping the event table, including missing profiles and an empty population. |
-| `TestUnifiedStoredNumbers*` | Shared six-profile monetary fixture: Count, Sum with minimum, Average, selected money, LastVersusPrevious and composition, with all profile outcomes/explanations, canceled operation and empty pages. |
+| `TestBehavioralStoredNumbers*` | Shared six-profile monetary fixture: Count, Sum with minimum, Average, selected money, LastVersusPrevious and composition, with all profile outcomes/explanations, canceled operation and empty pages. |
 
 The bounded fixture complements the full PostgreSQL completion oracles; it does
 not replace them. It avoids running the exhaustive suites remotely. Its selection
@@ -85,7 +88,7 @@ python3 -B test/snowflaketester/prepare.py "$campaign_dir" --timezone "$session_
 
 # Compile and prove that the bootstrap still skips before credential access.
 KRENALIS_SKIP_SNOWFLAKE_TESTS=true go test -overlay "$campaign_dir/overlay.json" \
-  ./core/internal/datastore -run '^TestUnified(Conformance|StoredNumbers)Snowflake$' \
+  ./core/internal/datastore -run '^TestBehavioral(Conformance|StoredNumbers)Snowflake$' \
   -count=1 -json > "$campaign_dir/compile-only.jsonl"
 ```
 
@@ -191,7 +194,7 @@ results.
 
 ```sh
 # Credentials must already have been supplied through the environment.
-# These commands are remote, including tests that do not need the Unified gate.
+# These commands are remote, including tests that do not need the behavioral filter gate.
 KRENALIS_SKIP_SNOWFLAKE_TESTS=false python3 test/snowflaketester/run.py --require-schemas \
   --require-session-timezone "$session_timezone" "$campaign_dir/physical-warehouse.jsonl" -- \
   -overlay "$campaign_dir/overlay.json" ./warehouses/snowflake \
@@ -212,7 +215,7 @@ KRENALIS_SKIP_SNOWFLAKE_TESTS=false python3 test/snowflaketester/run.py --requir
 KRENALIS_SKIP_SNOWFLAKE_TESTS=false python3 test/snowflaketester/run.py --require-schemas \
   --require-session-timezone "$session_timezone" "$campaign_dir/unified-snowflake.jsonl" -- \
   -overlay "$campaign_dir/overlay.json" \
-  ./core/internal/datastore -run '^TestUnified(StoredNumbers|Conformance)Snowflake$' \
+  ./core/internal/datastore -run '^TestBehavioral(StoredNumbers|Conformance)Snowflake$' \
   -skip '^TestBehavioralConformanceSnowflake$/(count-money|guards|sources|protocol)$' \
   -timeout=45m
 
@@ -306,7 +309,7 @@ either server format. These small fixtures do not deliberately force remote
 chunk downloads; that remains separate coverage.
 
 This is the next independent campaign; it does not require replaying the earlier
-Unified blocks. When live access is authorized, use fresh evidence names and UTC
+behavioral filter blocks. When live access is authorized, use fresh evidence names and UTC
 overlays. Run the four numeric blocks first, inspecting each result:
 
 ```sh
@@ -561,7 +564,7 @@ Run locally first, with no Snowflake credentials:
 
 ```sh
 KRENALIS_SKIP_SNOWFLAKE_TESTS=true go test ./core -race \
-  -run '^TestUnified(ServicePostgreSQL|WorkspacePostgreSQL)$' -count=1 -timeout=10m
+  -run '^TestBehavioral(ServicePostgreSQL|WorkspacePostgreSQL)$' -count=1 -timeout=10m
 ```
 
 The PostgreSQL service test includes an explicitly unverified test provider,
@@ -904,7 +907,7 @@ format returned for discovery.
 The cancellation case reuses the interruption observer. On PostgreSQL it
 requires a sleeping target and its disappearance before the delay can complete;
 on Snowflake it requires the tagged running query and terminal code 604.
-The existing Unified interruption run is not evidence for this new SELECT.
+The existing behavioral filter interruption run is not evidence for this new SELECT.
 Local virtual-time tests separately cover the 30-second datastore deadline and
 discarding a result after late cancellation. Remote execution, including this
 new cancellation case, must pass before merging discovery.
@@ -980,7 +983,7 @@ its own test schemas; do not run it against an application or demo schema.
   alternate between a scalar column and a path with literal dot, quote and
   backslash keys, checking all 41 fixture outcomes and all ternary totals.
 - The matrix covers all 26 original operators. Its successful application
-  reads require 161 Unified SELECTs, 46 explanations and 20 legacy queries
+  reads require 161 behavioral filter SELECTs, 46 explanations and 20 legacy queries
   (two SELECTs each), for 247 SELECTs, excluding initialization and writes.
   It also checks empty pages and pure Record after dropping the event table.
 - `TestBehavioralRecordStatesPostgreSQL/Snowflake` separately checks the six
@@ -1017,7 +1020,7 @@ credentials outside logs and manifests. The runner never sources `.env` files.
 ```sh
 python3 test/snowflaketester/run.py "$campaign_dir/record-local.jsonl" -- \
   ./core/internal/datastore -race \
-  -run '^TestUnifiedRecord(Conformance|Sources|Collation|States)PostgreSQL$' -timeout=5m
+  -run '^TestBehavioralRecord(Conformance|Sources|Collation|States)PostgreSQL$' -timeout=5m
 
 python3 test/snowflaketester/run.py --require-schemas \
   --require-session-timezone UTC --require-session-profile standard \
@@ -1027,7 +1030,7 @@ python3 test/snowflaketester/run.py --require-schemas \
   --require-result-tag krenalis-transport/record-legacy \
   "$campaign_dir/record-utc.jsonl" -- \
   -overlay "$campaign_dir/record-utc-overlay/overlay.json" ./core/internal/datastore -race \
-  -run '^TestUnifiedRecord(Conformance|Sources|Collation|States)Snowflake$' -timeout=20m
+  -run '^TestBehavioralRecord(Conformance|Sources|Collation|States)Snowflake$' -timeout=20m
 
 python3 test/snowflaketester/run.py --require-schemas \
   --require-session-timezone America/Los_Angeles --require-session-profile standard \
@@ -1037,7 +1040,7 @@ python3 test/snowflaketester/run.py --require-schemas \
   --require-result-tag krenalis-transport/record-legacy \
   "$campaign_dir/record-la.jsonl" -- \
   -overlay "$campaign_dir/record-la-overlay/overlay.json" ./core/internal/datastore -race \
-  -run '^TestUnifiedRecord(Conformance|Collation)Snowflake$/^(native|false_AND_unknown|true_OR_unknown|unknown_AND_true|unknown_OR_false)$/^(0|6|8|9|10|14|15|16|17|18|19)$' \
+  -run '^TestBehavioralRecord(Conformance|Collation)Snowflake$/^(native|false_AND_unknown|true_OR_unknown|unknown_AND_true|unknown_OR_false)$/^(0|6|8|9|10|14|15|16|17|18|19)$' \
   -timeout=10m
 ```
 
@@ -1155,7 +1158,7 @@ Repeat the UTC supplement with the standard UTC ARROW overlay and both
 `record-query`/`record-explanation` required tags, selecting:
 
 ```sh
--run '^TestUnifiedRecord(States|Collation)Snowflake$/^(empty|not_empty|null|not_null|exists|does_not_exist|false_AND_unknown|true_OR_unknown|unknown_AND_true|unknown_OR_false)$'
+-run '^TestBehavioralRecord(States|Collation)Snowflake$/^(empty|not_empty|null|not_null|exists|does_not_exist|false_AND_unknown|true_OR_unknown|unknown_AND_true|unknown_OR_false)$'
 ```
 
 For the LA supplement, use the LA overlay, the same two tags and:
@@ -1251,7 +1254,7 @@ reported those settings. Changing the inherited column to an uncollated
 VARCHAR with ALTER COLUMN was rejected with code 040053, incompatible collations.
 This does not establish a general migration procedure. Collation in managed
 writes and identity resolution is tracked on main, as recorded below; it is
-not an activation decision for this branch. The literal Unified reader
+not an activation decision for this branch. The literal behavioral filter reader
 corrections remain in place. The production gate stays false.
 
 ## Failure and resource supplement
@@ -1306,18 +1309,18 @@ Repeat the permanent tests with fresh logs and standard overlays:
 
 ```sh
 KRENALIS_SKIP_SNOWFLAKE_TESTS=true go test ./core/internal/datastore -race \
-  -run '^Test(ModeTransitions|Unified(Resources|TimestampPrecision)PostgreSQL)$' -count=1 -timeout=4m
+  -run '^Test(ModeTransitions|behavioral filter(Resources|TimestampPrecision)PostgreSQL)$' -count=1 -timeout=4m
 
 KRENALIS_SKIP_SNOWFLAKE_TESTS=false python3 test/snowflaketester/run.py --require-schemas \
   --require-session-timezone UTC --require-session-profile standard --require-result-format arrow \
   --require-result-tag krenalis-transport/record-query \
   --require-result-tag krenalis-transport/record-explanation "$campaign_dir/resources-utc.jsonl" -- \
   -overlay "$campaign_dir/utc-overlay/overlay.json" ./core/internal/datastore -race \
-  -run '^TestUnified(Resources|TimestampPrecision)Snowflake$' -timeout=8m
+  -run '^TestBehavioral(Resources|TimestampPrecision)Snowflake$' -timeout=8m
 ```
 
 The reduced LA selector is
-`^TestUnified(Resources|TimestampPrecision)Snowflake$/^(cumulative_oversized|UTF8_exact_budget|server_error_and_recovery|precision-9)$`,
+`^TestBehavioral(Resources|TimestampPrecision)Snowflake$/^(cumulative_oversized|UTF8_exact_budget|server_error_and_recovery|precision-9)$`,
 using the LA overlay and required timezone. The permanent suite does not enable
 driver fault injection. The private observation overlay adds counts only and
 does not change production, vendored sources, result formats or SQL.
@@ -1548,11 +1551,11 @@ On 2026-11-15 the user excluded managed Snowflake identifier collation from
 this branch. Writes, purges, identity resolution, event attribution and counts
 can still apply inherited non-binary column comparison rules. This is a
 pre-existing main defect, handled by the user on main; it is not a pending
-decision or prerequisite for activating Unified on this branch. No code or
+decision or prerequisite for activating behavioral filter on this branch. No code or
 further study of that defect is planned here.
 
 The literal technical source selectors and message-identity comparisons
-already implemented in the Unified reader remain unchanged. They prevent
+already implemented in the behavioral filter reader remain unchanged. They prevent
 query-side identity merging but cannot recover rows previously replaced or
 misattributed by managed operations. A detected copy conflict remains a
 technical failure, not semantic UNKNOWN.
@@ -1570,7 +1573,7 @@ No correction or change to the production result-format setting is made here.
 ## Coverage still required before activation
 
 Passing the commands above is necessary, but is not the complete acceptance
-checklist. Record actual results against each block in the Unified README.
+checklist. Record actual results against each block in the behavioral filter README.
 In particular, the following work remains explicit:
 
 - The failure/resource supplement above covers limits, a malformed identity,
@@ -1625,7 +1628,7 @@ KRENALIS_SKIP_SNOWFLAKE_TESTS=false python3 test/snowflaketester/run.py --requir
 
 # Local counterpart; no Snowflake credentials are used.
 KRENALIS_SKIP_SNOWFLAKE_TESTS=true go test ./core/internal/datastore \
-  -run '^TestUnified(Cancellation|Timeout)PostgreSQL$' -count=1 -timeout=3m
+  -run '^TestBehavioral(Cancellation|Timeout)PostgreSQL$' -count=1 -timeout=3m
 ```
 
 A distinct observer session reads query history by a unique context query tag.

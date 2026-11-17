@@ -28,7 +28,7 @@ const serverInstructions = "Krenalis MCP tools must be used only through this MC
 	" Discover stored names with list-observed-event-sources and sampled field types with inspect-event-fields." +
 	" Observations do not establish business meaning or allowed values; ask the user when these are unknown." +
 	" SQL execution is not available." +
-	" Never use SQL to emulate an unsupported Unified capability." +
+	" Never use SQL to emulate an unsupported behavioral filter capability." +
 	" Report unsupported capabilities explicitly and do not reinterpret them as empty results or UNKNOWN." +
 	" Profile tools require a valid workspace-scoped MCP key and use the main Krenalis warehouse connection." +
 	" Former MCP database credentials do not restrict their data access." +

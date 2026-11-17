@@ -298,7 +298,8 @@ INSERT INTO krenalis_events VALUES
 					t.Fatal("expected copy fault, got success")
 				}
 				assertBehavioralTruths(t, result, []behavioral.Truth{behavioral.Match, behavioral.NoMatch})
-				explained, err := store.ExplainProfileFilter(t.Context(), root, behavioral.Bindings{}, at, behavioralTestID(1))
+				explained, err := store.ExplainProfileFilter(t.Context(), root, behavioral.Bindings{}, at,
+					behavioralTestID(1))
 				if err != nil {
 					t.Fatalf("expected deduplicated explanation, got %v", err)
 				}
@@ -306,7 +307,8 @@ INSERT INTO krenalis_events VALUES
 					t.Fatalf("expected one logical candidate, got %+v", explained)
 				}
 			}
-			explained, err := store.ExplainProfileFilter(t.Context(), root, behavioral.Bindings{}, at, behavioralTestID(2))
+			explained, err := store.ExplainProfileFilter(t.Context(), root, behavioral.Bindings{}, at,
+				behavioralTestID(2))
 			if err != nil {
 				t.Fatalf("expected unrelated-profile explanation, got %v", err)
 			}

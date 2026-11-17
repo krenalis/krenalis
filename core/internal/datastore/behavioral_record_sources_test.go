@@ -196,7 +196,8 @@ CREATE VIEW events AS SELECT * FROM krenalis_events`)
 	if err != nil {
 		t.Fatalf("expected monetary field, got %v", err)
 	}
-	currency, err := behavioral.ResolveNativeCurrency("commerce.order_completed.currency", "1", "EUR", "Order Completed")
+	currency, err := behavioral.ResolveNativeCurrency("commerce.order_completed.currency", "1", "EUR",
+		"Order Completed")
 	if err != nil {
 		t.Fatalf("expected native currency, got %v", err)
 	}

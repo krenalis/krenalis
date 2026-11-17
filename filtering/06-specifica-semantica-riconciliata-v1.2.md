@@ -4,7 +4,7 @@
 
 ## 1. Status and scope
 
-**Stato:** **versione normativa 1.2 approvata esplicitamente, incluse le correzioni N1, N2 e N3**. La 1.2 è la nuova baseline normativa dello Unified Profile Filtering. La versione 1.1 approvata nel commit `25f639d84eb35815af5d1062c86545b65b97d720` viene conservata intatta come riferimento storico. **Prodotto:** record filtering e unified profile filtering di Krenalis, con un unico contratto pubblico `core.Filter`. La versione 1.2 recepisce la decisione di prodotto sul mondo chiuso degli eventi; non attesta implementazione, disponibilità dei dati o soluzione dei lavori infrastrutturali rinviati.
+**Stato:** **versione normativa 1.2 approvata esplicitamente, incluse le correzioni N1, N2 e N3**. La 1.2 è la nuova baseline normativa del Behavioral Profile Filtering. La versione 1.1 approvata nel commit `25f639d84eb35815af5d1062c86545b65b97d720` viene conservata intatta come riferimento storico. **Prodotto:** record filtering e behavioral profile filtering di Krenalis, con un unico contratto pubblico `core.Filter`. La versione 1.2 recepisce la decisione di prodotto sul mondo chiuso degli eventi; non attesta implementazione, disponibilità dei dati o soluzione dei lavori infrastrutturali rinviati.
 
 ### 1.1 Autorità e base documentale
 
@@ -28,19 +28,19 @@ Per le capacità e le condizioni qui definite, il documento stabilisce il signif
 
 ### 1.3 Raccordo normativo con `core.Filter`
 
-`core.Filter` è il **contratto pubblico comune**. Il **record filtering** verifica condizioni sulle proprietà di un singolo record (evento, utente importato o profilo) mediante operatori e gruppi AND/OR già disponibili. Lo **unified profile filtering** include tali funzionalità e aggiunge le cinque primitive comportamentali V/E/K/P/T nel perimetro dei profili unificati. Il nome *behavioral filtering* designa il progetto, non un secondo linguaggio pubblico indipendente.
+`core.Filter` è il **contratto pubblico comune**. Il **record filtering** verifica condizioni sulle proprietà di un singolo record (evento, utente importato o profilo) mediante operatori e gruppi AND/OR già disponibili. Il **behavioral profile filtering** include tali funzionalità e aggiunge le cinque primitive comportamentali V/E/K/P/T nel perimetro dei profili unificati. Il nome *behavioral filtering* designa questo linguaggio esteso, che comprende anche i filtri sulle sole proprietà e mantiene il medesimo contratto pubblico `core.Filter`.
 
 **Baseline implementativa per le condizioni condivise:** branch `typed-filter-values`, commit `d69e61681b2da531bbd9fdd067c825b589338f97`, secondo il resoconto di Codex e la revisione indipendente. Il commit `e66eea846` resta la baseline storica dell'audit 10 e del rapporto di riconciliazione precedente. Non si attribuisce qui un'ulteriore verifica del repository. Snowflake reale non è stato verificato per il commit nuovo.
 
 La compatibilità si riferisce alla struttura pubblica `Filter {operator, rules}`, alle condizioni `FilterCondition {property, operator, values}`, ai 26 operatori, alle combinazioni operatore/tipo, alla validazione e ai risultati semantici stabiliti dopo `d69e6168`. Una nuova condizione non può reinterpretare i literal o i path delle condizioni già salvate. La correzione della semantica dei missing in `d69e6168` è **un cambiamento intenzionale già effettuato**, non una migrazione implicita derivante dalla presente revisione.
 
-L'estensione Unified è ammessa **solo** nelle query dei profili unificati tramite API e nella pagina Profiles dell'Admin e nelle destination connections che esportano **profili** verso applicazioni, file e database. Negli altri contesti il record filtering rimane l'unico livello disponibile, ove già ammesso; un contesto che oggi vieta i filtri non viene abilitato da questa revisione. Il server MUST respingere esplicitamente le forme non autorizzate, non ignorarle o degradarle in silenzio.
+L'estensione Behavioral è ammessa **solo** nelle query dei profili unificati tramite API e nella pagina Profiles dell'Admin e nelle destination connections che esportano **profili** verso applicazioni, file e database. Negli altri contesti il record filtering rimane l'unico livello disponibile, ove già ammesso; un contesto che oggi vieta i filtri non viene abilitato da questa revisione. Il server MUST respingere esplicitamente le forme non autorizzate, non ignorarle o degradarle in silenzio.
 
 La revisione 1.1 usava l’audit 10, il rapporto di riconciliazione, la verifica Codex della baseline `d69e6168` e il registro sintetico del 26 ottobre 2026. La presente versione deriva dai documenti approvati nel commit `25f639d84eb35815af5d1062c86545b65b97d720`. Il documento 03 resta il benchmark storico indipendente: la sua premessa sulla completezza della relazione reale è modificata esplicitamente soltanto nell’interpretazione 1.2 (§28.22), senza riscrivere il benchmark o attribuirgli nuovi PASS. Il [documento 07 versione 1.2](07-ast-canonico-riconciliato-v1.2.md) descrive il modello tecnico corrispondente e il [documento 08 versione 1.2](08-ast-canonico-estratto-v1.2.md) ne è l’estratto esatto. I rapporti 11 e 12 sono fonti informative; il 12 resta una proposta architetturale non approvata. L’audit 10 resta storico.
 
 ## 2. Executive product decision
 
-Nella modalità **unified profile filtering** il prodotto MUST rimanere un filtro di profili, non un editor di query. L’utente descrive fatti correnti, attività, esperienze, esiti e abitudini; il risultato determina membership all’istante di valutazione T. Il **record filtering** del medesimo `core.Filter` continua invece a valutare il singolo record nel suo contesto operativo e non acquisisce per questo storia comportamentale o un T storico.
+Nella modalità **behavioral profile filtering** il prodotto MUST rimanere un filtro di profili, non un editor di query. L’utente descrive fatti correnti, attività, esperienze, esiti e abitudini; il risultato determina membership all’istante di valutazione T. Il **record filtering** del medesimo `core.Filter` continua invece a valutare il singolo record nel suo contesto operativo e non acquisisce per questo storia comportamentale o un T storico.
 
 La semantica usa esattamente cinque primitive: **Confronto tipizzato**, **Esperienza selezionata**, **Insieme per identità**, **Percorso ordinato**, **Schema di attività**. Queste forme non prescrivono cinque categorie visibili, cinque card o cinque tipi di rappresentazione tecnica.
 
@@ -98,7 +98,7 @@ Per progettare compilatore e piano fisico si **assume** che ogni query riceva un
 
 - **Identity Resolution:** la soluzione alla pubblicazione non atomica di associazioni e vista Profiles è rinviata a un lavoro autonomo. Questa specifica non prescrive generazioni, snapshot o coordinamento delle pubblicazioni.
 - **Acquisizione/attribuzione:** writer asincrono, persistenza e attribuzione KPID sono rinviati al relativo sottosistema insieme alla coerenza delle letture. Il dominio è la vista coerente resa interrogabile alla query; latenze tecniche non diventano automaticamente UNKNOWN. Non sono richiesti watermark o certificati di ingestione nel linguaggio.
-- **Destination matching:** la correzione di cancellazione e ricaricamento per batch appartiene all’export. Membership Unified e selezione operativa per consensi, matching e modalità restano separate. Il compilatore non deve governare un protocollo di matching.
+- **Destination matching:** la correzione di cancellazione e ricaricamento per batch appartiene all’export. Membership Behavioral e selezione operativa per consensi, matching e modalità restano separate. Il compilatore non deve governare un protocollo di matching.
 
 I tre lavori sono **rinviati, non risolti**. Non bloccano la progettazione corrente del compilatore e del piano fisico; possono essere prerequisiti di rilascio per le funzionalità dipendenti. I campi `ReadView`, le generazioni, i tagli di ingestione e la materializzazione proposti dal rapporto 12 non vengono adottati per implicazione. Una lettura realmente fallita, parzialmente eseguita o priva della coerenza necessaria non è un insieme vuoto semanticamente valido: è un risultato tecnico non disponibile, non MATCH/NO MATCH/UNKNOWN inventato.
 
@@ -284,7 +284,7 @@ I **sei operatori sullo stato del dato** (`is empty`, `is not empty`, `is null`,
 
 Questa prescrizione **non risolve in modo implicito** le divergenze storiche fra una proprietà ordinaria nullable rappresentata in Go e una colonna SQL `NULL`, o la presenza di Object di schema appiattiti: tali casi mantengono lo status di questioni tecniche aperte e non sono attestati equivalenti. Una configurazione invalida e un fallimento tecnico restano errori, non SQL `NULL` semantici. Un dato JSON lecito di tipo non applicabile è invece differente da un filtro malformato.
 
-Per ogni combinazione fonte/schema/predicato ammessa nello **unified profile filtering**, il significato osservabile e i requisiti informativi necessari MUST essere definiti. La scelta dell’executor MUST NOT modificarli. Se mancano informazioni decisive nei dati esistenti o nelle evidenze richieste dai contratti, si applicano §§19.3–19.7, compreso UNKNOWN quando necessario e salvo prove decisive. L’assenza di occurrence dal dominio registrato di §3.1, anche per retention o mancata corrispondenza con un utente di sorgente, non è da sola informazione insufficiente. Se manca una capacità strutturale indispensabile, la capability è non disponibile/non attivabile, non UNKNOWN per tutti i profili. Non si aggiungono requisiti di registry ai normali filtri Record né correzioni retroattive agli executor.
+Per ogni combinazione fonte/schema/predicato ammessa nello **behavioral profile filtering**, il significato osservabile e i requisiti informativi necessari MUST essere definiti. La scelta dell’executor MUST NOT modificarli. Se mancano informazioni decisive nei dati esistenti o nelle evidenze richieste dai contratti, si applicano §§19.3–19.7, compreso UNKNOWN quando necessario e salvo prove decisive. L’assenza di occurrence dal dominio registrato di §3.1, anche per retention o mancata corrispondenza con un utente di sorgente, non è da sola informazione insufficiente. Se manca una capacità strutturale indispensabile, la capability è non disponibile/non attivabile, non UNKNOWN per tutti i profili. Non si aggiungono requisiti di registry ai normali filtri Record né correzioni retroattive agli executor.
 
 **Deroga approvata dall’utente il 13 novembre 2026, con successiva estensione approvata ad Array(String):** per i predicati Record ordinari su colonne native String e per `contains` / `does not contain` sugli elementi String di proprietà native `Array(String)` è ammessa l’eccezione all’invarianza rispetto all’executor definita in [07 §14.4.1](07-ast-canonico-riconciliato-v1.2.md#1441-deroga-approvata-per-il-testo-nativo). Si conservano le regole del percorso SQL Record esistente, che Krenalis non registra né verifica. Le proprietà dichiarate JSON restano distinte dagli Array(String) tipizzati e fuori dalla deroga. Gli altri contratti, le regole di assenza/null e dell’array vuoto e la distinzione fra esito semantico ed errore tecnico restano invariati.
 
@@ -1330,8 +1330,8 @@ La disponibilità del linguaggio, del mapping, del contratto, dei dati per il pr
 
 | Ingresso | Capability massima ammessa |
 |---|---|
-| Query dei profili unificati tramite API; pagina Profiles nell’Admin | Record + Unified |
-| Destination connections che esportano profili verso applicazioni, file e database | Record + Unified (selezione dei profili **prima** della trasformazione/esportazione) |
+| Query dei profili unificati tramite API; pagina Profiles nell’Admin | Record + Behavioral |
+| Destination connections che esportano profili verso applicazioni, file e database | Record + Behavioral (selezione dei profili **prima** della trasformazione/esportazione) |
 | Altre pipeline e richieste che già supportano `core.Filter` | Soltanto Record |
 | Ingressi che già vietano `core.Filter` (per esempio Source/Database/User della baseline) | Restano vietati; nessuna ammissione introdotta |
 
@@ -1703,12 +1703,12 @@ Le verifiche seguenti riguardano le condizioni condivise e non aggiungono nuovi 
 | `properties.amount is one of [null]`, JSON `null` presente | SQL TRUE; Go `true` |
 | `properties.amount is one of [null]`, percorso JSON assente | SQL `NULL`; Go `false` |
 | `(TRUE AND NULL)` / `(TRUE OR NULL)` in SQL | NULL / TRUE |
-| Source/Database/User della baseline con `core.Filter` | Rifiuto di validazione, non attivazione Unified |
+| Source/Database/User della baseline con `core.Filter` | Rifiuto di validazione, non attivazione Behavioral |
 | Regola E/K/P/T in una pipeline record-only | Rifiuto esplicito server, non applicazione parziale |
 | Quattro livelli di gruppi AND/OR, radice inclusa, entro 100 nodi discendenti, radice esclusa | Forma ammessa; non ridotta obbligatoriamente a tre livelli |
 | Gruppo principale esplicitamente vuoto | Invalid configuration |
 
-Il record filtering Go continua a restituire soltanto `bool`, mentre la diagnostica ternaria per Unified è definita sul filtro complessivo. I renderer PostgreSQL/Snowflake devono preservare il contratto SQL; Snowflake remoto resta una verifica di integrazione non attestata per la baseline indicata.
+Il record filtering Go continua a restituire soltanto `bool`, mentre la diagnostica ternaria per Behavioral è definita sul filtro complessivo. I renderer PostgreSQL/Snowflake devono preservare il contratto SQL; Snowflake remoto resta una verifica di integrazione non attestata per la baseline indicata.
 
 ### 28.20 JSON raw e valuta business governata
 
@@ -1824,7 +1824,7 @@ Recipe, mapping, domain contract e producer MUST conservare una definizione rico
 
 La scelta di una fonte concreta è configurazione e verifica di un significato già definito, non il luogo in cui inventarlo. L’esecuzione MAY ottimizzare o precomputare, ma MUST preservare risultato e dipendenze: non può troncare ulteriormente la storia interrogabile, usare selezione greedy, scartare UNKNOWN o omettere bucket vuoti per ragioni di costo. La retention è un limite del patrimonio disponibile, non un’autorizzazione del planner a introdurre un ulteriore limite nascosto.
 
-La revisione del dominio event-based nella versione 1.2 è un cambiamento intenzionale approvato rispetto alla 1.1. L’adozione di nuove definizioni governate resta esplicita. Definizioni governate già immutabili non devono essere reinterpretate mantenendo la stessa identity/revisione; risultati o cache della 1.1 non si presumono equivalenti a quelli 1.2. Il protocollo concreto per eventuali documenti Unified precedenti resta da progettare. Non si aggiungono modalità configurabili, migrazioni automatiche o cambiamenti alla persistenza/equality dei filtri Record.
+La revisione del dominio event-based nella versione 1.2 è un cambiamento intenzionale approvato rispetto alla 1.1. L’adozione di nuove definizioni governate resta esplicita. Definizioni governate già immutabili non devono essere reinterpretate mantenendo la stessa identity/revisione; risultati o cache della 1.1 non si presumono equivalenti a quelli 1.2. Il protocollo concreto per eventuali documenti Behavioral precedenti resta da progettare. Non si aggiungono modalità configurabili, migrazioni automatiche o cambiamenti alla persistenza/equality dei filtri Record.
 
 ### 29.4 Conformità della traduzione tecnica
 
@@ -1842,7 +1842,7 @@ Questa sezione è un indice delle decisioni preservate dalla 1.1 e della revisio
 
 | Aspetto / decisione preservata o approvata | Sezioni |
 |---|---|
-| Unico `core.Filter`; record filtering incluso in Unified; ammissibilità contestuale | §§1.3, 2, 26.1.1 |
+| Unico `core.Filter`; record filtering incluso in Behavioral; ammissibilità contestuale | §§1.3, 2, 26.1.1 |
 | Catalogo condiviso dei 26 operatori e semantica aggiornata dei missing/JSON | §§8.1–8.2, 19.1–19.2 |
 | Massimo quattro livelli di gruppi AND/OR, radice inclusa, e 100 nodi discendenti, radice esclusa; senza riscrittura automatica del documento pubblico | §§7.5, 20 |
 | Mondo chiuso degli eventi registrati; assunzioni e rinvii operativi | §§3.1–3.2, 9.4, 19, 28.21–28.22 |
@@ -1915,7 +1915,7 @@ Rimosse alternative precedenti, verdetti concorrenti, riferimenti a un producer 
 
 ## Changelog di riconciliazione — versione 1.1 (informativo)
 
-- Unificato il contratto pubblico di riferimento: `core.Filter` per Record e Unified; introdotta la matrice dei contesti ammessi (§§1.3, 26.1.1).
+- Unificato il contratto pubblico di riferimento: `core.Filter` per Record e Behavioral; introdotta la matrice dei contesti ammessi (§§1.3, 26.1.1).
 - Conservati i 26 operatori, i loro payload e la semantica successiva a `d69e6168`, con risultato SQL nullable per i 20 operatori sui valori quando manca la proprietà (§§8.1–8.2, 19).
 - Esplicitata la distinzione fra SQL `NULL`, JSON `null` presente e `false` di applicabilità Go; i predicati dello scope comportamentale preservano i casi incerti nelle quantificazioni (§§9.2, 19).
 - Limiti del filtro principale: massimo quattro livelli di gruppi AND/OR, radice inclusa, e 100 nodi discendenti, radice esclusa; senza alterare i limiti interni delle nuove costruzioni (§7.5).

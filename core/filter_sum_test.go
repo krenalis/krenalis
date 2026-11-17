@@ -155,7 +155,8 @@ func TestFilterSumMinimum(t *testing.T) {
 				t.Fatalf("expected decodable minimum fixture, got %v", err)
 			}
 			nodes := 0
-			_, err = prepareBehavioralRule(&filter, types.Object([]types.Property{{Name: "country", Type: types.String()}}),
+			_, err = prepareBehavioralRule(&filter,
+				types.Object([]types.Property{{Name: "country", Type: types.String()}}),
 				0, &nodes)
 			if err != nil {
 				if _, unsupported := errors.AsType[*behavioral.UnsupportedError](err); unsupported {
@@ -205,7 +206,7 @@ func TestFilterSumRoundTrip(t *testing.T) {
 			t.Fatalf("expected Sum encoding, got %v", err)
 		}
 		if string(before) != input || !filter.HasBehavioralConditions() {
-			t.Fatalf("expected unchanged Sum document requiring Unified, got %s", before)
+			t.Fatalf("expected unchanged Sum document requiring behavioral filter, got %s", before)
 		}
 		nodes := 0
 		schema := types.Object([]types.Property{{Name: "country", Type: types.String()}})
@@ -322,7 +323,8 @@ func TestFilterSumWhere(t *testing.T) {
 			}
 			rule, err := prepareFilterSum(&condition, nil)
 			if err != nil {
-				if _, unsupported := errors.AsType[*behavioral.UnsupportedError](err); !test.unsupported || !unsupported {
+				if _, unsupported := errors.AsType[*behavioral.UnsupportedError](err); !test.unsupported ||
+					!unsupported {
 					t.Fatalf("expected unsupported=%v, got %v", test.unsupported, err)
 				}
 			}

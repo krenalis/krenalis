@@ -96,8 +96,8 @@ func assertBehavioralServiceJSON(t *testing.T, actual any, expected string) {
 }
 
 // newBehavioralServiceWorkspace uses production DDL and real state/datastore,
-// but
-// the facade's Core and warehouse factory are fixtures, not Core.Open or HTTP.
+// but the facade's Core and warehouse factory are fixtures, not Core.Open or
+// HTTP.
 func newBehavioralServiceWorkspace(t *testing.T, name string) (*Workspace, warehouses.Warehouse) {
 
 	t.Helper()
@@ -200,7 +200,7 @@ func newBehavioralServiceWorkspace(t *testing.T, name string) (*Workspace, wareh
 	_, err = database.Exec(t.Context(), `INSERT INTO workspaces
  (id,organization,name,warehouse_name,warehouse_mode,warehouse_settings,
  kms_encrypted_warehouse_settings_key,profile_schema,identifiers)
- SELECT '111111111111',id,'Unified service',$1,'Normal','','',$2,ARRAY[]::text[] FROM organizations`,
+ SELECT '111111111111',id,'behavioral filter service',$1,'Normal','','',$2,ARRAY[]::text[] FROM organizations`,
 		platform, encoded)
 	if err != nil {
 		t.Fatalf("expected workspace state fixture, got %v", err)
@@ -373,7 +373,8 @@ func testBehavioralService(t *testing.T, name string) {
 				t.Fatalf("expected matching IDs %v and total %d, got %+v", ids, len(ids), result)
 			}
 			assertBehavioralServiceJSON(t, result.Evaluation, fmt.Sprintf(
-				`{"at":"%s","match":%d,"noMatch":%d,"unknown":%d}`, behavioralServiceAt, counts[0], counts[1], counts[2]))
+				`{"at":"%s","match":%d,"noMatch":%d,"unknown":%d}`, behavioralServiceAt, counts[0], counts[1],
+				counts[2]))
 
 			for profile := 1; profile <= 6; profile++ {
 				leaf, ok := test.explanations[profile]
@@ -382,7 +383,8 @@ func testBehavioralService(t *testing.T, name string) {
 				}
 				id := fmt.Sprintf("00000000-0000-0000-0000-%012d", profile)
 				explanation, err := workspace.ExplainProfileFilter(
-					snowflaketester.ServiceContext(t.Context(), snowflaketester.ServiceExplanationTag), id, &filter, behavioralServiceAt)
+					snowflaketester.ServiceContext(t.Context(), snowflaketester.ServiceExplanationTag), id,
+					&filter, behavioralServiceAt)
 				if err != nil {
 					t.Fatalf("expected public explanation for %s, got %v", id, err)
 				}

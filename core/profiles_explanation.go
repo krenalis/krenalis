@@ -214,13 +214,13 @@ type ProfileSumBounds struct {
 	Upper *decimal.Decimal `json:"upper"`
 }
 
-// ExplainProfileFilter explains a supported filter for the KPID in the URL.
-// It returns errors.BadRequestError for invalid arguments,
-// errors.NotFoundError for a missing profile, errors.UnavailableError for a
-// warehouse failure, and errors.UnprocessableError with the following codes:
+// ExplainProfileFilter explains a supported filter for the KPID in the URL. It
+// returns errors.BadRequestError for invalid arguments, errors.NotFoundError
+// for a missing profile, errors.UnavailableError for a warehouse failure, and
+// errors.UnprocessableError with the following codes:
 //   - PropertyNotExist for an unresolved property path.
 //   - FilterCapabilityNotImplemented for an unavailable language capability.
-//   - UnifiedFilteringUnavailable for an unverified workspace backend.
+//   - BehavioralFilteringUnavailable for an unverified workspace backend.
 //   - MaintenanceMode when warehouse access is in maintenance.
 func (this *Workspace) ExplainProfileFilter(ctx context.Context, kpid string, filter *Filter, at string) (*ProfileFilterExplanation, error) {
 
@@ -261,7 +261,8 @@ func (this *Workspace) ExplainProfileFilter(ctx context.Context, kpid string, fi
 	result, err := this.store.ExplainProfileFilter(ctx, &root, behavioral.Bindings{}, instant, profile)
 	if err != nil {
 		if errors.Is(err, datastore.ErrBehavioralFilteringUnavailable) {
-			return nil, errors.Unprocessable(UnifiedFilteringUnavailable, "Unified filtering is unavailable on this warehouse")
+			return nil,
+				errors.Unprocessable(BehavioralFilteringUnavailable, "behavioral filtering is unavailable on this warehouse")
 		}
 		if unavailable, ok := errors.AsType[*behavioral.UnsupportedError](err); ok {
 			return nil, errors.Unprocessable(FilterCapabilityNotImplemented, "%s", unavailable)

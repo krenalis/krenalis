@@ -36,8 +36,9 @@ func TestScanArrayInvalidElementLength(t *testing.T) {
 	}
 }
 
-// TestScanArrayRecord bounds binary lengths without a Unified byte budget and
-// preserves the existing treatment of ordinary arrays and SQL NULL elements.
+// TestScanArrayRecord bounds binary lengths without a behavioral filter byte
+// budget and preserves the existing treatment of ordinary arrays and SQL NULL
+// elements.
 func TestScanArrayRecord(t *testing.T) {
 	first, second, third := "first", "second", "third"
 	for _, test := range []struct {

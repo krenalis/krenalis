@@ -65,7 +65,7 @@ specifica per quel nome. Non cerca sinonimi né nomi di compatibilità.
 La voce `legacy.identity_merge` è conservata come riferimento storico. La sua
 presenza nel catalogo non abilita il tipo `merge` nel decoder. Analogamente,
 la presenza di una definizione non prova che il workspace abbia ricevuto eventi
-corrispondenti e non abilita nuove capacità del motore Unified.
+corrispondenti e non abilita nuove capacità del motore behavioral filter.
 
 Non vengono introdotti configurazione per workspace, versionamento, preset,
 ruoli semantici, JSON Schema in ingresso, endpoint HTTP o tool MCP.

@@ -157,7 +157,8 @@ CREATE TABLE "KRENALIS_EVENTS" ("KPID" VARCHAR(36),"MESSAGE_ID" VARCHAR COLLATE 
 				}
 				execBehavioralFixture(t, dw, fmt.Sprintf("INSERT INTO %s SELECT CAST('%s' AS %s),'%s',"+
 					"'track','Order Completed',NULL,CAST('%s' AS %s),%s",
-					quoteBehavioralRecordIdentifier(platform, "krenalis_events"), behavioralTestID(event.profile), profileType,
+					quoteBehavioralRecordIdentifier(platform, "krenalis_events"), behavioralTestID(event.profile),
+					profileType,
 					strings.ReplaceAll(event.id, "'", "''"), event.at.Format("2006-01-02 15:04:05.999999"),
 					timestampType, payload))
 			}

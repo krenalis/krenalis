@@ -31,7 +31,7 @@ Gli unici risultati semantici sono MATCH, NO_MATCH e UNKNOWN. Le rule leggono il
 
 AllProfiles rappresenta il **filtro pubblico assente**, non un gruppo vuoto. La radice pubblica, quando esiste, è AND/OR; empty group è invalido; singleton e gruppi omogenei consecutivi sono validi nel documento pubblico. Massimo quattro livelli di gruppi AND/OR, radice inclusa, e 100 nodi discendenti, radice esclusa. La grammatica **interna** può eliminare singleton e appiattire gli operatori uguali, ma non modifica il documento pubblico, la sua persistenza o l’uguaglianza esistente. Non esiste NOT generico.
 
-**Raccordo del riepilogo:** le cinque varianti top-level appartengono all’AST di Unified; il DTO pubblico rimane `core.Filter` e `FilterCondition` per le condizioni Record. Le 26 condizioni sono property test V e foglie ammesse nei body solo con le relative capability. La radice pubblica resta un gruppo AND/OR, anche se il canonical AST può usare una foglia dopo normalizzazione.
+**Raccordo del riepilogo:** le cinque varianti top-level appartengono all’AST di Behavioral; il DTO pubblico rimane `core.Filter` e `FilterCondition` per le condizioni Record. Le 26 condizioni sono property test V e foglie ammesse nei body solo con le relative capability. La radice pubblica resta un gruppo AND/OR, anche se il canonical AST può usare una foglia dopo normalizzazione.
 
 ## F2. Shared types, predicate, riferimenti e tempo
 
@@ -316,7 +316,7 @@ I reference di uso sono distinti per forma e consumer. Scalar non può essere Oc
 
 Per S012 devono essere certificati primo raggiungimento del 90% cumulato dall'inizio di W, content identity/version/durata pertinente, identità episodio/serie, tempo e disponibilità storica del successivo episodio alla seconda milestone. Non esistono slot video nell'AST e il producer non è obbligatorio nel core.
 
-**Validazione contestuale aggiuntiva:** ammissibilità Unified solo in Profiles API/Admin ed export dei profili verso app/file/database; nelle altre pipeline è disponibile soltanto Record, dove già consentito. Le forme nuove fuori contesto sono rifiutate dal server; non producono un risultato ternario.
+**Validazione contestuale aggiuntiva:** ammissibilità Behavioral solo in Profiles API/Admin ed export dei profili verso app/file/database; nelle altre pipeline è disponibile soltanto Record, dove già consentito. Le forme nuove fuori contesto sono rifiutate dal server; non producono un risultato ternario.
 
 ## F6. Validation layers e evidence requirements
 
@@ -331,7 +331,7 @@ type StaticAssessment =
 
 Shape/checked values impongono tag, profondità, arità, budget, posizioni, periodi, soglie, contiguità/blocchi e divieti. **RecordAdmissibility conserva schema/path, operatore, tipo e operandi esistenti, senza nuovi registry o meaningRevision.** Per i nuovi predicati governati il registry verifica domini/unità/grana, ruoli, owner/slot, operatori/riduzioni e consumer. I normali eventi non richiedono certificati di completezza esterna o inizio reale della relazione; inventari, lifecycle, named scopes e CDE conservano le proprie garanzie. Definizione governata irrisolta e adapter assente rimangono stati distinti.
 
-Ogni combinazione fonte/schema/predicato ammessa in Unified conserva significato e requisiti informativi indipendenti dall’executor. Dati esistenti decisivi ignoti o garanzie contrattuali insufficienti seguono le regole sull’evidenza. L’assenza di occurrence registrate, anche per retention o senza utente di sorgente, non è automaticamente UNKNOWN. Repertorio configurato vuoto è valutabile; capability strutturale assente è non disponibile. Nessun registry retroattivo per Record né correzioni retroattive agli executor.
+Ogni combinazione fonte/schema/predicato ammessa in Behavioral conserva significato e requisiti informativi indipendenti dall’executor. Dati esistenti decisivi ignoti o garanzie contrattuali insufficienti seguono le regole sull’evidenza. L’assenza di occurrence registrate, anche per retention o senza utente di sorgente, non è automaticamente UNKNOWN. Repertorio configurato vuoto è valutabile; capability strutturale assente è non disponibile. Nessun registry retroattivo per Record né correzioni retroattive agli executor.
 
 **Deroga approvata:** i predicati Record ordinari su colonne native String conservano le regole del percorso SQL Record esistente, anche se gli esiti dipendono dall’executor o cambiano con quelle regole. La successiva estensione approvata comprende `contains` / `does not contain` su `Array(String)`: PostgreSQL segue la collation della colonna array, Snowflake confronta letteralmente gli elementi. I valori dichiarati JSON che contengono array restano distinti e fuori dalla deroga. Krenalis non registra né verifica queste regole. Si applica il perimetro di [07 §14.4.1](07-ast-canonico-riconciliato-v1.2.md#1441-deroga-approvata-per-il-testo-nativo), con la decisione del 13 novembre 2026 e la successiva estensione; null/missing, array vuoto, operatori di stato e costruttori AST restano invariati.
 

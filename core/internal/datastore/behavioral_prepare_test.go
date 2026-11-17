@@ -127,7 +127,8 @@ func TestBehavioralPrepare(t *testing.T) {
 		}
 	}
 	for _, op := range []state.WhereLogical{state.OpAnd, state.OpOr} {
-		group, err := behavioral.Prepare(&behavioral.Rule{Operator: op, Children: []behavioral.Rule{rule}}, bindings, at, source)
+		group, err := behavioral.Prepare(&behavioral.Rule{Operator: op, Children: []behavioral.Rule{rule}},
+			bindings, at, source)
 		if err != nil {
 			t.Fatalf("expected prepared logical group, got %v", err)
 		}
@@ -374,7 +375,8 @@ func TestBehavioralRecordBodyBinding(t *testing.T) {
 			calls++
 			return bind(actual)
 		}
-		scope := behavioral.Scope{Event: "Order Completed", Grain: "registered-message", Start: at.Add(-time.Hour), End: at}
+		scope := behavioral.Scope{Event: "Order Completed", Grain: "registered-message", Start: at.Add(-time.Hour),
+			End: at}
 		root := &behavioral.Rule{Count: &behavioral.Count{Scope: scope, Where: recordCountWhere(t, where)}}
 		expectedCalls := 1 // The whole where; source identity has its own binding.
 		if selected {

@@ -97,7 +97,8 @@ FROM (VALUES `+test.rows+`) v(id,stamp,payload)`)
 				if test.fault {
 					t.Fatal("expected source fault, got success")
 				}
-				assertBehavioralTruths(t, result, []behavioral.Truth{test.truth, behavioral.NoMatch, behavioral.NoMatch})
+				assertBehavioralTruths(t, result,
+					[]behavioral.Truth{test.truth, behavioral.NoMatch, behavioral.NoMatch})
 				empty, err := store.QueryProfiles(t.Context(), root, behavioral.Bindings{}, at,
 					behavioral.Page{First: 99, Limit: 1, MatchingOnly: true})
 				if err != nil {
@@ -108,7 +109,8 @@ FROM (VALUES `+test.rows+`) v(id,stamp,payload)`)
 					t.Fatalf("expected identical totals on empty page, got %+v", empty)
 				}
 			}
-			explained, err := store.ExplainProfileFilter(t.Context(), root, behavioral.Bindings{}, at, behavioralTestID(1))
+			explained, err := store.ExplainProfileFilter(t.Context(), root, behavioral.Bindings{}, at,
+				behavioralTestID(1))
 			if err != nil {
 				if !test.fault || explained != nil || !strings.Contains(err.Error(), "occurrence source violates") {
 					t.Fatalf("expected fault=%v without partial explanation, got %+v, %v", test.fault, explained, err)
@@ -148,7 +150,8 @@ INSERT INTO krenalis_events VALUES
 		if err != nil {
 			t.Fatalf("expected irrelevant timestamp conflict ignored, got %v", err)
 		}
-		assertBehavioralTruths(t, result, []behavioral.Truth{behavioral.NoMatch, behavioral.NoMatch, behavioral.NoMatch})
+		assertBehavioralTruths(t, result,
+			[]behavioral.Truth{behavioral.NoMatch, behavioral.NoMatch, behavioral.NoMatch})
 	})
 
 	t.Run("attribution conflicts", func(t *testing.T) {
@@ -175,7 +178,8 @@ INSERT INTO krenalis_events VALUES
 ('`+behavioralTestID(1)+`','later','track','Order Completed',NULL,'2026-01-20','{"q":"yes","v":"no"}')`)
 		bounded := experience
 		bounded.Scope.End = time.Date(2026, 1, 15, 0, 0, 0, 0, time.UTC)
-		result, err := store.QueryProfiles(t.Context(), &behavioral.Rule{Experience: &bounded}, behavioral.Bindings{}, at,
+		result, err := store.QueryProfiles(t.Context(), &behavioral.Rule{Experience: &bounded},
+			behavioral.Bindings{}, at,
 			behavioral.Page{Limit: 10})
 		if err != nil {
 			t.Fatalf("expected Last within the selected period, got %v", err)
@@ -191,7 +195,8 @@ INSERT INTO krenalis_events VALUES
 		if err != nil {
 			t.Fatalf("expected Last over full recorded history, got %v", err)
 		}
-		assertBehavioralTruths(t, result, []behavioral.Truth{behavioral.NoMatch, behavioral.NoMatch, behavioral.NoMatch})
+		assertBehavioralTruths(t, result,
+			[]behavioral.Truth{behavioral.NoMatch, behavioral.NoMatch, behavioral.NoMatch})
 	})
 
 	t.Run("page and screen", func(t *testing.T) {
@@ -203,19 +208,23 @@ INSERT INTO krenalis_events VALUES
 ('`+behavioralTestID(1)+`','track','track','Pricing',NULL,'2026-01-30','{"q":"yes","v":"no"}')`)
 			selected := experience
 			selected.Scope.Type, selected.Scope.Event = typ, "Pricing"
-			result, err := store.QueryProfiles(t.Context(), &behavioral.Rule{Experience: &selected}, behavioral.Bindings{}, at,
+			result, err := store.QueryProfiles(t.Context(), &behavioral.Rule{Experience: &selected},
+				behavioral.Bindings{}, at,
 				behavioral.Page{Limit: 10})
 			if err != nil {
 				t.Fatalf("expected named %s selection, got %v", typ, err)
 			}
-			assertBehavioralTruths(t, result, []behavioral.Truth{behavioral.Match, behavioral.NoMatch, behavioral.NoMatch})
+			assertBehavioralTruths(t, result,
+				[]behavioral.Truth{behavioral.Match, behavioral.NoMatch, behavioral.NoMatch})
 			selected.Scope.Event = ""
-			result, err = store.QueryProfiles(t.Context(), &behavioral.Rule{Experience: &selected}, behavioral.Bindings{}, at,
+			result, err = store.QueryProfiles(t.Context(), &behavioral.Rule{Experience: &selected},
+				behavioral.Bindings{}, at,
 				behavioral.Page{Limit: 10})
 			if err != nil {
 				t.Fatalf("expected all %s messages, got %v", typ, err)
 			}
-			assertBehavioralTruths(t, result, []behavioral.Truth{behavioral.NoMatch, behavioral.NoMatch, behavioral.NoMatch})
+			assertBehavioralTruths(t, result,
+				[]behavioral.Truth{behavioral.NoMatch, behavioral.NoMatch, behavioral.NoMatch})
 		}
 	})
 
@@ -243,7 +252,8 @@ INSERT INTO krenalis_events VALUES
 		}
 		assertBehavioralTruths(t, result, []behavioral.Truth{behavioral.Match, behavioral.NoMatch, behavioral.NoMatch})
 		for n := 1; n <= 3; n++ {
-			explained, err := store.ExplainProfileFilter(t.Context(), mixed, behavioral.Bindings{}, at, behavioralTestID(n))
+			explained, err := store.ExplainProfileFilter(t.Context(), mixed, behavioral.Bindings{}, at,
+				behavioralTestID(n))
 			if err != nil {
 				t.Fatalf("expected mixed explanation, got %v", err)
 			}
@@ -342,7 +352,8 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,tim
 						Operator: state.OpIs, Values: []any{json.Value(`"yes"`)}},
 				}}
 			}
-			root := &behavioral.Rule{Experience: &behavioral.Experience{First: first, Scope: behavioral.Scope{Event: "Order Completed",
+			root := &behavioral.Rule{Experience: &behavioral.Experience{First: first, Scope: behavioral.Scope{
+				Event: "Order Completed",
 				Grain: "registered-message", Start: at.AddDate(0, -1, 0), End: at}, Where: predicate("q"),
 				Verify: &behavioral.OccurrencePredicate{Record: predicate("v").Rules[0].(*state.WhereCondition)}}}
 			result, err := store.QueryProfiles(t.Context(), root, behavioral.Bindings{}, at, behavioral.Page{Limit: 1000})
@@ -401,8 +412,9 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,tim
 				if err != nil {
 					t.Fatalf("expected exact temporal verification, got %v", err)
 				}
-				assertBehavioralTruths(t, result, []behavioral.Truth{behavioral.NoMatch, behavioral.Match, behavioral.Match,
-					behavioral.Match, behavioral.NoMatch, behavioral.NoMatch, behavioral.NoMatch})
+				assertBehavioralTruths(t, result,
+					[]behavioral.Truth{behavioral.NoMatch, behavioral.Match, behavioral.Match,
+						behavioral.Match, behavioral.NoMatch, behavioral.NoMatch, behavioral.NoMatch})
 			}
 		})
 	}
@@ -449,7 +461,8 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,tim
 								Operator: state.OpIs, Values: []any{json.Value(`"yes"`)}}},
 						}}
 				}
-				result, err := store.QueryProfiles(t.Context(), root, behavioral.Bindings{}, at, behavioral.Page{Limit: 10})
+				result, err := store.QueryProfiles(t.Context(), root, behavioral.Bindings{}, at, behavioral.Page{
+					Limit: 10})
 				if err != nil {
 					t.Fatalf("expected candidate-local time with OR=%v, got %v", or, err)
 				}
@@ -459,7 +472,8 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,tim
 				}
 				assertBehavioralTruths(t, result, []behavioral.Truth{want, behavioral.Unknown, behavioral.Match,
 					behavioral.NoMatch, behavioral.NoMatch, behavioral.NoMatch, behavioral.NoMatch})
-				explained, err := store.ExplainProfileFilter(t.Context(), root, behavioral.Bindings{}, at, behavioralTestID(1))
+				explained, err := store.ExplainProfileFilter(t.Context(), root, behavioral.Bindings{}, at,
+					behavioralTestID(1))
 				if err != nil {
 					t.Fatalf("expected temporal explanation, got %v", err)
 				}
@@ -475,8 +489,9 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,tim
 			if err != nil {
 				t.Fatalf("expected disjoint base and verification, got %v", err)
 			}
-			assertBehavioralTruths(t, result, []behavioral.Truth{behavioral.NoMatch, behavioral.NoMatch, behavioral.NoMatch,
-				behavioral.NoMatch, behavioral.NoMatch, behavioral.NoMatch, behavioral.NoMatch})
+			assertBehavioralTruths(t, result,
+				[]behavioral.Truth{behavioral.NoMatch, behavioral.NoMatch, behavioral.NoMatch,
+					behavioral.NoMatch, behavioral.NoMatch, behavioral.NoMatch, behavioral.NoMatch})
 		})
 	}
 

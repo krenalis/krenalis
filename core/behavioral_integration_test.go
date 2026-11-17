@@ -362,8 +362,8 @@ INSERT INTO unified_v.krenalis_events VALUES
 			At: at.Format(time.RFC3339Nano), Limit: 10})
 		if err != nil {
 			failure, ok := errors.AsType[*errors.UnprocessableError](err)
-			if !ok || failure.Code != UnifiedFilteringUnavailable {
-				t.Fatalf("expected Unprocessable UnifiedFilteringUnavailable, got %T: %v", err, err)
+			if !ok || failure.Code != BehavioralFilteringUnavailable {
+				t.Fatalf("expected Unprocessable BehavioralFilteringUnavailable, got %T: %v", err, err)
 			}
 		}
 		if err == nil || result != nil {
@@ -373,7 +373,7 @@ INSERT INTO unified_v.krenalis_events VALUES
 			countRoot, at.Format(time.RFC3339))
 		if err != nil {
 			failure, ok := errors.AsType[*errors.UnprocessableError](err)
-			if !ok || failure.Code != UnifiedFilteringUnavailable || explained != nil {
+			if !ok || failure.Code != BehavioralFilteringUnavailable || explained != nil {
 				t.Fatalf("expected unavailable explanation backend, got %+v, %v", explained, err)
 			}
 			return
@@ -876,7 +876,7 @@ SET properties='{"currency":null,"coupon":"OTHER"}' WHERE message_id='native-cou
 		page, err = unverified.QueryProfiles(t.Context(), query)
 		if err != nil {
 			failure, ok := errors.AsType[*errors.UnprocessableError](err)
-			if !ok || failure.Code != UnifiedFilteringUnavailable || page != nil {
+			if !ok || failure.Code != BehavioralFilteringUnavailable || page != nil {
 				t.Fatalf("expected currency request blocked on unverified backend, got %+v, %v", page, err)
 			}
 		}
@@ -985,7 +985,7 @@ SET properties='{"currency":null,"coupon":"OTHER"}' WHERE message_id='native-cou
 		unavailable, err := unverified.QueryProfiles(t.Context(), query)
 		if err != nil {
 			failure, ok := errors.AsType[*errors.UnprocessableError](err)
-			if !ok || failure.Code != UnifiedFilteringUnavailable || unavailable != nil {
+			if !ok || failure.Code != BehavioralFilteringUnavailable || unavailable != nil {
 				t.Fatalf("expected gated Sum backend without result, got %+v, %v", unavailable, err)
 			}
 		}

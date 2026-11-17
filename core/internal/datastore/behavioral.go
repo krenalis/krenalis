@@ -15,26 +15,27 @@ import (
 	"github.com/krenalis/krenalis/warehouses"
 )
 
-// ErrProfileProjectionTooWide reports a Unified projection over its budget.
+// ErrProfileProjectionTooWide reports a behavioral filter projection over its
+// budget.
 var ErrProfileProjectionTooWide = errors.New("profile projection exceeds the column limit")
 
-// ErrProfileResultTooLarge reports a Unified page over its size budget.
+// ErrProfileResultTooLarge reports a behavioral filter result page over its
+// size budget.
 var ErrProfileResultTooLarge = errors.New("profile result exceeds the size limit")
 
 // ErrBehavioralFilteringUnavailable reports a workspace backend without
 // verified support.
-var ErrBehavioralFilteringUnavailable = errors.New("Unified filtering is unavailable on this warehouse")
+var ErrBehavioralFilteringUnavailable = errors.New("behavioral filtering is unavailable on this warehouse")
 
-// QueryProfiles executes the internal Record/Count path against a coherent
-// view of registered events and Profiles. This method assumes the publisher
-// and event attribution supply that view; it does not implement that guarantee.
-// It returns *behavioral.UnsupportedError for unimplemented capabilities, mode
+// QueryProfiles executes the internal Record/Count path against a coherent view
+// of registered events and Profiles. This method assumes the publisher and
+// event attribution supply that view; it does not implement that guarantee. It
+// returns *behavioral.UnsupportedError for unimplemented capabilities, mode
 // errors when the operation is unavailable (including
-// ErrBehavioralFilteringUnavailable),
-// and *WarehouseError on execution failure. Prepared-filter limits are
-// checked before backend execution. ErrProfileProjectionTooWide and
-// ErrProfileResultTooLarge distinguish request-dependent page limits.
-// No partial result is returned on failure.
+// ErrBehavioralFilteringUnavailable), and *WarehouseError on execution failure.
+// Prepared-filter limits are checked before backend execution.
+// ErrProfileProjectionTooWide and ErrProfileResultTooLarge distinguish
+// request-dependent page limits. No partial result is returned on failure.
 func (store *Store) QueryProfiles(ctx context.Context, root *behavioral.Rule, bindings behavioral.Bindings, at time.Time, page behavioral.Page) (*behavioral.Result, error) {
 	store.mustBeOpen()
 	ctx, done, err := store.mc.StartOperation(ctx, normalMode|inspectionMode)
@@ -65,7 +66,7 @@ func (store *Store) QueryProfiles(ctx context.Context, root *behavioral.Rule, bi
 	if page.OrderBy != "" {
 		column, ok := columns[page.OrderBy]
 		if !ok {
-			return nil, errors.New("core/internal/datastore: invalid Unified ordering property")
+			return nil, errors.New("core/internal/datastore: invalid behavioral filter ordering property")
 		}
 		request.OrderBy = []warehouses.Column{column}
 		request.OrderDesc = page.OrderDesc

@@ -11,11 +11,12 @@ import (
 	"time"
 )
 
-// MaxProfilePageBytes bounds variable-size values in a Unified profile page.
+// MaxProfilePageBytes bounds variable-size values in a behavioral filter result
+// page.
 const MaxProfilePageBytes = 1 << 20
 
-// MaxProfileProjectionColumns bounds a Unified page's flat projection,
-// including the metadata columns requested by core.
+// MaxProfileProjectionColumns bounds a behavioral filter result page's flat
+// projection, including the metadata columns requested by core.
 const MaxProfileProjectionColumns = 90
 
 // ErrProfileProjectionTooWide reports a projection beyond the column budget.

@@ -17,8 +17,7 @@ import (
 )
 
 // behavioralFilterQuery uses the public filter document with an internal result
-// request.
-// T and pagination belong to the operation, not to the saved filter.
+// request. T and pagination belong to the operation, not to the saved filter.
 type behavioralFilterQuery struct {
 	Root *Filter
 	At   time.Time
@@ -39,11 +38,10 @@ func (this *Workspace) queryProfilesWithBehavioralFilter(ctx context.Context, qu
 	return this.store.QueryProfiles(ctx, root, behavioral.Bindings{}, query.At, query.Page)
 }
 
-// prepareBehavioralCount reuses the schema-aware occurrence preparer.
-// With *behavioral.UnsupportedError it returns Scope and Test in a partial
-// Count
-// without qualification, so callers can validate remaining parameters.
-// That partial rule must not be executed.
+// prepareBehavioralCount reuses the schema-aware occurrence preparer. With
+// *behavioral.UnsupportedError it returns Scope and Test in a partial Count
+// without qualification, so callers can validate remaining parameters. That
+// partial rule must not be executed.
 func prepareBehavioralCount(scope behavioral.Scope, filter *Filter, test behavioral.CountTest) (behavioral.Rule, error) {
 	var where *behavioral.OccurrencePredicate
 	if filter != nil {
@@ -65,7 +63,8 @@ func prepareBehavioralRule(rule FilterRule, schema types.Type, depth int, nodes 
 	var calendar *behavioral.Calendar
 	if filter, ok := rule.(*Filter); ok && filter != nil && depth == 0 && filter.DefaultCalendar != nil {
 		var err error
-		calendar, err = behavioral.ResolveCalendar(filter.DefaultCalendar.Definition, filter.DefaultCalendar.MeaningRevision)
+		calendar, err = behavioral.ResolveCalendar(filter.DefaultCalendar.Definition,
+			filter.DefaultCalendar.MeaningRevision)
 		if err != nil {
 			return behavioral.Rule{}, err
 		}
@@ -76,13 +75,13 @@ func prepareBehavioralRule(rule FilterRule, schema types.Type, depth int, nodes 
 func prepareBehavioralRuleInCalendar(rule FilterRule, schema types.Type, depth int, nodes *int, calendar *behavioral.Calendar) (behavioral.Rule, error) {
 	*nodes++
 	if *nodes > 101 {
-		return behavioral.Rule{}, fmt.Errorf("Unified filter exceeds 100 descendant nodes")
+		return behavioral.Rule{}, fmt.Errorf("behavioral filter filter exceeds 100 descendant nodes")
 	}
 	switch rule := rule.(type) {
 	case *Filter:
 		if rule == nil || depth >= 4 || (rule.Operator != OpAnd && rule.Operator != OpOr) ||
 			len(rule.Rules) == 0 || len(rule.Rules) > 100 {
-			return behavioral.Rule{}, fmt.Errorf("invalid Unified filter group")
+			return behavioral.Rule{}, fmt.Errorf("invalid behavioral filter filter group")
 		}
 		if depth > 0 && rule.DefaultCalendar != nil {
 			return behavioral.Rule{}, fmt.Errorf("defaultCalendar is only allowed on the root group")
@@ -128,6 +127,6 @@ func prepareBehavioralRuleInCalendar(rule FilterRule, schema types.Type, depth i
 	case *FilterLatestNCondition:
 		return prepareFilterLatestN(rule, calendar)
 	default:
-		return behavioral.Rule{}, fmt.Errorf("unsupported Unified filter rule %T", rule)
+		return behavioral.Rule{}, fmt.Errorf("unsupported behavioral filter filter rule %T", rule)
 	}
 }

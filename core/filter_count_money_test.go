@@ -54,7 +54,8 @@ func TestFilterCountMoneyAdmission(t *testing.T) {
 				t.Fatalf("expected filter encoding, got %v", err)
 			}
 			nodes := 0
-			root, err := prepareBehavioralRule(&filter, types.Object([]types.Property{{Name: "country", Type: types.String()}}),
+			root, err := prepareBehavioralRule(&filter,
+				types.Object([]types.Property{{Name: "country", Type: types.String()}}),
 				0, &nodes)
 			if err != nil {
 				_, unsupported := errors.AsType[*behavioral.UnsupportedError](err)
@@ -192,7 +193,8 @@ func TestFilterCountMoneyDependencies(t *testing.T) {
 					t.Fatalf("expected decoded sibling order, got %v", err)
 				}
 				nodes := 0
-				_, err = prepareBehavioralRule(&filter, types.Object([]types.Property{{Name: "country", Type: types.String()}}),
+				_, err = prepareBehavioralRule(&filter,
+					types.Object([]types.Property{{Name: "country", Type: types.String()}}),
 					0, &nodes)
 				if err != nil {
 					if _, unsupported := errors.AsType[*behavioral.UnsupportedError](err); unsupported {

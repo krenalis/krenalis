@@ -170,7 +170,8 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,tim
 								want[i], _ = enumerateNth(history, position)
 							}
 						}
-						result, err := store.QueryProfiles(t.Context(), root, behavioral.Bindings{}, at, behavioral.Page{Limit: 1000})
+						result, err := store.QueryProfiles(t.Context(), root, behavioral.Bindings{}, at,
+							behavioral.Page{Limit: 1000})
 						if err != nil {
 							t.Fatalf("expected exact %s currency=%s mode=%s literal result, got %v", kind, currency, mode, err)
 						}

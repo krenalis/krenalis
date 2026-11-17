@@ -242,10 +242,12 @@ func testEventDiscoveryWarehouse(t *testing.T, platform string) {
 
 		switch platform {
 		case "PostgreSQL":
-			execBehavioralFixtureStatement(t, warehouse, `CREATE FUNCTION event_discovery_delay(id text, seconds double precision)
+			execBehavioralFixtureStatement(t, warehouse,
+				`CREATE FUNCTION event_discovery_delay(id text, seconds double precision)
 RETURNS boolean LANGUAGE plpgsql VOLATILE AS $$ BEGIN PERFORM pg_sleep(seconds); RETURN true; END $$`)
 		case "Snowflake":
-			execBehavioralFixtureStatement(t, warehouse, `CREATE FUNCTION event_discovery_delay(id VARCHAR, seconds FLOAT)
+			execBehavioralFixtureStatement(t, warehouse,
+				`CREATE FUNCTION event_discovery_delay(id VARCHAR, seconds FLOAT)
 RETURNS BOOLEAN LANGUAGE JAVASCRIPT VOLATILE AS $$
 var until = Date.now() + SECONDS * 1000; while (Date.now() < until) {} return true; $$`)
 		default:

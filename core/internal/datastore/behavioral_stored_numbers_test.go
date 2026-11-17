@@ -100,12 +100,14 @@ CREATE TABLE "KRENALIS_EVENTS" ("KPID" VARCHAR(36),"MESSAGE_ID" VARCHAR,"TYPE" V
 	case "PostgreSQL":
 		execBehavioralFixture(t, dw, `INSERT INTO krenalis_events SELECT * FROM krenalis_events WHERE message_id='m0'`)
 	case "Snowflake":
-		execBehavioralFixture(t, dw, `INSERT INTO "KRENALIS_EVENTS" SELECT * FROM "KRENALIS_EVENTS" WHERE "MESSAGE_ID"='m0'`)
+		execBehavioralFixture(t, dw,
+			`INSERT INTO "KRENALIS_EVENTS" SELECT * FROM "KRENALIS_EVENTS" WHERE "MESSAGE_ID"='m0'`)
 	default:
 		t.Fatalf("expected supported warehouse, got %s", name)
 	}
 
-	scope := behavioral.Scope{Event: "Order Completed", Grain: "registered-message", Start: at.AddDate(0, -1, 0), End: at}
+	scope := behavioral.Scope{Event: "Order Completed", Grain: "registered-message", Start: at.AddDate(0, -1, 0),
+		End: at}
 	field, err := behavioral.ResolveMonetaryField("commerce.order_completed.total", "1")
 	if err != nil {
 		t.Fatalf("expected monetary field, got %v", err)
@@ -124,7 +126,8 @@ CREATE TABLE "KRENALIS_EVENTS" ("KPID" VARCHAR(36),"MESSAGE_ID" VARCHAR,"TYPE" V
 	money := behavioral.Rule{Experience: &behavioral.Experience{Scope: scope, Currency: currency,
 		Verify: &behavioral.OccurrencePredicate{Money: &behavioral.Money{Field: field, NativeCurrency: "EUR",
 			Test: behavioral.SumTest{Operator: behavioral.GreaterOrEqual, Value: decimal.MustParse("50")}}}}}
-	pair := behavioral.Rule{LastVersusPrevious: &behavioral.LastVersusPrevious{Scope: scope, Field: field, Currency: currency,
+	pair := behavioral.Rule{LastVersusPrevious: &behavioral.LastVersusPrevious{Scope: scope, Field: field,
+		Currency: currency,
 		Check: behavioral.LastPreviousCheck{Kind: behavioral.LastPreviousDifference,
 			Test: behavioral.SumTest{Operator: behavioral.LessOrEqual, Value: decimal.MustParse("-30")}}}}
 	mixed := behavioral.Rule{Operator: state.OpAnd, Children: []behavioral.Rule{count, sum, average, money, pair}}
@@ -142,13 +145,15 @@ CREATE TABLE "KRENALIS_EVENTS" ("KPID" VARCHAR(36),"MESSAGE_ID" VARCHAR,"TYPE" V
 	} {
 		t.Run(test.name, func(t *testing.T) {
 
-			result, err := store.QueryProfiles(t.Context(), &test.rule, behavioral.Bindings{}, at, behavioral.Page{Limit: 10})
+			result, err := store.QueryProfiles(t.Context(), &test.rule, behavioral.Bindings{}, at, behavioral.Page{
+				Limit: 10})
 			if err != nil {
 				t.Fatalf("expected complete monetary evaluation, got %v", err)
 			}
 			assertBehavioralTruths(t, result, test.want)
 			for i, want := range test.want {
-				explained, err := store.ExplainProfileFilter(t.Context(), &test.rule, behavioral.Bindings{}, at, behavioralTestID(i+1))
+				explained, err := store.ExplainProfileFilter(t.Context(), &test.rule, behavioral.Bindings{}, at,
+					behavioralTestID(i+1))
 				if err != nil {
 					t.Fatalf("expected complete monetary explanation, got %v", err)
 				}

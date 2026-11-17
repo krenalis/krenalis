@@ -49,7 +49,8 @@ INSERT INTO krenalis_events (kpid,message_id,event,name,type,timestamp,propertie
 				root := &behavioral.Rule{Count: &behavioral.Count{Scope: behavioral.Scope{Type: typ, Event: test.selector,
 					Grain: "registered-message", Start: at.AddDate(0, -1, 0), End: at},
 					Test: behavioral.CountTest{Operator: behavioral.Equal, Value: 1}}}
-				result, err := store.QueryProfiles(t.Context(), root, behavioral.Bindings{}, at, behavioral.Page{Limit: 10})
+				result, err := store.QueryProfiles(t.Context(), root, behavioral.Bindings{}, at, behavioral.Page{
+					Limit: 10})
 				if err != nil {
 					if !test.conflict || result != nil || !strings.Contains(err.Error(), "occurrence source violates") {
 						t.Fatalf("expected source conflict=%v without partial results, got %+v, %v",

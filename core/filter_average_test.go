@@ -34,7 +34,7 @@ func TestFilterAverageBudget(t *testing.T) {
 			root.Rules[i] = &condition
 		}
 		if !root.HasBehavioralConditions() {
-			t.Fatal("expected Unified requirement, got false")
+			t.Fatal("expected behavioral filter requirement, got false")
 		}
 		nodes := 0
 		_, err := prepareBehavioralRule(root, schema, 0, &nodes)
@@ -230,7 +230,8 @@ func TestFilterAverageThresholds(t *testing.T) {
 			}
 			_, err = prepareFilterAverage(&condition, nil)
 			if err != nil {
-				if _, unsupported := errors.AsType[*behavioral.UnsupportedError](err); !unsupported || !test.unsupported {
+				if _, unsupported := errors.AsType[*behavioral.UnsupportedError](err); !unsupported ||
+					!test.unsupported {
 					t.Fatalf("expected unsupported=%v, got %v", test.unsupported, err)
 				}
 				return

@@ -1,4 +1,11 @@
-# Internal Unified Record, Count, Sum, Average and Experience vertical
+# Internal behavioral filtering
+
+Behavioral filtering combines profile properties and recorded behavior in the
+same `core.Filter` language. A filter can contain only property conditions;
+`Filter.HasBehavioralConditions` detects actual behavioral conditions. Record
+filters in other pipeline contexts keep their existing capabilities. Profile
+export support remains deferred. Source and test names formerly using `unified`
+now use `behavioral`; historical evidence keeps its original names and commits.
 
 This package implements the first backend subset of the B architecture consolidated
 in `filtering/14-confronto-architetture-interrogazione-unified-fase-4b.md`. The
@@ -13,7 +20,7 @@ the repeatable chunk checks, enum regression, bounded conformance and public
 HTTP/MCP paths. Results, provenance and coverage limits are recorded in the
 [runbook](../../../test/snowflaketester/UNIFIED.md#post-integration-completion-on-2026-11-16).
 The branch review and final production-gate HTTP/MCP checks are complete.
-The supported Unified forms are enabled on Snowflake; activation results are in
+The supported behavioral filter forms are enabled on Snowflake; activation results are in
 [the activation record](../../../filtering/SNOWFLAKE_UNIFIED_ACTIVATION.md).
 Historical verification sections below retain the gate state of those campaigns.
 
@@ -89,7 +96,7 @@ writes, purges, identity resolution, event attribution and counts can still
 follow inherited non-binary column comparison rules. On 2026-11-15 the user
 excluded that defect from this branch and is handling it on main. It is not a
 pending decision or prerequisite for activating this branch.
-The Unified reader's literal source selectors and message-identity comparisons
+The behavioral filter reader's literal source selectors and message-identity comparisons
 remain in place; they do not recover rows previously replaced or misattributed
 by managed operations. No code or further study of that defect is planned here.
 
@@ -553,7 +560,7 @@ are not implemented. Profiles queries accept and validate the reference even
 without Count, retaining the existing Record execution and response. Contexts
 restricted to Record filtering reject it rather than dropping it through
 `state.Where`. Relative periods and the explicit reference
-survive encode/decode and preparation unchanged. There is no Unified persistence
+survive encode/decode and preparation unchanged. There is no behavioral filter persistence
 format or materialized UTC period added by this increment.
 
 Nonexistent or ambiguous midnight boundaries require an unavailable capability,
@@ -655,7 +662,7 @@ These probes do not demonstrate Snowflake runtime behavior or production scale.
 `TestBehavioralWritersPostgreSQL` starts from schema-decoded inputs and uses the
 real batch/event identity writers and EventWriter, their flattening and
 asynchronous flushers, PostgreSQL COPY/merge, and a completed Identity Resolution
-publication/attribution before querying Unified. Eighteen profiles from two
+publication/attribution before querying with behavioral filters. Eighteen profiles from two
 connections cover no events, missing JSON, JSON null, empty objects, nested
 values, exact JSON integers above 2^53, ordinary String values, raw/governed
 currency and mixed Record/Count conditions. Missing and JSON null remain
@@ -698,7 +705,7 @@ coherence between those views remains an integration assumption to verify.
 
 PostgreSQL is enabled for this internal subset. Snowflake has the mirrored
 physical adapter and transport implementation, shared-compiler/local tests and
-an explicit **inactive Unified gate**. The bounded live campaign below now
+an explicit **inactive behavioral filter gate**. The bounded live campaign below now
 verifies numeric storage/readings, real writer round-trips and shared runtime
 fixtures. It does not establish conformance for the complete implemented
 subset; the remaining acceptance checks must pass before changing the gate.
@@ -727,7 +734,7 @@ introduced here.
 The runbook records per-query format evidence, source/session checks, independent
 schema inventories and coverage still required before activation.
 Per-query format evidence for those runs applies only to the six numeric-transport blocks.
-The Unified conformance blocks used the session default without requesting or
+The behavioral filter conformance blocks used the session default without requesting or
 recording the response format; these runs do not establish Arrow attribution.
 
 The bounded public-service group subsequently passed on 2026-11-12 in both UTC
@@ -780,8 +787,8 @@ this campaign.
 | Failures and resources | Cancellation, timeout, execution/scan/iteration/close failures, malformed or oversized results and controlled numeric conversions. Require complete exact results or technical errors, with no semantic UNKNOWN or partial-success fallback. Check cleanup and a small scale smoke test without claiming a production benchmark. |
 
 Each block must identify the command, fixture coverage and actual remote result.
-Source examples are TestUnifiedProfiles/Source/ProfileRecord/Pages, the monetary
-and experience test files, TestUnifiedWriters and TestProfilesMCP. Existing
+Source examples are TestBehavioralProfiles/Source/ProfileRecord/Pages, the monetary
+and experience test files, TestBehavioralWriters and TestProfilesMCP. Existing
 PostgreSQL-only setup and DML need adaptation; changing the backend name alone
 is not a conformance test. Keep shared inputs and expectations where possible,
 with backend-specific fixture encoding confined to test setup.
@@ -865,12 +872,12 @@ Local tests cover exact rational equivalence, precision/scale boundaries,
 large exponents, nested documents, byte preservation, idempotence and CSV
 serialization in both packages. The adjusted real-database tests retain
 historical DOUBLE fixtures separately. Both Merge/read paths and the numeric
-and bounded Unified fixtures passed remotely on 2026-11-11; the runbook records
+and bounded behavioral filter fixtures passed remotely on 2026-11-11; the runbook records
 the results and remaining coverage. The connector and warehouse use
 the same JSON output contract, without corrective queries or changes to the
 user's SQL. A profile can satisfy `value > 100` while the returned JSON shows
 100. See [Snowflake JSON numbers](../../../warehouses/snowflake/README.md).
-DECFLOAT and other native types remain outside this increment; the Unified
+DECFLOAT and other native types remain outside this increment; the behavioral filter
 gate stays closed.
 
 Membership cost remains a scale-check item. The 100-rule limit is not a bound
@@ -885,12 +892,12 @@ Example targeted commands, with Docker available and dependencies vendored:
 ```sh
 GOTOOLCHAIN=local GOPROXY=off GOSUMDB=off KRENALIS_SKIP_SNOWFLAKE_TESTS=true \
 go test -mod=vendor ./core ./core/internal/datastore \
-  -run '^(TestBehavioralWorkspacePostgreSQL|TestUnifiedProfiles.*|TestBehavioralSourcePostgreSQL|TestBehavioralProfileRecordPostgreSQL|TestBehavioralWritersPostgreSQL)$' -count=1
+  -run '^(TestBehavioralWorkspacePostgreSQL|TestBehavioralProfiles.*|TestBehavioralSourcePostgreSQL|TestBehavioralProfileRecordPostgreSQL|TestBehavioralWritersPostgreSQL)$' -count=1
 
 GOTOOLCHAIN=local GOPROXY=off GOSUMDB=off \
 go test -mod=vendor ./core ./core/internal/behavioral ./core/internal/datastore \
   ./warehouses ./warehouses/internal/profilefilter ./warehouses/postgresql ./warehouses/snowflake \
-  -run '^(TestPrepareUnified.*|TestRead|TestValidate.*|TestBehavioralPrepare.*|TestAcceptedCountRanges|TestValidateProfileFilter|TestProfileFilterDialect|TestProfileFilterSQL|TestProfileRecordSQL|TestStatementValues)$' -count=1
+  -run '^(TestPrepareBehavioral.*|TestRead|TestValidate.*|TestBehavioralPrepare.*|TestAcceptedCountRanges|TestValidateProfileFilter|TestProfileFilterDialect|TestProfileFilterSQL|TestProfileRecordSQL|TestStatementValues)$' -count=1
 ```
 
 ## Profiles HTTP entry
@@ -933,7 +940,7 @@ tie-break. Only the Count path gains this explicit tie-break.
 Invalid filters are HTTP 400. Missing properties and invalid sort properties
 retain their existing 422 codes. Valid-language capabilities not implemented
 return 422 `FilterCapabilityNotImplemented`; an unverified workspace backend
-returns 422 `UnifiedFilteringUnavailable`. Maintenance and execution failure use
+returns 422 `BehavioralFilteringUnavailable`. Maintenance and execution failure use
 the existing MaintenanceMode/Unavailable responses; warehouse-supplied failure
 text is not exposed by this new API path. Request-dependent page limits have
 their own 422 codes: `ProfileProjectionTooWide` for the physical column budget
@@ -964,7 +971,7 @@ Admin editing or destination execution. Aggregate ternary counts are not a
 replacement for the per-profile evidence/diagnostics required by the complete
 1.2 contract. Source-meaning registries and the deferred coherent-source release
 guarantees remain separate work. This is the admitted Record/Count subset, not
-all Unified capabilities.
+all behavioral filter capabilities.
 
 ## MCP entry
 
@@ -973,7 +980,7 @@ as the HTTP query parameter. A valid workspace-scoped MCP key grants access on
 the main datastore connection, without separate warehouse credentials or an
 additional workspace enablement switch. Former MCP database permissions do not
 limit the profile properties or supported event conditions read by this path.
-Snowflake uses the main virtual warehouse for the supported Unified forms.
+Snowflake uses the main virtual warehouse for the supported behavioral filter forms.
 The SQL tool is removed. The catalog supplies known definitions, while custom
 names and fields require user input until a dedicated discovery tool exists. See
 [`cmd/internal/mcp/README.md`](../../../cmd/internal/mcp/README.md) and the

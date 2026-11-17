@@ -1,7 +1,7 @@
 # Behavioral Filtering — Canonical Semantic AST & Type System
 ## Fase 4A · Canonical AST riconciliato — versione 1.2 — Approvata
 
-**Stato:** **versione tecnica 1.2 approvata esplicitamente, incluse le correzioni N1, N2 e N3**. La 1.2 è la nuova baseline tecnica dello Unified Profile Filtering. La versione 1.1 approvata nel commit `25f639d84eb35815af5d1062c86545b65b97d720` rimane riferimento storico. Il presente testo adatta il significato delle forme esistenti al mondo chiuso degli eventi; non implementa la Fase 4B e non approva il rapporto architetturale 12.
+**Stato:** **versione tecnica 1.2 approvata esplicitamente, incluse le correzioni N1, N2 e N3**. La 1.2 è la nuova baseline tecnica del Behavioral Profile Filtering. La versione 1.1 approvata nel commit `25f639d84eb35815af5d1062c86545b65b97d720` rimane riferimento storico. Il presente testo adatta il significato delle forme esistenti al mondo chiuso degli eventi; non implementa la Fase 4B e non approva il rapporto architetturale 12.
 
 **Base normativa:** [Specifica semantica riconciliata — versione 1.2, approvata](06-specifica-semantica-riconciliata-v1.2.md), derivata dalla 1.1 approvata il 27 ottobre 2026 e dalla successiva decisione di prodotto sul mondo chiuso. I documenti 1.0 e 1.1 restano conservati. **Tutti i rinvii normativi interni al documento 07 si riferiscono alla specifica 06 v1.2**, salvo richiamo espressamente storico. L’approvazione della 1.2 include espressamente la quantificazione composizionale N2, senza inferenza globale fra candidati K distinti e preservando le dipendenze interne obbligatorie.
 
@@ -9,7 +9,7 @@
 
 **Emendamento approvato dall’utente il 13 novembre 2026:** la deroga di §14.4.1 conserva le regole di confronto del warehouse per i predicati Record ordinari su testo nativo. È un’eccezione esplicita all’invarianza rispetto all’executor, non una nuova garanzia sulle collation né una modifica dei costruttori AST.
 
-**Decisione centrale:** il modello canonico per Unified è un’algebra di risultati di profilo con cinque sole primitive `V | E | K | P | T`. I predicati del record filtering sono **forme del confronto V o foglie autorizzate nei body**, non una sesta primitiva. L’input pubblico resta `core.Filter` condiviso con il filtraggio di singoli record. I valori atomici, gli scope, i quantificatori, i contratti, le guardie e i recognizer interni sono helper tecnici; nessuno restituisce una query, formula o testimone per una rule sorella.
+**Decisione centrale:** il modello canonico per Behavioral è un’algebra di risultati di profilo con cinque sole primitive `V | E | K | P | T`. I predicati del record filtering sono **forme del confronto V o foglie autorizzate nei body**, non una sesta primitiva. L’input pubblico resta `core.Filter` condiviso con il filtraggio di singoli record. I valori atomici, gli scope, i quantificatori, i contratti, le guardie e i recognizer interni sono helper tecnici; nessuno restituisce una query, formula o testimone per una rule sorella.
 
 ---
 
@@ -17,7 +17,7 @@
 
 | Invariante semantico | Conseguenza per la rappresentazione |
 |---|---|
-| Ogni rule **Unified** riguarda il profilo corrente allo stesso T | Il soggetto non è un parametro selezionabile degli scope; T è ambientale e unico |
+| Ogni rule **Behavioral** riguarda il profilo corrente allo stesso T | Il soggetto non è un parametro selezionabile degli scope; T è ambientale e unico |
 | Solo MATCH determina membership | Nessun campo `includeUnknown`, fallback al risultato precedente o strategia di null configurabile |
 | V ha operandi atomici e operazioni terminali | Due famiglie di tipi disgiunte; un terminale non implementa l'interfaccia di un operando |
 | I predicati di uno scope riguardano la stessa occurrence | I field reference sono tipizzati rispetto allo schema dell'occurrence di quello scope |
@@ -674,7 +674,7 @@ Regole di conteggio:
 - I predicati scalari e la verifica same-evidence su una riga non sono nuovi behavior scopes.
 - Il conteggio segue le **posizioni semantiche d'uso**, non il numero di oggetti in memoria, il numero di hash diversi o una condivisione del piano di esecuzione.
 
-La profondità booleana è calcolata nell’algebra pertinente. Per il filtro principale: massimo quattro livelli di gruppi AND/OR, radice inclusa, e 100 nodi discendenti, radice esclusa. Il body contestuale e il where same-occurrence mantengono il massimo di due livelli. Una `FilterRule` Unified conta come un nodo principale, indipendentemente dalla complessità del proprio body, che mantiene budget autonomi. La validazione della struttura pubblica precede la normalizzazione. Una formula sulle proprietà del medesimo Self viene inserita nel body, non nascosta in una foglia opaca per aggirarne il limite. Un where di uno scope di riduzione riguarda invece un'altra popolazione e ha la propria algebra same-occurrence limitata.
+La profondità booleana è calcolata nell’algebra pertinente. Per il filtro principale: massimo quattro livelli di gruppi AND/OR, radice inclusa, e 100 nodi discendenti, radice esclusa. Il body contestuale e il where same-occurrence mantengono il massimo di due livelli. Una `FilterRule` Behavioral conta come un nodo principale, indipendentemente dalla complessità del proprio body, che mantiene budget autonomi. La validazione della struttura pubblica precede la normalizzazione. Una formula sulle proprietà del medesimo Self viene inserita nel body, non nascosta in una foglia opaca per aggirarne il limite. Un where di uno scope di riduzione riguarda invece un'altra popolazione e ha la propria algebra same-occurrence limitata.
 
 **Riferimenti normativi (specifica 06 v1.2):** §§7, 9, 15.
 
@@ -1728,7 +1728,7 @@ type Filter = {
 }
 ```
 
-`RootTypedComparison` contiene le 26 condizioni record condivise (`RecordCondition` tramite `PropertyTest`), gli ulteriori property test governati, i cinque terminali di §7.1 e i test di distribuzione di §7.4, con `C=Root`. `LocalScalarAccess<Root,T>` è il tipo vuoto. Non ci sono local references nella top-level Rule union. Questo è il **modello canonico di Unified** su profilo corrente, non una sostituzione del normale `Applies` per eventi e utenti importati nei contesti Record.
+`RootTypedComparison` contiene le 26 condizioni record condivise (`RecordCondition` tramite `PropertyTest`), gli ulteriori property test governati, i cinque terminali di §7.1 e i test di distribuzione di §7.4, con `C=Root`. `LocalScalarAccess<Root,T>` è il tipo vuoto. Non ci sono local references nella top-level Rule union. Questo è il **modello canonico di Behavioral** su profilo corrente, non una sostituzione del normale `Applies` per eventi e utenti importati nei contesti Record.
 
 ### 14.2 Booleani canonici alternati
 
@@ -1771,7 +1771,7 @@ Questa firma stabilisce il dominio semantico, non il protocollo esecutivo. Un fa
 | NO_MATCH | UNKNOWN | NO_MATCH | UNKNOWN |
 | UNKNOWN | UNKNOWN | UNKNOWN | UNKNOWN |
 
-Le righe simmetriche sono equivalenti. Le guardie usano la medesima logica. Nel percorso ternario Unified **non** si converte UNKNOWN a falso prima della composizione delle condizioni e dei quantificatori; il cambio MATCH → UNKNOWN rimuove il profilo dalla membership corrente. L’interfaccia Record `Applies` conserva invece `bool`: per il solo AND/OR esterno di foglie **già valutate**, il `false` è applicabilità insufficiente, non diagnostica di NO_MATCH. I risultati SQL `TRUE/FALSE/NULL` sono interpretati dalla query chiamante, senza cambiare il significato del filtro.
+Le righe simmetriche sono equivalenti. Le guardie usano la medesima logica. Nel percorso ternario Behavioral **non** si converte UNKNOWN a falso prima della composizione delle condizioni e dei quantificatori; il cambio MATCH → UNKNOWN rimuove il profilo dalla membership corrente. L’interfaccia Record `Applies` conserva invece `bool`: per il solo AND/OR esterno di foglie **già valutate**, il `false` è applicabilità insufficiente, non diagnostica di NO_MATCH. I risultati SQL `TRUE/FALSE/NULL` sono interpretati dalla query chiamante, senza cambiare il significato del filtro.
 
 ### 14.4 Requisiti dichiarati dai contratti
 
@@ -1790,7 +1790,7 @@ Per consentire la valutazione devono essere referenziabili, quando pertinenti:
 
 Un contratto può dichiarare una capacità di certificazione senza garantirla per ogni profilo. Un campo malformato nei dati è evidenza invalida per il test pertinente; una definizione incompatibile è invece invalidità statica.
 
-Ogni combinazione fonte/schema/predicato ammessa nello **unified profile filtering** MUST avere significato osservabile e requisiti informativi definiti, invarianti rispetto all’executor. L’incertezza decisiva di dati esistenti o di garanzie contrattuali segue 06 §§19.3–19.7. La sola assenza di occurrence nel dominio registrato, anche dopo retention o senza utente corrispondente in una sorgente, non è UNKNOWN. Una capacità strutturale indispensabile assente rende la capability non disponibile, non un insieme vuoto né UNKNOWN per tutti. Non si aggiungono registry ai normali filtri Record o correzioni retroattive agli executor.
+Ogni combinazione fonte/schema/predicato ammessa nello **behavioral profile filtering** MUST avere significato osservabile e requisiti informativi definiti, invarianti rispetto all’executor. L’incertezza decisiva di dati esistenti o di garanzie contrattuali segue 06 §§19.3–19.7. La sola assenza di occurrence nel dominio registrato, anche dopo retention o senza utente corrispondente in una sorgente, non è UNKNOWN. Una capacità strutturale indispensabile assente rende la capability non disponibile, non un insieme vuoto né UNKNOWN per tutti. Non si aggiungono registry ai normali filtri Record o correzioni retroattive agli executor.
 
 #### 14.4.1 Deroga approvata per il testo nativo
 
@@ -1839,7 +1839,7 @@ Nella tabella: **S** = invalid shape/parametro della forma; **R** = incompatibil
 
 | Invariant | Enforced by type shape | Static registry validation | Runtime evidence | Outcome if violated |
 |---|---|---|---|---|
-| Esattamente V/E/K/P/T alla root Unified | Rule union chiusa; `RecordCondition` è foglia di V | No | No | S |
+| Esattamente V/E/K/P/T alla root Behavioral | Rule union chiusa; `RecordCondition` è foglia di V | No | No | S |
 | Nessun NOT generico | Nessun costruttore | No | No | S |
 | Soggetto sempre profilo corrente | Nessun subject selector locale | Contratti single-profile | Identità del profilo pertinente | S/R; dati incerti U |
 | Stesso T | T solo ambientale | Nessuna definizione può sostituirlo per l'uso corrente | Vista coerente | F se valutazione coerente non eseguibile; evidenza non valida può dare U |
@@ -1937,7 +1937,7 @@ La tabella non richiede un risolutore generale della soddisfacibilità dei filtr
 
 ### 15.1 Ammissione per contesto operativo
 
-Prima di risolvere e valutare una rule, il sistema determina se l’operazione appartiene al livello Record o Unified. Il validatore server deve autorizzare le nuove forme di `FilterRule` **solo** in Profiles API/Admin e nelle destination connections che esportano profili verso app, file e database. Altre pipeline mantengono soltanto le condizioni Record dove sono già ammesse; divieti come Source/Database/User restano invariati. Il rifiuto per contesto non è `NO_MATCH`, non è SQL `NULL` e non è `ValidButUnavailableInWorkspace`: è un errore di ammissibilità dell’input.
+Prima di risolvere e valutare una rule, il sistema determina se l’operazione appartiene al livello Record o Behavioral. Il validatore server deve autorizzare le nuove forme di `FilterRule` **solo** in Profiles API/Admin e nelle destination connections che esportano profili verso app, file e database. Altre pipeline mantengono soltanto le condizioni Record dove sono già ammesse; divieti come Source/Database/User restano invariati. Il rifiuto per contesto non è `NO_MATCH`, non è SQL `NULL` e non è `ValidButUnavailableInWorkspace`: è un errore di ammissibilità dell’input.
 
 La validazione della struttura pubblica è distinta dalla validazione del corpo di E/K/P/T, dal registry e dalla disponibilità delle evidenze. Massimo quattro livelli di gruppi AND/OR, radice inclusa, e 100 nodi discendenti, radice esclusa; i gruppi esplicitamente vuoti restano invalidi. I test su `RecordCondition` riusano la validazione esistente, senza introdurre requisiti retroattivi di significato revisionato per raw path salvati.
 
@@ -2030,7 +2030,7 @@ La recipe originaria può restare riconoscibile dopo una personalizzazione, ma n
 
 ---
 
-## 18. Raccordo progettato del record filtering con Unified
+## 18. Raccordo progettato del record filtering con Behavioral
 
 Il catalogo **non è più sconosciuto**. Il rapporto di riconciliazione relativo a `e66eea846` ha ricostruito il modello pubblico, i 26 operatori, i tipi, i limiti e le divergenze storiche; il commit `d69e6168` ha successivamente cambiato intenzionalmente la gestione degli assenti dei 20 operatori sui valori e corretto alcune incongruenze fra executor. Il presente raccordo usa **questa nuova baseline**. La verifica sui warehouse reali per Snowflake resta non attestata.
 
@@ -2047,13 +2047,13 @@ TranslateRecord(AbsentFilter) = AllProfiles
 
 Questa è una **relazione semantica concettuale**, non un formato pubblico o una proposta di modificare il persistito. Le 26 condizioni restano autonome anche per i negativi; non si devono espandere in un generico NOT o in alberi più profondi per forzarle nel catalogo vecchio. `FilterCondition.Values` contiene letterali, non riferimenti ad altre proprietà. Il confronto fra due proprietà del medesimo profilo o evento/profilo corrente è invece una capacità **nuova** con costruttore distinto.
 
-La mappatura del filtro pubblico conserva il gruppo AND/OR alla radice. Massimo quattro livelli di gruppi AND/OR, radice inclusa, e 100 nodi discendenti, radice esclusa. La forma canonica interna può eliminare singleton e appiattire gruppi omogenei **senza alterare** l'input pubblico, i limiti validati, il persistito o gli effetti di `Where.Equal`. Una nuova rule Unified occupa un nodo discendente dell'albero pubblico e mantiene il proprio budget interno.
+La mappatura del filtro pubblico conserva il gruppo AND/OR alla radice. Massimo quattro livelli di gruppi AND/OR, radice inclusa, e 100 nodi discendenti, radice esclusa. La forma canonica interna può eliminare singleton e appiattire gruppi omogenei **senza alterare** l'input pubblico, i limiti validati, il persistito o gli effetti di `Where.Equal`. Una nuova rule Behavioral occupa un nodo discendente dell'albero pubblico e mantiene il proprio budget interno.
 
 Il registro semantico con `meaningRevision` si applica ai nuovi riferimenti governati, ai contratti e alle definizioni di evidenza secondo §3. Non promuove automaticamente i path raw esistenti a identity versionate e non cambia i filtri già salvati se un ruolo del profilo viene riassegnato. Le nuove condizioni con property reference hanno una rappresentazione esplicita, non una String magica in `values`.
 
 **Limite dell'attestazione:** la rappresentabilità del catalogo è requisito del Canonical AST revisionato; la prova di una conversione **wire e persistita** lossless dei dati installati è distinta, ed è rimandata alla Fase 4B. La migrazione dei filtri antecedenti a `typed-filter-values` è un tema di rilascio separato, già indicato in `RELEASE-UPGRADE.md`. Non si dichiara eseguita una prova di compatibilità su filtri reali né si aggiunge una modalità `legacyMode` o `unknownPolicy`.
 
-**Divergenze tecniche rimaste fuori da questo raccordo:** presenza/null di proprietà ordinary nullable non-Profile e Object appiattiti, collazioni del testo ordinary, Float/NaN e precisione temporale residua; Snowflake remoto non verificato. Vanno documentate e affrontate indipendentemente; la presente revisione non approva automaticamente modifiche a questi comportamenti. Per le combinazioni ammesse in Unified resta vincolante §14.4: le questioni aperte non autorizzano significati diversi in funzione dell’executor.
+**Divergenze tecniche rimaste fuori da questo raccordo:** presenza/null di proprietà ordinary nullable non-Profile e Object appiattiti, collazioni del testo ordinary, Float/NaN e precisione temporale residua; Snowflake remoto non verificato. Vanno documentate e affrontate indipendentemente; la presente revisione non approva automaticamente modifiche a questi comportamenti. Per le combinazioni ammesse in Behavioral resta vincolante §14.4: le questioni aperte non autorizzano significati diversi in funzione dell’executor.
 
 **Emendamento successivo sul testo nativo:** per i confronti Record ordinari su colonne native String e per `contains` / `does not contain` su `Array(String)` si applica la deroga esplicita approvata in §14.4.1. Le altre questioni tecniche non acquistano per questo una deroga all’invarianza.
 
@@ -2623,7 +2623,7 @@ Per la Fase 4B restano da scegliere tag/payload wire, persistenza/versioning, co
 
 ### 23.4 Delta mirato della versione 1.2
 
-Le dichiarazioni ADT, i payload e i limiti strutturali della 1.1 restano invariati. Cambiano il dominio delle occurrence, la semantica dei descrittori storici e i requisiti di evidenza: vuoto registrato non richiede completezza esterna; dati esistenti, deadline e contratti restano rilevanti. Il binding H negli esempi usa il nuovo identificativo illustrativo RegisteredQueryableHistory@1, senza reinterpretare una definizione immutabile precedente. La semantica 1.2 è approvata; l’adozione di nuove definizioni governate e l’eventuale compatibilità di documenti Unified precedenti richiedono una scelta esplicita; non si alterano filtri Record o fingerprint esistenti. Le fixture CW01–CW21 e i confini del benchmark sono in 06 §§28.21–28.22. La revisione indipendente successiva introduce il vincolo dei due estremi finiti per MaximumGap, la scelta normativa della quantificazione K composizionale e la rilevanza degli ignoti sulla verità dei test di prevalenza, con fixture N1–N3 in 06 §§28.23–28.25. Non sono nuovi costruttori o capacità del linguaggio; queste correzioni N1/N2/N3 sono approvate nella versione 1.2. Nessun test di esecuzione viene attestato.
+Le dichiarazioni ADT, i payload e i limiti strutturali della 1.1 restano invariati. Cambiano il dominio delle occurrence, la semantica dei descrittori storici e i requisiti di evidenza: vuoto registrato non richiede completezza esterna; dati esistenti, deadline e contratti restano rilevanti. Il binding H negli esempi usa il nuovo identificativo illustrativo RegisteredQueryableHistory@1, senza reinterpretare una definizione immutabile precedente. La semantica 1.2 è approvata; l’adozione di nuove definizioni governate e l’eventuale compatibilità di documenti Behavioral precedenti richiedono una scelta esplicita; non si alterano filtri Record o fingerprint esistenti. Le fixture CW01–CW21 e i confini del benchmark sono in 06 §§28.21–28.22. La revisione indipendente successiva introduce il vincolo dei due estremi finiti per MaximumGap, la scelta normativa della quantificazione K composizionale e la rilevanza degli ignoti sulla verità dei test di prevalenza, con fixture N1–N3 in 06 §§28.23–28.25. Non sono nuovi costruttori o capacità del linguaggio; queste correzioni N1/N2/N3 sono approvate nella versione 1.2. Nessun test di esecuzione viene attestato.
 
 # Canonical AST — Phase 4A Final Model
 
@@ -2658,7 +2658,7 @@ Gli unici risultati semantici sono MATCH, NO_MATCH e UNKNOWN. Le rule leggono il
 
 AllProfiles rappresenta il **filtro pubblico assente**, non un gruppo vuoto. La radice pubblica, quando esiste, è AND/OR; empty group è invalido; singleton e gruppi omogenei consecutivi sono validi nel documento pubblico. Massimo quattro livelli di gruppi AND/OR, radice inclusa, e 100 nodi discendenti, radice esclusa. La grammatica **interna** può eliminare singleton e appiattire gli operatori uguali, ma non modifica il documento pubblico, la sua persistenza o l’uguaglianza esistente. Non esiste NOT generico.
 
-**Raccordo del riepilogo:** le cinque varianti top-level appartengono all’AST di Unified; il DTO pubblico rimane `core.Filter` e `FilterCondition` per le condizioni Record. Le 26 condizioni sono property test V e foglie ammesse nei body solo con le relative capability. La radice pubblica resta un gruppo AND/OR, anche se il canonical AST può usare una foglia dopo normalizzazione.
+**Raccordo del riepilogo:** le cinque varianti top-level appartengono all’AST di Behavioral; il DTO pubblico rimane `core.Filter` e `FilterCondition` per le condizioni Record. Le 26 condizioni sono property test V e foglie ammesse nei body solo con le relative capability. La radice pubblica resta un gruppo AND/OR, anche se il canonical AST può usare una foglia dopo normalizzazione.
 
 ## F2. Shared types, predicate, riferimenti e tempo
 
@@ -2943,7 +2943,7 @@ I reference di uso sono distinti per forma e consumer. Scalar non può essere Oc
 
 Per S012 devono essere certificati primo raggiungimento del 90% cumulato dall'inizio di W, content identity/version/durata pertinente, identità episodio/serie, tempo e disponibilità storica del successivo episodio alla seconda milestone. Non esistono slot video nell'AST e il producer non è obbligatorio nel core.
 
-**Validazione contestuale aggiuntiva:** ammissibilità Unified solo in Profiles API/Admin ed export dei profili verso app/file/database; nelle altre pipeline è disponibile soltanto Record, dove già consentito. Le forme nuove fuori contesto sono rifiutate dal server; non producono un risultato ternario.
+**Validazione contestuale aggiuntiva:** ammissibilità Behavioral solo in Profiles API/Admin ed export dei profili verso app/file/database; nelle altre pipeline è disponibile soltanto Record, dove già consentito. Le forme nuove fuori contesto sono rifiutate dal server; non producono un risultato ternario.
 
 ## F6. Validation layers e evidence requirements
 
@@ -2958,7 +2958,7 @@ type StaticAssessment =
 
 Shape/checked values impongono tag, profondità, arità, budget, posizioni, periodi, soglie, contiguità/blocchi e divieti. **RecordAdmissibility conserva schema/path, operatore, tipo e operandi esistenti, senza nuovi registry o meaningRevision.** Per i nuovi predicati governati il registry verifica domini/unità/grana, ruoli, owner/slot, operatori/riduzioni e consumer. I normali eventi non richiedono certificati di completezza esterna o inizio reale della relazione; inventari, lifecycle, named scopes e CDE conservano le proprie garanzie. Definizione governata irrisolta e adapter assente rimangono stati distinti.
 
-Ogni combinazione fonte/schema/predicato ammessa in Unified conserva significato e requisiti informativi indipendenti dall’executor. Dati esistenti decisivi ignoti o garanzie contrattuali insufficienti seguono le regole sull’evidenza. L’assenza di occurrence registrate, anche per retention o senza utente di sorgente, non è automaticamente UNKNOWN. Repertorio configurato vuoto è valutabile; capability strutturale assente è non disponibile. Nessun registry retroattivo per Record né correzioni retroattive agli executor.
+Ogni combinazione fonte/schema/predicato ammessa in Behavioral conserva significato e requisiti informativi indipendenti dall’executor. Dati esistenti decisivi ignoti o garanzie contrattuali insufficienti seguono le regole sull’evidenza. L’assenza di occurrence registrate, anche per retention o senza utente di sorgente, non è automaticamente UNKNOWN. Repertorio configurato vuoto è valutabile; capability strutturale assente è non disponibile. Nessun registry retroattivo per Record né correzioni retroattive agli executor.
 
 La valutazione richiede dati esistenti adeguati su valori, key/dedup, timestamp, ordine e maturazione; inventory, lifecycle, validità, storia e limiti certificati sono richiesti dove il contratto li prevede. Non si aggiungono occurrence esterne ipotetiche. Count/assenza su base registrata vuota danno 0/MATCH; l’esistenza è NO_MATCH. Un Purchase con NativeCurrency ignota rimane possibile Purchase EUR. Minimum/positive denominator/unique winner/required N/non-empty restano guardie chiuse: falsa certa→NO_MATCH; incerta→UNKNOWN quando decisiva.
 

@@ -182,7 +182,8 @@ func TestFilterCountInstants(t *testing.T) {
 				}
 				err = behavioral.Validate(&rule, time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC), behavioral.Page{Limit: 1})
 				if err != nil {
-					if _, unsupported := errors.AsType[*behavioral.UnsupportedError](err); !unsupported || test.nanos%1000 == 0 {
+					if _, unsupported := errors.AsType[*behavioral.UnsupportedError](err); !unsupported ||
+						test.nanos%1000 == 0 {
 						t.Fatalf("expected only submicrosecond precision unsupported, got %v", err)
 					}
 					return
@@ -281,7 +282,8 @@ func TestFilterCountInvalidBeforeUnsupported(t *testing.T) {
 				nodes := 0
 				rule, err := prepareBehavioralRule(&Filter{Operator: OpAnd, Rules: rules}, schema, 0, &nodes)
 				if err == nil {
-					err = behavioral.Validate(&rule, time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC), behavioral.Page{Limit: 1})
+					err = behavioral.Validate(&rule, time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC), behavioral.Page{
+						Limit: 1})
 				}
 				if err != nil {
 					if _, unsupported := errors.AsType[*behavioral.UnsupportedError](err); unsupported {
@@ -468,7 +470,8 @@ func TestFilterCountNulls(t *testing.T) {
 				prepared, err = prepareBehavioralRule(&filter, schema, 0, &nodes)
 			}
 			if err == nil {
-				err = behavioral.Validate(&prepared, time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC), behavioral.Page{Limit: 1})
+				err = behavioral.Validate(&prepared, time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC), behavioral.Page{
+					Limit: 1})
 			}
 			if err != nil {
 				if test.valid {

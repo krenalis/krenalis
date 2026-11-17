@@ -103,7 +103,7 @@ func (count *FilterCount) UnmarshalJSON(data []byte) error {
 }
 
 // FilterCountCondition compares a Count to one or two nonnegative JSON integer
-// literals using the seven Count comparisons. It requires Unified filtering.
+// literals using the seven Count comparisons. It requires behavioral filtering.
 // Literal values retain their exact JSON spelling through encode/decode.
 type FilterCountCondition struct {
 	Count    FilterCount    `json:"count"`
@@ -340,7 +340,8 @@ func (period FilterPeriod) scope(source FilterCountSource, calendar *behavioral.
 	case "lastCompleteCalendarPeriods":
 		if period.Start != nil || period.End != nil || period.Duration != nil ||
 			period.Older != nil || period.Newer != nil || calendar == nil {
-			return behavioral.Scope{}, errors.New("complete calendar periods require defaultCalendar, unit and count only")
+			return behavioral.Scope{},
+				errors.New("complete calendar periods require defaultCalendar, unit and count only")
 		}
 		switch period.Unit {
 		case "day", "week", "month":
@@ -356,7 +357,8 @@ func (period FilterPeriod) scope(source FilterCountSource, calendar *behavioral.
 		}
 		n, ok := count.uint64()
 		if !ok {
-			return behavioral.Scope{}, &behavioral.UnsupportedError{Capability: "calendar count beyond 64-bit representation"}
+			return behavioral.Scope{},
+				&behavioral.UnsupportedError{Capability: "calendar count beyond 64-bit representation"}
 		}
 		scope.Calendar = &behavioral.CalendarPeriod{Calendar: calendar, Unit: period.Unit, Count: n}
 	case "absoluteHalfOpen":
@@ -367,7 +369,7 @@ func (period FilterPeriod) scope(source FilterCountSource, calendar *behavioral.
 		scope.Start, scope.End = *period.Start, *period.End
 		for _, bound := range []time.Time{scope.Start, scope.End} {
 			if bound.IsZero() || bound.UTC().Year() < 1 || bound.UTC().Year() > 9999 {
-				return behavioral.Scope{}, errors.New("invalid Unified timestamp")
+				return behavioral.Scope{}, errors.New("invalid behavioral filter timestamp")
 			}
 		}
 		if !scope.Start.Before(scope.End) {
@@ -408,7 +410,8 @@ func (period FilterPeriod) scope(source FilterCountSource, calendar *behavioral.
 		old, ook := older.uint64()
 		recent, rok := newer.uint64()
 		if !ook || !rok || old > math.MaxInt64 || recent > math.MaxInt64 {
-			return behavioral.Scope{}, &behavioral.UnsupportedError{Capability: "elapsed duration beyond time.Duration range"}
+			return behavioral.Scope{},
+				&behavioral.UnsupportedError{Capability: "elapsed duration beyond time.Duration range"}
 		}
 		scope.Elapsed = &behavioral.ElapsedPeriod{Older: time.Duration(old), Newer: time.Duration(recent)}
 	}

@@ -171,14 +171,14 @@ exact.
 `at` is a nonfuture RFC3339 instant, exactly representable at microsecond
 precision. Omission fixes T once. Reuse the returned `evaluation.at` for subsequent
 pages to anchor relative periods. It does not freeze the data, identity mappings
-or profile values between requests. Unified sorting uses NULLS LAST and KPID as a
+or profile values between requests. Behavioral filtering sorts profiles with NULLS LAST and KPID as a
 deterministic tie-break; Record-only ordering retains the existing API behavior.
 
 Invalid filters and unavailable capabilities return tool errors with actionable
 messages/codes. Technical failures return an opaque operation error, never
 invented totals, partial success, NO_MATCH or UNKNOWN. `ProfileResultTooLarge`
 means reduce the page/projection; `ProfileProjectionTooWide` means request fewer
-properties. `FilterCapabilityNotImplemented` and `UnifiedFilteringUnavailable`
+properties. `FilterCapabilityNotImplemented` and `BehavioralFilteringUnavailable`
 must be reported to the user, not replaced with another query language.
 
 The MCP adapter uses `InvalidArguments` for invalid requests and filters.
@@ -558,7 +558,7 @@ provides known definitions and schemas, not an inventory of all received events
 or historical conformity. Use the recorded-event discovery tools for names and
 field types absent from the catalog; ask the user about unknown meanings or
 values. There is no SQL discovery or fallback tool. Report any
-Unified capability that cannot execute instead of approximating the request.
+behavioral filter capability that cannot execute instead of approximating the request.
 
 ## Monetary Average
 
@@ -1125,7 +1125,7 @@ segment listing.
 The tool uses the same MCP enablement and main connection as query-profiles.
 It returns `ProfileNotFound` for a missing KPID; technical errors return no
 partial explanation. Explanations, including Record-only ones, require the
-verified Unified backend, available on PostgreSQL and Snowflake.
+verified behavioral filter backend, available on PostgreSQL and Snowflake.
 
 The following are filter documents; pass each as the text of `filter`. Names and
 paths are examples: verify them against the actual workspace.

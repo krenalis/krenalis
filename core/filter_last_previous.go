@@ -214,11 +214,12 @@ func prepareFilterLastVersusPrevious(condition *FilterLastVersusPreviousConditio
 	// Resolve the pair as a whole before checking available capabilities.
 	var currency *behavioral.NativeCurrency
 	if (base.CurrencyField == nil) != (base.NativeCurrency == nil) {
-		return behavioral.Rule{}, errors.New("lastVersusPrevious base requires currencyField and nativeCurrency together")
+		return behavioral.Rule{},
+			errors.New("lastVersusPrevious base requires currencyField and nativeCurrency together")
 	}
 	if base.CurrencyField != nil {
-		currency, err = behavioral.ResolveNativeCurrency(base.CurrencyField.Definition, base.CurrencyField.MeaningRevision,
-			*base.NativeCurrency, base.Source.Name)
+		currency, err = behavioral.ResolveNativeCurrency(base.CurrencyField.Definition,
+			base.CurrencyField.MeaningRevision, *base.NativeCurrency, base.Source.Name)
 		if err != nil {
 			return behavioral.Rule{}, err
 		}

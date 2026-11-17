@@ -32,7 +32,7 @@ const (
 type Filter struct {
 	Operator FilterLogical `json:"operator"`
 	Rules    []FilterRule  `json:"rules"`
-	// DefaultCalendar is admitted only on the Unified root group.
+	// DefaultCalendar is admitted only on the behavioral filter root group.
 	DefaultCalendar *FilterCalendar `json:"defaultCalendar,omitzero"`
 }
 
@@ -47,8 +47,7 @@ type FilterRule interface {
 }
 
 // HasBehavioralConditions reports behavioral conditions in the main-tree
-// bounds.
-// It does not validate the filter.
+// bounds. It does not validate the filter.
 func (filter *Filter) HasBehavioralConditions() bool {
 	return filter.hasBehavior()
 }
@@ -1082,7 +1081,7 @@ func prepareFilterCondition(cond *FilterCondition, validation *filterValidation)
 func prepareFilterGroup(filter *Filter, validation *filterValidation, depth int) (*state.Where, error) {
 
 	if filter.DefaultCalendar != nil {
-		return nil, errors.New("defaultCalendar requires Unified profile filtering")
+		return nil, errors.New("defaultCalendar requires behavioral profile filtering")
 	}
 	if depth > validation.maxDepth {
 		return nil, fmt.Errorf("filter exceeds maximum depth of %d", validation.maxDepth)
@@ -1143,19 +1142,19 @@ func prepareFilterGroup(filter *Filter, validation *filterValidation, depth int)
 			}
 			unavailable = &behavioral.UnsupportedError{Capability: "money in occurrence qualification"}
 		case *FilterCountCondition:
-			return nil, errors.New("Count requires Unified profile filtering")
+			return nil, errors.New("Count requires behavioral profile filtering")
 		case *FilterSumCondition:
-			return nil, errors.New("Sum requires Unified profile filtering")
+			return nil, errors.New("Sum requires behavioral profile filtering")
 		case *FilterAverageCondition:
-			return nil, errors.New("Average requires Unified profile filtering")
+			return nil, errors.New("Average requires behavioral profile filtering")
 		case *FilterOccurredInCondition:
 			return nil, errors.New("occurredIn requires experience verify")
 		case *FilterExperienceCondition:
-			return nil, errors.New("experience requires Unified profile filtering")
+			return nil, errors.New("experience requires behavioral profile filtering")
 		case *FilterLastVersusPreviousCondition:
-			return nil, errors.New("lastVersusPrevious requires Unified profile filtering")
+			return nil, errors.New("lastVersusPrevious requires behavioral profile filtering")
 		case *FilterLatestNCondition:
-			return nil, errors.New("latestN requires Unified profile filtering")
+			return nil, errors.New("latestN requires behavioral profile filtering")
 		default:
 			return nil, errors.New("unsupported filter rule")
 		}

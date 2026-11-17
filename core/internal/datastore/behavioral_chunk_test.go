@@ -28,7 +28,8 @@ func assertBehavioralChunkProfiles(t *testing.T, result *behavioral.Result) {
 			fmt.Fprintf(&expected, "%x", sha256.Sum256([]byte(fmt.Sprintf("%d/%d", i+1, k))))
 		}
 		payload, ok := profile.Attributes["payload"].(string)
-		if !ok || profile.ID != behavioralTestID(i+1) || profile.Truth != behavioral.Match || payload != expected.String() {
+		if !ok || profile.ID != behavioralTestID(i+1) || profile.Truth != behavioral.Match ||
+			payload != expected.String() {
 			t.Fatalf("expected profile %d with exact digest payload, got invalid row", i+1)
 		}
 		bytesRead += len(payload)

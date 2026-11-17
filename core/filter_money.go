@@ -96,7 +96,8 @@ func prepareFilterMoney(condition *FilterMoneyCondition, source behavioral.Scope
 	if condition == nil {
 		return nil, errors.New("filter money condition cannot be nil")
 	}
-	field, err := behavioral.ResolveMonetaryField(condition.Money.Field.Definition, condition.Money.Field.MeaningRevision)
+	field, err := behavioral.ResolveMonetaryField(condition.Money.Field.Definition,
+		condition.Money.Field.MeaningRevision)
 	if err != nil {
 		return nil, err
 	}

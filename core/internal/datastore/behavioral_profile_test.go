@@ -151,8 +151,9 @@ INSERT INTO krenalis_events
 	t.Run("record binding reads profile not event", func(t *testing.T) {
 		root := behavioral.Rule{Operator: state.OpAnd, Children: []behavioral.Rule{count,
 			{Record: &state.WhereCondition{Property: []string{"event"}, Operator: state.OpIs, Values: []any{"Refund"}}}}}
-		assertBehavioralTruths(t, query(t, &root, page), []behavioral.Truth{behavioral.Match, behavioral.NoMatch, behavioral.Unknown,
-			behavioral.Match, behavioral.NoMatch, behavioral.Unknown, behavioral.Match, behavioral.NoMatch, behavioral.Unknown})
+		assertBehavioralTruths(t, query(t, &root, page),
+			[]behavioral.Truth{behavioral.Match, behavioral.NoMatch, behavioral.Unknown,
+				behavioral.Match, behavioral.NoMatch, behavioral.Unknown, behavioral.Match, behavioral.NoMatch, behavioral.Unknown})
 	})
 
 	for _, test := range []struct {

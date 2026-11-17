@@ -67,13 +67,14 @@ INSERT INTO event_fixture VALUES
 		t.Helper()
 		result, err := store.QueryProfiles(t.Context(), rule, bindings, at, p)
 		if err != nil {
-			t.Fatalf("expected complete Unified query, got %v", err)
+			t.Fatalf("expected complete behavioral filter query, got %v", err)
 		}
 		return result
 	}
 	t.Run("all profiles", func(t *testing.T) {
-		assertBehavioralTruths(t, query(t, nil, page), []behavioral.Truth{behavioral.Match, behavioral.Match, behavioral.Match,
-			behavioral.Match, behavioral.Match, behavioral.Match, behavioral.Match, behavioral.Match})
+		assertBehavioralTruths(t, query(t, nil, page),
+			[]behavioral.Truth{behavioral.Match, behavioral.Match, behavioral.Match,
+				behavioral.Match, behavioral.Match, behavioral.Match, behavioral.Match, behavioral.Match})
 	})
 
 	t.Run("governed absence", func(t *testing.T) {
@@ -251,7 +252,8 @@ SELECT e.* FROM event_fixture e CROSS JOIN (VALUES (1),(2),(3)) copies(n)`)
 				rule := behavioral.Rule{Count: &count}
 				assertBehavioralTruths(t, query(t, &rule, page), test.want)
 				for i, want := range test.want {
-					explained, err := store.ExplainProfileFilter(t.Context(), &rule, bindings, at, behavioralTestID(i+1))
+					explained, err := store.ExplainProfileFilter(t.Context(), &rule, bindings, at,
+						behavioralTestID(i+1))
 					if err != nil {
 						t.Fatalf("expected history explanation, got %v", err)
 					}
@@ -289,7 +291,8 @@ SELECT e.* FROM event_fixture e CROSS JOIN (VALUES (1),(2),(3)) copies(n)`)
 		for i := range 27 {
 			history := []int{i % 3, i / 3 % 3, i / 9 % 3}
 			histories = append(histories, history)
-			execBehavioralFixture(t, dw, fmt.Sprintf("INSERT INTO profile_fixture VALUES ('%s')", behavioralTestID(100+i)))
+			execBehavioralFixture(t, dw, fmt.Sprintf("INSERT INTO profile_fixture VALUES ('%s')",
+				behavioralTestID(100+i)))
 			for j, flag := range history {
 				data := []string{`{"flag":false}`, `{"flag":true}`, `{}`}[flag]
 				execBehavioralFixture(t, dw,
@@ -301,8 +304,10 @@ SELECT e.* FROM event_fixture e CROSS JOIN (VALUES (1),(2),(3)) copies(n)`)
 			behavioral.LessOrEqual, behavioral.Greater, behavioral.GreaterOrEqual, behavioral.Between} {
 			for threshold := uint64(0); threshold <= 4; threshold++ {
 				for _, minimum := range []uint64{0, 2, 3} {
-					if minimum > 0 && ((op == behavioral.Equal && threshold < minimum) || (op == behavioral.Less && threshold <= minimum) ||
-						(op == behavioral.LessOrEqual && threshold < minimum) || (op == behavioral.Between && threshold+1 < minimum)) {
+					if minimum > 0 && ((op == behavioral.Equal && threshold < minimum) || (op == behavioral.Less &&
+						threshold <= minimum) ||
+						(op == behavioral.LessOrEqual && threshold < minimum) || (op == behavioral.Between &&
+						threshold+1 < minimum)) {
 						continue // The same-condition parameters are statically incompatible.
 					}
 					count := behavioral.Count{Scope: scope, Minimum: minimum, Test: behavioral.CountTest{Operator: op,
@@ -338,11 +343,13 @@ SELECT e.* FROM event_fixture e CROSS JOIN (VALUES (1),(2),(3)) copies(n)`)
 			execBehavioralFixture(t, dw,
 				fmt.Sprintf("INSERT INTO profile_fixture VALUES ('%s'); "+
 					"INSERT INTO event_fixture VALUES ('%s','json%d','JSON','2026-01-15','%s')",
-					behavioralTestID(200+i), behavioralTestID(200+i), i, strings.ReplaceAll(string(properties), "'", "''")))
+					behavioralTestID(200+i), behavioralTestID(200+i), i, strings.ReplaceAll(string(properties),
+						"'", "''")))
 		}
 		for _, path := range [][]string{{"properties", "value"}, {"properties", "a.b"}} {
 			for _, test := range cases {
-				count := behavioral.Count{Scope: scope, Test: behavioral.CountTest{Operator: behavioral.Equal, Value: 1},
+				count := behavioral.Count{Scope: scope, Test: behavioral.CountTest{Operator: behavioral.Equal,
+					Value: 1},
 					Where: recordCountWhere(t, &state.Where{Operator: state.OpAnd, Rules: []state.WhereRule{
 						&state.WhereCondition{Property: path, Operator: state.WhereOperator(test.Operator), Values: test.Values},
 					}})}
@@ -394,7 +401,8 @@ SELECT e.* FROM event_fixture e CROSS JOIN (VALUES (1),(2),(3)) copies(n)`)
 				t.Fatalf("expected shared counts %v, got %v", want, counts)
 			}
 			count := behavioral.Count{Scope: scope, Test: behavioral.CountTest{Operator: behavioral.Equal, Value: 1},
-				Shared: &behavioral.SharedBoolean{Fact: "profile.g@1", Field: []string{"properties", "flag"}, EqualTo: true}}
+				Shared: &behavioral.SharedBoolean{Fact: "profile.g@1", Field: []string{"properties", "flag"},
+					EqualTo: true}}
 			count.Scope.Event = eventName
 			result, err := store.QueryProfiles(t.Context(), &behavioral.Rule{Count: &count}, bindings, at, page)
 			assertBehavioralUnsupported(t, err)

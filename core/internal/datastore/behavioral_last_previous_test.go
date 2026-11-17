@@ -39,7 +39,8 @@ INSERT INTO profiles VALUES ('00000000-0000-0000-0000-000000000001'),('00000000-
 	if err != nil {
 		t.Fatalf("expected field binding, got %v", err)
 	}
-	currency, err := behavioral.ResolveNativeCurrency("commerce.order_completed.currency", "1", "EUR", "Order Completed")
+	currency, err := behavioral.ResolveNativeCurrency("commerce.order_completed.currency", "1", "EUR",
+		"Order Completed")
 	if err != nil {
 		t.Fatalf("expected currency binding, got %v", err)
 	}
@@ -77,7 +78,8 @@ INSERT INTO profiles VALUES ('00000000-0000-0000-0000-000000000001'),('00000000-
 ('%s','old','track','Order Completed','2026-01-15','{"currency":"EUR","total":100}'),
 ('%s','copy','track','Order Completed','%s','%s'),
 (%s,'copy','track','Order Completed','%s','%s')`,
-				behavioralTestID(1), behavioralTestID(1), test.firstTime, test.first, profile, test.secondTime, test.second))
+				behavioralTestID(1), behavioralTestID(1), test.firstTime, test.first, profile, test.secondTime,
+				test.second))
 			result, err := store.QueryProfiles(t.Context(), root, behavioral.Bindings{}, at, behavioral.Page{Limit: 10})
 			if err != nil {
 				if !test.fault || result != nil || !strings.Contains(err.Error(), "occurrence contract") {
@@ -92,7 +94,8 @@ INSERT INTO profiles VALUES ('00000000-0000-0000-0000-000000000001'),('00000000-
 				t.Fatalf("expected target profile source fault=%v, got %v", test.fault, err)
 			}
 			if test.secondProfile != "2" {
-				explained, err := store.ExplainProfileFilter(t.Context(), root, behavioral.Bindings{}, at, behavioralTestID(2))
+				explained, err := store.ExplainProfileFilter(t.Context(), root, behavioral.Bindings{}, at,
+					behavioralTestID(2))
 				if err != nil {
 					t.Fatalf("expected unrelated profile isolation, got %v", err)
 				}
@@ -129,8 +132,7 @@ INSERT INTO krenalis_events VALUES
 }
 
 // TestBehavioralLastPreviousOraclePostgreSQL compares SQL with actual
-// compatible
-// pairs from subsets and tie orders, and exact rational comparisons.
+// compatible pairs from subsets and tie orders, and exact rational comparisons.
 func TestBehavioralLastPreviousOraclePostgreSQL(t *testing.T) {
 
 	dw := newJSONFilterTestWarehouse(t, "PostgreSQL")
@@ -143,7 +145,8 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,tim
 	if err != nil {
 		t.Fatalf("expected field binding, got %v", err)
 	}
-	currency, err := behavioral.ResolveNativeCurrency("commerce.order_completed.currency", "1", "EUR", "Order Completed")
+	currency, err := behavioral.ResolveNativeCurrency("commerce.order_completed.currency", "1", "EUR",
+		"Order Completed")
 	if err != nil {
 		t.Fatalf("expected currency binding, got %v", err)
 	}
@@ -220,7 +223,8 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,tim
 				for i, history := range histories {
 					want[i], _ = enumeratePairTest(history, operator, threshold)
 				}
-				result, err := store.QueryProfiles(t.Context(), root, behavioral.Bindings{}, at, behavioral.Page{Limit: 1000})
+				result, err := store.QueryProfiles(t.Context(), root, behavioral.Bindings{}, at, behavioral.Page{
+					Limit: 1000})
 				if err != nil {
 					t.Fatalf("expected exact pair comparison, got %v", err)
 				}
@@ -228,7 +232,8 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,tim
 				if operator == behavioral.LessOrEqual && threshold == "-30" {
 					for i, history := range histories {
 						_, selection := enumeratePairTest(history, operator, threshold)
-						explanation, err := store.ExplainProfileFilter(t.Context(), root, behavioral.Bindings{}, at, behavioralTestID(i+1))
+						explanation, err := store.ExplainProfileFilter(t.Context(), root, behavioral.Bindings{},
+							at, behavioralTestID(i+1))
 						if err != nil {
 							t.Fatalf("expected selection for every profile, got %v", err)
 						}
@@ -256,7 +261,8 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,tim
 	if err != nil {
 		t.Fatalf("expected field binding, got %v", err)
 	}
-	currency, err := behavioral.ResolveNativeCurrency("commerce.order_completed.currency", "1", "EUR", "Order Completed")
+	currency, err := behavioral.ResolveNativeCurrency("commerce.order_completed.currency", "1", "EUR",
+		"Order Completed")
 	if err != nil {
 		t.Fatalf("expected currency binding, got %v", err)
 	}
@@ -306,7 +312,8 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,tim
 			if truth != test.want {
 				t.Fatalf("expected independent oracle %v, got %v", test.want, truth)
 			}
-			explanation, err := store.ExplainProfileFilter(t.Context(), root, behavioral.Bindings{}, at, behavioralTestID(1))
+			explanation, err := store.ExplainProfileFilter(t.Context(), root, behavioral.Bindings{}, at,
+				behavioralTestID(1))
 			if err != nil {
 				t.Fatalf("expected exact pair explanation, got %v", err)
 			}

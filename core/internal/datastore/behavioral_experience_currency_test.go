@@ -25,7 +25,8 @@ func TestBehavioralExperienceCurrencyOraclePostgreSQL(t *testing.T) {
 	execBehavioralFixture(t, dw, `CREATE TABLE profiles (_kpid uuid PRIMARY KEY);
 CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,timestamp timestamp,properties jsonb)`)
 	at := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
-	currency, err := behavioral.ResolveNativeCurrency("commerce.order_completed.currency", "1", "EUR", "Order Completed")
+	currency, err := behavioral.ResolveNativeCurrency("commerce.order_completed.currency", "1", "EUR",
+		"Order Completed")
 	if err != nil {
 		t.Fatalf("expected resolved currency, got %v", err)
 	}
@@ -136,7 +137,8 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,tim
 					*verify, {OccurredIn: &period}}}
 			}
 			experience := &behavioral.Experience{First: test.first, Currency: currency,
-				Scope: behavioral.Scope{Event: "Order Completed", Grain: "registered-message", Start: at.AddDate(0, -1, 0), End: at},
+				Scope: behavioral.Scope{Event: "Order Completed", Grain: "registered-message", Start: at.AddDate(0,
+					-1, 0), End: at},
 				Where: &state.Where{Operator: state.OpAnd, Rules: []state.WhereRule{
 					&state.WhereCondition{Property: []string{"properties", "q"}, Operator: state.OpIs,
 						Values: []any{json.Value(`"yes"`)}}}},
@@ -161,7 +163,8 @@ func TestBehavioralExperienceCurrencyPostgreSQL(t *testing.T) {
 CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,timestamp timestamp,properties jsonb);
 INSERT INTO profiles VALUES ('`+behavioralTestID(1)+`'),('`+behavioralTestID(2)+`')`)
 	at := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
-	currency, err := behavioral.ResolveNativeCurrency("commerce.order_completed.currency", "1", "EUR", "Order Completed")
+	currency, err := behavioral.ResolveNativeCurrency("commerce.order_completed.currency", "1", "EUR",
+		"Order Completed")
 	if err != nil {
 		t.Fatalf("expected resolved currency, got %v", err)
 	}
@@ -172,7 +175,8 @@ INSERT INTO profiles VALUES ('`+behavioralTestID(1)+`'),('`+behavioralTestID(2)+
 	money := &behavioral.Money{Field: field, NativeCurrency: "EUR",
 		Test: behavioral.SumTest{Operator: behavioral.Greater, Value: decimal.MustParse("100")}}
 	experience := &behavioral.Experience{Currency: currency,
-		Scope:  behavioral.Scope{Event: "Order Completed", Grain: "registered-message", Start: at.AddDate(0, -1, 0), End: at},
+		Scope: behavioral.Scope{Event: "Order Completed", Grain: "registered-message", Start: at.AddDate(0, -1,
+			0), End: at},
 		Verify: &behavioral.OccurrencePredicate{Money: money}}
 	root := &behavioral.Rule{Experience: experience}
 	for _, first := range []bool{false, true} {
@@ -202,7 +206,8 @@ INSERT INTO profiles VALUES ('`+behavioralTestID(1)+`'),('`+behavioralTestID(2)+
 ('%s','event-%d','track','Order Completed','2026-01-%d','%s')`,
 						behavioralTestID(1), i, day, payload))
 				}
-				result, err := store.QueryProfiles(t.Context(), root, behavioral.Bindings{}, at, behavioral.Page{Limit: 10})
+				result, err := store.QueryProfiles(t.Context(), root, behavioral.Bindings{}, at, behavioral.Page{
+					Limit: 10})
 				if err != nil {
 					t.Fatalf("expected governed selection, got %v", err)
 				}
@@ -276,7 +281,8 @@ INSERT INTO profiles VALUES ('`+behavioralTestID(1)+`'),('`+behavioralTestID(2)+
 				}
 				assertBehavioralTruths(t, result, []behavioral.Truth{test.want, behavioral.NoMatch})
 			}
-			explanation, err := store.ExplainProfileFilter(t.Context(), root, behavioral.Bindings{}, at, behavioralTestID(2))
+			explanation, err := store.ExplainProfileFilter(t.Context(), root, behavioral.Bindings{}, at,
+				behavioralTestID(2))
 			if err != nil {
 				t.Fatalf("expected unrelated explanation, got %v", err)
 			}

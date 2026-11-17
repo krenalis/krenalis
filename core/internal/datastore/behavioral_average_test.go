@@ -32,7 +32,8 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,
 		t.Fatalf("expected monetary fixture, got %v", err)
 	}
 	average := behavioral.Average{Sum: behavioral.Sum{
-		Scope: behavioral.Scope{Event: "Order Completed", Grain: "registered-message", Start: at.AddDate(0, -1, 0), End: at},
+		Scope: behavioral.Scope{Event: "Order Completed", Grain: "registered-message", Start: at.AddDate(0, -1, 0),
+			End: at},
 		Field: field, NativeCurrency: "EUR", Minimum: 2,
 		Test: behavioral.SumTest{Operator: behavioral.GreaterOrEqual, Value: decimal.MustParse("100")}}}
 
@@ -80,8 +81,10 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,
 			if err != nil {
 				t.Fatalf("expected complete Average evaluation, got %v", err)
 			}
-			assertBehavioralTruths(t, result, []behavioral.Truth{test.truth, behavioral.Match, behavioral.NoMatch, behavioral.NoMatch})
-			explained, err := store.ExplainProfileFilter(t.Context(), root, behavioral.Bindings{}, at, behavioralTestID(1))
+			assertBehavioralTruths(t, result,
+				[]behavioral.Truth{test.truth, behavioral.Match, behavioral.NoMatch, behavioral.NoMatch})
+			explained, err := store.ExplainProfileFilter(t.Context(), root, behavioral.Bindings{}, at,
+				behavioralTestID(1))
 			if err != nil {
 				t.Fatalf("expected exact Average inputs, got %v", err)
 			}
@@ -133,7 +136,8 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,
 						Operator: state.OpIs, Values: []any{json.Value(`"PROMO"`)}},
 				}}
 				root := &behavioral.Rule{Average: &qualified}
-				result, err := store.QueryProfiles(t.Context(), root, behavioral.Bindings{}, at, behavioral.Page{Limit: 10})
+				result, err := store.QueryProfiles(t.Context(), root, behavioral.Bindings{}, at, behavioral.Page{
+					Limit: 10})
 				if err != nil {
 					if !test.conflict || result != nil {
 						t.Fatalf("expected conflict=%v without partial result, got %+v, %v", test.conflict, result, err)
@@ -143,9 +147,11 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,
 					if test.conflict {
 						t.Fatal("expected source conflict, got success")
 					}
-					assertBehavioralTruths(t, result, []behavioral.Truth{test.truth, behavioral.NoMatch, behavioral.NoMatch, behavioral.NoMatch})
+					assertBehavioralTruths(t, result,
+						[]behavioral.Truth{test.truth, behavioral.NoMatch, behavioral.NoMatch, behavioral.NoMatch})
 				}
-				explained, err := store.ExplainProfileFilter(t.Context(), root, behavioral.Bindings{}, at, behavioralTestID(1))
+				explained, err := store.ExplainProfileFilter(t.Context(), root, behavioral.Bindings{}, at,
+					behavioralTestID(1))
 				if err != nil {
 					if !test.conflict || explained != nil {
 						t.Fatalf("expected conflict=%v without partial explanation, got %+v, %v", test.conflict, explained, err)
@@ -190,7 +196,8 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,
 					if want {
 						truth = behavioral.Match
 					}
-					assertBehavioralTruths(t, result, []behavioral.Truth{truth, behavioral.NoMatch, behavioral.NoMatch, behavioral.NoMatch})
+					assertBehavioralTruths(t, result,
+						[]behavioral.Truth{truth, behavioral.NoMatch, behavioral.NoMatch, behavioral.NoMatch})
 				}
 			}
 		}

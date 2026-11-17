@@ -20,8 +20,7 @@ import (
 )
 
 // TestBehavioralLatestNOraclePostgreSQL enumerates subsets, tie permutations
-// and
-// local body completions, never the compiler's cumulative-count formula.
+// and local body completions, never the compiler's cumulative-count formula.
 func TestBehavioralLatestNOraclePostgreSQL(t *testing.T) {
 
 	dw := newJSONFilterTestWarehouse(t, "PostgreSQL")
@@ -79,7 +78,8 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,tim
 						counts[code], selections[code] = enumerateLatestCounts(history, size)
 						want[code] = latestCountTruth(counts[code], selections[code], size, size)
 					}
-					result, err := store.QueryProfiles(t.Context(), root, behavioral.Bindings{}, at, behavioral.Page{Limit: 1000})
+					result, err := store.QueryProfiles(t.Context(), root, behavioral.Bindings{}, at,
+						behavioral.Page{Limit: 1000})
 					if err != nil {
 						t.Fatalf("expected exact Latest(%d)/All enumeration, got %v", size, err)
 					}
@@ -118,7 +118,8 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,tim
 						for code := range histories {
 							expected[code] = latestCountTruth(counts[code], selections[code], quantifier.lower, quantifier.upper)
 						}
-						actual, err := store.QueryProfiles(t.Context(), root, behavioral.Bindings{}, at, behavioral.Page{Limit: 1000})
+						actual, err := store.QueryProfiles(t.Context(), root, behavioral.Bindings{}, at,
+							behavioral.Page{Limit: 1000})
 						if err != nil {
 							t.Fatalf("expected exact Latest(%d) quantifier %+v, got %v", size, quantifier, err)
 						}
@@ -133,7 +134,8 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,tim
 							}
 							count := &behavioral.Rule{Count: &behavioral.Count{Scope: latest.Scope, Where: where,
 								Test: behavioral.CountTest{Operator: behavioral.GreaterOrEqual, Value: uint64(size)}}}
-							complete, err := store.QueryProfiles(t.Context(), count, behavioral.Bindings{}, at, behavioral.Page{Limit: 1000})
+							complete, err := store.QueryProfiles(t.Context(), count, behavioral.Bindings{}, at,
+								behavioral.Page{Limit: 1000})
 							if err != nil {
 								t.Fatalf("expected complete-block Count differential, got %v", err)
 							}
@@ -146,7 +148,8 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,tim
 						// profiles of the mixed fixture, not just its aggregate totals.
 						if ti == 1 && bi == 2 && size == 2 && quantifier.requested.Kind == behavioral.LatestSome {
 							for code := range histories {
-								explained, err := store.ExplainProfileFilter(t.Context(), root, behavioral.Bindings{}, at, behavioralTestID(code+1))
+								explained, err := store.ExplainProfileFilter(t.Context(), root,
+									behavioral.Bindings{}, at, behavioralTestID(code+1))
 								if err != nil {
 									t.Fatalf("expected Some selection, got %v", err)
 								}
@@ -190,7 +193,8 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,tim
 						}
 					}
 					for _, code := range codes {
-						explained, err := store.ExplainProfileFilter(t.Context(), root, behavioral.Bindings{}, at, behavioralTestID(code+1))
+						explained, err := store.ExplainProfileFilter(t.Context(), root, behavioral.Bindings{}, at,
+							behavioralTestID(code+1))
 						if err != nil {
 							t.Fatalf("expected Latest(%d) explanation, got %v", size, err)
 						}
@@ -201,7 +205,8 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,tim
 						}
 						if size == 1 {
 							last, err := store.ExplainProfileFilter(t.Context(), &behavioral.Rule{
-								Experience: &behavioral.Experience{Scope: latest.Scope, Where: latest.Where, Verify: latest.Predicate}},
+								Experience: &behavioral.Experience{Scope: latest.Scope, Where: latest.Where,
+									Verify: latest.Predicate}},
 								behavioral.Bindings{}, at, behavioralTestID(code+1))
 							if err != nil {
 								t.Fatalf("expected differential Last explanation, got %v", err)
@@ -231,7 +236,8 @@ func TestBehavioralLatestNPostgreSQL(t *testing.T) {
 INSERT INTO profiles VALUES ('`+behavioralTestID(1)+`'),('`+behavioralTestID(2)+`');
 CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,timestamp timestamp,properties jsonb)`)
 	at := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
-	currency, err := behavioral.ResolveNativeCurrency("commerce.order_completed.currency", "1", "EUR", "Order Completed")
+	currency, err := behavioral.ResolveNativeCurrency("commerce.order_completed.currency", "1", "EUR",
+		"Order Completed")
 	if err != nil {
 		t.Fatalf("expected resolved currency, got %v", err)
 	}
@@ -300,7 +306,8 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,tim
 			execBehavioralFixture(t, dw, "INSERT INTO krenalis_events VALUES "+strings.Join(events, ","))
 
 			latest := &behavioral.LatestN{Size: test.size, Currency: currency,
-				Scope: behavioral.Scope{Event: "Order Completed", Grain: "registered-message", Start: at.AddDate(0, -1, 0), End: at},
+				Scope: behavioral.Scope{Event: "Order Completed", Grain: "registered-message", Start: at.AddDate(0,
+					-1, 0), End: at},
 				Predicate: &behavioral.OccurrencePredicate{Money: &behavioral.Money{Field: field, NativeCurrency: "EUR",
 					Test: behavioral.SumTest{Operator: behavioral.Greater, Value: decimal.MustParse("100")}}}}
 			root := &behavioral.Rule{LatestN: latest}
@@ -310,7 +317,8 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,tim
 				t.Fatalf("expected exact compatible blocks, got %v", err)
 			}
 			assertBehavioralTruths(t, result, []behavioral.Truth{want, behavioral.NoMatch})
-			explained, err := store.ExplainProfileFilter(t.Context(), root, behavioral.Bindings{}, at, behavioralTestID(1))
+			explained, err := store.ExplainProfileFilter(t.Context(), root, behavioral.Bindings{}, at,
+				behavioralTestID(1))
 			if err != nil {
 				t.Fatalf("expected selection explanation, got %v", err)
 			}
@@ -321,11 +329,13 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,tim
 			for value := 0; value <= test.size; value++ {
 				latest.Quantifier = behavioral.LatestNQuantifier{Kind: behavioral.LatestCardinality,
 					Operator: behavioral.Equal, Value: fmt.Sprint(value)}
-				actual, err := store.QueryProfiles(t.Context(), root, behavioral.Bindings{}, at, behavioral.Page{Limit: 10})
+				actual, err := store.QueryProfiles(t.Context(), root, behavioral.Bindings{}, at, behavioral.Page{
+					Limit: 10})
 				if err != nil {
 					t.Fatalf("expected money block cardinality %d, got %v", value, err)
 				}
-				assertBehavioralTruths(t, actual, []behavioral.Truth{latestCountTruth(counts, selection, value, value), behavioral.NoMatch})
+				assertBehavioralTruths(t, actual,
+					[]behavioral.Truth{latestCountTruth(counts, selection, value, value), behavioral.NoMatch})
 			}
 			latest.Quantifier = behavioral.LatestNQuantifier{}
 
@@ -392,12 +402,14 @@ SELECT '`+behavioralTestID(1)+`',id,'track','Order Completed',stamp::timestamp,p
 FROM (VALUES `+test.rows+`) v(id,stamp,payload)`)
 				root := &behavioral.Rule{LatestN: &behavioral.LatestN{Size: 10, Currency: currency,
 					Scope: behavioral.Scope{Event: "Order Completed", Grain: "registered-message", Start: at.AddDate(0, -1, 0), End: at},
-					Predicate: &behavioral.OccurrencePredicate{Money: &behavioral.Money{Field: field, NativeCurrency: "EUR",
-						Test: behavioral.SumTest{Operator: behavioral.Greater, Value: decimal.MustParse("100")}}}}}
+					Predicate: &behavioral.OccurrencePredicate{Money: &behavioral.Money{Field: field,
+						NativeCurrency: "EUR",
+						Test:           behavioral.SumTest{Operator: behavioral.Greater, Value: decimal.MustParse("100")}}}}}
 				for _, quantifier := range []behavioral.LatestNQuantifier{{}, {Kind: behavioral.LatestSome},
 					{Kind: behavioral.LatestCardinality, Operator: behavioral.GreaterOrEqual, Value: "0"}} {
 					root.LatestN.Quantifier = quantifier
-					result, err := store.QueryProfiles(t.Context(), root, behavioral.Bindings{}, at, behavioral.Page{Limit: 10})
+					result, err := store.QueryProfiles(t.Context(), root, behavioral.Bindings{}, at,
+						behavioral.Page{Limit: 10})
 					if err != nil {
 						if !test.fault || result != nil || !strings.Contains(err.Error(), "occurrence source violates") {
 							t.Fatalf("expected source fault=%v without partial result, got %+v, %v", test.fault, result, err)
@@ -409,7 +421,8 @@ FROM (VALUES `+test.rows+`) v(id,stamp,payload)`)
 						}
 						assertBehavioralTruths(t, result, []behavioral.Truth{behavioral.NoMatch, behavioral.NoMatch})
 					}
-					explained, err := store.ExplainProfileFilter(t.Context(), root, behavioral.Bindings{}, at, behavioralTestID(1))
+					explained, err := store.ExplainProfileFilter(t.Context(), root, behavioral.Bindings{}, at,
+						behavioralTestID(1))
 					if err != nil {
 						if !test.fault || explained != nil || !strings.Contains(err.Error(), "occurrence source violates") {
 							t.Fatalf("expected explanation fault=%v without partial result, got %+v, %v", test.fault, explained, err)
@@ -418,7 +431,8 @@ FROM (VALUES `+test.rows+`) v(id,stamp,payload)`)
 					if err == nil && test.fault {
 						t.Fatal("expected source fault before explanation, got success")
 					}
-					other, err := store.ExplainProfileFilter(t.Context(), root, behavioral.Bindings{}, at, behavioralTestID(2))
+					other, err := store.ExplainProfileFilter(t.Context(), root, behavioral.Bindings{}, at,
+						behavioralTestID(2))
 					if err != nil {
 						t.Fatalf("expected unrelated profile unaffected by faults, got %v", err)
 					}
@@ -448,7 +462,8 @@ FROM (VALUES
 					Scope: behavioral.Scope{Type: typ, Event: name, Grain: "registered-message", Start: at.AddDate(0, -1, 0), End: at},
 					Predicate: &behavioral.OccurrencePredicate{Record: &state.WhereCondition{Property: []string{"properties", "v"},
 						Operator: state.OpIs, Values: []any{json.Value(`"yes"`)}}}}}
-				result, err := store.QueryProfiles(t.Context(), root, behavioral.Bindings{}, at, behavioral.Page{Limit: 10})
+				result, err := store.QueryProfiles(t.Context(), root, behavioral.Bindings{}, at, behavioral.Page{
+					Limit: 10})
 				if err != nil {
 					t.Fatalf("expected %s source %q, got %v", typ, name, err)
 				}

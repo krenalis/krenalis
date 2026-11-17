@@ -17,8 +17,9 @@ import (
 	"github.com/krenalis/krenalis/warehouses"
 )
 
-// ProfileQuery selects a profile page. At optionally fixes the Unified
-// reference instant; it does not select a historical snapshot of profile data.
+// ProfileQuery selects a profile page. At optionally fixes the behavioral
+// filter reference instant; it does not select a historical snapshot of profile
+// data.
 type ProfileQuery struct {
 	Properties   []string
 	Filter       *Filter
@@ -46,15 +47,15 @@ type ProfileEvaluation struct {
 	Unknown int64     `json:"unknown"`
 }
 
-// QueryProfiles returns matching profiles and Unified evaluation metadata.
-// It returns errors.BadRequestError for invalid request values,
+// QueryProfiles returns matching profiles and behavioral filter evaluation
+// metadata. It returns errors.BadRequestError for invalid request values,
 // errors.NotFoundError if the workspace no longer exists,
-// errors.UnavailableError on warehouse failure, and
-// errors.UnprocessableError with the following codes:
+// errors.UnavailableError on warehouse failure, and errors.UnprocessableError
+// with the following codes:
 //   - PropertyNotExist, OrderNotExist or OrderTypeNotSortable
 //     for schema errors.
 //   - FilterCapabilityNotImplemented for an unavailable language capability.
-//   - UnifiedFilteringUnavailable for an unverified workspace backend.
+//   - BehavioralFilteringUnavailable for an unverified workspace backend.
 //   - ProfileProjectionTooWide or ProfileResultTooLarge for page limits.
 //   - MaintenanceMode when warehouse access is in maintenance.
 func (this *Workspace) QueryProfiles(ctx context.Context, query ProfileQuery) (*ProfileQueryResult, error) {
@@ -67,7 +68,8 @@ func (this *Workspace) QueryProfiles(ctx context.Context, query ProfileQuery) (*
 		}
 		filter := query.Filter
 		if filter != nil && filter.DefaultCalendar != nil {
-			_, err := behavioral.ResolveCalendar(filter.DefaultCalendar.Definition, filter.DefaultCalendar.MeaningRevision)
+			_, err := behavioral.ResolveCalendar(filter.DefaultCalendar.Definition,
+				filter.DefaultCalendar.MeaningRevision)
 			if err != nil {
 				return nil, errors.BadRequest("filter is not valid: %s", err)
 			}
@@ -172,7 +174,8 @@ func (this *Workspace) QueryProfiles(ctx context.Context, query ProfileQuery) (*
 				"profile page exceeds the supported size; reduce limit or request fewer properties")
 		}
 		if errors.Is(err, datastore.ErrBehavioralFilteringUnavailable) {
-			return nil, errors.Unprocessable(UnifiedFilteringUnavailable, "Unified filtering is unavailable on this warehouse")
+			return nil,
+				errors.Unprocessable(BehavioralFilteringUnavailable, "behavioral filtering is unavailable on this warehouse")
 		}
 		if unavailable, ok := errors.AsType[*behavioral.UnsupportedError](err); ok {
 			return nil, errors.Unprocessable(FilterCapabilityNotImplemented, "%s", unavailable)

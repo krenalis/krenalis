@@ -474,9 +474,11 @@ func TestJSONFloatFilters(t *testing.T) {
 				Columns: []warehouses.Column{idColumn, valueColumn, documentColumn}}
 			switch name {
 			case "PostgreSQL":
-				execBehavioralFixture(t, warehouse, `CREATE TABLE json_floats (id integer PRIMARY KEY,value jsonb,document jsonb)`)
+				execBehavioralFixture(t, warehouse,
+					`CREATE TABLE json_floats (id integer PRIMARY KEY,value jsonb,document jsonb)`)
 			case "Snowflake":
-				execBehavioralFixture(t, warehouse, `CREATE TABLE "JSON_FLOATS" ("ID" INTEGER,"VALUE" VARIANT,"DOCUMENT" VARIANT)`)
+				execBehavioralFixture(t, warehouse,
+					`CREATE TABLE "JSON_FLOATS" ("ID" INTEGER,"VALUE" VARIANT,"DOCUMENT" VARIANT)`)
 			default:
 				t.Fatalf("expected supported warehouse, got %s", name)
 			}

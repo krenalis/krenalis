@@ -19,8 +19,7 @@ import (
 )
 
 // testBehavioralConformanceProtocol checks projection, ties in page ordering
-// and
-// mixed explanation layouts, then proves pure Record needs no event table.
+// and mixed explanation layouts, then proves pure Record needs no event table.
 func testBehavioralConformanceProtocol(t *testing.T, store *Store, dw warehouses.Warehouse, table warehouses.Table, name string) {
 
 	t.Helper()
@@ -74,7 +73,8 @@ func testBehavioralConformanceProtocol(t *testing.T, store *Store, dw warehouses
 	if err != nil {
 		t.Fatalf("expected protocol amount field, got %v", err)
 	}
-	currency, err := behavioral.ResolveNativeCurrency("commerce.order_completed.currency", "1", "EUR", "Order Completed")
+	currency, err := behavioral.ResolveNativeCurrency("commerce.order_completed.currency", "1", "EUR",
+		"Order Completed")
 	if err != nil {
 		t.Fatalf("expected protocol currency field, got %v", err)
 	}
@@ -206,7 +206,8 @@ func testBehavioralConformanceProtocol(t *testing.T, store *Store, dw warehouses
 			t.Fatalf("expected pure Record evaluation without events, got %v", err)
 		}
 		assertBehavioralTruths(t, result, leaves[0])
-		explained, err := store.ExplainProfileFilter(t.Context(), &record, behavioral.Bindings{}, at, behavioralTestID(9))
+		explained, err := store.ExplainProfileFilter(t.Context(), &record, behavioral.Bindings{}, at,
+			behavioralTestID(9))
 		if err != nil {
 			t.Fatalf("expected pure Record explanation without events, got %v", err)
 		}
@@ -214,7 +215,8 @@ func testBehavioralConformanceProtocol(t *testing.T, store *Store, dw warehouses
 			explained.Nodes[0].Count != nil || explained.Nodes[0].Sum != nil {
 			t.Fatalf("expected pure Record UNKNOWN without occurrence metadata, got %+v", explained)
 		}
-		missing, err := store.ExplainProfileFilter(t.Context(), &record, behavioral.Bindings{}, at, behavioralTestID(99))
+		missing, err := store.ExplainProfileFilter(t.Context(), &record, behavioral.Bindings{}, at,
+			behavioralTestID(99))
 		if err != nil {
 			t.Fatalf("expected missing-profile lookup, got %v", err)
 		}

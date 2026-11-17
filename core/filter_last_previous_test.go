@@ -146,7 +146,7 @@ func TestFilterLastPreviousCodec(t *testing.T) {
 		t.Fatalf("expected public pair decoding, got %v", err)
 	}
 	if !filter.HasBehavioralConditions() {
-		t.Fatal("expected Unified requirement, got false")
+		t.Fatal("expected behavioral filter requirement, got false")
 	}
 	encoded, err := json.Marshal(&filter)
 	if err != nil {

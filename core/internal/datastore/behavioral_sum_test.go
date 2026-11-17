@@ -78,12 +78,15 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,
 			execBehavioralFixture(t, dw, fmt.Sprintf(`INSERT INTO krenalis_events VALUES
 ('%s','other','track','Order Completed','2026-01-15','{"total":40,"currency":"EUR"}')`, behavioralTestID(2)))
 			rule := behavioral.Rule{Count: nil, Sum: &sum}
-			result, err := store.QueryProfiles(t.Context(), &rule, behavioral.Bindings{}, at, behavioral.Page{Limit: 10})
+			result, err := store.QueryProfiles(t.Context(), &rule, behavioral.Bindings{}, at, behavioral.Page{
+				Limit: 10})
 			if err != nil {
 				t.Fatalf("expected complete Sum evaluation, got %v", err)
 			}
-			assertBehavioralTruths(t, result, []behavioral.Truth{test.want, behavioral.Match, behavioral.NoMatch, behavioral.NoMatch})
-			explained, err := store.ExplainProfileFilter(t.Context(), &rule, behavioral.Bindings{}, at, behavioralTestID(1))
+			assertBehavioralTruths(t, result,
+				[]behavioral.Truth{test.want, behavioral.Match, behavioral.NoMatch, behavioral.NoMatch})
+			explained, err := store.ExplainProfileFilter(t.Context(), &rule, behavioral.Bindings{}, at,
+				behavioralTestID(1))
 			if err != nil {
 				t.Fatalf("expected complete Sum explanation, got %v", err)
 			}
@@ -130,7 +133,8 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,
 ('%s','same','track','Order Completed','2026-01-15','%s')`, behavioralTestID(1), data))
 				}
 				rule := behavioral.Rule{Sum: &sum}
-				result, err := store.QueryProfiles(t.Context(), &rule, behavioral.Bindings{}, at, behavioral.Page{Limit: 10})
+				result, err := store.QueryProfiles(t.Context(), &rule, behavioral.Bindings{}, at, behavioral.Page{
+					Limit: 10})
 				if err != nil {
 					if !test.conflict || result != nil {
 						t.Fatalf("expected source conflict=%v without result, got %+v, %v", test.conflict, result, err)
@@ -139,7 +143,8 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,
 				if err == nil && test.conflict {
 					t.Fatal("expected source contract error, got success")
 				}
-				explained, err := store.ExplainProfileFilter(t.Context(), &rule, behavioral.Bindings{}, at, behavioralTestID(1))
+				explained, err := store.ExplainProfileFilter(t.Context(), &rule, behavioral.Bindings{}, at,
+					behavioralTestID(1))
 				if err != nil {
 					if !test.conflict || explained != nil {
 						t.Fatalf("expected source conflict=%v without explanation, got %+v, %v", test.conflict, explained, err)
@@ -172,7 +177,8 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,
 ('00000000-0000-0000-0000-000000000001','target','track','Order Completed','2026-01-15',
 '{"total":40,"currency":"EUR"}'),`+test.rows)
 			rule := behavioral.Rule{Sum: &sum}
-			explained, err := store.ExplainProfileFilter(t.Context(), &rule, behavioral.Bindings{}, at, behavioralTestID(1))
+			explained, err := store.ExplainProfileFilter(t.Context(), &rule, behavioral.Bindings{}, at,
+				behavioralTestID(1))
 			if err != nil {
 				t.Fatalf("expected unaffected Sum explanation, got %v", err)
 			}
@@ -182,7 +188,8 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,
 				!explained.Nodes[0].Sum.Upper.Equal(decimal.MustParse("40")) {
 				t.Fatalf("expected target MATCH with exact Sum [40,40], got %+v", explained)
 			}
-			explained, err = store.ExplainProfileFilter(t.Context(), &rule, behavioral.Bindings{}, at, behavioralTestID(2))
+			explained, err = store.ExplainProfileFilter(t.Context(), &rule, behavioral.Bindings{}, at,
+				behavioralTestID(2))
 			if err != nil {
 				if explained != nil || !strings.Contains(err.Error(), "occurrence source violates") {
 					t.Fatalf("expected source-contract failure without explanation, got %+v, %v", explained, err)
@@ -191,7 +198,8 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,
 			if err == nil {
 				t.Fatal("expected affected profile source-contract failure, got success")
 			}
-			result, err := store.QueryProfiles(t.Context(), &rule, behavioral.Bindings{}, at, behavioral.Page{Limit: 10})
+			result, err := store.QueryProfiles(t.Context(), &rule, behavioral.Bindings{}, at, behavioral.Page{
+				Limit: 10})
 			if err != nil {
 				if result != nil || !strings.Contains(err.Error(), "occurrence source violates") {
 					t.Fatalf("expected source-contract failure without partial result, got %+v, %v", result, err)
@@ -239,13 +247,15 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,
 			thresholdSum := sum
 			thresholdSum.Test = behavioral.SumTest{Operator: test.operator, Value: decimal.MustParse(test.literal)}
 			rule := behavioral.Rule{Sum: &thresholdSum}
-			result, err := store.QueryProfiles(t.Context(), &rule, behavioral.Bindings{}, at, behavioral.Page{Limit: 10})
+			result, err := store.QueryProfiles(t.Context(), &rule, behavioral.Bindings{}, at, behavioral.Page{
+				Limit: 10})
 			if err != nil {
 				t.Fatalf("expected exact Sum threshold evaluation, got %v", err)
 			}
 			assertBehavioralTruths(t, result, test.want)
 			for i, want := range test.want {
-				explained, err := store.ExplainProfileFilter(t.Context(), &rule, behavioral.Bindings{}, at, behavioralTestID(i+1))
+				explained, err := store.ExplainProfileFilter(t.Context(), &rule, behavioral.Bindings{}, at,
+					behavioralTestID(i+1))
 				if err != nil {
 					t.Fatalf("expected exact Sum threshold explanation, got %v", err)
 				}
@@ -276,14 +286,16 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,
 			}
 			currency := []string{`,"currency":"USD"`, `,"currency":"EUR"`, ``}[flag%3]
 			execBehavioralFixture(t, dw, fmt.Sprintf(`INSERT INTO krenalis_events VALUES
-('%s','o%d/%d','track','Order Completed','2026-01-15','{"total":%d%s}')`, behavioralTestID(i+1), i, j, amount, currency))
+('%s','o%d/%d','track','Order Completed','2026-01-15','{"total":%d%s}')`, behavioralTestID(i+1), i, j, amount,
+				currency))
 		}
 	}
 	for _, op := range []behavioral.Comparison{behavioral.Less, behavioral.LessOrEqual, behavioral.Greater, behavioral.GreaterOrEqual} {
 		for _, literal := range []string{"-3.00001", "-3", "0", "0.00001", "1.00001", "4", "1e-37", "1e75", "-1e75"} {
 			sum.Test = behavioral.SumTest{Operator: op, Value: decimal.MustParse(literal)}
 			rule := behavioral.Rule{Sum: &sum}
-			result, err := store.QueryProfiles(t.Context(), &rule, behavioral.Bindings{}, at, behavioral.Page{Limit: 100})
+			result, err := store.QueryProfiles(t.Context(), &rule, behavioral.Bindings{}, at, behavioral.Page{
+				Limit: 100})
 			if err != nil {
 				t.Fatalf("expected oracle query op%d %s, got %v", op, literal, err)
 			}
@@ -343,7 +355,8 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,
 					for _, total := range possible {
 						lo, hi = min(lo, total), max(hi, total)
 					}
-					explained, err := store.ExplainProfileFilter(t.Context(), &rule, behavioral.Bindings{}, at, behavioralTestID(i+1))
+					explained, err := store.ExplainProfileFilter(t.Context(), &rule, behavioral.Bindings{}, at,
+						behavioralTestID(i+1))
 					if err != nil {
 						t.Fatalf("expected oracle extrema explanation, got %v", err)
 					}
@@ -371,7 +384,8 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,
 						guarded[i] = behavioral.NoMatch
 					}
 				}
-				result, err := store.QueryProfiles(t.Context(), &rule, behavioral.Bindings{}, at, behavioral.Page{Limit: 100})
+				result, err := store.QueryProfiles(t.Context(), &rule, behavioral.Bindings{}, at, behavioral.Page{
+					Limit: 100})
 				if err != nil {
 					t.Fatalf("expected guarded oracle query minimum %d op%d %s, got %v", minimum, op, literal, err)
 				}
@@ -390,7 +404,8 @@ INSERT INTO krenalis_events VALUES
 ('%s','end-before','track','Order Completed','2026-01-31 23:59:59.999','{"total":10,"currency":"EUR"}'),
 ('%s','end','track','Order Completed','2026-02-01','{"total":1000,"currency":"EUR"}'),
 ('%s','future','track','Order Completed','2026-02-02','{"total":1000,"currency":"EUR"}')`,
-			behavioralTestID(1), behavioralTestID(1), behavioralTestID(1), behavioralTestID(1), behavioralTestID(1), behavioralTestID(1)))
+			behavioralTestID(1), behavioralTestID(1), behavioralTestID(1), behavioralTestID(1),
+			behavioralTestID(1), behavioralTestID(1)))
 		sum.Test = behavioral.SumTest{Operator: behavioral.GreaterOrEqual, Value: decimal.MustParse("30")}
 		rule := behavioral.Rule{Sum: &sum}
 		result, err := store.QueryProfiles(t.Context(), &rule, behavioral.Bindings{}, at, behavioral.Page{Limit: 10})
@@ -488,12 +503,15 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,
 ('%s','other','track','Order Completed','2026-01-15','{"total":40,"currency":"EUR","coupon":"PROMO"}')`,
 				behavioralTestID(2)))
 			rule := behavioral.Rule{Sum: &sum}
-			result, err := store.QueryProfiles(t.Context(), &rule, behavioral.Bindings{}, at, behavioral.Page{Limit: 10})
+			result, err := store.QueryProfiles(t.Context(), &rule, behavioral.Bindings{}, at, behavioral.Page{
+				Limit: 10})
 			if err != nil {
 				t.Fatalf("expected qualified Sum evaluation, got %v", err)
 			}
-			assertBehavioralTruths(t, result, []behavioral.Truth{test.want, behavioral.Match, behavioral.NoMatch, behavioral.NoMatch})
-			explained, err := store.ExplainProfileFilter(t.Context(), &rule, behavioral.Bindings{}, at, behavioralTestID(1))
+			assertBehavioralTruths(t, result,
+				[]behavioral.Truth{test.want, behavioral.Match, behavioral.NoMatch, behavioral.NoMatch})
+			explained, err := store.ExplainProfileFilter(t.Context(), &rule, behavioral.Bindings{}, at,
+				behavioralTestID(1))
 			if err != nil {
 				t.Fatalf("expected qualified Sum explanation, got %v", err)
 			}
@@ -532,13 +550,15 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,
 					Values: []any{json.Value(`"PROMO"`)}},
 			}}
 			rule := behavioral.Rule{Sum: &qualified}
-			result, err := store.QueryProfiles(t.Context(), &rule, behavioral.Bindings{}, at, behavioral.Page{Limit: 10})
+			result, err := store.QueryProfiles(t.Context(), &rule, behavioral.Bindings{}, at, behavioral.Page{
+				Limit: 10})
 			if err != nil {
 				t.Fatalf("expected Record/Kleene Sum evaluation, got %v", err)
 			}
 			want := []behavioral.Truth{behavioral.Unknown, behavioral.NoMatch, behavioral.NoMatch, behavioral.NoMatch}
 			assertBehavioralTruths(t, result, want)
-			explained, err := store.ExplainProfileFilter(t.Context(), &rule, behavioral.Bindings{}, at, behavioralTestID(1))
+			explained, err := store.ExplainProfileFilter(t.Context(), &rule, behavioral.Bindings{}, at,
+				behavioralTestID(1))
 			if err != nil {
 				t.Fatalf("expected Record/Kleene Sum explanation, got %v", err)
 			}
@@ -576,7 +596,8 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,
 ('%s','%s','track','Order Completed','2026-01-15','%s')`, behavioralTestID(2), id, data))
 			}
 			rule := behavioral.Rule{Sum: &sum}
-			target, err := store.ExplainProfileFilter(t.Context(), &rule, behavioral.Bindings{}, at, behavioralTestID(1))
+			target, err := store.ExplainProfileFilter(t.Context(), &rule, behavioral.Bindings{}, at,
+				behavioralTestID(1))
 			if err != nil {
 				t.Fatalf("expected unaffected target explanation, got %v", err)
 			}
@@ -586,7 +607,8 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,
 				!target.Nodes[0].Sum.Upper.Equal(decimal.MustParse("40")) {
 				t.Fatalf("expected unaffected target bounds [40,40], got %+v", target)
 			}
-			result, err := store.QueryProfiles(t.Context(), &rule, behavioral.Bindings{}, at, behavioral.Page{Limit: 10})
+			result, err := store.QueryProfiles(t.Context(), &rule, behavioral.Bindings{}, at, behavioral.Page{
+				Limit: 10})
 			if err != nil {
 				if !test.conflict || result != nil || !strings.Contains(err.Error(), "occurrence source violates") {
 					t.Fatalf("expected source conflict=%v without partial result, got %+v, %v", test.conflict, result, err)
@@ -595,7 +617,8 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,
 			if err == nil && test.conflict {
 				t.Fatal("expected qualification source-contract failure, got success")
 			}
-			explained, err := store.ExplainProfileFilter(t.Context(), &rule, behavioral.Bindings{}, at, behavioralTestID(2))
+			explained, err := store.ExplainProfileFilter(t.Context(), &rule, behavioral.Bindings{}, at,
+				behavioralTestID(2))
 			if err != nil {
 				if !test.conflict || explained != nil || !strings.Contains(err.Error(), "occurrence source violates") {
 					t.Fatalf("expected source conflict=%v without explanation, got %+v, %v", test.conflict, explained, err)

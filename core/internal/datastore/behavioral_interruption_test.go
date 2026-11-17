@@ -282,12 +282,14 @@ var until = Date.now() + SECONDS * 1000; while (Date.now() < until) {} return tr
 		{Name: "type", Type: types.String()}, {Name: "event", Type: types.String()},
 		{Name: "timestamp", Type: types.DateTime()},
 	}}
-	err = dw.Merge(t.Context(), table, [][]any{{behavioralTestID(1), "one", "track", "Delay Probe", at.Add(-time.Hour)}}, nil)
+	err = dw.Merge(t.Context(), table,
+		[][]any{{behavioralTestID(1), "one", "track", "Delay Probe", at.Add(-time.Hour)}}, nil)
 	if err != nil {
 		t.Fatalf("expected real event write, got %v", err)
 	}
 	root := &behavioral.Rule{Count: &behavioral.Count{Scope: behavioral.Scope{Event: "Delay Probe", Grain: "registered-message",
-		Start: at.Add(-24 * time.Hour), End: at}, Test: behavioral.CountTest{Operator: behavioral.GreaterOrEqual, Value: 1}}}
+		Start: at.Add(-24 * time.Hour), End: at}, Test: behavioral.CountTest{Operator: behavioral.GreaterOrEqual,
+		Value: 1}}}
 	for _, operation := range []struct {
 		name string
 		call func(context.Context) (bool, error)

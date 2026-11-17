@@ -80,14 +80,16 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,tim
 						Where:  &state.Where{Operator: state.OpAnd, Rules: []state.WhereRule{predicate("q")}},
 						Verify: &behavioral.OccurrencePredicate{Record: predicate("v")}}
 					root := &behavioral.Rule{Experience: experience}
-					result, err := store.QueryProfiles(t.Context(), root, behavioral.Bindings{}, at, behavioral.Page{Limit: 1000})
+					result, err := store.QueryProfiles(t.Context(), root, behavioral.Bindings{}, at,
+						behavioral.Page{Limit: 1000})
 					if err != nil {
 						t.Fatalf("expected exact Nth(%d) enumeration, got %v", position, err)
 					}
 					assertBehavioralTruths(t, result, want)
 					if position == 1 {
 						experience.Nth, experience.First = 0, true
-						first, err := store.QueryProfiles(t.Context(), root, behavioral.Bindings{}, at, behavioral.Page{Limit: 1000})
+						first, err := store.QueryProfiles(t.Context(), root, behavioral.Bindings{}, at,
+							behavioral.Page{Limit: 1000})
 						if err != nil {
 							t.Fatalf("expected differential First result, got %v", err)
 						}
@@ -97,7 +99,8 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,tim
 						experience.Nth, experience.First = 1, false
 					}
 					for _, code := range []int{0, 121, 364, 728, (position*223 + 17) % 729} {
-						explained, err := store.ExplainProfileFilter(t.Context(), root, behavioral.Bindings{}, at, behavioralTestID(code+1))
+						explained, err := store.ExplainProfileFilter(t.Context(), root, behavioral.Bindings{}, at,
+							behavioralTestID(code+1))
 						if err != nil {
 							t.Fatalf("expected Nth(%d) selection metadata, got %v", position, err)
 						}
@@ -108,7 +111,8 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,tim
 						}
 						if position == 1 {
 							experience.Nth, experience.First = 0, true
-							first, err := store.ExplainProfileFilter(t.Context(), root, behavioral.Bindings{}, at, behavioralTestID(code+1))
+							first, err := store.ExplainProfileFilter(t.Context(), root, behavioral.Bindings{}, at,
+								behavioralTestID(code+1))
 							if err != nil {
 								t.Fatalf("expected differential First explanation, got %v", err)
 							}
@@ -137,7 +141,8 @@ func TestBehavioralExperienceNthPostgreSQL(t *testing.T) {
 INSERT INTO profiles VALUES ('`+behavioralTestID(1)+`'),('`+behavioralTestID(2)+`');
 CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,timestamp timestamp,properties jsonb)`)
 	at := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
-	currency, err := behavioral.ResolveNativeCurrency("commerce.order_completed.currency", "1", "EUR", "Order Completed")
+	currency, err := behavioral.ResolveNativeCurrency("commerce.order_completed.currency", "1", "EUR",
+		"Order Completed")
 	if err != nil {
 		t.Fatalf("expected resolved currency, got %v", err)
 	}
@@ -190,7 +195,8 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,tim
 			execBehavioralFixture(t, dw, "INSERT INTO krenalis_events VALUES "+strings.Join(events, ","))
 
 			experience := &behavioral.Experience{Nth: test.position, Currency: currency,
-				Scope: behavioral.Scope{Event: "Order Completed", Grain: "registered-message", Start: at.AddDate(0, -1, 0), End: at},
+				Scope: behavioral.Scope{Event: "Order Completed", Grain: "registered-message", Start: at.AddDate(0,
+					-1, 0), End: at},
 				Verify: &behavioral.OccurrencePredicate{Money: &behavioral.Money{Field: field, NativeCurrency: "EUR",
 					Test: behavioral.SumTest{Operator: behavioral.Greater, Value: decimal.MustParse("100")}}}}
 			root := &behavioral.Rule{Experience: experience}
@@ -199,7 +205,8 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,tim
 				t.Fatalf("expected exact Nth(%d) occurrence, got %v", test.position, err)
 			}
 			assertBehavioralTruths(t, result, []behavioral.Truth{test.want, behavioral.NoMatch})
-			explained, err := store.ExplainProfileFilter(t.Context(), root, behavioral.Bindings{}, at, behavioralTestID(1))
+			explained, err := store.ExplainProfileFilter(t.Context(), root, behavioral.Bindings{}, at,
+				behavioralTestID(1))
 			if err != nil {
 				t.Fatalf("expected Nth(%d) selection explanation, got %v", test.position, err)
 			}
@@ -240,7 +247,8 @@ FROM (VALUES `+test.rows+`) v(id,stamp,payload)`)
 					Verify: &behavioral.OccurrencePredicate{Money: &behavioral.Money{Field: field, NativeCurrency: "EUR",
 						Test: behavioral.SumTest{Operator: behavioral.Greater, Value: decimal.MustParse("100")}}}}
 				root := &behavioral.Rule{Experience: experience}
-				result, err := store.QueryProfiles(t.Context(), root, behavioral.Bindings{}, at, behavioral.Page{Limit: 10})
+				result, err := store.QueryProfiles(t.Context(), root, behavioral.Bindings{}, at, behavioral.Page{
+					Limit: 10})
 				if err != nil {
 					if !test.fault || result != nil || !strings.Contains(err.Error(), "occurrence source violates") {
 						t.Fatalf("expected source fault=%v without partial result, got %+v, %v", test.fault, result, err)
@@ -252,7 +260,8 @@ FROM (VALUES `+test.rows+`) v(id,stamp,payload)`)
 					}
 					assertBehavioralTruths(t, result, []behavioral.Truth{behavioral.NoMatch, behavioral.NoMatch})
 				}
-				explained, err := store.ExplainProfileFilter(t.Context(), root, behavioral.Bindings{}, at, behavioralTestID(1))
+				explained, err := store.ExplainProfileFilter(t.Context(), root, behavioral.Bindings{}, at,
+					behavioralTestID(1))
 				if err != nil {
 					if !test.fault || explained != nil || !strings.Contains(err.Error(), "occurrence source violates") {
 						t.Fatalf("expected explanation fault=%v without partial result, got %+v, %v", test.fault, explained, err)
@@ -261,7 +270,8 @@ FROM (VALUES `+test.rows+`) v(id,stamp,payload)`)
 				if err == nil && test.fault {
 					t.Fatal("expected source fault before explanation, got success")
 				}
-				other, err := store.ExplainProfileFilter(t.Context(), root, behavioral.Bindings{}, at, behavioralTestID(2))
+				other, err := store.ExplainProfileFilter(t.Context(), root, behavioral.Bindings{}, at,
+					behavioralTestID(2))
 				if err != nil {
 					t.Fatalf("expected unrelated profile unaffected by faults, got %v", err)
 				}

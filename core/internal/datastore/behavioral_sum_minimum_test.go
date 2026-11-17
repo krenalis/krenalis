@@ -86,7 +86,8 @@ CREATE VIEW krenalis_events AS SELECT e.* FROM event_fixture e CROSS JOIN (VALUE
 			}
 			sum.Test = behavioral.SumTest{Operator: test.op, Value: decimal.MustParse(test.threshold)}
 			rule := behavioral.Rule{Sum: &sum}
-			result, err := store.QueryProfiles(t.Context(), &rule, behavioral.Bindings{}, at, behavioral.Page{Limit: 10})
+			result, err := store.QueryProfiles(t.Context(), &rule, behavioral.Bindings{}, at, behavioral.Page{
+				Limit: 10})
 			if err != nil {
 				t.Fatalf("expected complete guarded Sum, got %v", err)
 			}
@@ -96,7 +97,8 @@ CREATE VIEW krenalis_events AS SELECT e.* FROM event_fixture e CROSS JOIN (VALUE
 			}
 			assertBehavioralTruths(t, result, []behavioral.Truth{test.want, other, behavioral.NoMatch})
 
-			explained, err := store.ExplainProfileFilter(t.Context(), &rule, behavioral.Bindings{}, at, behavioralTestID(1))
+			explained, err := store.ExplainProfileFilter(t.Context(), &rule, behavioral.Bindings{}, at,
+				behavioralTestID(1))
 			if err != nil {
 				t.Fatalf("expected guarded Sum explanation, got %v", err)
 			}
@@ -149,7 +151,8 @@ CREATE VIEW krenalis_events AS SELECT e.* FROM event_fixture e CROSS JOIN (VALUE
 		if err != nil {
 			t.Fatalf("expected mixed guarded query, got %v", err)
 		}
-		assertBehavioralTruths(t, result, []behavioral.Truth{behavioral.Unknown, behavioral.NoMatch, behavioral.NoMatch})
+		assertBehavioralTruths(t, result,
+			[]behavioral.Truth{behavioral.Unknown, behavioral.NoMatch, behavioral.NoMatch})
 
 		explained, err := store.ExplainProfileFilter(t.Context(), &rule, behavioral.Bindings{}, at, behavioralTestID(1))
 		if err != nil {

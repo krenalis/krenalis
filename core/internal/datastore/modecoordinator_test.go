@@ -44,7 +44,8 @@ func TestCompatibleMode(t *testing.T) {
 	}
 }
 
-// TestModeTransitions checks Unified read operations during mode changes.
+// TestModeTransitions checks behavioral filter read operations during mode
+// changes.
 func TestModeTransitions(t *testing.T) {
 	for _, test := range []struct {
 		name   string

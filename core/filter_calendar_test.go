@@ -182,7 +182,8 @@ func TestFilterCalendarValidation(t *testing.T) {
 				root, err = prepareBehavioralRule(&filter,
 					types.Object([]types.Property{{Name: "country", Type: types.String()}}), 0, &nodes)
 				if err == nil {
-					err = behavioral.Validate(&root, time.Date(2026, 11, 6, 12, 0, 0, 0, time.UTC), behavioral.Page{Limit: 1})
+					err = behavioral.Validate(&root, time.Date(2026, 11, 6, 12, 0, 0, 0, time.UTC),
+						behavioral.Page{Limit: 1})
 				}
 			}
 			if err != nil {

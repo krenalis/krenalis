@@ -26,7 +26,7 @@ func TestProfileQueryErrorResult(t *testing.T) {
 	}{
 		{"invalid", errors.BadRequest("invalid Count"), "InvalidArguments: invalid Count"},
 		{"capability", errors.Unprocessable(core.FilterCapabilityNotImplemented, "not implemented"), "FilterCapabilityNotImplemented: not implemented"},
-		{"backend", errors.Unprocessable(core.UnifiedFilteringUnavailable, "unavailable"), "UnifiedFilteringUnavailable: unavailable"},
+		{"backend", errors.Unprocessable(core.BehavioralFilteringUnavailable, "unavailable"), "BehavioralFilteringUnavailable: unavailable"},
 		{"size", errors.Unprocessable(core.ProfileResultTooLarge, "reduce limit"), "ProfileResultTooLarge: reduce limit"},
 		{"unavailable", errors.Unavailable("private warehouse detail"), ""},
 		{"internal", errors.New("private warehouse detail"), ""},

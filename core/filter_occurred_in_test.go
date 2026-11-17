@@ -257,7 +257,8 @@ func TestFilterOccurredInOwner(t *testing.T) {
 		t.Fatal("expected temporal leaf rejected in Record pipeline, got success")
 	}
 	nodes := 0
-	_, err = prepareBehavioralRule(filter, types.Object([]types.Property{{Name: "country", Type: types.String()}}), 0, &nodes)
+	_, err = prepareBehavioralRule(filter, types.Object([]types.Property{{Name: "country", Type: types.String()}}),
+		0, &nodes)
 	if err == nil {
 		t.Fatal("expected temporal leaf rejected on Profiles root, got success")
 	}

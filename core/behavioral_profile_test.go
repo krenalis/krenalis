@@ -45,7 +45,7 @@ func TestPrepareBehavioralProfileRecord(t *testing.T) {
 	nodes := 0
 	rule, err := prepareBehavioralRule(&filter, schema, 0, &nodes)
 	if err != nil {
-		t.Fatalf("expected prepared Unified tree, got %v", err)
+		t.Fatalf("expected prepared behavioral filter tree, got %v", err)
 	}
 	if rule.Operator != expected.Operator || len(rule.Children) != 2 ||
 		!reflect.DeepEqual(rule.Children[0].Record, expected.Rules[0]) ||

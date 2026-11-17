@@ -113,12 +113,14 @@ func testBehavioralConformancePages(t *testing.T, store *Store, dw warehouses.Wa
 					want, certain = behavioral.NoMatch, 4
 				}
 				root := &behavioral.Rule{Count: count}
-				result, err := store.QueryProfiles(t.Context(), root, behavioral.Bindings{}, at, behavioral.Page{Limit: 10})
+				result, err := store.QueryProfiles(t.Context(), root, behavioral.Bindings{}, at, behavioral.Page{
+					Limit: 10})
 				if err != nil {
 					t.Fatalf("expected exact source selection, got %v", err)
 				}
 				assertBehavioralTruths(t, result, []behavioral.Truth{want, behavioral.NoMatch})
-				explained, err := store.ExplainProfileFilter(t.Context(), root, behavioral.Bindings{}, at, behavioralTestID(1))
+				explained, err := store.ExplainProfileFilter(t.Context(), root, behavioral.Bindings{}, at,
+					behavioralTestID(1))
 				if err != nil {
 					t.Fatalf("expected source explanation, got %v", err)
 				}
@@ -130,7 +132,8 @@ func testBehavioralConformancePages(t *testing.T, store *Store, dw warehouses.Wa
 				count.Where = &behavioral.OccurrencePredicate{Record: &state.WhereCondition{
 					Property: []string{"properties", "path.extra"}, Operator: state.OpIs,
 					Values: []any{json.Value(`"literal"`)}}}
-				qualified, err := store.QueryProfiles(t.Context(), root, behavioral.Bindings{}, at, behavioral.Page{Limit: 10})
+				qualified, err := store.QueryProfiles(t.Context(), root, behavioral.Bindings{}, at,
+					behavioral.Page{Limit: 10})
 				if err != nil {
 					t.Fatalf("expected literal JSON path, got %v", err)
 				}
@@ -206,17 +209,20 @@ func testBehavioralConformancePeriods(t *testing.T, store *Store, dw warehouses.
 			experience := &behavioral.Rule{Experience: &behavioral.Experience{First: true, Scope: base,
 				Verify: &behavioral.OccurrencePredicate{OccurredIn: &test.scope}}}
 			for _, rule := range []*behavioral.Rule{count, experience} {
-				result, err := store.QueryProfiles(t.Context(), rule, behavioral.Bindings{}, at, behavioral.Page{Limit: 10})
+				result, err := store.QueryProfiles(t.Context(), rule, behavioral.Bindings{}, at, behavioral.Page{
+					Limit: 10})
 				if err != nil {
 					t.Fatalf("expected microsecond half-open period, got %v", err)
 				}
-				assertBehavioralTruths(t, result, []behavioral.Truth{behavioral.NoMatch, behavioral.Match, behavioral.Match,
-					behavioral.Match, behavioral.NoMatch, behavioral.NoMatch, behavioral.NoMatch})
+				assertBehavioralTruths(t, result,
+					[]behavioral.Truth{behavioral.NoMatch, behavioral.Match, behavioral.Match,
+						behavioral.Match, behavioral.NoMatch, behavioral.NoMatch, behavioral.NoMatch})
 				if !result.At.Equal(at) || result.At.Location() != time.UTC {
 					t.Fatalf("expected single UTC evaluation time %s, got %s", at, result.At)
 				}
 			}
-			explained, err := store.ExplainProfileFilter(t.Context(), count, behavioral.Bindings{}, at, behavioralTestID(2))
+			explained, err := store.ExplainProfileFilter(t.Context(), count, behavioral.Bindings{}, at,
+				behavioralTestID(2))
 			if err != nil {
 				t.Fatalf("expected period explanation, got %v", err)
 			}
@@ -229,7 +235,8 @@ func testBehavioralConformancePeriods(t *testing.T, store *Store, dw warehouses.
 			}
 
 			count.Count.Scope = base
-			result, err := store.QueryProfiles(t.Context(), count, behavioral.Bindings{}, at, behavioral.Page{Limit: 10})
+			result, err := store.QueryProfiles(t.Context(), count, behavioral.Bindings{}, at, behavioral.Page{
+				Limit: 10})
 			if err != nil {
 				t.Fatalf("expected registered history before T, got %v", err)
 			}
@@ -316,11 +323,13 @@ func testBehavioralConformanceSelections(t *testing.T, store *Store, dw warehous
 	if err != nil {
 		t.Fatalf("expected amount binding, got %v", err)
 	}
-	currency, err := behavioral.ResolveNativeCurrency("commerce.order_completed.currency", "1", "EUR", "Order Completed")
+	currency, err := behavioral.ResolveNativeCurrency("commerce.order_completed.currency", "1", "EUR",
+		"Order Completed")
 	if err != nil {
 		t.Fatalf("expected currency binding, got %v", err)
 	}
-	scope := behavioral.Scope{Event: "Order Completed", Grain: "registered-message", Start: at.AddDate(0, -1, 0), End: at}
+	scope := behavioral.Scope{Event: "Order Completed", Grain: "registered-message", Start: at.AddDate(0, -1, 0),
+		End: at}
 	money := &behavioral.OccurrencePredicate{Money: &behavioral.Money{Field: field, NativeCurrency: "EUR",
 		Test: behavioral.SumTest{Operator: behavioral.GreaterOrEqual, Value: decimal.MustParse("100")}}}
 	type check struct {
@@ -413,7 +422,8 @@ func testBehavioralConformanceSelections(t *testing.T, store *Store, dw warehous
 				}
 			}
 
-			result, err := store.QueryProfiles(t.Context(), &check.rule, behavioral.Bindings{}, at, behavioral.Page{Limit: 100})
+			result, err := store.QueryProfiles(t.Context(), &check.rule, behavioral.Bindings{}, at,
+				behavioral.Page{Limit: 100})
 			if err != nil {
 				t.Fatalf("expected compatible selections, got %v", err)
 			}
@@ -438,7 +448,8 @@ func testBehavioralConformanceSelections(t *testing.T, store *Store, dw warehous
 				if p >= limit && (!checkBorders || p < len(histories)-4) {
 					continue
 				}
-				explained, err := store.ExplainProfileFilter(t.Context(), &check.rule, behavioral.Bindings{}, at, behavioralTestID(p+1))
+				explained, err := store.ExplainProfileFilter(t.Context(), &check.rule, behavioral.Bindings{}, at,
+					behavioralTestID(p+1))
 				if err != nil {
 					t.Fatalf("expected complete selection explanation, got %v", err)
 				}

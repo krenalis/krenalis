@@ -201,7 +201,7 @@ SELECT 'h'||i,repeat('<',1021)||lpad(i::text,3,'0'),'2026-01-15','2026-01-15','2
 }
 
 // TestEventDiscoveryMCPSnowflake checks the same two tools on a live test
-// warehouse, without opening the production Unified filter gate.
+// warehouse, without opening the production behavioral filter filter gate.
 func TestEventDiscoveryMCPSnowflake(t *testing.T) {
 
 	if testing.Short() || os.Getenv("KRENALIS_SKIP_SNOWFLAKE_TESTS") == "true" {

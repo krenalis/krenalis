@@ -78,7 +78,8 @@ func TestFilterMoneyAdmission(t *testing.T) {
 			}
 			err = behavioral.Validate(&rule, time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC), behavioral.Page{Limit: 1})
 			if err != nil {
-				if _, unsupported := errors.AsType[*behavioral.UnsupportedError](err); !test.unavailable || !unsupported {
+				if _, unsupported := errors.AsType[*behavioral.UnsupportedError](err); !test.unavailable ||
+					!unsupported {
 					t.Fatalf("expected unavailable=%v, got %v", test.unavailable, err)
 				}
 				return
@@ -153,11 +154,13 @@ func TestFilterMoneyDependencies(t *testing.T) {
 					if err != nil {
 						t.Fatalf("expected valid dependency shape, got %v", err)
 					}
-					err = behavioral.Validate(&rule, time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC), behavioral.Page{Limit: 1})
+					err = behavioral.Validate(&rule, time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC), behavioral.Page{
+						Limit: 1})
 					blocked := path == "properties" || path == "properties.total" || path == "properties.total.x" ||
 						path == "properties.currency" || path == "properties.currency.x"
 					if err != nil {
-						if _, unsupported := errors.AsType[*behavioral.UnsupportedError](err); !blocked || !unsupported {
+						if _, unsupported := errors.AsType[*behavioral.UnsupportedError](err); !blocked ||
+							!unsupported {
 							t.Fatalf("expected blocked=%v, got %v", blocked, err)
 						}
 						return

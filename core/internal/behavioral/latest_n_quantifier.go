@@ -90,7 +90,8 @@ func (quantifier LatestNQuantifier) Accepted(size int) (*warehouses.CountRange, 
 	case Between:
 		lower, upper = bounded(quantifier.Value), bounded(quantifier.Upper)
 	default:
-		return nil, fmt.Errorf("core/internal/behavioral: unexpected latestN cardinality operator %d", quantifier.Operator)
+		return nil,
+			fmt.Errorf("core/internal/behavioral: unexpected latestN cardinality operator %d", quantifier.Operator)
 	}
 
 	return &warehouses.CountRange{Lower: lower, Upper: &upper}, nil

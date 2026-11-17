@@ -38,8 +38,8 @@ type behavioralWriterMetrics struct{}
 func (behavioralWriterMetrics) FinalizePassed(string, int) {}
 
 // TestBehavioralWritersPostgreSQL reads evidence written by the real writers
-// and
-// published by a completed Identity Resolution, without concurrent mutations.
+// and published by a completed Identity Resolution, without concurrent
+// mutations.
 func TestBehavioralWritersPostgreSQL(t *testing.T) {
 
 	if testing.Short() {
@@ -364,7 +364,7 @@ func TestBehavioralWritersPostgreSQL(t *testing.T) {
 
 			result, err := store.QueryProfiles(ctx, &rule, bindings, at, behavioral.Page{Limit: 100})
 			if err != nil {
-				t.Fatalf("expected complete writer-backed Unified query, got %v", err)
+				t.Fatalf("expected complete writer-backed behavioral filter query, got %v", err)
 			}
 			if len(result.Profiles) != len(names) {
 				t.Fatalf("expected %d profile outcomes, got %+v", len(names), result)

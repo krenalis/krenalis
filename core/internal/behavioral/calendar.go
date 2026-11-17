@@ -129,7 +129,8 @@ func (period CalendarPeriod) bounds(at time.Time) (time.Time, time.Time, error) 
 		end = time.Date(year, month, 1, 0, 0, 0, 0, time.UTC)
 		start = end.AddDate(0, -int(period.Count), 0)
 	default:
-		return time.Time{}, time.Time{}, fmt.Errorf("core/internal/behavioral: unexpected calendar unit %q", period.Unit)
+		return time.Time{}, time.Time{},
+			fmt.Errorf("core/internal/behavioral: unexpected calendar unit %q", period.Unit)
 	}
 	start, err := period.Calendar.midnight(start)
 	if err != nil {

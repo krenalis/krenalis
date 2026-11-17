@@ -115,7 +115,7 @@ func TestFilterExperienceCodec(t *testing.T) {
 		t.Fatalf("expected experience decoded, got %v", err)
 	}
 	if !filter.HasBehavioralConditions() {
-		t.Fatal("expected Unified requirement, got false")
+		t.Fatal("expected behavioral filter requirement, got false")
 	}
 	before, err := json.Marshal(&filter)
 	if err != nil {

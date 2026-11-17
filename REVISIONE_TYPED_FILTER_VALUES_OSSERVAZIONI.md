@@ -348,3 +348,45 @@ rivalidazione degli eventi storici; non serve una migrazione del database.
 Il gate Snowflake era chiuso alla conclusione di questa revisione; la successiva
 attivazione verificata è registrata nell'esito finale sopra. Il merge su main
 resta separato.
+
+## Rinomina in behavioral filtering
+
+Il lavoro prosegue sul branch `behavioral-filters`. Il package interno è
+`core/internal/behavioral`; `Filter.HasBehavioralConditions` distingue la presenza
+effettiva di condizioni comportamentali. Il primo intervento è nel commit
+`acc5fba92`: rinomina codice, test, ancoraggi degli overlay e comandi correnti.
+Un confronto strutturale conferma dichiarazioni e corpi equivalenti nei 102
+file Go modificati, applicando le sole rinomine dichiarate.
+
+Il codice pubblico `UnifiedFilteringUnavailable` diventa
+`BehavioralFilteringUnavailable`, anche nel valore restituito tramite HTTP e
+MCP. Endpoint, formato JSON, filtri salvati, SQL e capacità restano invariati.
+Il supporto behavioral nelle pipeline di esportazione profili è rinviato.
+“Unified profiles” continua a indicare l'unificazione delle identità. Le
+evidenze storiche mantengono nomi, commit e hash originali.
+
+Verifiche della rinomina (2026-11-17):
+
+- Suite estesa `-short -race`: 10.058 eventi PASS, 55 SKIP, nessun FAIL.
+  Comprende datastore, core, cmd, MCP, il motore behavioral, i due warehouse,
+  il compositore SQL condiviso e snowflaketester.
+- Integrazioni PostgreSQL aggiuntive con `-race`: 125 PASS e uno SKIP Snowflake;
+  writer reali, risoluzione delle identità e servizio profili.
+- HTTP/MCP PostgreSQL con overlay rigenerati: rispettivamente 10 e 7 PASS,
+  senza FAIL o SKIP. I conteggi JSON includono sottotest e pacchetti.
+- Tutti i 45 test Python degli strumenti passano a sorgenti fermi. Un primo
+  run aveva rilevato una modifica concorrente dei commenti: il singolo caso
+  ripetuto e poi l'intera suite sono passati senza cambiare il test.
+- Cinque casi Cuba già noti esclusi dai comandi del package behavioral;
+  le loro aspettative restano invariate rispetto alla base.
+- Confronto AST finale su 112 file Go: dichiarazioni e corpi equivalenti dopo
+  le rinomine e i soli cambi di testo dichiarati. Compresi gli aggiustamenti
+  di impaginazione richiesti dai nomi più lunghi.
+- `go vet`, compilazione dei pacchetti e dell'eseguibile da `main.go`, gofmt
+  e controllo del diff puliti. Il collegamento locale estraneo `connectors.go`
+  resta invariato. Nessun nuovo test live Snowflake.
+- Sezioni storiche del runbook e del README del motore identiche alla base,
+  salvo collegamenti alla nuova posizione del README. Archivio di attivazione,
+  initdb, state, Admin e codice di validazione/esecuzione pipeline invariati.
+
+Log e strumenti temporanei: `/private/tmp/krenalis-behavioral-rename-n32x6vu4/`.

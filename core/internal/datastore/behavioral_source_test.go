@@ -16,8 +16,7 @@ import (
 )
 
 // TestBehavioralSourcePostgreSQL checks the determined-identity source contract
-// on
-// a fixture without a PK. This models conflicts that a physical PK can hide.
+// on a fixture without a PK. This models conflicts that a physical PK can hide.
 func TestBehavioralSourcePostgreSQL(t *testing.T) {
 
 	dw := newJSONFilterTestWarehouse(t, "PostgreSQL")
@@ -92,8 +91,9 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,event text,timestamp tim
 				if r.id != "" {
 					id = "'" + r.id + "'"
 				}
-				execBehavioralFixture(t, dw, fmt.Sprintf("INSERT INTO krenalis_events VALUES (%s,%s,'Purchase','%s','%s')",
-					profile, id, r.date, strings.ReplaceAll(r.properties, "'", "''")))
+				execBehavioralFixture(t, dw,
+					fmt.Sprintf("INSERT INTO krenalis_events VALUES (%s,%s,'Purchase','%s','%s')",
+						profile, id, r.date, strings.ReplaceAll(r.properties, "'", "''")))
 			}
 			explained, err := store.ExplainProfileFilter(t.Context(), &rule, bindings, at, behavioralTestID(1))
 			if err != nil {
@@ -124,7 +124,8 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,event text,timestamp tim
 	}
 
 	t.Run("resolved currency and independent where", func(t *testing.T) {
-		currency, err := behavioral.ResolveNativeCurrency("commerce.order_completed.currency", "1", "EUR", "Order Completed")
+		currency, err := behavioral.ResolveNativeCurrency("commerce.order_completed.currency", "1", "EUR",
+			"Order Completed")
 		if err != nil {
 			t.Fatalf("expected resolved currency, got %v", err)
 		}
@@ -156,7 +157,8 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,event text,timestamp tim
 				execBehavioralFixture(t, dw, `INSERT INTO krenalis_events (kpid,message_id,event,timestamp,properties)
 SELECT ('00000000-0000-0000-0000-'||lpad(profile,12,'0'))::uuid,id,'Order Completed','2026-01-15',properties::jsonb
 FROM (VALUES `+test.rows+`) input(profile,id,properties)`)
-				explained, err := store.ExplainProfileFilter(t.Context(), &bound, behavioral.Bindings{}, at, behavioralTestID(1))
+				explained, err := store.ExplainProfileFilter(t.Context(), &bound, behavioral.Bindings{}, at,
+					behavioralTestID(1))
 				if err != nil {
 					if !test.conflict || explained != nil || !strings.Contains(err.Error(), "occurrence source violates") {
 						t.Fatalf("expected target source fault=%v, got %+v, %v", test.conflict, explained, err)
@@ -166,7 +168,8 @@ FROM (VALUES `+test.rows+`) input(profile,id,properties)`)
 					explained.Nodes[0].Truth != test.truth) {
 					t.Fatalf("expected target fault=%v/truth=%v, got %+v", test.conflict, test.truth, explained)
 				}
-				result, err := store.QueryProfiles(t.Context(), &bound, behavioral.Bindings{}, at, behavioral.Page{Limit: 10})
+				result, err := store.QueryProfiles(t.Context(), &bound, behavioral.Bindings{}, at, behavioral.Page{
+					Limit: 10})
 				if err != nil {
 					if !(test.conflict || test.otherConflict) || result != nil ||
 						!strings.Contains(err.Error(), "occurrence source violates") {
@@ -213,8 +216,9 @@ FROM (VALUES `+test.rows+`) input(profile,id,properties)`)
 					if r.id != "" {
 						id = "'" + r.id + "'"
 					}
-					execBehavioralFixture(t, dw, fmt.Sprintf("INSERT INTO krenalis_events VALUES ('%s',%s,'Purchase','%s','%s')",
-						behavioralTestID(int(r.profile[0]-'0')), id, r.date, r.properties))
+					execBehavioralFixture(t, dw,
+						fmt.Sprintf("INSERT INTO krenalis_events VALUES ('%s',%s,'Purchase','%s','%s')",
+							behavioralTestID(int(r.profile[0]-'0')), id, r.date, r.properties))
 				}
 				result, err := store.QueryProfiles(t.Context(), &historyRule, bindings, at, behavioral.Page{Limit: 10})
 				if err != nil {

@@ -14,12 +14,11 @@ import (
 	"github.com/krenalis/krenalis/warehouses"
 )
 
-// ExplainProfileFilter evaluates every node for one determined profile.
-// It returns nil for a missing profile, ErrBehavioralFilteringUnavailable for
-// an unverified
-// backend, *behavioral.UnsupportedError for unavailable language capabilities,
-// mode errors when unavailable, and *WarehouseError on execution failure.
-// It assumes a coherent source view, as does QueryProfiles.
+// ExplainProfileFilter evaluates every node for one determined profile. It
+// returns nil for a missing profile, ErrBehavioralFilteringUnavailable for an
+// unverified backend, *behavioral.UnsupportedError for unavailable language
+// capabilities, mode errors when unavailable, and *WarehouseError on execution
+// failure. It assumes a coherent source view, as does QueryProfiles.
 func (store *Store) ExplainProfileFilter(ctx context.Context, root *behavioral.Rule, bindings behavioral.Bindings, at time.Time, profile string) (*behavioral.Explanation, error) {
 	store.mustBeOpen()
 	ctx, done, err := store.mc.StartOperation(ctx, normalMode|inspectionMode)

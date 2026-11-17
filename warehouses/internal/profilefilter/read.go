@@ -28,7 +28,7 @@ func Read(ctx context.Context, rows warehouses.Rows, request warehouses.ProfileO
 		}
 	}()
 	if request.Limit < 1 || request.Limit > 1000 {
-		return nil, fmt.Errorf("invalid internal Unified page")
+		return nil, fmt.Errorf("invalid internal behavioral filter result page")
 	}
 
 	result = &warehouses.ProfileOutcomes{Profiles: []warehouses.ProfileOutcome{}}

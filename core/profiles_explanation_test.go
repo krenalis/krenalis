@@ -27,7 +27,8 @@ func TestExplainCountMoney(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected resolved monetary field, got %v", err)
 	}
-	currency, err := behavioral.ResolveNativeCurrency("commerce.order_completed.currency", "1", "USD", "Order Completed")
+	currency, err := behavioral.ResolveNativeCurrency("commerce.order_completed.currency", "1", "USD",
+		"Order Completed")
 	if err != nil {
 		t.Fatalf("expected resolved Count currency, got %v", err)
 	}

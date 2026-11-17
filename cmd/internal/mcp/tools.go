@@ -18,7 +18,7 @@ import (
 )
 
 const warehouseInformationToolDescription = "Return high-level information about the workspace data warehouse as exposed through this Krenalis MCP server." +
-	" The warehouse is managed directly by Krenalis; profile data is queried through Unified filters." +
+	" The warehouse is managed directly by Krenalis; profile data is queried through behavioral filters." +
 	" This information is for understanding the workspace context only." +
 	" Do not use it to infer or attempt direct warehouse access."
 
@@ -28,7 +28,7 @@ const warehouseInformationToolDescription = "Return high-level information about
 const warehouseInformationResultFormat = "This workspace has a %s data warehouse managed directly by Krenalis." +
 	" Krenalis is responsible for writes and schema changes on Krenalis-managed tables and views." +
 	" If a user needs to change data, schema, or configuration, they must do so through the Krenalis Admin console or the Krenalis APIs." +
-	" This MCP server exposes profile queries and explanations through Unified filters, without SQL execution." +
+	" This MCP server exposes profile queries and explanations through behavioral filters, without SQL execution." +
 	" Direct access to the underlying warehouse is not allowed through this interface."
 
 var tools = []server.ServerTool{

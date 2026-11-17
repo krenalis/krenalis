@@ -96,7 +96,8 @@ func testBehavioralTimestampPrecision(t *testing.T, platform string) {
 					Verify: &behavioral.OccurrencePredicate{Record: &state.WhereCondition{Property: []string{"messageId"},
 						Operator: state.OpIs, Values: []any{"before-end"}}}}},
 			}}
-			assertBehavioralTruths(t, fixture.query(t, root, behavioral.Page{Limit: 10}), []behavioral.Truth{behavioral.Match})
+			assertBehavioralTruths(t, fixture.query(t, root, behavioral.Page{Limit: 10}),
+				[]behavioral.Truth{behavioral.Match})
 			explained := fixture.explain(t, root, 1)
 			if len(explained.Nodes) != 4 || explained.Nodes[1].Count == nil ||
 				*explained.Nodes[1].Count != (warehouses.OccurrenceCountBounds{Certain: 3, Possible: 3}) {

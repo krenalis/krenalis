@@ -3,8 +3,7 @@
 // that can be found in the LICENSE file.
 
 // Package behavioral implements Record/Count/Sum/Average and selected
-// experiences.
-// It has no public JSON or persistence representation.
+// experiences. It has no public JSON or persistence representation.
 package behavioral
 
 import (
@@ -325,14 +324,14 @@ type UnsupportedError struct {
 
 // Error describes the unavailable capability.
 func (e *UnsupportedError) Error() string {
-	return "unified capability not implemented: " + e.Capability
+	return "behavioral filter capability not implemented: " + e.Capability
 }
 
 // Validate checks the implemented canonical subset and its structural limits.
 // Record operands must also pass the existing schema-aware preparer and binder.
 func Validate(root *Rule, at time.Time, page Page) error {
 	if page.Limit < 1 || page.Limit > 1000 || page.First < 0 || int64(page.First) > math.MaxInt32 {
-		return fmt.Errorf("invalid internal Unified page")
+		return fmt.Errorf("invalid internal behavioral filter result page")
 	}
 	return validateFilter(root, at)
 }
@@ -364,7 +363,7 @@ func validateFilter(root *Rule, at time.Time) error {
 func validateRule(rule Rule, at time.Time, depth int, nodes *int) error {
 	*nodes++
 	if *nodes > 101 {
-		return fmt.Errorf("Unified root exceeds 100 descendant nodes")
+		return fmt.Errorf("behavioral filter root exceeds 100 descendant nodes")
 	}
 	if rule.Record != nil {
 		if rule.Count != nil || rule.Sum != nil || rule.Average != nil || rule.Experience != nil || rule.LatestN != nil ||
@@ -412,7 +411,7 @@ func validateRule(rule Rule, at time.Time, depth int, nodes *int) error {
 	}
 	if rule.Count == nil {
 		if depth >= 4 || (rule.Operator != state.OpAnd && rule.Operator != state.OpOr) || len(rule.Children) == 0 {
-			return fmt.Errorf("invalid Unified boolean group")
+			return fmt.Errorf("invalid behavioral filter boolean group")
 		}
 		var unavailable error
 		for _, child := range rule.Children {
@@ -468,7 +467,7 @@ func validateRule(rule Rule, at time.Time, depth int, nodes *int) error {
 func validateTime(t time.Time) error {
 	t = t.UTC()
 	if t.IsZero() || t.Year() < 1 || t.Year() > 9999 {
-		return fmt.Errorf("invalid Unified timestamp")
+		return fmt.Errorf("invalid behavioral filter timestamp")
 	}
 	if t.Nanosecond()%1000 != 0 {
 		return &UnsupportedError{Capability: "timestamp precision greater than one microsecond"}

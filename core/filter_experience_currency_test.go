@@ -65,7 +65,8 @@ func TestFilterExperienceCurrencyAdmission(t *testing.T) {
 			}
 			err = behavioral.Validate(&rule, time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC), behavioral.Page{Limit: 1})
 			if err != nil {
-				if _, unsupported := errors.AsType[*behavioral.UnsupportedError](err); !test.unsupported || !unsupported {
+				if _, unsupported := errors.AsType[*behavioral.UnsupportedError](err); !test.unsupported ||
+					!unsupported {
 					t.Fatalf("expected unsupported=%v, got %v", test.unsupported, err)
 				}
 				return
@@ -146,7 +147,8 @@ func TestFilterExperienceCurrencyDependencies(t *testing.T) {
 				}
 				rule, err := prepareFilterExperience(&condition, nil)
 				if err == nil {
-					err = behavioral.Validate(&rule, time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC), behavioral.Page{Limit: 1})
+					err = behavioral.Validate(&rule, time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC), behavioral.Page{
+						Limit: 1})
 				}
 				blocked := path == "properties" || path == "properties.currency" || path == "properties.currency.x"
 				if err != nil {

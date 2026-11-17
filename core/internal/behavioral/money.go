@@ -140,7 +140,8 @@ func (money *Money) prepare(source SourceBinding) (warehouses.RowQualification, 
 		case Between:
 			qualification.Lower, qualification.Upper = &comparison.Value, &comparison.Upper
 		default:
-			return nil, fmt.Errorf("core/internal/behavioral: unexpected normalized monetary operator %d", comparison.Operator)
+			return nil,
+				fmt.Errorf("core/internal/behavioral: unexpected normalized monetary operator %d", comparison.Operator)
 		}
 	}
 	return qualification, nil

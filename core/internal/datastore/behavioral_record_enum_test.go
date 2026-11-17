@@ -67,9 +67,10 @@ func testBehavioralRecordEnum(t *testing.T, platform string) {
 	}
 	var rows [][]any
 	for i, values := range [][2]any{{"Chrome", "Linux"}, {"Safari", "Windows"}, {nil, nil}} {
-		rows = append(rows, []any{behavioralTestID(i + 1), behavioralTestID(i + 1), "fixture", "fixture", "track", "Purchase",
-			fixture.at.Add(-time.Hour), fixture.at, fixture.at,
-			json.Value(`{}`), json.Value(`{}`), values[0], values[1]})
+		rows = append(rows,
+			[]any{behavioralTestID(i + 1), behavioralTestID(i + 1), "fixture", "fixture", "track", "Purchase",
+				fixture.at.Add(-time.Hour), fixture.at, fixture.at,
+				json.Value(`{}`), json.Value(`{}`), values[0], values[1]})
 	}
 	err = fixture.warehouse.Merge(t.Context(), events, rows, nil)
 	if err != nil {

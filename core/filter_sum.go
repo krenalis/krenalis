@@ -219,7 +219,8 @@ func prepareFilterSum(condition *FilterSumCondition, calendar *behavioral.Calend
 		return behavioral.Rule{}, &behavioral.UnsupportedError{
 			Capability: "monetary sample minimum exceeds the execution integer range"}
 	}
-	if test.Operator == behavioral.Equal || test.Operator == behavioral.Different || test.Operator == behavioral.Between {
+	if test.Operator == behavioral.Equal || test.Operator == behavioral.Different ||
+		test.Operator == behavioral.Between {
 		return behavioral.Rule{}, &behavioral.UnsupportedError{Capability: "monetary equality or interval comparisons"}
 	}
 

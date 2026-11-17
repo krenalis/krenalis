@@ -88,7 +88,8 @@ func TestExplainLatestNSelection(t *testing.T) {
 	} {
 		index := 0
 		result, err := explainProfileRule(&warehouses.LatestOccurrences{Size: 2, End: at},
-			behavioral.Rule{LatestN: &behavioral.LatestN{Size: 2}}, []warehouses.FilterNodeOutcome{{Truth: warehouses.FilterUnknown,
+			behavioral.Rule{LatestN: &behavioral.LatestN{Size: 2}},
+			[]warehouses.FilterNodeOutcome{{Truth: warehouses.FilterUnknown,
 				Experience: &warehouses.OccurrenceSelection{Candidates: test.candidates, AbsencePossible: test.absent}}},
 			&index, at)
 		if err != nil {
@@ -111,7 +112,7 @@ func TestFilterLatestNCodec(t *testing.T) {
 		t.Fatalf("expected latestN fixture, got %v", err)
 	}
 	if !filter.HasBehavioralConditions() {
-		t.Fatal("expected Unified requirement, got false")
+		t.Fatal("expected behavioral filter requirement, got false")
 	}
 	encoded, err := json.Marshal(&filter)
 	if err != nil {

@@ -3,7 +3,7 @@
 `query-profiles` calls `Workspace.QueryProfiles`, with the same Record/Count/Sum/Average
 document and execution path as `GET /v1/profiles`. `profile-filter-doc` exposes
 the supported syntax, examples and limitations to the model. The server does not
-execute client-supplied SQL. Profile and segment questions use Unified filters;
+execute client-supplied SQL. Profile and segment questions use behavioral filters;
 unavailable capabilities must be reported without a fallback query language.
 
 `explain-profile-filter` calls `Workspace.ExplainProfileFilter`, also available as
@@ -89,7 +89,7 @@ lists stored track/page/screen names in a bounded interval, with optional litera
 case-sensitive `nameContains`. `inspect-event-fields` describes a recent bounded
 sample's paths, JSON kinds and presence, including events outside the catalog.
 Both use the main connection and the workspace MCP key. They have no dependency
-on the Unified profile-filter gate.
+on the behavioral filter gate.
 
 Observed `recordedName` is an exact nullable name, not a Count source. SQL NULL,
 empty and named pages remain distinct. Root `uninspected` counters distinguish

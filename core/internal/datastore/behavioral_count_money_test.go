@@ -176,7 +176,8 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,tim
 							}
 							want[i] = independentCountOracle(states, test.minimum, test.terminal)
 						}
-						result, err := store.QueryProfiles(t.Context(), &behavioral.Rule{Count: count}, behavioral.Bindings{}, at,
+						result, err := store.QueryProfiles(t.Context(), &behavioral.Rule{Count: count},
+							behavioral.Bindings{}, at,
 							behavioral.Page{Limit: 1000})
 						if err != nil {
 							t.Fatalf("expected exact money-qualified Count, got %v", err)
@@ -205,7 +206,8 @@ CREATE TABLE krenalis_events (kpid uuid,message_id text,type text,event text,tim
 	if err != nil {
 		t.Fatalf("expected monetary field, got %v", err)
 	}
-	currency, err := behavioral.ResolveNativeCurrency("commerce.order_completed.currency", "1", "EUR", "Order Completed")
+	currency, err := behavioral.ResolveNativeCurrency("commerce.order_completed.currency", "1", "EUR",
+		"Order Completed")
 	if err != nil {
 		t.Fatalf("expected governed currency, got %v", err)
 	}
@@ -280,7 +282,8 @@ INSERT INTO krenalis_events VALUES
 		execBehavioralFixture(t, dw, `TRUNCATE krenalis_events;
 INSERT INTO krenalis_events VALUES
 ('`+behavioralTestID(1)+`','eur','track','Order Completed','2026-01-15','{"total":150,"flag":true}'),
-('`+behavioralTestID(2)+`','promo','track','Order Completed','2026-01-15','{"currency":"USD","total":150,"flag":true}')`)
+('`+behavioralTestID(2)+
+			`','promo','track','Order Completed','2026-01-15','{"currency":"USD","total":150,"flag":true}')`)
 		money.NativeCurrency = "EUR"
 		for _, mode := range []string{"money", "and", "or"} {
 			where.Operator, where.Children = state.OpAnd, []behavioral.OccurrencePredicate{{Money: money}}
@@ -292,7 +295,8 @@ INSERT INTO krenalis_events VALUES
 				}
 			}
 			count.Currency = nil
-			without, err := store.QueryProfiles(t.Context(), root, behavioral.Bindings{}, at, behavioral.Page{Limit: 10})
+			without, err := store.QueryProfiles(t.Context(), root, behavioral.Bindings{}, at, behavioral.Page{
+				Limit: 10})
 			if err != nil {
 				t.Fatalf("expected where without outer currency, got %v", err)
 			}

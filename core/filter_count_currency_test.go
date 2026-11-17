@@ -111,7 +111,7 @@ func TestFilterCountCurrencyRoundTrip(t *testing.T) {
 				t.Fatalf("expected encoded currency Count, got %v", err)
 			}
 			if string(encoded) != input || !filter.HasBehavioralConditions() {
-				t.Fatalf("expected unchanged Count document %s requiring Unified, got %s", input, encoded)
+				t.Fatalf("expected unchanged Count document %s requiring behavioral filter, got %s", input, encoded)
 			}
 			nodes := 0
 			schema := types.Object([]types.Property{{Name: "country", Type: types.String()}})
