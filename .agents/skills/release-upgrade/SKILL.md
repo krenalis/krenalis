@@ -1,21 +1,23 @@
 ---
 name: release-upgrade
-description: Record in core/internal/initdb/RELEASE-UPGRADE.md how a change alters Krenalis's PostgreSQL database, so that the updater can be written when the next release is prepared; also write the updater for a release and remove it afterwards.
+description: Record in core/internal/initdb/RELEASE-UPGRADE.md how a change alters Krenalis's PostgreSQL database, so that the migration can be written when the next release is prepared; also write the migration for a release and remove it afterwards.
 ---
 
 # Release upgrade
 
-Krenalis upgrades the PostgreSQL database of a release with an updater:
-`core/internal/initdb/upgrade.go`, its test with the schema of the previous
-release in `core/internal/initdb/testdata`, `core.UpgradeDB`, and the
-`-upgrade-db` flag. The updater exists on `main` only while a release is
-prepared. Between releases, changes record what the updater must do in
-`core/internal/initdb/RELEASE-UPGRADE.md`, and the updater is written from
-those notes when the next release is prepared.
+Krenalis migrates the PostgreSQL database of a release with the `-migrate-db`
+flag, which calls `core.MigrateDB` and `initdb.Migrate`. These are permanent:
+`Migrate` takes the advisory lock and the transaction, and calls `migrate` in
+`core/internal/initdb/migrate.go`, which holds the migration of the release.
+The migration, with its test and the schema of the previous release in
+`core/internal/initdb/testdata`, exists on `main` only while a release is
+prepared; otherwise `migrate` does nothing. Between releases, changes record
+what the migration must do in `core/internal/initdb/RELEASE-UPGRADE.md`, and
+the migration is written from those notes when the next release is prepared.
 
 ## Base release
 
-The notes and the updater upgrade from the base release: the last release
+The notes and the migration upgrade from the base release: the last release
 published and used in production, which is the one with the **Latest** badge
 on GitHub. Pre-releases and aborted releases are not base releases, even when
 their tag is more recent, so the base release cannot be determined from the
@@ -39,8 +41,9 @@ to `schema.sql` and to the other SQL files of `core/internal/initdb`, as well
 as changes to the format of data stored in the database, such as JSON in a
 column, that leave the schema unchanged.
 
-1. If `upgrade.go` exists, a release is being prepared, or the updater of the
-   previous release was not removed: stop and ask the user how to proceed.
+1. If `migrate` in `migrate.go` does something, a release is being prepared,
+   or the migration of the previous release was not removed: stop and ask the
+   user how to proceed.
 2. If `RELEASE-UPGRADE.md` does not exist, ask the user for the base release
    and create the file:
 
@@ -49,7 +52,7 @@ column, that leave the schema unchanged.
 
    Base release: `<tag>`
 
-   What the updater of the next release must do to upgrade a database of the
+   What the migration of the next release must do to upgrade a database of the
    base release. See `.agents/skills/release-upgrade/SKILL.md`.
    ```
 
@@ -77,7 +80,7 @@ The notes describe the net change since the base release, not the history of
 remove that entry instead of adding a new one, and delete the file when no
 entries remain.
 
-## Writing the updater for a release
+## Writing the migration for a release
 
 1. Read the base release from `RELEASE-UPGRADE.md` and confirm it with the
    user, because it must still be the latest release in production. If the
@@ -85,21 +88,23 @@ entries remain.
 2. Compare the notes with `git diff <base> HEAD -- core/internal/initdb/`.
    Every difference must be covered by an entry, and every entry by the
    diff or by a change in the format of stored data; ask the user about any
-   mismatch. If the database has not changed, write no updater.
-3. Restore `core.UpgradeDB` and the `-upgrade-db` flag, as in #2653, which
-   restored what #2612 removed.
-4. Write `Upgrade` in `upgrade.go` so that it upgrades a database of the base
-   release to the current schema, in a single transaction, idempotently.
-5. Save the schema of the base release in
+   mismatch. If the database has not changed, write no migration.
+3. Write `migrate` in `migrate.go` so that it upgrades a database of the base
+   release to the current schema, within the transaction it receives,
+   idempotently: it must also leave unchanged a database already migrated or
+   newly initialized.
+4. Save the schema of the base release in
    `core/internal/initdb/testdata/schema_<base>.sql` with
    `git show <base>:core/internal/initdb/schema.sql`, and write
-   `upgrade_test.go` as in #2653: the upgraded schema must match a newly
-   initialized one, the upgrade must be idempotent, and the test data must
-   cover every step that transforms existing data.
-6. Delete `RELEASE-UPGRADE.md` in the same change.
+   `migrate_release_test.go` as `upgrade_test.go` in #2653: the migrated
+   schema must match a newly initialized one, the migration must be
+   idempotent, and the test data must cover every step that transforms
+   existing data.
+5. Delete `RELEASE-UPGRADE.md` in the same change.
 
-## Removing the updater after a release
+## Removing the migration after a release
 
-Once the release is published, remove from `main` the updater and everything
-that only it uses: `upgrade.go`, `upgrade_test.go`, the schema in
-`testdata`, `core.UpgradeDB`, and the `-upgrade-db` flag, as in #2612.
+Once the release is published, empty the body of `migrate` so that it returns
+`nil`, and remove from `main` everything that only the migration uses:
+`migrate_release_test.go`, the schema in `testdata`, and any helpers. Keep
+`-migrate-db`, `core.MigrateDB`, and `initdb.Migrate`.
