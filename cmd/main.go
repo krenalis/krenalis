@@ -48,7 +48,7 @@ func Main(assets fs.FS) {
 		"when initializing the PostgreSQL database, also initialize the Docker member;"+
 			" this flag is primarily intended for automated scenarios involving Docker and testing purposes")
 	flag.BoolVar(&migrateDB, "migrate-db", false,
-		"migrate Krenalis's PostgreSQL database from the base release and exit")
+		"migrate Krenalis's PostgreSQL database to the current version and exit")
 	flag.BoolVar(&printVersion, "version", false, "print the Krenalis version and exit")
 	flag.Parse()
 	if help {

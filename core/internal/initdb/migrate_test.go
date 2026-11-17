@@ -14,9 +14,14 @@ import (
 func TestMigrateEmpty(t *testing.T) {
 	database := newTestDatabase(t)
 	err := Migrate(t.Context(), database)
-	if err == nil {
-		t.Fatal("expected an error, got nil")
+	if err != nil {
+		const expected = "Krenalis's PostgreSQL database has not been initialized"
+		if err.Error() != expected {
+			t.Fatalf("expected error %q, got %q", expected, err)
+		}
+		return
 	}
+	t.Fatal("expected an error, got nil")
 }
 
 // TestMigrateConcurrent verifies that concurrent calls to Migrate on the same
