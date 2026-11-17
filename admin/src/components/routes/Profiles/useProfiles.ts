@@ -6,7 +6,6 @@ import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import { ProfileProperty, ProfileSchemaProperties } from './Profiles.types';
 import { ObjectType } from '../../../lib/api/types/types';
 import { Filter } from '../../../lib/api/types/pipeline';
-import { FindProfilesResponse } from '../../../lib/api/types/responses';
 import { ProfilePropertyRoles } from '../../../lib/api/types/workspace';
 import { flattenSchema } from '../../../lib/core/pipeline';
 import { PROFILES_PROPERTIES_KEY } from '../../../constants/storage';
@@ -125,7 +124,7 @@ const useProfiles = () => {
 	}, []);
 
 	const loadProfilesRange = useCallback(
-		(
+		async (
 			executionID: number,
 			request: ProfilesRangeRequest,
 			first: number,
@@ -136,7 +135,11 @@ const useProfiles = () => {
 			const inFlight = inFlightRef.current.get(key);
 			if (inFlight != null) {
 				if (!background && inFlight.background) {
-					return inFlight.promise.catch(() => loadProfilesRange(executionID, request, first, limit, false));
+					try {
+						return await inFlight.promise;
+					} catch {
+						return loadProfilesRange(executionID, request, first, limit, false);
+					}
 				}
 				return inFlight.promise;
 			}
@@ -144,9 +147,18 @@ const useProfiles = () => {
 			const controller = new AbortController();
 			abortControllersRef.current.add(controller);
 			let promise: Promise<boolean>;
-			promise = api.workspaces.profiles
-				.find(request.projection, request.filter, '', true, first, limit, request.schema, controller.signal)
-				.then((response: FindProfilesResponse) => {
+			const fetchProfiles = async () => {
+				try {
+					const response = await api.workspaces.profiles.find(
+						request.projection,
+						request.filter,
+						'',
+						true,
+						first,
+						limit,
+						request.schema,
+						controller.signal,
+					);
 					if (controller.signal.aborted || executionRef.current !== executionID) {
 						return false;
 					}
@@ -159,8 +171,7 @@ const useProfiles = () => {
 						hasNext: response.hasNext,
 					});
 					return true;
-				})
-				.catch((error) => {
+				} catch (error) {
 					if (executionRef.current !== executionID || error?.name === 'AbortError') {
 						return false;
 					}
@@ -169,13 +180,14 @@ const useProfiles = () => {
 						return false;
 					}
 					throw error;
-				})
-				.finally(() => {
+				} finally {
 					abortControllersRef.current.delete(controller);
 					if (inFlightRef.current.get(key)?.promise === promise) {
 						inFlightRef.current.delete(key);
 					}
-				});
+				}
+			};
+			promise = fetchProfiles();
 			inFlightRef.current.set(key, { background, promise });
 			return promise;
 		},

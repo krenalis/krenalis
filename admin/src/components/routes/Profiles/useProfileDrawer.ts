@@ -1,6 +1,5 @@
 import { useState, useContext, useEffect } from 'react';
 import AppContext from '../../../context/AppContext';
-import { ProfileEventsResponse, IdentitiesResponse, profileAttributesResponse } from '../../../lib/api/types/responses';
 import { NotFoundError, UnprocessableError } from '../../../lib/api/errors';
 import { ObjectType } from '../../../lib/api/types/types';
 import { ProfileTab } from './Profiles.types';
@@ -46,15 +45,14 @@ const useProfileDrawer = (
 
 		const controller = new AbortController();
 		setAttributesLoadingKey(attributesKey);
-		void api.workspaces.profiles
-			.attributes(kpid, schema, controller.signal)
-			.then((response: profileAttributesResponse) => {
+		const fetchProfileAttributes = async () => {
+			try {
+				const response = await api.workspaces.profiles.attributes(kpid, schema, controller.signal);
 				if (controller.signal.aborted) {
 					return;
 				}
 				setAttributesResource({ key: attributesKey, value: response.attributes });
-			})
-			.catch((error) => {
+			} catch (error) {
 				if (controller.signal.aborted || error?.name === 'AbortError') {
 					return;
 				}
@@ -67,12 +65,13 @@ const useProfileDrawer = (
 					return;
 				}
 				handleError(error);
-			})
-			.finally(() => {
+			} finally {
 				if (!controller.signal.aborted) {
 					setAttributesLoadingKey((key) => (key === attributesKey ? '' : key));
 				}
-			});
+			}
+		};
+		void fetchProfileAttributes();
 
 		return () => controller.abort();
 	}, [api, attributesKey, schema, handleError, kpid, onSchemaNotAligned]);
@@ -83,37 +82,34 @@ const useProfileDrawer = (
 		}
 
 		const controller = new AbortController();
-		if (selectedTab === 'events') {
-			setEventsLoadingKey(auxiliaryKey);
-			void api.workspaces.profiles
-				.events(kpid, controller.signal)
-				.then((response: ProfileEventsResponse) => {
+		const fetchProfileTab = async () => {
+			try {
+				if (selectedTab === 'events') {
+					setEventsLoadingKey(auxiliaryKey);
+					const response = await api.workspaces.profiles.events(kpid, controller.signal);
 					if (!controller.signal.aborted) {
 						setEventsResource({ key: auxiliaryKey, value: response.events });
 					}
-				})
-				.catch((error) => handleAuxiliaryError(error, controller.signal, handleError))
-				.finally(() => {
-					if (!controller.signal.aborted) {
-						setEventsLoadingKey((key) => (key === auxiliaryKey ? '' : key));
-					}
-				});
-		} else {
-			setIdentitiesLoadingKey(auxiliaryKey);
-			void api.workspaces.profiles
-				.identities(kpid, 0, 1000, controller.signal)
-				.then((response: IdentitiesResponse) => {
+				} else {
+					setIdentitiesLoadingKey(auxiliaryKey);
+					const response = await api.workspaces.profiles.identities(kpid, 0, 1000, controller.signal);
 					if (!controller.signal.aborted) {
 						setIdentitiesResource({ key: auxiliaryKey, value: response.identities });
 					}
-				})
-				.catch((error) => handleAuxiliaryError(error, controller.signal, handleError))
-				.finally(() => {
-					if (!controller.signal.aborted) {
+				}
+			} catch (error) {
+				handleAuxiliaryError(error, controller.signal, handleError);
+			} finally {
+				if (!controller.signal.aborted) {
+					if (selectedTab === 'events') {
+						setEventsLoadingKey((key) => (key === auxiliaryKey ? '' : key));
+					} else {
 						setIdentitiesLoadingKey((key) => (key === auxiliaryKey ? '' : key));
 					}
-				});
-		}
+				}
+			}
+		};
+		void fetchProfileTab();
 
 		return () => controller.abort();
 	}, [api, auxiliaryKey, schema, handleError, kpid, onSchemaNotAligned, selectedTab]);
