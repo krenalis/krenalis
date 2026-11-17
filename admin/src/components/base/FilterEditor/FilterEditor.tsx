@@ -1,6 +1,6 @@
 import React, { ReactNode, RefObject, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import './FilterEditor.css';
-import { checkIfPropertyExists } from '../../helpers/checkIfPropertyExists';
+import { checkIfPropertyExists } from '../../../lib/core/schema';
 import { getPropertyPathDisplayValue } from '../../helpers/getPropertyPathDisplayValue';
 import { getFilterPropertyComboboxItems } from '../../helpers/getSchemaComboboxItems';
 import WaOption from '@awesome.me/webawesome/dist/react/option/index.js';

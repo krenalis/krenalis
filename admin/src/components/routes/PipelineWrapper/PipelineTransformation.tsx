@@ -17,7 +17,7 @@ import {
 	propertyAnnotation,
 	propertyAnnotationSeparator,
 } from './Pipeline.helpers';
-import { checkIfPropertyExists } from '../../helpers/checkIfPropertyExists';
+import { checkIfPropertyExists } from '../../../lib/core/schema';
 import {
 	getSchemaComboboxItems,
 	getUserIDColumnComboboxItems,
