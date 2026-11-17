@@ -12,9 +12,9 @@ The post-integration Snowflake campaign completed on 2026-11-16, including
 the repeatable chunk checks, enum regression, bounded conformance and public
 HTTP/MCP paths. Results, provenance and coverage limits are recorded in the
 [runbook](../../../test/snowflaketester/UNIFIED.md#post-integration-completion-on-2026-11-16).
-The branch review is complete. This activation candidate enables the production
-gate; transfer to typed-filter-values remains pending the live check described in
-[the activation plan](../../../filtering/SNOWFLAKE_UNIFIED_ACTIVATION.md).
+The branch review and final production-gate HTTP/MCP checks are complete.
+The supported Unified forms are enabled on Snowflake; activation results are in
+[the activation record](../../../filtering/SNOWFLAKE_UNIFIED_ACTIVATION.md).
 Historical verification sections below retain the gate state of those campaigns.
 
 ## Executable path

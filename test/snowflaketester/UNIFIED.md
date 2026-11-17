@@ -1,9 +1,8 @@
 # Unified Filtering: Snowflake campaign
 
-Run commands from the repository root. This activation candidate enables the
-production gate only in its separate branch. Transfer to typed-filter-values
-requires the pending live HTTP/MCP check in
-[the activation plan](../../filtering/SNOWFLAKE_UNIFIED_ACTIVATION.md).
+Run commands from the repository root. The production gate is enabled after
+branch review and the live HTTP/MCP checks on 2026-11-17, recorded in
+[the activation record](../../filtering/SNOWFLAKE_UNIFIED_ACTIVATION.md).
 Historical campaign records below retain their original closed-gate state.
 Local compilation, PostgreSQL results and skipped Snowflake tests are not remote passes.
 The complete acceptance checklist is in
@@ -1823,3 +1822,28 @@ limits above remain explicit: it does not certify explanation/HTTP/MCP chunk
 faults, actual network outages, other timestamp input formats or environment-level
 resource controls. The main-only limitations remain outside this branch. The
 production gate stays closed; the whole-branch review precedes activation or merge.
+
+## Production-gate activation checks on 2026-11-17
+
+The reviewed candidate `293fbec09189508521aba0bc80498d17106940e2` passed its
+final live check without a gate overlay. HTTP passed nine test nodes in each
+of UTC and America/Los_Angeles; MCP passed six in each timezone. No block failed
+or skipped. Source hashes remained stable and the compiled gate stayed true.
+
+Each public block verified five physical sessions under the standard profile.
+Observed SELECT results were Arrow throughout: HTTP query/explanation/Record
+counts were 7/3/2 per timezone; MCP counts were 3/2/2. The schema ledger has four
+CREATEs and four matching DROPs. A separate read-only inventory passed, finding
+zero campaign schemas remaining and 23 other visible test schemas.
+
+Evidence: `/private/tmp/krenalis-snowflake-activation-live-20261117-nwyc8kq8/`.
+The private archive has 31 indexed payload files and the index, all verified:
+`/Users/marco/src/krenalis-test-evidence/snowflake-activation-20261117-293fbec09.tar.gz`.
+SHA-256: `8d57186885b145569097d17076bbdffe0710baf9043330ac4a07ef6cf11f5db3`.
+Credential-value, signed-URL and workspace-key audits found zero matches;
+credentials, launchers, binaries and assets are excluded.
+
+This completes the activation check, not a new full conformance campaign.
+Existing coverage limits and main-only work remain unchanged. The reviewed
+activation can now be transferred to typed-filter-values; merge to main and
+release preparation remain separate.

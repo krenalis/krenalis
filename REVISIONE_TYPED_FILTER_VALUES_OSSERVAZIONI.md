@@ -19,9 +19,12 @@ approvato i nove commit correttivi da `3a3c0a646` a `d977e0c3c`, ripetendo
 le verifiche sugli interventi che modificavano codice e confermando anche
 le ultime correzioni documentali.
 
-Restano separati il merge su main, la conferma della base di rilascio
-`v0.48.0` con la preparazione dell'updater e l'attivazione del gate Snowflake.
-Il gate resta chiuso (`profileFilterVerified = false`).
+L'attivazione Snowflake è stata poi revisionata separatamente e verificata live
+il 17 novembre: 30 nodi HTTP/MCP passati nei due fusi e inventario indipendente
+senza residui. Il gate è abilitato; dettagli nel
+[registro dell'attivazione](filtering/SNOWFLAKE_UNIFIED_ACTIVATION.md).
+Restano separati il merge su main e la conferma della base di rilascio
+`v0.48.0` con la preparazione dell'updater.
 
 ## Rilievi del branch
 
@@ -342,5 +345,6 @@ Float, Decimal, Time e IP e l'ordine delle chiavi degli oggetti, comprese
 quelle non dichiarate. Non sono previste conversioni aggiuntive né una
 rivalidazione degli eventi storici; non serve una migrazione del database.
 
-Il gate Snowflake resta chiuso. Revisione, attivazione e merge sono passi
-separati.
+Il gate Snowflake era chiuso alla conclusione di questa revisione; la successiva
+attivazione verificata è registrata nell'esito finale sopra. Il merge su main
+resta separato.

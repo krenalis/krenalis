@@ -1,15 +1,15 @@
 # Preparazione dell'attivazione Unified su Snowflake
 
-Stato: preparazione locale e revisione mirata concluse; prova live finale ancora
-da eseguire.
+Stato: preparazione locale, revisione mirata e prova live finale concluse.
+I controlli di attivazione sono passati il 17 novembre 2026.
 
-- Branch: `prepare/unified-snowflake-activation`.
-- Worktree: `/private/tmp/krenalis-snowflake-unified-activation`.
+- Branch di preparazione: `prepare/unified-snowflake-activation`.
+- Worktree di preparazione: `/private/tmp/krenalis-snowflake-unified-activation`.
 - Base: `6b8b726c5bf298250c251f39284bc2bec3f98024`, dopo la chiusura della
   revisione approfondita.
-- `typed-filter-values`, nella worktree `/Users/marco/src/cluster`, conserva
-  il gate chiuso. Questo incremento non viene trasferito prima della verifica
-  live e della revisione mirata.
+- Trasferimento verso `typed-filter-values`, nella worktree
+  `/Users/marco/src/cluster`: fast-forward del candidato approvato dopo i
+  controlli live positivi, senza merge su main.
 
 ## Modifiche
 
@@ -34,7 +34,7 @@ La guida MCP descrive le capacità abilitate su PostgreSQL e Snowflake.
 Lo stesso vale per le istruzioni del server restituite da initialize e per le
 descrizioni di query-profiles ed explain-profile-filter in tools/list.
 Le evidenze delle campagne precedenti conservano i loro riferimenti e i loro
-limiti; non dimostrano l'esecuzione live di questo candidato.
+limiti. La prova finale di questo candidato è documentata sotto.
 
 ## Verifiche locali del candidato iniziale
 
@@ -110,17 +110,50 @@ Nuove verifiche, sempre con `KRENALIS_SKIP_SNOWFLAKE_TESTS=true`:
 Log in `/private/tmp/krenalis-snowflake-activation-review-d0opipev/`.
 Non sono ripetute le prove pubbliche PostgreSQL o le suite degli oracoli:
 la correzione modifica soltanto testi, commenti e il controllo dell'harness.
-La prova Snowflake live del candidato corretto resta pendente.
+La prova Snowflake live del candidato corretto è riportata nella sezione seguente.
 
 La verifica del 17 novembre approva `cc5496961`: il rilievo bloccante e le
 note 1–4 e 6 sono risolti; la scelta sulla nota 5 è confermata come legittima
 e sicura. Il revisore ha ripetuto MCP (37 PASS), adapter (9 PASS), factory e
 rifiuto dei backend non verificati (2 PASS, 1 SKIP), il mutante delle spiegazioni
 e i 13 test Python. Non restano rilievi aperti nella revisione mirata.
-Il prossimo passo è la prova live descritta sotto; nessun trasferimento del
-candidato avviene prima del suo esito positivo.
+La prova live descritta sotto completa il prerequisito per il trasferimento.
 
-## Prova live alla prossima finestra
+## Esito live del 17 novembre 2026
+
+Provato `293fbec09189508521aba0bc80498d17106940e2`, comprendente le correzioni
+approvate. Nessun file del gate è sostituito dagli overlay. I quattro blocchi
+sono passati al primo tentativo, con race detector, sorgenti stabili e nessun
+FAIL o SKIP.
+
+| Blocco | PASS | SELECT query/spiegazione/Record |
+| --- | --- | --- |
+| HTTP UTC | 9 | 7/3/2, tutti Arrow |
+| MCP UTC | 6 | 3/2/2, tutti Arrow |
+| HTTP America/Los_Angeles | 9 | 7/3/2, tutti Arrow |
+| MCP America/Los_Angeles | 6 | 3/2/2, tutti Arrow |
+| Inventario indipendente | 1 | Nessuno schema della campagna rimasto |
+
+Ogni blocco pubblico ha verificato cinque connessioni fisiche con i parametri
+di sessione previsti; l'inventario ne ha verificata una in UTC. Il ledger
+riconcilia quattro CREATE e quattro DROP, senza incongruenze. L'inventario ha
+osservato 23 altri schemi di test e zero residui della campagna.
+
+Gli hash Go nei manifest coincidono con i sorgenti provati. L'audit dei file
+conservati non trova valori delle sei credenziali, URL firmati o chiavi di
+workspace. Sono esclusi credenziali, launcher, binari e asset.
+
+Evidenze locali:
+`/private/tmp/krenalis-snowflake-activation-live-20261117-nwyc8kq8/`.
+Archivio privato con indice SHA-256 verificato, 31 file e l'indice:
+`/Users/marco/src/krenalis-test-evidence/snowflake-activation-20261117-293fbec09.tar.gz`.
+SHA-256: `8d57186885b145569097d17076bbdffe0710baf9043330ac4a07ef6cf11f5db3`.
+
+Questa prova chiude l'accettazione HTTP/MCP del gate compilato. Non estende
+la copertura della campagna precedente su guasti di rete, formati temporali o
+controlli ambientali delle risorse. I problemi assegnati a main restano separati.
+
+## Procedura per ripetere la prova
 
 Eseguire dalla worktree del candidato, solo quando l'accesso live è disponibile
 e dopo la revisione. Usare l'ambiente di test dedicato e le credenziali approvate,
@@ -170,6 +203,6 @@ l'intera campagna già conclusa e non ampliano i contratti su numeri, collation,
 guasti di rete, formati temporali o limiti delle risorse. I problemi assegnati
 a main restano fuori da questo incremento.
 
-Solo dopo esito live positivo e approvazione si trasferisce l'incremento a
-`typed-filter-values`. Il merge su main e la preparazione del rilascio con
-base e updater restano passi separati.
+Revisione ed esito live positivo consentono il trasferimento dell'incremento a
+`typed-filter-values`. Il merge su main e la preparazione del rilascio con base
+e updater restano passi separati.

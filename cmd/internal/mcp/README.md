@@ -81,8 +81,8 @@ with HTTP 400; credential payloads cannot silently configure MCP access.
 
 On Snowflake this selects the main virtual warehouse. Record-only queries use the
 existing Record path. Behavioral queries and explanations are enabled on both
-PostgreSQL and Snowflake. The activation candidate's final live HTTP/MCP check
-is tracked in [the activation plan](../../../filtering/SNOWFLAKE_UNIFIED_ACTIVATION.md).
+PostgreSQL and Snowflake. The final live HTTP/MCP activation check passed on
+2026-11-17; results are in [the activation record](../../../filtering/SNOWFLAKE_UNIFIED_ACTIVATION.md).
 
 The event catalog describes known definitions. `list-observed-event-sources`
 lists stored track/page/screen names in a bounded interval, with optional literal
