@@ -49,7 +49,6 @@ import (
 //     as the Go time format "2006-01-02"
 //   - time: a JSON String representing a time in the ISO8601 format, formatted
 //     as the Go time format "15:04:05.999999999"
-//   - year: a JSON Number representing an integer
 //   - uuid: a JSON String representing a UUID
 //   - json: a JSON value; JSON null is always interpreted as Value("null")
 //   - ip: a JSON String representing an IP number
@@ -543,16 +542,6 @@ func (d decoder) value(v json.Value, t Type) (any, error) {
 			if t, err := time.Parse("15:04:05.999999999", string(d.unquoteString(v))); err == nil {
 				t = t.UTC()
 				return time.Date(1970, 1, 1, t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), time.UTC), nil
-			}
-		}
-	case YearKind:
-		if v.Kind() == '0' {
-			y, err := strconv.ParseInt(string(v), 10, 64)
-			if err == nil {
-				if y < MinYear || y > MaxYear {
-					return nil, newErrInvalidValue(fmt.Sprintf("is out of range [1, 9999]: %d", y), "")
-				}
-				return int(y), nil
 			}
 		}
 	case UUIDKind:

@@ -147,7 +147,6 @@ var pythonDecoderOptions = decoderOptions{
 //     "2006-01-02T15:04:05.999999999Z07:00"
 //   - date: a String representing a time formatted as "2006-01-02"
 //   - time: a String representing a time formatted as "15:04:05.999999999"
-//   - year: a Number representing an integer
 //   - uuid: a String representing a UUID
 //   - json: if preserveJSON is false: true, false, a Number, a String, an
 //     Array, or an Object; Otherwise a String representing a JSON value
@@ -167,7 +166,6 @@ var pythonDecoderOptions = decoderOptions{
 //     15:04:05.999999"
 //   - date: a String representing a date formatted as "2006-01-02"
 //   - time: a String representing a time formatted as "15:04:05.999999"
-//   - year: a Number representing an integer
 //   - uuid: a String representing a UUID
 //   - ip: a String representing an IP number
 //   - json: if preserveJSON is false: true, false, a Number, a String, an
@@ -731,16 +729,6 @@ func (d decoder) value(v json.Value, t types.Type) (any, error) {
 			}
 			return time.Date(1970, 1, 1, t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), time.UTC), nil
 		}
-	case types.YearKind:
-		if v.Kind() == '0' {
-			y, err := strconv.ParseInt(string(v), 10, 64)
-			if err == nil {
-				if y < types.MinYear || y > types.MaxYear {
-					return nil, newRecordValidationError("", "year is not in range [1,9999]")
-				}
-				return int(y), nil
-			}
-		}
 	case types.UUIDKind:
 		if v.Kind() == '"' {
 			if u, ok := types.NormalizeUUID(string(v.AppendUnquote(nil))); ok {
@@ -794,8 +782,6 @@ func toJavascriptType(t types.Type) string {
 		return "string"
 	case types.DateTimeKind, types.DateKind, types.TimeKind:
 		return "string"
-	case types.YearKind:
-		return "number"
 	case types.UUIDKind, types.JSONKind, types.IPKind:
 		return "string"
 	case types.ArrayKind:
@@ -831,8 +817,6 @@ func toPythonType(t types.Type) string {
 		return "datetime.date"
 	case types.TimeKind:
 		return "datetime.time"
-	case types.YearKind:
-		return "int"
 	case types.UUIDKind:
 		return "uuid.UUID"
 	case types.JSONKind, types.IPKind:

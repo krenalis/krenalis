@@ -11,7 +11,7 @@ const TypeIcon = ({ kind, slot }: TypeIconProps) => {
 	let s = slot !== undefined ? slot : null;
 	if (kind === 'boolean') {
 		icon = <WaIcon slot={s} name='type-bold' />;
-	} else if (kind === 'int' || kind === 'float' || kind === 'decimal' || kind === 'year') {
+	} else if (kind === 'int' || kind === 'float' || kind === 'decimal') {
 		icon = <WaIcon slot={s} name='123' />;
 	} else if (kind === 'datetime' || kind === 'date') {
 		icon = <WaIcon slot={s} name='calendar-date' />;

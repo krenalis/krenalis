@@ -145,6 +145,7 @@ function toSemanticsLabel(semantics: Semantics): string {
 		case 'percentage':
 		case 'measurement':
 		case 'duration':
+		case 'year':
 			return semantics;
 		default:
 			throw new Error(`unknown property semantics ${semantics satisfies never}`);
@@ -251,9 +252,6 @@ function toJavascriptType(type: Type, preserveJSON: boolean, nullable?: boolean)
 		case 'time':
 			t = 'Date';
 			break;
-		case 'year':
-			t = 'number';
-			break;
 		case 'uuid':
 			t = 'string';
 			break;
@@ -317,9 +315,6 @@ function toPythonType(type: Type, preserveJSON: boolean, nullable?: boolean) {
 			break;
 		case 'time':
 			t = 'datetime.time';
-			break;
-		case 'year':
-			t = 'int';
 			break;
 		case 'uuid':
 			t = 'uuid.UUID';

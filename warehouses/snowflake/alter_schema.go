@@ -293,8 +293,6 @@ func typeToSnowflakeType(t types.Type) string {
 		return "DATE"
 	case types.TimeKind:
 		return "TIME"
-	case types.YearKind:
-		return "NUMBER(4,0)"
 	case types.UUIDKind:
 		return "VARCHAR"
 	case types.JSONKind:

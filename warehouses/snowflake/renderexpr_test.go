@@ -58,7 +58,7 @@ func TestArrayContains(t *testing.T) {
 		{"datetime-negative", types.DateTime(), offsetInstant.In(time.FixedZone("", -18000)), offsetInstant.Add(-5 * time.Hour)},
 		{"date", types.Date(), instant, instant.AddDate(0, 0, 1)},
 		{"time", types.Time(), clock, clock.Add(time.Hour)},
-		{"year", types.Year(), 2026, 2025},
+		{"year", types.Int(16).AsYear(), 2026, 2025},
 		{"uuid", types.UUID(), "550e8400-e29b-41d4-a716-446655440000", "550e8400-e29b-41d4-a716-446655440001"},
 		{"ip", types.IP(), "192.0.2.1", "192.0.2.2"},
 	} {

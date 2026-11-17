@@ -229,7 +229,6 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 		}
 		var v int64
 		var err error
-		// Keep in sync with the case 'types.YearKind'.
 		switch src := src.(type) {
 		case int:
 			v = int64(src)
@@ -552,73 +551,6 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 			return nil, invalidType(name, src, typ)
 		}
 		return t, nil
-	case types.YearKind:
-		var v int64
-		var err error
-		// Keep in sync with the case 'types.IntKind'.
-		switch src := src.(type) {
-		case int:
-			v = int64(src)
-		case int8:
-			v = int64(src)
-		case int16:
-			v = int64(src)
-		case int32:
-			v = int64(src)
-		case int64:
-			v = src
-		case uint:
-			if src > math.MaxInt64 {
-				return nil, inputValidationErrorf(name, "has value which is not in the range [%d, %d]", types.MinYear, types.MaxYear)
-			}
-			v = int64(src)
-		case uint8:
-			v = int64(src)
-		case uint16:
-			v = int64(src)
-		case uint32:
-			v = int64(src)
-		case uint64:
-			if src > math.MaxInt64 {
-				return nil, inputValidationErrorf(name, "has value which is not in the range [%d, %d]", types.MinYear, types.MaxYear)
-			}
-			v = int64(src)
-		case float32:
-			f := float64(src)
-			if f < types.MinYear || f > types.MaxYear || f != math.Trunc(f) {
-				return nil, inputValidationErrorf(name, "has a float32 value that cannot represent a year value")
-			}
-			v = int64(f)
-		case float64:
-			if src < types.MinYear || src > types.MaxYear || src != math.Trunc(src) {
-				return nil, inputValidationErrorf(name, "has a float64 value that cannot represent a year value")
-			}
-			v = int64(src)
-		case decimal.Decimal:
-			v, err = src.Int64()
-			if err != nil {
-				return nil, inputValidationErrorf(name, "has a deciaml.Decimal value that cannot represent a year value")
-			}
-		case string:
-			v, err = strconv.ParseInt(src, 10, 64)
-			if err != nil {
-				return nil, inputValidationErrorf(name, "has a string value that cannot represent a year value")
-			}
-		case []byte:
-			if src == nil && nullable {
-				return nil, nil
-			}
-			v, err = strconv.ParseInt(string(src), 10, 64)
-			if err != nil {
-				return nil, inputValidationErrorf(name, "has a []byte value that cannot represent a year value")
-			}
-		default:
-			return nil, invalidType(name, src, typ)
-		}
-		if v < types.MinYear || v > types.MaxYear {
-			return nil, inputValidationErrorf(name, "has value which is not in the range [%d, %d]", types.MinYear, types.MaxYear)
-		}
-		return int(v), nil
 	case types.UUIDKind:
 		switch src := src.(type) {
 		case string:

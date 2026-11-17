@@ -2227,6 +2227,11 @@ test(`Create profile schema properties with default semantics and options`, asyn
 		page.locator('.schema-edit .grid__row[data-id="semantics_duration"] .schema-property-grid__type'),
 	).toHaveText('duration — s · float(64) · real');
 
+	await page.locator('.schema-edit__add-property').click();
+	await propertyPanel.locator('.property-form__name-input input').fill('semantics_year');
+	await selectPropertyType(page, 'year');
+	await propertyPanel.locator('.property-panel__save').click();
+
 	const previewRequestPromise = page.waitForRequest(
 		(request) => request.url().endsWith('/profiles/schema/preview') && request.method() === 'PUT',
 	);
@@ -2273,6 +2278,15 @@ test(`Create profile schema properties with default semantics and options`, asyn
 		unit: 'second',
 		bitSize: 64,
 		real: true,
+	});
+	const year = schema.properties.find((property) => property.name === 'semantics_year');
+	expect(year?.type).toEqual({
+		kind: 'int',
+		semantics: 'year',
+		bitSize: 16,
+		unsigned: false,
+		minimum: 1,
+		maximum: 9999,
 	});
 	const previewResponse = await previewResponsePromise;
 	expect(previewResponse.status()).toBe(200);

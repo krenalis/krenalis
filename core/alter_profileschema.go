@@ -231,6 +231,12 @@ func checkAllowedPropertyProfileSchema(schema types.Type) error {
 	return nil
 }
 
+// minProfileYear and maxProfileYear bound year values in profile schemas.
+const (
+	minProfileYear = 1
+	maxProfileYear = 9999
+)
+
 // checkAllowedSemanticsProfileSchema returns an error if t does not meet the
 // semantics restrictions for profile schema properties.
 func checkAllowedSemanticsProfileSchema(t types.Type) error {
@@ -247,6 +253,14 @@ func checkAllowedSemanticsProfileSchema(t types.Type) error {
 	case types.DurationSemantics:
 		if !t.IsFloat(64) {
 			return errors.New("profile schema properties with duration semantics must have real float(64) values")
+		}
+	case types.YearSemantics:
+		if !t.IsInt(16) || t.IsUnsigned() {
+			return errors.New("profile schema properties with year semantics must have signed int(16) values")
+		}
+		if min, max := t.IntRange(); min != minProfileYear || max != maxProfileYear {
+			return fmt.Errorf("profile schema properties with year semantics must have range [%d,%d]",
+				minProfileYear, maxProfileYear)
 		}
 	}
 	return nil

@@ -54,8 +54,8 @@ const (
 	MaxDecimalScale     = 37             // Maximum scale for a decimal type
 	MaxElements         = math.MaxInt32  // Maximum number of elements of an array type
 	MaxStringLen        = math.MaxUint32 // Maximum length in bytes and characters for a string type
-	MaxYear             = 9999           // Maximum year for datetime, date and year types
-	MinYear             = 1              // Minimum year for datetime, date and year types
+	MaxYear             = 9999           // Maximum year for date and datetime types
+	MinYear             = 1              // Minimum year for date and datetime types
 
 	MaxInt16  = math.MaxInt16
 	MaxInt24  = 1<<23 - 1
@@ -86,7 +86,6 @@ const (
 	DateTimeKind
 	DateKind
 	TimeKind
-	YearKind
 	UUIDKind
 	JSONKind
 	IPKind
@@ -104,7 +103,6 @@ var kindName = []string{
 	"datetime",
 	"date",
 	"time",
-	"year",
 	"uuid",
 	"json",
 	"ip",
@@ -295,11 +293,6 @@ func Date() Type {
 // Time returns the time type.
 func Time() Type {
 	return Type{kind: TimeKind}
-}
-
-// Year returns the year type.
-func Year() Type {
-	return Type{kind: YearKind}
 }
 
 // UUID returns the uuid type.
@@ -519,11 +512,6 @@ func (t Type) IsTime() bool {
 // IsUUID reports whether t is a UUID type.
 func (t Type) IsUUID() bool {
 	return t.kind == UUIDKind
-}
-
-// IsYear reports whether t is a year type.
-func (t Type) IsYear() bool {
-	return t.kind == YearKind
 }
 
 // Valid indicates if t is valid.

@@ -24,7 +24,8 @@ type PropertyTypeOptionID =
 	| 'duration'
 	| 'money'
 	| 'percentage'
-	| 'measurement';
+	| 'measurement'
+	| 'year';
 
 interface PropertyStructureOption {
 	description: string;
@@ -183,9 +184,8 @@ const PROPERTY_TYPE_OPTIONS: PropertyTypeOption[] = [
 	},
 	{
 		id: 'year',
-		kind: 'year',
-		description: 'Year',
-		create: () => ({ kind: 'year' }),
+		kind: 'int',
+		create: () => ({ kind: 'int', bitSize: 16, unsigned: false, semantics: 'year', minimum: 1, maximum: 9999 }),
 	},
 	{
 		id: 'uuid',
