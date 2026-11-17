@@ -33,7 +33,7 @@ const serverInstructions = "Krenalis MCP tools must be used only through this MC
 	" Profile tools require a valid workspace-scoped MCP key and use the main Krenalis warehouse connection." +
 	" Former MCP database credentials do not restrict their data access." +
 	" On Snowflake they use the main virtual warehouse." +
-	" Behavioral filters remain unavailable on Snowflake until their backend gate is enabled." +
+	" Behavioral filters and explanations are available on PostgreSQL and Snowflake." +
 	" The workspace data warehouse is managed directly by Krenalis." +
 	" Writes and schema changes for Krenalis-managed tables and views must be performed only by Krenalis itself." +
 	" If a user wants to modify data, schema, or configuration, explain clearly and professionally that user-driven changes must be done only through the Krenalis Admin console or the Krenalis APIs, not through direct SQL on the warehouse." +

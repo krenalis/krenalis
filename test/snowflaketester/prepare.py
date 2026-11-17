@@ -7,6 +7,7 @@
 import argparse
 import json
 import os
+import re
 from pathlib import Path
 import subprocess
 import sys
@@ -74,7 +75,7 @@ def main():
         source = root / name
         text = source.read_text()
         if name.endswith("profile_filter.go"):
-            if text.count("const profileFilterVerified = true") != 1:
+            if len(re.findall(r"^const profileFilterVerified = true$", text, re.MULTILINE)) != 1:
                 parser.error("requires an open production gate; gate overlays are not allowed")
             continue
         else:

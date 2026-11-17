@@ -66,14 +66,19 @@ class PrepareTest(unittest.TestCase):
             (scripts / name).write_bytes(PREPARE.with_name(name).read_bytes())
         gate = root / "warehouses/snowflake/profile_filter.go"
         gate.parent.mkdir(parents=True)
-        gate.write_text("const profileFilterVerified = false\n")
-        directory = self.directory / "closed-output"
-        result = subprocess.run([sys.executable, "-B", str(scripts / "prepare.py"),
-                                 str(directory), "--timezone", "UTC"],
-                                env=self.environment, capture_output=True, text=True)
-        self.assertEqual(result.returncode, 2, result.stderr)
-        self.assertIn("requires an open production gate", result.stderr)
-        self.assertFalse(directory.exists())
+        for name, source in [
+            ("closed", "const profileFilterVerified = false\n"),
+            ("commented", "// const profileFilterVerified = true\nconst profileFilterVerified = false\n"),
+        ]:
+            with self.subTest(name=name):
+                gate.write_text(source)
+                directory = self.directory / (name + "-output")
+                result = subprocess.run([sys.executable, "-B", str(scripts / "prepare.py"),
+                                         str(directory), "--timezone", "UTC"],
+                                        env=self.environment, capture_output=True, text=True)
+                self.assertEqual(result.returncode, 2, result.stderr)
+                self.assertIn("requires an open production gate", result.stderr)
+                self.assertFalse(directory.exists())
 
     def test_production_gate_and_all_connection_paths(self):
         for timezone in ["UTC", "America/Los_Angeles"]:

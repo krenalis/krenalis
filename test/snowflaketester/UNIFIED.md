@@ -565,9 +565,9 @@ KRENALIS_SKIP_SNOWFLAKE_TESTS=true go test ./core -race \
   -run '^TestUnified(ServicePostgreSQL|WorkspacePostgreSQL)$' -count=1 -timeout=10m
 ```
 
-Run Snowflake separately from the existing PostgreSQL service test: that test
-contains a deliberately unconfigured Snowflake workspace whose gate must stay
-closed. A normal build of the new Snowflake test skips before loading credentials.
+The PostgreSQL service test includes an explicitly unverified test provider,
+independent of the production Snowflake gate. The Snowflake test skips before
+credentials with `-short` or `KRENALIS_SKIP_SNOWFLAKE_TESTS=true`.
 With authorized live access, execute the complete bounded group in each session
 timezone, using a fresh directory and the existing credential environment:
 
@@ -670,8 +670,10 @@ float64 decoding step.
 The tester's `SetWarehouse` option copies settings per instance and skips only
 the warehouse PostgreSQL container. The application PostgreSQL and NATS remain
 disposable local containers. The normal tester still starts an external server;
-`UsesInternalServer` derives from its existing launch constant. Snowflake skips
-before credentials unless both the internal-server and gate overlays are present.
+`UsesInternalServer` derives from its existing launch constant. Snowflake HTTP
+tests skip before credentials with `-short`, the Snowflake skip variable or
+without the internal-server overlay. They use the production gate; the overlay
+does not enable it.
 The HTTP overlay changes neither SQL nor handler behavior. It adds the three
 service tags at the public core delegation sites, covering all downstream reads,
 and reuses the existing session verifier and driver response observer.
@@ -841,7 +843,7 @@ the manifest in addition to the runner's format/presence checks. Require stable
 source/overlay hashes, the requested session parameters, schema-ledger audit,
 credential-output masking and independent inventory as in the HTTP campaign.
 Both session runs passed on 2026-11-13, as recorded in the live results below.
-The production gate remains closed.
+The production gate was closed during those runs.
 
 ## Recorded event discovery
 
@@ -872,8 +874,9 @@ fixture; it does not repeat the backend-independent authentication cases.
 Run the following as one discovery campaign in an authorized window. Prepare
 fresh overlays and assets as in the Profiles MCP section; reuse its
 `mcp_campaign` directories only when their source hashes still match. The
-standard UTC/ARROW HTTP overlay also enables the Unified gate for other tests,
-but discovery does not depend on that change. The production gate stays closed.
+standard UTC/ARROW HTTP overlay configures and verifies sessions and observes
+results. It does not change the production gate; discovery remains independent
+of that gate.
 
 ```sh
 # Local prerequisite, including the internal-server test on a separate port.

@@ -90,6 +90,13 @@ func TestQueryProfilesToolMetadata(t *testing.T) {
 	found := map[string]bool{}
 	for _, tool := range body.Result.Tools {
 		found[tool.Name] = true
+		if tool.Name == "query-profiles" || tool.Name == "explain-profile-filter" {
+			if !strings.Contains(tool.Description, "available on PostgreSQL and Snowflake") ||
+				strings.Contains(tool.Description, "remain unavailable") ||
+				strings.Contains(tool.Description, "including Snowflake") {
+				t.Fatalf("expected verified warehouse availability for %s, got %q", tool.Name, tool.Description)
+			}
+		}
 		if tool.Name != "query-profiles" {
 			continue
 		}

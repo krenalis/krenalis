@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"uuid"
 )
@@ -125,6 +126,7 @@ func (mcp *testMCPClient) jsonRPCRequest(method string, params map[string]any) (
 }
 
 func TestInitializeIncludesServerInstructions(t *testing.T) {
+
 	mcpServer := NewMCPServer(nil)
 	defer mcpServer.Close(t.Context())
 
@@ -173,4 +175,9 @@ func TestInitializeIncludesServerInstructions(t *testing.T) {
 	if got.Result.Instructions != serverInstructions {
 		t.Fatalf("initialize instructions = %q, want %q", got.Result.Instructions, serverInstructions)
 	}
+	if !strings.Contains(got.Result.Instructions, "available on PostgreSQL and Snowflake") ||
+		strings.Contains(got.Result.Instructions, "unavailable on Snowflake") {
+		t.Fatalf("expected verified PostgreSQL and Snowflake availability, got %q", got.Result.Instructions)
+	}
+
 }

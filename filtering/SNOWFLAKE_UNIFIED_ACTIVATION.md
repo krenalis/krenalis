@@ -15,6 +15,8 @@ Stato: candidato preparato in locale, prova live finale ancora da eseguire.
 Il gate compilato di Snowflake passa a `true`. SQL, letture dei dati, connessioni
 di produzione, autenticazione e contratti dei filtri restano quelli revisionati.
 Non viene introdotto un interruttore per workspace o un bypass a runtime.
+Gli altri cambiamenti al Go di produzione riguardano i tre testi MCP descritti
+sotto e il commento del gate, reso uguale nei due provider.
 
 I test delle factory richiedono entrambe le piattaforme verificate. Il rifiuto
 di un backend non verificato resta coperto con un doppio esplicito, indipendente
@@ -28,10 +30,15 @@ richiesto, il server HTTP interno e i tag delle query. I test Python verificano
 l'assenza della sostituzione del gate e il rifiuto di un sorgente con gate chiuso.
 
 La guida MCP descrive le capacità abilitate su PostgreSQL e Snowflake.
+Lo stesso vale per le istruzioni del server restituite da initialize e per le
+descrizioni di query-profiles ed explain-profile-filter in tools/list.
 Le evidenze delle campagne precedenti conservano i loro riferimenti e i loro
 limiti; non dimostrano l'esecuzione live di questo candidato.
 
-## Verifiche locali
+## Verifiche locali del candidato iniziale
+
+Queste evidenze si riferiscono al candidato `72e5cfeaf`, prima delle correzioni
+documentate nella sezione successiva.
 
 Le prove usano `KRENALIS_SKIP_SNOWFLAKE_TESTS=true`. Non si caricano credenziali
 Snowflake e non si eseguono query remote. Le integrazioni PostgreSQL usano
@@ -59,7 +66,7 @@ precedente; le prove HTTP non certificano il comportamento dell'interfaccia.
 I conteggi comprendono test padre e sottotest e non vanno sommati fra suite
 sovrapposte. Nei tre blocchi HTTP/MCP accettati i manifest confermano sorgenti
 stabili. Gli overlay non sostituiscono il file del gate.
-`final-source-comparison.json` confronta i sorgenti finali con i tre manifest:
+Per `72e5cfeaf`, `final-source-comparison.json` confronta i sorgenti con i tre manifest:
 gli hash del codice Go di produzione coincidono; le sole differenze Go sono
 commenti di dichiarazione abbreviati nei test. Le factory sono state ricontrollate
 dopo questa passata.
@@ -70,6 +77,40 @@ una prova MCP locale era bloccata dai permessi di bind della sandbox; un blocco
 HTTP/MCP combinato falliva perché il server interno ammette un solo test
 principale per processo. Le ripetizioni corrette passano e hanno log separati.
 
+## Correzioni dopo la revisione del 17 novembre
+
+Il rilievo bloccante è corretto: tre stringhe Go inviate ai client MCP
+dichiaravano ancora Snowflake non disponibile. Ora initialize e tools/list
+descrivono la disponibilità di filtri e spiegazioni su PostgreSQL e Snowflake.
+I test verificano i testi delle risposte HTTP, compresa l'assenza delle vecchie
+indicazioni. Tre mutanti ripristinano separatamente i vecchi testi e sono
+rilevati dai due test aggiornati.
+
+Le note 1 e 2 sono risolte nelle istruzioni operative del runbook e nel README
+Unified, preservando i resoconti storici. Il commento del gate è uguale nei
+due provider (nota 3). Il controllo di prepare.py richiede una dichiarazione
+ancorata all'inizio della riga; una riga preceduta da `//` non abilita la
+preparazione (nota 4). Il piano live descrive un unico script sequenziale, che
+si interrompe al primo errore (nota 6).
+
+L'ordine delle guardie dei test remoti resta quello preesistente, già verificato
+sicuro nella nota 5 della revisione: le credenziali non vengono lette con skip
+attivo. Il commento di TestUnifiedStoredNumbersSnowflake è stato aggiornato;
+non viene uniformato il controllo diretto di `-short` fra questi test.
+
+Nuove verifiche, sempre con `KRENALIS_SKIP_SNOWFLAKE_TESTS=true`:
+
+- MCP, risposte initialize e tools/list incluse, con race detector: 37 PASS.
+- Adapter PostgreSQL e Snowflake, SQL e guasti del cursore, con race: 9 PASS.
+- Python test_prepare: 13 test OK, incluso il gate chiuso con riga commentata.
+- Tre mutanti MCP rilevati, uno per ogni vecchio testo.
+- Vet dei tre package interessati, gofmt e controllo del diff: puliti.
+
+Log in `/private/tmp/krenalis-snowflake-activation-review-d0opipev/`.
+Non sono ripetute le prove pubbliche PostgreSQL o le suite degli oracoli:
+la correzione modifica soltanto testi, commenti e il controllo dell'harness.
+La prova Snowflake live del candidato corretto resta pendente.
+
 ## Prova live alla prossima finestra
 
 Eseguire dalla worktree del candidato, solo quando l'accesso live è disponibile
@@ -77,6 +118,7 @@ e dopo la revisione. Usare l'ambiente di test dedicato e le credenziali approvat
 senza riportarle in comandi, log o documenti. Preparare una directory nuova e
 rigenerare gli overlay dal commit revisionato. I limiti e le politiche del
 warehouse di test devono essere verificati dal proprietario dell'ambiente.
+Eseguire lo script seguente in Bash.
 
 ```sh
 set -euo pipefail
@@ -106,8 +148,10 @@ done
 python3 -B test/snowflaketester/run.py --audit "$campaign"
 ```
 
-I comandi vanno eseguiti uno alla volta, fermandosi e controllando la pulizia
-in caso di errore. L'overlay deve escludere il file del gate. I manifest devono
+Lo script esegue i blocchi in sequenza e si interrompe al primo errore; prima
+di riprenderlo verificare la pulizia e usare nuovi nomi di log. Ogni test
+principale viene eseguito in un processo separato. L'overlay deve escludere
+il file del gate. I manifest devono
 riportare sorgenti stabili, sessioni attese e risultati Arrow per tutti e tre
 i tag; ogni blocco deve avere esiti PASS senza SKIP. Verificare separatamente
 che non restino schemi creati dalla prova, senza toccare quelli altrui.

@@ -26,7 +26,8 @@ var explainProfileFilterTool = server.ServerTool{
 			" Read profile-filter-doc first. Reuse query-profiles evaluation.at to anchor the periods;"+
 			" this is a new evaluation, not a snapshot. It does not identify which Record operand caused NULL."+
 			" Requires a valid workspace-scoped MCP key and uses the main warehouse connection. Its data access is"+
-			" not restricted by former MCP credentials. Unavailable on unverified backends including Snowflake."),
+			" not restricted by former MCP credentials."+
+			" Explanations are available on PostgreSQL and Snowflake."),
 		mcp.WithString("kpid", mcp.Required(), mcp.Description("KPID of the profile to explain, as a UUID.")),
 		mcp.WithString("filter", mcp.Required(), mcp.Description("The same core.Filter JSON text used in query-profiles.")),
 		mcp.WithString("at", mcp.Description("Optional nonfuture RFC 3339 instant with microsecond precision.")),

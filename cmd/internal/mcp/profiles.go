@@ -59,7 +59,8 @@ var queryProfilesTool = server.ServerTool{
 			" Reuse evaluation.at on later pages to anchor periods; this does not freeze the data."+
 			" Requires a valid workspace-scoped MCP key and uses the main Krenalis connection."+
 			" Former MCP table/column permissions do not restrict this tool or its event conditions."+
-			" Snowflake uses the main virtual warehouse; behavioral filters remain unavailable."+
+			" Snowflake uses the main virtual warehouse."+
+			" Behavioral filters are available on PostgreSQL and Snowflake."+
 			" SQL execution is not available; report unsupported Unified capabilities explicitly."),
 		mcp.WithString("filter", mcp.Description("core.Filter encoded as JSON text, not an object or SQL."+
 			" Numbers inside the text retain exact digits. Omit to list all profiles; null is invalid.")),

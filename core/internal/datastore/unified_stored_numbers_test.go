@@ -24,8 +24,7 @@ func TestUnifiedStoredNumbersPostgreSQL(t *testing.T) {
 	testUnifiedStoredNumbers(t, "PostgreSQL")
 }
 
-// TestUnifiedStoredNumbersSnowflake needs a verified or test-overlay build;
-// it does not provide a runtime bypass of the production verification gate.
+// TestUnifiedStoredNumbersSnowflake uses an isolated Snowflake warehouse.
 func TestUnifiedStoredNumbersSnowflake(t *testing.T) {
 	dw := warehouses.Registered("Snowflake").New(newTestSettingsLoader(json.Value(`{}`)), nil)
 	if !dw.(warehouses.ProfileFilterWarehouse).ProfileFilterVerified() {

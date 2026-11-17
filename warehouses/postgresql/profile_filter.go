@@ -15,7 +15,7 @@ import (
 	"github.com/krenalis/krenalis/warehouses/internal/profilefilter"
 )
 
-// profileFilterVerified gates prepared filters pending real-database tests.
+// profileFilterVerified controls availability after backend verification.
 const profileFilterVerified = true
 
 // ProfileFilterVerified reports backend verification of prepared filters.

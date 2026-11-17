@@ -708,7 +708,7 @@ activation checks are listed in the runbook below.
 ### Consolidated Snowflake verification campaign
 
 The [campaign runbook](../../../test/snowflaketester/UNIFIED.md) collects the
-local checks, isolated gate-overlay preparation, ordered remote commands and
+local checks, isolated session-overlay preparation, ordered remote commands and
 remaining acceptance gaps. The shared bounded fixtures passed on PostgreSQL
 and their original selection, period and page/screen groups passed on real
 Snowflake on 2026-11-11. Four added groups cover Count money, Sum/Average guards,
@@ -1089,9 +1089,9 @@ existence in the 60–90-day band, with the same source and qualification.
 PostgreSQL tests exercise the real Go/Record/warehouse path, duplicated identities,
 exact timestamp conflicts, missing timestamps, named and unnamed page/screen,
 empty and uncertain bases, ties, no fallback, scoping, full history, independent
-completion enumeration and HTTP/MCP. Snowflake has the same shared composer and
-local adapter tests; its existing verification gate remains closed. No remote
-Snowflake execution or infrastructure coherence guarantee is claimed.
+completion enumeration and HTTP/MCP. Snowflake uses the same shared composer and
+local adapter tests; its integrated campaign and coverage limits are recorded
+in the runbook above. These do not establish infrastructure coherence.
 
 ### Selected timestamp membership
 
