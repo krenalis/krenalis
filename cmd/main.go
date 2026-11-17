@@ -105,6 +105,9 @@ func Main(assets fs.FS) {
 	if err != nil {
 		fatal(1, err.Error())
 	}
+
+	// If the -migrate-db flag is provided, migrate the PostgreSQL database and
+	// exit.
 	if migrateDB {
 		err = core.MigrateDB(ctx, &core.Config{DB: conf.DB})
 		if err != nil {
