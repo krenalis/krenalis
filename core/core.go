@@ -430,40 +430,6 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 	return core, nil
 }
 
-// MigrateDB migrates Krenalis's PostgreSQL database to the current schema. It
-// is idempotent, and it is safe to call it concurrently from several Krenalis
-// instances.
-func MigrateDB(ctx context.Context, conf *Config) error {
-
-	db, err := dbpkg.Open(&dbpkg.Options{
-		Host:           conf.DB.Host,
-		Port:           conf.DB.Port,
-		Username:       conf.DB.Username,
-		Password:       conf.DB.Password,
-		Database:       conf.DB.Database,
-		Schema:         conf.DB.Schema,
-		MaxConnections: max(2, conf.DB.MaxConnections),
-	})
-	if err != nil {
-		return fmt.Errorf("cannot connect to PostgreSQL: %s", err)
-	}
-	defer db.Close()
-
-	pingCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
-	defer cancel()
-	err = db.Ping(pingCtx)
-	if err != nil {
-		return fmt.Errorf("cannot connect to PostgreSQL: %s", err)
-	}
-
-	err = initdb.Migrate(ctx, db)
-	if err != nil {
-		return fmt.Errorf("cannot migrate PostgreSQL database: %s", err)
-	}
-
-	return nil
-}
-
 // AcceptInvitation accepts the invitation with the given invitation token. It
 // sets the member's name and password and removes its token. name's length must
 // be in range [0, 45]. password's length must be at least 8 character long.
@@ -2241,6 +2207,40 @@ func EventSchema() types.Type {
 // members, access keys, workspaces, connections, pipelines, and pipeline runs).
 func IsValidID(id string) bool {
 	return len(id) == 12 && base58.IsValid(id)
+}
+
+// MigrateDB migrates Krenalis's PostgreSQL database to the current schema. It
+// is idempotent, and it is safe to call it concurrently from several Krenalis
+// instances.
+func MigrateDB(ctx context.Context, conf *Config) error {
+
+	db, err := dbpkg.Open(&dbpkg.Options{
+		Host:           conf.DB.Host,
+		Port:           conf.DB.Port,
+		Username:       conf.DB.Username,
+		Password:       conf.DB.Password,
+		Database:       conf.DB.Database,
+		Schema:         conf.DB.Schema,
+		MaxConnections: max(2, conf.DB.MaxConnections),
+	})
+	if err != nil {
+		return fmt.Errorf("cannot connect to PostgreSQL: %s", err)
+	}
+	defer db.Close()
+
+	pingCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+	err = db.Ping(pingCtx)
+	if err != nil {
+		return fmt.Errorf("cannot connect to PostgreSQL: %s", err)
+	}
+
+	err = initdb.Migrate(ctx, db)
+	if err != nil {
+		return fmt.Errorf("cannot migrate PostgreSQL database: %s", err)
+	}
+
+	return nil
 }
 
 // RequestID returns the request ID associated with ctx.

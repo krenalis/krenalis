@@ -2,7 +2,7 @@
 
 Base release: `v0.48.0`
 
-What the updater of the next release must do to upgrade a database of the
+What the migration of the next release must do to upgrade a database of the
 base release. See `.agents/skills/release-upgrade/SKILL.md`.
 
 - Replace every `{"kind":"year"}` type with a signed `int` of `bitSize: 16`
