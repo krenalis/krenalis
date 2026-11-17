@@ -22,6 +22,23 @@ services:
       KRENALIS_KMS: ${KRENALIS_KMS:?KRENALIS_KMS must be set}
       KRENALIS_PROMETHEUS_METRICS_ENABLED: ${KRENALIS_PROMETHEUS_METRICS_ENABLED-true}
       KRENALIS_TRANSFORMERS_PROVIDER: ${KRENALIS_TRANSFORMERS_PROVIDER-local}
+      KRENALIS_DB_HOST: db
+      KRENALIS_DB_PORT: 5432
+      KRENALIS_DB_USERNAME: krenalis
+      KRENALIS_DB_PASSWORD: krenalis
+      KRENALIS_DB_DATABASE: krenalis
+      KRENALIS_NATS_URL: nats://nats:4222
+      KRENALIS_NATS_USER: ruser
+      KRENALIS_NATS_PASSWORD: T0pS3cr3t
+      KRENALIS_TRANSFORMERS_LOCAL_NODEJS_EXECUTABLE: /usr/bin/node
+      KRENALIS_TRANSFORMERS_LOCAL_PYTHON_EXECUTABLE: /usr/bin/python
+      KRENALIS_TRANSFORMERS_LOCAL_FUNCTIONS_DIR: /var/krenalis/transformation-functions
+      KRENALIS_TRANSFORMERS_LOCAL_DOAS_USER: transformeruser
+      KRENALIS_CONNECTOR_FILESYSTEM_ROOT: /var/krenalis/storage
+      KRENALIS_CONNECTOR_FILESYSTEM_DISPLAYED_ROOT: ${PWD}/storage
+
+      # Optional variables, passed to Krenalis only when set in the shell or
+      # in the '.env' file. They must be listed here to reach the container.
       KRENALIS_INVITE_MEMBERS_VIA_EMAIL:
       KRENALIS_MEMBER_EMAIL_FROM:
       KRENALIS_SMTP_HOST:
@@ -39,20 +56,6 @@ services:
       AWS_ACCESS_KEY_ID:
       AWS_SECRET_ACCESS_KEY:
       AWS_SESSION_TOKEN:
-      KRENALIS_DB_HOST: db
-      KRENALIS_DB_PORT: 5432
-      KRENALIS_DB_USERNAME: krenalis
-      KRENALIS_DB_PASSWORD: krenalis
-      KRENALIS_DB_DATABASE: krenalis
-      KRENALIS_NATS_URL: nats://nats:4222
-      KRENALIS_NATS_USER: ruser
-      KRENALIS_NATS_PASSWORD: T0pS3cr3t
-      KRENALIS_TRANSFORMERS_LOCAL_NODEJS_EXECUTABLE: /usr/bin/node
-      KRENALIS_TRANSFORMERS_LOCAL_PYTHON_EXECUTABLE: /usr/bin/python
-      KRENALIS_TRANSFORMERS_LOCAL_FUNCTIONS_DIR: /var/krenalis/transformation-functions
-      KRENALIS_TRANSFORMERS_LOCAL_DOAS_USER: transformeruser
-      KRENALIS_CONNECTOR_FILESYSTEM_ROOT: /var/krenalis/storage
-      KRENALIS_CONNECTOR_FILESYSTEM_DISPLAYED_ROOT: ${PWD}/storage
 
     volumes:
       - ./storage:/var/krenalis/storage
