@@ -1,6 +1,7 @@
 # Preparazione dell'attivazione Unified su Snowflake
 
-Stato: candidato preparato in locale, prova live finale ancora da eseguire.
+Stato: preparazione locale e revisione mirata concluse; prova live finale ancora
+da eseguire.
 
 - Branch: `prepare/unified-snowflake-activation`.
 - Worktree: `/private/tmp/krenalis-snowflake-unified-activation`.
@@ -110,6 +111,14 @@ Log in `/private/tmp/krenalis-snowflake-activation-review-d0opipev/`.
 Non sono ripetute le prove pubbliche PostgreSQL o le suite degli oracoli:
 la correzione modifica soltanto testi, commenti e il controllo dell'harness.
 La prova Snowflake live del candidato corretto resta pendente.
+
+La verifica del 17 novembre approva `cc5496961`: il rilievo bloccante e le
+note 1–4 e 6 sono risolti; la scelta sulla nota 5 è confermata come legittima
+e sicura. Il revisore ha ripetuto MCP (37 PASS), adapter (9 PASS), factory e
+rifiuto dei backend non verificati (2 PASS, 1 SKIP), il mutante delle spiegazioni
+e i 13 test Python. Non restano rilievi aperti nella revisione mirata.
+Il prossimo passo è la prova live descritta sotto; nessun trasferimento del
+candidato avviene prima del suo esito positivo.
 
 ## Prova live alla prossima finestra
 
