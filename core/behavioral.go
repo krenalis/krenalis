@@ -75,13 +75,13 @@ func prepareBehavioralRule(rule FilterRule, schema types.Type, depth int, nodes 
 func prepareBehavioralRuleInCalendar(rule FilterRule, schema types.Type, depth int, nodes *int, calendar *behavioral.Calendar) (behavioral.Rule, error) {
 	*nodes++
 	if *nodes > 101 {
-		return behavioral.Rule{}, fmt.Errorf("behavioral filter filter exceeds 100 descendant nodes")
+		return behavioral.Rule{}, fmt.Errorf("behavioral filter exceeds 100 descendant nodes")
 	}
 	switch rule := rule.(type) {
 	case *Filter:
 		if rule == nil || depth >= 4 || (rule.Operator != OpAnd && rule.Operator != OpOr) ||
 			len(rule.Rules) == 0 || len(rule.Rules) > 100 {
-			return behavioral.Rule{}, fmt.Errorf("invalid behavioral filter filter group")
+			return behavioral.Rule{}, fmt.Errorf("invalid behavioral filter group")
 		}
 		if depth > 0 && rule.DefaultCalendar != nil {
 			return behavioral.Rule{}, fmt.Errorf("defaultCalendar is only allowed on the root group")
@@ -127,6 +127,6 @@ func prepareBehavioralRuleInCalendar(rule FilterRule, schema types.Type, depth i
 	case *FilterLatestNCondition:
 		return prepareFilterLatestN(rule, calendar)
 	default:
-		return behavioral.Rule{}, fmt.Errorf("unsupported behavioral filter filter rule %T", rule)
+		return behavioral.Rule{}, fmt.Errorf("unsupported behavioral filter rule %T", rule)
 	}
 }

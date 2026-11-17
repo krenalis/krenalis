@@ -1309,7 +1309,7 @@ Repeat the permanent tests with fresh logs and standard overlays:
 
 ```sh
 KRENALIS_SKIP_SNOWFLAKE_TESTS=true go test ./core/internal/datastore -race \
-  -run '^Test(ModeTransitions|behavioral filter(Resources|TimestampPrecision)PostgreSQL)$' -count=1 -timeout=4m
+  -run '^Test(ModeTransitions|Behavioral(Resources|TimestampPrecision)PostgreSQL)$' -count=1 -timeout=4m
 
 KRENALIS_SKIP_SNOWFLAKE_TESTS=false python3 test/snowflaketester/run.py --require-schemas \
   --require-session-timezone UTC --require-session-profile standard --require-result-format arrow \

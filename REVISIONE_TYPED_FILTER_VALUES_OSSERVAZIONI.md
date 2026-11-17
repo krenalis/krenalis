@@ -390,3 +390,20 @@ Verifiche della rinomina (2026-11-17):
   initdb, state, Admin e codice di validazione/esecuzione pipeline invariati.
 
 Log e strumenti temporanei: `/private/tmp/krenalis-behavioral-rename-n32x6vu4/`.
+
+### Riscontro alla revisione mirata della rinomina
+
+Confermati e corretti entrambi i rilievi del rapporto
+`filtering/claude/revisione-rinomina-behavioral-filters.md`:
+
+- R1/P2: il selettore locale del runbook usa `Behavioral`, selezionando
+  risorse e precisione oltre a `TestModeTransitions`. La verifica estrae
+  l'espressione dal runbook, controlla con `go test -list` l'insieme esatto dei
+  tre test e richiede che tutti e tre passino nell'esecuzione con `-race`.
+  Esito: 21 eventi PASS, incluso il pacchetto, nessun FAIL o SKIP.
+- R2/P3: eliminate le tre duplicazioni `behavioral filter filter` nei messaggi
+  del preparatore. Logica, limiti e classificazione degli errori invariati.
+
+Passano anche `go test -mod=vendor ./core -short -race -count=1`, `go vet` su
+core, gofmt e il controllo del diff. Nessuna prova live Snowflake. Evidenze:
+`/private/tmp/krenalis-behavioral-review-fixes-2e8k_fb5/`.
