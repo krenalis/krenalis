@@ -4,10 +4,11 @@ if (e.load) {
   window.console && console.error &&
     console.error("The Krenalis snippet is included twice");
 } else {
-  e.load = function (key, url, options) {
+  e.load = function (key, url, options, consents) {
     e.key = key;
     e.url = url;
     e.options = options;
+    e.consents = consents;
     var script = document.createElement("script");
     script.async = !0;
     script.type = "text/javascript";
