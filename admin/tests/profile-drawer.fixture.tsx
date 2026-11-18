@@ -6,6 +6,7 @@ import React, { useState } from 'react';
 import ReactDOM from 'react-dom/client';
 import '@awesome.me/webawesome/dist/styles/layers.css';
 import '@awesome.me/webawesome/dist/styles/themes/default.css';
+import '../src/components/routes/App/App.css';
 import API from '../src/lib/api/api';
 import { profileAttributesResponse } from '../src/lib/api/types/responses';
 import Workspace from '../src/lib/api/types/workspace';

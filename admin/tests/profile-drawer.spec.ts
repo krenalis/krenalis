@@ -36,7 +36,7 @@ test.beforeAll(async () => {
 test.beforeEach(async ({ page }) => {
 	await page.route('**/*', (route) => route.abort());
 	await page.route('https://example.test/', (route) =>
-		route.fulfill({ contentType: 'text/html', body: '<div id="root"></div>' }),
+		route.fulfill({ contentType: 'text/html', body: '<!doctype html><div id="root"></div>' }),
 	);
 	await page.goto('https://example.test/');
 	await page.addStyleTag({ content: componentStyles });
@@ -182,6 +182,8 @@ test('fades profile changes without remounting the drawer and cancels superseded
 		await drawer.getByRole('tab', { name: tab, exact: true }).click();
 		const content = drawer.locator(`.profile-drawer__${tab.toLowerCase()}`);
 		await expect(content.locator('wa-spinner')).toBeVisible();
+		const panel = drawer.locator('wa-tab-panel[active] [part="base"]');
+		expect(await panel.evaluate((element) => element.scrollHeight - element.clientHeight)).toBe(0);
 		await expect.poll(() => pendingResponses.length).toBe(1);
 		expect(await previousAnimation.evaluate((animation) => animation.playState)).toBe('paused');
 		pendingResponses.shift()!();

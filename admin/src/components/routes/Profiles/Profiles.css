@@ -1257,7 +1257,7 @@ wa-button.profiles-list__filter-history-action:not([disabled]):active::part(butt
 
 .profile-drawer wa-spinner {
 	margin: 15px auto;
-	display: block;
+	display: flex;
 }
 
 .profile-drawer__events > *,
