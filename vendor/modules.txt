@@ -611,7 +611,7 @@ github.com/nats-io/nats.go/internal/parser
 github.com/nats-io/nats.go/internal/syncx
 github.com/nats-io/nats.go/jetstream
 github.com/nats-io/nats.go/util
-# github.com/nats-io/nkeys v0.4.16
+# github.com/nats-io/nkeys v0.4.17
 ## explicit; go 1.25.0
 github.com/nats-io/nkeys
 # github.com/nats-io/nuid v1.0.1
