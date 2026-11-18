@@ -231,11 +231,13 @@ func convertFilterToWhere(filter *Filter, schema types.Type) *state.Where {
 			case types.DecimalKind:
 				v, _ = parseFilterDecimal(value)
 			case types.DateTimeKind:
-				v, _ = iso8601.ParseString(value)
+				dt, _ := iso8601.ParseString(value)
+				v = dt.UTC()
 			case types.DateKind:
 				v, _ = time.Parse(time.DateOnly, value)
 			case types.TimeKind:
-				v, _ = util.ParseTime(value)
+				t, _ := time.Parse("15:04:05.999999999", value)
+				v = time.Date(1970, 1, 1, t.Hour(), t.Minute(), t.Second(), t.Nanosecond(), time.UTC)
 			case types.UUIDKind:
 				v, _ = types.NormalizeUUID(value)
 			case types.JSONKind:
@@ -918,11 +920,12 @@ func validateFilterCondition(cond *FilterCondition, validation *filterValidation
 			}
 		case types.DateKind:
 			if t, err := time.Parse(time.DateOnly, value); err == nil {
-				y := t.UTC().Year()
+				y := t.Year()
 				valid = types.MinYear <= y && y <= types.MaxYear
 			}
 		case types.TimeKind:
-			_, valid = util.ParseTime(value)
+			_, err = time.Parse("15:04:05.999999999", value)
+			valid = err == nil
 		case types.UUIDKind:
 			_, valid = types.NormalizeUUID(value)
 		case types.IPKind:
