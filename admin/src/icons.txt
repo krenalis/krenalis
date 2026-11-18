@@ -2,13 +2,16 @@
 123.svg
 activity.svg
 arrow-clockwise.svg
+arrow-counterclockwise.svg
 arrow-down-circle.svg
 arrow-down-right-square.svg
+arrow-down.svg
 arrow-left.svg
 arrow-right-short.svg
 arrow-right.svg
 arrow-up-circle.svg
 arrow-up-right-square.svg
+arrow-up.svg
 arrows-angle-contract.svg
 arrows-angle-expand.svg
 arrows-collapse.svg
@@ -34,6 +37,7 @@ chevron-down.svg
 chevron-expand.svg
 chevron-left.svg
 chevron-right.svg
+chevron-up.svg
 circle-fill.svg
 clock.svg
 cloud.svg

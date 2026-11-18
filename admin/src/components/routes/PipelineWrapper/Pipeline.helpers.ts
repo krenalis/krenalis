@@ -1,4 +1,4 @@
-import { getHierarchicalPaths, TransformedPipeline, FlatSchema } from '../../../lib/core/pipeline';
+import { getHierarchicalPaths, TransformedPipeline } from '../../../lib/core/pipeline';
 import TransformedConnection from '../../../lib/core/connection';
 import { Property } from '../../../lib/api/types/types';
 import { SampleIdentifiers } from './Pipeline.types';
@@ -139,16 +139,6 @@ const updateMappingPropertyError = (
 	return p;
 };
 
-const checkIfPropertyExists = (property: string, schema: FlatSchema, toHide?: string[]): string => {
-	if (schema == null || property === '' || property == null) {
-		return '';
-	}
-	if (schema[property] == null || toHide?.includes(property)) {
-		return `Property "${property}" does not exist`;
-	}
-	return '';
-};
-
 const propertyAnnotationSeparator = ' – ';
 
 // propertyAnnotation returns the display name and the description of a
@@ -224,7 +214,6 @@ const getSampleIdentifiers = (sample: Record<string, any>): SampleIdentifiers | 
 export {
 	updateMappingProperty,
 	updateMappingPropertyError,
-	checkIfPropertyExists,
 	getSampleIdentifiers,
 	pipelineObjectLabels,
 	propertyAnnotation,

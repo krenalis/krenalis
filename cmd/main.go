@@ -57,6 +57,9 @@ func Main(assets fs.FS) {
 			" and exit")
 	flag.BoolVar(&printVersion, "version", false, "print the Krenalis version and exit")
 	flag.Parse()
+	if flag.NArg() > 0 {
+		fatal(1, fmt.Sprintf("unexpected argument %q\nRun with -help for usage.", flag.Arg(0)))
+	}
 	if help {
 		flag.Usage()
 		os.Exit(0)

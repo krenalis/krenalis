@@ -2,6 +2,7 @@ import React, { useCallback, useContext, useEffect, useId, useLayoutEffect, useM
 import './IdentityOverview.css';
 import WaTooltip from '@awesome.me/webawesome/dist/react/tooltip/index.js';
 import AppContext from '../../../context/AppContext';
+import { ErrorNotice } from '../../base/ErrorNotice/ErrorNotice';
 import SegmentedDateRangeControl, {
 	SegmentedDateRangePreset,
 	SegmentedDateRangeSelection,
@@ -68,7 +69,6 @@ import {
 	ResolutionEffectivenessChart,
 	ResolutionPeriodEmptyState,
 	SectionHeading,
-	StateMessage,
 	TypeDistributionCard,
 } from './IdentityOverview.components';
 
@@ -513,11 +513,10 @@ const IdentityOverview = () => {
 
 			<section className='identity-dashboard__section'>
 				{dashboardError != null && (
-					<StateMessage
-						variant='error'
+					<ErrorNotice
+						className='identity-dashboard__error-notice'
 						title='Dashboard data could not be loaded'
 						description={dashboardError}
-						compact={true}
 					/>
 				)}
 				{shouldShowResolutionStructure && (

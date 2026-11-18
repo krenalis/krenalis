@@ -84,7 +84,7 @@ func TestSourceFileStorageUsersFiltering(t *testing.T) {
 
 	k.WaitForRunsCompletionAllowFailed(run1)
 
-	_, _, total := k.Profiles([]string{"email"}, "", false, 0, 100)
+	_, total := k.Profiles([]string{"email"}, "", false, 0, 100)
 
 	// Only cp@example.com satisfies "email is not ap@example.com" AND
 	// ("email is ap@example.com" OR "email is cp@example.com").
