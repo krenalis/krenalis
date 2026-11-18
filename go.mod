@@ -52,7 +52,7 @@ require (
 	github.com/twmb/franz-go v1.22.2
 	github.com/xuri/excelize/v2 v2.11.1
 	golang.org/x/crypto v0.59.0
-	golang.org/x/net v0.62.0
+	golang.org/x/net v0.63.0
 	golang.org/x/text v0.44.0
 )
 
