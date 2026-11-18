@@ -9,6 +9,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"syscall"
@@ -45,6 +46,7 @@ type toolCallWork struct {
 	id      any // JSON-RPC id, so a recovered panic stays correlatable
 	message json.RawMessage
 	writer  io.Writer
+	cancel  context.CancelFunc
 }
 
 // StdioOption defines a function type for configuring StdioServer
@@ -425,6 +427,13 @@ func (s *StdioServer) processInputStream(ctx context.Context, reader *bufio.Read
 		line, err := s.readNextLine(ctx, reader)
 		if err != nil {
 			if err == io.EOF {
+				// The final message may arrive without a trailing newline.
+				if strings.TrimSpace(line) != "" {
+					if err := s.processMessage(ctx, line, stdout); err != nil && err != io.EOF {
+						s.errLogger.Printf("Error handling message: %v", err)
+						return err
+					}
+				}
 				return nil
 			}
 			s.errLogger.Printf("Error reading input: %v", err)
@@ -441,35 +450,32 @@ func (s *StdioServer) processInputStream(ctx context.Context, reader *bufio.Read
 	}
 }
 
-// toolCallWorker processes tool calls from the queue
-func (s *StdioServer) toolCallWorker(ctx context.Context) {
+// toolCallWorker processes tool calls from the queue until Listen closes it.
+//
+// It does not stop on context cancellation: Listen cancels the request
+// context when input ends and only then closes the queue, so a worker that
+// returned on ctx.Done() could leave accepted calls unanswered. Calls still
+// queued at that point run with the cancelled context and get a response.
+func (s *StdioServer) toolCallWorker() {
 	defer s.workerWg.Done()
 
-	for {
-		select {
-		case work, ok := <-s.toolCallQueue:
-			if !ok {
-				// Channel closed, exit worker
-				return
-			}
-			// Process the tool call with panic recovery so a single
-			// panicking handler does not kill the worker permanently.
-			response := func() (resp mcp.JSONRPCMessage) {
-				defer func() {
-					if r := recover(); r != nil {
-						s.errLogger.Printf("panic recovered in stdio tool call worker: %v", r)
-						resp = createErrorResponse(work.id, mcp.INTERNAL_ERROR, fmt.Sprintf("internal panic: %v", r))
-					}
-				}()
-				return s.server.HandleMessage(work.ctx, work.message)
-			}()
-			if response != nil {
-				if err := s.writeResponse(response, work.writer); err != nil {
-					s.errLogger.Printf("Error writing tool response: %v", err)
+	for work := range s.toolCallQueue {
+		// Process the tool call with panic recovery so a single
+		// panicking handler does not kill the worker permanently.
+		response := func() (resp mcp.JSONRPCMessage) {
+			defer func() {
+				if r := recover(); r != nil {
+					s.errLogger.Printf("panic recovered in stdio tool call worker: %v", r)
+					resp = createErrorResponse(work.id, mcp.INTERNAL_ERROR, fmt.Sprintf("internal panic: %v", r))
 				}
+			}()
+			return s.server.HandleMessage(work.ctx, work.message)
+		}()
+		work.cancel()
+		if response != nil {
+			if err := s.writeResponse(response, work.writer); err != nil {
+				s.errLogger.Printf("Error writing tool response: %v", err)
 			}
-		case <-ctx.Done():
-			return
 		}
 	}
 }
@@ -537,7 +543,7 @@ func (s *StdioServer) Listen(
 	// Start worker pool for tool calls
 	for i := 0; i < s.workerPoolSize; i++ {
 		s.workerWg.Add(1)
-		go s.toolCallWorker(ctx)
+		go s.toolCallWorker()
 	}
 
 	// Start notification handler
@@ -592,26 +598,42 @@ func (s *StdioServer) processMessage(
 
 	// Check if this is a tool call that might need sampling (and thus should be processed concurrently)
 	var baseMessage struct {
-		Method string `json:"method"`
-		ID     any    `json:"id,omitempty"`
+		Method string        `json:"method"`
+		ID     mcp.RequestId `json:"id"`
 	}
 	parsed := json.Unmarshal(rawMessage, &baseMessage) == nil
+	if !parsed {
+		var invalidIDMessage struct {
+			Method string          `json:"method"`
+			ID     json.RawMessage `json:"id"`
+		}
+		if err := json.Unmarshal(rawMessage, &invalidIDMessage); err == nil && invalidIDMessage.Method == string(mcp.MethodToolsCall) {
+			var id mcp.RequestId
+			if err := json.Unmarshal(invalidIDMessage.ID, &id); err != nil {
+				return s.writeResponse(createErrorResponse(nil, mcp.INVALID_REQUEST, "Invalid request id"), writer)
+			}
+		}
+	}
 	if parsed && baseMessage.Method == string(mcp.MethodToolsCall) {
+		reqCtx, cancel := s.trackInflight(ctx, baseMessage.ID.Value())
 		// Queue tool calls for processing by workers
 		select {
 		case s.toolCallQueue <- &toolCallWork{
-			ctx:     ctx,
-			id:      baseMessage.ID,
+			ctx:     reqCtx,
+			id:      baseMessage.ID.Value(),
 			message: rawMessage,
 			writer:  writer,
+			cancel:  cancel,
 		}:
 			return nil
 		case <-ctx.Done():
+			cancel()
 			return ctx.Err()
 		default:
+			defer cancel()
 			// Queue is full, process synchronously as fallback
 			s.errLogger.Printf("Tool call queue full, processing synchronously")
-			response := s.handleMessage(ctx, baseMessage.ID, rawMessage)
+			response := s.handleMessage(reqCtx, baseMessage.ID.Value(), rawMessage)
 			if response != nil {
 				return s.writeResponse(response, writer)
 			}
@@ -621,15 +643,17 @@ func (s *StdioServer) processMessage(
 
 	// Serve requests off the read loop: a handler that blocks, such as
 	// subscriptions/listen, must not stall it. writeMu serialises the writes.
-	if parsed && baseMessage.ID != nil {
+	if parsed && !baseMessage.ID.IsNil() {
+		reqCtx, cancel := s.trackInflight(ctx, baseMessage.ID.Value())
 		s.requestWg.Go(func() {
-			s.handleRequest(ctx, baseMessage.ID, rawMessage, writer)
+			defer cancel()
+			s.handleRequest(reqCtx, baseMessage.ID.Value(), rawMessage, writer)
 		})
 		return nil
 	}
 
 	// Notifications carry no response and must not queue behind a request.
-	response := s.handleMessage(ctx, baseMessage.ID, rawMessage)
+	response := s.handleMessage(ctx, baseMessage.ID.Value(), rawMessage)
 
 	// Only write response if there is one (not for notifications)
 	if response != nil {
@@ -639,6 +663,19 @@ func (s *StdioServer) processMessage(
 	}
 
 	return nil
+}
+
+// trackInflight registers the request for notifications/cancelled before it
+// leaves the read loop, so a cancellation read while it waits for a worker or
+// goroutine still reaches it.
+func (s *StdioServer) trackInflight(ctx context.Context, id any) (context.Context, context.CancelFunc) {
+	ctx, cancel := context.WithCancel(ctx)
+	key := inflightKey(ctx, id)
+	s.server.inflightCancels.Store(key, cancel)
+	return ctx, func() {
+		s.server.inflightCancels.Delete(key)
+		cancel()
+	}
 }
 
 // handleMessage runs HandleMessage, recovering a panicking handler so that
