@@ -19,6 +19,7 @@ import {
 	focusGridForKeyboardNavigation,
 	navigateGrid,
 	navigateGridWithKeyboard,
+	scrollGridRowIntoView,
 } from './GridKeyboardNavigation.helpers';
 import GridNestedRows from './GridNestedRows/GridNestedRows';
 import GridRow from './GridRow/GridRow';
@@ -35,6 +36,7 @@ interface GridProps {
 	showColumnBorder?: boolean;
 	showRowBorder?: boolean;
 	gridColumnsWidths?: string; // the widths of the columns in the 'grid-template-columns' CSS rule format.
+	shouldSyncColumnWidths?: boolean; // commit measured widths before a view transition captures the grid.
 	isLoading?: boolean;
 	noRowsIcon?: string;
 	noRowsMessage?: string;
@@ -47,6 +49,11 @@ interface GridProps {
 	nestedRowsIndentation?: GridNestedRowsIndentation;
 	keyboardNavigation?: boolean;
 	reordering?: GridReordering;
+	activeRowID?: string;
+	ariaLabel?: string;
+	gridID?: string;
+	onNavigateActiveRow?: (direction: 'previous' | 'next') => void;
+	onSortColumn?: (overColumnKey: string, movedColumnKey: string) => void;
 }
 
 const Grid = forwardRef<GridRef, GridProps>(
@@ -57,6 +64,7 @@ const Grid = forwardRef<GridRef, GridProps>(
 			showColumnBorder,
 			showRowBorder,
 			gridColumnsWidths,
+			shouldSyncColumnWidths,
 			isLoading,
 			noRowsIcon,
 			noRowsMessage,
@@ -66,6 +74,11 @@ const Grid = forwardRef<GridRef, GridProps>(
 			nestedRowsIndentation,
 			keyboardNavigation,
 			reordering,
+			activeRowID,
+			ariaLabel,
+			gridID,
+			onNavigateActiveRow,
+			onSortColumn,
 		}: GridProps,
 		ref,
 	) => {
@@ -73,6 +86,7 @@ const Grid = forwardRef<GridRef, GridProps>(
 		const [isScrolledVertically, setIsScrolledVertically] = useState(false);
 		const onSortRow = reordering?.onSortRow;
 		const reorderDisabled = reordering?.disabled;
+		const hasControlledActiveItem = onNavigateActiveRow != null;
 
 		const { columnsWidths, reloadColumnsWidths } = useGrid(
 			gridRef,
@@ -81,6 +95,7 @@ const Grid = forwardRef<GridRef, GridProps>(
 			gridColumnsWidths,
 			isLoading,
 			isShown,
+			shouldSyncColumnWidths,
 		);
 
 		useImperativeHandle(ref, () => {
@@ -127,6 +142,16 @@ const Grid = forwardRef<GridRef, GridProps>(
 						? false
 						: navigateGrid(gridRef.current, key, shiftKey, reorderDisabled ? undefined : onSortRow);
 				},
+				scrollRowIntoView: (id: string) => {
+					const rows = gridRef.current?.querySelectorAll('.grid__row[data-id]') as
+						| NodeListOf<HTMLElement>
+						| undefined;
+					const row =
+						rows == null ? undefined : Array.from(rows).find((candidate) => candidate.dataset.id === id);
+					if (row != null) {
+						scrollGridRowIntoView(row);
+					}
+				},
 			};
 		}, [onSortRow, reorderDisabled]);
 
@@ -165,10 +190,14 @@ const Grid = forwardRef<GridRef, GridProps>(
 				}
 				const component = (
 					<GridRow
-						key={i}
+						key={row.key ?? row.id ?? i}
 						row={row as StandardGridRow}
 						columns={columns}
 						className={`grid__row${className ? ' ' + className : ''}`}
+						domID={
+							gridID != null && row.id != null ? `${gridID}-row-${encodeURIComponent(row.id)}` : undefined
+						}
+						isInteractiveGrid={hasControlledActiveItem}
 					/>
 				);
 				const sortableRow = row as SortableGridRow;
@@ -183,26 +212,49 @@ const Grid = forwardRef<GridRef, GridProps>(
 				}
 			}
 			return { rowComponents, sortableRowComponents };
-		}, [rows, nestedRowsIndentation, onSortRow, reorderDisabled]);
+		}, [rows, nestedRowsIndentation, onSortRow, reorderDisabled, gridID, hasControlledActiveItem]);
 
 		let widths = columnsWidths;
 		if (gridColumnsWidths != null) {
 			widths = gridColumnsWidths;
 		}
+		const onGridKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+			if (hasControlledActiveItem) {
+				if (
+					event.target === event.currentTarget &&
+					!event.altKey &&
+					!event.ctrlKey &&
+					!event.metaKey &&
+					!event.shiftKey &&
+					(event.key === 'ArrowDown' || event.key === 'ArrowUp')
+				) {
+					event.preventDefault();
+					onNavigateActiveRow?.(event.key === 'ArrowDown' ? 'next' : 'previous');
+				}
+				return;
+			}
+			if (keyboardNavigation) {
+				navigateGridWithKeyboard(event, reorderDisabled ? undefined : onSortRow);
+			}
+		};
 
 		return (
 			<div
 				ref={gridRef}
-				className={`grid${onSortRow == null ? '' : ' grid--sortable'}${isScrolledVertically ? ' grid--scrolled-vertically' : ''}${className ? ' ' + className : ''}${showColumnBorder ? ' grid--show-column-border' : ''}${showRowBorder ? ' grid--show-row-border' : ''}${widths == null ? ' grid--hide-content' : ''}`}
+				id={gridID}
+				className={`grid${onSortRow == null ? '' : ' grid--sortable'}${hasControlledActiveItem ? ' grid--active-items' : ''}${isScrolledVertically ? ' grid--scrolled-vertically' : ''}${className ? ' ' + className : ''}${showColumnBorder ? ' grid--show-column-border' : ''}${showRowBorder ? ' grid--show-row-border' : ''}${widths == null ? ' grid--hide-content' : ''}`}
 				style={{ '--grid-columns': widths } as React.CSSProperties}
-				tabIndex={keyboardNavigation ? 0 : undefined}
-				onClick={keyboardNavigation ? focusGridForKeyboardNavigation : undefined}
-				onScroll={(event) => setIsScrolledVertically(event.currentTarget.scrollTop > 0)}
-				onKeyDown={
-					keyboardNavigation
-						? (event) => navigateGridWithKeyboard(event, reorderDisabled ? undefined : onSortRow)
+				role={hasControlledActiveItem ? 'grid' : undefined}
+				aria-label={hasControlledActiveItem ? ariaLabel : undefined}
+				aria-activedescendant={
+					hasControlledActiveItem && activeRowID != null && activeRowID !== '' && gridID != null
+						? `${gridID}-row-${encodeURIComponent(activeRowID)}`
 						: undefined
 				}
+				tabIndex={keyboardNavigation || hasControlledActiveItem ? 0 : undefined}
+				onClick={keyboardNavigation || hasControlledActiveItem ? focusGridForKeyboardNavigation : undefined}
+				onScroll={(event) => setIsScrolledVertically(event.currentTarget.scrollTop > 0)}
+				onKeyDown={keyboardNavigation || hasControlledActiveItem ? onGridKeyDown : undefined}
 			>
 				{isLoading ? (
 					<div className='grid__loading'>
@@ -218,7 +270,11 @@ const Grid = forwardRef<GridRef, GridProps>(
 					</div>
 				) : (
 					<>
-						<GridHeaderRow columns={columns} />
+						<GridHeaderRow
+							columns={columns}
+							onSortColumn={onSortColumn}
+							isInteractiveGrid={hasControlledActiveItem}
+						/>
 						{rows.length === 0 && noRowsMessage ? (
 							<div className='grid__no-rows'>
 								<div className='grid__no-rows-text'>

@@ -6,6 +6,9 @@
 	--bg-transparent: #ffffff10;
 	--bg-editor: #1e1e1e;
 	--bg-overlay: #17171747;
+	--destructive-icon-button-active-background: var(--wa-color-danger-90);
+	--destructive-icon-button-color: var(--wa-color-danger-40);
+	--destructive-icon-button-hover-background: var(--wa-color-danger-95);
 	--text-primary: var(--wa-color-neutral-10);
 	--text-onaccent: var(--wa-color-surface-default);
 	--text-gray: var(--wa-color-neutral-60);
@@ -164,6 +167,27 @@ code {
 
 button {
 	line-height: normal;
+}
+
+.app-tooltip {
+	--wa-tooltip-border-color: var(--wa-color-neutral-70);
+	--wa-tooltip-border-width: 1px;
+}
+
+.app-tooltip::part(body) {
+	background-color: var(--bg-primary);
+	border: 1px solid var(--wa-color-neutral-70);
+	color: var(--text-primary);
+	font-weight: var(--wa-font-weight-light);
+	padding: calc(var(--wa-space-2xs) + 2px) calc(var(--wa-space-xs) + 4px);
+}
+
+.app-tooltip::part(base__popup) {
+	box-shadow: var(--wa-shadow-m);
+}
+
+.app-tooltip::part(base__arrow) {
+	background-color: var(--bg-primary);
 }
 
 h1,

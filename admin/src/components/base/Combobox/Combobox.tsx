@@ -20,6 +20,7 @@ const CONSTANT_REGEX = /"([^"]*)"/;
 
 interface ComboboxProps {
 	value: string;
+	displayValue?: string;
 	items: ComboboxItem[];
 	onInput: (path: string, value: string) => void;
 	onSelect: (path: string, value: string) => void;
@@ -49,6 +50,7 @@ interface ComboboxProps {
 // schema properties and expressions.
 const Combobox = ({
 	value,
+	displayValue,
 	items,
 	onInput: onInputFunc,
 	onSelect: onSelectFunc,
@@ -73,7 +75,7 @@ const Combobox = ({
 	propertiesToHide,
 	...rest
 }: ComboboxProps) => {
-	const [val, setVal] = useState<string>(value == null ? '' : value);
+	const [val, setVal] = useState<string>(displayValue ?? value ?? '');
 	const [cursorPosition, setCursorPosition] = useState<number>();
 	const [isOpen, setIsOpen] = useState<boolean>(false);
 	const [listWidth, setListWidth] = useState<number>();
@@ -87,6 +89,7 @@ const Combobox = ({
 	const listRef = useRef<any>();
 	const tabGroupRef = useRef<any>();
 	const programmaticFocus = useRef(false);
+	const isEditing = useRef(false);
 
 	const { api, handleError } = useContext(appContext);
 	const { connection } = useContext(ConnectionContext);
@@ -187,15 +190,16 @@ const Combobox = ({
 
 	useEffect(() => {
 		if (controlled) {
+			const inputValue = isEditing.current ? value : (displayValue ?? value);
 			if (isFirstControl.current) {
 				// Defer update to next event loop tick to ensure the input is
 				// mounted before updating its value.
 				setTimeout(() => {
-					updateComboboxValue(value);
+					updateComboboxValue(inputValue);
 					isFirstControl.current = false;
 				});
 			} else {
-				updateComboboxValue(value);
+				updateComboboxValue(inputValue);
 			}
 		}
 		if (autoResize && !isFirstControl.current) {
@@ -204,7 +208,7 @@ const Combobox = ({
 			// error icon shown in the suffix slot of the input).
 			resizeCombobox();
 		}
-	}, [value, error]);
+	}, [displayValue, value, error]);
 
 	useEffect(() => {
 		if (!isOpen || listRef.current == null) {
@@ -268,16 +272,15 @@ const Combobox = ({
 		if (listRef.current == null || !isOpen) {
 			return;
 		}
-		// Check if the combobox list vertically overflows the viewport
-		// and eventually position it on the border top of the combobox
-		// input.
-		listRef.current.classList.add('combobox-list--computing-position');
-		setTimeout(() => {
-			const rect = listRef.current.getBoundingClientRect();
-			listRef.current.classList.toggle('combobox-list--top', rect.bottom > window.innerHeight);
-			listRef.current.classList.remove('combobox-list--computing-position');
+		const list = listRef.current;
+		list.classList.add('combobox-list--computing-position');
+		const timeoutID = window.setTimeout(() => {
+			const rect = list.getBoundingClientRect();
+			list.classList.toggle('combobox-list--top', rect.bottom > window.innerHeight);
+			list.classList.remove('combobox-list--computing-position');
 		}, 20);
-	}, [isOpen]);
+		return () => window.clearTimeout(timeoutID);
+	}, [isOpen, listWidth]);
 
 	useLayoutEffect(() => {
 		if (enumValues == null) {
@@ -349,6 +352,7 @@ const Combobox = ({
 
 	const onInput = (e) => {
 		e.preventDefault();
+		isEditing.current = true;
 		if (!isOpen) {
 			// if the user has closed the list via escape button.
 			setIsOpen(true);
@@ -422,6 +426,17 @@ const Combobox = ({
 		wrapper.style.width = `${textWidth + prefixWidth + suffixWidth + 30}px`;
 	};
 
+	const onInputBlur = () => {
+		isEditing.current = false;
+		programmaticFocus.current = false;
+		if (displayValue != null) {
+			updateComboboxValue(displayValue);
+			if (autoResize) {
+				resizeCombobox();
+			}
+		}
+	};
+
 	const onInputFocus = () => {
 		if (programmaticFocus.current) {
 			// Prevent opening the list when the focus is set
@@ -431,6 +446,13 @@ const Combobox = ({
 			// continue typing, not to immediately open the list again.
 			programmaticFocus.current = false;
 			return;
+		}
+		isEditing.current = true;
+		if (displayValue != null) {
+			updateComboboxValue(value);
+			if (autoResize) {
+				resizeCombobox();
+			}
 		}
 		setIsOpen(true);
 		updateCursorPosition();
@@ -480,9 +502,10 @@ const Combobox = ({
 		}
 	}, []);
 
-	const onSelect = (e, term: string, type: 'property' | 'function' | 'enum') => {
+	const onSelect = (e, term: string, type: 'property' | 'function' | 'enum', selectedDisplayValue?: string) => {
 		e.preventDefault();
 		e.stopPropagation();
+		isEditing.current = true;
 
 		if (type === 'enum') {
 			let v = term;
@@ -491,6 +514,15 @@ const Combobox = ({
 			inputRef.current.focus();
 			onSelectFunc(name, v);
 			validate(name, v);
+			setIsOpen(false);
+			return;
+		}
+		if (type === 'property' && !isExpression && selectedDisplayValue != null) {
+			updateComboboxValue(term);
+			programmaticFocus.current = true;
+			inputRef.current.focus();
+			onSelectFunc(name, term);
+			validate(name, term);
 			setIsOpen(false);
 			return;
 		}
@@ -582,6 +614,7 @@ const Combobox = ({
 				<WaInput
 					data-is-combobox-input
 					onInput={disabled ? undefined : onInput}
+					onBlur={onInputBlur}
 					onFocus={onInputFocus}
 					disabled={disabled}
 					autocomplete='off'
@@ -691,7 +724,7 @@ const Combobox = ({
 												key={item.term}
 												className='combobox-list__item'
 												role='menuitem'
-												onClick={(e) => onSelect(e, item.term, 'property')}
+												onClick={(e) => onSelect(e, item.term, 'property', item.displayValue)}
 											>
 												{item.content}
 											</div>
@@ -721,7 +754,7 @@ const Combobox = ({
 											key={item.term}
 											className='combobox-list__item'
 											role='menuitem'
-											onClick={(e) => onSelect(e, item.term, 'property')}
+											onClick={(e) => onSelect(e, item.term, 'property', item.displayValue)}
 										>
 											{item.content}
 										</div>
@@ -747,8 +780,12 @@ const filterComboboxItems = (
 	propertyItems: ComboboxItem[],
 	functionItems: ComboboxItem[],
 ): ComboboxState => {
-	if (value === '' || (fragment != null && fragment.func == null && fragment.pos == null && fragment.type == null)) {
-		// the user is at the start of a new fragment.
+	if (
+		cursorPosition === 0 ||
+		value === '' ||
+		(fragment != null && fragment.func == null && fragment.pos == null && fragment.type == null)
+	) {
+		// Every completion is relevant at the start of the value or of a new fragment.
 		return { filteredProperties: propertyItems, filteredFunctions: functionItems };
 	}
 
@@ -774,13 +811,7 @@ const filterComboboxItems = (
 const filterItems = (searchTerm: string, items: ComboboxItem[]): ComboboxItem[] => {
 	const filtered: ComboboxItem[] = [];
 	for (const item of items) {
-		const term = item.term;
-		if (
-			term.includes(searchTerm) ||
-			term.includes(searchTerm.charAt(0).toUpperCase() + searchTerm.slice(1)) ||
-			term.includes(searchTerm.toUpperCase()) ||
-			term.includes(searchTerm.toLowerCase())
-		) {
+		if ([item.term, item.displayValue].some((term) => term != null && termMatches(term, searchTerm))) {
 			filtered.push(item);
 		}
 	}
@@ -797,6 +828,12 @@ const filterItems = (searchTerm: string, items: ComboboxItem[]): ComboboxItem[] 
 
 	return filtered;
 };
+
+const termMatches = (term: string, searchTerm: string): boolean =>
+	term.includes(searchTerm) ||
+	term.includes(searchTerm.charAt(0).toUpperCase() + searchTerm.slice(1)) ||
+	term.includes(searchTerm.toUpperCase()) ||
+	term.includes(searchTerm.toLowerCase());
 
 const getFunctionsComboboxItems = (functions: KrenalisFunction[]): ComboboxItem[] => {
 	const functionItems: ComboboxItem[] = [];

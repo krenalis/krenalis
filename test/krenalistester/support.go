@@ -719,23 +719,35 @@ func (k *Krenalis) ProfilePropertiesSuitableAsIdentifiers() types.Type {
 	return schema
 }
 
-// Profiles returns the profiles in the given range, together with their schema
-// and total count.
-func (k *Krenalis) Profiles(properties []string, order string, orderDesc bool, first, limit int) (users []Profile, schema types.Type, total int) {
-	queryString := url.Values{
+// Profiles returns the profiles in the given range and their total count.
+func (k *Krenalis) Profiles(properties []string, order string, orderDesc bool, first, limit int) (users []Profile, total int) {
+	var schema ProfileSchema
+	k.Call("GET", "/v1/profiles/schema", nil, nil, &schema)
+	users, total, _ = k.ProfilesWithSchema(schema.Schema, properties, order, orderDesc, first, limit)
+	return users, total
+}
+
+// ProfilesWithSchema returns profiles queried using schema, their total
+// count, and continuation state.
+func (k *Krenalis) ProfilesWithSchema(schema types.Type, properties []string, order string, orderDesc bool, first, limit int) ([]Profile, int, bool) {
+	body := map[string]any{
+		"schema":     schema,
 		"properties": properties,
-		"order":      []string{order},
-		"orderDesc":  []string{fmt.Sprintf("%t", orderDesc)},
-		"first":      []string{strconv.Itoa(first)},
-		"limit":      []string{strconv.Itoa(limit)},
+		"order":      order,
+		"orderDesc":  orderDesc,
+		"first":      first,
+		"limit":      limit,
 	}
 	var response struct {
-		Profiles []Profile  `json:"profiles"`
-		Schema   types.Type `json:"schema"`
-		Total    int        `json:"total"`
+		Profiles []Profile `json:"profiles"`
+		Total    int       `json:"total"`
+		HasNext  *bool     `json:"hasNext"`
 	}
-	k.Call("GET", "/v1/profiles?"+queryString.Encode(), nil, nil, &response)
-	return response.Profiles, response.Schema, response.Total
+	k.Call("POST", "/v1/profiles/query", nil, body, &response)
+	if response.HasNext == nil {
+		k.t.Fatal("expected hasNext to be a boolean, got missing or null")
+	}
+	return response.Profiles, response.Total, *response.HasNext
 }
 
 // RepairWarehouse repairs the warehouse.

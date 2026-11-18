@@ -226,8 +226,24 @@ const moveGridRow = (
 };
 
 const selectGridRow = (row: HTMLElement) => {
-	row.scrollIntoView({ block: 'nearest' });
+	scrollGridRowIntoView(row);
 	row.click();
 };
 
-export { focusGridForKeyboardNavigation, navigateGrid, navigateGridWithKeyboard, shouldNavigateGridFromDocument };
+const scrollGridRowIntoView = (row: HTMLElement) => {
+	row.scrollIntoView({ block: 'nearest' });
+	const grid = row.closest<HTMLElement>('.grid');
+	const header = grid?.querySelector<HTMLElement>(':scope > .grid__header-row');
+	if (grid != null && header != null && getComputedStyle(header).position === 'sticky') {
+		const overlap = Math.ceil(header.getBoundingClientRect().bottom - row.getBoundingClientRect().top);
+		grid.scrollTop -= Math.max(0, overlap);
+	}
+};
+
+export {
+	focusGridForKeyboardNavigation,
+	navigateGrid,
+	navigateGridWithKeyboard,
+	scrollGridRowIntoView,
+	shouldNavigateGridFromDocument,
+};
