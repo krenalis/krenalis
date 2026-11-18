@@ -1,39 +1,41 @@
 ---
 name: release-upgrade
-description: Record in core/internal/initdb/RELEASE-UPGRADE.md how a change alters Krenalis's PostgreSQL database, so that the migration and the finalization can be written when the next release is prepared; also write them for a release, increment the schema generation, and empty them afterwards.
+description: Record in core/internal/initdb/RELEASE-UPGRADE.md how a change alters Krenalis's PostgreSQL database, so that the migration and the finalization can be written when the next release is prepared; also write them for a release, increment the schema version, and empty them afterwards.
 ---
 
 # Release upgrade
 
-Krenalis's PostgreSQL database has a schema generation, an integer recorded in
-the single row of the `schema_version` table together with whether it has been
-finalized. A database without that table, that is, a database of `v0.48.0`, is
-at generation 1, finalized. The constant `schemaGeneration` in
-`core/internal/initdb/migrate.go` is the generation of the current code; it is
-incremented only by the releases that change the database, so a release that
-does not change it needs no migration.
+Krenalis's PostgreSQL database has a schema version: an integer, unrelated to
+the Krenalis version, recorded in the single row of the `schema_version` table
+together with whether it has been finalized. A database without that table,
+that is, a database of `v0.48.0`, is at schema version 1, finalized. The
+constant `schemaVersion` in `core/internal/initdb/migrate.go` is the schema
+version of the current code; it is incremented only by the releases that
+change the database, so a release that does not change it needs no
+migration.
 
 A release that changes the database upgrades it in two steps, both permanent
 flags of Krenalis:
 
 1. `-migrate-db` (`core.MigrateDB`, `initdb.Migrate`) runs `migrate` in
-   `migrate.go`. It migrates a finalized database of the previous generation
-   and records the new generation, not finalized. It runs while the Krenalis
-   instances of the previous release are still running, so `migrate` must not
-   break them (see "Compatibility with the previous release").
+   `migrate.go`. It migrates a finalized database of the previous schema
+   version and records the new schema version, not finalized. It runs while
+   the Krenalis instances of the previous release are still running, so
+   `migrate` must not break them (see "Compatibility with the previous
+   release").
 2. `-finalize-db` (`core.FinalizeDB`, `initdb.Finalize`) runs `finalize` in
    `migrate.go`, once no instance of the previous release is running. It
-   removes what only those instances needed and records the generation as
-   finalized. After it, the previous release can no longer run on the
+   removes what only those instances needed and records the schema version
+   as finalized. After it, the previous release can no longer run on the
    database.
 
 Both run in a single transaction, under the advisory lock shared with the
 initialization and with `lock_timeout` set to 5 seconds, and check the recorded
-generation, so they do nothing when run again. At startup,
-`initdb.CheckSchemaVersion` lets Krenalis run only on its own generation, or on
-the next one not yet finalized. A database of generation N must be finalized
-before the release of generation N+1 can migrate it, so the releases that
-change the database are deployed one at a time, in order.
+schema version, so they do nothing when run again. At startup,
+`initdb.CheckSchemaVersion` lets Krenalis run only on its own schema version,
+or on the next one not yet finalized. A database at schema version N must be
+finalized before the release with schema version N+1 can migrate it, so the
+releases that change the database are deployed one at a time, in order.
 
 `migrate` and `finalize` hold the upgrade of a single release. Together with
 their test and the schema of the previous release in
@@ -150,24 +152,24 @@ entries remain.
    Every difference must be covered by an entry, and every entry by the
    diff or by a change in the format of stored data; ask the user about any
    mismatch. If the database has not changed, write nothing and leave
-   `schemaGeneration` unchanged.
-3. Check that `schemaGeneration` is the generation of the base release:
+   `schemaVersion` unchanged.
+3. Check that `schemaVersion` is the schema version of the base release:
    `git show <base>:core/internal/initdb/migrate.go`, or 1 if the base release
-   has no `schemaGeneration`. Then increment it by one.
+   has no `schemaVersion`. Then increment it by one.
 4. Write `migrate` from the entries under "Migration", and `finalize` from
    those under "Finalization", each within the transaction it receives. They
-   need not be idempotent, since the recorded generation prevents running them
-   twice, but every statement is subject to the 5-second `lock_timeout`. Ask
-   the user before writing a long backfill or a statement that cannot run in a
-   transaction, such as `CREATE INDEX CONCURRENTLY`.
+   need not be idempotent, since the recorded schema version prevents running
+   them twice, but every statement is subject to the 5-second `lock_timeout`.
+   Ask the user before writing a long backfill or a statement that cannot run
+   in a transaction, such as `CREATE INDEX CONCURRENTLY`.
 5. Save the schema of the base release in
    `core/internal/initdb/testdata/schema_<base>.sql` with
    `git show <base>:core/internal/initdb/schema.sql`, and write
    `migrate_release_test.go`, following
    `git show v0.48.0:core/internal/initdb/upgrade_test.go`:
    - Create the base database from that schema. If it has the `schema_version`
-     table, record in it the generation of the base release, finalized, as its
-     initialization did.
+     table, record in it the schema version of the base release, finalized, as
+     its initialization did.
    - Run `Migrate`, then `Finalize`; the resulting schema must match a newly
      initialized one, ignoring the order of the columns.
    - The test data must cover every step that transforms existing data.
@@ -180,6 +182,6 @@ entries remain.
 Once the release is published, empty the bodies of `migrate` and `finalize` so
 that they return `nil`, and remove from `main` everything that only the upgrade
 uses: `migrate_release_test.go`, the schema in `testdata`, and any helpers.
-Keep `schemaGeneration` at its new value, and keep `-migrate-db`,
+Keep `schemaVersion` at its new value, and keep `-migrate-db`,
 `-finalize-db`, `core.MigrateDB`, `core.FinalizeDB`, `initdb.Migrate`,
 `initdb.Finalize`, and `initdb.CheckSchemaVersion`.

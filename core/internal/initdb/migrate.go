@@ -13,21 +13,22 @@ import (
 	"github.com/krenalis/krenalis/tools/errors"
 )
 
-// schemaGeneration is the generation of the database schema of this version of
-// Krenalis. It is incremented only by the releases that change the database,
-// whose migrate migrates a database of the previous generation to it. See
+// schemaVersion is the schema version of the database of this version of
+// Krenalis, an integer unrelated to the Krenalis version. It is incremented
+// only by the releases that change the database, whose migrate migrates a
+// database of the previous schema version to it. See
 // .agents/skills/release-upgrade/SKILL.md.
-const schemaGeneration = 1
+const schemaVersion = 1
 
-// legacySchemaGeneration is the generation of a database without the
+// legacySchemaVersion is the schema version of a database without the
 // schema_version table, that is, a database of v0.48.0.
-const legacySchemaGeneration = 1
+const legacySchemaVersion = 1
 
 // CheckSchemaVersion checks that this version of Krenalis can run on the
-// database: its schema generation must be the one of this version, finalized
-// or not, or the next one not finalized, as while the Krenalis instances are
-// being replaced or after a rollback. In the latter case it logs a warning. It
-// returns nil for an empty database.
+// database: its schema version must be the one of this version of Krenalis,
+// finalized or not, or the next one not finalized, as while the Krenalis
+// instances are being replaced or after a rollback. In the latter case it logs
+// a warning. It returns nil for an empty database.
 func CheckSchemaVersion(ctx context.Context, database *db.DB) error {
 	isEmpty, err := databaseIsEmpty(ctx, database)
 	if err != nil {
@@ -36,31 +37,31 @@ func CheckSchemaVersion(ctx context.Context, database *db.DB) error {
 	if isEmpty {
 		return nil
 	}
-	generation, finalized, err := readSchemaVersion(ctx, database)
+	version, finalized, err := readSchemaVersion(ctx, database)
 	if err != nil {
-		return fmt.Errorf("cannot read schema generation of PostgreSQL database: %s", err)
+		return fmt.Errorf("cannot read schema version of PostgreSQL database: %s", err)
 	}
 	switch {
-	case generation == schemaGeneration:
+	case version == schemaVersion:
 		// This version runs on it.
-	case generation == schemaGeneration+1 && !finalized:
-		slog.Warn("PostgreSQL database is at the next schema generation, not finalized,"+
-			" on which this version of Krenalis can still run", "generation", generation)
-	case generation > schemaGeneration:
-		return fmt.Errorf("PostgreSQL database is at schema generation %d, on which this version of Krenalis,"+
-			" at generation %d, can no longer run", generation, schemaGeneration)
+	case version == schemaVersion+1 && !finalized:
+		slog.Warn("PostgreSQL database is at the next schema version, not finalized,"+
+			" on which this version of Krenalis can still run", "schema_version", version)
+	case version > schemaVersion:
+		return fmt.Errorf("PostgreSQL database is at schema version %d, on which this version of Krenalis,"+
+			" at schema version %d, can no longer run", version, schemaVersion)
 	default:
-		return fmt.Errorf("PostgreSQL database is at schema generation %d, but this version of Krenalis"+
-			" requires generation %d; migrate the database first", generation, schemaGeneration)
+		return fmt.Errorf("PostgreSQL database is at schema version %d, but this version of Krenalis"+
+			" requires schema version %d; migrate the database first", version, schemaVersion)
 	}
 	return nil
 }
 
 // Finalize finalizes, in a single transaction, the migration of Krenalis's
-// PostgreSQL database to the schema generation of this version of Krenalis,
+// PostgreSQL database to the schema version of this version of Krenalis,
 // removing what only the Krenalis instances of the previous version need, and
 // records it as finalized. It does nothing if the database is already
-// finalized, and fails if the database is empty or at another generation.
+// finalized, and fails if the database is empty or at another schema version.
 // After it, the instances of the previous version can no longer run on the
 // database. It does not check that none of them is running: the caller must
 // ensure it. It is safe to call it concurrently from several Krenalis
@@ -68,84 +69,85 @@ func CheckSchemaVersion(ctx context.Context, database *db.DB) error {
 func Finalize(ctx context.Context, database *db.DB) error {
 	return database.Transaction(ctx, func(tx *db.Tx) error {
 
-		generation, finalized, err := lockSchemaVersion(ctx, tx)
+		version, finalized, err := lockSchemaVersion(ctx, tx)
 		if err != nil {
 			return err
 		}
 
 		switch {
-		case generation == schemaGeneration && finalized:
-			slog.Info("PostgreSQL database is already finalized", "generation", generation)
+		case version == schemaVersion && finalized:
+			slog.Info("PostgreSQL database is already finalized", "schema_version", version)
 			return nil
-		case generation == schemaGeneration:
+		case version == schemaVersion:
 			// It is finalized below.
-		case generation < schemaGeneration:
-			return fmt.Errorf("PostgreSQL database is at schema generation %d, which must be migrated to"+
-				" generation %d before finalizing it", generation, schemaGeneration)
+		case version < schemaVersion:
+			return fmt.Errorf("PostgreSQL database is at schema version %d, which must be migrated to"+
+				" schema version %d before finalizing it", version, schemaVersion)
 		default:
-			return fmt.Errorf("PostgreSQL database is at schema generation %d, newer than generation %d of this"+
-				" version of Krenalis", generation, schemaGeneration)
+			return fmt.Errorf("PostgreSQL database is at schema version %d, newer than schema version %d of"+
+				" this version of Krenalis", version, schemaVersion)
 		}
 
 		err = finalize(ctx, tx)
 		if err != nil {
 			return err
 		}
-		err = writeSchemaVersion(ctx, tx, schemaGeneration, true)
+		err = writeSchemaVersion(ctx, tx, schemaVersion, true)
 		if err != nil {
-			return fmt.Errorf("cannot write schema generation of PostgreSQL database: %s", err)
+			return fmt.Errorf("cannot write schema version of PostgreSQL database: %s", err)
 		}
-		slog.Info("PostgreSQL database finalized", "generation", schemaGeneration)
+		slog.Info("PostgreSQL database finalized", "schema_version", schemaVersion)
 
 		return nil
 	})
 }
 
 // Migrate migrates Krenalis's PostgreSQL database, in a single transaction,
-// from the previous schema generation to the one of this version of Krenalis,
-// and records it as not finalized. It does nothing if the database is already
-// at this generation, or at the next one but not finalized, as after a
-// rollback. It fails if the database is empty, if the previous generation has
-// not been finalized, or if the database is at any other generation. It is
-// safe to call it concurrently from several Krenalis instances.
+// from the previous schema version to the one of this version of Krenalis, and
+// records it as not finalized. It does nothing if the database is already at
+// this schema version, or at the next one but not finalized, as after a
+// rollback. It fails if the database is empty, if the previous schema version
+// has not been finalized, or if the database is at any other schema version.
+// It is safe to call it concurrently from several Krenalis instances.
 func Migrate(ctx context.Context, database *db.DB) error {
 	err := database.Transaction(ctx, func(tx *db.Tx) error {
 
-		generation, finalized, err := lockSchemaVersion(ctx, tx)
+		version, finalized, err := lockSchemaVersion(ctx, tx)
 		if err != nil {
 			return err
 		}
 
 		switch {
-		case generation == schemaGeneration:
-			slog.Info("PostgreSQL database is already at the schema generation of this version", "generation", generation)
+		case version == schemaVersion:
+			slog.Info("PostgreSQL database is already at the schema version of this version of Krenalis",
+				"schema_version", version)
 			return nil
-		case generation == schemaGeneration+1 && !finalized:
-			slog.Warn("PostgreSQL database is at the next schema generation, not finalized, so it won't be migrated",
-				"generation", generation)
+		case version == schemaVersion+1 && !finalized:
+			slog.Warn("PostgreSQL database is at the next schema version, not finalized, so it won't be migrated",
+				"schema_version", version)
 			return nil
-		case generation > schemaGeneration:
-			return fmt.Errorf("PostgreSQL database is at schema generation %d, on which this version of Krenalis,"+
-				" at generation %d, can no longer run", generation, schemaGeneration)
-		case generation == schemaGeneration-1 && finalized:
+		case version > schemaVersion:
+			return fmt.Errorf("PostgreSQL database is at schema version %d, on which this version of Krenalis,"+
+				" at schema version %d, can no longer run", version, schemaVersion)
+		case version == schemaVersion-1 && finalized:
 			// It is migrated below.
-		case generation == schemaGeneration-1:
-			return fmt.Errorf("PostgreSQL database is at schema generation %d, which must be finalized before"+
-				" migrating it to generation %d", generation, schemaGeneration)
+		case version == schemaVersion-1:
+			return fmt.Errorf("PostgreSQL database is at schema version %d, which must be finalized before"+
+				" migrating it to schema version %d", version, schemaVersion)
 		default:
-			return fmt.Errorf("PostgreSQL database is at schema generation %d, which cannot be migrated directly"+
-				" to generation %d; migrate it one generation at a time", generation, schemaGeneration)
+			return fmt.Errorf("PostgreSQL database is at schema version %d, which cannot be migrated directly"+
+				" to schema version %d; migrate it one schema version at a time", version, schemaVersion)
 		}
 
 		err = migrate(ctx, tx)
 		if err != nil {
 			return err
 		}
-		err = writeSchemaVersion(ctx, tx, schemaGeneration, false)
+		err = writeSchemaVersion(ctx, tx, schemaVersion, false)
 		if err != nil {
-			return fmt.Errorf("cannot write schema generation of PostgreSQL database: %s", err)
+			return fmt.Errorf("cannot write schema version of PostgreSQL database: %s", err)
 		}
-		slog.Info("PostgreSQL database migrated", "generation", schemaGeneration)
+		slog.Info("PostgreSQL database migrated", "schema_version", schemaVersion)
 
 		return nil
 	})
@@ -157,7 +159,7 @@ func Migrate(ctx context.Context, database *db.DB) error {
 }
 
 // finalize removes, within the given transaction, what only the Krenalis
-// instances of the previous schema generation need from a migrated database.
+// instances of the previous schema version need from a migrated database.
 // It runs only when none of them is running anymore. The current version of
 // Krenalis must run both before and after it.
 //
@@ -170,9 +172,9 @@ func finalize(ctx context.Context, tx *db.Tx) error {
 
 // lockSchemaVersion takes, within the given transaction, the lock that
 // serializes the initialization, the migration and the finalization of the
-// database, and returns its schema generation and whether it has been
+// database, and returns its schema version and whether it has been
 // finalized. It fails if the database is empty.
-func lockSchemaVersion(ctx context.Context, tx *db.Tx) (generation int, finalized bool, err error) {
+func lockSchemaVersion(ctx context.Context, tx *db.Tx) (version int, finalized bool, err error) {
 
 	_, err = tx.Exec(ctx, "SELECT pg_advisory_xact_lock($1)", initLockKey)
 	if err != nil {
@@ -195,16 +197,16 @@ func lockSchemaVersion(ctx context.Context, tx *db.Tx) (generation int, finalize
 	if isEmpty {
 		return 0, false, errors.New("Krenalis's PostgreSQL database has not been initialized")
 	}
-	generation, finalized, err = readSchemaVersion(ctx, tx)
+	version, finalized, err = readSchemaVersion(ctx, tx)
 	if err != nil {
-		return 0, false, fmt.Errorf("cannot read schema generation of PostgreSQL database: %s", err)
+		return 0, false, fmt.Errorf("cannot read schema version of PostgreSQL database: %s", err)
 	}
 
-	return generation, finalized, nil
+	return version, finalized, nil
 }
 
 // migrate migrates, within the given transaction, a database of the previous
-// schema generation to the current schema. It must not break the Krenalis
+// schema version to the current schema. It must not break the Krenalis
 // instances of the previous version, which keep running on the database until
 // they are replaced.
 //
@@ -215,37 +217,37 @@ func migrate(ctx context.Context, tx *db.Tx) error {
 	return nil
 }
 
-// readSchemaVersion returns the schema generation of the database and whether
-// it has been finalized. A database without the schema_version table is at the
-// legacy generation, finalized.
-func readSchemaVersion(ctx context.Context, conn db.Connection) (generation int, finalized bool, err error) {
+// readSchemaVersion returns the schema version of the database and whether it
+// has been finalized. A database without the schema_version table is at the
+// legacy schema version, finalized.
+func readSchemaVersion(ctx context.Context, conn db.Connection) (version int, finalized bool, err error) {
 	var exists bool
 	err = conn.QueryRow(ctx, "SELECT to_regclass('schema_version') IS NOT NULL").Scan(&exists)
 	if err != nil {
 		return 0, false, err
 	}
 	if !exists {
-		return legacySchemaGeneration, true, nil
+		return legacySchemaVersion, true, nil
 	}
-	err = conn.QueryRow(ctx, "SELECT generation, finalized FROM schema_version").Scan(&generation, &finalized)
-	return generation, finalized, err
+	err = conn.QueryRow(ctx, "SELECT version, finalized FROM schema_version").Scan(&version, &finalized)
+	return version, finalized, err
 }
 
-// writeSchemaVersion records, within the given transaction, the schema
-// generation of the database and whether it has been finalized. It creates the
-// schema_version table if the database is at the legacy generation.
-func writeSchemaVersion(ctx context.Context, tx *db.Tx, generation int, finalized bool) error {
+// writeSchemaVersion records, within the given transaction, the schema version
+// of the database and whether it has been finalized. It creates the
+// schema_version table if the database is at the legacy schema version.
+func writeSchemaVersion(ctx context.Context, tx *db.Tx, version int, finalized bool) error {
 	// The definition must match the one in schema.sql.
 	_, err := tx.Exec(ctx, `CREATE TABLE IF NOT EXISTS schema_version (
 		singleton boolean PRIMARY KEY DEFAULT true CHECK (singleton),
-		generation integer NOT NULL CHECK (generation > 0),
+		version integer NOT NULL CHECK (version > 0),
 		finalized boolean NOT NULL
 	)`)
 	if err != nil {
 		return err
 	}
-	_, err = tx.Exec(ctx, "INSERT INTO schema_version (generation, finalized) VALUES ($1, $2)"+
-		" ON CONFLICT (singleton) DO UPDATE SET generation = EXCLUDED.generation, finalized = EXCLUDED.finalized",
-		generation, finalized)
+	_, err = tx.Exec(ctx, "INSERT INTO schema_version (version, finalized) VALUES ($1, $2)"+
+		" ON CONFLICT (singleton) DO UPDATE SET version = EXCLUDED.version, finalized = EXCLUDED.finalized",
+		version, finalized)
 	return err
 }

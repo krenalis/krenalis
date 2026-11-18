@@ -174,8 +174,8 @@ func initialize(ctx context.Context, tx *db.Tx, dockerMember bool) error {
 	if _, err := tx.Exec(ctx, createRateLimiterLeasesFunction); err != nil {
 		return err
 	}
-	// Record the schema generation. A new database has nothing to finalize.
-	_, err := tx.Exec(ctx, "INSERT INTO schema_version (generation, finalized) VALUES ($1, true)", schemaGeneration)
+	// Record the schema version. A new database has nothing to finalize.
+	_, err := tx.Exec(ctx, "INSERT INTO schema_version (version, finalized) VALUES ($1, true)", schemaVersion)
 	if err != nil {
 		return err
 	}

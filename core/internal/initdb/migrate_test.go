@@ -12,40 +12,40 @@ import (
 	"github.com/krenalis/krenalis/core/internal/db"
 )
 
-// TestCheckSchemaVersion verifies on which schema generations of the database
+// TestCheckSchemaVersion verifies on which schema versions of the database
 // CheckSchemaVersion lets this version of Krenalis run. Cases that set a
-// generation below 1 are skipped until schemaGeneration is high enough.
+// schema version below 1 are skipped until schemaVersion is high enough.
 func TestCheckSchemaVersion(t *testing.T) {
 
-	type version struct {
-		generation int
-		finalized  bool
+	type state struct {
+		version   int
+		finalized bool
 	}
 
-	const g = schemaGeneration
+	const v = schemaVersion
 	tests := []struct {
 		name   string
-		empty  bool     // use an empty database
-		legacy bool     // drop the schema_version table
-		set    *version // version set on the newly initialized database, if not nil
+		empty  bool   // use an empty database
+		legacy bool   // drop the schema_version table
+		set    *state // state set on the newly initialized database, if not nil
 		fails  bool
 	}{
 		{name: "empty database", empty: true},
 		{name: "new database"},
-		{name: "legacy database", legacy: true, fails: legacySchemaGeneration != g},
-		{name: "current, not finalized", set: &version{g, false}},
-		{name: "next, not finalized", set: &version{g + 1, false}},
-		{name: "next, finalized", set: &version{g + 1, true}, fails: true},
-		{name: "two ahead", set: &version{g + 2, false}, fails: true},
-		{name: "previous, finalized", set: &version{g - 1, true}, fails: true},
-		{name: "previous, not finalized", set: &version{g - 1, false}, fails: true},
+		{name: "legacy database", legacy: true, fails: legacySchemaVersion != v},
+		{name: "current, not finalized", set: &state{v, false}},
+		{name: "next, not finalized", set: &state{v + 1, false}},
+		{name: "next, finalized", set: &state{v + 1, true}, fails: true},
+		{name: "two ahead", set: &state{v + 2, false}, fails: true},
+		{name: "previous, finalized", set: &state{v - 1, true}, fails: true},
+		{name: "previous, not finalized", set: &state{v - 1, false}, fails: true},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 
-			if test.set != nil && test.set.generation < 1 {
-				t.Skipf("requires schemaGeneration to be at least %d", g-test.set.generation+1)
+			if test.set != nil && test.set.version < 1 {
+				t.Skipf("requires schemaVersion to be at least %d", v-test.set.version+1)
 			}
 			t.Parallel()
 
@@ -63,8 +63,8 @@ func TestCheckSchemaVersion(t *testing.T) {
 				}
 			}
 			if test.set != nil {
-				_, err := database.Exec(ctx, "UPDATE schema_version SET generation = $1, finalized = $2",
-					test.set.generation, test.set.finalized)
+				_, err := database.Exec(ctx, "UPDATE schema_version SET version = $1, finalized = $2",
+					test.set.version, test.set.finalized)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -85,40 +85,40 @@ func TestCheckSchemaVersion(t *testing.T) {
 
 }
 
-// TestFinalizeGenerations verifies how Finalize handles each schema generation
-// of the database. Cases that set a generation below 1 are skipped until
-// schemaGeneration is high enough.
-func TestFinalizeGenerations(t *testing.T) {
+// TestFinalizeSchemaVersions verifies how Finalize handles each schema version
+// of the database. Cases that set a schema version below 1 are skipped until
+// schemaVersion is high enough.
+func TestFinalizeSchemaVersions(t *testing.T) {
 
-	type version struct {
-		generation int
-		finalized  bool
+	type state struct {
+		version   int
+		finalized bool
 	}
 
-	const g = schemaGeneration
+	const v = schemaVersion
 	tests := []struct {
 		name     string
-		empty    bool     // use an empty database
-		legacy   bool     // drop the schema_version table
-		set      *version // version set on the newly initialized database, if not nil
+		empty    bool   // use an empty database
+		legacy   bool   // drop the schema_version table
+		set      *state // state set on the newly initialized database, if not nil
 		fails    bool
-		expected *version // version after Finalize, if not nil
+		expected *state // state after Finalize, if not nil
 	}{
 		{name: "empty database", empty: true, fails: true},
-		{name: "new database", expected: &version{g, true}},
-		{name: "legacy database", legacy: true, fails: legacySchemaGeneration != g, expected: &version{legacySchemaGeneration, true}},
-		{name: "current, not finalized", set: &version{g, false}, expected: &version{g, true}},
-		{name: "next, not finalized", set: &version{g + 1, false}, fails: true, expected: &version{g + 1, false}},
-		{name: "next, finalized", set: &version{g + 1, true}, fails: true, expected: &version{g + 1, true}},
-		{name: "previous, finalized", set: &version{g - 1, true}, fails: true, expected: &version{g - 1, true}},
-		{name: "previous, not finalized", set: &version{g - 1, false}, fails: true, expected: &version{g - 1, false}},
+		{name: "new database", expected: &state{v, true}},
+		{name: "legacy database", legacy: true, fails: legacySchemaVersion != v, expected: &state{legacySchemaVersion, true}},
+		{name: "current, not finalized", set: &state{v, false}, expected: &state{v, true}},
+		{name: "next, not finalized", set: &state{v + 1, false}, fails: true, expected: &state{v + 1, false}},
+		{name: "next, finalized", set: &state{v + 1, true}, fails: true, expected: &state{v + 1, true}},
+		{name: "previous, finalized", set: &state{v - 1, true}, fails: true, expected: &state{v - 1, true}},
+		{name: "previous, not finalized", set: &state{v - 1, false}, fails: true, expected: &state{v - 1, false}},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 
-			if test.set != nil && test.set.generation < 1 {
-				t.Skipf("requires schemaGeneration to be at least %d", g-test.set.generation+1)
+			if test.set != nil && test.set.version < 1 {
+				t.Skipf("requires schemaVersion to be at least %d", v-test.set.version+1)
 			}
 			t.Parallel()
 
@@ -136,8 +136,8 @@ func TestFinalizeGenerations(t *testing.T) {
 				}
 			}
 			if test.set != nil {
-				_, err := database.Exec(ctx, "UPDATE schema_version SET generation = $1, finalized = $2",
-					test.set.generation, test.set.finalized)
+				_, err := database.Exec(ctx, "UPDATE schema_version SET version = $1, finalized = $2",
+					test.set.version, test.set.finalized)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -154,8 +154,8 @@ func TestFinalizeGenerations(t *testing.T) {
 			}
 
 			if test.expected != nil {
-				var got version
-				got.generation, got.finalized, err = readSchemaVersion(ctx, database)
+				var got state
+				got.version, got.finalized, err = readSchemaVersion(ctx, database)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -183,52 +183,52 @@ func TestMigrateEmpty(t *testing.T) {
 	t.Fatal("expected an error, got nil")
 }
 
-// TestMigrateGenerations verifies how Migrate handles each schema generation of
-// the database. Cases that set a generation below 1 are skipped until
-// schemaGeneration is high enough.
-func TestMigrateGenerations(t *testing.T) {
+// TestMigrateSchemaVersions verifies how Migrate handles each schema version of
+// the database. Cases that set a schema version below 1 are skipped until
+// schemaVersion is high enough.
+func TestMigrateSchemaVersions(t *testing.T) {
 
-	type version struct {
-		generation int
-		finalized  bool
+	type state struct {
+		version   int
+		finalized bool
 	}
 
 	// A database without the schema_version table is handled as a finalized
-	// database of the legacy generation.
-	legacyExpected, legacyFails := version{legacySchemaGeneration, true}, false
-	switch legacySchemaGeneration {
-	case schemaGeneration:
+	// database of the legacy schema version.
+	legacyExpected, legacyFails := state{legacySchemaVersion, true}, false
+	switch legacySchemaVersion {
+	case schemaVersion:
 		// There is nothing to migrate.
-	case schemaGeneration - 1:
-		legacyExpected = version{schemaGeneration, false}
+	case schemaVersion - 1:
+		legacyExpected = state{schemaVersion, false}
 	default:
 		legacyFails = true
 	}
 
-	const g = schemaGeneration
+	const v = schemaVersion
 	tests := []struct {
 		name     string
-		legacy   bool     // drop the schema_version table
-		set      *version // version set on the newly initialized database, if not nil
+		legacy   bool   // drop the schema_version table
+		set      *state // state set on the newly initialized database, if not nil
 		fails    bool
-		expected version // version after Migrate
+		expected state // state after Migrate
 	}{
-		{name: "new database", expected: version{g, true}},
+		{name: "new database", expected: state{v, true}},
 		{name: "legacy database", legacy: true, fails: legacyFails, expected: legacyExpected},
-		{name: "current, not finalized", set: &version{g, false}, expected: version{g, false}},
-		{name: "next, not finalized", set: &version{g + 1, false}, expected: version{g + 1, false}},
-		{name: "next, finalized", set: &version{g + 1, true}, fails: true, expected: version{g + 1, true}},
-		{name: "two ahead", set: &version{g + 2, false}, fails: true, expected: version{g + 2, false}},
-		{name: "previous, finalized", set: &version{g - 1, true}, expected: version{g, false}},
-		{name: "previous, not finalized", set: &version{g - 1, false}, fails: true, expected: version{g - 1, false}},
-		{name: "two behind", set: &version{g - 2, true}, fails: true, expected: version{g - 2, true}},
+		{name: "current, not finalized", set: &state{v, false}, expected: state{v, false}},
+		{name: "next, not finalized", set: &state{v + 1, false}, expected: state{v + 1, false}},
+		{name: "next, finalized", set: &state{v + 1, true}, fails: true, expected: state{v + 1, true}},
+		{name: "two ahead", set: &state{v + 2, false}, fails: true, expected: state{v + 2, false}},
+		{name: "previous, finalized", set: &state{v - 1, true}, expected: state{v, false}},
+		{name: "previous, not finalized", set: &state{v - 1, false}, fails: true, expected: state{v - 1, false}},
+		{name: "two behind", set: &state{v - 2, true}, fails: true, expected: state{v - 2, true}},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 
-			if test.set != nil && test.set.generation < 1 {
-				t.Skipf("requires schemaGeneration to be at least %d", g-test.set.generation+1)
+			if test.set != nil && test.set.version < 1 {
+				t.Skipf("requires schemaVersion to be at least %d", v-test.set.version+1)
 			}
 			t.Parallel()
 
@@ -241,8 +241,8 @@ func TestMigrateGenerations(t *testing.T) {
 				}
 			}
 			if test.set != nil {
-				_, err := database.Exec(ctx, "UPDATE schema_version SET generation = $1, finalized = $2",
-					test.set.generation, test.set.finalized)
+				_, err := database.Exec(ctx, "UPDATE schema_version SET version = $1, finalized = $2",
+					test.set.version, test.set.finalized)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -258,8 +258,8 @@ func TestMigrateGenerations(t *testing.T) {
 				t.Fatal("expected an error, got nil")
 			}
 
-			var got version
-			got.generation, got.finalized, err = readSchemaVersion(ctx, database)
+			var got state
+			got.version, got.finalized, err = readSchemaVersion(ctx, database)
 			if err != nil {
 				t.Fatal(err)
 			}

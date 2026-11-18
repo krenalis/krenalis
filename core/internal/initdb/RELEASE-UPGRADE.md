@@ -9,7 +9,7 @@ upgrade a database of the base release. See
 ## Migration
 
 - Create the `schema_version` table: `migrate` has nothing to do, because
-  `Migrate` creates it when it records the new generation.
+  `Migrate` creates it when it records the new schema version.
 - Replace every `{"kind":"year"}` type with a signed `int` of `bitSize: 16`
   and `semantics: "year"`, recursively in
   `workspaces.profile_schema`, `workspaces.alter_profile_schema_schema`,

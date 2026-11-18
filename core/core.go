@@ -2212,8 +2212,8 @@ func EventSchema() types.Type {
 }
 
 // FinalizeDB finalizes the migration of Krenalis's PostgreSQL database to the
-// schema generation of this version of Krenalis, after which the instances of
-// the previous version can no longer run on it. It must be called only when
+// schema version of this version of Krenalis, after which the instances of the
+// previous version can no longer run on it. It must be called only when
 // none of them is running. It reads only the DB field of conf. It is
 // idempotent, and it is safe to call it concurrently from several Krenalis
 // instances.
@@ -2237,8 +2237,8 @@ func IsValidID(id string) bool {
 }
 
 // MigrateDB migrates Krenalis's PostgreSQL database from the previous schema
-// generation to the one of this version of Krenalis, or initializes it if it
-// is empty. It reads only the DB and KMS fields of conf. It is idempotent, and
+// version to the one of this version of Krenalis, or initializes it if it is
+// empty. It reads only the DB and KMS fields of conf. It is idempotent, and
 // it is safe to call it concurrently from several Krenalis instances.
 func MigrateDB(ctx context.Context, conf *Config) error {
 
