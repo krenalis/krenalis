@@ -32,7 +32,7 @@ require (
 	github.com/itchyny/timefmt-go v0.1.9
 	github.com/jackc/pgx/v5 v5.13.0
 	github.com/jordan-wright/email v4.0.1-0.20210109023952-943e75fe5223+incompatible
-	github.com/klauspost/compress v1.20.3
+	github.com/klauspost/compress v1.20.4
 	github.com/krenalis/analytics-go v0.0.8
 	github.com/mark3labs/mcp-go v1.3.0
 	github.com/nats-io/nats.go v1.55.0
