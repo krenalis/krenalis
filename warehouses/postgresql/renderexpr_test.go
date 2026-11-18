@@ -5,6 +5,9 @@
 package postgresql
 
 import (
+	"database/sql"
+	"fmt"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -14,9 +17,162 @@ import (
 	"github.com/krenalis/krenalis/warehouses"
 )
 
+// TestArrayContains checks queries and counts for arrays containing or missing
+// a given value, including null and empty arrays.
+func TestArrayContains(t *testing.T) {
+	warehouse, db := newTestPostgreSQLWarehouse(t)
+	instant := time.Date(2026, 10, 20, 10, 0, 0, 0, time.UTC)
+	clock := time.Date(1970, 1, 1, 10, 30, 0, 123456000, time.UTC)
+	offsetInstant := time.Date(2026, 10, 20, 23, 30, 45, 123456000, time.UTC)
+	integer39 := decimal.MustParse("123456789012345678901234567890123456790")
+	for i, test := range []struct {
+		name  string
+		typ   types.Type
+		value any
+		other any
+	}{
+		{"string", types.String(), "f'o\\o", "bar"},
+		{"int32", types.Int(32), -2147483648, 2147483647},
+		{"int64", types.Int(64), 9223372036854775807, -9223372036854775808},
+		{"uint64", types.Int(64).Unsigned(), uint(18446744073709551615), uint(1)},
+		{"decimal", types.Decimal(18, 4), decimal.MustParse("1.25"), decimal.MustParse("1")},
+		{"decimal-small", types.Decimal(18, 8), decimal.MustParse("0.00000001"), decimal.MustParse("0.00000002")},
+		{"decimal38", types.Decimal(38, 0), decimal.MustParse("12345678901234567890123456789012345678"), decimal.MustParse("1")},
+		{"decimal39", types.Decimal(76, 0), decimal.MustParse("123456789012345678901234567890123456789"), integer39},
+		{"decimal39-swapped", types.Decimal(76, 0), integer39, decimal.MustParse("123456789012345678901234567890123456789")},
+		{"decimal-negative-zero", types.Decimal(76, 0), decimal.MustParse("-0"), decimal.MustParse("1")},
+		{"float32", types.Float(32), float64(float32(1.2345678)), 1.5},
+		{"float64", types.Float(64), 0.1, 1.5},
+		{"datetime", types.DateTime(), instant, instant.Add(time.Hour)},
+		// The same local date and time with different offsets must not match.
+		{"datetime-positive", types.DateTime(), offsetInstant.In(time.FixedZone("", 7200)), offsetInstant.Add(2 * time.Hour)},
+		{"datetime-negative", types.DateTime(), offsetInstant.In(time.FixedZone("", -18000)), offsetInstant.Add(-5 * time.Hour)},
+		{"date", types.Date(), instant, instant.AddDate(0, 0, 1)},
+		{"time", types.Time(), clock, clock.Add(time.Hour)},
+		{"year", types.Int(16).AsYear(), 2026, 2025},
+		{"uuid", types.UUID(), "550e8400-e29b-41d4-a716-446655440000", "550e8400-e29b-41d4-a716-446655440001"},
+		{"ip", types.IP(), "192.0.2.1", "192.0.2.2"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+
+			idColumn := warehouses.Column{Name: "id", Type: types.Int(32)}
+			column := warehouses.Column{Name: "value", Type: types.Array(test.typ), Nullable: true}
+			table := warehouses.Table{
+				Name:    fmt.Sprintf("array_contains_%d", i),
+				Columns: []warehouses.Column{idColumn, column},
+				Keys:    []string{"id"},
+			}
+			mustExecSQL(t, db, "CREATE TABLE "+quoteIdent(table.Name)+" ("+quoteIdent(idColumn.Name)+
+				" INTEGER PRIMARY KEY, "+quoteIdent(column.Name)+" "+typeToPostgresType(column.Type)+")")
+			// Store datetime elements in UTC in the timestamp without time zone column.
+			stored := test.value
+			if test.typ.IsDateTime() {
+				stored = test.value.(time.Time).UTC()
+			}
+			err := warehouse.Merge(t.Context(), table, [][]any{
+				{0, nil},
+				{1, []any{}},
+				{2, []any{stored}},
+				{3, []any{test.other}},
+				{4, []any{test.other, stored, stored}},
+			}, nil)
+			if err != nil {
+				t.Fatalf("expected array fixture merge, got %v", err)
+			}
+
+			for _, op := range []warehouses.Operator{warehouses.OpContains, warehouses.OpDoesNotContain} {
+				name := "contains"
+				if op == warehouses.OpDoesNotContain {
+					name = "does_not_contain"
+				}
+				t.Run(name, func(t *testing.T) {
+
+					expr := warehouses.NewBaseExpr(column, op, test.value)
+					want := []int{2, 4}
+					if op == warehouses.OpDoesNotContain {
+						want = []int{1, 3}
+					}
+					query := warehouses.RowQuery{
+						Table: table.Name, Columns: []warehouses.Column{idColumn},
+						Where: expr, OrderBy: []warehouses.Column{idColumn},
+					}
+					rows, total, err := warehouse.Query(t.Context(), query, true)
+					if err != nil {
+						t.Fatalf("expected array query, got %v", err)
+					}
+					defer rows.Close()
+					var got []int
+					row := make([]any, 1)
+					for rows.Next() {
+						err = rows.Scan(row...)
+						if err != nil {
+							t.Fatalf("expected array query row, got %v", err)
+						}
+						got = append(got, row[0].(int))
+					}
+					err = rows.Err()
+					if err != nil {
+						t.Fatalf("expected complete array query, got %v", err)
+					}
+					if !slices.Equal(got, want) || total != len(want) {
+						t.Errorf("expected ids %v and total %d, got %v and %d", want, len(want), got, total)
+					}
+
+					counts, err := warehouse.Counts(t.Context(), table.Name, []warehouses.Expr{expr})
+					if err != nil {
+						t.Fatalf("expected array counts, got %v", err)
+					}
+					if !slices.Equal(counts, []int{len(want)}) {
+						t.Errorf("expected counts [%d], got %v", len(want), counts)
+					}
+
+					var b strings.Builder
+					err = renderExpr(&b, expr)
+					if err != nil {
+						t.Fatalf("expected array expression, got %v", err)
+					}
+					statement := "SELECT " + quoteIdent(idColumn.Name) + ", (" + b.String() + ") FROM " +
+						quoteIdent(table.Name) + " ORDER BY " + quoteIdent(idColumn.Name)
+					truthRows, err := db.Query(t.Context(), statement)
+					if err != nil {
+						t.Fatalf("expected array truth query, got %v", err)
+					}
+					defer truthRows.Close()
+					count := 0
+					for truthRows.Next() {
+						var id int
+						var truth sql.NullBool
+						if err := truthRows.Scan(&id, &truth); err != nil {
+							t.Fatalf("expected array truth row, got %v", err)
+						}
+						wantTruth := sql.NullBool{Bool: slices.Contains(want, id), Valid: id != 0}
+						if truth != wantTruth {
+							t.Errorf("expected id %d truth %v, got %v", id, wantTruth, truth)
+						}
+						count++
+					}
+					err = truthRows.Err()
+					if err != nil {
+						t.Fatalf("expected complete array truth query, got %v", err)
+					}
+					if count != 5 {
+						t.Errorf("expected 5 array truth rows, got %d", count)
+					}
+
+				})
+			}
+
+		})
+	}
+}
+
 // Test_renderExpr converts various expressions to SQL and compares with the
 // expected query strings.
 func Test_renderExpr(t *testing.T) {
+	datetimes := warehouses.Column{Name: "values", Type: types.Array(types.DateTime())}
+	instant := time.Date(2026, 10, 20, 23, 30, 45, 123456000, time.UTC)
+	positiveOffset := instant.In(time.FixedZone("", 2*60*60))
+	negativeOffset := instant.In(time.FixedZone("", -5*60*60))
 	tests := []struct {
 		expr    warehouses.Expr
 		query   string
@@ -89,6 +245,42 @@ func Test_renderExpr(t *testing.T) {
 		{
 			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.Array(types.Int(32))}, warehouses.OpDoesNotContain, 7),
 			query: `NOT (7 = ANY("values"))`,
+		},
+		{
+			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.Array(types.String())}, warehouses.OpContains, "foo"),
+			query: `'foo' = ANY("values")`,
+		},
+		{
+			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.Array(types.String())}, warehouses.OpDoesNotContain, "boo"),
+			query: `NOT ('boo' = ANY("values"))`,
+		},
+		{
+			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.Array(types.Decimal(76, 0))}, warehouses.OpContains, decimal.MustParse("123456789012345678901234567890123456789")),
+			query: `123456789012345678901234567890123456789 = ANY("values")`,
+		},
+		{
+			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.Array(types.Decimal(18, 4))}, warehouses.OpContains, decimal.MustParse("1.25")),
+			query: `1.25 = ANY("values")`,
+		},
+		{
+			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.Array(types.Decimal(76, 0))}, warehouses.OpContains, decimal.MustParse("1e2")),
+			query: `1e2 = ANY("values")`,
+		},
+		{
+			expr:  warehouses.NewBaseExpr(datetimes, warehouses.OpContains, positiveOffset),
+			query: `'2026-10-20 23:30:45.123456' = ANY("values")`,
+		},
+		{
+			expr:  warehouses.NewBaseExpr(datetimes, warehouses.OpContains, negativeOffset),
+			query: `'2026-10-20 23:30:45.123456' = ANY("values")`,
+		},
+		{
+			expr:  warehouses.NewBaseExpr(datetimes, warehouses.OpDoesNotContain, positiveOffset),
+			query: `NOT ('2026-10-20 23:30:45.123456' = ANY("values"))`,
+		},
+		{
+			expr:  warehouses.NewBaseExpr(datetimes, warehouses.OpDoesNotContain, negativeOffset),
+			query: `NOT ('2026-10-20 23:30:45.123456' = ANY("values"))`,
 		},
 		{
 			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "id", Type: types.Int(32)}, warehouses.OpIsOneOf, 3, 9, 5),
