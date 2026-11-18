@@ -36,7 +36,7 @@ require (
 	github.com/krenalis/analytics-go v0.0.8
 	github.com/mark3labs/mcp-go v1.3.0
 	github.com/nats-io/nats.go v1.56.0
-	github.com/nats-io/nkeys v0.4.16
+	github.com/nats-io/nkeys v0.4.17
 	github.com/nyaruka/phonenumbers/v2 v2.0.17
 	github.com/oschwald/maxminddb-golang/v2 v2.9.1
 	github.com/pkg/sftp v1.13.12
