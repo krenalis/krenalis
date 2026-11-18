@@ -48,6 +48,9 @@ func Main(assets fs.FS) {
 			" this flag is primarily intended for automated scenarios involving Docker and testing purposes")
 	flag.BoolVar(&printVersion, "version", false, "print the Krenalis version and exit")
 	flag.Parse()
+	if flag.NArg() > 0 {
+		fatal(1, fmt.Sprintf("unexpected argument %q\nRun with -help for usage.", flag.Arg(0)))
+	}
 	if help {
 		flag.Usage()
 		os.Exit(0)
