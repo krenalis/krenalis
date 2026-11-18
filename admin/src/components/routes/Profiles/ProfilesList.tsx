@@ -365,6 +365,7 @@ const ProfilesList = () => {
 							ariaLabel='Profiles'
 							activeRowID={activeProfileID}
 							columns={profileColumns}
+							shouldSyncColumnWidths
 							onSortColumn={onSortColumn}
 							rows={profilesRows}
 							isLoading={isLoading}

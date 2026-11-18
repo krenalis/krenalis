@@ -350,27 +350,30 @@ test(`Toggle a column locally when its profile property is already loaded`, asyn
 		grid.scrollLeft = grid.scrollWidth;
 		grid.scrollTop = grid.scrollHeight;
 	});
-	const snapshots = await page.evaluateHandle(() => {
+	const readTransition = await page.evaluateHandle(() => {
 		interface ColumnSnapshot {
 			captured: number;
-			outside: number;
+			visible: number;
 		}
-		const snapshots: ColumnSnapshot[] = [];
-		const capture = () => {
-			const grid = document.querySelector('.profiles-list__grid');
+		const grid = document.querySelector('.profiles-list__grid');
+		const visibleCells = (cells: Element[]) => {
 			const bounds = grid.getBoundingClientRect();
-			const cells = Array.from(grid.querySelectorAll('.grid__cell-content'));
-			const captured = cells.filter((cell) => getComputedStyle(cell).viewTransitionName !== 'none');
-			const outside = captured.filter((cell) => {
+			return cells.filter((cell) => {
 				const rect = cell.getBoundingClientRect();
 				return (
-					rect.right <= Math.max(bounds.left, 0) ||
-					rect.left >= Math.min(bounds.right, innerWidth) ||
-					rect.bottom <= Math.max(bounds.top, 0) ||
-					rect.top >= Math.min(bounds.bottom, innerHeight)
+					rect.right > Math.max(bounds.left, 0) &&
+					rect.left < Math.min(bounds.right, innerWidth) &&
+					rect.bottom > Math.max(bounds.top, 0) &&
+					rect.top < Math.min(bounds.bottom, innerHeight)
 				);
 			});
-			snapshots.push({ captured: captured.length, outside: outside.length });
+		};
+		const snapshots: ColumnSnapshot[] = [];
+		let captured: Element[] = [];
+		const capture = () => {
+			const cells = Array.from(grid.querySelectorAll('.grid__cell-content'));
+			captured = cells.filter((cell) => getComputedStyle(cell).viewTransitionName !== 'none');
+			snapshots.push({ captured: captured.length, visible: visibleCells(captured).length });
 		};
 		const startViewTransition = document.startViewTransition.bind(document);
 		document.startViewTransition = (update) => {
@@ -383,7 +386,19 @@ test(`Toggle a column locally when its profile property is already loaded`, asyn
 				capture();
 			});
 		};
-		return snapshots;
+		return () => {
+			const headers = Array.from(grid.querySelectorAll('.grid__header-cell'));
+			const column = headers.findIndex((header) => header.textContent.trim() === 'Billing address › City') + 1;
+			const billingCells = Array.from(
+				grid.querySelectorAll(`.grid__row > :nth-child(${column}) > .grid__cell-content`),
+			);
+			const rowID = (cell: Element) => cell.closest<HTMLElement>('.grid__row').dataset.id;
+			return {
+				snapshots,
+				capturedRows: billingCells.filter((cell) => captured.includes(cell)).map(rowID),
+				visibleRows: visibleCells(billingCells).map(rowID),
+			};
+		};
 	});
 
 	const columns = page.locator('.profiles-list__toggle-columns');
@@ -403,12 +418,14 @@ test(`Toggle a column locally when its profile property is already loaded`, asyn
 	await expect(page.locator('.profiles-list .grid__loading')).toHaveCount(0);
 	await expect(page.locator('html')).not.toHaveClass(/profiles-columns-transition/);
 	expect(profileRequests).toBe(requestsBeforeToggle);
-	const capturedSnapshots = await snapshots.jsonValue();
-	expect(capturedSnapshots).toHaveLength(4);
-	for (const snapshot of capturedSnapshots) {
+	const { snapshots, capturedRows, visibleRows } = await readTransition.evaluate((read) => read());
+	expect(snapshots).toHaveLength(4);
+	for (const snapshot of snapshots) {
 		expect(snapshot.captured).toBeGreaterThan(0);
-		expect(snapshot.outside).toBe(0);
+		expect(snapshot.visible).toBe(snapshot.captured);
 	}
+	expect(visibleRows.length).toBeGreaterThan(1);
+	expect(capturedRows).toEqual(visibleRows);
 });
 
 test(`Keep the profile grid stable while loading a newly selected property`, async ({ page }) => {

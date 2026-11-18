@@ -36,6 +36,7 @@ interface GridProps {
 	showColumnBorder?: boolean;
 	showRowBorder?: boolean;
 	gridColumnsWidths?: string; // the widths of the columns in the 'grid-template-columns' CSS rule format.
+	shouldSyncColumnWidths?: boolean; // commit measured widths before a view transition captures the grid.
 	isLoading?: boolean;
 	noRowsIcon?: string;
 	noRowsMessage?: string;
@@ -63,6 +64,7 @@ const Grid = forwardRef<GridRef, GridProps>(
 			showColumnBorder,
 			showRowBorder,
 			gridColumnsWidths,
+			shouldSyncColumnWidths,
 			isLoading,
 			noRowsIcon,
 			noRowsMessage,
@@ -93,6 +95,7 @@ const Grid = forwardRef<GridRef, GridProps>(
 			gridColumnsWidths,
 			isLoading,
 			isShown,
+			shouldSyncColumnWidths,
 		);
 
 		useImperativeHandle(ref, () => {
