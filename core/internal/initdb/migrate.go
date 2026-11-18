@@ -43,7 +43,7 @@ func CheckSchemaVersion(ctx context.Context, database *db.DB) error {
 	}
 	switch {
 	case version == schemaVersion:
-		// This version runs on it.
+		// This version of Krenalis runs on it.
 	case version == schemaVersion+1 && !finalized:
 		slog.Warn("PostgreSQL database is at the next schema version, not finalized,"+
 			" on which this version of Krenalis can still run", "schema_version", version)
@@ -59,10 +59,10 @@ func CheckSchemaVersion(ctx context.Context, database *db.DB) error {
 
 // Finalize finalizes, in a single transaction, the migration of Krenalis's
 // PostgreSQL database to the schema version of this version of Krenalis,
-// removing what only the Krenalis instances of the previous version need, and
+// removing what only the Krenalis instances of the previous release need, and
 // records it as finalized. It does nothing if the database is already
 // finalized, and fails if the database is empty or at another schema version.
-// After it, the instances of the previous version can no longer run on the
+// After it, the instances of the previous release can no longer run on the
 // database. It does not check that none of them is running: the caller must
 // ensure it. It is safe to call it concurrently from several Krenalis
 // instances.
@@ -159,9 +159,9 @@ func Migrate(ctx context.Context, database *db.DB) error {
 }
 
 // finalize removes, within the given transaction, what only the Krenalis
-// instances of the previous schema version need from a migrated database.
-// It runs only when none of them is running anymore. The current version of
-// Krenalis must run both before and after it.
+// instances of the previous release need from a migrated database. It runs
+// only when none of them is running anymore. This version of Krenalis must run
+// on the database both before and after it.
 //
 // It is written together with migrate, when a release that changes the
 // database is prepared, and emptied after the release is published. See
@@ -171,7 +171,7 @@ func finalize(ctx context.Context, tx *db.Tx) error {
 }
 
 // lockSchemaVersion takes, within the given transaction, the lock that
-// serializes the initialization, the migration and the finalization of the
+// serializes the initialization, the migration, and the finalization of the
 // database, and returns its schema version and whether it has been
 // finalized. It fails if the database is empty.
 func lockSchemaVersion(ctx context.Context, tx *db.Tx) (version int, finalized bool, err error) {
@@ -207,7 +207,7 @@ func lockSchemaVersion(ctx context.Context, tx *db.Tx) (version int, finalized b
 
 // migrate migrates, within the given transaction, a database of the previous
 // schema version to the current schema. It must not break the Krenalis
-// instances of the previous version, which keep running on the database until
+// instances of the previous release, which keep running on the database until
 // they are replaced.
 //
 // It is written when a release that changes the database is prepared, from

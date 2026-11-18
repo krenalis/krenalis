@@ -45,14 +45,16 @@ func Main(assets fs.FS) {
 	flag.StringVar(&configStore, "config-store", "env:",
 		"configuration source: 'env:' to read KRENALIS_* from the environment, or 'aws:<region>:<prefix>' to read from AWS Parameter Store (default: 'env:')")
 	flag.BoolVar(&finalizeDB, "finalize-db", false,
-		"finalize the migration of Krenalis's PostgreSQL database and exit; use it only when no instance of the"+
-			" previous version of Krenalis is running; with -migrate-db, it finalizes right after migrating")
+		"finalize the migration of Krenalis's PostgreSQL database, removing what only the previous release needs,"+
+			" and exit; use it only when no instance of the previous release is running; with -migrate-db, it"+
+			" finalizes right after migrating")
 	flag.BoolVar(&initDBIfEmpty, "init-db-if-empty", false, "initialize the PostgreSQL database, if it is empty")
 	flag.BoolVar(&initDockerMember, "init-docker-member", false,
 		"when initializing the PostgreSQL database, also initialize the Docker member;"+
 			" this flag is primarily intended for automated scenarios involving Docker and testing purposes")
 	flag.BoolVar(&migrateDB, "migrate-db", false,
-		"migrate Krenalis's PostgreSQL database to the current version, initializing it if it is empty, and exit")
+		"migrate Krenalis's PostgreSQL database to the current schema version, initializing it if it is empty,"+
+			" and exit")
 	flag.BoolVar(&printVersion, "version", false, "print the Krenalis version and exit")
 	flag.Parse()
 	if help {

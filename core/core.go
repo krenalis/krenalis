@@ -247,8 +247,8 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 		}
 	}
 
-	// Check that this version can run on the schema of the database, before
-	// loading the state from it. An empty database is reported as not
+	// Check that this version of Krenalis can run on the schema version of the
+	// database, before loading the state from it. An empty database is reported as not
 	// initialized when the state is loaded.
 	err = initdb.CheckSchemaVersion(ctx, db)
 	if err != nil {
@@ -2213,7 +2213,7 @@ func EventSchema() types.Type {
 
 // FinalizeDB finalizes the migration of Krenalis's PostgreSQL database to the
 // schema version of this version of Krenalis, after which the instances of the
-// previous version can no longer run on it. It must be called only when
+// previous release can no longer run on it. It must be called only when
 // none of them is running. It reads only the DB field of conf. It is
 // idempotent, and it is safe to call it concurrently from several Krenalis
 // instances.
