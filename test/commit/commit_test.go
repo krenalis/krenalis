@@ -11,6 +11,9 @@ import (
 	"testing"
 )
 
+// TestFindPackages tests that findPackages returns, sorted, the directories of
+// the root module that contain Go files, skipping vendor directories and other
+// modules.
 func TestFindPackages(t *testing.T) {
 	dir := t.TempDir()
 	files := []string{
