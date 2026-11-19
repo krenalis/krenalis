@@ -44,7 +44,7 @@ the allowed values.
 | `EmailSemantics` (`email`) | `StringKind`. | A string representing an email address. The types package applies only the declared string constraints. |
 | `MeasurementSemantics` (`measurement`) | `IntKind`, `DecimalKind`, or `FloatKind` with `real`. Requires a `unit` accepted by `Unit.IsMeasurementUnit`. | A numeric measurement expressed in the declared unit. |
 | `MoneySemantics` (`money`) | `DecimalKind`. Optional ISO 4217 `currency` code. | A monetary amount in the declared currency, if specified. |
-| `PercentageSemantics` (`percentage`) | `DecimalKind`. | A percentage within the underlying decimal range. |
+| `PercentageSemantics` (`percentage`) | `DecimalKind`. | A percentage in decimal form within the underlying decimal range. For example, `1` represents 100% and `0.25` represents 25%. |
 | `PhoneSemantics` (`phone`) | Unconstrained `StringKind`. | A canonical E.164 phone number accepted by `types.IsPhone`. |
 | `URLSemantics` (`url`) | `StringKind`. | A string representing a web URL. The types package applies only the declared string constraints. |
 | `YearSemantics` (`year`) | `IntKind`. | A year within the underlying signed or unsigned integer range. |
