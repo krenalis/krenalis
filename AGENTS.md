@@ -227,6 +227,13 @@ For the TypeScript and React code under `admin/`:
 - Put component styles in a `.css` file next to the component and import it there, with BEM-style names such as `schema-grid`, `schema-grid__search`, and `schema-grid--loading`.
 - For an icon, list its file name in `admin/src/icons.txt` alphabetically and run `npm run makevendor` from `admin/`; unlisted icons are not embedded and fail to load.
 
+# Markdown conventions
+
+For Markdown files, except vendored ones:
+
+- Write each paragraph, list item, and table row on a single line, whatever its length; do not wrap text at a fixed width.
+- Align tables: pad cells with spaces so that each column, delimiter row included, has the same width in every row.
+
 # Code comments
 
 A comment on a statement or a group of statements describes at a high level what it does, without explaining what the code already makes clear; it may also state a non-obvious reason or constraint the code relies on.
