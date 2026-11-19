@@ -229,7 +229,7 @@ For the TypeScript and React code under `admin/`:
 
 # Markdown conventions
 
-For Markdown files, except vendored ones:
+For Markdown files:
 
 - Write each paragraph, list item, and table row on a single line, whatever its length; do not wrap text at a fixed width. A hard line break, written as a trailing backslash or two trailing spaces, still ends a line.
 - Align tables: pad cells with spaces so that each column, delimiter row included, has the same width in every row. Write the delimiter row without spaces, filling each column with hyphens, as in `|------|-----|`.
