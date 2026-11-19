@@ -651,6 +651,7 @@ const Combobox = ({
 			setIsOpen(true);
 			const count = activeGroup?.items.length ?? 0;
 			if (count === 0 && !hasTabNavigation) {
+				updateCursorPosition();
 				return;
 			}
 			const index = typeof highlight === 'number' ? highlight : -1;

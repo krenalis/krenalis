@@ -111,6 +111,13 @@ test(`Add "Import customers" pipeline on Dummy`, async ({ page }) => {
 
 	let email = page.locator('.combobox[data-id="email"]');
 	const emailInput = email.locator('input');
+	await emailInput.fill('"abc"');
+	await emailInput.press('ArrowLeft');
+	await expect(email.locator('[data-is-combobox-list]')).toHaveCount(0);
+	await emailInput.press('ArrowUp');
+	await expect(emailInput).toHaveJSProperty('selectionStart', 0);
+	await expect(email.getByRole('tab', { name: /^Properties/ })).toHaveAttribute('aria-selected', 'true');
+
 	await emailInput.fill('email');
 	await emailInput.press('ArrowUp');
 	await emailInput.press('ArrowRight');
