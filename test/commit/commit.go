@@ -44,14 +44,15 @@ func main() {
 
 	start := time.Now()
 
-	// Find modules and packages in the current working directory, then ensure
-	// that the script has been launched with the correct working directory.
-	modules, packages := findModulesPackages(".")
-	for _, mod := range []string{"."} { // just some random modules in the repository (currently we have just one).
-		if !slices.Contains(modules, mod) {
-			fatal("module %q was expected in the repository but not found, maybe because you ran this script incorrectly or this script is out-of-date", mod)
-		}
+	// Find the packages of the module in the current working directory, then
+	// ensure that the script has been launched with the correct working
+	// directory. Other modules nested in the repository, such as ignored local
+	// ones, are not considered.
+	_, err := os.Stat("go.mod")
+	if err != nil {
+		fatal("module was expected in the current working directory but not found, maybe because you ran this script incorrectly or this script is out-of-date: %s", err)
 	}
+	packages := findPackages(".")
 	for _, pkg := range []string{"core", "connectors", "warehouses"} { // just some random top-level packages in the repository.
 		if !slices.Contains(packages, pkg) {
 			fatal("package %q was expected in the repository but not found, maybe because you ran this script incorrectly or this script is out-of-date", pkg)
@@ -70,35 +71,27 @@ func main() {
 		os.Exit(0)
 	}
 
-	// Tidy modules.
-	fmt.Println("Tidy modules")
-	for _, module := range modules {
-		removeGoSum(repo, module)
-		NewCmd("go", "mod", "tidy").InDir(repo, module).Run()
+	// Tidy the module.
+	fmt.Println("Tidy the module")
+	removeGoSum(repo)
+	NewCmd("go", "mod", "tidy").InDir(repo).Run()
+
+	// Go-fix the module.
+	fmt.Println("Go-fixing the module")
+	// Call the command 3 times, because some fixes are applied in subsequent
+	// calls. 3 is a reasonable number to most likely perform all the necessary
+	// fixes.
+	for range 3 {
+		NewCmd("go", "fix", "./...").InDir(repo).Run()
 	}
 
-	// Go-fix modules.
-	fmt.Println("Go-fixing modules")
-	for _, module := range modules {
-		// Call the command 3 times, because some fixes are applied in
-		// subsequent calls. 3 is a reasonable number to most likely perform all
-		// the necessary fixes.
-		for range 3 {
-			NewCmd("go", "fix", "./...").InDir(repo, module).Run()
-		}
-	}
+	// Format the module.
+	fmt.Println("Format the module")
+	NewCmd("go", "fmt", "./...").InDir(repo).Run()
 
-	// Format modules.
-	fmt.Println("Format modules")
-	for _, module := range modules {
-		NewCmd("go", "fmt", "./...").InDir(repo, module).Run()
-	}
-
-	// Running 'go vet' on every module.
-	fmt.Println("Running 'go vet' on every module")
-	for _, module := range modules {
-		NewCmd("go", "vet", "./...").InDir(repo, module).Run()
-	}
+	// Running 'go vet' on the module.
+	fmt.Println("Running 'go vet' on the module")
+	NewCmd("go", "vet", "./...").InDir(repo).Run()
 
 	// Update the Go vendor.
 	NewCmd("go", "mod", "vendor").InDir(repo).Run()
@@ -244,10 +237,11 @@ func parseCli() cliOptions {
 	}
 }
 
-// findModulesPackages finds the Go modules and packages within the given dir.
-// Both the modules and packages are sorted in alphabetical order.
-// This function skips directories named "vendor".
-func findModulesPackages(dir string) (modules, packages []string) {
+// findPackages finds the Go packages of the module rooted at the given dir,
+// sorted in alphabetical order. This function skips directories named "vendor"
+// and the directories of other modules, which contain a "go.mod" file.
+func findPackages(dir string) []string {
+	var packages []string
 	err := filepath.Walk(dir, func(path string, fi fs.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -255,9 +249,15 @@ func findModulesPackages(dir string) (modules, packages []string) {
 		if fi.IsDir() && fi.Name() == "vendor" {
 			return filepath.SkipDir
 		}
-		// Module found.
-		if filepath.Base(path) == "go.mod" {
-			modules = append(modules, filepath.Dir(path))
+		// Other module found.
+		if fi.IsDir() && path != dir {
+			_, err := os.Stat(filepath.Join(path, "go.mod"))
+			if err == nil {
+				return filepath.SkipDir
+			}
+			if !errors.Is(err, fs.ErrNotExist) {
+				return err
+			}
 		}
 		// Package found.
 		if filepath.Ext(path) == ".go" {
@@ -269,11 +269,10 @@ func findModulesPackages(dir string) (modules, packages []string) {
 		return nil
 	})
 	if err != nil {
-		fatal("cannot read modules and packages in the repository: %s", err)
+		fatal("cannot read packages in the repository: %s", err)
 	}
-	slices.Sort(modules)
 	slices.Sort(packages)
-	return modules, packages
+	return packages
 }
 
 func logCmd(dir, cmd string) {
@@ -324,9 +323,9 @@ func fatal(msg string, args ...any) {
 	os.Exit(1)
 }
 
-func removeGoSum(repo, module string) {
-	logCmd(filepath.Join(repo, module), "rm go.sum")
-	err := os.Remove(filepath.Join(repo, module, "go.sum"))
+func removeGoSum(repo string) {
+	logCmd(repo, "rm go.sum")
+	err := os.Remove(filepath.Join(repo, "go.sum"))
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		fatal("cannot remove 'go.sum': %s", err)
 	}
