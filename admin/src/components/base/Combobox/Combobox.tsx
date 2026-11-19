@@ -24,6 +24,11 @@ interface SuggestionGroup {
 	items: ComboboxItem[];
 }
 
+interface HighlightedOption {
+	group: string;
+	term: string;
+}
+
 interface ComboboxProps {
 	value: string;
 	displayValue?: string;
@@ -86,7 +91,7 @@ const Combobox = ({
 	const [isOpen, setIsOpen] = useState<boolean>(false);
 	const [listWidth, setListWidth] = useState<number>();
 	const [selectedTab, setSelectedTab] = useState<string>();
-	const [highlight, setHighlight] = useState<number | 'tabs' | null>(null);
+	const [keyboardHighlight, setKeyboardHighlight] = useState<HighlightedOption | 'tabs' | null>(null);
 	const [isErrorExpanded, setIsErrorExpanded] = useState<boolean>(false);
 	const [isErrorOverflowing, setIsErrorOverflowing] = useState<boolean>(false);
 
@@ -129,7 +134,7 @@ const Combobox = ({
 			// dropdown caret.
 			return;
 		}
-		setHighlight(null);
+		setKeyboardHighlight(null);
 		setIsOpen(true);
 		if (isExpression) {
 			updateCursorPosition();
@@ -171,7 +176,7 @@ const Combobox = ({
 			const inputSuffix = inputRef.current.shadowRoot?.querySelector('[part="end"]');
 			inputSuffix.addEventListener('click', () => {
 				inputRef.current.focus();
-				setHighlight(null);
+				setKeyboardHighlight(null);
 				setIsOpen(true);
 				updateCursorPosition(true);
 			});
@@ -321,7 +326,7 @@ const Combobox = ({
 
 	const onInput = (e) => {
 		e.preventDefault();
-		setHighlight(null);
+		setKeyboardHighlight(null);
 		isEditing.current = true;
 		if (!isOpen) {
 			// if the user has closed the list via escape button.
@@ -397,7 +402,7 @@ const Combobox = ({
 	};
 
 	const onInputBlur = () => {
-		setHighlight(null);
+		setKeyboardHighlight(null);
 		isEditing.current = false;
 		programmaticFocus.current = false;
 		if (displayValue != null) {
@@ -475,16 +480,26 @@ const Combobox = ({
 	const hasTabNavigation = hasTabs && groups.length > 1;
 	const isListVisible = isOpen && (selectedFunction != null || hasTabs || activeGroup?.items.length > 0);
 
+	let highlight: number | 'tabs' | null = null;
+	if (keyboardHighlight === 'tabs') {
+		highlight = hasTabNavigation ? 'tabs' : null;
+	} else if (keyboardHighlight != null && activeGroup?.name === keyboardHighlight.group) {
+		const index = activeGroup.items.findIndex((item) => item.term === keyboardHighlight.term);
+		highlight = index >= 0 ? index : null;
+	}
+
 	useLayoutEffect(() => {
 		if (!isOpen) {
-			setHighlight(null);
+			setKeyboardHighlight(null);
 			setSelectedTab(undefined);
 		}
 	}, [isOpen]);
 
 	useLayoutEffect(() => {
-		setHighlight(null);
-	}, [filteredProperties, filteredFunctions, enumItems, cursorPosition]);
+		if (highlight == null && keyboardHighlight != null) {
+			setKeyboardHighlight(null);
+		}
+	}, [highlight, keyboardHighlight]);
 
 	useLayoutEffect(() => {
 		const input = inputRef.current?.input;
@@ -534,7 +549,7 @@ const Combobox = ({
 	const onSelect = (e, term: string, type: 'property' | 'function' | 'enum', selectedDisplayValue?: string) => {
 		e.preventDefault();
 		e.stopPropagation();
-		setHighlight(null);
+		setKeyboardHighlight(null);
 		isEditing.current = true;
 
 		if (type === 'enum') {
@@ -640,11 +655,15 @@ const Combobox = ({
 			}
 			const index = typeof highlight === 'number' ? highlight : -1;
 			if (count === 0 || (key === 'ArrowUp' && hasTabNavigation && index <= 0)) {
-				setHighlight('tabs');
-			} else if (key === 'ArrowDown') {
-				setHighlight(Math.min(index + 1, count - 1));
+				setKeyboardHighlight('tabs');
 			} else {
-				setHighlight(index === -1 ? count - 1 : Math.max(0, index - 1));
+				let nextIndex = count - 1;
+				if (key === 'ArrowDown') {
+					nextIndex = Math.min(index + 1, count - 1);
+				} else if (index !== -1) {
+					nextIndex = Math.max(0, index - 1);
+				}
+				setKeyboardHighlight({ group: activeGroup.name, term: activeGroup.items[nextIndex].term });
 			}
 		} else if (!hasModifier && highlight === 'tabs' && (key === 'ArrowLeft' || key === 'ArrowRight')) {
 			const index = groups.indexOf(activeGroup) + (key === 'ArrowRight' ? 1 : -1);
@@ -662,7 +681,7 @@ const Combobox = ({
 			if (
 				['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown'].includes(key)
 			) {
-				setHighlight(null);
+				setKeyboardHighlight(null);
 				setIsOpen(true);
 				updateCursorPosition();
 			}
