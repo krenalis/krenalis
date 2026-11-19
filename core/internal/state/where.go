@@ -380,7 +380,8 @@ func unmarshalConditionValue(v json.Value, t types.Type) (any, error) {
 		if err != nil {
 			return value, nil
 		}
-		if types.IsDecimal(d) {
+		precision, scale := d.PrecisionScale()
+		if precision <= types.MaxDecimalPrecision && scale <= types.MaxDecimalScale {
 			value.Number = &d
 		}
 		return value, nil

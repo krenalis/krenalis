@@ -431,7 +431,8 @@ func jsonFilterOperand(text string) state.JSONConditionValue {
 	if err != nil {
 		return value
 	}
-	if types.IsDecimal(number) {
+	precision, scale := number.PrecisionScale()
+	if precision <= types.MaxDecimalPrecision && scale <= types.MaxDecimalScale {
 		value.Number = &number
 	}
 	return value

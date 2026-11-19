@@ -340,7 +340,8 @@ func parseFilterDecimal(s string) (decimal.Decimal, bool) {
 	if err != nil {
 		return decimal.Decimal{}, false
 	}
-	if !types.IsDecimal(d) {
+	precision, scale := d.PrecisionScale()
+	if precision > types.MaxDecimalPrecision || scale > types.MaxDecimalScale {
 		return decimal.Decimal{}, false
 	}
 	return d, true
