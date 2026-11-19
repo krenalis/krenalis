@@ -44,13 +44,12 @@ func main() {
 
 	start := time.Now()
 
-	// Find the packages of the module in the current working directory, then
-	// ensure that the script has been launched with the correct working
-	// directory. Other modules nested in the repository, such as ignored local
-	// ones, are not considered.
+	// Find the packages of the root module, then ensure that the script has
+	// been launched with the correct working directory. Other modules in the
+	// repository, such as ignored local ones, are not considered.
 	_, err := os.Stat("go.mod")
 	if err != nil {
-		fatal("module was expected in the current working directory but not found, maybe because you ran this script incorrectly or this script is out-of-date: %s", err)
+		fatal("root module was expected in the current working directory but not found, maybe because you ran this script incorrectly or this script is out-of-date: %s", err)
 	}
 	packages := findPackages(".")
 	for _, pkg := range []string{"core", "connectors", "warehouses"} { // just some random top-level packages in the repository.
