@@ -110,8 +110,15 @@ test(`Add "Import customers" pipeline on Dummy`, async ({ page }) => {
 	await expect(page.locator('.pipeline__header')).toBeAttached();
 
 	let email = page.locator('.combobox[data-id="email"]');
-	await email.locator('wa-input').click();
-	await email.locator('.combobox-list__item .schema-combobox-item__text', { hasText: 'email' }).click();
+	const emailInput = email.locator('input');
+	await emailInput.fill('email');
+	await emailInput.press('ArrowUp');
+	await emailInput.press('ArrowRight');
+	await expect(email.getByRole('tab', { name: /^Functions/ })).toHaveAttribute('aria-selected', 'true');
+	await emailInput.press('ArrowLeft');
+	await emailInput.press('ArrowDown');
+	await expect(email.getByRole('option', { selected: true })).toHaveText('email');
+	await emailInput.press('Enter');
 	await page.keyboard.press('Escape');
 
 	let dummyId = page.locator('.combobox[data-id="dummy_id"]');

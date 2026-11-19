@@ -707,10 +707,10 @@ test(`Apply a completed filter explicitly`, async ({ page }) => {
 	await expect(
 		property.locator('.combobox-list__item .schema-combobox-item__name', { hasText: /^Billing address › City$/ }),
 	).toBeVisible();
-	const propertyMenu = property.locator('[data-is-combobox-list]');
-	await propertyMenu.hover();
+	const menuBody = property.locator('.combobox-list__body');
+	await menuBody.hover();
 	await page.mouse.wheel(0, 200);
-	await expect.poll(() => propertyMenu.evaluate((menu) => menu.scrollTop)).toBeGreaterThan(0);
+	await expect.poll(() => menuBody.evaluate((body) => body.scrollTop)).toBeGreaterThan(0);
 	const propertyMenuLayout = await property.locator('[data-is-combobox-list]').evaluate((menu) => {
 		const lastItem = menu.querySelector('.combobox-list__item:last-of-type');
 		if (!(lastItem instanceof HTMLElement)) {
