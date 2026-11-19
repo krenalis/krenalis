@@ -49,7 +49,8 @@ func main() {
 	// repository, such as ignored local ones, are not considered.
 	_, err := os.Stat("go.mod")
 	if err != nil {
-		fatal("root module was expected in the current working directory but not found, maybe because you ran this script incorrectly or this script is out-of-date: %s", err)
+		fatal("root module was expected in the current working directory but not found, maybe because"+
+			" you ran this script incorrectly or this script is out-of-date: %s", err)
 	}
 	packages := findPackages(".")
 	for _, pkg := range []string{"core", "connectors", "warehouses"} { // just some random top-level packages in the repository.
