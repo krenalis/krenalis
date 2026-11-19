@@ -51,10 +51,10 @@ type Query struct {
 }
 
 // convertWhere converts a state.Where expression into a warehouses.Expr,
-// preserving condition operators. For object properties, "exists" is an OR of
-// descendant existence checks, while "does not exist" is an AND of descendant
-// absence checks. JSON path segments after the column are stored in
-// warehouses.BaseExpr.Keys.
+// preserving the condition operators. For object properties, "exists" matches
+// if any descendant column is non-NULL, and "does not exist" matches if all
+// descendant columns are SQL NULL. JSON path segments following the column's
+// property path are stored in warehouses.BaseExpr.Keys.
 func convertWhere(where *state.Where, columnByProperty map[string]warehouses.Column) (warehouses.Expr, error) {
 
 	if where == nil {
@@ -96,11 +96,17 @@ func convertWhere(where *state.Where, columnByProperty map[string]warehouses.Col
 				return nil, fmt.Errorf("invalid operator %d for property %q in where expression",
 					int(rule.Operator), path)
 			}
-			values := slices.Clone(rule.Values)
-			for j, value := range values {
+			var values []any
+			for j, value := range rule.Values {
 				if value, ok := value.(state.JSONConditionValue); ok {
+					if values == nil {
+						values = slices.Clone(rule.Values)
+					}
 					values[j] = warehouses.JSONConditionValue{String: value.String, Number: value.Number}
 				}
+			}
+			if values == nil {
+				values = rule.Values
 			}
 			if column, ok := columnByProperty[path]; ok {
 				expr.Operands[i] = warehouses.NewBaseExpr(column, warehouses.Operator(rule.Operator), values...)
@@ -115,7 +121,8 @@ func convertWhere(where *state.Where, columnByProperty map[string]warehouses.Col
 					path[len(name)] != '.' || !strings.HasPrefix(path, name) {
 					continue
 				}
-				// The column must end at a segment boundary. JSON keys can contain dots.
+				// The column's property path must end at a segment boundary in
+				// the filter path, since JSON keys can contain dots.
 				end, n := -1, 0
 				for end < len(name) {
 					end += len(rule.Property[n]) + 1
