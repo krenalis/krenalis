@@ -24,7 +24,7 @@ type JSONCase struct {
 }
 
 // JSONCases returns JSON fixtures and manually specified positive matches.
-// Negative matches are complements, as defined by the filter evaluator.
+// Negative matches are generated as complements of the positive matches.
 // A nil fixture represents an absent property, distinct from JSON null.
 func JSONCases() ([]json.Value, []JSONCase) {
 	values := []json.Value{
@@ -163,10 +163,13 @@ func JSONCases() ([]json.Value, []JSONCase) {
 			[]int{40}},
 	}
 	negative := map[warehouses.Operator]warehouses.Operator{
-		warehouses.OpIs: warehouses.OpIsNot, warehouses.OpIsBetween: warehouses.OpIsNotBetween,
-		warehouses.OpContains: warehouses.OpDoesNotContain, warehouses.OpIsOneOf: warehouses.OpIsNotOneOf,
-		warehouses.OpIsEmpty: warehouses.OpIsNotEmpty, warehouses.OpIsNull: warehouses.OpIsNotNull,
-		warehouses.OpExists: warehouses.OpDoesNotExist,
+		warehouses.OpIs:        warehouses.OpIsNot,
+		warehouses.OpIsBetween: warehouses.OpIsNotBetween,
+		warehouses.OpContains:  warehouses.OpDoesNotContain,
+		warehouses.OpIsOneOf:   warehouses.OpIsNotOneOf,
+		warehouses.OpIsEmpty:   warehouses.OpIsNotEmpty,
+		warehouses.OpIsNull:    warehouses.OpIsNotNull,
+		warehouses.OpExists:    warehouses.OpDoesNotExist,
 	}
 	for _, c := range cases {
 		op, ok := negative[c.Operator]
@@ -184,7 +187,8 @@ func JSONCases() ([]json.Value, []JSONCase) {
 	return values, cases
 }
 
-// Operand constructs the dual string and decimal representation of a filter.
+// Operand preserves the original text and includes its decimal representation
+// only when it fits the supported precision and scale.
 func Operand(text string) warehouses.JSONConditionValue {
 	value := warehouses.JSONConditionValue{String: text}
 	number, err := decimal.Parse(text, 0, 0)
