@@ -90,7 +90,8 @@ func TestConvertWhereJSONBooleanOperators(t *testing.T) {
 }
 
 // TestConvertWhereJSONOperators verifies that JSON filter conditions are
-// converted across property paths without modifying the input.
+// converted correctly for different property paths without modifying
+// the inputs.
 func TestConvertWhereJSONOperators(t *testing.T) {
 
 	_, cases := warehouseexpr.JSONCases()
@@ -120,18 +121,20 @@ func TestConvertWhereJSONOperators(t *testing.T) {
 						if !ok {
 							t.Fatalf("expected warehouses.JSONConditionValue at index %d, got %T", i, raw)
 						}
-						originalValues[i] = state.JSONConditionValue{String: value.String, Number: value.Number}
+						originalValues[i] = state.JSONConditionValue(value)
 						if value.Number != nil {
 							number := *value.Number
 							value.Number = &number
 						}
-						values[i] = state.JSONConditionValue{String: value.String, Number: value.Number}
+						values[i] = state.JSONConditionValue(value)
 					}
 				}
 				original := &state.WhereCondition{
 					Property: slices.Clone(path.property), Operator: state.WhereOperator(c.Operator), Values: originalValues,
 				}
-				condition := &state.WhereCondition{Property: path.property, Operator: original.Operator, Values: values}
+				condition := &state.WhereCondition{
+					Property: slices.Clone(path.property), Operator: original.Operator, Values: values,
+				}
 				where := &state.Where{Operator: state.OpAnd, Rules: []state.WhereRule{condition}}
 				originalWhere := &state.Where{Operator: state.OpAnd, Rules: []state.WhereRule{original}}
 				column := warehouses.Column{Name: "json_column", Type: types.JSON(), Nullable: true}

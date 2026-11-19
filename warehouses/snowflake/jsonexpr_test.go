@@ -7,7 +7,6 @@ package snowflake
 import (
 	"fmt"
 	"slices"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -256,7 +255,10 @@ func TestJSONExpressions(t *testing.T) {
 
 	// Container filters treat SQL NULL as empty, but still distinguish it
 	// from a present empty container for null and existence checks.
-	mustExecSQL(t, db, "INSERT INTO \"JSON_EXPRESSIONS\" SELECT "+strconv.Itoa(len(values))+", NULL, NULL, ARRAY_CONSTRUCT(), OBJECT_CONSTRUCT()")
+	err = warehouse.Merge(t.Context(), table, [][]any{{len(values), nil, nil, []any{}, map[string]any{}}}, nil)
+	if err != nil {
+		t.Fatalf("expected empty container fixture merge, got %v", err)
+	}
 	var absentIDs, nonEmptyIDs []int
 	for i, value := range values {
 		if value == nil {

@@ -29,8 +29,8 @@ import (
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 )
 
-// TestJSONFilters verifies that SQL filters return the same records as the
-// in-memory evaluator on both PostgreSQL and Snowflake.
+// TestJSONFilters verifies that SQL filters match the same records as the
+// in-memory evaluator on PostgreSQL and Snowflake.
 func TestJSONFilters(t *testing.T) {
 
 	// Check the differential oracle against independently specified matches.
@@ -384,7 +384,12 @@ func TestJSONFilters(t *testing.T) {
 				}
 				counts, err := warehouse.Counts(t.Context(), table.Name, expressions)
 				if err != nil {
-					t.Fatalf("expected query execution for batch starting at %s, got %v", batch[0].name, err)
+					t.Fatalf("expected query execution for batch from %s through %s, got %v",
+						batch[0].name, batch[len(batch)-1].name, err)
+				}
+				if len(counts) != len(expressions) {
+					t.Fatalf("expected %d counts for batch starting at %s, got %d",
+						len(expressions), batch[0].name, len(counts))
 				}
 				for i, query := range batch {
 					t.Run(query.name, func(t *testing.T) {
@@ -400,7 +405,8 @@ func TestJSONFilters(t *testing.T) {
 
 }
 
-// TestJSONFilterOperand checks numeric classification and preserves value text.
+// TestJSONFilterOperand checks whether operands are numeric and retain their
+// original text.
 func TestJSONFilterOperand(t *testing.T) {
 	for _, c := range []struct {
 		text   string
@@ -438,7 +444,7 @@ func jsonFilterOperand(text string) state.JSONConditionValue {
 	return value
 }
 
-// newJSONFilterTestWarehouse creates one environment for all JSON filter tests.
+// newJSONFilterTestWarehouse creates a warehouse and registers its cleanup.
 func newJSONFilterTestWarehouse(t *testing.T, name string) warehouses.Warehouse {
 
 	t.Helper()
