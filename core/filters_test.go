@@ -1818,6 +1818,70 @@ func Test_validateFilter(t *testing.T) {
 
 }
 
+// Test_validateJSONFilters checks that validation leaves JSON filters intact
+// and that a conversion round trip preserves their original operands.
+func Test_validateJSONFilters(t *testing.T) {
+
+	schema := types.Object([]types.Property{
+		{Name: "value", Type: types.JSON(), ReadOptional: true},
+		{Name: "array", Type: types.Array(types.JSON()), ReadOptional: true},
+		{Name: "map", Type: types.Map(types.JSON()), ReadOptional: true},
+	})
+	for _, test := range []struct {
+		name     string
+		property string
+		operator FilterOperator
+		values   []string
+		wantErr  string
+	}{
+		{"scalar membership", "value", OpIsOneOf, []string{"5", "5.0", "5e0", " Foo ", "é", "e\u0301"}, ""},
+		{"nested range", "value.a.b", OpIsBetween, []string{"0.0050", "1e76"}, ""},
+		{"array containment", "array", OpContains, []string{"  Pro  "}, ""},
+		{"negated array containment", "array", OpDoesNotContain, []string{"-1e999999"}, ""},
+		{"map emptiness", "map", OpIsEmpty, nil, ""},
+		{"map absence", "map", OpDoesNotExist, nil, ""},
+		{"empty membership operand", "value.a.b", OpIsOneOf, []string{"5.0", ""}, "condition value is empty"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+
+			filter := &Filter{Operator: OpAnd, Rules: []FilterRule{
+				&FilterCondition{Property: test.property, Operator: test.operator, Values: slices.Clone(test.values)},
+			}}
+			want := &Filter{Operator: OpAnd, Rules: []FilterRule{
+				&FilterCondition{Property: test.property, Operator: test.operator, Values: test.values},
+			}}
+
+			_, err := validateFilter(filter, schema, state.Source, state.TargetUser)
+			if diff := cmp.Diff(want, filter); diff != "" {
+				t.Fatalf("expected unchanged filter after validation, got difference (-want +got):\n%s", diff)
+			}
+			if err != nil {
+				if test.wantErr == "" {
+					t.Fatalf("expected valid filter, got %v", err)
+				}
+				if err.Error() != test.wantErr {
+					t.Fatalf("expected error %q, got %q", test.wantErr, err)
+				}
+				return
+			}
+			if test.wantErr != "" {
+				t.Fatalf("expected error %q, got nil", test.wantErr)
+			}
+
+			where := convertFilterToWhere(filter, schema)
+			got := convertWhereToFilter(where, schema)
+			if diff := cmp.Diff(want, filter); diff != "" {
+				t.Errorf("expected unchanged filter after conversion, got difference (-want +got):\n%s", diff)
+			}
+			if diff := cmp.Diff(want, got); diff != "" {
+				t.Errorf("expected original filter after round trip, got difference (-want +got):\n%s", diff)
+			}
+
+		})
+	}
+
+}
+
 // Test_validateFilterLimits verifies filter complexity limits for values built
 // directly in Go.
 func Test_validateFilterLimits(t *testing.T) {
