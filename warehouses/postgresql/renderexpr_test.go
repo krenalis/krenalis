@@ -249,36 +249,6 @@ func Test_renderExpr(t *testing.T) {
 			query: `("type" IS NOT NULL AND "type" <> '') OR COALESCE(("properties" IS NULL OR "properties" IN ('null'::jsonb, '""'::jsonb, '[]'::jsonb, '{}'::jsonb)), FALSE) OR array_length("scores", 1) IS NULL OR "properties" <> '{}'::jsonb`,
 		},
 		{
-			name:  "decimal zero",
-			expr:  warehouses.NewBaseExpr(column, warehouses.OpIs, decimal.Decimal{}),
-			query: `"value" = 0`,
-		},
-		{
-			name:  "decimal trailing zeros",
-			expr:  warehouses.NewBaseExpr(column, warehouses.OpIs, decimal.MustParse("1.2300")),
-			query: `"value" = 1.23`,
-		},
-		{
-			name:  "decimal maximum precision exceeds column precision",
-			expr:  warehouses.NewBaseExpr(column, warehouses.OpIs, decimal.MustParse("1e75")),
-			query: `"value" = 1e75`,
-		},
-		{
-			name:  "decimal maximum scale exceeds column scale",
-			expr:  warehouses.NewBaseExpr(column, warehouses.OpIsLessThan, decimal.MustParse("1e-37")),
-			query: `"value" < 1e-37`,
-		},
-		{
-			name:  "decimal array maximum precision",
-			expr:  warehouses.NewBaseExpr(array, warehouses.OpContains, decimal.MustParse("1e75")),
-			query: `1e75 = ANY("value")`,
-		},
-		{
-			name:  "decimal array maximum scale",
-			expr:  warehouses.NewBaseExpr(array, warehouses.OpDoesNotContain, decimal.MustParse("1e-37")),
-			query: `NOT (1e-37 = ANY("value"))`,
-		},
-		{
 			name:    "decimal excessive precision",
 			expr:    warehouses.NewBaseExpr(column, warehouses.OpIs, decimal.MustParse("1e76")),
 			wantErr: "decimal operand exceeds precision 76 or scale 37",

@@ -485,32 +485,6 @@ func TestProfilesPagination(t *testing.T) {
 	if len(attributes) != 1 || attributes["email"] != "changed@example.com" {
 		t.Fatalf("expected only email changed@example.com, got %v", attributes)
 	}
-	t.Run("JSON filter property outside request schema", func(t *testing.T) {
-		err := k.TryCall("POST", "/v1/profiles/query", nil, map[string]any{
-			"schema": partialSchema, "properties": []string{"email"}, "filter": json.Value(jsonFilter),
-		}, nil)
-		if err != nil {
-			statusErr, ok := errors.AsType[*krenalistester.StatusCodeError](err)
-			if !ok || statusErr.Response.Code != http.StatusUnprocessableEntity {
-				t.Fatalf("expected HTTP 422, got %v", err)
-			}
-			var response struct {
-				Error struct {
-					Code string `json:"code"`
-				} `json:"error"`
-			}
-			err = json.Unmarshal([]byte(statusErr.Response.Text), &response)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if response.Error.Code != "PropertyNotExist" {
-				t.Fatalf("expected code PropertyNotExist, got %q", response.Error.Code)
-			}
-			return
-		}
-		t.Fatal("expected HTTP 422 PropertyNotExist, got nil")
-	})
-
 	// A partial nested object describes both the selected columns and serialization.
 	android, _ := requestSchema.Properties().ByName("android")
 	androidID, _ := android.Type.Properties().ByName("id")

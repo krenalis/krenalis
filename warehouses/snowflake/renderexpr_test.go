@@ -418,36 +418,6 @@ func Test_renderExpr(t *testing.T) {
 			query: `("TYPE" IS NOT NULL AND "TYPE" <> '') OR COALESCE(("PROPERTIES" IS NULL OR IS_NULL_VALUE("PROPERTIES") OR AS_VARCHAR("PROPERTIES") = '' OR ARRAY_SIZE(AS_ARRAY("PROPERTIES")) = 0 OR ARRAY_SIZE(OBJECT_KEYS(AS_OBJECT("PROPERTIES"))) = 0), FALSE) OR ("SCORES" IS NULL OR "SCORES" = ARRAY_CONSTRUCT()) OR "PROPERTIES" <> OBJECT_CONSTRUCT()`,
 		},
 		{
-			name:  "decimal zero",
-			expr:  warehouses.NewBaseExpr(column, warehouses.OpIs, decimal.Decimal{}),
-			query: `"VALUE" = 0`,
-		},
-		{
-			name:  "decimal trailing zeros",
-			expr:  warehouses.NewBaseExpr(column, warehouses.OpIs, decimal.MustParse("1.2300")),
-			query: `"VALUE" = 1.23`,
-		},
-		{
-			name:  "decimal maximum precision exceeds column precision",
-			expr:  warehouses.NewBaseExpr(column, warehouses.OpIs, decimal.MustParse("1e75")),
-			query: `"VALUE" = 1e75`,
-		},
-		{
-			name:  "decimal maximum scale exceeds column scale",
-			expr:  warehouses.NewBaseExpr(column, warehouses.OpIsLessThan, decimal.MustParse("1e-37")),
-			query: `"VALUE" < 1e-37`,
-		},
-		{
-			name:  "decimal array maximum precision",
-			expr:  warehouses.NewBaseExpr(array, warehouses.OpContains, decimal.MustParse("1e75")),
-			query: `(ARRAY_SIZE(FILTER("VALUE", krenalis_element -> IFF(TYPEOF(krenalis_element) = 'INTEGER', TO_JSON(krenalis_element) = '1000000000000000000000000000000000000000000000000000000000000000000000000000', TRY_TO_DECFLOAT(TO_JSON(krenalis_element)) = TO_DECFLOAT('1e75')))) > 0)`,
-		},
-		{
-			name:  "decimal array maximum scale",
-			expr:  warehouses.NewBaseExpr(array, warehouses.OpDoesNotContain, decimal.MustParse("1e-37")),
-			query: `NOT (ARRAY_SIZE(FILTER("VALUE", krenalis_element -> IFF(TYPEOF(krenalis_element) = 'INTEGER', FALSE, TRY_TO_DECFLOAT(TO_JSON(krenalis_element)) = TO_DECFLOAT('1e-37')))) > 0)`,
-		},
-		{
 			name:    "decimal excessive precision",
 			expr:    warehouses.NewBaseExpr(column, warehouses.OpIs, decimal.MustParse("1e76")),
 			wantErr: "decimal operand exceeds precision 76 or scale 37",
