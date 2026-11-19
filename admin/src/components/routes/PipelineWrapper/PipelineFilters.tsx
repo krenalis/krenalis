@@ -67,10 +67,8 @@ const PipelineFilters = forwardRef<any>((_, ref) => {
 				filter={pipeline.filter}
 				onChange={onChange}
 				propertiesToHide={propertiesToHide}
-				role={connection.role}
 				schema={pipelineType.inputSchema}
 				subject={filterSubject}
-				target={pipeline.target}
 			/>
 		</Section>
 	);
