@@ -17,6 +17,8 @@ import (
 // Test_renderExpr converts various expressions to SQL and compares with the
 // expected query strings.
 func Test_renderExpr(t *testing.T) {
+	decimalColumn := warehouses.Column{Name: "value", Type: types.Decimal(3, 2)}
+	decimalArrayColumn := warehouses.Column{Name: "value", Type: types.Array(types.Decimal(3, 2))}
 	tests := []struct {
 		expr    warehouses.Expr
 		query   string
@@ -55,6 +57,22 @@ func Test_renderExpr(t *testing.T) {
 			query: `"count" >= 3289`,
 		},
 		{
+			expr:  warehouses.NewBaseExpr(decimalColumn, warehouses.OpIs, decimal.Decimal{}),
+			query: `"value" = 0`,
+		},
+		{
+			expr:  warehouses.NewBaseExpr(decimalColumn, warehouses.OpIs, decimal.MustParse("1.2300")),
+			query: `"value" = 1.23`,
+		},
+		{
+			expr:  warehouses.NewBaseExpr(decimalColumn, warehouses.OpIs, decimal.MustParse("1e75")),
+			query: `"value" = 1e75`,
+		},
+		{
+			expr:  warehouses.NewBaseExpr(decimalColumn, warehouses.OpIsLessThan, decimal.MustParse("1e-37")),
+			query: `"value" < 1e-37`,
+		},
+		{
 			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "timestamp", Type: types.DateTime()}, warehouses.OpIsBefore, time.Date(1900, 1, 2, 23, 32, 11, 940253000, time.UTC)),
 			query: `"timestamp" < '1900-01-02 23:32:11.940253'`,
 		},
@@ -89,6 +107,14 @@ func Test_renderExpr(t *testing.T) {
 		{
 			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.Array(types.Int(32))}, warehouses.OpDoesNotContain, 7),
 			query: `NOT (7 = ANY("values"))`,
+		},
+		{
+			expr:  warehouses.NewBaseExpr(decimalArrayColumn, warehouses.OpContains, decimal.MustParse("1e75")),
+			query: `1e75 = ANY("value")`,
+		},
+		{
+			expr:  warehouses.NewBaseExpr(decimalArrayColumn, warehouses.OpDoesNotContain, decimal.MustParse("1e-37")),
+			query: `NOT (1e-37 = ANY("value"))`,
 		},
 		{
 			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "id", Type: types.Int(32)}, warehouses.OpIsOneOf, 3, 9, 5),
