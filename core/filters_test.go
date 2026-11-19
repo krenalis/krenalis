@@ -1818,10 +1818,9 @@ func Test_validateFilter(t *testing.T) {
 
 }
 
-// Test_validateJSONFilters checks that validation leaves JSON filters intact
-// and that a conversion round trip preserves their original operands.
-func Test_validateJSONFilters(t *testing.T) {
-
+// Test_validateFilterJSONRoundTrip checks that validation and conversion
+// leave JSON filters unchanged and that a round trip preserves their operands.
+func Test_validateFilterJSONRoundTrip(t *testing.T) {
 	schema := types.Object([]types.Property{
 		{Name: "value", Type: types.JSON(), ReadOptional: true},
 		{Name: "array", Type: types.Array(types.JSON()), ReadOptional: true},
@@ -1869,17 +1868,16 @@ func Test_validateJSONFilters(t *testing.T) {
 			}
 
 			where := convertFilterToWhere(filter, schema)
-			got := convertWhereToFilter(where, schema)
 			if diff := cmp.Diff(want, filter); diff != "" {
-				t.Errorf("expected unchanged filter after conversion, got difference (-want +got):\n%s", diff)
+				t.Errorf("expected unchanged filter after convertFilterToWhere, got difference (-want +got):\n%s", diff)
 			}
+			got := convertWhereToFilter(where, schema)
 			if diff := cmp.Diff(want, got); diff != "" {
 				t.Errorf("expected original filter after round trip, got difference (-want +got):\n%s", diff)
 			}
 
 		})
 	}
-
 }
 
 // Test_validateFilterLimits verifies filter complexity limits for values built
