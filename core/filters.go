@@ -108,8 +108,6 @@ type FilterCondition struct {
 	// Values.
 	// If the property has a string type with allowed values, each value must be one of the allowed values.
 	// In all other cases, each value must be at most 80 runes and must not contain the NUL byte.
-	// Decimal operands must fit a decimal(p,s) with p <= 76 and 0 <= s <= min(p,37).
-	// In addition to JSON strings, only JSON operands within these decimal limits are compared with JSON numbers.
 	Values []string `json:"values,omitzero"`
 }
 
