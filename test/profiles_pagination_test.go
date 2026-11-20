@@ -426,10 +426,20 @@ func TestProfilesPagination(t *testing.T) {
 	// Compatible alterations and subsequent IR publications keep old arguments usable.
 	newProperties := requestSchema.Properties().Slice()
 	newProperties = append(newProperties, types.Property{
-		Name: "new_property", Type: types.String(), ReadOptional: true,
+		Name: "metadata", Type: types.JSON(), ReadOptional: true,
 	})
 	k.AlterProfileSchemaAndWait(types.Object(newProperties), nil, nil)
 	partialSchema := types.Object([]types.Property{emailProperty})
+
+	t.Run("JSON filter property outside request schema", func(t *testing.T) {
+		jsonFilter := json.Value(`{"operator":"and","rules":[` +
+			`{"property":"metadata.score","operator":"is","values":["1.25"]}]}`)
+		err := k.TryCall("POST", "/v1/profiles/query", nil, map[string]any{
+			"schema": partialSchema, "properties": []string{"email"}, "filter": jsonFilter,
+		}, nil)
+		expectAPIError(t, err, http.StatusUnprocessableEntity, "PropertyNotExist")
+	})
+
 	page, _, _ := k.ProfilesWithSchema(partialSchema, nil, "", true, 0, 1)
 	if len(page) != 1 {
 		t.Fatalf("expected one profile, got %d", len(page))
