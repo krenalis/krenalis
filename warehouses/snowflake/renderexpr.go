@@ -110,6 +110,14 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 		}
 	}
 
+	jsonColumnFilter := c.Type.IsJSON()
+	if jsonColumnFilter && len(baseExpr.Keys) == 0 && len(baseExpr.Values) == 1 &&
+		(baseExpr.Operator == warehouses.OpIs || baseExpr.Operator == warehouses.OpIsNot) {
+		// Use native comparison for column references to preserve SQL NULL semantics.
+		_, column := baseExpr.Values[0].(warehouses.Column)
+		jsonColumnFilter = !column
+	}
+
 	jsonArrayFilter := c.Type.IsArray() && c.Type.Elem().IsJSON()
 	if jsonArrayFilter && len(baseExpr.Values) == 1 &&
 		(baseExpr.Operator == warehouses.OpContains || baseExpr.Operator == warehouses.OpDoesNotContain) {
@@ -117,7 +125,7 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 		_, encoded := baseExpr.Values[0].(json.Value)
 		jsonArrayFilter = !encoded
 	}
-	if c.Type.IsJSON() || jsonArrayFilter || c.Type.IsMap() && c.Type.Elem().IsJSON() {
+	if jsonColumnFilter || jsonArrayFilter || c.Type.IsMap() && c.Type.Elem().IsJSON() {
 		return renderJSONExpr(b, baseExpr)
 	}
 

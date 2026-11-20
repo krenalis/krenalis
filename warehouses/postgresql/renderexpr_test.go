@@ -43,6 +43,18 @@ func Test_renderExpr(t *testing.T) {
 			query: `"a" = "b"`,
 		},
 		{
+			name: "JSON column equality",
+			expr: warehouses.NewBaseExpr(warehouses.Column{Name: "a", Type: types.JSON(), Nullable: true},
+				warehouses.OpIs, warehouses.Column{Name: "b", Type: types.JSON(), Nullable: true}),
+			query: `"a" = "b"`,
+		},
+		{
+			name: "JSON column inequality",
+			expr: warehouses.NewBaseExpr(warehouses.Column{Name: "a", Type: types.JSON(), Nullable: true},
+				warehouses.OpIsNot, warehouses.Column{Name: "b", Type: types.JSON(), Nullable: true}),
+			query: `"a" <> "b"`,
+		},
+		{
 			name: "JSON structural equality with apostrophe",
 			expr: warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.JSON()},
 				warehouses.OpIs, json.Value(`{"foo":2,"boo":true,"name":"O'Reilly"}`)),
