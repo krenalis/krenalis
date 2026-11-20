@@ -74,8 +74,8 @@ a rollback. Meanwhile they keep reading and writing the database, and they
 exchange notifications with the instances of the new release.
 
 This is a requirement, with no exceptions: the upgrade to a release must never
-break the previous one. A single release is enough, if it follows the rules
-below for the database and for the notifications.
+break the previous one. For the database, a single release is enough, if it
+follows the rules below.
 
 ### The database
 
@@ -108,25 +108,11 @@ to the old representation cannot be written: ask the user how to proceed.
 
 ### Notifications and NATS
 
-The payload of a notification travels in the `NOTIFY`, from the instance that
-sends it to the others, and is stored in the `notifications` table for those
-that read it later, so no trigger can translate it. The same holds for the
-messages on NATS. An instance that cannot read a notification exits with a
-terminal replication error.
-
-So, when a change alters the format of a value carried by a notification or a
-message, such as a type or a filter:
-
-- the new release reads both formats, and still sends the old one, which the
-  previous release reads;
-- the following release sends the new format, which the release before it
-  already reads, and still reads the old one;
-- the release after that can stop reading the old format.
-
-When preparing a release that still sends an old format, ask the user to track
-the switch for the following release, for example with an issue.
-Notifications already stored need no conversion, because an instance reads
-only those that follow the load of its state.
+The two releases also exchange notifications and NATS messages, which no
+trigger can translate. How to keep them compatible is still open, and a policy
+must be agreed in https://github.com/krenalis/krenalis/issues/2796. Until
+then, ask the user before changing a notification or the format of the events
+published on NATS.
 
 ## Recording a change
 

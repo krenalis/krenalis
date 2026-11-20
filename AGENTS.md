@@ -314,5 +314,5 @@ During every rolling deployment, and after a rollback, the instances of two cons
 - It works both on the migrated database and on the finalized one, because the finalization may come long after the deployment: until then the database still holds what only the previous release uses, and lacks the constraints that `finalize` adds.
 - It reads and writes only the representation of the data of its own schema version, and never the old one that the previous release still uses; the triggers added by `migrate` keep the two in sync.
 - It handles the values that the previous release can still write until the finalization, such as the default of a new column in the rows it inserts, unless a trigger fills them.
-- It sends notifications and NATS messages in a format that the previous release reads, and reads the format that the previous release sends.
+- How to keep notifications and NATS messages compatible is still open (https://github.com/krenalis/krenalis/issues/2796): ask the user before changing a notification or the format of the events published on NATS.
 - It starts with the configuration of the previous release, and the configuration it needs does not stop the previous release from starting, since both read the same configuration as long as a rollback is possible: add settings as optional or with a default, and never change the meaning of an existing one.
