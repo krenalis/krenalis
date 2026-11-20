@@ -17,7 +17,6 @@ import (
 	"github.com/krenalis/krenalis/test/snowflaketester"
 	"github.com/krenalis/krenalis/test/testimages"
 	"github.com/krenalis/krenalis/test/warehouseexpr"
-	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
@@ -405,43 +404,8 @@ func TestJSONFilters(t *testing.T) {
 
 }
 
-// TestJSONFilterOperand checks whether operands are numeric and retain their
-// original text.
-func TestJSONFilterOperand(t *testing.T) {
-	for _, c := range []struct {
-		text   string
-		number bool
-	}{
-		{"670", true}, {"670.0", true}, {"+670", true}, {"6.7e2", true},
-		{".005", true}, {"0.", true}, {"-0", true},
-		{"1e75", true}, {"1e-37", true}, {"1e76", false}, {"1e-38", false},
-		{"1e999999", false}, {"-1e999999", false}, {"1e-999999", false},
-		{"", false}, {"foo", false}, {"null", false}, {"true", false}, {"1e", false},
-	} {
-		t.Run(c.text, func(t *testing.T) {
-			value := jsonFilterOperand(c.text)
-			if value.String != c.text {
-				t.Errorf("expected original value text %q, got %q", c.text, value.String)
-			}
-			if got := value.Number != nil; got != c.number {
-				t.Errorf("expected numeric operand %t, got %t", c.number, got)
-			}
-		})
-	}
-}
-
-// jsonFilterOperand constructs the same dual representation as core filters.
 func jsonFilterOperand(text string) state.JSONConditionValue {
-	value := state.JSONConditionValue{String: text}
-	number, err := decimal.Parse(text, 0, 0)
-	if err != nil {
-		return value
-	}
-	precision, scale := number.PrecisionScale()
-	if precision <= types.MaxDecimalPrecision && scale <= types.MaxDecimalScale {
-		value.Number = &number
-	}
-	return value
+	return state.JSONConditionValue(warehouseexpr.Operand(text))
 }
 
 // newJSONFilterTestWarehouse creates a warehouse and registers its cleanup.
