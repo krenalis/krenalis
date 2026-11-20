@@ -412,7 +412,7 @@ test('Submit a JSON filter when saving a User export', async ({ page }) => {
 	await filters.locator('.filter-editor__path input').fill('plan');
 	const operator = filters.locator('.filter-editor__operator');
 	await operator.locator('[part="display-input"]').click();
-	await operator.locator('wa-option[value="10"]').click(); // Option is "is one of".
+	await operator.getByRole('option', { name: 'is one of', exact: true }).click();
 	await filters.locator('.filter-editor__add-value').click();
 	const values = filters.locator('.filter-editor__is-one-of-values .filter-editor__value-input input');
 	await values.nth(0).fill('pro');

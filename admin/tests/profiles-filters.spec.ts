@@ -377,7 +377,9 @@ test(`Apply a filter on a JSON property path`, async ({ page }) => {
 		),
 		editor.getByRole('button', { name: 'Apply filters', exact: true }).click(),
 	]);
-	expect(request.postDataJSON().filter).toEqual({
+	const body = request.postDataJSON();
+	expect(body.schema).toEqual(jsonSchema);
+	expect(body.filter).toEqual({
 		operator: 'and',
 		rules: [{ property: 'metadata.score', operator: 'is', values: ['1.25'] }],
 	});
