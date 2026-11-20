@@ -16,7 +16,17 @@ import ConnectionContext from '../../../context/ConnectionContext';
 import pipelineContext from '../../../context/PipelineContext';
 import Type from '../../../lib/api/types/types';
 
-const CONSTANT_REGEX = /"([^"]*)"/;
+interface SuggestionGroup {
+	name: string;
+	label: string;
+	type: 'enum' | 'property' | 'function';
+	items: ComboboxItem[];
+}
+
+interface HighlightedOption {
+	group: string;
+	term: string;
+}
 
 interface ComboboxProps {
 	value: string;
@@ -77,9 +87,10 @@ const Combobox = ({
 }: ComboboxProps) => {
 	const [val, setVal] = useState<string>(displayValue ?? value ?? '');
 	const [cursorPosition, setCursorPosition] = useState<number>();
-	const [isOpen, setIsOpen] = useState<boolean>(false);
+	const [menuMode, setMenuMode] = useState<'closed' | 'filtered' | 'all'>('closed');
 	const [listWidth, setListWidth] = useState<number>();
 	const [selectedTab, setSelectedTab] = useState<string>();
+	const [keyboardHighlight, setKeyboardHighlight] = useState<HighlightedOption | null>(null);
 	const [isErrorExpanded, setIsErrorExpanded] = useState<boolean>(false);
 	const [isErrorOverflowing, setIsErrorOverflowing] = useState<boolean>(false);
 
@@ -87,13 +98,16 @@ const Combobox = ({
 	const isFirstControl = useRef<any>(true);
 	const errorContainerRef = useRef<any>();
 	const listRef = useRef<any>();
-	const tabGroupRef = useRef<any>();
+	const bodyRef = useRef<HTMLDivElement>(null);
+	const optionsRef = useRef<HTMLDivElement>(null);
 	const programmaticFocus = useRef(false);
 	const isEditing = useRef(false);
 
 	const { api, handleError } = useContext(appContext);
 	const { connection } = useContext(ConnectionContext);
 	const { pipelineType } = useContext(pipelineContext);
+
+	const isOpen = menuMode !== 'closed';
 
 	useLayoutEffect(() => {
 		setIsErrorExpanded(false);
@@ -106,36 +120,24 @@ const Combobox = ({
 		}
 	}, [error]);
 
-	const updateCursorPosition = (setStart?: boolean) => {
+	const updateCursorPosition = () => {
 		setTimeout(() => {
 			const inputElement = inputRef.current?.input;
 			if (inputElement) {
-				setCursorPosition(setStart ? 0 : inputElement.selectionStart);
+				setCursorPosition(inputElement.selectionStart);
 			}
 		});
 	};
 
-	const onKeyDown = (event: KeyboardEvent) => {
-		if (
-			['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown'].includes(event.key)
-		) {
-			setIsOpen(true);
-			updateCursorPosition();
-		} else if (event.key === 'Escape' || event.key === 'Tab') {
-			// Close the list before the browser moves the focus on Tab, so that
-			// the focus does not land on the tabs of the list.
-			flushSync(() => setIsOpen(false));
+	const onClick = (event: React.MouseEvent) => {
+		if (event.nativeEvent.composedPath()[0] !== inputRef.current?.input) {
+			// WaInput also receives clicks from controls such as the
+			// dropdown caret.
+			return;
 		}
-	};
-
-	const onClick = () => {
-		setIsOpen(true);
-		if (isExpression) {
-			updateCursorPosition();
-		} else {
-			// Set the cursor to the start to show every item in the list.
-			updateCursorPosition(true);
-		}
+		setKeyboardHighlight(null);
+		setMenuMode(isExpression ? 'filtered' : 'all');
+		updateCursorPosition();
 	};
 
 	useEffect(() => {
@@ -144,25 +146,22 @@ const Combobox = ({
 		}
 
 		// Add a delay to ensure that the shadow DOM is fully loaded.
-		setTimeout(() => {
-			const input = inputRef.current.shadowRoot?.querySelector('input');
-			if (input) {
+		const timeout = window.setTimeout(() => {
+			const input = inputRef.current?.input;
+			if (input != null) {
 				// Disable password managers autofill on the input.
 				input.setAttribute('data-1p-ignore', '');
 				input.setAttribute('data-bwignore', '');
 				input.setAttribute('data-form-type', 'other');
 				input.setAttribute('data-lpignore', 'true');
 
-				// Add event listeners on the input.
-				input.addEventListener('keydown', onKeyDown);
-				input.addEventListener('click', onClick);
-				return () => {
-					input.removeEventListener('keydown', onKeyDown);
-					input.removeEventListener('click', onClick);
-				};
+				input.setAttribute('role', 'combobox');
+				input.setAttribute('aria-autocomplete', 'list');
+				input.setAttribute('aria-expanded', String(listRef.current != null));
 			}
 		});
-	}, [inputRef.current]);
+		return () => window.clearTimeout(timeout);
+	}, []);
 
 	useEffect(() => {
 		if (inputRef.current == null || !caret) {
@@ -173,8 +172,9 @@ const Combobox = ({
 			const inputSuffix = inputRef.current.shadowRoot?.querySelector('[part="end"]');
 			inputSuffix.addEventListener('click', () => {
 				inputRef.current.focus();
-				setIsOpen(true);
-				updateCursorPosition(true);
+				setKeyboardHighlight(null);
+				setMenuMode('all');
+				updateCursorPosition();
 			});
 		});
 	}, [inputRef.current, caret]);
@@ -214,7 +214,7 @@ const Combobox = ({
 		if (!isOpen || listRef.current == null) {
 			return;
 		}
-		setTimeout(() => {
+		const timeout = window.setTimeout(() => {
 			// See if the menu is overflowing the width of the input and
 			// in that case expand it to avoid horizontal scrollbars.
 			const menu = listRef.current;
@@ -222,25 +222,20 @@ const Combobox = ({
 				return;
 			}
 
-			let menuItems: any[];
-			if (selectedTab == null) {
-				menuItems = menu.querySelectorAll('.combobox-list__item');
-			} else {
-				const panel = menu.querySelector(`wa-tab-panel[name="${selectedTab}"]`);
-				menuItems = panel.querySelectorAll('.combobox-list__item');
-			}
+			const menuItems = optionsRef.current?.children ?? [];
 
 			// Get the width of the wider menu item.
 			let maxWidth = 0;
-			for (const item of menuItems) {
+			for (const item of Array.from<Element>(menuItems)) {
 				let w: number;
-				if (selectedTab == null || selectedTab == 'properties') {
-					const iconWidth = item.querySelector('.schema-combobox-item__type').offsetWidth;
-					const textWidth = item.querySelector('.schema-combobox-item__text').offsetWidth;
+				if (activeGroup?.type === 'property') {
+					const iconWidth = item.querySelector<HTMLElement>('.schema-combobox-item__type').offsetWidth;
+					const textWidth = item.querySelector<HTMLElement>('.schema-combobox-item__text').offsetWidth;
 					w = iconWidth + textWidth;
-				} else if (selectedTab === 'functions') {
-					const itemWidth = item.querySelector('.function-item').offsetWidth;
-					w = itemWidth;
+				} else if (activeGroup?.type === 'function') {
+					w = item.querySelector<HTMLElement>('.function-item').offsetWidth;
+				} else {
+					continue;
 				}
 				if (w > maxWidth) {
 					maxWidth = w;
@@ -266,33 +261,8 @@ const Combobox = ({
 				setListWidth(maxWidth + 50);
 			}
 		});
-	}, [items, cursorPosition, isOpen, selectedTab]);
-
-	useLayoutEffect(() => {
-		if (listRef.current == null || !isOpen) {
-			return;
-		}
-		const list = listRef.current;
-		list.classList.add('combobox-list--computing-position');
-		const timeoutID = window.setTimeout(() => {
-			const rect = list.getBoundingClientRect();
-			list.classList.toggle('combobox-list--top', rect.bottom > window.innerHeight);
-			list.classList.remove('combobox-list--computing-position');
-		}, 20);
-		return () => window.clearTimeout(timeoutID);
-	}, [isOpen, listWidth]);
-
-	useLayoutEffect(() => {
-		if (enumValues == null) {
-			return;
-		}
-		setTimeout(() => {
-			const isConstant = CONSTANT_REGEX.test(val);
-			if ((val === '' || isConstant) && tabGroupRef.current != null) {
-				tabGroupRef.current.active = 'enum';
-			}
-		});
-	}, [isOpen]);
+		return () => window.clearTimeout(timeout);
+	}, [items, cursorPosition, menuMode, selectedTab, enumValues]);
 
 	useEffect(() => {
 		const onPageClick = (e) => {
@@ -300,7 +270,7 @@ const Combobox = ({
 			const isInCombobox = target.closest('.combobox') != null;
 			const isInAnotherCombobox = target.closest('.combobox')?.dataset.id !== name;
 			if (!isInCombobox || isInAnotherCombobox) {
-				setIsOpen(false);
+				setMenuMode('closed');
 			}
 		};
 
@@ -352,11 +322,9 @@ const Combobox = ({
 
 	const onInput = (e) => {
 		e.preventDefault();
+		setKeyboardHighlight(null);
 		isEditing.current = true;
-		if (!isOpen) {
-			// if the user has closed the list via escape button.
-			setIsOpen(true);
-		}
+		setMenuMode('filtered');
 
 		const lastValue = val;
 		let newValue: string = e.target.value;
@@ -376,7 +344,7 @@ const Combobox = ({
 		}
 
 		updateComboboxValue(newValue);
-		updateCursorPosition();
+		setCursorPosition(position);
 		onInputFunc(name, newValue);
 		validate(name, newValue);
 	};
@@ -426,7 +394,12 @@ const Combobox = ({
 		wrapper.style.width = `${textWidth + prefixWidth + suffixWidth + 30}px`;
 	};
 
-	const onInputBlur = () => {
+	const onBlur = (event: React.FocusEvent<HTMLDivElement>) => {
+		if (event.currentTarget.contains(event.relatedTarget)) {
+			return;
+		}
+		setKeyboardHighlight(null);
+		setSelectedTab(undefined);
 		isEditing.current = false;
 		programmaticFocus.current = false;
 		if (displayValue != null) {
@@ -454,7 +427,7 @@ const Combobox = ({
 				resizeCombobox();
 			}
 		}
-		setIsOpen(true);
+		setMenuMode('filtered');
 		updateCursorPosition();
 	};
 
@@ -463,15 +436,15 @@ const Combobox = ({
 			return [];
 		}
 		return getFunctionsComboboxItems(KRENALIS_FUNCTIONS);
-	}, []);
+	}, [isExpression]);
 
 	let fragment = useMemo(() => {
 		return parseMapExpression(val == null ? '' : val, cursorPosition);
-	}, [val, cursorPosition, items]);
+	}, [val, cursorPosition]);
 
 	let { filteredProperties, filteredFunctions } = useMemo(() => {
-		return filterComboboxItems(fragment, cursorPosition, val, items, isExpression ? functionItems : []);
-	}, [fragment]);
+		return filterComboboxItems(fragment, cursorPosition, val, items, functionItems);
+	}, [fragment, cursorPosition, val, items, functionItems]);
 
 	let selectedFunction = useMemo(() => {
 		if (!isExpression) {
@@ -484,69 +457,119 @@ const Combobox = ({
 		return null;
 	}, [fragment]);
 
-	const hasTabs = useMemo(() => {
-		return (
-			enumValues != null ||
-			(((filteredProperties != null && filteredProperties.length > 0) ||
-				(filteredFunctions != null && filteredFunctions.length > 0)) &&
-				isExpression)
-		);
-	}, [filteredProperties, filteredFunctions]);
-
-	useEffect(() => {
-		if (enumValues != null) {
-			setSelectedTab('enum');
-		} else if (hasTabs) {
-			// set the initial value of the selected tab.
-			setSelectedTab('properties');
+	const enumItems = useMemo(
+		() => enumValues?.map((term) => ({ term, content: <div className='enum-item'>{term}</div> })),
+		[enumValues],
+	);
+	const getGroups = (showAll: boolean) => {
+		const properties = showAll ? items : filteredProperties;
+		const functions = showAll ? functionItems : filteredFunctions;
+		const groups: SuggestionGroup[] = [];
+		if (enumItems != null) {
+			groups.push({ name: 'enum', label: 'Enum', type: 'enum', items: enumItems });
 		}
-	}, []);
+		if (properties != null) {
+			groups.push({ name: 'properties', label: 'Properties', type: 'property', items: properties });
+		}
+		const hasOptions = properties?.length > 0 || functions?.length > 0;
+		if (isExpression && functions != null && (enumItems != null || hasOptions)) {
+			groups.push({ name: 'functions', label: 'Functions', type: 'function', items: functions });
+		}
+		return groups;
+	};
+	const groups = getGroups(menuMode === 'all');
+	const hasTabs = groups.some((group) => group.type !== 'property');
+	const activeGroup = groups.find((group) => group.name === selectedTab) ?? groups[0];
+	const isListVisible = isOpen && (selectedFunction != null || hasTabs || activeGroup?.items.length > 0);
 
-	const onSelect = (e, term: string, type: 'property' | 'function' | 'enum', selectedDisplayValue?: string) => {
-		e.preventDefault();
-		e.stopPropagation();
-		isEditing.current = true;
+	let highlight: number | null = null;
+	if (keyboardHighlight != null && activeGroup?.name === keyboardHighlight.group) {
+		const index = activeGroup.items.findIndex((item) => item.term === keyboardHighlight.term);
+		highlight = index >= 0 ? index : null;
+	}
 
-		if (type === 'enum') {
-			let v = term;
-			updateComboboxValue(v);
-			programmaticFocus.current = true;
-			inputRef.current.focus();
-			onSelectFunc(name, v);
-			validate(name, v);
-			setIsOpen(false);
+	useLayoutEffect(() => {
+		if (!isOpen) {
+			setKeyboardHighlight(null);
+		}
+	}, [isOpen]);
+
+	useLayoutEffect(() => {
+		if (highlight == null && keyboardHighlight != null) {
+			setKeyboardHighlight(null);
+		}
+	}, [highlight, keyboardHighlight]);
+
+	useLayoutEffect(() => {
+		const input = inputRef.current?.input;
+		if (input == null) {
 			return;
 		}
-		if (type === 'property' && !isExpression && selectedDisplayValue != null) {
+		const body = bodyRef.current;
+		const options = optionsRef.current;
+		const tab = body?.querySelector<HTMLElement>(`wa-tab[panel="${activeGroup?.name}"]`);
+		const target = highlight != null ? options?.children[highlight] : null;
+		// Element references link the native input in the shadow root to the visible suggestions.
+		input.ariaExpanded = String(isListVisible);
+		input.ariaControlsElements = [options, tab?.parentElement].filter((element) => element != null);
+		input.ariaActiveDescendantElement = target ?? null;
+		if (body == null || target == null) {
+			return;
+		}
+		const bounds = body.getBoundingClientRect();
+		const top = bounds.top + (tab?.offsetHeight ?? 0);
+		const rect = target.getBoundingClientRect();
+		if (rect.top < top) {
+			body.scrollTop += rect.top - top;
+		} else if (rect.bottom > bounds.bottom) {
+			body.scrollTop += rect.bottom - bounds.bottom;
+		}
+	}, [highlight, isListVisible, activeGroup?.name, activeGroup?.items]);
+
+	useLayoutEffect(() => {
+		const list = listRef.current;
+		if (list == null) {
+			return;
+		}
+		const positionList = () => {
+			if (list.offsetParent == null) {
+				return;
+			}
+			list.classList.remove('combobox-list--top');
+			const bottom = list.offsetParent.getBoundingClientRect().top + list.offsetTop + list.offsetHeight;
+			list.classList.toggle('combobox-list--top', bottom > window.innerHeight);
+		};
+		positionList();
+		const observer = new ResizeObserver(positionList);
+		observer.observe(list);
+		return () => observer.disconnect();
+	}, [isListVisible]);
+
+	const onSelect = (e, term: string, type: 'property' | 'function' | 'enum') => {
+		e.preventDefault();
+		e.stopPropagation();
+		setKeyboardHighlight(null);
+		isEditing.current = true;
+
+		if (type === 'enum' || !isExpression) {
 			updateComboboxValue(term);
 			programmaticFocus.current = true;
 			inputRef.current.focus();
 			onSelectFunc(name, term);
 			validate(name, term);
-			setIsOpen(false);
+			setMenuMode('closed');
 			return;
 		}
 
-		let position = 0;
-		let v = '';
-		if (fragment.func != null && fragment.pos == null) {
-			const expressionStart = val.slice(0, cursorPosition);
-			const expressionEnd = val.slice(cursorPosition);
-			v = `${expressionStart}${term}${expressionEnd}`;
-			position = cursorPosition + term.length;
-		} else if (fragment != null && fragment.pos != null) {
-			const expressionStart = val.slice(0, fragment.pos.start);
-			const expressionEnd = val.slice(fragment.pos.end);
-			v = `${expressionStart}${term}${expressionEnd}`;
-			if (val === '') {
-				position = term.length;
-			} else {
-				position = fragment.pos.start + term.length;
-			}
-		} else {
-			v = val + term;
-			position = val.length + term.length;
+		const { selectionStart, selectionEnd } = inputRef.current.input;
+		const insertionFragment = parseMapExpression(val, selectionStart);
+		const start = insertionFragment?.pos?.start ?? selectionStart;
+		let end = insertionFragment?.pos?.end ?? selectionEnd;
+		if (insertionFragment?.type === 'String') {
+			end++; // Include the closing quote.
 		}
+		let v = val.slice(0, start) + term + val.slice(end);
+		let position = start + term.length;
 
 		if (type === 'function') {
 			// add parenthesis if necessary.
@@ -565,14 +588,16 @@ const Combobox = ({
 				v = `${expressionStart}${expressionEnd}`;
 			}
 		}
-		if (type === 'property' && fragment.func == null) {
+		if (type === 'property' && insertionFragment?.func == null) {
 			// if a property has been selected and is not an argument for a
 			// function, the combobox list can be closed.
-			setIsOpen(false);
-		} else if (type === 'function') {
-			// probably now the user wants to select a property to pass as
-			// argument to the function.
-			tabGroupRef.current.active = 'properties';
+			setMenuMode('closed');
+		} else {
+			setMenuMode('filtered');
+			if (type === 'function') {
+				// Show properties to pass as arguments to the function.
+				setSelectedTab('properties');
+			}
 		}
 
 		updateComboboxValue(v);
@@ -587,15 +612,107 @@ const Combobox = ({
 		validate(name, v);
 	};
 
-	const onTabClick = (e: any) => {
-		inputRef.current.focus();
-		setSelectedTab(e.detail.name);
+	const highlightOption = (group: SuggestionGroup, index: number) => {
+		setSelectedTab(group.name);
+		setKeyboardHighlight({ group: group.name, term: group.items[index].term });
 	};
+
+	const onKeyDown = (event: React.KeyboardEvent) => {
+		const isOnTab = event.target instanceof HTMLElement && event.target.closest('wa-tab') != null;
+		const isOnInput = event.nativeEvent.composedPath()[0] === inputRef.current?.input;
+		if ((!isOnTab && !isOnInput) || event.nativeEvent.isComposing) {
+			return;
+		}
+		const { key } = event;
+		if (key === 'Escape' || key === 'Tab') {
+			if (isOnTab) {
+				programmaticFocus.current = true;
+				inputRef.current.focus();
+			}
+			// Remove the menu tabs before the browser advances focus.
+			flushSync(() => setMenuMode('closed'));
+			if (key === 'Escape' && isListVisible) {
+				event.preventDefault();
+				event.stopPropagation();
+			}
+			return;
+		}
+		const hasModifier = event.altKey || event.ctrlKey || event.metaKey || event.shiftKey;
+		if (isOnTab) {
+			if (hasModifier || (key !== 'ArrowDown' && key !== 'ArrowUp')) {
+				return;
+			}
+			if (key === 'ArrowUp' || activeGroup.items.length > 0) {
+				programmaticFocus.current = true;
+				inputRef.current.focus();
+				if (key === 'ArrowDown') {
+					highlightOption(activeGroup, 0);
+				}
+			}
+		} else if (!hasModifier && (key === 'ArrowDown' || key === 'ArrowUp')) {
+			let available = groups.filter((group) => group.items.length > 0);
+			if (key === 'ArrowDown' && (!isListVisible || available.length === 0)) {
+				available = getGroups(true).filter((group) => group.items.length > 0);
+				setMenuMode('all');
+			} else if (!isOpen) {
+				setMenuMode('filtered');
+			}
+			const group = available.find((group) => group.name === selectedTab) ?? available[0];
+			if (group != null) {
+				const count = group.items.length;
+				const index = key === 'ArrowDown' ? (highlight ?? -1) + 1 : (highlight ?? 0) - 1;
+				highlightOption(group, (index + count) % count);
+			} else if (key === 'ArrowUp') {
+				updateCursorPosition();
+				return;
+			}
+		} else if (!hasModifier && highlight != null && (key === 'ArrowLeft' || key === 'ArrowRight')) {
+			const available = groups.filter((group) => group.items.length > 0);
+			if (available.length > 1) {
+				const index = available.indexOf(activeGroup) + (key === 'ArrowRight' ? 1 : -1);
+				highlightOption(available[(index + available.length) % available.length], 0);
+			}
+		} else if (!hasModifier && key === 'Enter' && highlight != null) {
+			const item = activeGroup.items[highlight];
+			onSelect(event, item.term, activeGroup.type);
+			return;
+		} else {
+			if (
+				['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown'].includes(key)
+			) {
+				setKeyboardHighlight(null);
+				setMenuMode('filtered');
+				updateCursorPosition();
+			}
+			return;
+		}
+		event.preventDefault();
+		event.stopPropagation();
+	};
+
+	const renderOptions = (group: SuggestionGroup) => (
+		<div role='listbox' aria-label={group.label} ref={group === activeGroup ? optionsRef : undefined}>
+			{group.items.map((item, index) => (
+				<div
+					key={item.term}
+					className='combobox-list__item'
+					role='option'
+					aria-selected={group === activeGroup && highlight === index}
+					onMouseDown={(event) => event.preventDefault()}
+					onClick={(event) => onSelect(event, item.term, group.type)}
+				>
+					{item.content}
+				</div>
+			))}
+		</div>
+	);
 
 	return (
 		<div
 			className={`combobox${isOpen ? ' combobox--open' : ''}${isExpression ? ' combobox--expression' : ''}${caret ? ' combobox--caret' : ''}${className ? ` ${className}` : ''}`}
 			data-id={name}
+			onBlur={onBlur}
+			onKeyDown={onKeyDown}
 			style={
 				{
 					'--combobox-input-height':
@@ -614,7 +731,7 @@ const Combobox = ({
 				<WaInput
 					data-is-combobox-input
 					onInput={disabled ? undefined : onInput}
-					onBlur={onInputBlur}
+					onClick={onClick}
 					onFocus={onInputFocus}
 					disabled={disabled}
 					autocomplete='off'
@@ -646,19 +763,14 @@ const Combobox = ({
 					</div>
 				)}
 			</div>
-			{isOpen &&
-				((isExpression && selectedFunction != null) ||
-					enumValues != null ||
-					filteredProperties?.length > 0 ||
-					filteredFunctions?.length > 0) && (
-					<div
-						role='menu'
-						tabIndex={-1}
-						data-is-combobox-list
-						className={`combobox-list${isErrorExpanded ? ' combobox-list--expanded' : ''}`}
-						ref={listRef}
-						style={listWidth != null ? { width: `${listWidth}px` } : null}
-					>
+			{isListVisible && (
+				<div
+					data-is-combobox-list
+					className={`combobox-list${isErrorExpanded ? ' combobox-list--expanded' : ''}`}
+					ref={listRef}
+					style={listWidth != null ? { width: `${listWidth}px` } : null}
+				>
+					<div className='combobox-list__body' ref={bodyRef}>
 						{isExpression && selectedFunction != null && (
 							<div className='combobox-list__function'>
 								<div className='combobox-list__function-signature'>
@@ -685,85 +797,33 @@ const Combobox = ({
 							</div>
 						)}
 						{hasTabs ? (
-							<WaTabGroup className='combobox-list__tabs' onWaTabShow={onTabClick} ref={tabGroupRef}>
-								{enumValues != null && (
-									<WaTab slot='nav' panel='enum'>
-										Enum ({enumValues.length})
+							<WaTabGroup
+								className='combobox-list__tabs'
+								active={activeGroup.name}
+								onWaTabShow={(event) => setSelectedTab(event.detail.name)}
+							>
+								{groups.map((group) => (
+									<WaTab
+										key={group.name}
+										slot='nav'
+										panel={group.name}
+										onFocus={() => setKeyboardHighlight(null)}
+									>
+										{group.label} ({group.items.length})
 									</WaTab>
-								)}
-								{filteredProperties && (
-									<WaTab slot='nav' panel='properties'>
-										Properties ({filteredProperties.length})
-									</WaTab>
-								)}
-								{filteredFunctions && (
-									<WaTab slot='nav' panel='functions'>
-										Functions ({filteredFunctions.length})
-									</WaTab>
-								)}
-								{enumValues != null && (
-									<WaTabPanel name='enum'>
-										{enumValues.map((v) => {
-											return (
-												<div
-													key={v}
-													className='combobox-list__item'
-													role='menuitem'
-													onClick={(e) => onSelect(e, v, 'enum')}
-												>
-													<div className='enum-item'>{v}</div>
-												</div>
-											);
-										})}
+								))}
+								{groups.map((group) => (
+									<WaTabPanel key={group.name} name={group.name}>
+										{renderOptions(group)}
 									</WaTabPanel>
-								)}
-								<WaTabPanel name='properties'>
-									{filteredProperties?.map((item) => {
-										return (
-											<div
-												key={item.term}
-												className='combobox-list__item'
-												role='menuitem'
-												onClick={(e) => onSelect(e, item.term, 'property', item.displayValue)}
-											>
-												{item.content}
-											</div>
-										);
-									})}
-								</WaTabPanel>
-								<WaTabPanel name='functions'>
-									{filteredFunctions?.map((item) => {
-										return (
-											<div
-												key={item.term}
-												className='combobox-list__item'
-												role='menuitem'
-												onClick={(e) => onSelect(e, item.term, 'function')}
-											>
-												{item.content}
-											</div>
-										);
-									})}
-								</WaTabPanel>
+								))}
 							</WaTabGroup>
 						) : (
-							<div>
-								{filteredProperties?.map((item) => {
-									return (
-										<div
-											key={item.term}
-											className='combobox-list__item'
-											role='menuitem'
-											onClick={(e) => onSelect(e, item.term, 'property', item.displayValue)}
-										>
-											{item.content}
-										</div>
-									);
-								})}
-							</div>
+							activeGroup != null && renderOptions(activeGroup)
 						)}
 					</div>
-				)}
+				</div>
+			)}
 		</div>
 	);
 };
