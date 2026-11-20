@@ -1,6 +1,7 @@
 package gosnowflake
 
 import (
+	"bytes"
 	"cmp"
 	"context"
 	"encoding/json"
@@ -218,10 +219,12 @@ func (util *snowflakeGcsClient) uploadFile(
 
 	var uploadSrc io.Reader
 	if meta.srcStream != nil {
-		uploadSrc = meta.srcStream
+		stream := meta.srcStream
 		if meta.realSrcStream != nil {
-			uploadSrc = meta.realSrcStream
+			stream = meta.realSrcStream
 		}
+		// Snapshot the bytes so a retry does not PUT an already-consumed buffer.
+		uploadSrc = bytes.NewReader(stream.Bytes())
 	} else {
 		var err error
 		uploadSrc, err = os.Open(dataFile)

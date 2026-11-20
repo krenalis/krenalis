@@ -75,7 +75,10 @@ func WithFetchResultByID(ctx context.Context, queryID string) context.Context {
 	return context.WithValue(ctx, fetchResultByID, queryID)
 }
 
-// WithFilePutStream returns a context that contains the address of the file stream to be PUT
+// WithFilePutStream returns a context that contains the address of the file stream to be PUT.
+//
+// Deprecated: WithFilePutStream buffers the entire object before uploading it.
+// Use SnowflakeConnection.UploadStream instead.
 func WithFilePutStream(ctx context.Context, reader io.Reader) context.Context {
 	return context.WithValue(ctx, filePutStream, reader)
 }

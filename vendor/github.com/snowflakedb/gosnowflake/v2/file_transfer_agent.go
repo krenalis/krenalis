@@ -4,13 +4,12 @@ package gosnowflake
 
 import (
 	"bytes"
-	"cmp"
 	"context"
 	"database/sql/driver"
 	"encoding/json"
 	"errors"
 	"fmt"
-	errors2 "github.com/snowflakedb/gosnowflake/v2/internal/errors"
+	sferrors "github.com/snowflakedb/gosnowflake/v2/internal/errors"
 	"github.com/snowflakedb/gosnowflake/v2/internal/query"
 	"io"
 	"math"
@@ -128,6 +127,9 @@ type snowflakeFileTransferAgent struct {
 	streamBuffer                *bytes.Buffer
 	streamDownload              bool
 	streamDownloadFileName      string
+	// streamUpload selects UploadStream's GCS presigned-URL command. The dummy PUT
+	// path only fetches stage info; the follow-up PUT must name dstFileName.
+	streamUpload bool
 }
 
 func (sfa *snowflakeFileTransferAgent) execute() error {
@@ -236,7 +238,7 @@ func (sfa *snowflakeFileTransferAgent) parseCommand() error {
 				Number:      ErrFileNotExists,
 				SQLState:    SQLStateNoData,
 				QueryID:     sfa.data.QueryID,
-				Message:     errors2.ErrMsgDownloadStreamFileNotFound,
+				Message:     sferrors.ErrMsgDownloadStreamFileNotFound,
 				MessageArgs: []any{name},
 			}, sfa.sc)
 		}
@@ -250,8 +252,8 @@ func (sfa *snowflakeFileTransferAgent) parseCommand() error {
 	sfa.srcLocations = sfa.data.SrcLocations
 
 	if sfa.commandType == uploadCommand {
-		if sfa.sourceStream != nil {
-			sfa.srcFiles = sfa.srcLocations // streaming PUT
+		if sfa.sourceStream != nil || sfa.streamUpload {
+			sfa.srcFiles = sfa.srcLocations // streaming PUT; UploadStream must not stat the dummy path
 		} else {
 			sfa.srcFiles, err = sfa.expandFilenames(sfa.srcLocations)
 			if err != nil {
@@ -272,7 +274,7 @@ func (sfa *snowflakeFileTransferAgent) parseCommand() error {
 				Number:      ErrInternalNotMatchEncryptMaterial,
 				SQLState:    sfa.data.SQLState,
 				QueryID:     sfa.data.QueryID,
-				Message:     errors2.ErrMsgInternalNotMatchEncryptMaterial,
+				Message:     sferrors.ErrMsgInternalNotMatchEncryptMaterial,
 				MessageArgs: []any{len(sfa.data.SrcLocations), len(sfa.encryptionMaterial)},
 			}, sfa.sc)
 		}
@@ -296,7 +298,7 @@ func (sfa *snowflakeFileTransferAgent) parseCommand() error {
 					Number:      ErrLocalPathNotDirectory,
 					SQLState:    sfa.data.SQLState,
 					QueryID:     sfa.data.QueryID,
-					Message:     errors2.ErrMsgLocalPathNotDirectory,
+					Message:     sferrors.ErrMsgLocalPathNotDirectory,
 					MessageArgs: []any{sfa.localLocation},
 				}, sfa.sc)
 			}
@@ -320,7 +322,7 @@ func (sfa *snowflakeFileTransferAgent) parseCommand() error {
 			Number:      ErrInvalidStageFs,
 			SQLState:    sfa.data.SQLState,
 			QueryID:     sfa.data.QueryID,
-			Message:     errors2.ErrMsgInvalidStageFs,
+			Message:     sferrors.ErrMsgInvalidStageFs,
 			MessageArgs: []any{sfa.stageLocationType},
 		}, sfa.sc)
 	}
@@ -337,7 +339,7 @@ func (sfa *snowflakeFileTransferAgent) ensureSingleGetStreamFile() error {
 			Number:   ErrGetStreamMultipleFiles,
 			SQLState: sfa.data.SQLState,
 			QueryID:  sfa.data.QueryID,
-			Message:  errors2.ErrMsgGetStreamMultipleFiles,
+			Message:  sferrors.ErrMsgGetStreamMultipleFiles,
 		}, sfa.sc)
 	}
 	return nil
@@ -406,7 +408,7 @@ func (sfa *snowflakeFileTransferAgent) initFileMetadata() error {
 				Number:      ErrFileNotExists,
 				SQLState:    sfa.data.SQLState,
 				QueryID:     sfa.data.QueryID,
-				Message:     errors2.ErrMsgFileNotExists,
+				Message:     sferrors.ErrMsgFileNotExists,
 				MessageArgs: []any{fileName},
 			}, sfa.sc)
 		}
@@ -425,7 +427,7 @@ func (sfa *snowflakeFileTransferAgent) initFileMetadata() error {
 						Number:      ErrFileNotExists,
 						SQLState:    sfa.data.SQLState,
 						QueryID:     sfa.data.QueryID,
-						Message:     errors2.ErrMsgFailToReadDataFromBuffer,
+						Message:     sferrors.ErrMsgFailToReadDataFromBuffer,
 						MessageArgs: []any{fileName},
 					}, sfa.sc)
 				}
@@ -457,7 +459,7 @@ func (sfa *snowflakeFileTransferAgent) initFileMetadata() error {
 						Number:      ErrFileNotExists,
 						SQLState:    sfa.data.SQLState,
 						QueryID:     sfa.data.QueryID,
-						Message:     errors2.ErrMsgFileNotExists,
+						Message:     sferrors.ErrMsgFileNotExists,
 						MessageArgs: []any{fileName},
 					}, sfa.sc)
 				} else if fi.IsDir() {
@@ -465,7 +467,7 @@ func (sfa *snowflakeFileTransferAgent) initFileMetadata() error {
 						Number:      ErrFileNotExists,
 						SQLState:    sfa.data.SQLState,
 						QueryID:     sfa.data.QueryID,
-						Message:     errors2.ErrMsgFileNotExists,
+						Message:     sferrors.ErrMsgFileNotExists,
 						MessageArgs: []any{fileName},
 					}, sfa.sc)
 				}
@@ -533,7 +535,7 @@ func (sfa *snowflakeFileTransferAgent) processFileCompressionType() error {
 				Number:      ErrCompressionNotSupported,
 				SQLState:    sfa.data.SQLState,
 				QueryID:     sfa.data.QueryID,
-				Message:     errors2.ErrMsgFeatureNotSupported,
+				Message:     sferrors.ErrMsgFeatureNotSupported,
 				MessageArgs: []any{userSpecifiedSourceCompression},
 			}, sfa.sc)
 		}
@@ -572,7 +574,7 @@ func (sfa *snowflakeFileTransferAgent) processFileCompressionType() error {
 					Number:      ErrCompressionNotSupported,
 					SQLState:    sfa.data.SQLState,
 					QueryID:     sfa.data.QueryID,
-					Message:     errors2.ErrMsgFeatureNotSupported,
+					Message:     sferrors.ErrMsgFeatureNotSupported,
 					MessageArgs: []any{userSpecifiedSourceCompression},
 				}, sfa.sc)
 			}
@@ -591,7 +593,7 @@ func (sfa *snowflakeFileTransferAgent) processFileCompressionType() error {
 					Number:      ErrCompressionNotSupported,
 					SQLState:    sfa.data.SQLState,
 					QueryID:     sfa.data.QueryID,
-					Message:     errors2.ErrMsgFeatureNotSupported,
+					Message:     sferrors.ErrMsgFeatureNotSupported,
 					MessageArgs: []any{userSpecifiedSourceCompression},
 				}, sfa.sc)
 			}
@@ -623,8 +625,14 @@ func (sfa *snowflakeFileTransferAgent) updateFileMetadataWithPresignedURL() erro
 			}
 			filePathToBeReplaced := sfa.getLocalFilePathFromCommand(sfa.command)
 			for _, meta := range sfa.fileMetadata {
-				filePathToBeReplacedWith := strings.TrimRight(filePathToBeReplaced, meta.dstFileName) + meta.dstFileName
-				commandWithSingleFile := strings.ReplaceAll(sfa.command, filePathToBeReplaced, filePathToBeReplacedWith)
+				command := sfa.command
+				if sfa.streamUpload {
+					command = uploadStreamPresignedCommand(sfa.command, meta.dstFileName)
+				} else {
+					filePathToBeReplacedWith := strings.TrimRight(filePathToBeReplaced, meta.dstFileName) + meta.dstFileName
+					command = strings.ReplaceAll(command, filePathToBeReplaced, filePathToBeReplacedWith)
+				}
+				commandWithSingleFile := command
 				req := execRequest{
 					SQLText: commandWithSingleFile,
 				}
@@ -657,6 +665,15 @@ func (sfa *snowflakeFileTransferAgent) updateFileMetadataWithPresignedURL() erro
 						}
 					}
 				}
+				if sfa.streamUpload && meta.presignedURL != nil && !presignedURLTargetsDest(meta.presignedURL, meta.dstFileName) {
+					return exceptionTelemetry(&SnowflakeError{
+						Number:      ErrFailedToUploadToStage,
+						SQLState:    sfa.data.SQLState,
+						QueryID:     sfa.data.QueryID,
+						Message:     sferrors.ErrMsgUploadStreamPresignedURL,
+						MessageArgs: []any{meta.dstFileName},
+					}, sfa.sc)
+				}
 			}
 		case downloadCommand:
 			for i, meta := range sfa.fileMetadata {
@@ -675,7 +692,7 @@ func (sfa *snowflakeFileTransferAgent) updateFileMetadataWithPresignedURL() erro
 				Number:      ErrCommandNotRecognized,
 				SQLState:    sfa.data.SQLState,
 				QueryID:     sfa.data.QueryID,
-				Message:     errors2.ErrMsgCommandNotRecognized,
+				Message:     sferrors.ErrMsgCommandNotRecognized,
 				MessageArgs: []any{sfa.commandType},
 			}, sfa.sc)
 		}
@@ -713,7 +730,7 @@ func (sfa *snowflakeFileTransferAgent) transferAccelerateConfigWithUtil(s3Util s
 			Number:   ErrFailedToConvertToS3Client,
 			SQLState: sfa.data.SQLState,
 			QueryID:  sfa.data.QueryID,
-			Message:  errors2.ErrMsgFailedToConvertToS3Client,
+			Message:  sferrors.ErrMsgFailedToConvertToS3Client,
 		}, sfa.sc)
 	}
 	logger.WithContext(sfa.sc.ctx).Debugf("Getting accelerate endpoint for bucket %v.", s3Loc.bucketName)
@@ -964,41 +981,67 @@ func (sfa *snowflakeFileTransferAgent) uploadFilesSequential(fileMetas []*fileMe
 }
 
 func (sfa *snowflakeFileTransferAgent) uploadOneFile(meta *fileMetadata) (*fileMetadata, error) {
-	meta.realSrcFileName = meta.srcFileName
+	// A credential or presigned-URL refresh calls this again. The first attempt
+	// already produced ciphertext and encryptMeta; upload those same bytes.
+	reuse := encryptedPayloadReady(meta)
+	if reuse {
+		meta.resStatus = errStatus
+	}
 	tmpDir := ""
-	if meta.fileStream == nil {
-		var err error
-		tmpDir, err = os.MkdirTemp(sfa.sc.cfg.TmpDirPath, "")
-		if err != nil {
-			return nil, err
+	if !reuse {
+		meta.realSrcFileName = meta.srcFileName
+		if meta.fileStream == nil {
+			parent := sfa.sc.cfg.TmpDirPath
+			if meta.encTempRoot != "" {
+				parent = meta.encTempRoot
+			}
+			var err error
+			tmpDir, err = os.MkdirTemp(parent, "")
+			if err != nil {
+				return nil, err
+			}
+			meta.tmpDir = tmpDir
 		}
-		meta.tmpDir = tmpDir
 	}
 	defer func() {
-		if err := os.RemoveAll(tmpDir); err != nil {
-			logger.WithContext(sfa.sc.ctx).Warnf("failed to remove temp dir %v: %v", tmpDir, err)
+		if encryptedPayloadReady(meta) && (meta.resStatus == renewToken || meta.resStatus == renewPresignedURL) {
+			return
+		}
+		dir := tmpDir
+		if dir == "" {
+			dir = meta.tmpDir
+		}
+		if dir == "" {
+			return
+		}
+		if err := os.RemoveAll(dir); err != nil {
+			logger.WithContext(sfa.sc.ctx).Warnf("failed to remove temp dir %v: %v", dir, err)
 		}
 	}()
 
-	fileUtil := new(snowflakeFileUtil)
+	if !reuse {
+		fileUtil := new(snowflakeFileUtil)
 
-	err := compressDataIfRequired(meta, fileUtil, tmpDir)
-	if err != nil {
-		return meta, err
-	}
+		err := compressDataIfRequired(meta, fileUtil, tmpDir)
+		if err != nil {
+			return meta, err
+		}
 
-	err = updateUploadSize(meta, fileUtil)
-	if err != nil {
-		return meta, err
-	}
+		if meta.sha256Digest == "" {
+			err = updateUploadSize(meta, fileUtil)
+			if err != nil {
+				return meta, err
+			}
+		}
 
-	err = encryptDataIfRequired(meta, sfa.stageLocationType)
-	if err != nil {
-		return meta, err
+		err = encryptDataIfRequired(meta, sfa.stageLocationType)
+		if err != nil {
+			return meta, err
+		}
 	}
 
 	client := sfa.getStorageClient(sfa.stageLocationType)
-	if err = client.uploadOneFileWithRetry(sfa.ctx, meta); err != nil {
+	if err := client.uploadOneFileWithRetry(sfa.ctx, meta); err != nil {
 		return meta, err
 	}
 	return meta, nil
@@ -1125,8 +1168,12 @@ func (sfa *snowflakeFileTransferAgent) getStorageClient(stageLocationType cloudT
 }
 
 func (sfa *snowflakeFileTransferAgent) renewExpiredClient() (cloudClient, error) {
+	ctx := sfa.ctx
+	if sfa.streamUpload {
+		ctx = withSkipFileTransfer(ctx)
+	}
 	data, err := sfa.sc.exec(
-		sfa.ctx,
+		ctx,
 		sfa.command,
 		false,
 		false,
@@ -1279,7 +1326,7 @@ func (sfa *snowflakeFileTransferAgent) result() (*execResponse, error) {
 		Number:   ErrNotImplemented,
 		SQLState: sfa.data.SQLState,
 		QueryID:  sfa.data.QueryID,
-		Message:  errors2.ErrMsgNotImplemented,
+		Message:  sferrors.ErrMsgNotImplemented,
 	}, sfa.sc)
 }
 
@@ -1370,25 +1417,178 @@ func updateUploadSize(meta *fileMetadata, fileUtil *snowflakeFileUtil) error {
 	return err
 }
 
-func encryptDataIfRequired(meta *fileMetadata, ct cloudType) error {
-	if ct != local && meta.encryptionMaterial != nil {
-		var err error
-		if meta.srcStream != nil {
-			var encryptedStream bytes.Buffer
-			srcStream := cmp.Or(meta.realSrcStream, meta.srcStream)
-			meta.encryptMeta, err = encryptStreamCBC(meta.encryptionMaterial, srcStream, &encryptedStream, 0)
-			if err != nil {
-				return err
-			}
-			meta.realSrcStream = &encryptedStream
+func (sfa *snowflakeFileTransferAgent) rejectUploadStreamLocalStage() error {
+	if sfa.stageLocationType != local {
+		return nil
+	}
+	return exceptionTelemetry(&SnowflakeError{
+		Number:   ErrUploadStreamLocalFS,
+		SQLState: sfa.data.SQLState,
+		QueryID:  sfa.data.QueryID,
+		Message:  sferrors.ErrMsgUploadStreamLocalFS,
+	}, sfa.sc)
+}
+
+// uploadStreamObject uploads one prepared object. The payload is already gzipped
+// when required, and file metadata names the remote object. srcStream is set only
+// for an in-memory spool; this does not use the WithFilePutStream path.
+func (sfa *snowflakeFileTransferAgent) uploadStreamObject(meta *fileMetadata) error {
+	if sfa.options == nil {
+		sfa.options = &SnowflakeFileTransferOptions{}
+	}
+	if sfa.options.MultiPartThreshold == 0 {
+		sfa.options.MultiPartThreshold = multiPartThreshold
+	}
+	meta.stageInfo = sfa.stageInfo
+	meta.stageLocationType = sfa.stageLocationType
+	meta.options = sfa.options
+	meta.sfa = sfa
+	meta.overwrite = sfa.overwrite
+	if len(sfa.encryptionMaterial) > 0 {
+		meta.encryptionMaterial = sfa.encryptionMaterial[0]
+	}
+	sfa.fileMetadata = []*fileMetadata{meta}
+
+	if err := sfa.transferAccelerateConfig(); err != nil {
+		return err
+	}
+	if err := sfa.updateFileMetadataWithPresignedURL(); err != nil {
+		return err
+	}
+
+	var small, large []*fileMetadata
+	if meta.srcFileSize > sfa.options.MultiPartThreshold {
+		meta.parallel = sfa.parallel
+		large = []*fileMetadata{meta}
+	} else {
+		meta.parallel = 1
+		small = []*fileMetadata{meta}
+	}
+	if err := sfa.upload(large, small); err != nil {
+		return err
+	}
+	if _, err := sfa.result(); err != nil {
+		return err
+	}
+	return sfa.uploadedStreamResult()
+}
+
+// uploadStreamDestExists reports whether the destination object is already on
+// the stage. A GCS upload that only has a presigned URL cannot HEAD, so this
+// returns false and the upload path checks again after spooling.
+func (sfa *snowflakeFileTransferAgent) uploadStreamDestExists(destFileName string, compress bool) (bool, error) {
+	if sfa.stageInfo == nil || sfa.sc == nil {
+		return false, nil
+	}
+	if sfa.stageLocationType == gcsClient && sfa.stageInfo.Creds.GcsAccessToken == "" {
+		return false, nil
+	}
+	rsu, ok := sfa.getStorageClient(sfa.stageLocationType).(*remoteStorageUtil)
+	if !ok {
+		return false, nil
+	}
+	client, err := rsu.createClient(sfa.stageInfo, sfa.useAccelerateEndpoint, sfa.sc.cfg, sfa.sc.telemetry)
+	if err != nil {
+		return false, err
+	}
+	name := uploadStreamDestName(destFileName, compress)
+	meta := &fileMetadata{
+		dstFileName:       name,
+		stageInfo:         sfa.stageInfo,
+		stageLocationType: sfa.stageLocationType,
+		client:            client,
+		sfa:               sfa,
+	}
+	util := rsu.getNativeCloudType(string(sfa.stageLocationType), sfa.sc.cfg)
+	if util == nil {
+		return false, nil
+	}
+	header, err := util.getFileHeader(sfa.ctx, meta, name)
+	if meta.resStatus == notFoundFile {
+		return false, nil
+	}
+	if header != nil && meta.resStatus == uploaded {
+		return true, nil
+	}
+	if err != nil {
+		logger.Debugf("UploadStream existence check failed, continuing with upload: %v", err)
+		return false, nil
+	}
+	return false, nil
+}
+
+// uploadedStreamResult fails unless the transfer status is UPLOADED.
+// result returns nil when errorDetails is empty, including ERROR after a
+// credential or presigned-URL refresh was exhausted.
+func (sfa *snowflakeFileTransferAgent) uploadedStreamResult() error {
+	if len(sfa.results) == 1 && sfa.results[0].resStatus == uploaded {
+		return nil
+	}
+	if len(sfa.results) == 1 && sfa.results[0].resStatus == skipped {
+		return exceptionTelemetry(&SnowflakeError{
+			Number:   ErrUploadStreamSkipped,
+			SQLState: sfa.data.SQLState,
+			QueryID:  sfa.data.QueryID,
+			Message:  sferrors.ErrMsgUploadStreamSkipped,
+		}, sfa.sc)
+	}
+	message := "failed to upload to stage"
+	if len(sfa.results) == 1 {
+		meta := sfa.results[0]
+		if meta.lastError != nil {
+			message = meta.lastError.Error()
 		} else {
-			var dataFile string
-			meta.encryptMeta, dataFile, err = encryptFileCBC(meta.encryptionMaterial, meta.realSrcFileName, 0, meta.tmpDir)
-			if err != nil {
-				return err
-			}
-			meta.realSrcFileName = dataFile
+			message = meta.resStatus.String()
 		}
 	}
+	return exceptionTelemetry(&SnowflakeError{
+		Number:   ErrFailedToUploadToStage,
+		SQLState: sfa.data.SQLState,
+		QueryID:  sfa.data.QueryID,
+		Message:  message,
+	}, sfa.sc)
+}
+
+func encryptDataIfRequired(meta *fileMetadata, ct cloudType) error {
+	if ct == local || meta.encryptionMaterial == nil || encryptedPayloadReady(meta) {
+		return nil
+	}
+	var err error
+	if meta.srcStream != nil {
+		var encryptedStream bytes.Buffer
+		// realSrcStream is compressed plaintext until this writes ciphertext.
+		source := meta.srcStream
+		if meta.realSrcStream != nil {
+			source = meta.realSrcStream
+		}
+		meta.encryptMeta, err = encryptStreamCBC(meta.encryptionMaterial, bytes.NewReader(source.Bytes()), &encryptedStream, 0)
+		if err != nil {
+			return err
+		}
+		meta.realSrcStream = &encryptedStream
+		return nil
+	}
+	var dataFile string
+	meta.encryptMeta, dataFile, err = encryptFileCBC(meta.encryptionMaterial, meta.realSrcFileName, 0, meta.tmpDir)
+	if err != nil {
+		return err
+	}
+	meta.realSrcFileName = dataFile
 	return nil
+}
+
+// encryptedPayloadReady reports whether an earlier attempt left ciphertext that
+// matches encryptMeta. A later attempt uploads those bytes instead of encrypting again.
+func encryptedPayloadReady(meta *fileMetadata) bool {
+	if meta.encryptMeta == nil {
+		return false
+	}
+	if meta.srcStream != nil {
+		return meta.realSrcStream != nil
+	}
+	if meta.realSrcFileName == "" || meta.realSrcFileName == meta.srcFileName {
+		return false
+	}
+	_, err := os.Stat(meta.realSrcFileName)
+	return err == nil
 }
