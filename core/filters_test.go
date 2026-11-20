@@ -491,9 +491,11 @@ func Test_convertFilterToWhere(t *testing.T) {
 		{Name: "r", Type: types.Array(types.Float(32))},
 		{Name: "s", Type: types.Array(types.Decimal(3, 2))},
 		{Name: "t", Type: types.Array(types.JSON())},
+		{Name: "u", Type: types.Array(types.DateTime())},
 	})
 
 	d := decimal.MustParse("56.19")
+	dt := time.Date(2026, 10, 20, 23, 30, 45, 123456000, time.UTC)
 
 	type testCase struct {
 		name     string
@@ -514,13 +516,15 @@ func Test_convertFilterToWhere(t *testing.T) {
 					&FilterCondition{Property: "e", Operator: OpIsGreaterThan, Values: []string{"60526.8020184552091647"}},
 					&FilterCondition{Property: "e", Operator: OpIsLessThan, Values: []string{"1.7976931348623157e+308"}},
 					&FilterCondition{Property: "f", Operator: OpIsLessThanOrEqualTo, Values: []string{"12.956"}},
-					&FilterCondition{Property: "g", Operator: OpIsAfter, Values: []string{"2024-09-19T14:36:57.264699103"}},
+					&FilterCondition{Property: "f", Operator: OpIs, Values: []string{"1e75"}},
+					&FilterCondition{Property: "g", Operator: OpIsAfter, Values: []string{"2026-10-21T01:30:45.123456+02:00"}},
 					&FilterCondition{Property: "h", Operator: OpIsBetween, Values: []string{"2024-09-19", "2025-09-19"}},
-					&FilterCondition{Property: "i", Operator: OpIsBefore, Values: []string{"14:36:57.264699103"}},
+					&FilterCondition{Property: "i", Operator: OpIsBefore, Values: []string{"14:36:57,264699103"}},
 					&FilterCondition{Property: "j", Operator: OpIsGreaterThanOrEqualTo, Values: []string{"2024"}},
 					&FilterCondition{Property: "k", Operator: OpIs, Values: []string{"38d065ab-ca46-4812-a83c-a9712e09c153"}},
 					&FilterCondition{Property: "l", Operator: OpIs, Values: []string{"foo"}},
 					&FilterCondition{Property: "l.a", Operator: OpIsOneOf, Values: []string{"1e75", "1e76"}},
+					&FilterCondition{Property: "l.a", Operator: OpIs, Values: []string{"10e-38"}},
 					&FilterCondition{Property: "l", Operator: OpIsOneOf, Values: []string{"foo", "56.19", "boo"}},
 					&FilterCondition{Property: "l.x", Operator: OpExists},
 					&FilterCondition{Property: "m", Operator: OpIsNot, Values: []string{"::ffff:192.168.1.1"}},
@@ -532,8 +536,12 @@ func Test_convertFilterToWhere(t *testing.T) {
 					&FilterCondition{Property: "l.x.y", Operator: OpExists},
 					&FilterCondition{Property: "q", Operator: OpIsNull},
 					&FilterCondition{Property: "s", Operator: OpContains, Values: []string{"1e75"}},
+					&FilterCondition{Property: "s", Operator: OpContains, Values: []string{"1e-37"}},
 					&FilterCondition{Property: "t", Operator: OpContains, Values: []string{"1e75"}},
 					&FilterCondition{Property: "t", Operator: OpContains, Values: []string{"1e76"}},
+					&FilterCondition{Property: "t", Operator: OpContains, Values: []string{"10e-38"}},
+					&FilterCondition{Property: "u", Operator: OpContains, Values: []string{"2026-10-21T01:30:45.123456+02:00"}},
+					&FilterCondition{Property: "u", Operator: OpDoesNotContain, Values: []string{"2026-10-20T18:30:45.123456-05:00"}},
 				},
 			},
 			expected: state.Where{
@@ -546,7 +554,8 @@ func Test_convertFilterToWhere(t *testing.T) {
 					&state.WhereCondition{Property: []string{"e"}, Operator: state.OpIsGreaterThan, Values: []any{60526.80201845521}},
 					&state.WhereCondition{Property: []string{"e"}, Operator: state.OpIsLessThan, Values: []any{1.7976931348623157e+308}},
 					&state.WhereCondition{Property: []string{"f"}, Operator: state.OpIsLessThanOrEqualTo, Values: []any{decimal.MustParse("12.956")}},
-					&state.WhereCondition{Property: []string{"g"}, Operator: state.OpIsAfter, Values: []any{time.Date(2024, 9, 19, 14, 36, 57, 264699103, time.UTC)}},
+					&state.WhereCondition{Property: []string{"f"}, Operator: state.OpIs, Values: []any{decimal.MustParse("1e75")}},
+					&state.WhereCondition{Property: []string{"g"}, Operator: state.OpIsAfter, Values: []any{dt}},
 					&state.WhereCondition{Property: []string{"h"}, Operator: state.OpIsBetween, Values: []any{time.Date(2024, 9, 19, 0, 0, 0, 0, time.UTC), time.Date(2025, 9, 19, 0, 0, 0, 0, time.UTC)}},
 					&state.WhereCondition{Property: []string{"i"}, Operator: state.OpIsBefore, Values: []any{time.Date(1970, 1, 1, 14, 36, 57, 264699103, time.UTC)}},
 					&state.WhereCondition{Property: []string{"j"}, Operator: state.OpIsGreaterThanOrEqualTo, Values: []any{2024}},
@@ -555,6 +564,9 @@ func Test_convertFilterToWhere(t *testing.T) {
 					&state.WhereCondition{Property: []string{"l", "a"}, Operator: state.OpIsOneOf, Values: []any{
 						state.JSONConditionValue{String: "1e75", Number: new(decimal.MustParse("1e75"))},
 						state.JSONConditionValue{String: "1e76"},
+					}},
+					&state.WhereCondition{Property: []string{"l", "a"}, Operator: state.OpIs, Values: []any{
+						state.JSONConditionValue{String: "10e-38", Number: new(decimal.MustParse("1e-37"))},
 					}},
 					&state.WhereCondition{Property: []string{"l"}, Operator: state.OpIsOneOf, Values: []any{
 						state.JSONConditionValue{String: "foo"},
@@ -571,8 +583,14 @@ func Test_convertFilterToWhere(t *testing.T) {
 					&state.WhereCondition{Property: []string{"l", "x", "y"}, Operator: state.OpExists},
 					&state.WhereCondition{Property: []string{"q"}, Operator: state.OpIsNull},
 					&state.WhereCondition{Property: []string{"s"}, Operator: state.OpContains, Values: []any{decimal.MustParse("1e75")}},
+					&state.WhereCondition{Property: []string{"s"}, Operator: state.OpContains, Values: []any{decimal.MustParse("1e-37")}},
 					&state.WhereCondition{Property: []string{"t"}, Operator: state.OpContains, Values: []any{state.JSONConditionValue{String: "1e75", Number: new(decimal.MustParse("1e75"))}}},
 					&state.WhereCondition{Property: []string{"t"}, Operator: state.OpContains, Values: []any{state.JSONConditionValue{String: "1e76"}}},
+					&state.WhereCondition{Property: []string{"t"}, Operator: state.OpContains, Values: []any{
+						state.JSONConditionValue{String: "10e-38", Number: new(decimal.MustParse("1e-37"))},
+					}},
+					&state.WhereCondition{Property: []string{"u"}, Operator: state.OpContains, Values: []any{dt}},
+					&state.WhereCondition{Property: []string{"u"}, Operator: state.OpDoesNotContain, Values: []any{dt}},
 				},
 			},
 		},
@@ -639,11 +657,15 @@ func Test_convertFilterToWhere(t *testing.T) {
 		})
 	}
 
+	compareTime := cmp.Comparer(func(a, b time.Time) bool {
+		return a.Equal(b) && a.Location() == b.Location()
+	})
+
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			got := convertFilterToWhere(&test.filter, schema)
-			if diff := cmp.Diff(&test.expected, got); diff != "" {
-				t.Fatalf("unexpected value (-want +got):\n%s", diff)
+			if diff := cmp.Diff(&test.expected, got, compareTime); diff != "" {
+				t.Fatalf("expected where expression, got difference (-want +got):\n%s", diff)
 			}
 		})
 	}
@@ -703,7 +725,13 @@ func Test_convertWhereToFilter(t *testing.T) {
 					&state.WhereCondition{Property: []string{"l"}, Operator: state.OpIs, Values: []any{state.JSONConditionValue{String: "foo"}}},
 					&state.WhereCondition{Property: []string{"l"}, Operator: state.OpIs, Values: []any{state.JSONConditionValue{String: "1.2300", Number: new(decimal.MustParse("1.23"))}}},
 					&state.WhereCondition{Property: []string{"l", "a"}, Operator: state.OpIs, Values: []any{state.JSONConditionValue{String: "1e76"}}},
+					&state.WhereCondition{Property: []string{"l", "a"}, Operator: state.OpIs, Values: []any{
+						state.JSONConditionValue{String: "10e-38", Number: new(decimal.MustParse("1e-37"))},
+					}},
 					&state.WhereCondition{Property: []string{"s"}, Operator: state.OpContains, Values: []any{state.JSONConditionValue{String: "1e-38"}}},
+					&state.WhereCondition{Property: []string{"s"}, Operator: state.OpContains, Values: []any{
+						state.JSONConditionValue{String: "10e-38", Number: new(decimal.MustParse("1e-37"))},
+					}},
 					&state.WhereCondition{Property: []string{"l"}, Operator: state.OpIsOneOf, Values: []any{
 						state.JSONConditionValue{String: "foo"},
 						state.JSONConditionValue{String: "56.19", Number: &d},
@@ -738,7 +766,9 @@ func Test_convertWhereToFilter(t *testing.T) {
 					&FilterCondition{Property: "l", Operator: OpIs, Values: []string{"foo"}},
 					&FilterCondition{Property: "l", Operator: OpIs, Values: []string{"1.2300"}},
 					&FilterCondition{Property: "l.a", Operator: OpIs, Values: []string{"1e76"}},
+					&FilterCondition{Property: "l.a", Operator: OpIs, Values: []string{"10e-38"}},
 					&FilterCondition{Property: "s", Operator: OpContains, Values: []string{"1e-38"}},
+					&FilterCondition{Property: "s", Operator: OpContains, Values: []string{"10e-38"}},
 					&FilterCondition{Property: "l", Operator: OpIsOneOf, Values: []string{"foo", "56.19", "boo"}},
 					&FilterCondition{Property: "l.x", Operator: OpExists},
 					&FilterCondition{Property: "m", Operator: OpIsNot, Values: []string{"192.168.1.1"}},
@@ -1477,6 +1507,27 @@ func Test_validateFilter(t *testing.T) {
 				},
 			},
 			err: errors.New(`value of the "c" property is not a valid int`),
+		},
+		{
+			name: "time values with a decimal comma or single-digit hour",
+			filter: Filter{Operator: OpAnd, Rules: []FilterRule{
+				&FilterCondition{Property: "g", Operator: OpIsOneOf, Values: []string{"14:36:57,264699103", "1:02:03"}},
+			}},
+			expected: []string{"g"},
+		},
+		{
+			name: "time with trailing text",
+			filter: Filter{Operator: OpAnd, Rules: []FilterRule{
+				&FilterCondition{Property: "g", Operator: OpIsAfter, Values: []string{"15:34:31abc"}},
+			}},
+			err: errors.New(`value of the "g" property is not a valid time`),
+		},
+		{
+			name: "time with text after fractional seconds",
+			filter: Filter{Operator: OpAnd, Rules: []FilterRule{
+				&FilterCondition{Property: "g", Operator: OpIsAfter, Values: []string{"12:00:00.5x"}},
+			}},
+			err: errors.New(`value of the "g" property is not a valid time`),
 		},
 		{
 			name: "invalid UUID value",

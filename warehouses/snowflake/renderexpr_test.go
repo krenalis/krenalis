@@ -171,6 +171,8 @@ func TestArrayContains(t *testing.T) {
 }
 
 func Test_renderExpr(t *testing.T) {
+	decimalColumn := warehouses.Column{Name: "value", Type: types.Decimal(3, 2)}
+	decimalArrayColumn := warehouses.Column{Name: "value", Type: types.Array(types.Decimal(3, 2))}
 	tests := []struct {
 		expr    warehouses.Expr
 		query   string
@@ -207,6 +209,22 @@ func Test_renderExpr(t *testing.T) {
 		{
 			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "count", Type: types.Decimal(5, 0)}, warehouses.OpIsGreaterThanOrEqualTo, decimal.MustInt(3289)),
 			query: `"COUNT" >= 3289`,
+		},
+		{
+			expr:  warehouses.NewBaseExpr(decimalColumn, warehouses.OpIs, decimal.Decimal{}),
+			query: `"VALUE" = 0`,
+		},
+		{
+			expr:  warehouses.NewBaseExpr(decimalColumn, warehouses.OpIs, decimal.MustParse("1.2300")),
+			query: `"VALUE" = 1.23`,
+		},
+		{
+			expr:  warehouses.NewBaseExpr(decimalColumn, warehouses.OpIs, decimal.MustParse("1e75")),
+			query: `"VALUE" = 1e75`,
+		},
+		{
+			expr:  warehouses.NewBaseExpr(decimalColumn, warehouses.OpIsLessThan, decimal.MustParse("1e-37")),
+			query: `"VALUE" < 1e-37`,
 		},
 		{
 			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "timestamp", Type: types.DateTime()}, warehouses.OpIsBefore, time.Date(1900, 1, 2, 23, 32, 11, 940253621, time.UTC)),
@@ -251,6 +269,14 @@ func Test_renderExpr(t *testing.T) {
 		{
 			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.Array(types.String())}, warehouses.OpDoesNotContain, "boo"),
 			query: `NOT ARRAY_CONTAINS(PARSE_JSON('"boo"'), "VALUES")`,
+		},
+		{
+			expr:  warehouses.NewBaseExpr(decimalArrayColumn, warehouses.OpContains, decimal.MustParse("1e75")),
+			query: `(ARRAY_SIZE(FILTER("VALUE", krenalis_element -> IFF(TYPEOF(krenalis_element) = 'INTEGER', TO_JSON(krenalis_element) = '1000000000000000000000000000000000000000000000000000000000000000000000000000', TRY_TO_DECFLOAT(TO_JSON(krenalis_element)) = TO_DECFLOAT('1e75')))) > 0)`,
+		},
+		{
+			expr:  warehouses.NewBaseExpr(decimalArrayColumn, warehouses.OpDoesNotContain, decimal.MustParse("1e-37")),
+			query: `NOT (ARRAY_SIZE(FILTER("VALUE", krenalis_element -> IFF(TYPEOF(krenalis_element) = 'INTEGER', FALSE, TRY_TO_DECFLOAT(TO_JSON(krenalis_element)) = TO_DECFLOAT('1e-37')))) > 0)`,
 		},
 		{
 			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.Array(types.Decimal(76, 0))}, warehouses.OpContains, decimal.MustParse("123456789012345678901234567890123456789")),

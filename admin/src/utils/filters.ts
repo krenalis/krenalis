@@ -174,8 +174,8 @@ const isFloat = (s: string, bitSize: number): boolean => {
 // isTime checks whether the string s represents a valid time value that can be
 // used as a filter value.
 const isTime = (s: string): boolean => {
-	const m = s.match(/^(\d{2}):(\d{2}):(\d{2})/);
-	if (m == null || (s[8] === '.' && !/^\.\d{1,9}/.test(s.slice(8)))) {
+	const m = s.match(/^(\d{1,2}):(\d{2}):(\d{2})(?:[.,]\d+)?$/);
+	if (m == null) {
 		return false;
 	}
 	const [hour, minute, second] = [Number(m[1]), Number(m[2]), Number(m[3])];
