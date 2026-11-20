@@ -247,6 +247,14 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 		}
 	}
 
+	// Check that this version of Krenalis can run on the schema version of the
+	// database, before loading the state from it. An empty database is reported as not
+	// initialized when the state is loaded.
+	err = initdb.CheckSchemaVersion(ctx, db)
+	if err != nil {
+		return nil, err
+	}
+
 	var smtp *SMTPConfig
 	if conf.SMTP.Host != "" {
 		smtp = &conf.SMTP
@@ -2203,10 +2211,60 @@ func EventSchema() types.Type {
 	return schemas.Event
 }
 
+// FinalizeDB finalizes the migration of Krenalis's PostgreSQL database to the
+// schema version of this version of Krenalis, after which the instances of the
+// previous release can no longer run on it. It must be called only when
+// none of them is running. It reads only the DB field of conf. It is
+// idempotent, and it is safe to call it concurrently from several Krenalis
+// instances.
+func FinalizeDB(ctx context.Context, conf *Config) error {
+	db, err := openDB(ctx, conf.DB)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+	err = initdb.Finalize(ctx, db)
+	if err != nil {
+		return fmt.Errorf("cannot finalize PostgreSQL database: %s", err)
+	}
+	return nil
+}
+
 // IsValidID reports whether id is a valid resource identifier (organizations,
 // members, access keys, workspaces, connections, pipelines, and pipeline runs).
 func IsValidID(id string) bool {
 	return len(id) == 12 && base58.IsValid(id)
+}
+
+// MigrateDB migrates Krenalis's PostgreSQL database from the previous schema
+// version to the one of this version of Krenalis, or initializes it if it is
+// empty. It reads only the DB and KMS fields of conf. It is idempotent, and
+// it is safe to call it concurrently from several Krenalis instances.
+func MigrateDB(ctx context.Context, conf *Config) error {
+
+	db, err := openDB(ctx, conf.DB)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	// Initialize the database if it is empty, as on the first deployment,
+	// before any Krenalis instance has started.
+	kms, err := kms.New(ctx, conf.KMS)
+	if err != nil {
+		return err
+	}
+	err = initdb.InitIfEmpty(ctx, db, kms, false)
+	if err != nil {
+		return err
+	}
+
+	err = initdb.Migrate(ctx, db)
+	if err != nil {
+		return fmt.Errorf("cannot migrate PostgreSQL database: %s", err)
+	}
+
+	return nil
 }
 
 // RequestID returns the request ID associated with ctx.
@@ -2243,6 +2301,31 @@ func isValidMemberToken(token string) bool {
 	}
 	_, err := base64.URLEncoding.DecodeString(token)
 	return err == nil
+}
+
+// openDB opens Krenalis's PostgreSQL database and checks that it can connect
+// to it.
+func openDB(ctx context.Context, conf DBConfig) (*dbpkg.DB, error) {
+	db, err := dbpkg.Open(&dbpkg.Options{
+		Host:           conf.Host,
+		Port:           conf.Port,
+		Username:       conf.Username,
+		Password:       conf.Password,
+		Database:       conf.Database,
+		Schema:         conf.Schema,
+		MaxConnections: max(2, conf.MaxConnections),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("cannot connect to PostgreSQL: %s", err)
+	}
+	pingCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+	err = db.Ping(pingCtx)
+	if err != nil {
+		db.Close()
+		return nil, fmt.Errorf("cannot connect to PostgreSQL: %s", err)
+	}
+	return db, nil
 }
 
 // generateID returns a new 12-character Base58 identifier.

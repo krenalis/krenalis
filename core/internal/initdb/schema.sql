@@ -538,3 +538,9 @@ INSERT INTO metadata (
     100,
     100
 );
+
+CREATE TABLE schema_version (
+    singleton boolean PRIMARY KEY DEFAULT true CHECK (singleton),
+    version integer NOT NULL CHECK (version > 0),
+    finalized boolean NOT NULL
+);

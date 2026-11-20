@@ -305,4 +305,14 @@ Every exported `core` method called by `cmd` starts with `<receiver>.core.mustBe
 
 ## Database upgrades
 
-Write, restore, or remove the database updater only during the release procedure. When a change requires upgrading an existing Krenalis PostgreSQL database, including a stored-data format change that leaves the schema unchanged, record it in `core/internal/initdb/RELEASE-UPGRADE.md` in the same change, following `.agents/skills/release-upgrade/SKILL.md`.
+Write or remove the database upgrade, in `migrate` and `finalize` of `core/internal/initdb/migrate.go`, and increment `schemaVersion` there, only during the release procedure. When a change requires upgrading an existing Krenalis PostgreSQL database, including a stored-data format change that leaves the schema unchanged, record it in `core/internal/initdb/RELEASE-UPGRADE.md` in the same change, following `.agents/skills/release-upgrade/SKILL.md`.
+
+## Compatibility with the previous release
+
+During every rolling deployment, and after a rollback, the instances of two consecutive releases run together on the same database and exchange notifications, and the upgrade to a release must never break the previous one. How the database and the messages stay compatible is described in `.agents/skills/release-upgrade/SKILL.md`; write the application code so that:
+
+- It works both on the migrated database and on the finalized one, because the finalization may come long after the deployment: until then the database still holds what only the previous release uses, and lacks the constraints that `finalize` adds.
+- It reads and writes only the representation of the data of its own schema version, and never the old one that the previous release still uses; the triggers added by `migrate` keep the two in sync.
+- It handles the values that the previous release can still write until the finalization, such as the default of a new column in the rows it inserts, unless a trigger fills them.
+- How to keep notifications and NATS messages compatible is still open (https://github.com/krenalis/krenalis/issues/2796): ask the user before changing a notification or the format of the events published on NATS.
+- It starts with the configuration of the previous release, and the configuration it needs does not stop the previous release from starting, since both read the same configuration as long as a rollback is possible: add settings as optional or with a default, and never change the meaning of an existing one.

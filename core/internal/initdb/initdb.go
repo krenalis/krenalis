@@ -19,8 +19,9 @@ import (
 )
 
 // initLockKey is the arbitrary key of the advisory lock that serializes the
-// initialization of the database. The lock is database-wide, so instances
-// using different schemas of the same database also wait for each other.
+// initialization, the migration, and the finalization of the database. The
+// lock is database-wide, so instances using different schemas of the same
+// database also wait for each other.
 const initLockKey = 1766325504
 
 // InitIfEmpty initializes the PostgreSQL database if it is empty.
@@ -173,9 +174,14 @@ func initialize(ctx context.Context, tx *db.Tx, dockerMember bool) error {
 	if _, err := tx.Exec(ctx, createRateLimiterLeasesFunction); err != nil {
 		return err
 	}
+	// Record the schema version. A new database has nothing to finalize.
+	_, err := tx.Exec(ctx, "INSERT INTO schema_version (version, finalized) VALUES ($1, true)", schemaVersion)
+	if err != nil {
+		return err
+	}
 	// Insert the organization.
 	organizationID := base58.Generate(12)
-	_, err := tx.Exec(ctx, `INSERT INTO organizations`+
+	_, err = tx.Exec(ctx, `INSERT INTO organizations`+
 		` (id, name, enabled, members_limit, access_keys_limit, workspaces_limit, connectors_limit, connections_limit, pipelines_limit,`+
 		` organization_requests_rate_per_minute, organization_requests_max_capacity, workspace_requests_rate_per_minute, workspace_requests_max_capacity,`+
 		` workspace_events_rate_per_minute, workspace_events_max_capacity)`+

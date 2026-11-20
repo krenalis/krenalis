@@ -2,9 +2,14 @@
 
 Base release: `v0.48.0`
 
-What the updater of the next release must do to upgrade a database of the
-base release. See `.agents/skills/release-upgrade/SKILL.md`.
+What the migration and the finalization of the next release must do to
+upgrade a database of the base release. See
+`.agents/skills/release-upgrade/SKILL.md`.
 
+## Migration
+
+- Create the `schema_version` table: `migrate` has nothing to do, because
+  `Migrate` creates it when it records the new schema version.
 - Replace every `{"kind":"year"}` type with a signed `int` of `bitSize: 16`
   and `semantics: "year"`, recursively in
   `workspaces.profile_schema`, `workspaces.alter_profile_schema_schema`,
@@ -22,3 +27,8 @@ base release. See `.agents/skills/release-upgrade/SKILL.md`.
   input schema before replacing its types. Preserve condition values,
   nested groups, and conditions on other types. Complete both schema and
   filter conversions in the same upgrade transaction before loading state.
+- The two conversions above break the instances of the base release, which
+  cannot read the new types; this is accepted because Krenalis is not in
+  production yet.
+
+## Finalization
