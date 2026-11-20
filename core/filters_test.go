@@ -1469,6 +1469,16 @@ func Test_validateFilter(t *testing.T) {
 			err: errors.New(`only one value can be used with the operator "contains"`),
 		},
 		{
+			name: "empty operand in JSON membership list",
+			filter: Filter{
+				Operator: OpAnd,
+				Rules: []FilterRule{
+					&FilterCondition{Property: "d.s.a", Operator: OpIsOneOf, Values: []string{"5.0", ""}},
+				},
+			},
+			err: errors.New("condition value is empty"),
+		},
+		{
 			name: "NUL byte in value",
 			filter: Filter{
 				Operator: OpOr,
@@ -1831,15 +1841,13 @@ func Test_validateFilterJSONRoundTrip(t *testing.T) {
 		property string
 		operator FilterOperator
 		values   []string
-		wantErr  string
 	}{
-		{"scalar membership", "value", OpIsOneOf, []string{"5", "5.0", "5e0", " Foo ", "é", "e\u0301"}, ""},
-		{"nested range", "value.a.b", OpIsBetween, []string{"0.0050", "1e76"}, ""},
-		{"array containment", "array", OpContains, []string{"  Pro  "}, ""},
-		{"negated array containment", "array", OpDoesNotContain, []string{"-1e999999"}, ""},
-		{"map emptiness", "map", OpIsEmpty, nil, ""},
-		{"map absence", "map", OpDoesNotExist, nil, ""},
-		{"empty membership operand", "value.a.b", OpIsOneOf, []string{"5.0", ""}, "condition value is empty"},
+		{"scalar membership", "value", OpIsOneOf, []string{"5", "5.0", "5e0", " Foo ", "é", "e\u0301"}},
+		{"nested range", "value.a.b", OpIsBetween, []string{"0.0050", "1e76"}},
+		{"array containment", "array", OpContains, []string{"  Pro  "}},
+		{"negated array containment", "array", OpDoesNotContain, []string{"-1e999999"}},
+		{"map emptiness", "map", OpIsEmpty, nil},
+		{"map absence", "map", OpDoesNotExist, nil},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 
@@ -1851,20 +1859,11 @@ func Test_validateFilterJSONRoundTrip(t *testing.T) {
 			}}
 
 			_, err := validateFilter(filter, schema, state.Source, state.TargetUser)
+			if err != nil {
+				t.Fatalf("expected valid filter, got %v", err)
+			}
 			if diff := cmp.Diff(want, filter); diff != "" {
 				t.Fatalf("expected unchanged filter after validation, got difference (-want +got):\n%s", diff)
-			}
-			if err != nil {
-				if test.wantErr == "" {
-					t.Fatalf("expected valid filter, got %v", err)
-				}
-				if err.Error() != test.wantErr {
-					t.Fatalf("expected error %q, got %q", test.wantErr, err)
-				}
-				return
-			}
-			if test.wantErr != "" {
-				t.Fatalf("expected error %q, got nil", test.wantErr)
 			}
 
 			where := convertFilterToWhere(filter, schema)
