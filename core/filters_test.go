@@ -1489,6 +1489,16 @@ func Test_validateFilter(t *testing.T) {
 			err: errors.New(`only one value can be used with the operator "contains"`),
 		},
 		{
+			name: "empty operand in JSON membership list",
+			filter: Filter{
+				Operator: OpAnd,
+				Rules: []FilterRule{
+					&FilterCondition{Property: "d.s.a", Operator: OpIsOneOf, Values: []string{"5.0", ""}},
+				},
+			},
+			err: errors.New("condition value is empty"),
+		},
+		{
 			name: "NUL byte in value",
 			filter: Filter{
 				Operator: OpOr,
@@ -1836,6 +1846,57 @@ func Test_validateFilter(t *testing.T) {
 		})
 	}
 
+}
+
+// Test_validateFilterJSONRoundTrip checks that validation and conversion
+// leave JSON filters unchanged and that a round trip preserves their operands.
+func Test_validateFilterJSONRoundTrip(t *testing.T) {
+	schema := types.Object([]types.Property{
+		{Name: "value", Type: types.JSON(), ReadOptional: true},
+		{Name: "array", Type: types.Array(types.JSON()), ReadOptional: true},
+		{Name: "map", Type: types.Map(types.JSON()), ReadOptional: true},
+	})
+	for _, test := range []struct {
+		name     string
+		property string
+		operator FilterOperator
+		values   []string
+	}{
+		{"scalar membership", "value", OpIsOneOf, []string{"5", "5.0", "5e0", " Foo ", "é", "e\u0301"}},
+		{"nested range", "value.a.b", OpIsBetween, []string{"0.0050", "1e76"}},
+		{"array containment", "array", OpContains, []string{"  Pro  "}},
+		{"negated array containment", "array", OpDoesNotContain, []string{"-1e999999"}},
+		{"map emptiness", "map", OpIsEmpty, nil},
+		{"map absence", "map", OpDoesNotExist, nil},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+
+			filter := &Filter{Operator: OpAnd, Rules: []FilterRule{
+				&FilterCondition{Property: test.property, Operator: test.operator, Values: slices.Clone(test.values)},
+			}}
+			want := &Filter{Operator: OpAnd, Rules: []FilterRule{
+				&FilterCondition{Property: test.property, Operator: test.operator, Values: test.values},
+			}}
+
+			_, err := validateFilter(filter, schema, state.Source, state.TargetUser)
+			if err != nil {
+				t.Fatalf("expected valid filter, got %v", err)
+			}
+			if diff := cmp.Diff(want, filter); diff != "" {
+				t.Fatalf("expected unchanged filter after validation, got difference (-want +got):\n%s", diff)
+			}
+
+			where := convertFilterToWhere(filter, schema)
+			if diff := cmp.Diff(want, filter); diff != "" {
+				t.Errorf("expected unchanged filter after convertFilterToWhere, got difference (-want +got):\n%s", diff)
+			}
+			got := convertWhereToFilter(where, schema)
+			if diff := cmp.Diff(want, got); diff != "" {
+				t.Errorf("expected original filter after round trip, got difference (-want +got):\n%s", diff)
+			}
+
+		})
+	}
 }
 
 // Test_validateFilterLimits verifies filter complexity limits for values built
