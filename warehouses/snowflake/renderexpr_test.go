@@ -461,42 +461,42 @@ func Test_renderExpr(t *testing.T) {
 		{
 			name:    "decimal excessive precision",
 			expr:    warehouses.NewBaseExpr(decimalColumn, warehouses.OpIs, decimal.MustParse("1e76")),
-			wantErr: "decimal operand exceeds precision 76 or scale 37",
+			wantErr: "warehouses/snowflake: decimal operand exceeds precision 76 or scale 37",
 		},
 		{
 			name:    "decimal excessive scale",
 			expr:    warehouses.NewBaseExpr(decimalColumn, warehouses.OpIsLessThan, decimal.MustParse("1e-38")),
-			wantErr: "decimal operand exceeds precision 76 or scale 37",
+			wantErr: "warehouses/snowflake: decimal operand exceeds precision 76 or scale 37",
 		},
 		{
 			name:    "decimal large positive exponent",
 			expr:    warehouses.NewBaseExpr(decimalColumn, warehouses.OpIs, decimal.MustParse("1e999999")),
-			wantErr: "decimal operand exceeds precision 76 or scale 37",
+			wantErr: "warehouses/snowflake: decimal operand exceeds precision 76 or scale 37",
 		},
 		{
 			name:    "decimal large negative exponent",
 			expr:    warehouses.NewBaseExpr(decimalColumn, warehouses.OpIs, decimal.MustParse("1e-999999")),
-			wantErr: "decimal operand exceeds precision 76 or scale 37",
+			wantErr: "warehouses/snowflake: decimal operand exceeds precision 76 or scale 37",
 		},
 		{
 			name:    "decimal between invalid second operand",
 			expr:    warehouses.NewBaseExpr(decimalColumn, warehouses.OpIsBetween, decimal.MustInt(0), decimal.MustParse("1e-38")),
-			wantErr: "decimal operand exceeds precision 76 or scale 37",
+			wantErr: "warehouses/snowflake: decimal operand exceeds precision 76 or scale 37",
 		},
 		{
 			name:    "decimal membership invalid second operand",
 			expr:    warehouses.NewBaseExpr(decimalColumn, warehouses.OpIsOneOf, decimal.MustInt(0), decimal.MustParse("1e76")),
-			wantErr: "decimal operand exceeds precision 76 or scale 37",
+			wantErr: "warehouses/snowflake: decimal operand exceeds precision 76 or scale 37",
 		},
 		{
 			name:    "decimal array excessive precision",
 			expr:    warehouses.NewBaseExpr(decimalArrayColumn, warehouses.OpContains, decimal.MustParse("1e76")),
-			wantErr: "decimal operand exceeds precision 76 or scale 37",
+			wantErr: "warehouses/snowflake: decimal operand exceeds precision 76 or scale 37",
 		},
 		{
 			name:    "decimal array excessive scale",
 			expr:    warehouses.NewBaseExpr(decimalArrayColumn, warehouses.OpDoesNotContain, decimal.MustParse("1e-38")),
-			wantErr: "decimal operand exceeds precision 76 or scale 37",
+			wantErr: "warehouses/snowflake: decimal operand exceeds precision 76 or scale 37",
 		},
 		{
 			name: "decimal invalid nested expression after valid expression",
@@ -506,7 +506,7 @@ func Test_renderExpr(t *testing.T) {
 					warehouses.NewBaseExpr(decimalColumn, warehouses.OpIs, decimal.MustParse("1e76")),
 				}),
 			}),
-			wantErr: "decimal operand exceeds precision 76 or scale 37",
+			wantErr: "warehouses/snowflake: decimal operand exceeds precision 76 or scale 37",
 		},
 		{
 			name: "JSON string is one of",

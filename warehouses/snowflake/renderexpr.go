@@ -105,7 +105,7 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 		}
 		precision, scale := number.PrecisionScale()
 		if precision > types.MaxDecimalPrecision || scale > types.MaxDecimalScale {
-			return fmt.Errorf("decimal operand exceeds precision %d or scale %d",
+			return fmt.Errorf("warehouses/snowflake: decimal operand exceeds precision %d or scale %d",
 				types.MaxDecimalPrecision, types.MaxDecimalScale)
 		}
 	}
@@ -130,7 +130,7 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 	}
 
 	if len(baseExpr.Keys) > 0 {
-		return fmt.Errorf("JSON keys cannot be used with type %q", c.Type)
+		return fmt.Errorf("warehouses/snowflake: JSON keys cannot be used with type %q", c.Type)
 	}
 
 	qname := quoteIdent(c.Name)
@@ -293,7 +293,7 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 
 	case warehouses.OpIsTrue, warehouses.OpIsFalse:
 		if !c.Type.IsBoolean() {
-			return fmt.Errorf("operator %d is not supported for type %q", op, c.Type)
+			return fmt.Errorf("warehouses/snowflake: operator %d is not supported for type %q", op, c.Type)
 		}
 		if op == warehouses.OpIsFalse {
 			b.WriteString("NOT ")
@@ -385,7 +385,7 @@ func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr) error {
 	op := expr.Operator
 
 	if !c.Type.IsJSON() && len(expr.Keys) > 0 {
-		return fmt.Errorf("JSON keys cannot be used with type %q", c.Type)
+		return fmt.Errorf("warehouses/snowflake: JSON keys cannot be used with type %q", c.Type)
 	}
 
 	if (c.Type.IsArray() || c.Type.IsMap()) && op != warehouses.OpContains && op != warehouses.OpDoesNotContain {
@@ -424,7 +424,7 @@ func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr) error {
 			b.WriteString(" IS NOT NULL")
 			return nil
 		}
-		return fmt.Errorf("operator %d is not supported for type %q", expr.Operator, c.Type)
+		return fmt.Errorf("warehouses/snowflake: operator %d is not supported for type %q", expr.Operator, c.Type)
 	}
 
 	if len(expr.Keys) > 0 {
@@ -471,14 +471,16 @@ func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr) error {
 	case warehouses.OpIsOneOf:
 		count = len(expr.Values)
 		if count == 0 {
-			return fmt.Errorf("JSON membership requires at least one value")
+			return fmt.Errorf("warehouses/snowflake: JSON membership requires at least one value")
 		}
 	case warehouses.OpIsTrue, warehouses.OpIsFalse, warehouses.OpIsEmpty, warehouses.OpIsNull, warehouses.OpExists:
 	default:
-		return fmt.Errorf("operator %d is not supported for type %q", expr.Operator, expr.Column.Type)
+		return fmt.Errorf("warehouses/snowflake: operator %d is not supported for type %q",
+			expr.Operator, expr.Column.Type)
 	}
 	if len(expr.Values) != count {
-		return fmt.Errorf("operator %d requires %d values, got %d", expr.Operator, count, len(expr.Values))
+		return fmt.Errorf("warehouses/snowflake: operator %d requires %d values, got %d",
+			expr.Operator, count, len(expr.Values))
 	}
 
 	// Preserve structural equality when callers provide a JSON-encoded value.
@@ -500,7 +502,7 @@ func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr) error {
 		var ok bool
 		values[i], ok = operand.(warehouses.JSONConditionValue)
 		if !ok {
-			return fmt.Errorf("expected a JSONConditionValue, got %T", operand)
+			return fmt.Errorf("warehouses/snowflake: expected a JSONConditionValue, got %T", operand)
 		}
 	}
 
@@ -584,7 +586,7 @@ func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr) error {
 
 	case warehouses.OpContains:
 		if c.Type.IsMap() {
-			return fmt.Errorf("operator %d is not supported for type %q", expr.Operator, c.Type)
+			return fmt.Errorf("warehouses/snowflake: operator %d is not supported for type %q", expr.Operator, c.Type)
 		}
 		b.WriteByte('(')
 		if expr.Column.Type.IsJSON() {
