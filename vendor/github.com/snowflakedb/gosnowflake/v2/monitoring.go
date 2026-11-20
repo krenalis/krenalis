@@ -96,6 +96,13 @@ type retStatus struct {
 	ErrorCode    string   `json:"errorCode"`
 	ErrorMessage string   `json:"errorMessage"`
 	Stats        retStats `json:"stats"`
+
+	TotalDuration     int64 `json:"totalDuration"`
+	GsCompileDuration int64 `json:"gsCompileDuration"`
+	GsExecDuration    int64 `json:"gsExecDuration"`
+	XpExecDuration    int64 `json:"xpExecDuration"`
+	QueryRetryTime    int64 `json:"queryRetryTime"`
+	FaultHandlingTime int64 `json:"faultHandlingTime"`
 }
 
 type retStats struct {
@@ -125,6 +132,13 @@ type SnowflakeQueryStatus struct {
 	ErrorMessage string
 	ScanBytes    int64
 	ProducedRows int64
+
+	TotalDuration     int64
+	GsCompileDuration int64
+	GsExecDuration    int64
+	XpExecDuration    int64
+	QueryRetryTime    int64
+	FaultHandlingTime int64
 }
 
 // SnowflakeConnection is a wrapper to snowflakeConn that exposes API functions
@@ -132,6 +146,8 @@ type SnowflakeConnection interface {
 	GetQueryStatus(ctx context.Context, queryID string) (*SnowflakeQueryStatus, error)
 	AddTelemetryData(ctx context.Context, eventDate time.Time, data map[string]string) error
 	// DownloadStream downloads one stage object as a readable stream.
+	// stageName is an @-stage name or a snow:// embedded-stage URL; see the
+	// package documentation.
 	// ctx is used for the metadata GET and the cloud body: canceling it aborts a
 	// blocked Read. The returned reader must be closed. Concurrent Read and Close
 	// are not supported. When used via database/sql Conn.Raw, consume and close
@@ -142,6 +158,19 @@ type SnowflakeConnection interface {
 	// DownloadStreamWithConfig. Truncated gzip may fail on a later Read.
 	DownloadStream(ctx context.Context, stageName, sourceFileName string) (io.ReadCloser, error)
 	DownloadStreamWithConfig(ctx context.Context, stageName, sourceFileName string, config DownloadStreamConfig) (io.ReadCloser, error)
+	// UploadStream uploads one stage object from src. destFileName is a basename;
+	// directories belong in UploadStreamConfig.DestPrefix. Compression defaults
+	// to gzip. The driver reads src and does not close it; the caller closes it
+	// after UploadStream returns. Canceling ctx fails the next read of src,
+	// aborts an in-flight cloud PUT, and stops the storage retry loop, including
+	// its backoff sleep. A Read already blocked inside src is not interrupted.
+	// The dummy PUT only reserves the stage object. The payload is spooled, then
+	// uploaded, outside that statement. When used via database/sql Conn.Raw,
+	// return from the callback only after UploadStream returns so the connection
+	// is not released during the upload. The payload stays in memory until
+	// 128 MiB, then spills to disk.
+	UploadStream(ctx context.Context, stageName, destFileName string, src io.Reader) error
+	UploadStreamWithConfig(ctx context.Context, stageName, destFileName string, src io.Reader, config UploadStreamConfig) error
 }
 
 // checkQueryStatus returns the status given the query ID. If successful,

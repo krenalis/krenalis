@@ -2,6 +2,7 @@ package gosnowflake
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -78,13 +79,24 @@ func (rsu *remoteStorageUtil) uploadOneFile(ctx context.Context, meta *fileMetad
 	logger.Debugf(
 		"Started Uploading. File: %v, location: %v", meta.realSrcFileName, meta.stageInfo.Location)
 	for retry := range maxRetry {
+		if err := canceledUpload(meta.realSrcFileName, ctx.Err()); err != nil {
+			return err
+		}
 		timer = time.Now()
 		if !meta.overwrite {
 			header, err := utilClass.getFileHeader(ctx, meta, meta.dstFileName)
+			if err != nil {
+				if canceled := canceledUpload(meta.realSrcFileName, err); canceled != nil {
+					return canceled
+				}
+			}
 			if meta.resStatus == notFoundFile {
 				err := utilClass.uploadFile(ctx, meta.realSrcFileName, meta, maxConcurrency, meta.options.MultiPartThreshold)
 				if err != nil {
 					logger.Warnf("Error uploading %v. err: %v", meta.realSrcFileName, err)
+					if canceled := canceledUpload(meta.realSrcFileName, err); canceled != nil {
+						return canceled
+					}
 				}
 			} else if err != nil {
 				return err
@@ -99,6 +111,9 @@ func (rsu *remoteStorageUtil) uploadOneFile(ctx context.Context, meta *fileMetad
 			err := utilClass.uploadFile(ctx, meta.realSrcFileName, meta, maxConcurrency, meta.options.MultiPartThreshold)
 			if err != nil {
 				logger.Warnf("Error uploading %v. err: %v", meta.realSrcFileName, err)
+				if canceled := canceledUpload(meta.realSrcFileName, err); canceled != nil {
+					return canceled
+				}
 			}
 		}
 		elapsedTime = time.Since(timer).String()
@@ -110,7 +125,9 @@ func (rsu *remoteStorageUtil) uploadOneFile(ctx context.Context, meta *fileMetad
 			if !meta.noSleepingTime {
 				sleepingTime := min(int(math.Exp2(float64(retry))), 16)
 				logger.Debugf("Need to retry for uploading file: %v. Current retry: %v, Sleeping time: %v.", meta.realSrcFileName, retry, sleepingTime)
-				time.Sleep(time.Second * time.Duration(sleepingTime))
+				if err := sleepContext(ctx, time.Second*time.Duration(sleepingTime)); err != nil {
+					return canceledUpload(meta.realSrcFileName, err)
+				}
 			} else {
 				logger.Debugf("Need to retry for uploading file:  %v. Current retry: %v without the sleeping time.", meta.realSrcFileName, retry)
 			}
@@ -121,7 +138,9 @@ func (rsu *remoteStorageUtil) uploadOneFile(ctx context.Context, meta *fileMetad
 			if !meta.noSleepingTime {
 				sleepingTime := min(int(math.Exp2(float64(retry))), 16)
 				logger.Debugf("Need to retry with lower concurrency for uploading file: %v. Current retry: %v, Sleeping time: %v.", meta.realSrcFileName, retry, sleepingTime)
-				time.Sleep(time.Second * time.Duration(sleepingTime))
+				if err := sleepContext(ctx, time.Second*time.Duration(sleepingTime)); err != nil {
+					return canceledUpload(meta.realSrcFileName, err)
+				}
 			} else {
 				logger.Debugf("Need to retry with lower concurrency for uploading file: %v. Current retry: %v without Sleeping time.", meta.realSrcFileName, retry)
 
@@ -136,13 +155,44 @@ func (rsu *remoteStorageUtil) uploadOneFile(ctx context.Context, meta *fileMetad
 	return fmt.Errorf("unkown error uploading %v", meta.realSrcFileName)
 }
 
+func sleepContext(ctx context.Context, d time.Duration) error {
+	timer := time.NewTimer(d)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-timer.C:
+		return nil
+	}
+}
+
+// canceledUpload wraps a canceled context so errors.Is still matches it.
+// Other errors return nil and the caller keeps the existing retry behavior.
+func canceledUpload(name string, err error) error {
+	if err == nil {
+		return nil
+	}
+	if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) {
+		return fmt.Errorf("uploading %v: %w", name, err)
+	}
+	return nil
+}
+
 func (rsu *remoteStorageUtil) uploadOneFileWithRetry(ctx context.Context, meta *fileMetadata) error {
 	utilClass := rsu.getNativeCloudType(meta.stageInfo.LocationType, rsu.cfg)
 	retryOuter := true
 	for range 10 {
+		if err := canceledUpload(meta.realSrcFileName, ctx.Err()); err != nil {
+			return err
+		}
 		// retry
 		if err := rsu.uploadOneFile(ctx, meta); err != nil {
 			return err
+		}
+		// The file-transfer agent renews the client or presigned URL and retries.
+		// Keep the status so that renewal runs instead of repeating this client.
+		if meta.resStatus == renewToken || meta.resStatus == renewPresignedURL {
+			return nil
 		}
 		retryInner := true
 		if meta.resStatus == uploaded || meta.resStatus == skipped {
@@ -154,7 +204,9 @@ func (rsu *remoteStorageUtil) uploadOneFileWithRetry(ctx context.Context, meta *
 				// check file header status and verify upload/skip
 				if meta.resStatus == notFoundFile {
 					if !meta.noSleepingTime {
-						time.Sleep(time.Second) // wait 1 second for S3 eventual consistency
+						if err := sleepContext(ctx, time.Second); err != nil { // wait 1 second for S3 eventual consistency
+							return canceledUpload(meta.realSrcFileName, err)
+						}
 					}
 					continue
 				} else {

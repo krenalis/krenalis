@@ -6,7 +6,7 @@ go 1.27
 
 // Use our Snowflake driver fork. See https://github.com/krenalis/krenalis/issues/2368.
 // Keep in sync with the version within "test/krenalistester/build_run_krenalis.go".
-replace github.com/snowflakedb/gosnowflake/v2 => github.com/krenalis/gosnowflake/v2 v2.3.0-patched
+replace github.com/snowflakedb/gosnowflake/v2 => github.com/krenalis/gosnowflake/v2 v2.4.0-patched
 
 require (
 	github.com/ClickHouse/clickhouse-go/v2 v2.51.0
@@ -44,7 +44,7 @@ require (
 	github.com/prometheus/client_model v0.6.3
 	github.com/rabbitmq/amqp091-go v1.17.0
 	github.com/relvacode/iso8601 v1.8.3
-	github.com/snowflakedb/gosnowflake/v2 v2.3.0
+	github.com/snowflakedb/gosnowflake/v2 v2.4.0
 	github.com/testcontainers/testcontainers-go v0.45.0
 	github.com/testcontainers/testcontainers-go/modules/clickhouse v0.45.0
 	github.com/testcontainers/testcontainers-go/modules/nats v0.45.0

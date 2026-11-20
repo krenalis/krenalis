@@ -206,6 +206,12 @@ const (
 	ErrFailedToDecrypt = sferrors.ErrFailedToDecrypt
 	// ErrDownloadStreamDecompress is an error code denoting gzip decompression failed while reading a DownloadStream
 	ErrDownloadStreamDecompress = sferrors.ErrDownloadStreamDecompress
+	// ErrUploadStreamInvalidArg is an error code denoting an invalid argument for UploadStream
+	ErrUploadStreamInvalidArg = sferrors.ErrUploadStreamInvalidArg
+	// ErrUploadStreamLocalFS is an error code denoting UploadStream used with a LOCAL_FS stage
+	ErrUploadStreamLocalFS = sferrors.ErrUploadStreamLocalFS
+	// ErrUploadStreamSkipped is an error code denoting UploadStream left an existing object in place
+	ErrUploadStreamSkipped = sferrors.ErrUploadStreamSkipped
 
 	/* binding */
 

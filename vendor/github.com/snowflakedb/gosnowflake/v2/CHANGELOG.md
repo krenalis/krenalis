@@ -5,9 +5,33 @@
 New features:
 - Added `WrapDialContext` config option that wraps the dial function of the transports the driver creates, so that the connections can be customized or instrumented while keeping the certificate revocation checks, the proxy handling and the TLS configuration that setting `Transporter` would replace (snowflakedb/gosnowflake#1850).
 
+## 2.4.0
+
+New features:
+- Added the monitoring endpoint's timing breakdown (`TotalDuration`, `GsCompileDuration`, `GsExecDuration`, `XpExecDuration`, `QueryRetryTime`, `FaultHandlingTime`) to `SnowflakeQueryStatus`, so `GetQueryStatus` callers can read them. These fields were already returned by `/monitoring/queries/{id}` but dropped while decoding the response (snowflakedb/gosnowflake@912cb8ec2a6e).
+- Added `UploadStream` / `UploadStreamWithConfig` on `SnowflakeConnection`: upload one stage object from an `io.Reader`. Gzip is the default, the destination name is a basename, and an optional prefix selects the stage directory. The payload stays in memory until 128 MiB, then spills to disk. Prefer this over `WithFilePutStream`, which still buffers the whole file (snowflakedb/gosnowflake@150d083fc10c).
+- Added the `SF_TEMPORARY_CREDENTIAL_CACHE_FILE_NAME` environment variable to override the Linux token cache file name (default `credential_cache_v2.json`) (snowflakedb/gosnowflake@fc0309a6c496).
+
+Internal changes:
+- Upload GHA coverage reports to Dedicated Codecov (`snowflake.codecov.io`) from Jenkins snowos instead of `codecov-action` on GitHub-hosted runners, and bump golangci-lint to v2.14 for Go 1.27 (snowflakedb/gosnowflake@c05b13ef97ed).
+
+Bug fixes:
+- Fixed token cache key v2 normalization to lowercase URLs and identifiers and PascalCase token types (`IdToken`, `MfaToken`, `OauthAccessToken`, `OauthRefreshToken`) so keys match the cross-driver contract. Users of MFA, external-browser SSO, and OAuth token caching re-authenticate once after upgrading (snowflakedb/gosnowflake@fc0309a6c496).
+- Changed where cached tokens are stored so they can be shared with the universal driver: macOS Keychain and Windows Credential Manager entries use service `snowflake_credential_cache`, and the Linux cache file is `credential_cache_v2.json`. Tokens in the old locations are not read (snowflakedb/gosnowflake@fc0309a6c496).
+- Fixed the Linux token cache directory lookup to read `XDG_CACHE_HOME` instead of `XDG_CACHE_DIR`, and to disable caching with a warning instead of falling back to another directory when `SF_TEMPORARY_CREDENTIAL_CACHE_DIR` is set but unusable (snowflakedb/gosnowflake@fc0309a6c496).
+- Fixed the Linux token cache lock to use `flock` on `<cache file>.lck` instead of a lock directory that was deleted after one second, and to replace a corrupt cache file on the next write instead of disabling caching (snowflakedb/gosnowflake@fc0309a6c496).
+- Fixed `loadCore()` leaking the `gosnowflake-cgo*` temp directory on early returns (unsupported platform, statically-linked binary, or a failed `writeLibraryToFile()`) that occur before the library-write success path registers cleanup (snowflakedb/gosnowflake#1856).
+- Fixed Azure workload-identity authentication on a VM that has only a user-assigned managed identity by sending `client_id` on the IMDS token request when `WorkloadIdentityAzureClientID` or `MANAGED_IDENTITY_CLIENT_ID` is set (snowflakedb/gosnowflake@739b862f936d).
+- Avoided a process-global logger lock and per-value argument formatting while converting result cells when debug logging is off (snowflakedb/gosnowflake@62ee24639b92).
+- Demoted per-timestamp `sec`/`nsec` logging in `extractTimestamp` from INFO to DEBUG (snowflakedb/gosnowflake@62ee24639b92).
+- Fixed a panic when an ARRAY or OBJECT arrives as native Arrow. With structured types disabled, the query returns the existing structured-types error. With no field metadata, it returns an error that names the Arrow type. Previously both cases terminated the process (snowflakedb/gosnowflake@af4bbe437bb5).
+- Fixed external-browser authentication hanging when an idle connection reaches the callback listener before the real browser redirect (snowflakedb/gosnowflake@5f174118ad08).
+- Fixed Azure Git repository downloads requesting a duplicate `blobs/` prefix (snowflakedb/gosnowflake@5d3ada21b10c).
+- Fixed a data race in `WithFileGetStream` that could panic or return corrupted bytes for S3 objects downloaded in multiple parts (snowflakedb/gosnowflake@f62f4f9d9a44).
+
 ## 2.3.0
 
-Breaking changes:
+Updates:
 - OCSP certificate revocation checking is now off by default; opt in with `ocspFailOpen`/`OCSPFailOpen` or `SF_DISABLE_OCSP_CHECKS=false`.
   - `FillMissingConfigParameters` no longer defaults `OCSPFailOpen` nor snapshots the env onto `DisableOCSPChecks`.
   - `DSN()` omits unset `ocspFailOpen`, so newly generated DSNs no longer carry the opt-in, while DSNs stored from v2.2 still enable OCSP.
@@ -22,6 +46,9 @@ Bug fixes:
 - Hardened external-browser callback handling by checking `Origin` headers against the connected Snowflake account endpoint, accepting matching-Origin POST callbacks, and continuing to wait after unrelated or incomplete requests (snowflakedb/gosnowflake@386bbc9d8caa).
 - Fixed `GetQueryStatus` treating `RESTARTED` as success by counting that status as still running (snowflakedb/gosnowflake#1842).
 - Fixed stage array bind of TIMESTAMP_LTZ/NTZ/TZ writing local wallclock with no offset, so bulk inserts disagreed with scalar bind on non-UTC hosts.
+
+Internal changes:
+- Platform detection now logs why each platform was not detected.
 
 ## 2.2.0
 
