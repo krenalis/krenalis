@@ -16,6 +16,10 @@
 	width: 140px;
 }
 
+.snippet__cmp-select::part(display-input) {
+	caret-color: transparent;
+}
+
 .syntax-highlight--install-command + wa-copy-button {
 	position: absolute;
 	width: max-content !important;
