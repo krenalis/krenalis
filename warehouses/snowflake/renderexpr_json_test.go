@@ -215,15 +215,17 @@ func TestJSONExpressionErrors(t *testing.T) {
 func TestJSONExpressions(t *testing.T) {
 
 	warehouse, db := newTestSnowflakeWarehouse(t)
-	mustExecSQL(t, db, "CREATE TABLE \"JSON_EXPRESSIONS\" (\"ID\" INTEGER PRIMARY KEY, \"VALUE\" VARIANT, \"DOCUMENT\" VARIANT, \"ARRAY\" ARRAY, \"MAP\" VARIANT)")
+	mustExecSQL(t, db, `CREATE TABLE "JSON_EXPRESSIONS" ("ID" INTEGER PRIMARY KEY, "VALUE" VARIANT, `+
+		`"DOCUMENT" VARIANT, "ARRAY" ARRAY, "MAP" VARIANT)`)
 	idColumn := warehouses.Column{Name: "id", Type: types.Int(32)}
 	column := warehouses.Column{Name: "value", Type: types.JSON(), Nullable: true}
 	documentColumn := warehouses.Column{Name: "document", Type: types.JSON(), Nullable: true}
 	arrayColumn := warehouses.Column{Name: "array", Type: types.Array(types.JSON()), Nullable: true}
 	mapColumn := warehouses.Column{Name: "map", Type: types.Map(types.JSON()), Nullable: true}
 	table := warehouses.Table{
-		Name: "json_expressions", Columns: []warehouses.Column{idColumn, column, documentColumn, arrayColumn, mapColumn},
-		Keys: []string{"id"},
+		Name:    "json_expressions",
+		Columns: []warehouses.Column{idColumn, column, documentColumn, arrayColumn, mapColumn},
+		Keys:    []string{"id"},
 	}
 	values, cases := warehouseexpr.JSONCases()
 	if len(values) == 0 || len(cases) == 0 {
@@ -390,7 +392,8 @@ func TestJSONExpressions(t *testing.T) {
 				t.Fatalf("expected numeric original value, got %v", err)
 			}
 			if changed := !number.Equal(originalNumber); changed != fixture.changed {
-				t.Fatalf("expected numeric storage change %t, got %t: %s became %s", fixture.changed, changed, fixture.raw, stored)
+				t.Fatalf("expected numeric storage change %t, got %t: %s became %s",
+					fixture.changed, changed, fixture.raw, stored)
 			}
 
 			original := warehouses.JSONConditionValue{String: fixture.raw}

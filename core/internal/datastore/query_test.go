@@ -132,7 +132,9 @@ func TestConvertWhereJSONOperators(t *testing.T) {
 					}
 				}
 				original := &state.WhereCondition{
-					Property: slices.Clone(path.property), Operator: state.WhereOperator(c.Operator), Values: originalValues,
+					Property: slices.Clone(path.property),
+					Operator: state.WhereOperator(c.Operator),
+					Values:   originalValues,
 				}
 				condition := &state.WhereCondition{
 					Property: slices.Clone(path.property), Operator: original.Operator, Values: values,

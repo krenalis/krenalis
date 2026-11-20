@@ -45,7 +45,11 @@ func TestJSONFilters(t *testing.T) {
 				values[i] = state.JSONConditionValue{String: value.String, Number: value.Number}
 			}
 			where := &state.Where{Operator: state.OpAnd, Rules: []state.WhereRule{
-				&state.WhereCondition{Property: []string{"value"}, Operator: state.WhereOperator(c.Operator), Values: values},
+				&state.WhereCondition{
+					Property: []string{"value"},
+					Operator: state.WhereOperator(c.Operator),
+					Values:   values,
+				},
 			}}
 			var matches []int
 			for i, value := range fixtures {
@@ -180,7 +184,10 @@ func TestJSONFilters(t *testing.T) {
 			{"12.345678901234567890123456789012345678", "12.3456789012345678901234567890123456781"},
 			{"-12.3456789012345678901234567890123456781", "-12.345678901234567890123456789012345678"},
 		} {
-			conditions = append(conditions, condition{op, []any{jsonFilterOperand(bounds[0]), jsonFilterOperand(bounds[1])}})
+			conditions = append(conditions, condition{op, []any{
+				jsonFilterOperand(bounds[0]),
+				jsonFilterOperand(bounds[1]),
+			}})
 		}
 	}
 	for _, op := range []state.WhereOperator{state.OpIsOneOf, state.OpIsNotOneOf} {
@@ -325,7 +332,8 @@ func TestJSONFilters(t *testing.T) {
 						allowed = allowed || cond.operator == state.OpIsEmpty || cond.operator == state.OpIsNotEmpty
 					}
 					if path == "array" {
-						allowed = allowed || cond.operator == state.OpContains || cond.operator == state.OpDoesNotContain
+						allowed = allowed || cond.operator == state.OpContains ||
+							cond.operator == state.OpDoesNotContain
 					}
 					if !allowed {
 						continue
@@ -337,7 +345,11 @@ func TestJSONFilters(t *testing.T) {
 					queries = append(queries, queryCase{
 						name: fmt.Sprintf("%s/%s/%q", path, cond.operator, texts),
 						where: &state.Where{Operator: state.OpAnd, Rules: []state.WhereRule{
-							&state.WhereCondition{Property: []string{path}, Operator: cond.operator, Values: cond.values},
+							&state.WhereCondition{
+								Property: []string{path},
+								Operator: cond.operator,
+								Values:   cond.values,
+							},
 						}},
 					})
 				}
@@ -347,8 +359,16 @@ func TestJSONFilters(t *testing.T) {
 				where: &state.Where{Operator: state.OpAnd, Rules: []state.WhereRule{
 					&state.WhereCondition{Property: []string{"document", "a", "b"}, Operator: state.OpIsNotNull},
 					&state.Where{Operator: state.OpOr, Rules: []state.WhereRule{
-						&state.WhereCondition{Property: []string{"value"}, Operator: state.OpIsNot, Values: []any{jsonFilterOperand("670")}},
-						&state.WhereCondition{Property: []string{"array"}, Operator: state.OpContains, Values: []any{jsonFilterOperand("foo")}},
+						&state.WhereCondition{
+							Property: []string{"value"},
+							Operator: state.OpIsNot,
+							Values:   []any{jsonFilterOperand("670")},
+						},
+						&state.WhereCondition{
+							Property: []string{"array"},
+							Operator: state.OpContains,
+							Values:   []any{jsonFilterOperand("foo")},
+						},
 					}},
 				}},
 			})
@@ -393,7 +413,8 @@ func TestJSONFilters(t *testing.T) {
 				for i, query := range batch {
 					t.Run(query.name, func(t *testing.T) {
 						if counts[2*i] != wants[i] || counts[2*i+1] != 0 {
-							t.Fatalf("expected %d matching rows and 0 unexpected IDs, got %d and %d", wants[i], counts[2*i], counts[2*i+1])
+							t.Fatalf("expected %d matching rows and 0 unexpected IDs, got %d and %d",
+								wants[i], counts[2*i], counts[2*i+1])
 						}
 					})
 				}
