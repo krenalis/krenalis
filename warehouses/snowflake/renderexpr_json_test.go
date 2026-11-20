@@ -5,7 +5,6 @@
 package snowflake
 
 import (
-	"fmt"
 	"slices"
 	"strings"
 	"testing"
@@ -20,50 +19,63 @@ import (
 // TestJSONDecimalRendering checks numeric literals and comparison bounds.
 func TestJSONDecimalRendering(t *testing.T) {
 
+	operators := []struct {
+		name string
+		op   warehouses.Operator
+	}{
+		{"is", warehouses.OpIs},
+		{"is one of", warehouses.OpIsOneOf},
+		{"contains", warehouses.OpContains},
+	}
+
 	for _, test := range []struct {
+		name    string
 		number  decimal.Decimal
 		fixed   string
 		literal string // empty when the operand needs more than 38 significant digits
 	}{
-		{decimal.Decimal{}, "0.", "0"},
-		{decimal.New(0, decimal.MaxScale), "0.", "0"},
-		{decimal.MustParse("1000"), "1000.", "1e3"},
-		{decimal.New(12300, 4), "1.23", "123e-2"},
-		{decimal.MustParse("-0.0012300"), "-0.00123", "-123e-5"},
-		{decimal.New(10, 38), "0." + strings.Repeat("0", 36) + "1", "1e-37"},
-		{decimal.MustParse("1" + strings.Repeat("0", 38)), "1" + strings.Repeat("0", 38) + ".", "1e38"},
-		{decimal.MustParse("1." + strings.Repeat("0", 38)), "1.", "1e0"},
-		{decimal.MustParse("1e75"), "1" + strings.Repeat("0", 75) + ".", "1e75"},
-		{decimal.MustParse(strings.Repeat("9", 38)), strings.Repeat("9", 38) + ".", strings.Repeat("9", 38) + "e0"},
-		{decimal.MustParse(strings.Repeat("9", 39)), strings.Repeat("9", 39) + ".", ""},
-		{decimal.MustParse("-" + strings.Repeat("9", 39)), "-" + strings.Repeat("9", 39) + ".", ""},
-		{decimal.MustParse(strings.Repeat("9", 76)), strings.Repeat("9", 76) + ".", ""},
-		{decimal.MustParse("-" + strings.Repeat("9", 39) + "." + strings.Repeat("8", 37)), "-" + strings.Repeat("9", 39) + "." + strings.Repeat("8", 37), ""},
+		{"zero", decimal.Decimal{}, "0.", "0"},
+		{"zero with maximum scale", decimal.New(0, decimal.MaxScale), "0.", "0"},
+		{"integer", decimal.MustParse("1000"), "1000.", "1e3"},
+		{"trailing fractional zeros", decimal.New(12300, 4), "1.23", "123e-2"},
+		{"negative fraction", decimal.MustParse("-0.0012300"), "-0.00123", "-123e-5"},
+		{"normalized scale 37", decimal.New(10, 38), "0." + strings.Repeat("0", 36) + "1", "1e-37"},
+		{"large power of ten", decimal.MustParse("1" + strings.Repeat("0", 38)), "1" + strings.Repeat("0", 38) + ".", "1e38"},
+		{"integer with fractional zeros", decimal.MustParse("1." + strings.Repeat("0", 38)), "1.", "1e0"},
+		{"positive exponent", decimal.MustParse("1e75"), "1" + strings.Repeat("0", 75) + ".", "1e75"},
+		{"positive exponent with fractional mantissa", decimal.MustParse("1.23e5"), "123000.", "123e3"},
+		{"38 digits", decimal.MustParse(strings.Repeat("9", 38)), strings.Repeat("9", 38) + ".", strings.Repeat("9", 38) + "e0"},
+		{"39 digits", decimal.MustParse(strings.Repeat("9", 39)), strings.Repeat("9", 39) + ".", ""},
+		{"negative 39 digits", decimal.MustParse("-" + strings.Repeat("9", 39)), "-" + strings.Repeat("9", 39) + ".", ""},
+		{"76 digits", decimal.MustParse(strings.Repeat("9", 76)), strings.Repeat("9", 76) + ".", ""},
+		{"large negative fraction", decimal.MustParse("-" + strings.Repeat("9", 39) + "." + strings.Repeat("8", 37)),
+			"-" + strings.Repeat("9", 39) + "." + strings.Repeat("8", 37), ""},
 	} {
-		for _, op := range []warehouses.Operator{warehouses.OpIs, warehouses.OpIsOneOf, warehouses.OpContains} {
-			t.Run(fmt.Sprintf("%d/%s", op, test.number), func(t *testing.T) {
+		for _, operator := range operators {
+			t.Run(test.name+"/"+operator.name, func(t *testing.T) {
 				column := warehouses.Column{Name: "value", Type: types.JSON()}
 				target := `"VALUE"`
-				if op == warehouses.OpContains {
+				if operator.op == warehouses.OpContains {
 					column.Type = types.Array(types.JSON())
 					target = "krenalis_json_element"
 				}
+				// Use distinct text for the string branch of the same operand.
 				operand := warehouses.JSONConditionValue{String: "threshold", Number: &test.number}
 				var b strings.Builder
-				err := renderExpr(&b, warehouses.NewBaseExpr(column, op, operand))
+				err := renderExpr(&b, warehouses.NewBaseExpr(column, operator.op, operand))
 				if err != nil {
 					t.Fatalf("expected valid numeric expression, got %v", err)
 				}
 				query := b.String()
 				match := "= '" + test.fixed + "'"
-				if op == warehouses.OpIsOneOf {
+				if operator.op == warehouses.OpIsOneOf {
 					match = "WHEN '" + test.fixed + "' THEN TRUE"
 				}
 				if !strings.Contains(query, match) {
 					t.Fatalf("expected fixed-point comparison containing %s, got %s", match, query)
 				}
 				want := "TRY_TO_DECFLOAT(TO_JSON(" + target + ")) = TO_DECFLOAT('" + test.literal + "')"
-				if op == warehouses.OpIsOneOf {
+				if operator.op == warehouses.OpIsOneOf {
 					want = "TRY_TO_DECFLOAT(TO_JSON(" + target + ")) IN (TO_DECFLOAT('" + test.literal + "'))"
 				}
 				if test.literal == "" {
@@ -71,7 +83,7 @@ func TestJSONDecimalRendering(t *testing.T) {
 						t.Fatalf("expected no numeric conversion for an inexact equality operand, got %s", query)
 					}
 					want = "WHEN IS_DOUBLE(" + target + ") THEN FALSE"
-					if op == warehouses.OpIsOneOf {
+					if operator.op == warehouses.OpIsOneOf {
 						want = "WHEN IS_DECIMAL(" + target + ") THEN CASE"
 					}
 				}
@@ -83,22 +95,33 @@ func TestJSONDecimalRendering(t *testing.T) {
 	}
 
 	for _, test := range []struct {
+		name       string
 		number     string
 		operator   warehouses.Operator
 		comparison string
 	}{
-		{"12345678901234567890123456789012345678.9", warehouses.OpIsLessThan, "<= TO_DECFLOAT('12345678901234567890123456789012345678e0')"},
-		{"12345678901234567890123456789012345678.9", warehouses.OpIsLessThanOrEqualTo, "<= TO_DECFLOAT('12345678901234567890123456789012345678e0')"},
-		{"12345678901234567890123456789012345678.9", warehouses.OpIsGreaterThan, "> TO_DECFLOAT('12345678901234567890123456789012345678e0')"},
-		{"12345678901234567890123456789012345678.9", warehouses.OpIsGreaterThanOrEqualTo, "> TO_DECFLOAT('12345678901234567890123456789012345678e0')"},
-		{"-12345678901234567890123456789012345678.9", warehouses.OpIsLessThan, "< TO_DECFLOAT('-12345678901234567890123456789012345678e0')"},
-		{"-12345678901234567890123456789012345678.9", warehouses.OpIsLessThanOrEqualTo, "< TO_DECFLOAT('-12345678901234567890123456789012345678e0')"},
-		{"-12345678901234567890123456789012345678.9", warehouses.OpIsGreaterThan, ">= TO_DECFLOAT('-12345678901234567890123456789012345678e0')"},
-		{"-12345678901234567890123456789012345678.9", warehouses.OpIsGreaterThanOrEqualTo, ">= TO_DECFLOAT('-12345678901234567890123456789012345678e0')"},
-		{"99999999999999999999999999999999999999.9", warehouses.OpIsLessThan, "<= TO_DECFLOAT('99999999999999999999999999999999999999e0')"},
-		{"-99999999999999999999999999999999999999.9", warehouses.OpIsGreaterThan, ">= TO_DECFLOAT('-99999999999999999999999999999999999999e0')"},
+		{"positive/is less than", "12345678901234567890123456789012345678.9", warehouses.OpIsLessThan,
+			"<= TO_DECFLOAT('12345678901234567890123456789012345678e0')"},
+		{"positive/is less than or equal to", "12345678901234567890123456789012345678.9", warehouses.OpIsLessThanOrEqualTo,
+			"<= TO_DECFLOAT('12345678901234567890123456789012345678e0')"},
+		{"positive/is greater than", "12345678901234567890123456789012345678.9", warehouses.OpIsGreaterThan,
+			"> TO_DECFLOAT('12345678901234567890123456789012345678e0')"},
+		{"positive/is greater than or equal to", "12345678901234567890123456789012345678.9", warehouses.OpIsGreaterThanOrEqualTo,
+			"> TO_DECFLOAT('12345678901234567890123456789012345678e0')"},
+		{"negative/is less than", "-12345678901234567890123456789012345678.9", warehouses.OpIsLessThan,
+			"< TO_DECFLOAT('-12345678901234567890123456789012345678e0')"},
+		{"negative/is less than or equal to", "-12345678901234567890123456789012345678.9", warehouses.OpIsLessThanOrEqualTo,
+			"< TO_DECFLOAT('-12345678901234567890123456789012345678e0')"},
+		{"negative/is greater than", "-12345678901234567890123456789012345678.9", warehouses.OpIsGreaterThan,
+			">= TO_DECFLOAT('-12345678901234567890123456789012345678e0')"},
+		{"negative/is greater than or equal to", "-12345678901234567890123456789012345678.9", warehouses.OpIsGreaterThanOrEqualTo,
+			">= TO_DECFLOAT('-12345678901234567890123456789012345678e0')"},
+		{"positive all nines/is less than", "99999999999999999999999999999999999999.9", warehouses.OpIsLessThan,
+			"<= TO_DECFLOAT('99999999999999999999999999999999999999e0')"},
+		{"negative all nines/is greater than", "-99999999999999999999999999999999999999.9", warehouses.OpIsGreaterThan,
+			">= TO_DECFLOAT('-99999999999999999999999999999999999999e0')"},
 	} {
-		t.Run(fmt.Sprintf("%d/%s", test.operator, test.number), func(t *testing.T) {
+		t.Run("bounds/"+test.name, func(t *testing.T) {
 			column := warehouses.Column{Name: "value", Type: types.JSON()}
 			var b strings.Builder
 			err := renderExpr(&b, warehouses.NewBaseExpr(column, test.operator, warehouseexpr.Operand(test.number)))
@@ -117,6 +140,11 @@ func TestJSONDecimalRendering(t *testing.T) {
 
 // TestJSONExpressionErrors verifies that invalid JSON expressions are rejected.
 func TestJSONExpressionErrors(t *testing.T) {
+
+	// jsonNumber sets Number even for decimals outside the renderer's limits.
+	jsonNumber := func(text string) warehouses.JSONConditionValue {
+		return warehouses.JSONConditionValue{String: text, Number: new(decimal.MustParse(text))}
+	}
 
 	column := warehouses.Column{Name: "value", Type: types.JSON()}
 	array := warehouses.Column{Name: "value", Type: types.Array(types.JSON())}
@@ -148,29 +176,23 @@ func TestJSONExpressionErrors(t *testing.T) {
 			`operator 8 is not supported for type "map(json)"`},
 		{"array with JSON keys", &warehouses.BaseExpr{Column: array, Keys: []string{"key"}, Operator: warehouses.OpExists},
 			`JSON keys cannot be used with type "array(json)"`},
-		{"number exceeds precision", warehouses.NewBaseExpr(column, warehouses.OpIs,
-			warehouses.JSONConditionValue{String: "1e76", Number: new(decimal.MustParse("1e76"))}),
+		{"number exceeds precision", warehouses.NewBaseExpr(column, warehouses.OpIs, jsonNumber("1e76")),
 			"decimal operand exceeds precision 76 or scale 37"},
-		{"number exceeds scale", warehouses.NewBaseExpr(column, warehouses.OpIs,
-			warehouses.JSONConditionValue{String: "1e-38", Number: new(decimal.MustParse("1e-38"))}),
+		{"number exceeds scale", warehouses.NewBaseExpr(column, warehouses.OpIs, jsonNumber("1e-38")),
 			"decimal operand exceeds precision 76 or scale 37"},
-		{"number has large positive exponent", warehouses.NewBaseExpr(column, warehouses.OpIs,
-			warehouses.JSONConditionValue{String: "1e999999", Number: new(decimal.MustParse("1e999999"))}),
+		{"number has large positive exponent", warehouses.NewBaseExpr(column, warehouses.OpIs, jsonNumber("1e999999")),
 			"decimal operand exceeds precision 76 or scale 37"},
-		{"number has large negative exponent", warehouses.NewBaseExpr(column, warehouses.OpIs,
-			warehouses.JSONConditionValue{String: "1e-999999", Number: new(decimal.MustParse("1e-999999"))}),
+		{"number has large negative exponent", warehouses.NewBaseExpr(column, warehouses.OpIs, jsonNumber("1e-999999")),
 			"decimal operand exceeds precision 76 or scale 37"},
 		{"between with invalid second number", warehouses.NewBaseExpr(column, warehouses.OpIsBetween,
-			warehouseexpr.Operand("0"), warehouses.JSONConditionValue{String: "1e-38", Number: new(decimal.MustParse("1e-38"))}),
+			warehouseexpr.Operand("0"), jsonNumber("1e-38")),
 			"decimal operand exceeds precision 76 or scale 37"},
 		{"one of with invalid second number", warehouses.NewBaseExpr(column, warehouses.OpIsOneOf,
-			warehouseexpr.Operand("0"), warehouses.JSONConditionValue{String: "1e76", Number: new(decimal.MustParse("1e76"))}),
+			warehouseexpr.Operand("0"), jsonNumber("1e76")),
 			"decimal operand exceeds precision 76 or scale 37"},
-		{"array number exceeds precision", warehouses.NewBaseExpr(array, warehouses.OpContains,
-			warehouses.JSONConditionValue{String: "1e76", Number: new(decimal.MustParse("1e76"))}),
+		{"array number exceeds precision", warehouses.NewBaseExpr(array, warehouses.OpContains, jsonNumber("1e76")),
 			"decimal operand exceeds precision 76 or scale 37"},
-		{"array number exceeds scale", warehouses.NewBaseExpr(array, warehouses.OpDoesNotContain,
-			warehouses.JSONConditionValue{String: "1e-38", Number: new(decimal.MustParse("1e-38"))}),
+		{"array number exceeds scale", warehouses.NewBaseExpr(array, warehouses.OpDoesNotContain, jsonNumber("1e-38")),
 			"decimal operand exceeds precision 76 or scale 37"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
@@ -188,7 +210,7 @@ func TestJSONExpressionErrors(t *testing.T) {
 
 }
 
-// TestJSONExpressions verifies JSON filtering on data written by Merge.
+// TestJSONExpressions verifies JSON filters on data written by Merge.
 func TestJSONExpressions(t *testing.T) {
 
 	warehouse, db := newTestSnowflakeWarehouse(t)
@@ -206,7 +228,20 @@ func TestJSONExpressions(t *testing.T) {
 	if len(values) == 0 || len(cases) == 0 {
 		t.Fatalf("expected nonempty JSON fixtures and cases, got %d and %d", len(values), len(cases))
 	}
-	data := make([][]any, len(values))
+	emptyID := len(values)
+	mixedID := emptyID + 1
+	numericFixtures := []struct {
+		raw, lower, upper       string
+		compareOriginalAsNumber bool
+		changed                 bool
+	}{
+		{"123456789012345678901234567890123456789", "123456789012345678901234567890123456788", "123456789012345678901234567890123456790", true, false},
+		{"-123456789012345678901234567890123456789", "-123456789012345678901234567890123456790", "-123456789012345678901234567890123456788", true, false},
+		{"9007199254740993e0", "9007199254740991", "9007199254740994", true, true},
+		{"1.234567890123456789e0", "1.23456789012345", "1.23456789012347", true, true},
+		{"0.1234567890123456789012345678901234567890123456789", "0.12345678901234", "0.12345678901235", false, true},
+	}
+	data := make([][]any, len(values), mixedID+1+len(numericFixtures))
 	for i, value := range values {
 		var scalar, document, array, mapping any
 		if value != nil {
@@ -217,11 +252,22 @@ func TestJSONExpressions(t *testing.T) {
 		}
 		data[i] = []any{i, scalar, document, array, mapping}
 	}
+	data = append(data,
+		[]any{emptyID, nil, nil, []any{}, map[string]any{}},
+		[]any{mixedID, nil, nil, []any{
+			json.Value("null"), json.Value("true"), json.Value("5"), json.Value("5"),
+			json.Value("\"foo\""), json.Value("[6]"), json.Value("{\"key\":6}"),
+		}, nil},
+	)
+	for i, fixture := range numericFixtures {
+		data = append(data, []any{mixedID + 1 + i, json.Value(fixture.raw), nil, nil, nil})
+	}
 	err := warehouse.Merge(t.Context(), table, data, nil)
 	if err != nil {
 		t.Fatalf("expected fixture merge, got %v", err)
 	}
 
+	fixtureRange := warehouses.NewBaseExpr(idColumn, warehouses.OpIsLessThan, emptyID)
 	for _, path := range []struct {
 		name string
 		keys []string
@@ -233,7 +279,8 @@ func TestJSONExpressions(t *testing.T) {
 					expr.Column = documentColumn
 					expr.Keys = path.keys
 				}
-				checkJSONExpression(t, warehouse, table.Name, idColumn, expr, c.Matches)
+				where := warehouses.NewMultiExpr(warehouses.OpAnd, []warehouses.Expr{fixtureRange, expr})
+				checkJSONExpression(t, warehouse, table.Name, idColumn, where, c.Matches)
 			})
 		}
 	}
@@ -248,17 +295,15 @@ func TestJSONExpressions(t *testing.T) {
 			if c.Operator == warehouses.OpIsNot {
 				op = warehouses.OpDoesNotContain
 			}
-			checkJSONExpression(t, warehouse, table.Name, idColumn,
-				warehouses.NewBaseExpr(arrayColumn, op, c.Values...), c.Matches)
+			expr := warehouses.NewMultiExpr(warehouses.OpAnd, []warehouses.Expr{
+				fixtureRange, warehouses.NewBaseExpr(arrayColumn, op, c.Values...),
+			})
+			checkJSONExpression(t, warehouse, table.Name, idColumn, expr, c.Matches)
 		})
 	}
 
 	// Container filters treat SQL NULL as empty, but still distinguish it
 	// from a present empty container for null and existence checks.
-	err = warehouse.Merge(t.Context(), table, [][]any{{len(values), nil, nil, []any{}, map[string]any{}}}, nil)
-	if err != nil {
-		t.Fatalf("expected empty container fixture merge, got %v", err)
-	}
 	var absentIDs, nonEmptyIDs []int
 	for i, value := range values {
 		if value == nil {
@@ -270,8 +315,9 @@ func TestJSONExpressions(t *testing.T) {
 	if len(absentIDs) == 0 || len(nonEmptyIDs) == 0 {
 		t.Fatalf("expected absent and present JSON fixtures, got %d and %d", len(absentIDs), len(nonEmptyIDs))
 	}
-	emptyIDs := append(slices.Clone(absentIDs), len(values))
-	presentIDs := append(slices.Clone(nonEmptyIDs), len(values))
+	emptyIDs := append(slices.Clone(absentIDs), emptyID)
+	presentIDs := append(slices.Clone(nonEmptyIDs), emptyID)
+	containerRange := warehouses.NewBaseExpr(idColumn, warehouses.OpIsLessThanOrEqualTo, emptyID)
 	for _, container := range []warehouses.Column{arrayColumn, mapColumn} {
 		for _, c := range []struct {
 			name    string
@@ -286,22 +332,16 @@ func TestJSONExpressions(t *testing.T) {
 			{"does not exist", warehouses.OpDoesNotExist, absentIDs},
 		} {
 			t.Run(container.Name+"/"+c.name, func(t *testing.T) {
-				checkJSONExpression(t, warehouse, table.Name, idColumn,
-					warehouses.NewBaseExpr(container, c.op), c.matches)
+				expr := warehouses.NewMultiExpr(warehouses.OpAnd, []warehouses.Expr{
+					containerRange, warehouses.NewBaseExpr(container, c.op),
+				})
+				checkJSONExpression(t, warehouse, table.Name, idColumn, expr, c.matches)
 			})
 		}
 	}
 
 	// A mixed SQL array searches all immediate scalar elements, including
 	// duplicates, without matching scalars nested inside JSON arrays or objects.
-	mixedID := len(values) + 1
-	err = warehouse.Merge(t.Context(), table, [][]any{{mixedID, nil, nil, []any{
-		json.Value("null"), json.Value("true"), json.Value("5"), json.Value("5"),
-		json.Value("\"foo\""), json.Value("[6]"), json.Value("{\"key\":6}"),
-	}, nil}}, nil)
-	if err != nil {
-		t.Fatalf("expected mixed array fixture merge, got %v", err)
-	}
 	for _, c := range []struct {
 		name    string
 		operand any
@@ -334,54 +374,12 @@ func TestJSONExpressions(t *testing.T) {
 
 	// Check storage precision separately from comparisons with stored values.
 	// Explicit lower and upper bounds also exercise positive comparisons.
-	for i, fixture := range []struct {
-		raw, lower, upper string
-		changed           bool
-	}{
-		{"123456789012345678901234567890123456789", "123456789012345678901234567890123456788", "123456789012345678901234567890123456790", false},
-		{"-123456789012345678901234567890123456789", "-123456789012345678901234567890123456790", "-123456789012345678901234567890123456788", false},
-		{"9007199254740993e0", "9007199254740991", "9007199254740994", true},
-		{"1.234567890123456789e0", "1.23456789012345", "1.23456789012347", true},
-		{"0.1234567890123456789012345678901234567890123456789", "0.12345678901234", "0.12345678901235", true},
-	} {
+	for i, fixture := range numericFixtures {
 		t.Run("numeric representation/"+fixture.raw, func(t *testing.T) {
 
 			id := mixedID + 1 + i
-			err := warehouse.Merge(t.Context(), table, [][]any{{id, json.Value(fixture.raw), nil, nil, nil}}, nil)
-			if err != nil {
-				t.Fatalf("expected numeric fixture merge, got %v", err)
-			}
 			idExpr := warehouses.NewBaseExpr(idColumn, warehouses.OpIs, id)
-			rows, _, err := warehouse.Query(t.Context(), warehouses.RowQuery{
-				Table: table.Name, Columns: []warehouses.Column{column}, Where: idExpr,
-			}, false)
-			if err != nil {
-				t.Fatalf("expected numeric fixture query, got %v", err)
-			}
-			defer rows.Close()
-			if !rows.Next() {
-				err = rows.Err()
-				if err != nil {
-					t.Fatalf("expected numeric fixture iteration, got %v", err)
-				}
-				t.Fatal("expected stored numeric fixture, got no rows")
-			}
-			scanned := make([]any, 1)
-			err = rows.Scan(scanned...)
-			if err != nil {
-				t.Fatalf("expected numeric fixture scan, got %v", err)
-			}
-			stored, ok := scanned[0].(json.Value)
-			if !ok {
-				t.Fatalf("expected stored JSON value, got %T", scanned[0])
-			}
-			if rows.Next() {
-				t.Fatal("expected one numeric fixture, got additional rows")
-			}
-			err = rows.Err()
-			if err != nil {
-				t.Fatalf("expected complete numeric fixture iteration, got %v", err)
-			}
+			stored := readJSONValue(t, warehouse, table.Name, column, idExpr)
 			number, err := stored.Decimal(0, 0)
 			if err != nil {
 				t.Fatalf("expected stored JSON number, got %v", err)
@@ -390,16 +388,17 @@ func TestJSONExpressions(t *testing.T) {
 			if err != nil {
 				t.Fatalf("expected numeric original value, got %v", err)
 			}
-			original := warehouseexpr.Operand(fixture.raw)
-			storedOperand := warehouseexpr.Operand(string(stored))
-			changed := !number.Equal(originalNumber)
-			if changed != fixture.changed {
+			if changed := !number.Equal(originalNumber); changed != fixture.changed {
 				t.Fatalf("expected numeric storage change %t, got %t: %s became %s", fixture.changed, changed, fixture.raw, stored)
 			}
-			err = rows.Close()
-			if err != nil {
-				t.Fatalf("expected numeric query close, got %v", err)
+
+			original := warehouses.JSONConditionValue{String: fixture.raw}
+			storedOperand := warehouses.JSONConditionValue{String: string(stored), Number: &number}
+			if fixture.compareOriginalAsNumber {
+				original.Number = &originalNumber
 			}
+			lower := warehouses.JSONConditionValue{String: fixture.lower, Number: new(decimal.MustParse(fixture.lower))}
+			upper := warehouses.JSONConditionValue{String: fixture.upper, Number: new(decimal.MustParse(fixture.upper))}
 
 			for _, c := range []struct {
 				name    string
@@ -407,12 +406,12 @@ func TestJSONExpressions(t *testing.T) {
 				operand warehouses.JSONConditionValue
 				matches bool
 			}{
-				{"stored equality", warehouses.OpIs, storedOperand, storedOperand.Number != nil},
-				{"original equality", warehouses.OpIs, original, original.Number != nil && !changed},
-				{"original less than", warehouses.OpIsLessThan, original, original.Number != nil && number.Less(originalNumber)},
-				{"original greater than", warehouses.OpIsGreaterThan, original, original.Number != nil && number.Greater(originalNumber)},
-				{"less than upper bound", warehouses.OpIsLessThan, warehouseexpr.Operand(fixture.upper), true},
-				{"greater than lower bound", warehouses.OpIsGreaterThan, warehouseexpr.Operand(fixture.lower), true},
+				{"stored equality", warehouses.OpIs, storedOperand, true},
+				{"original equality", warehouses.OpIs, original, fixture.compareOriginalAsNumber && !fixture.changed},
+				{"original less than", warehouses.OpIsLessThan, original, fixture.compareOriginalAsNumber && number.Less(originalNumber)},
+				{"original greater than", warehouses.OpIsGreaterThan, original, fixture.compareOriginalAsNumber && number.Greater(originalNumber)},
+				{"less than upper bound", warehouses.OpIsLessThan, upper, true},
+				{"greater than lower bound", warehouses.OpIsGreaterThan, lower, true},
 			} {
 				t.Run(c.name, func(t *testing.T) {
 					var want []int
@@ -431,8 +430,8 @@ func TestJSONExpressions(t *testing.T) {
 
 }
 
-// checkJSONExpression checks the matching IDs and the total row count.
-// want must contain IDs in ascending order.
+// checkJSONExpression checks the matching row IDs and total count.
+// want must be sorted in ascending order.
 func checkJSONExpression(t *testing.T, warehouse warehouses.Warehouse, table string, idColumn warehouses.Column, expr warehouses.Expr, want []int) {
 
 	t.Helper()
@@ -467,4 +466,38 @@ func checkJSONExpression(t *testing.T, warehouse warehouses.Warehouse, table str
 		t.Errorf("expected total %d, got %d", len(want), total)
 	}
 
+}
+
+// readJSONValue reads a JSON value, expecting exactly one matching row.
+func readJSONValue(t *testing.T, warehouse warehouses.Warehouse, table string, column warehouses.Column, where warehouses.Expr) json.Value {
+	t.Helper()
+	rows, _, err := warehouse.Query(t.Context(), warehouses.RowQuery{
+		Table: table, Columns: []warehouses.Column{column}, Where: where,
+	}, false)
+	if err != nil {
+		t.Fatalf("expected JSON value query, got %v", err)
+	}
+	defer rows.Close()
+	if !rows.Next() {
+		if err := rows.Err(); err != nil {
+			t.Fatalf("expected JSON value iteration, got %v", err)
+		}
+		t.Fatal("expected one JSON value, got no rows")
+	}
+	scanned := make([]any, 1)
+	err = rows.Scan(scanned...)
+	if err != nil {
+		t.Fatalf("expected JSON value scan, got %v", err)
+	}
+	stored, ok := scanned[0].(json.Value)
+	if !ok {
+		t.Fatalf("expected JSON value, got %T", scanned[0])
+	}
+	if rows.Next() {
+		t.Fatal("expected one JSON value, got additional rows")
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatalf("expected complete JSON value iteration, got %v", err)
+	}
+	return stored
 }

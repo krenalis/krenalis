@@ -263,7 +263,8 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 }
 
 // renderJSONComparison compares JSON strings and numbers without coercing other
-// types, using byte order for strings and exact decimal ordering for numbers.
+// types, using byte-wise ordering for strings and exact decimal ordering for
+// numbers as represented by the warehouse.
 func renderJSONComparison(b *strings.Builder, target, operator string, value warehouses.JSONConditionValue) {
 	isString := "jsonb_typeof(" + target + ") = 'string'"
 	isNumber := "jsonb_typeof(" + target + ") = 'number'"
@@ -278,8 +279,8 @@ func renderJSONComparison(b *strings.Builder, target, operator string, value war
 }
 
 // renderJSONExpr renders filters on JSON columns and containers of JSON values.
-// Predicates on JSON values are two-valued, so negative operators include
-// absent values, nulls, and non-matching JSON kinds.
+// JSON predicates use two-valued logic even for absent values and JSON null.
+// Negative operators match exactly when their positive counterparts do not.
 func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr) error {
 
 	c := expr.Column
@@ -387,7 +388,7 @@ func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr) error {
 		return fmt.Errorf("operator %d requires %d values, got %d", expr.Operator, count, len(expr.Values))
 	}
 
-	// Preserve structural equality when callers provide an encoded JSON value.
+	// Preserve structural equality when callers provide a JSON-encoded value.
 	if count == 1 && op == warehouses.OpIs {
 		if operand, ok := expr.Values[0].(json.Value); ok {
 			if negative {

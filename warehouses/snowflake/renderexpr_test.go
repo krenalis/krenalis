@@ -192,8 +192,10 @@ func Test_renderExpr(t *testing.T) {
 			query: `"A" = "B"`,
 		},
 		{
-			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.JSON()}, warehouses.OpIs, json.Value(`{"foo":2,"boo":true}`)),
-			query: `COALESCE("VALUES" = PARSE_JSON('{"foo":2,"boo":true}'), FALSE)`,
+			name: "JSON structural equality with apostrophe",
+			expr: warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.JSON()},
+				warehouses.OpIs, json.Value(`{"foo":2,"boo":true,"name":"O'Reilly"}`)),
+			query: `COALESCE("VALUES" = PARSE_JSON('{"foo":2,"boo":true,"name":"O\'Reilly"}'), FALSE)`,
 		},
 		{
 			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "weight", Type: types.Float(32)}, warehouses.OpIsLessThan, 6.5),
@@ -356,10 +358,12 @@ func Test_renderExpr(t *testing.T) {
 			query: `"ID" IS NOT NULL`,
 		},
 		{
+			name:  "string column exists",
 			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "id", Type: types.String()}, warehouses.OpExists),
 			query: `"ID" IS NOT NULL`,
 		},
 		{
+			name:  "string column does not exist",
 			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "id", Type: types.String()}, warehouses.OpDoesNotExist),
 			query: `"ID" IS NULL`,
 		},
@@ -407,6 +411,7 @@ func Test_renderExpr(t *testing.T) {
 			query: `("ID" = 'abc_42' OR "ID" = 'abc_50' OR "ID" = 'abc_60') AND ("COUNT" = 100 OR "COUNT" = 200 OR "COUNT" = 300)`,
 		},
 		{
+			name: "combined emptiness checks with JSON",
 			expr: warehouses.NewMultiExpr(
 				warehouses.OpOr,
 				[]warehouses.Expr{
@@ -439,12 +444,12 @@ func Test_renderExpr(t *testing.T) {
 		},
 		{
 			name:    "decimal between invalid second operand",
-			expr:    warehouses.NewBaseExpr(column, warehouses.OpIsBetween, decimal.Decimal{}, decimal.MustParse("1e-38")),
+			expr:    warehouses.NewBaseExpr(column, warehouses.OpIsBetween, decimal.MustInt(0), decimal.MustParse("1e-38")),
 			wantErr: "decimal operand exceeds precision 76 or scale 37",
 		},
 		{
 			name:    "decimal membership invalid second operand",
-			expr:    warehouses.NewBaseExpr(column, warehouses.OpIsOneOf, decimal.Decimal{}, decimal.MustParse("1e76")),
+			expr:    warehouses.NewBaseExpr(column, warehouses.OpIsOneOf, decimal.MustInt(0), decimal.MustParse("1e76")),
 			wantErr: "decimal operand exceeds precision 76 or scale 37",
 		},
 		{
@@ -460,7 +465,7 @@ func Test_renderExpr(t *testing.T) {
 		{
 			name: "decimal invalid nested expression after valid expression",
 			expr: warehouses.NewMultiExpr(warehouses.OpAnd, []warehouses.Expr{
-				warehouses.NewBaseExpr(column, warehouses.OpIs, decimal.Decimal{}),
+				warehouses.NewBaseExpr(column, warehouses.OpIs, decimal.MustInt(0)),
 				warehouses.NewMultiExpr(warehouses.OpOr, []warehouses.Expr{
 					warehouses.NewBaseExpr(column, warehouses.OpIs, decimal.MustParse("1e76")),
 				}),
