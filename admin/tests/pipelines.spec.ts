@@ -452,6 +452,72 @@ test('Submit a JSON filter when saving a User export', async ({ page }) => {
 	await expect(page.locator('.pipeline__header')).toHaveCount(0);
 });
 
+for (const scenario of [
+	{
+		name: 'Normalize a quoted operand in a User export preview',
+		rule: { property: 'email', operator: 'is', values: ['preview@example.test'] },
+		draftValue: '"preview@example.test"',
+	},
+	{
+		name: 'Omit values for a saved unary filter in a User export preview',
+		rule: { property: 'email', operator: 'exists' },
+		draftValue: null,
+	},
+]) {
+	test(scenario.name, async ({ page }) => {
+		const id = await addDummyDestination(page);
+		const pipelinesURL = `${adminURL}/connections/${id}/pipelines`;
+		await page.goto(pipelinesURL);
+		const tile = page.locator('.connection-pipelines__no-pipeline-pipeline-types .list-tile__name', {
+			hasText: 'Export customers',
+		});
+		await tile.locator('..').locator('..').locator('wa-button').click();
+
+		const exportMode = page.locator('.pipeline__export-mode wa-select');
+		await exportMode.locator('[part="display-input"]').click();
+		await exportMode.locator('wa-option[value="UpdateOnly"]').click();
+		const matching = page.locator('.pipeline__matching-properties');
+		for (const side of ['in', 'out']) {
+			await matching.locator(`[data-id="${side}"] input`).fill('email');
+			await page.keyboard.press('Escape');
+		}
+
+		const filters = page.locator('.pipeline__filters');
+		await filters.getByRole('button', { name: 'Add filter', exact: true }).click();
+		const property = filters.locator('.filter-editor__property');
+		await property.locator('input').click();
+		await property.locator('.combobox-list__item .schema-combobox-item__name', { hasText: /^email$/ }).click();
+		const operator = filters.locator('.filter-editor__operator');
+		await operator.getByRole('option', { name: scenario.rule.operator, exact: true }).click();
+		if (scenario.draftValue != null) {
+			await filters.locator('.filter-editor__value-input input').fill(scenario.draftValue);
+		} else {
+			await page.locator('.pipeline__transformation .combobox[data-id="firstName"] input').fill('first_name');
+			await page.keyboard.press('Escape');
+			const [response] = await Promise.all([
+				page.waitForResponse(
+					(response) => response.url().endsWith('/v1/pipelines') && response.request().method() === 'POST',
+				),
+				page.locator('.pipeline__header-save button').click(),
+			]);
+			expect(response.ok()).toBe(true);
+			const pipeline = await response.json();
+			await page.goto(`${pipelinesURL}/edit/${pipeline.id}`);
+		}
+
+		await page.route('**/profiles/query', async (route) => {
+			await route.fulfill({ json: { profiles: [], total: 0, hasNext: false }, headers: syncTokenHeaders() });
+		});
+		const [response] = await Promise.all([
+			page.waitForResponse(
+				(response) => response.url().endsWith('/profiles/query') && response.request().method() === 'POST',
+			),
+			page.getByRole('button', { name: 'Edit in full mode', exact: true }).click(),
+		]);
+		expect(response.request().postDataJSON().filter).toEqual({ operator: 'and', rules: [scenario.rule] });
+	});
+}
+
 test.describe('Matching semantics', () => {
 	const openPipeline = async (page: Page, hasRequiredPhone = false) => {
 		const id = await addDummyDestination(page);
