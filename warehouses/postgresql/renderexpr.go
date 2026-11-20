@@ -59,6 +59,7 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 		return fmt.Errorf("invalid property name %q", c.Name)
 	}
 
+	// Validate precision and scale for decimal values and JSON decimals.
 	for _, value := range baseExpr.Values {
 		var number *decimal.Decimal
 		switch value := value.(type) {
@@ -66,6 +67,8 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 			number = &value
 		case warehouses.JSONConditionValue:
 			number = value.Number
+		default:
+			// Other operand types require no decimal validation.
 		}
 		if number == nil {
 			continue
@@ -365,6 +368,7 @@ func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr) error {
 		op, negative = warehouses.OpIsNull, true
 	case warehouses.OpDoesNotExist:
 		op, negative = warehouses.OpExists, true
+	default:
 	}
 
 	var count int
@@ -517,6 +521,9 @@ func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr) error {
 	case warehouses.OpExists:
 		b.WriteString(target)
 		b.WriteString(" IS NOT NULL")
+
+	default:
+		return fmt.Errorf("warehouses/postgresql: unexpected operator %d", op)
 
 	}
 	b.WriteString(", FALSE)")
