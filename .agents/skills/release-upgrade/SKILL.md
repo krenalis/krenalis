@@ -25,8 +25,9 @@ flags of Krenalis:
    release").
 2. `-finalize-db` (`core.FinalizeDB`, `initdb.Finalize`) runs `finalize` in
    `migrate.go`, once no instance of the previous release is running. It
-   removes what only those instances needed and records the schema version
-   as finalized. After it, the previous release can no longer run on the
+   removes what only those instances needed, such as the old columns and the
+   triggers that keep them in sync, and records the schema version as
+   finalized. After it, the previous release can no longer run on the
    database.
 
 Both run in a single transaction, under the advisory lock shared with the
@@ -38,13 +39,13 @@ finalized before the release with schema version N+1 can migrate it, so the
 releases that change the database are deployed one at a time, in order.
 
 `migrate` and `finalize` hold the upgrade of a single release. Together with
-their test and the schema of the previous release in
-`core/internal/initdb/testdata`, they exist on `main` only while a release is
-prepared; otherwise both do nothing. Between releases, changes record what the
-upgrade must do in `core/internal/initdb/RELEASE-UPGRADE.md`, and `migrate` and
-`finalize` are written from those notes when the next release is prepared. So a
-commit of `main` that changes the database cannot be deployed on an existing
-database.
+their helpers in `migrate_release.go`, their test in `migrate_release_test.go`,
+and the SQL files of the base release in `core/internal/initdb/testdata`, they
+exist on `main` only while a release is prepared; otherwise both do nothing.
+Between releases, changes record what the upgrade must do in
+`core/internal/initdb/RELEASE-UPGRADE.md`, and `migrate` and `finalize` are
+written from those notes when the next release is prepared. So a commit of
+`main` that changes the database cannot be deployed on an existing database.
 
 ## Base release
 
@@ -69,18 +70,63 @@ If a check fails, stop and report it without choosing another tag.
 
 During a rolling deployment, the instances of the previous release keep running
 on a migrated database until they are replaced, and they run on it again after
-a rollback. So:
+a rollback. Meanwhile they keep reading and writing the database, and they
+exchange notifications with the instances of the new release.
 
-- `migrate` must not break the previous release: add tables, nullable columns
-  or columns with a default, and new data formats alongside the old ones.
-- `finalize` holds what would break it: dropping columns, tables, triggers or
-  old data formats, and adding constraints that the previous release could
-  violate.
-- The new release must work both on the migrated database and on the
-  finalized one, because the finalization may come long after the deployment.
+This is a requirement, with no exceptions: the upgrade to a release must never
+break the previous one. A single release is enough, if it follows the rules
+below for the database and for the notifications.
 
-This rule is mandatory from the first release deployed in production. Before
-that, a change may break the previous release, but its entry must say so.
+### The database
+
+Until the finalization, the database holds both the representation that the
+previous release uses and the one that the new release uses, kept in sync:
+
+- `migrate` adds what the new release needs without changing or removing what
+  the previous release uses: tables, nullable columns or columns with a
+  default, populated from the existing data. When the two releases must see
+  the same data in different formats, `migrate` puts the new format in a new
+  column or table, and adds triggers that keep the two in sync in both
+  directions: what the previous release writes in the old representation is
+  copied to the new one, and vice versa. Each release reads and writes only
+  its own representation. The triggers also fill the new columns of the rows
+  that the previous release inserts, when their default is not the right
+  value.
+- `finalize` removes what only the previous release used: the triggers, the
+  old columns and tables. It also adds the constraints that the previous
+  release could violate. It converts nothing, because the triggers have kept
+  the new representation up to date.
+- The new release reads and writes only the new representation, and must work
+  both on the migrated database and on the finalized one, because the
+  finalization may come long after the deployment.
+
+A trigger cannot show the same column in two formats to two readers, so never
+change a format in place, by converting the values of a column that the
+previous release reads: put the new format in a new column. If the new format
+carries information that the old one cannot express, the trigger from the new
+to the old representation cannot be written: ask the user how to proceed.
+
+### Notifications and NATS
+
+The payload of a notification travels in the `NOTIFY`, from the instance that
+sends it to the others, and is stored in the `notifications` table for those
+that read it later, so no trigger can translate it. The same holds for the
+messages on NATS. An instance that cannot read a notification exits with a
+terminal replication error.
+
+So, when a change alters the format of a value carried by a notification or a
+message, such as a type or a filter:
+
+- the new release reads both formats, and still sends the old one, which the
+  previous release reads;
+- the following release sends the new format, which the release before it
+  already reads, and still reads the old one;
+- the release after that can stop reading the old format.
+
+When preparing a release that still sends an old format, ask the user to track
+the switch for the following release, for example with an issue.
+Notifications already stored need no conversion, because an instance reads
+only those that follow the load of its state.
 
 ## Recording a change
 
@@ -122,8 +168,8 @@ An entry describes what the upgrade must do, including what the diff of
   column's default;
 - the conversion of existing data;
 - the order that the steps require;
-- that it breaks the previous release, when it does (see "Compatibility with
-  the previous release").
+- how it keeps the previous release working, when it is not obvious (see
+  "Compatibility with the previous release").
 
 For example:
 
@@ -157,31 +203,61 @@ entries remain.
    `git show <base>:core/internal/initdb/migrate.go`, or 1 if the base release
    has no `schemaVersion`. Then increment it by one.
 4. Write `migrate` from the entries under "Migration", and `finalize` from
-   those under "Finalization", each within the transaction it receives. They
-   need not be idempotent, since the recorded schema version prevents running
-   them twice, but every statement is subject to the 5-second `lock_timeout`.
-   Ask the user before writing a long backfill or a statement that cannot run
-   in a transaction, such as `CREATE INDEX CONCURRENTLY`.
-5. Save the schema of the base release in
-   `core/internal/initdb/testdata/schema_<base>.sql` with
-   `git show <base>:core/internal/initdb/schema.sql`, and write
-   `migrate_release_test.go`, following
-   `git show v0.48.0:core/internal/initdb/upgrade_test.go`:
-   - Create the base database from that schema. If it has the `schema_version`
-     table, record in it the schema version of the base release, finalized, as
-     its initialization did.
-   - Run `Migrate`, then `Finalize`; the resulting schema must match a newly
-     initialized one, ignoring the order of the columns.
-   - The test data must cover every step that transforms existing data.
-   - Where the current code reads or writes what the upgrade changes, test it
-     both after `Migrate` and after `Finalize`.
-6. Delete `RELEASE-UPGRADE.md` in the same change.
+   those under "Finalization", each within the transaction it receives, with
+   the helpers they need in `migrate_release.go`:
+   - Use SQL for DDL, triggers, and backfills that a statement can express.
+     Use Go for conversions that are recursive, as of JSON values, or that
+     depend on other data; in Go, work on the decoded JSON, such as
+     `map[string]any` decoded with `UseNumber`, not on the types of the
+     current code, which already describe the new format and may reject the
+     old one.
+   - When `migrate` adds triggers that convert between two formats, the
+     backfill must produce the same values as the triggers. Prefer writing
+     the conversion once, in a SQL function that both the triggers and the
+     backfill use.
+   - They need not be idempotent, since the recorded schema version prevents
+     running them twice.
+   - Every statement is subject to the 5-second `lock_timeout`, which keeps
+     them from waiting for the running instances. The opposite is not
+     prevented: the rows they update stay locked until the commit, and the
+     running instances that write them wait. So update only the rows that
+     change, filtering them in SQL or comparing the values in Go.
+   - Tables of configuration, such as `workspaces` and `pipelines`, are small
+     and can be updated in the transaction. Ask the user before updating a
+     table that grows with the data, such as one of events, identities or
+     metrics, and before a statement that cannot run in a transaction, such
+     as `CREATE INDEX CONCURRENTLY`.
+5. Save in `core/internal/initdb/testdata/<base>/`, with
+   `git show <base>:core/internal/initdb/<file>`, every SQL file that the
+   `initialize` function of the base release executes: `schema.sql` and the
+   others, such as `rate_limiter_leases.sql`. `newBaseTestDatabase`, in
+   `migrate_helpers_test.go`, creates the base database as `initialize` does
+   now: `schema.sql` one statement at a time, then the other files whole, in
+   lexical order. If the `initialize` of the base release differs, adapt the
+   helper first.
+6. Write `migrate_release_test.go` with the helpers of
+   `migrate_helpers_test.go`, which do not depend on the release:
+   - Create the base database with `newBaseTestDatabase` and insert test data
+     that covers every step that transforms existing data, and rows that must
+     not change.
+   - Run `Migrate`, then `Finalize`. After each, check the recorded schema
+     version, and that `schemaSnapshot` matches the one of a database created
+     with `newInitializedTestDatabase`.
+   - After each, check the converted values with `assertQueryJSON`, and load
+     the state with `loadTestState`, which runs the code that Krenalis runs at
+     startup on the upgraded data, such as the parsing of schemas and filters.
+     Connections and pipelines load only if their connectors are imported by
+     the test.
+   - If `migrate` adds triggers, test them between `Migrate` and `Finalize`:
+     write rows in the old representation, as the previous release does, and
+     check the new one, and vice versa.
+7. Delete `RELEASE-UPGRADE.md` in the same change.
 
 ## Removing the upgrade after a release
 
 Once the release is published, empty the bodies of `migrate` and `finalize` so
-that they return `nil`, and remove from `main` everything that only the upgrade
-uses: `migrate_release_test.go`, the schema in `testdata`, and any helpers.
-Keep `schemaVersion` at its new value, and keep `-migrate-db`,
-`-finalize-db`, `core.MigrateDB`, `core.FinalizeDB`, `initdb.Migrate`,
-`initdb.Finalize`, and `initdb.CheckSchemaVersion`.
+that they return `nil`, and delete `migrate_release.go`,
+`migrate_release_test.go`, and `testdata/<base>`. Keep
+`schemaVersion` at its new value, and keep `migrate_helpers_test.go`,
+`-migrate-db`, `-finalize-db`, `core.MigrateDB`, `core.FinalizeDB`,
+`initdb.Migrate`, `initdb.Finalize`, and `initdb.CheckSchemaVersion`.

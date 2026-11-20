@@ -159,13 +159,14 @@ func Migrate(ctx context.Context, database *db.DB) error {
 }
 
 // finalize removes, within the given transaction, what only the Krenalis
-// instances of the previous release need from a migrated database. It runs
-// only when none of them is running anymore. This version of Krenalis must run
-// on the database both before and after it.
+// instances of the previous release need from a migrated database, such as the
+// old columns and the triggers that keep them in sync. It runs only when none
+// of them is running anymore. This version of Krenalis must run on the
+// database both before and after it.
 //
 // It is written together with migrate, when a release that changes the
-// database is prepared, and emptied after the release is published. See
-// .agents/skills/release-upgrade/SKILL.md.
+// database is prepared, with its helpers in migrate_release.go, and emptied
+// after the release is published. See .agents/skills/release-upgrade/SKILL.md.
 func finalize(ctx context.Context, tx *db.Tx) error {
 	return nil
 }
@@ -211,8 +212,9 @@ func lockSchemaVersion(ctx context.Context, tx *db.Tx) (version int, finalized b
 // they are replaced.
 //
 // It is written when a release that changes the database is prepared, from
-// the notes in RELEASE-UPGRADE.md, and emptied after the release is published.
-// See .agents/skills/release-upgrade/SKILL.md.
+// the notes in RELEASE-UPGRADE.md, with its helpers in migrate_release.go, and
+// emptied after the release is published. See
+// .agents/skills/release-upgrade/SKILL.md.
 func migrate(ctx context.Context, tx *db.Tx) error {
 	return nil
 }
