@@ -375,8 +375,8 @@ func renderJSONComparison(b *strings.Builder, target, operator string, value war
 }
 
 // renderJSONExpr renders filters on JSON columns and containers of JSON values.
-// JSON predicates use two-valued logic even for absent values and JSON null.
-// Negative operators match exactly when their positive counterparts do not.
+// JSONConditionValue predicates use two-valued logic even for absent values
+// and JSON null.
 func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr) error {
 
 	c := expr.Column
@@ -483,17 +483,16 @@ func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr) error {
 			expr.Operator, count, len(expr.Values))
 	}
 
-	// Preserve structural equality when callers provide a JSON-encoded value.
+	// Preserve SQL NULL semantics for comparisons with JSON-encoded values.
 	if count == 1 && op == warehouses.OpIs {
 		if operand, ok := expr.Values[0].(json.Value); ok {
-			if negative {
-				b.WriteString("NOT ")
-			}
-			b.WriteString("COALESCE(")
 			b.WriteString(target)
-			b.WriteString(" = ")
+			if negative {
+				b.WriteString(" <> ")
+			} else {
+				b.WriteString(" = ")
+			}
 			serializeValue(b, operand, types.JSON())
-			b.WriteString(", FALSE)")
 			return nil
 		}
 	}

@@ -207,7 +207,13 @@ func Test_renderExpr(t *testing.T) {
 			name: "JSON structural equality with apostrophe",
 			expr: warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.JSON()},
 				warehouses.OpIs, json.Value(`{"foo":2,"boo":true,"name":"O'Reilly"}`)),
-			query: `COALESCE("VALUES" = PARSE_JSON('{"foo":2,"boo":true,"name":"O\'Reilly"}'), FALSE)`,
+			query: `"VALUES" = PARSE_JSON('{"foo":2,"boo":true,"name":"O\'Reilly"}')`,
+		},
+		{
+			name: "JSON structural inequality",
+			expr: warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.JSON(), Nullable: true},
+				warehouses.OpIsNot, json.Value(`{"plan":"pro"}`)),
+			query: `"VALUES" <> PARSE_JSON('{"plan":"pro"}')`,
 		},
 		{
 			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "weight", Type: types.Float(32)}, warehouses.OpIsLessThan, 6.5),
@@ -562,7 +568,7 @@ func Test_renderExpr(t *testing.T) {
 			name: "structural JSON number outside decimal limits",
 			expr: warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.JSON()}, warehouses.OpIs,
 				json.Value("1e76")),
-			query: `COALESCE("VALUES" = PARSE_JSON('1e76'), FALSE)`,
+			query: `"VALUES" = PARSE_JSON('1e76')`,
 		},
 	}
 	for _, test := range tests {

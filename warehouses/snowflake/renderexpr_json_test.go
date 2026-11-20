@@ -244,7 +244,10 @@ func TestJSONExpressions(t *testing.T) {
 		{"1.234567890123456789e0", "1.23456789012345", "1.23456789012347", true, true},
 		{"0.1234567890123456789012345678901234567890123456789", "0.12345678901234", "0.12345678901235", false, true},
 	}
-	data := make([][]any, len(values), mixedID+1+len(numericFixtures))
+	nullID := mixedID + 1 + len(numericFixtures)
+	equalID := nullID + 1
+	differentID := equalID + 1
+	data := make([][]any, len(values), differentID+1)
 	for i, value := range values {
 		var scalar, document, array, mapping any
 		if value != nil {
@@ -265,6 +268,12 @@ func TestJSONExpressions(t *testing.T) {
 	for i, fixture := range numericFixtures {
 		data = append(data, []any{mixedID + 1 + i, json.Value(fixture.raw), nil, nil, nil})
 	}
+	equalValue := json.Value(`{"plan":"pro"}`)
+	data = append(data,
+		[]any{nullID, nil, nil, nil, nil},
+		[]any{equalID, equalValue, nil, nil, nil},
+		[]any{differentID, json.Value(`{"plan":"team"}`), nil, nil, nil},
+	)
 	err := warehouse.Merge(t.Context(), table, data, nil)
 	if err != nil {
 		t.Fatalf("expected fixture merge, got %v", err)
@@ -431,6 +440,19 @@ func TestJSONExpressions(t *testing.T) {
 
 		})
 	}
+
+	t.Run("delete by structural inequality", func(t *testing.T) {
+		ids := warehouses.NewBaseExpr(idColumn, warehouses.OpIsOneOf, nullID, equalID, differentID)
+		checkJSONExpression(t, warehouse, table.Name, idColumn, ids, []int{nullID, equalID, differentID})
+		where := warehouses.NewMultiExpr(warehouses.OpAnd, []warehouses.Expr{
+			ids, warehouses.NewBaseExpr(column, warehouses.OpIsNot, equalValue),
+		})
+		err := warehouse.Delete(t.Context(), table.Name, where)
+		if err != nil {
+			t.Fatalf("expected delete by structural inequality to succeed, got %v", err)
+		}
+		checkJSONExpression(t, warehouse, table.Name, idColumn, ids, []int{nullID, equalID})
+	})
 
 }
 

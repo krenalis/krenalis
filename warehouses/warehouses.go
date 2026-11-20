@@ -916,8 +916,9 @@ const (
 // On JSON columns, Keys specifies successive object keys, treated literally,
 // including any dots. An empty Keys applies to the entire column. SQL NULL
 // represents an absent JSON property; JSON null represents a present null.
-// JSON filter operands have type JSONConditionValue; encoded json.Value
+// JSON filter operands have type JSONConditionValue. Encoded json.Value
 // operands also support structural equality and array(json) containment.
+// OpIs and OpIsNot use SQL NULL semantics with encoded JSON operands.
 // For JSON columns, OpIs and OpIsNot accept a Column operand if Keys is empty.
 // Decimal operands, including JSONConditionValue.Number, must fit a
 // decimal(p,s) with p <= 76 and 0 <= s <= min(p,37), independently of the
