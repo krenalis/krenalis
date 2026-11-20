@@ -16,6 +16,16 @@ import (
 	"github.com/krenalis/krenalis/warehouses"
 )
 
+// jsonFixedLiteral formats a decimal as a normalized SQL numeric literal.
+func jsonFixedLiteral(number decimal.Decimal) string {
+	if number.Sign() == 0 {
+		// Formatting zero with a negative scale can emit many extra zeros.
+		return "0"
+	}
+	_, scale := number.PrecisionScale()
+	return fmt.Sprintf("%.*f", scale, number)
+}
+
 // renderExpr renders the expression expr returning a fragment of a query
 // representing a boolean expression.
 func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
@@ -275,8 +285,8 @@ func renderJSONComparison(b *strings.Builder, target, operator string, value war
 	fmt.Fprintf(b, "CASE WHEN %s THEN %s %s ", isString, text, operator)
 	quoteString(b, value.String)
 	if value.Number != nil {
-		_, scale := value.Number.PrecisionScale()
-		fmt.Fprintf(b, " WHEN %s THEN (%s)::numeric %s %.*f", isNumber, target, operator, scale, *value.Number)
+		fmt.Fprintf(b, " WHEN %s THEN (%s)::numeric %s %s",
+			isNumber, target, operator, jsonFixedLiteral(*value.Number))
 	}
 	b.WriteString(" ELSE FALSE END")
 }
@@ -467,8 +477,7 @@ func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr) error {
 			if operand.Number == nil {
 				continue
 			}
-			_, scale := operand.Number.PrecisionScale()
-			numbers = append(numbers, fmt.Sprintf("%.*f", scale, *operand.Number))
+			numbers = append(numbers, jsonFixedLiteral(*operand.Number))
 		}
 		if len(numbers) > 0 {
 			fmt.Fprintf(b, " WHEN %s THEN (%s)::numeric IN (%s)", isNumber, target, strings.Join(numbers, ", "))

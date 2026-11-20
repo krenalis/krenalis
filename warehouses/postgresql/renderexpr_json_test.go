@@ -36,6 +36,7 @@ func TestJSONDecimalRendering(t *testing.T) {
 	}{
 		{"zero", decimal.Decimal{}, "0"},
 		{"zero with maximum scale", decimal.New(0, decimal.MaxScale), "0"},
+		{"zero with negative scale", decimal.New(0, -6), "0"},
 		{"integer", decimal.MustParse("1000"), "1000"},
 		{"trailing fractional zeros", decimal.New(12300, 4), "1.23"},
 		{"negative fraction", decimal.MustParse("-0.0012300"), "-0.00123"},
