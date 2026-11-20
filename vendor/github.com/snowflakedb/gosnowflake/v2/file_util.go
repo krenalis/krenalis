@@ -146,6 +146,7 @@ type fileMetadata struct {
 	sha256Digest       string
 	overwrite          bool
 	tmpDir             string
+	encTempRoot        string // parent of the encryption temp dir; the child is kept across a credential retry
 	errorDetails       error
 	lastError          error
 	noSleepingTime     bool

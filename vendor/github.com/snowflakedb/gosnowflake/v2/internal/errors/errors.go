@@ -174,6 +174,12 @@ const (
 	ErrFailedToDecrypt = 264016
 	// ErrDownloadStreamDecompress is an error code denoting gzip decompression failed while reading a DownloadStream
 	ErrDownloadStreamDecompress = 264017
+	// ErrUploadStreamInvalidArg is an error code denoting an invalid argument for UploadStream
+	ErrUploadStreamInvalidArg = 264018
+	// ErrUploadStreamLocalFS is an error code denoting UploadStream used with a LOCAL_FS stage
+	ErrUploadStreamLocalFS = 264019
+	// ErrUploadStreamSkipped is an error code denoting UploadStream left an existing object in place
+	ErrUploadStreamSkipped = 264020
 
 	/* binding */
 
@@ -287,6 +293,13 @@ const (
 	ErrMsgDownloadStreamFileNotFound         = "File not found: %v"
 	ErrMsgFailedToDecrypt                    = "failed to decrypt downloaded stage object"
 	ErrMsgDownloadStreamDecompress           = "failed to decompress downloaded stream: %v"
+	ErrMsgUploadStreamInvalidArg             = "UploadStream requires a non-empty stage name and destination file name"
+	ErrMsgUploadStreamNilReader              = "UploadStream requires a source reader"
+	ErrMsgUploadStreamBadThreshold           = "UploadStream MaxBuffer must be 0, -1, or greater than zero"
+	ErrMsgUploadStreamBadCompression         = "UploadStream compression is not supported"
+	ErrMsgUploadStreamLocalFS                = "UploadStream is only supported for remote stages"
+	ErrMsgUploadStreamPresignedURL           = "UploadStream presigned URL does not target %v"
+	ErrMsgUploadStreamSkipped                = "UploadStream destination already exists and overwrite is false"
 	ErrMsgClientConfigFailed                 = "client configuration failed: %v"
 	ErrMsgNullValueInArray                   = "for handling null values in arrays use WithArrayValuesNullable(ctx)"
 	ErrMsgNullValueInMap                     = "for handling null values in maps use WithMapValuesNullable(ctx)"

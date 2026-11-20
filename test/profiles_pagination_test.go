@@ -429,6 +429,16 @@ func TestProfilesPagination(t *testing.T) {
 	newProperties = append(newProperties, metadata)
 	k.AlterProfileSchemaAndWait(types.Object(newProperties), nil, nil)
 	partialSchema := types.Object([]types.Property{emailProperty})
+	jsonFilter := json.Value(`{"operator":"and","rules":[` +
+		`{"property":"metadata.score","operator":"is","values":["1.25"]}]}`)
+
+	t.Run("JSON filter property outside request schema", func(t *testing.T) {
+		err := k.TryCall("POST", "/v1/profiles/query", nil, map[string]any{
+			"schema": partialSchema, "properties": []string{"email"}, "filter": jsonFilter,
+		}, nil)
+		expectAPIError(t, err, http.StatusUnprocessableEntity, "PropertyNotExist")
+	})
+
 	page, _, _ := k.ProfilesWithSchema(partialSchema, nil, "", true, 0, 1)
 	if len(page) != 1 {
 		t.Fatalf("expected one profile, got %d", len(page))
@@ -468,11 +478,10 @@ func TestProfilesPagination(t *testing.T) {
 	}
 
 	// A JSON property used only in the filter is resolved through the request schema.
-	jsonFilter := `{"operator":"and","rules":[{"property":"metadata.score","operator":"is","values":["1.25"]}]}`
 	postPage.Profiles = nil
 	k.Call("POST", "/v1/profiles/query", nil, map[string]any{
 		"schema": types.Object([]types.Property{emailProperty, metadata}), "properties": []string{"email"},
-		"filter": json.Value(jsonFilter),
+		"filter": jsonFilter,
 	}, &postPage)
 	if len(postPage.Profiles) != 1 || postPage.Total != 1 || postPage.HasNext {
 		t.Fatalf("expected one JSON match, total 1 and no continuation, got %d profiles, total %d and continuation %t",

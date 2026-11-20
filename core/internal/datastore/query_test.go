@@ -45,6 +45,7 @@ func TestConvertWhereSimple(t *testing.T) {
 // paths for both boolean operators.
 func TestConvertWhereJSONBooleanOperators(t *testing.T) {
 
+	deepKeys := slices.Repeat([]string{"a.b"}, 4096)
 	tests := []struct {
 		name       string
 		columnPath string
@@ -54,6 +55,7 @@ func TestConvertWhereJSONBooleanOperators(t *testing.T) {
 		{"column", "j", []string{"j"}, nil},
 		{"key", "j", []string{"j", "enabled"}, []string{"enabled"}},
 		{"nested keys", "j", []string{"j", "a", "b"}, []string{"a", "b"}},
+		{"deep keys", "obj.j", append([]string{"obj", "j"}, deepKeys...), deepKeys},
 		{"literal dot", "j", []string{"j", "a.b"}, []string{"a.b"}},
 		{"nested literal dot", "j", []string{"j", "a.b", "c"}, []string{"a.b", "c"}},
 		{"object column", "obj.j", []string{"obj", "j"}, nil},

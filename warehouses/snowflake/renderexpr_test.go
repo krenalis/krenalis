@@ -171,8 +171,8 @@ func TestArrayContains(t *testing.T) {
 }
 
 func Test_renderExpr(t *testing.T) {
-	column := warehouses.Column{Name: "value", Type: types.Decimal(3, 2)}
-	array := warehouses.Column{Name: "value", Type: types.Array(types.Decimal(3, 2))}
+	decimalColumn := warehouses.Column{Name: "value", Type: types.Decimal(3, 2)}
+	decimalArrayColumn := warehouses.Column{Name: "value", Type: types.Array(types.Decimal(3, 2))}
 	tests := []struct {
 		name    string
 		expr    warehouses.Expr
@@ -212,6 +212,22 @@ func Test_renderExpr(t *testing.T) {
 		{
 			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "count", Type: types.Decimal(5, 0)}, warehouses.OpIsGreaterThanOrEqualTo, decimal.MustInt(3289)),
 			query: `"COUNT" >= 3289`,
+		},
+		{
+			expr:  warehouses.NewBaseExpr(decimalColumn, warehouses.OpIs, decimal.Decimal{}),
+			query: `"VALUE" = 0`,
+		},
+		{
+			expr:  warehouses.NewBaseExpr(decimalColumn, warehouses.OpIs, decimal.MustParse("1.2300")),
+			query: `"VALUE" = 1.23`,
+		},
+		{
+			expr:  warehouses.NewBaseExpr(decimalColumn, warehouses.OpIs, decimal.MustParse("1e75")),
+			query: `"VALUE" = 1e75`,
+		},
+		{
+			expr:  warehouses.NewBaseExpr(decimalColumn, warehouses.OpIsLessThan, decimal.MustParse("1e-37")),
+			query: `"VALUE" < 1e-37`,
 		},
 		{
 			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "timestamp", Type: types.DateTime()}, warehouses.OpIsBefore, time.Date(1900, 1, 2, 23, 32, 11, 940253621, time.UTC)),
@@ -256,6 +272,14 @@ func Test_renderExpr(t *testing.T) {
 		{
 			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.Array(types.String())}, warehouses.OpDoesNotContain, "boo"),
 			query: `NOT ARRAY_CONTAINS(PARSE_JSON('"boo"'), "VALUES")`,
+		},
+		{
+			expr:  warehouses.NewBaseExpr(decimalArrayColumn, warehouses.OpContains, decimal.MustParse("1e75")),
+			query: `(ARRAY_SIZE(FILTER("VALUE", krenalis_element -> IFF(TYPEOF(krenalis_element) = 'INTEGER', TO_JSON(krenalis_element) = '1000000000000000000000000000000000000000000000000000000000000000000000000000', TRY_TO_DECFLOAT(TO_JSON(krenalis_element)) = TO_DECFLOAT('1e75')))) > 0)`,
+		},
+		{
+			expr:  warehouses.NewBaseExpr(decimalArrayColumn, warehouses.OpDoesNotContain, decimal.MustParse("1e-37")),
+			query: `NOT (ARRAY_SIZE(FILTER("VALUE", krenalis_element -> IFF(TYPEOF(krenalis_element) = 'INTEGER', FALSE, TRY_TO_DECFLOAT(TO_JSON(krenalis_element)) = TO_DECFLOAT('1e-37')))) > 0)`,
 		},
 		{
 			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.Array(types.Decimal(76, 0))}, warehouses.OpContains, decimal.MustParse("123456789012345678901234567890123456789")),
@@ -424,50 +448,50 @@ func Test_renderExpr(t *testing.T) {
 		},
 		{
 			name:    "decimal excessive precision",
-			expr:    warehouses.NewBaseExpr(column, warehouses.OpIs, decimal.MustParse("1e76")),
+			expr:    warehouses.NewBaseExpr(decimalColumn, warehouses.OpIs, decimal.MustParse("1e76")),
 			wantErr: "decimal operand exceeds precision 76 or scale 37",
 		},
 		{
 			name:    "decimal excessive scale",
-			expr:    warehouses.NewBaseExpr(column, warehouses.OpIsLessThan, decimal.MustParse("1e-38")),
+			expr:    warehouses.NewBaseExpr(decimalColumn, warehouses.OpIsLessThan, decimal.MustParse("1e-38")),
 			wantErr: "decimal operand exceeds precision 76 or scale 37",
 		},
 		{
 			name:    "decimal large positive exponent",
-			expr:    warehouses.NewBaseExpr(column, warehouses.OpIs, decimal.MustParse("1e999999")),
+			expr:    warehouses.NewBaseExpr(decimalColumn, warehouses.OpIs, decimal.MustParse("1e999999")),
 			wantErr: "decimal operand exceeds precision 76 or scale 37",
 		},
 		{
 			name:    "decimal large negative exponent",
-			expr:    warehouses.NewBaseExpr(column, warehouses.OpIs, decimal.MustParse("1e-999999")),
+			expr:    warehouses.NewBaseExpr(decimalColumn, warehouses.OpIs, decimal.MustParse("1e-999999")),
 			wantErr: "decimal operand exceeds precision 76 or scale 37",
 		},
 		{
 			name:    "decimal between invalid second operand",
-			expr:    warehouses.NewBaseExpr(column, warehouses.OpIsBetween, decimal.MustInt(0), decimal.MustParse("1e-38")),
+			expr:    warehouses.NewBaseExpr(decimalColumn, warehouses.OpIsBetween, decimal.MustInt(0), decimal.MustParse("1e-38")),
 			wantErr: "decimal operand exceeds precision 76 or scale 37",
 		},
 		{
 			name:    "decimal membership invalid second operand",
-			expr:    warehouses.NewBaseExpr(column, warehouses.OpIsOneOf, decimal.MustInt(0), decimal.MustParse("1e76")),
+			expr:    warehouses.NewBaseExpr(decimalColumn, warehouses.OpIsOneOf, decimal.MustInt(0), decimal.MustParse("1e76")),
 			wantErr: "decimal operand exceeds precision 76 or scale 37",
 		},
 		{
 			name:    "decimal array excessive precision",
-			expr:    warehouses.NewBaseExpr(array, warehouses.OpContains, decimal.MustParse("1e76")),
+			expr:    warehouses.NewBaseExpr(decimalArrayColumn, warehouses.OpContains, decimal.MustParse("1e76")),
 			wantErr: "decimal operand exceeds precision 76 or scale 37",
 		},
 		{
 			name:    "decimal array excessive scale",
-			expr:    warehouses.NewBaseExpr(array, warehouses.OpDoesNotContain, decimal.MustParse("1e-38")),
+			expr:    warehouses.NewBaseExpr(decimalArrayColumn, warehouses.OpDoesNotContain, decimal.MustParse("1e-38")),
 			wantErr: "decimal operand exceeds precision 76 or scale 37",
 		},
 		{
 			name: "decimal invalid nested expression after valid expression",
 			expr: warehouses.NewMultiExpr(warehouses.OpAnd, []warehouses.Expr{
-				warehouses.NewBaseExpr(column, warehouses.OpIs, decimal.MustInt(0)),
+				warehouses.NewBaseExpr(decimalColumn, warehouses.OpIs, decimal.MustInt(0)),
 				warehouses.NewMultiExpr(warehouses.OpOr, []warehouses.Expr{
-					warehouses.NewBaseExpr(column, warehouses.OpIs, decimal.MustParse("1e76")),
+					warehouses.NewBaseExpr(decimalColumn, warehouses.OpIs, decimal.MustParse("1e76")),
 				}),
 			}),
 			wantErr: "decimal operand exceeds precision 76 or scale 37",

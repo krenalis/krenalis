@@ -664,11 +664,13 @@ func Test_MarshalWhereValues(t *testing.T) {
 			where: Where{Operator: OpAnd, Rules: []WhereRule{
 				&WhereCondition{Property: []string{"h"}, Operator: OpIs, Values: []any{JSONConditionValue{String: "1.2300", Number: new(decimal.MustParse("1.23"))}}},
 				&WhereCondition{Property: []string{"h", "number"}, Operator: OpIs, Values: []any{JSONConditionValue{String: "1e76"}}},
+				&WhereCondition{Property: []string{"m"}, Operator: OpContains, Values: []any{JSONConditionValue{String: "1.2300", Number: new(decimal.MustParse("1.23"))}}},
 				&WhereCondition{Property: []string{"m"}, Operator: OpContains, Values: []any{JSONConditionValue{String: "1e-38"}}},
 			}},
 			expected: []byte(`{"operator":"And","rules":[` +
 				`{"property":["h"],"operator":"Is","values":["1.2300"]},` +
 				`{"property":["h","number"],"operator":"Is","values":["1e76"]},` +
+				`{"property":["m"],"operator":"Contains","values":["1.2300"]},` +
 				`{"property":["m"],"operator":"Contains","values":["1e-38"]}]}`),
 		},
 		{
