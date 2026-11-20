@@ -1181,14 +1181,9 @@ func Test_validateFilter(t *testing.T) {
 		{Name: "t", Type: types.Array(types.JSON())},
 		{Name: "u", Type: types.String().WithValues(longAllowedValue)},
 	})
-	destinationRole := state.Destination
-	eventTarget := state.TargetEvent
-
 	type testCase struct {
 		name     string
 		filter   Filter
-		role     *state.Role
-		target   *state.Target
 		expected []string
 		err      error
 	}
@@ -1641,8 +1636,7 @@ func Test_validateFilter(t *testing.T) {
 					&FilterCondition{Property: "m", Operator: OpIsEmpty},
 				},
 			},
-			role: &destinationRole,
-			err:  errors.New(`operator "is empty" can only be used with json, string, array, and map properties`),
+			err: errors.New(`operator "is empty" can only be used with json, string, array, and map properties`),
 		},
 		{
 			name: "is not empty on event object",
@@ -1652,8 +1646,7 @@ func Test_validateFilter(t *testing.T) {
 					&FilterCondition{Property: "m", Operator: OpIsNotEmpty},
 				},
 			},
-			target: &eventTarget,
-			err:    errors.New(`operator "is not empty" can only be used with json, string, array, and map properties`),
+			err: errors.New(`operator "is not empty" can only be used with json, string, array, and map properties`),
 		},
 		{
 			name: "JSON in destination user filter",
@@ -1663,8 +1656,7 @@ func Test_validateFilter(t *testing.T) {
 					&FilterCondition{Property: "d.p", Operator: OpIsNotEmpty},
 				},
 			},
-			role: &destinationRole,
-			err:  errors.New(`property "d" has type json, which is not supported in data warehouse exports`),
+			expected: []string{"d"},
 		},
 		{
 			name: "numeric comparisons on year semantics",
@@ -1809,15 +1801,7 @@ func Test_validateFilter(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			role := state.Source
-			if test.role != nil {
-				role = *test.role
-			}
-			target := state.TargetUser
-			if test.target != nil {
-				target = *test.target
-			}
-			got, err := validateFilter(&test.filter, schema, role, target)
+			got, err := validateFilter(&test.filter, schema)
 			if err != nil {
 				if test.err == nil {
 					t.Fatalf("expected no error, got error %q (type %T)", err, err)
@@ -1870,7 +1854,7 @@ func Test_validateFilterLimits(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			_, err := validateFilter(test.filter, schema, state.Source, state.TargetUser)
+			_, err := validateFilter(test.filter, schema)
 			if !reflect.DeepEqual(test.expected, err) {
 				t.Fatalf("expected error %q (type %T), got error %q (type %T)", test.expected, test.expected, err, err)
 			}
@@ -1896,7 +1880,7 @@ func Test_validateFilterRejectsNilRules(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			filter := &Filter{Operator: OpAnd, Rules: []FilterRule{test.rule}}
-			_, err := validateFilter(filter, schema, state.Source, state.TargetUser)
+			_, err := validateFilter(filter, schema)
 			if !reflect.DeepEqual(test.err, err) {
 				t.Fatalf("expected error %q (type %T), got error %q (type %T)", test.err, test.err, err, err)
 			}

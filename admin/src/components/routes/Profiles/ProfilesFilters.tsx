@@ -803,12 +803,10 @@ const ProfilesFilters = ({
 									filter={session.draft}
 									onChange={onDraftChange}
 									onCommit={onDraftCommit}
-									role='Destination'
 									rootActions={historyActions}
 									schema={schema}
 									showEmptyFilterAsCondition={true}
 									subject='Profiles'
-									target='User'
 									validationAttempt={validationAttempt}
 								/>
 							</div>

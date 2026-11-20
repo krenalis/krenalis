@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/krenalis/krenalis/tools/decimal"
+	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
 )
@@ -20,9 +21,10 @@ func Test_renderExpr(t *testing.T) {
 	decimalColumn := warehouses.Column{Name: "value", Type: types.Decimal(3, 2)}
 	decimalArrayColumn := warehouses.Column{Name: "value", Type: types.Array(types.Decimal(3, 2))}
 	tests := []struct {
+		name    string
 		expr    warehouses.Expr
 		query   string
-		invalid bool
+		wantErr string
 	}{
 		{
 			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "id", Type: types.String()}, warehouses.OpIs, "qwerty"),
@@ -39,6 +41,30 @@ func Test_renderExpr(t *testing.T) {
 		{
 			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "a", Type: types.String()}, warehouses.OpIs, warehouses.Column{Name: "b", Type: types.String()}),
 			query: `"a" = "b"`,
+		},
+		{
+			name: "JSON column equality",
+			expr: warehouses.NewBaseExpr(warehouses.Column{Name: "a", Type: types.JSON(), Nullable: true},
+				warehouses.OpIs, warehouses.Column{Name: "b", Type: types.JSON(), Nullable: true}),
+			query: `"a" = "b"`,
+		},
+		{
+			name: "JSON column inequality",
+			expr: warehouses.NewBaseExpr(warehouses.Column{Name: "a", Type: types.JSON(), Nullable: true},
+				warehouses.OpIsNot, warehouses.Column{Name: "b", Type: types.JSON(), Nullable: true}),
+			query: `"a" <> "b"`,
+		},
+		{
+			name: "JSON structural equality with apostrophe",
+			expr: warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.JSON()},
+				warehouses.OpIs, json.Value(`{"foo":2,"boo":true,"name":"O'Reilly"}`)),
+			query: `"values" = '{"foo":2,"boo":true,"name":"O''Reilly"}'::jsonb`,
+		},
+		{
+			name: "JSON structural inequality",
+			expr: warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.JSON(), Nullable: true},
+				warehouses.OpIsNot, json.Value(`{"plan":"pro"}`)),
+			query: `"values" <> '{"plan":"pro"}'::jsonb`,
 		},
 		{
 			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "weight", Type: types.Float(32)}, warehouses.OpIsLessThan, 6.5),
@@ -205,6 +231,16 @@ func Test_renderExpr(t *testing.T) {
 			query: `"id" IS NOT NULL`,
 		},
 		{
+			name:  "string column exists",
+			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "id", Type: types.String()}, warehouses.OpExists),
+			query: `"id" IS NOT NULL`,
+		},
+		{
+			name:  "string column does not exist",
+			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "id", Type: types.String()}, warehouses.OpDoesNotExist),
+			query: `"id" IS NULL`,
+		},
+		{
 			expr: warehouses.NewMultiExpr(
 				warehouses.OpAnd,
 				[]warehouses.Expr{
@@ -248,33 +284,122 @@ func Test_renderExpr(t *testing.T) {
 			query: `("id" = 'abc_42' OR "id" = 'abc_50' OR "id" = 'abc_60') AND ("count" = 100 OR "count" = 200 OR "count" = 300)`,
 		},
 		{
+			name: "combined emptiness checks with JSON",
 			expr: warehouses.NewMultiExpr(
 				warehouses.OpOr,
 				[]warehouses.Expr{
 					warehouses.NewBaseExpr(warehouses.Column{Name: "type", Type: types.String(), Nullable: true}, warehouses.OpIsNotEmpty),
-					// warehouses.NewBaseExpr(warehouses.Column{Name: "properties", Type: types.JSON()}, warehouses.OpIsEmpty), // See issue https://github.com/krenalis/krenalis/issues/1804.
+					warehouses.NewBaseExpr(warehouses.Column{Name: "properties", Type: types.JSON()}, warehouses.OpIsEmpty),
 					warehouses.NewBaseExpr(warehouses.Column{Name: "scores", Type: types.Array(types.Int(32)), Nullable: true}, warehouses.OpIsEmpty),
 					warehouses.NewBaseExpr(warehouses.Column{Name: "properties", Type: types.Map(types.String())}, warehouses.OpIsNotEmpty),
 				}),
-			query: `("type" IS NOT NULL AND "type" <> '') OR array_length("scores", 1) IS NULL OR "properties" <> '{}'::jsonb`,
+			query: `("type" IS NOT NULL AND "type" <> '') OR COALESCE(("properties" IS NULL OR "properties" IN ('null'::jsonb, '""'::jsonb, '[]'::jsonb, '{}'::jsonb)), FALSE) OR array_length("scores", 1) IS NULL OR "properties" <> '{}'::jsonb`,
+		},
+		{
+			name:    "decimal excessive precision",
+			expr:    warehouses.NewBaseExpr(decimalColumn, warehouses.OpIs, decimal.MustParse("1e76")),
+			wantErr: "warehouses/postgresql: decimal operand exceeds precision 76 or scale 37",
+		},
+		{
+			name:    "decimal excessive scale",
+			expr:    warehouses.NewBaseExpr(decimalColumn, warehouses.OpIsLessThan, decimal.MustParse("1e-38")),
+			wantErr: "warehouses/postgresql: decimal operand exceeds precision 76 or scale 37",
+		},
+		{
+			name:    "decimal large positive exponent",
+			expr:    warehouses.NewBaseExpr(decimalColumn, warehouses.OpIs, decimal.MustParse("1e999999")),
+			wantErr: "warehouses/postgresql: decimal operand exceeds precision 76 or scale 37",
+		},
+		{
+			name:    "decimal large negative exponent",
+			expr:    warehouses.NewBaseExpr(decimalColumn, warehouses.OpIs, decimal.MustParse("1e-999999")),
+			wantErr: "warehouses/postgresql: decimal operand exceeds precision 76 or scale 37",
+		},
+		{
+			name:    "decimal between invalid second operand",
+			expr:    warehouses.NewBaseExpr(decimalColumn, warehouses.OpIsBetween, decimal.MustInt(0), decimal.MustParse("1e-38")),
+			wantErr: "warehouses/postgresql: decimal operand exceeds precision 76 or scale 37",
+		},
+		{
+			name:    "decimal membership invalid second operand",
+			expr:    warehouses.NewBaseExpr(decimalColumn, warehouses.OpIsOneOf, decimal.MustInt(0), decimal.MustParse("1e76")),
+			wantErr: "warehouses/postgresql: decimal operand exceeds precision 76 or scale 37",
+		},
+		{
+			name:    "decimal array excessive precision",
+			expr:    warehouses.NewBaseExpr(decimalArrayColumn, warehouses.OpContains, decimal.MustParse("1e76")),
+			wantErr: "warehouses/postgresql: decimal operand exceeds precision 76 or scale 37",
+		},
+		{
+			name:    "decimal array excessive scale",
+			expr:    warehouses.NewBaseExpr(decimalArrayColumn, warehouses.OpDoesNotContain, decimal.MustParse("1e-38")),
+			wantErr: "warehouses/postgresql: decimal operand exceeds precision 76 or scale 37",
+		},
+		{
+			name: "decimal invalid nested expression after valid expression",
+			expr: warehouses.NewMultiExpr(warehouses.OpAnd, []warehouses.Expr{
+				warehouses.NewBaseExpr(decimalColumn, warehouses.OpIs, decimal.MustInt(0)),
+				warehouses.NewMultiExpr(warehouses.OpOr, []warehouses.Expr{
+					warehouses.NewBaseExpr(decimalColumn, warehouses.OpIs, decimal.MustParse("1e76")),
+				}),
+			}),
+			wantErr: "warehouses/postgresql: decimal operand exceeds precision 76 or scale 37",
+		},
+		{
+			name: "JSON array contains encoded object",
+			expr: warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.Array(types.JSON())},
+				warehouses.OpContains, json.Value(`{"plan":"pro"}`)),
+			query: `'{"plan":"pro"}'::jsonb = ANY("values")`,
+		},
+		{
+			name: "JSON array does not contain encoded object",
+			expr: warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.Array(types.JSON())},
+				warehouses.OpDoesNotContain, json.Value(`{"plan":"pro"}`)),
+			query: `NOT ('{"plan":"pro"}'::jsonb = ANY("values"))`,
+		},
+		{
+			name: "JSON array contains",
+			expr: warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.Array(types.JSON())},
+				warehouses.OpContains, warehouses.JSONConditionValue{String: "foo"}),
+			query: `COALESCE((EXISTS (SELECT 1 FROM unnest("values") AS krenalis_json_element(value) WHERE CASE WHEN jsonb_typeof(krenalis_json_element.value) = 'string' THEN (krenalis_json_element.value #>> '{}') COLLATE "C" = 'foo' ELSE FALSE END)), FALSE)`,
+		},
+		{
+			name: "JSON array does not contain",
+			expr: warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.Array(types.JSON())},
+				warehouses.OpDoesNotContain, warehouses.JSONConditionValue{String: "foo"}),
+			query: `NOT COALESCE((EXISTS (SELECT 1 FROM unnest("values") AS krenalis_json_element(value) WHERE CASE WHEN jsonb_typeof(krenalis_json_element.value) = 'string' THEN (krenalis_json_element.value #>> '{}') COLLATE "C" = 'foo' ELSE FALSE END)), FALSE)`,
+		},
+		{
+			name: "JSON numeric text without number",
+			expr: warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.JSON()}, warehouses.OpIs,
+				warehouses.JSONConditionValue{String: "1e999999"}),
+			query: `COALESCE(CASE WHEN jsonb_typeof("values") = 'string' THEN ("values" #>> '{}') COLLATE "C" = '1e999999' ELSE FALSE END, FALSE)`,
+		},
+		{
+			name: "structural JSON number outside decimal limits",
+			expr: warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.JSON()}, warehouses.OpIs,
+				json.Value("1e76")),
+			query: `"values" = '1e76'::jsonb`,
 		},
 	}
 	for _, test := range tests {
-		t.Run("", func(t *testing.T) {
+		t.Run(test.name, func(t *testing.T) {
 			var b strings.Builder
 			err := renderExpr(&b, test.expr)
 			if err != nil {
-				if !test.invalid {
-					t.Fatalf("expected query %q, got error: %s", test.query, err)
+				if test.wantErr == "" {
+					t.Fatalf("expected query %q, got error %q", test.query, err)
+				}
+				if err.Error() != test.wantErr {
+					t.Fatalf("expected error %q, got %q", test.wantErr, err.Error())
 				}
 				return
 			}
-			got := b.String()
-			if test.invalid {
-				t.Fatalf("expected invalid, got query %q", got)
+			if test.wantErr != "" {
+				t.Fatalf("expected error %q, got nil and SQL %q", test.wantErr, b.String())
 			}
-			if test.query != got {
-				t.Fatalf("\nexpected query:  %s\ngot:             %s", test.query, got)
+			if got := b.String(); test.query != got {
+				t.Fatalf("expected query %q, got %q", test.query, got)
 			}
 		})
 	}
