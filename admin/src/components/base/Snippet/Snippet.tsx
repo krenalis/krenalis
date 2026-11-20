@@ -112,7 +112,7 @@ const Snippet = ({ connectorCode, connectionID }: SnippetProps) => {
 		applicationType = 'website';
 	}
 
-	let language = 'html';
+	let language = 'xml'; // The highlighter registers its HTML grammar as 'xml'
 	if (connectorCode === 'python') {
 		language = 'python';
 	} else if (connectorCode === 'go') {
@@ -147,11 +147,6 @@ const Snippet = ({ connectorCode, connectionID }: SnippetProps) => {
 		>
 			{connectorCode === 'javascript' && (
 				<div className='snippet__cmp'>
-					{cmp === 'ketch' && (
-						<span className='snippet__cmp-note'>
-							The Ketch Smart Tag must also be added to your website.
-						</span>
-					)}
 					<span className='snippet__cmp-label'>Consent management</span>
 					<WaSelect size='s' value={cmp} onChange={onChangeCMP} className='snippet__cmp-select'>
 						<WaOption value='none'>None</WaOption>
