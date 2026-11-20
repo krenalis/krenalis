@@ -1,7 +1,6 @@
 import React, { ReactNode, useState, useMemo, useRef, useEffect, useLayoutEffect, useContext } from 'react';
 import { flushSync } from 'react-dom';
 import './Combobox.css';
-import { ComboboxKeyboardHints } from './ComboboxKeyboardHints';
 import WaInput from '@awesome.me/webawesome/dist/react/input/index.js';
 import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import WaTabGroup from '@awesome.me/webawesome/dist/react/tab-group/index.js';
@@ -88,10 +87,10 @@ const Combobox = ({
 }: ComboboxProps) => {
 	const [val, setVal] = useState<string>(displayValue ?? value ?? '');
 	const [cursorPosition, setCursorPosition] = useState<number>();
-	const [isOpen, setIsOpen] = useState<boolean>(false);
+	const [menuMode, setMenuMode] = useState<'closed' | 'filtered' | 'all'>('closed');
 	const [listWidth, setListWidth] = useState<number>();
 	const [selectedTab, setSelectedTab] = useState<string>();
-	const [keyboardHighlight, setKeyboardHighlight] = useState<HighlightedOption | 'tabs' | null>(null);
+	const [keyboardHighlight, setKeyboardHighlight] = useState<HighlightedOption | null>(null);
 	const [isErrorExpanded, setIsErrorExpanded] = useState<boolean>(false);
 	const [isErrorOverflowing, setIsErrorOverflowing] = useState<boolean>(false);
 
@@ -108,6 +107,8 @@ const Combobox = ({
 	const { connection } = useContext(ConnectionContext);
 	const { pipelineType } = useContext(pipelineContext);
 
+	const isOpen = menuMode !== 'closed';
+
 	useLayoutEffect(() => {
 		setIsErrorExpanded(false);
 		if (error !== '') {
@@ -119,11 +120,11 @@ const Combobox = ({
 		}
 	}, [error]);
 
-	const updateCursorPosition = (setStart?: boolean) => {
+	const updateCursorPosition = () => {
 		setTimeout(() => {
 			const inputElement = inputRef.current?.input;
 			if (inputElement) {
-				setCursorPosition(setStart ? 0 : inputElement.selectionStart);
+				setCursorPosition(inputElement.selectionStart);
 			}
 		});
 	};
@@ -135,13 +136,8 @@ const Combobox = ({
 			return;
 		}
 		setKeyboardHighlight(null);
-		setIsOpen(true);
-		if (isExpression) {
-			updateCursorPosition();
-		} else {
-			// Set the cursor to the start to show every item in the list.
-			updateCursorPosition(true);
-		}
+		setMenuMode(isExpression ? 'filtered' : 'all');
+		updateCursorPosition();
 	};
 
 	useEffect(() => {
@@ -177,8 +173,8 @@ const Combobox = ({
 			inputSuffix.addEventListener('click', () => {
 				inputRef.current.focus();
 				setKeyboardHighlight(null);
-				setIsOpen(true);
-				updateCursorPosition(true);
+				setMenuMode('all');
+				updateCursorPosition();
 			});
 		});
 	}, [inputRef.current, caret]);
@@ -266,7 +262,7 @@ const Combobox = ({
 			}
 		});
 		return () => window.clearTimeout(timeout);
-	}, [items, cursorPosition, isOpen, selectedTab, enumValues]);
+	}, [items, cursorPosition, menuMode, selectedTab, enumValues]);
 
 	useEffect(() => {
 		const onPageClick = (e) => {
@@ -274,7 +270,7 @@ const Combobox = ({
 			const isInCombobox = target.closest('.combobox') != null;
 			const isInAnotherCombobox = target.closest('.combobox')?.dataset.id !== name;
 			if (!isInCombobox || isInAnotherCombobox) {
-				setIsOpen(false);
+				setMenuMode('closed');
 			}
 		};
 
@@ -328,10 +324,7 @@ const Combobox = ({
 		e.preventDefault();
 		setKeyboardHighlight(null);
 		isEditing.current = true;
-		if (!isOpen) {
-			// if the user has closed the list via escape button.
-			setIsOpen(true);
-		}
+		setMenuMode('filtered');
 
 		const lastValue = val;
 		let newValue: string = e.target.value;
@@ -351,7 +344,7 @@ const Combobox = ({
 		}
 
 		updateComboboxValue(newValue);
-		updateCursorPosition();
+		setCursorPosition(position);
 		onInputFunc(name, newValue);
 		validate(name, newValue);
 	};
@@ -401,8 +394,12 @@ const Combobox = ({
 		wrapper.style.width = `${textWidth + prefixWidth + suffixWidth + 30}px`;
 	};
 
-	const onInputBlur = () => {
+	const onBlur = (event: React.FocusEvent<HTMLDivElement>) => {
+		if (event.currentTarget.contains(event.relatedTarget)) {
+			return;
+		}
 		setKeyboardHighlight(null);
+		setSelectedTab(undefined);
 		isEditing.current = false;
 		programmaticFocus.current = false;
 		if (displayValue != null) {
@@ -430,7 +427,7 @@ const Combobox = ({
 				resizeCombobox();
 			}
 		}
-		setIsOpen(true);
+		setMenuMode('filtered');
 		updateCursorPosition();
 	};
 
@@ -439,15 +436,15 @@ const Combobox = ({
 			return [];
 		}
 		return getFunctionsComboboxItems(KRENALIS_FUNCTIONS);
-	}, []);
+	}, [isExpression]);
 
 	let fragment = useMemo(() => {
 		return parseMapExpression(val == null ? '' : val, cursorPosition);
-	}, [val, cursorPosition, items]);
+	}, [val, cursorPosition]);
 
 	let { filteredProperties, filteredFunctions } = useMemo(() => {
-		return filterComboboxItems(fragment, cursorPosition, val, items, isExpression ? functionItems : []);
-	}, [fragment]);
+		return filterComboboxItems(fragment, cursorPosition, val, items, functionItems);
+	}, [fragment, cursorPosition, val, items, functionItems]);
 
 	let selectedFunction = useMemo(() => {
 		if (!isExpression) {
@@ -464,26 +461,29 @@ const Combobox = ({
 		() => enumValues?.map((term) => ({ term, content: <div className='enum-item'>{term}</div> })),
 		[enumValues],
 	);
-	const groups: SuggestionGroup[] = [];
-	if (enumItems != null) {
-		groups.push({ name: 'enum', label: 'Enum', type: 'enum', items: enumItems });
-	}
-	if (filteredProperties != null) {
-		groups.push({ name: 'properties', label: 'Properties', type: 'property', items: filteredProperties });
-	}
-	const hasTabs =
-		enumItems != null || (isExpression && (filteredProperties?.length > 0 || filteredFunctions?.length > 0));
-	if (hasTabs && filteredFunctions != null) {
-		groups.push({ name: 'functions', label: 'Functions', type: 'function', items: filteredFunctions });
-	}
+	const getGroups = (showAll: boolean) => {
+		const properties = showAll ? items : filteredProperties;
+		const functions = showAll ? functionItems : filteredFunctions;
+		const groups: SuggestionGroup[] = [];
+		if (enumItems != null) {
+			groups.push({ name: 'enum', label: 'Enum', type: 'enum', items: enumItems });
+		}
+		if (properties != null) {
+			groups.push({ name: 'properties', label: 'Properties', type: 'property', items: properties });
+		}
+		const hasOptions = properties?.length > 0 || functions?.length > 0;
+		if (isExpression && functions != null && (enumItems != null || hasOptions)) {
+			groups.push({ name: 'functions', label: 'Functions', type: 'function', items: functions });
+		}
+		return groups;
+	};
+	const groups = getGroups(menuMode === 'all');
+	const hasTabs = groups.some((group) => group.type !== 'property');
 	const activeGroup = groups.find((group) => group.name === selectedTab) ?? groups[0];
-	const hasTabNavigation = hasTabs && groups.length > 1;
 	const isListVisible = isOpen && (selectedFunction != null || hasTabs || activeGroup?.items.length > 0);
 
-	let highlight: number | 'tabs' | null = null;
-	if (keyboardHighlight === 'tabs') {
-		highlight = hasTabNavigation ? 'tabs' : null;
-	} else if (keyboardHighlight != null && activeGroup?.name === keyboardHighlight.group) {
+	let highlight: number | null = null;
+	if (keyboardHighlight != null && activeGroup?.name === keyboardHighlight.group) {
 		const index = activeGroup.items.findIndex((item) => item.term === keyboardHighlight.term);
 		highlight = index >= 0 ? index : null;
 	}
@@ -491,7 +491,6 @@ const Combobox = ({
 	useLayoutEffect(() => {
 		if (!isOpen) {
 			setKeyboardHighlight(null);
-			setSelectedTab(undefined);
 		}
 	}, [isOpen]);
 
@@ -509,7 +508,7 @@ const Combobox = ({
 		const body = bodyRef.current;
 		const options = optionsRef.current;
 		const tab = body?.querySelector<HTMLElement>(`wa-tab[panel="${activeGroup?.name}"]`);
-		const target = highlight === 'tabs' ? tab : typeof highlight === 'number' ? options?.children[highlight] : null;
+		const target = highlight != null ? options?.children[highlight] : null;
 		// Element references link the native input in the shadow root to the visible suggestions.
 		input.ariaExpanded = String(isListVisible);
 		input.ariaControlsElements = [options, tab?.parentElement].filter((element) => element != null);
@@ -518,7 +517,7 @@ const Combobox = ({
 			return;
 		}
 		const bounds = body.getBoundingClientRect();
-		const top = bounds.top + (target === tab ? 0 : (tab?.offsetHeight ?? 0));
+		const top = bounds.top + (tab?.offsetHeight ?? 0);
 		const rect = target.getBoundingClientRect();
 		if (rect.top < top) {
 			body.scrollTop += rect.top - top;
@@ -546,52 +545,31 @@ const Combobox = ({
 		return () => observer.disconnect();
 	}, [isListVisible]);
 
-	const onSelect = (e, term: string, type: 'property' | 'function' | 'enum', selectedDisplayValue?: string) => {
+	const onSelect = (e, term: string, type: 'property' | 'function' | 'enum') => {
 		e.preventDefault();
 		e.stopPropagation();
 		setKeyboardHighlight(null);
 		isEditing.current = true;
 
-		if (type === 'enum') {
-			let v = term;
-			updateComboboxValue(v);
-			programmaticFocus.current = true;
-			inputRef.current.focus();
-			onSelectFunc(name, v);
-			validate(name, v);
-			setIsOpen(false);
-			return;
-		}
-		if (type === 'property' && !isExpression && selectedDisplayValue != null) {
+		if (type === 'enum' || !isExpression) {
 			updateComboboxValue(term);
 			programmaticFocus.current = true;
 			inputRef.current.focus();
 			onSelectFunc(name, term);
 			validate(name, term);
-			setIsOpen(false);
+			setMenuMode('closed');
 			return;
 		}
 
-		let position = 0;
-		let v = '';
-		if (fragment.func != null && fragment.pos == null) {
-			const expressionStart = val.slice(0, cursorPosition);
-			const expressionEnd = val.slice(cursorPosition);
-			v = `${expressionStart}${term}${expressionEnd}`;
-			position = cursorPosition + term.length;
-		} else if (fragment != null && fragment.pos != null) {
-			const expressionStart = val.slice(0, fragment.pos.start);
-			const expressionEnd = val.slice(fragment.pos.end);
-			v = `${expressionStart}${term}${expressionEnd}`;
-			if (val === '') {
-				position = term.length;
-			} else {
-				position = fragment.pos.start + term.length;
-			}
-		} else {
-			v = val + term;
-			position = val.length + term.length;
+		const { selectionStart, selectionEnd } = inputRef.current.input;
+		const insertionFragment = parseMapExpression(val, selectionStart);
+		const start = insertionFragment?.pos?.start ?? selectionStart;
+		let end = insertionFragment?.pos?.end ?? selectionEnd;
+		if (insertionFragment?.type === 'String') {
+			end++; // Include the closing quote.
 		}
+		let v = val.slice(0, start) + term + val.slice(end);
+		let position = start + term.length;
 
 		if (type === 'function') {
 			// add parenthesis if necessary.
@@ -610,14 +588,16 @@ const Combobox = ({
 				v = `${expressionStart}${expressionEnd}`;
 			}
 		}
-		if (type === 'property' && fragment.func == null) {
+		if (type === 'property' && insertionFragment?.func == null) {
 			// if a property has been selected and is not an argument for a
 			// function, the combobox list can be closed.
-			setIsOpen(false);
-		} else if (type === 'function') {
-			// probably now the user wants to select a property to pass as
-			// argument to the function.
-			setSelectedTab('properties');
+			setMenuMode('closed');
+		} else {
+			setMenuMode('filtered');
+			if (type === 'function') {
+				// Show properties to pass as arguments to the function.
+				setSelectedTab('properties');
+			}
 		}
 
 		updateComboboxValue(v);
@@ -632,14 +612,25 @@ const Combobox = ({
 		validate(name, v);
 	};
 
+	const highlightOption = (group: SuggestionGroup, index: number) => {
+		setSelectedTab(group.name);
+		setKeyboardHighlight({ group: group.name, term: group.items[index].term });
+	};
+
 	const onKeyDown = (event: React.KeyboardEvent) => {
-		if (event.nativeEvent.composedPath()[0] !== inputRef.current?.input || event.nativeEvent.isComposing) {
+		const isOnTab = event.target instanceof HTMLElement && event.target.closest('wa-tab') != null;
+		const isOnInput = event.nativeEvent.composedPath()[0] === inputRef.current?.input;
+		if ((!isOnTab && !isOnInput) || event.nativeEvent.isComposing) {
 			return;
 		}
 		const { key } = event;
 		if (key === 'Escape' || key === 'Tab') {
+			if (isOnTab) {
+				programmaticFocus.current = true;
+				inputRef.current.focus();
+			}
 			// Remove the menu tabs before the browser advances focus.
-			flushSync(() => setIsOpen(false));
+			flushSync(() => setMenuMode('closed'));
 			if (key === 'Escape' && isListVisible) {
 				event.preventDefault();
 				event.stopPropagation();
@@ -647,43 +638,50 @@ const Combobox = ({
 			return;
 		}
 		const hasModifier = event.altKey || event.ctrlKey || event.metaKey || event.shiftKey;
-		if (!hasModifier && (key === 'ArrowDown' || key === 'ArrowUp')) {
-			setIsOpen(true);
-			const count = activeGroup?.items.length ?? 0;
-			if (count === 0 && !hasTabNavigation) {
+		if (isOnTab) {
+			if (hasModifier || (key !== 'ArrowDown' && key !== 'ArrowUp')) {
+				return;
+			}
+			if (key === 'ArrowUp' || activeGroup.items.length > 0) {
+				programmaticFocus.current = true;
+				inputRef.current.focus();
+				if (key === 'ArrowDown') {
+					highlightOption(activeGroup, 0);
+				}
+			}
+		} else if (!hasModifier && (key === 'ArrowDown' || key === 'ArrowUp')) {
+			let available = groups.filter((group) => group.items.length > 0);
+			if (key === 'ArrowDown' && (!isListVisible || available.length === 0)) {
+				available = getGroups(true).filter((group) => group.items.length > 0);
+				setMenuMode('all');
+			} else if (!isOpen) {
+				setMenuMode('filtered');
+			}
+			const group = available.find((group) => group.name === selectedTab) ?? available[0];
+			if (group != null) {
+				const count = group.items.length;
+				const index = key === 'ArrowDown' ? (highlight ?? -1) + 1 : (highlight ?? 0) - 1;
+				highlightOption(group, (index + count) % count);
+			} else if (key === 'ArrowUp') {
 				updateCursorPosition();
 				return;
 			}
-			const index = typeof highlight === 'number' ? highlight : -1;
-			if (count === 0 || (key === 'ArrowUp' && hasTabNavigation && index <= 0)) {
-				setKeyboardHighlight('tabs');
-			} else {
-				let nextIndex = count - 1;
-				if (key === 'ArrowDown') {
-					nextIndex = Math.min(index + 1, count - 1);
-				} else if (index !== -1) {
-					nextIndex = Math.max(0, index - 1);
-				}
-				setKeyboardHighlight({ group: activeGroup.name, term: activeGroup.items[nextIndex].term });
+		} else if (!hasModifier && highlight != null && (key === 'ArrowLeft' || key === 'ArrowRight')) {
+			const available = groups.filter((group) => group.items.length > 0);
+			if (available.length > 1) {
+				const index = available.indexOf(activeGroup) + (key === 'ArrowRight' ? 1 : -1);
+				highlightOption(available[(index + available.length) % available.length], 0);
 			}
-		} else if (!hasModifier && highlight === 'tabs' && (key === 'ArrowLeft' || key === 'ArrowRight')) {
-			const index = groups.indexOf(activeGroup) + (key === 'ArrowRight' ? 1 : -1);
-			setSelectedTab(groups[(index + groups.length) % groups.length].name);
-		} else if (
-			!hasModifier &&
-			key === 'Enter' &&
-			typeof highlight === 'number' &&
-			activeGroup?.items[highlight] != null
-		) {
+		} else if (!hasModifier && key === 'Enter' && highlight != null) {
 			const item = activeGroup.items[highlight];
-			onSelect(event, item.term, activeGroup.type, item.displayValue);
+			onSelect(event, item.term, activeGroup.type);
 			return;
 		} else {
 			if (
 				['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End', 'PageUp', 'PageDown'].includes(key)
 			) {
 				setKeyboardHighlight(null);
-				setIsOpen(true);
+				setMenuMode('filtered');
 				updateCursorPosition();
 			}
 			return;
@@ -700,7 +698,8 @@ const Combobox = ({
 					className='combobox-list__item'
 					role='option'
 					aria-selected={group === activeGroup && highlight === index}
-					onClick={(event) => onSelect(event, item.term, group.type, item.displayValue)}
+					onMouseDown={(event) => event.preventDefault()}
+					onClick={(event) => onSelect(event, item.term, group.type)}
 				>
 					{item.content}
 				</div>
@@ -708,15 +707,12 @@ const Combobox = ({
 		</div>
 	);
 
-	const onTabClick = (e: any) => {
-		inputRef.current.focus();
-		setSelectedTab(e.detail.name);
-	};
-
 	return (
 		<div
 			className={`combobox${isOpen ? ' combobox--open' : ''}${isExpression ? ' combobox--expression' : ''}${caret ? ' combobox--caret' : ''}${className ? ` ${className}` : ''}`}
 			data-id={name}
+			onBlur={onBlur}
+			onKeyDown={onKeyDown}
 			style={
 				{
 					'--combobox-input-height':
@@ -735,9 +731,7 @@ const Combobox = ({
 				<WaInput
 					data-is-combobox-input
 					onInput={disabled ? undefined : onInput}
-					onKeyDown={onKeyDown}
 					onClick={onClick}
-					onBlur={onInputBlur}
 					onFocus={onInputFocus}
 					disabled={disabled}
 					autocomplete='off'
@@ -806,16 +800,14 @@ const Combobox = ({
 							<WaTabGroup
 								className='combobox-list__tabs'
 								active={activeGroup.name}
-								onWaTabShow={onTabClick}
+								onWaTabShow={(event) => setSelectedTab(event.detail.name)}
 							>
 								{groups.map((group) => (
 									<WaTab
 										key={group.name}
 										slot='nav'
 										panel={group.name}
-										data-highlighted={
-											highlight === 'tabs' && group === activeGroup ? '' : undefined
-										}
+										onFocus={() => setKeyboardHighlight(null)}
 									>
 										{group.label} ({group.items.length})
 									</WaTab>
@@ -830,13 +822,6 @@ const Combobox = ({
 							activeGroup != null && renderOptions(activeGroup)
 						)}
 					</div>
-					{(hasTabNavigation || activeGroup?.items.length > 0) && (
-						<ComboboxKeyboardHints
-							hasTabNavigation={hasTabNavigation}
-							highlight={highlight}
-							hasOptions={activeGroup.items.length > 0}
-						/>
-					)}
 				</div>
 			)}
 		</div>

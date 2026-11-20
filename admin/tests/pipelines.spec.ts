@@ -118,14 +118,71 @@ test(`Add "Import customers" pipeline on Dummy`, async ({ page }) => {
 	await expect(emailInput).toHaveJSProperty('selectionStart', 0);
 	await expect(email.getByRole('tab', { name: /^Properties/ })).toHaveAttribute('aria-selected', 'true');
 
-	await emailInput.fill('email');
-	await emailInput.press('ArrowUp');
-	await emailInput.press('ArrowRight');
-	await expect(email.getByRole('tab', { name: /^Functions/ })).toHaveAttribute('aria-selected', 'true');
-	await emailInput.press('ArrowLeft');
+	const selected = email.getByRole('option', { selected: true });
+	const options = email.getByRole('option');
+	const properties = email.getByRole('tab', { name: /^Properties/ });
+	const functions = email.getByRole('tab', { name: /^Functions/ });
+	await emailInput.fill('ema');
+	await expect(options).toHaveText(['email']);
 	await emailInput.press('ArrowDown');
-	await expect(email.getByRole('option', { selected: true })).toHaveText('email');
+	await expect(selected).toHaveText('email');
+	await emailInput.press('Escape');
+	await emailInput.press('ArrowDown');
+	await expect(options.filter({ hasText: 'dummyId' })).toBeVisible();
+	await expect(options.first()).toHaveAttribute('aria-selected', 'true');
+	await expect(emailInput).toHaveValue('ema');
+	await expect(emailInput).toHaveJSProperty('selectionStart', 3);
+	await emailInput.press('ArrowUp');
+	await expect(options.last()).toHaveAttribute('aria-selected', 'true');
+	await emailInput.press('ArrowDown');
+	await expect(options.first()).toHaveAttribute('aria-selected', 'true');
+	await emailInput.press('ArrowRight');
+	await expect(functions).toHaveAttribute('aria-selected', 'true');
+	await expect(options.first()).toHaveAttribute('aria-selected', 'true');
+
+	await properties.click();
+	await expect(properties).toBeFocused();
+	await expect(selected).toHaveCount(0);
+	await page.keyboard.press('ArrowRight');
+	await expect(functions).toBeFocused();
+	await expect(selected).toHaveCount(0);
+	await page.keyboard.press('ArrowDown');
+	await expect(emailInput).toBeFocused();
+	await expect(options.first()).toHaveAttribute('aria-selected', 'true');
+	await emailInput.press('ArrowLeft');
+	await expect(properties).toHaveAttribute('aria-selected', 'true');
+
+	await emailInput.fill('lower(emax)');
+	await emailInput.press('ArrowLeft');
+	await expect(options).toHaveCount(0);
+	await expect(email.locator('.combobox-input__error')).toBeVisible();
+	await emailInput.press('ArrowDown');
+	await expect(options.filter({ hasText: 'dummyId' })).toBeVisible();
+	const replacement = await selected.innerText();
 	await emailInput.press('Enter');
+	await expect(emailInput).toHaveValue(`lower(${replacement})`);
+
+	await emailInput.fill('upper');
+	await expect(properties).toHaveText('Properties (0)');
+	await properties.click();
+	await page.keyboard.press('ArrowDown');
+	await expect(properties).toBeFocused();
+	await page.keyboard.press('ArrowUp');
+	await expect(emailInput).toBeFocused();
+	await emailInput.press('ArrowDown');
+	await expect(functions).toHaveAttribute('aria-selected', 'true');
+	await expect(selected).toContainText('upper');
+	await emailInput.press('ArrowLeft');
+	await expect(selected).toContainText('upper');
+	await properties.click();
+	await page.keyboard.press('Escape');
+	await expect(emailInput).toBeFocused();
+
+	await emailInput.fill('ema');
+	await expect(options).toHaveText(['email']);
+	await emailInput.press('ArrowDown');
+	await emailInput.press('Enter');
+	await expect(emailInput).toHaveValue('email');
 	await page.keyboard.press('Escape');
 
 	let dummyId = page.locator('.combobox[data-id="dummy_id"]');

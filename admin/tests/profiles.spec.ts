@@ -630,6 +630,11 @@ test(`Apply a completed filter explicitly`, async ({ page }) => {
 		}
 	});
 	await mockProfiles(page, {
+		// Include enough properties to scroll the suggestions menu.
+		schema: {
+			...profileSchema,
+			properties: [...profileSchema.properties, profileProperty('city'), profileProperty('postal_code')],
+		},
 		profilesForRequest: (request) => {
 			const filter = request.postDataJSON().filter ?? null;
 			const value = filter?.rules?.[0]?.values?.[0];
