@@ -401,12 +401,12 @@ func Test_renderExpr(t *testing.T) {
 		},
 		{
 			name:  "string column exists",
-			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "id", Type: types.String()}, warehouses.OpExists),
+			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "id", Type: types.String(), ReadOptional: true}, warehouses.OpExists),
 			query: `"ID" IS NOT NULL`,
 		},
 		{
 			name:  "string column does not exist",
-			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "id", Type: types.String()}, warehouses.OpDoesNotExist),
+			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "id", Type: types.String(), ReadOptional: true}, warehouses.OpDoesNotExist),
 			query: `"ID" IS NULL`,
 		},
 		{

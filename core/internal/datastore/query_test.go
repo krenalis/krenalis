@@ -261,13 +261,13 @@ func TestConvertWhereNested(t *testing.T) {
 // TestConvertWhereExistsOperators tests convertWhere with "exists" and
 // "does not exist" operators.
 func TestConvertWhereExistsOperators(t *testing.T) {
-	colA := warehouses.Column{Name: "a", Type: types.Int(32)}
+	colA := warehouses.Column{Name: "a", Type: types.Int(32), ReadOptional: true}
 	colBC := warehouses.Column{Name: "b_c", Type: types.Int(32)}
 	colBD := warehouses.Column{Name: "b_d", Type: types.String()}
 	colBEF := warehouses.Column{Name: "b_e_f", Type: types.String()}
 	colEF := warehouses.Column{Name: "e_f", Type: types.Boolean()}
 	colEG := warehouses.Column{Name: "e_g", Type: types.String()}
-	colH := warehouses.Column{Name: "h", Type: types.String()}
+	colH := warehouses.Column{Name: "h", Type: types.String(), ReadOptional: true}
 	columns := map[string]warehouses.Column{
 		"a":     colA,
 		"b.c":   colBC,
@@ -291,6 +291,11 @@ func TestConvertWhereExistsOperators(t *testing.T) {
 	if err != nil {
 		t.Fatalf("convertWhere returned error: %v", err)
 	}
+	colBC.ReadOptional = true
+	colBD.ReadOptional = true
+	colBEF.ReadOptional = true
+	colEF.ReadOptional = true
+	colEG.ReadOptional = true
 	want := warehouses.NewMultiExpr(warehouses.OpAnd, []warehouses.Expr{
 		warehouses.NewBaseExpr(colA, warehouses.OpExists),
 		warehouses.NewBaseExpr(colH, warehouses.OpDoesNotExist),

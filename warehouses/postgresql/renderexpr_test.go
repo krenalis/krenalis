@@ -58,13 +58,13 @@ func Test_renderExpr(t *testing.T) {
 			name: "JSON structural equality with apostrophe",
 			expr: warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.JSON()},
 				warehouses.OpIs, json.Value(`{"foo":2,"boo":true,"name":"O'Reilly"}`)),
-			query: `"values" = '{"foo":2,"boo":true,"name":"O''Reilly"}'::jsonb`,
+			wantErr: "warehouses/postgresql: unexpected operand type json.Value",
 		},
 		{
 			name: "JSON structural inequality",
 			expr: warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.JSON(), Nullable: true},
 				warehouses.OpIsNot, json.Value(`{"plan":"pro"}`)),
-			query: `"values" <> '{"plan":"pro"}'::jsonb`,
+			wantErr: "warehouses/postgresql: unexpected operand type json.Value",
 		},
 		{
 			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "weight", Type: types.Float(32)}, warehouses.OpIsLessThan, 6.5),
@@ -232,12 +232,12 @@ func Test_renderExpr(t *testing.T) {
 		},
 		{
 			name:  "string column exists",
-			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "id", Type: types.String()}, warehouses.OpExists),
+			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "id", Type: types.String(), ReadOptional: true}, warehouses.OpExists),
 			query: `"id" IS NOT NULL`,
 		},
 		{
 			name:  "string column does not exist",
-			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "id", Type: types.String()}, warehouses.OpDoesNotExist),
+			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "id", Type: types.String(), ReadOptional: true}, warehouses.OpDoesNotExist),
 			query: `"id" IS NULL`,
 		},
 		{
@@ -349,13 +349,13 @@ func Test_renderExpr(t *testing.T) {
 			name: "JSON array contains encoded object",
 			expr: warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.Array(types.JSON())},
 				warehouses.OpContains, json.Value(`{"plan":"pro"}`)),
-			query: `'{"plan":"pro"}'::jsonb = ANY("values")`,
+			wantErr: "warehouses/postgresql: unexpected operand type json.Value",
 		},
 		{
 			name: "JSON array does not contain encoded object",
 			expr: warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.Array(types.JSON())},
 				warehouses.OpDoesNotContain, json.Value(`{"plan":"pro"}`)),
-			query: `NOT ('{"plan":"pro"}'::jsonb = ANY("values"))`,
+			wantErr: "warehouses/postgresql: unexpected operand type json.Value",
 		},
 		{
 			name: "JSON array contains",
@@ -379,7 +379,7 @@ func Test_renderExpr(t *testing.T) {
 			name: "structural JSON number outside decimal limits",
 			expr: warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.JSON()}, warehouses.OpIs,
 				json.Value("1e76")),
-			query: `"values" = '1e76'::jsonb`,
+			wantErr: "warehouses/postgresql: unexpected operand type json.Value",
 		},
 	}
 	for _, test := range tests {

@@ -123,7 +123,8 @@ func init() {
 			// present when the event is written and then retrieved. The others,
 			// which are not read optional and thus always present, are NOT NULL
 			// in the database.
-			Nullable: p.ReadOptional,
+			Nullable:     p.ReadOptional,
+			ReadOptional: p.ReadOptional,
 		}
 		eventColumnByProperty[path] = c
 		if path != "kpid" {

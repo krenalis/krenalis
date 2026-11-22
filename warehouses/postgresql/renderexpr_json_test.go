@@ -90,13 +90,17 @@ func TestJSONExpressionErrors(t *testing.T) {
 	}
 
 	column := warehouses.Column{Name: "value", Type: types.JSON()}
-	array := warehouses.Column{Name: "value", Type: types.Array(types.JSON())}
+	array := warehouses.Column{Name: "value", Type: types.Array(types.JSON()), Nullable: true}
 	mapping := warehouses.Column{Name: "value", Type: types.Map(types.JSON())}
 	for _, test := range []struct {
 		name    string
 		expr    *warehouses.BaseExpr
 		wantErr string
 	}{
+		{"required JSON existence", warehouses.NewBaseExpr(column, warehouses.OpExists),
+			"warehouses/postgresql: existence requires a read-optional property or a JSON path"},
+		{"required array absence", warehouses.NewBaseExpr(array, warehouses.OpDoesNotExist),
+			"warehouses/postgresql: existence requires a read-optional property or a JSON path"},
 		{"unsupported JSON operator", warehouses.NewBaseExpr(column, warehouses.OpIsBefore, warehouseexpr.Operand("2026-01-01")),
 			`warehouses/postgresql: operator 14 is not supported for type "json"`},
 		{"missing operand", warehouses.NewBaseExpr(column, warehouses.OpIs),
@@ -160,10 +164,10 @@ func TestJSONExpressions(t *testing.T) {
 	mustExecSQL(t, db, `CREATE TABLE "json_expressions" ("id" integer PRIMARY KEY, "value" jsonb, `+
 		`"document" jsonb, "array" jsonb[], "map" jsonb)`)
 	idColumn := warehouses.Column{Name: "id", Type: types.Int(32)}
-	column := warehouses.Column{Name: "value", Type: types.JSON(), Nullable: true}
+	column := warehouses.Column{Name: "value", Type: types.JSON(), Nullable: true, ReadOptional: true}
 	documentColumn := warehouses.Column{Name: "document", Type: types.JSON(), Nullable: true}
-	arrayColumn := warehouses.Column{Name: "array", Type: types.Array(types.JSON()), Nullable: true}
-	mapColumn := warehouses.Column{Name: "map", Type: types.Map(types.JSON()), Nullable: true}
+	arrayColumn := warehouses.Column{Name: "array", Type: types.Array(types.JSON()), Nullable: true, ReadOptional: true}
+	mapColumn := warehouses.Column{Name: "map", Type: types.Map(types.JSON()), Nullable: true, ReadOptional: true}
 	table := warehouses.Table{
 		Name:    "json_expressions",
 		Columns: []warehouses.Column{idColumn, column, documentColumn, arrayColumn, mapColumn},
@@ -185,10 +189,7 @@ func TestJSONExpressions(t *testing.T) {
 		{"1.234567890123456789e0", "1.23456789012345", "1.23456789012347", true},
 		{"0.1234567890123456789012345678901234567890123456789", "0.12345678901234", "0.12345678901235", false},
 	}
-	nullID := mixedID + 1 + len(numericFixtures)
-	equalID := nullID + 1
-	differentID := equalID + 1
-	data := make([][]any, len(values), differentID+1)
+	data := make([][]any, len(values), mixedID+1+len(numericFixtures))
 	for i, value := range values {
 		var scalar, document, array, mapping any
 		if value != nil {
@@ -209,12 +210,6 @@ func TestJSONExpressions(t *testing.T) {
 	for i, fixture := range numericFixtures {
 		data = append(data, []any{mixedID + 1 + i, json.Value(fixture.raw), nil, nil, nil})
 	}
-	equalValue := json.Value(`{"plan":"pro"}`)
-	data = append(data,
-		[]any{nullID, nil, nil, nil, nil},
-		[]any{equalID, equalValue, nil, nil, nil},
-		[]any{differentID, json.Value(`{"plan":"team"}`), nil, nil, nil},
-	)
 	err := warehouse.Merge(t.Context(), table, data, nil)
 	if err != nil {
 		t.Fatalf("expected fixture merge, got %v", err)
@@ -303,7 +298,6 @@ func TestJSONExpressions(t *testing.T) {
 		{"number", warehouseexpr.Operand("5"), true}, {"string", warehouseexpr.Operand("foo"), true},
 		{"nested number", warehouseexpr.Operand("6"), false}, {"boolean text", warehouseexpr.Operand("true"), false},
 		{"null text", warehouseexpr.Operand("null"), false},
-		{"encoded object", json.Value(`{"key":6}`), true}, {"different object", json.Value(`{"key":7}`), false},
 	} {
 		for _, op := range []warehouses.Operator{warehouses.OpContains, warehouses.OpDoesNotContain} {
 			name := "contains"
@@ -381,19 +375,6 @@ func TestJSONExpressions(t *testing.T) {
 
 		})
 	}
-
-	t.Run("delete by structural inequality", func(t *testing.T) {
-		ids := warehouses.NewBaseExpr(idColumn, warehouses.OpIsOneOf, nullID, equalID, differentID)
-		checkJSONExpression(t, warehouse, table.Name, idColumn, ids, []int{nullID, equalID, differentID})
-		where := warehouses.NewMultiExpr(warehouses.OpAnd, []warehouses.Expr{
-			ids, warehouses.NewBaseExpr(column, warehouses.OpIsNot, equalValue),
-		})
-		err := warehouse.Delete(t.Context(), table.Name, where)
-		if err != nil {
-			t.Fatalf("expected delete by structural inequality to succeed, got %v", err)
-		}
-		checkJSONExpression(t, warehouse, table.Name, idColumn, ids, []int{nullID, equalID})
-	})
 
 }
 

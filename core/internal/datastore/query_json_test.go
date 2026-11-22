@@ -67,13 +67,13 @@ func TestJSONFilters(t *testing.T) {
 		})
 	}
 
-	columns := map[string]warehouses.Column{
-		"value":        {Name: "value", Type: types.JSON(), Nullable: true},
-		"document":     {Name: "document", Type: types.JSON(), Nullable: true},
-		"array":        {Name: "array", Type: types.Array(types.JSON()), Nullable: true},
-		"map":          {Name: "map", Type: types.Map(types.JSON()), Nullable: true},
-		"object.value": {Name: "object_value", Type: types.JSON(), Nullable: true},
-	}
+	columns := profileColumnByProperty(types.Object([]types.Property{
+		{Name: "value", Type: types.JSON(), ReadOptional: true},
+		{Name: "document", Type: types.JSON()},
+		{Name: "array", Type: types.Array(types.JSON()), ReadOptional: true},
+		{Name: "map", Type: types.Map(types.JSON()), ReadOptional: true},
+		{Name: "object", ReadOptional: true, Type: types.Object([]types.Property{{Name: "value", Type: types.JSON()}})},
+	}))
 	profileColumns := []warehouses.Column{
 		columns["value"], columns["document"], columns["array"], columns["map"], columns["object.value"],
 	}
@@ -303,6 +303,10 @@ func TestJSONFilters(t *testing.T) {
 				{"document", "quoted'key", "back\\slash"}, {"document", "0"}, {"object", "value"},
 			} {
 				for _, cond := range conditions {
+					// object.value is required whenever object is present.
+					if path[0] == "object" && (cond.operator == state.OpExists || cond.operator == state.OpDoesNotExist) {
+						continue
+					}
 					texts := make([]string, len(cond.values))
 					for i, value := range cond.values {
 						texts[i] = value.(state.JSONConditionValue).String

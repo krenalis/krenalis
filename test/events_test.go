@@ -167,6 +167,38 @@ func TestEvents(t *testing.T) {
 
 	})
 
+	for _, test := range []struct {
+		operator string
+		want     []string
+	}{
+		{"exists", []string{"group"}},
+		{"does not exist", []string{"identify", "track", "track", "track", "track"}},
+	} {
+		t.Run("groupId "+test.operator, func(t *testing.T) {
+			query := url.Values{
+				"properties": {"type"},
+				"filter":     {`{"operator":"and","rules":[{"property":"groupId","operator":"` + test.operator + `"}]}`},
+			}
+			var response struct {
+				Events []struct {
+					Type string
+				}
+			}
+			err := k.TryCall("GET", "/v1/events?"+query.Encode(), nil, nil, &response)
+			if err != nil {
+				t.Fatalf("expected GET /v1/events to succeed, got %v", err)
+			}
+			got := make([]string, len(response.Events))
+			for i, event := range response.Events {
+				got[i] = event.Type
+			}
+			slices.Sort(got)
+			if !slices.Equal(test.want, got) {
+				t.Errorf("expected event types %v, got %v", test.want, got)
+			}
+		})
+	}
+
 	// Retrieve the profile imported from the event.
 	profiles, total := k.Profiles([]string{"email"}, "", false, 0, 100)
 	const expectedProfilesTotal = 10 + 1 // 10 imported from Dummy, 1 imported from JavaScript, with the identity call

@@ -110,6 +110,11 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 		}
 	}
 
+	if (baseExpr.Operator == warehouses.OpExists || baseExpr.Operator == warehouses.OpDoesNotExist) &&
+		len(baseExpr.Keys) == 0 && !c.ReadOptional {
+		return fmt.Errorf("warehouses/snowflake: existence requires a read-optional property or a JSON path")
+	}
+
 	jsonColumnFilter := c.Type.IsJSON()
 	if jsonColumnFilter && len(baseExpr.Keys) == 0 && len(baseExpr.Values) == 1 &&
 		(baseExpr.Operator == warehouses.OpIs || baseExpr.Operator == warehouses.OpIsNot) {
@@ -484,7 +489,7 @@ func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr) error {
 	}
 
 	// Preserve SQL NULL semantics for comparisons with JSON-encoded values.
-	if count == 1 && op == warehouses.OpIs {
+	if count == 1 && op == warehouses.OpIs && len(expr.Keys) == 0 {
 		if operand, ok := expr.Values[0].(json.Value); ok {
 			b.WriteString(target)
 			if negative {

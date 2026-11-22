@@ -148,13 +148,20 @@ func TestJSONExpressionErrors(t *testing.T) {
 	}
 
 	column := warehouses.Column{Name: "value", Type: types.JSON()}
-	array := warehouses.Column{Name: "value", Type: types.Array(types.JSON())}
+	array := warehouses.Column{Name: "value", Type: types.Array(types.JSON()), Nullable: true}
 	mapping := warehouses.Column{Name: "value", Type: types.Map(types.JSON())}
 	for _, test := range []struct {
 		name    string
 		expr    *warehouses.BaseExpr
 		wantErr string
 	}{
+		{"required JSON existence", warehouses.NewBaseExpr(column, warehouses.OpExists),
+			"warehouses/snowflake: existence requires a read-optional property or a JSON path"},
+		{"required array absence", warehouses.NewBaseExpr(array, warehouses.OpDoesNotExist),
+			"warehouses/snowflake: existence requires a read-optional property or a JSON path"},
+		{"encoded value on JSON path", &warehouses.BaseExpr{Column: column, Keys: []string{"key"},
+			Operator: warehouses.OpIs, Values: []any{json.Value("1")}},
+			"warehouses/snowflake: expected a JSONConditionValue, got json.Value"},
 		{"unsupported JSON operator", warehouses.NewBaseExpr(column, warehouses.OpIsBefore, warehouseexpr.Operand("2026-01-01")),
 			`warehouses/snowflake: operator 14 is not supported for type "json"`},
 		{"missing operand", warehouses.NewBaseExpr(column, warehouses.OpIs),
@@ -218,10 +225,10 @@ func TestJSONExpressions(t *testing.T) {
 	mustExecSQL(t, db, `CREATE TABLE "JSON_EXPRESSIONS" ("ID" INTEGER PRIMARY KEY, "VALUE" VARIANT, `+
 		`"DOCUMENT" VARIANT, "ARRAY" ARRAY, "MAP" VARIANT)`)
 	idColumn := warehouses.Column{Name: "id", Type: types.Int(32)}
-	column := warehouses.Column{Name: "value", Type: types.JSON(), Nullable: true}
+	column := warehouses.Column{Name: "value", Type: types.JSON(), Nullable: true, ReadOptional: true}
 	documentColumn := warehouses.Column{Name: "document", Type: types.JSON(), Nullable: true}
-	arrayColumn := warehouses.Column{Name: "array", Type: types.Array(types.JSON()), Nullable: true}
-	mapColumn := warehouses.Column{Name: "map", Type: types.Map(types.JSON()), Nullable: true}
+	arrayColumn := warehouses.Column{Name: "array", Type: types.Array(types.JSON()), Nullable: true, ReadOptional: true}
+	mapColumn := warehouses.Column{Name: "map", Type: types.Map(types.JSON()), Nullable: true, ReadOptional: true}
 	table := warehouses.Table{
 		Name:    "json_expressions",
 		Columns: []warehouses.Column{idColumn, column, documentColumn, arrayColumn, mapColumn},

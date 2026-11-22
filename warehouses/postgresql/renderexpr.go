@@ -73,6 +73,8 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 	for _, value := range baseExpr.Values {
 		var number *decimal.Decimal
 		switch value := value.(type) {
+		case json.Value:
+			return fmt.Errorf("warehouses/postgresql: unexpected operand type %T", value)
 		case decimal.Decimal:
 			number = &value
 		case warehouses.JSONConditionValue:
@@ -90,6 +92,11 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 		}
 	}
 
+	if (baseExpr.Operator == warehouses.OpExists || baseExpr.Operator == warehouses.OpDoesNotExist) &&
+		len(baseExpr.Keys) == 0 && !c.ReadOptional {
+		return fmt.Errorf("warehouses/postgresql: existence requires a read-optional property or a JSON path")
+	}
+
 	jsonColumnFilter := c.Type.IsJSON()
 	if jsonColumnFilter && len(baseExpr.Keys) == 0 && len(baseExpr.Values) == 1 &&
 		(baseExpr.Operator == warehouses.OpIs || baseExpr.Operator == warehouses.OpIsNot) {
@@ -99,12 +106,6 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 	}
 
 	jsonArrayFilter := c.Type.IsArray() && c.Type.Elem().IsJSON()
-	if jsonArrayFilter && len(baseExpr.Values) == 1 &&
-		(baseExpr.Operator == warehouses.OpContains || baseExpr.Operator == warehouses.OpDoesNotContain) {
-		// Native array containment compares encoded JSON elements structurally.
-		_, encoded := baseExpr.Values[0].(json.Value)
-		jsonArrayFilter = !encoded
-	}
 	if jsonColumnFilter || jsonArrayFilter || c.Type.IsMap() && c.Type.Elem().IsJSON() {
 		return renderJSONExpr(b, baseExpr)
 	}
@@ -412,19 +413,6 @@ func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr) error {
 			expr.Operator, count, len(expr.Values))
 	}
 
-	// Preserve SQL NULL semantics for comparisons with JSON-encoded values.
-	if count == 1 && op == warehouses.OpIs {
-		if operand, ok := expr.Values[0].(json.Value); ok {
-			b.WriteString(target)
-			if negative {
-				b.WriteString(" <> ")
-			} else {
-				b.WriteString(" = ")
-			}
-			serializeValue(b, operand, types.JSON())
-			return nil
-		}
-	}
 	values := make([]warehouses.JSONConditionValue, count)
 	for i, operand := range expr.Values {
 		var ok bool
@@ -584,9 +572,6 @@ func serializeValue(b *strings.Builder, v any, t types.Type) {
 			b.WriteString(v.Format("15:04:05.999999"))
 		}
 		b.WriteByte('\'')
-	case json.Value:
-		quoteString(b, string(v))
-		b.WriteString("::jsonb")
 	default:
 		panic(fmt.Sprintf("unexpected type %T", v))
 	}

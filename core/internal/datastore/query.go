@@ -157,6 +157,8 @@ func convertWhere(where *state.Where, columnByProperty map[string]warehouses.Col
 			})
 			operands := make([]warehouses.Expr, len(descendantColumns))
 			for j, column := range descendantColumns {
+				// A required child can be absent when its parent object is absent.
+				column.ReadOptional = true
 				operands[j] = warehouses.NewBaseExpr(column, warehouses.Operator(rule.Operator))
 			}
 			expr.Operands[i] = warehouses.NewMultiExpr(logicalOp, operands)

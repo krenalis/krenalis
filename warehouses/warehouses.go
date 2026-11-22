@@ -391,11 +391,12 @@ type Table struct {
 // Column represents a database table column. If Type is invalid, Issue
 // describes the problem, and the other fields are not meaningful.
 type Column struct {
-	Name     string     // column name
-	Type     types.Type // data type of the column
-	Nullable bool       // true if the column can contain NULL values
-	Writable bool       // true if the column is writable
-	Issue    string     // issue message
+	Name         string     // column name
+	Type         types.Type // data type of the column
+	Nullable     bool       // true if the column can contain NULL values
+	ReadOptional bool       // true if the filtered property may be absent
+	Writable     bool       // true if the column is writable
+	Issue        string     // issue message
 }
 
 // Rows is the result of a database query. Its cursor starts before the first
@@ -916,9 +917,10 @@ const (
 // On JSON columns, Keys specifies successive object keys, treated literally,
 // including any dots. An empty Keys applies to the entire column. SQL NULL
 // represents an absent JSON property; JSON null represents a present null.
-// JSON filter operands have type JSONConditionValue. Encoded json.Value
-// operands also support structural equality and array(json) containment.
-// OpIs and OpIsNot use SQL NULL semantics with encoded JSON operands.
+// Existence operators require a read-optional property or a JSON path.
+// JSON filter operands have type JSONConditionValue. Snowflake also accepts
+// encoded json.Value operands for whole-column JSON equality and array(json)
+// containment. Encoded JSON equality uses SQL NULL semantics.
 // For JSON columns, OpIs and OpIsNot accept a Column operand if Keys is empty.
 // Decimal operands, including JSONConditionValue.Number, must fit a
 // decimal(p,s) with p <= 76 and 0 <= s <= min(p,37), independently of the
