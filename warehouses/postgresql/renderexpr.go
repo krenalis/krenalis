@@ -317,8 +317,7 @@ func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr) error {
 	if (c.Type.IsArray() || c.Type.IsMap()) && op != warehouses.OpContains && op != warehouses.OpDoesNotContain {
 		switch expr.Operator {
 		case warehouses.OpIsEmpty, warehouses.OpIsNotEmpty:
-			switch c.Type.Kind() {
-			case types.ArrayKind:
+			if c.Type.IsArray() {
 				b.WriteString("array_length(")
 				b.WriteString(target)
 				if expr.Operator == warehouses.OpIsEmpty {
@@ -326,7 +325,7 @@ func renderJSONExpr(b *strings.Builder, expr *warehouses.BaseExpr) error {
 				} else {
 					b.WriteString(", 1) IS NOT NULL")
 				}
-			case types.MapKind:
+			} else {
 				if c.Nullable {
 					b.WriteByte('(')
 					b.WriteString(target)

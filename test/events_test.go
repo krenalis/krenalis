@@ -177,7 +177,8 @@ func TestEvents(t *testing.T) {
 		t.Run("groupId "+test.operator, func(t *testing.T) {
 			query := url.Values{
 				"properties": {"type"},
-				"filter":     {`{"operator":"and","rules":[{"property":"groupId","operator":"` + test.operator + `"}]}`},
+				"filter": {`{"operator":"and","rules":[{"property":"groupId","operator":"` +
+					test.operator + `"}]}`},
 			}
 			var response struct {
 				Events []struct {

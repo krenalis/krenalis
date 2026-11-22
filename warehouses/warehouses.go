@@ -943,7 +943,8 @@ func NewBaseExpr(column Column, operator Operator, values ...any) *BaseExpr {
 // String is compared with JSON strings; Number, when non-nil, is also compared
 // with JSON numbers. Other JSON kinds do not match either representation.
 // Number must fit a decimal(p,s) with p <= 76 and 0 <= s <= min(p,37).
-// A nil Number permits any String, including numeric text outside those limits.
+// String must be valid UTF-8 and must not contain a NUL byte.
+// Number may be nil even when String represents a number outside these limits.
 type JSONConditionValue struct {
 	String string
 	Number *decimal.Decimal

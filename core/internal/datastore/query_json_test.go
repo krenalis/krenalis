@@ -306,7 +306,8 @@ func TestJSONFilters(t *testing.T) {
 			} {
 				for _, cond := range conditions {
 					// object.value is required whenever object is present.
-					if path[0] == "object" && (cond.operator == state.OpExists || cond.operator == state.OpDoesNotExist) {
+					if path[0] == "object" &&
+						(cond.operator == state.OpExists || cond.operator == state.OpDoesNotExist) {
 						continue
 					}
 					texts := make([]string, len(cond.values))
