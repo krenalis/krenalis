@@ -141,7 +141,9 @@ func TestConvertWhereJSONOperators(t *testing.T) {
 				}
 				where := &state.Where{Operator: state.OpAnd, Rules: []state.WhereRule{condition}}
 				originalWhere := &state.Where{Operator: state.OpAnd, Rules: []state.WhereRule{original}}
-				column := warehouses.Column{Name: "json_column", Type: types.JSON(), Nullable: true}
+				column := warehouses.Column{
+					Name: "json_column", Type: types.JSON(), Nullable: true, ReadOptional: len(path.keys) == 0,
+				}
 				columns := map[string]warehouses.Column{path.columnPath: column}
 				originalColumns := maps.Clone(columns)
 

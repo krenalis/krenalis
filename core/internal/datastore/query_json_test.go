@@ -386,23 +386,18 @@ func TestJSONFilters(t *testing.T) {
 				expressions := make([]warehouses.Expr, 0, 2*len(batch))
 				wants := make([]int, len(batch))
 				for i, query := range batch {
-					var ids []any
-					for _, record := range storedRecords {
-						if filters.Applies(query.where, record.attributes) {
-							ids = append(ids, record.id)
-						}
-					}
-					wants[i] = len(ids)
 					expr, err := convertWhere(query.where, columns)
 					if err != nil {
 						t.Fatalf("expected conversion for %s, got %v", query.name, err)
 					}
-					unexpected := expr
-					if len(ids) > 0 {
-						unexpected = warehouses.NewMultiExpr(warehouses.OpAnd, []warehouses.Expr{
-							expr, warehouses.NewBaseExpr(idColumn, warehouses.OpIsNotOneOf, ids...),
-						})
+					operands := []warehouses.Expr{expr}
+					for _, record := range storedRecords {
+						if filters.Applies(query.where, record.attributes) {
+							wants[i]++
+							operands = append(operands, warehouses.NewBaseExpr(idColumn, warehouses.OpIsNot, record.id))
+						}
 					}
+					unexpected := warehouses.NewMultiExpr(warehouses.OpAnd, operands)
 					expressions = append(expressions, expr, unexpected)
 				}
 				counts, err := warehouse.Counts(t.Context(), table.Name, expressions)
