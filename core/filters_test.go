@@ -1609,7 +1609,7 @@ func Test_validateFilter(t *testing.T) {
 			err: errors.New(`operator "is not empty" can only be used with json, string, array, and map properties`),
 		},
 		{
-			name: "is empty on source user object",
+			name: "is empty on object",
 			filter: Filter{
 				Operator: OpAnd,
 				Rules: []FilterRule{
@@ -1619,7 +1619,7 @@ func Test_validateFilter(t *testing.T) {
 			err: errors.New(`operator "is empty" can only be used with json, string, array, and map properties`),
 		},
 		{
-			name: "is not empty on source user object",
+			name: "is not empty on object",
 			filter: Filter{
 				Operator: OpAnd,
 				Rules: []FilterRule{
@@ -1629,27 +1629,7 @@ func Test_validateFilter(t *testing.T) {
 			err: errors.New(`operator "is not empty" can only be used with json, string, array, and map properties`),
 		},
 		{
-			name: "is empty on destination user object",
-			filter: Filter{
-				Operator: OpAnd,
-				Rules: []FilterRule{
-					&FilterCondition{Property: "m", Operator: OpIsEmpty},
-				},
-			},
-			err: errors.New(`operator "is empty" can only be used with json, string, array, and map properties`),
-		},
-		{
-			name: "is not empty on event object",
-			filter: Filter{
-				Operator: OpAnd,
-				Rules: []FilterRule{
-					&FilterCondition{Property: "m", Operator: OpIsNotEmpty},
-				},
-			},
-			err: errors.New(`operator "is not empty" can only be used with json, string, array, and map properties`),
-		},
-		{
-			name: "JSON in destination user filter",
+			name: "is not empty on a nested JSON path",
 			filter: Filter{
 				Operator: OpAnd,
 				Rules: []FilterRule{
