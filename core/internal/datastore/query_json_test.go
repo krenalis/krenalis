@@ -113,40 +113,6 @@ func TestJSONFilters(t *testing.T) {
 		"12.345678901234567890123456789012345678", "-12.345678901234567890123456789012345678",
 		"1e308", "-1e308", "1e-308", "-1e-308", "1e-324",
 	}
-	var data [][]any
-	// Nil represents a missing property (SQL NULL); json.Value("null") is present.
-	add := func(value, document any, array []any, mapping map[string]any) {
-		id := fmt.Sprintf("00000000-0000-0000-0000-%012d", len(data)+1)
-		var arrayValue, mapValue any
-		if array != nil {
-			arrayValue = array
-		}
-		if mapping != nil {
-			mapValue = mapping
-		}
-		data = append(data, []any{id, 0, 1, time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
-			value, document, arrayValue, mapValue, value})
-	}
-	for _, raw := range rawValues {
-		if raw == "" {
-			add(nil, nil, nil, nil)
-			continue
-		}
-		value := json.Value(raw)
-		document := json.Value("{\"a\":{\"b\":" + raw + "},\"a.b\":" + raw +
-			",\"quoted'key\":{\"back\\\\slash\":" + raw + "},\"0\":" + raw + "}")
-		add(value, document, []any{value}, map[string]any{"key": value})
-	}
-	add(nil, json.Value("{}"), []any{}, map[string]any{})
-	for _, document := range []string{
-		"null", "true", "5", "\"foo\"", "[]", "[{\"a\":{\"b\":670}}]",
-		"{\"a\":null}", "{\"a\":5}", "{\"a\":[]}", "{\"a\":[{\"b\":670}]}",
-		"{\"a\":{}}", "{\"a.b\":\"foo\"}", "{\"0\":670}", "[670]",
-	} {
-		add(nil, json.Value(document), nil, nil)
-	}
-	add(nil, nil, []any{json.Value("null"), json.Value("true"), json.Value("\"foo\""), json.Value("670")},
-		map[string]any{"key": json.Value("null")})
 
 	type condition struct {
 		operator state.WhereOperator
@@ -220,6 +186,42 @@ func TestJSONFilters(t *testing.T) {
 			if err != nil {
 				t.Fatalf("expected warehouse initialization, got %v", err)
 			}
+
+			// Merge may modify the rows, so build fresh fixtures for each warehouse.
+			var data [][]any
+			// Nil represents a missing property (SQL NULL); json.Value("null") is present.
+			add := func(value, document any, array []any, mapping map[string]any) {
+				id := fmt.Sprintf("00000000-0000-0000-0000-%012d", len(data)+1)
+				var arrayValue, mapValue any
+				if array != nil {
+					arrayValue = array
+				}
+				if mapping != nil {
+					mapValue = mapping
+				}
+				data = append(data, []any{id, 0, 1, time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
+					value, document, arrayValue, mapValue, value})
+			}
+			for _, raw := range rawValues {
+				if raw == "" {
+					add(nil, nil, nil, nil)
+					continue
+				}
+				value := json.Value(raw)
+				document := json.Value("{\"a\":{\"b\":" + raw + "},\"a.b\":" + raw +
+					",\"quoted'key\":{\"back\\\\slash\":" + raw + "},\"0\":" + raw + "}")
+				add(value, document, []any{value}, map[string]any{"key": value})
+			}
+			add(nil, json.Value("{}"), []any{}, map[string]any{})
+			for _, document := range []string{
+				"null", "true", "5", "\"foo\"", "[]", "[{\"a\":{\"b\":670}}]",
+				"{\"a\":null}", "{\"a\":5}", "{\"a\":[]}", "{\"a\":[{\"b\":670}]}",
+				"{\"a\":{}}", "{\"a.b\":\"foo\"}", "{\"0\":670}", "[670]",
+			} {
+				add(nil, json.Value(document), nil, nil)
+			}
+			add(nil, nil, []any{json.Value("null"), json.Value("true"), json.Value("\"foo\""), json.Value("670")},
+				map[string]any{"key": json.Value("null")})
 			err = warehouse.Merge(t.Context(), table, data, nil)
 			if err != nil {
 				t.Fatalf("expected fixture merge, got %v", err)
