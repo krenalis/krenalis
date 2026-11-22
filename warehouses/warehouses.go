@@ -918,9 +918,7 @@ const (
 // including any dots. An empty Keys applies to the entire column. SQL NULL
 // represents an absent JSON property; JSON null represents a present null.
 // Existence operators require a read-optional property or a JSON path.
-// JSON filter operands have type JSONConditionValue. Snowflake also accepts
-// encoded json.Value operands for whole-column JSON equality and array(json)
-// containment. Encoded JSON equality uses SQL NULL semantics.
+// JSON filter operands have type JSONConditionValue.
 // For JSON columns, OpIs and OpIsNot accept a Column operand if Keys is empty.
 // Decimal operands, including JSONConditionValue.Number, must fit a
 // decimal(p,s) with p <= 76 and 0 <= s <= min(p,37), independently of the

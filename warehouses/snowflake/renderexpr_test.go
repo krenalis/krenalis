@@ -204,16 +204,10 @@ func Test_renderExpr(t *testing.T) {
 			query: `"A" <> "B"`,
 		},
 		{
-			name: "JSON structural equality with apostrophe",
+			name: "unsupported encoded JSON operand",
 			expr: warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.JSON()},
-				warehouses.OpIs, json.Value(`{"foo":2,"boo":true,"name":"O'Reilly"}`)),
-			query: `"VALUES" = PARSE_JSON('{"foo":2,"boo":true,"name":"O\'Reilly"}')`,
-		},
-		{
-			name: "JSON structural inequality",
-			expr: warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.JSON(), Nullable: true},
-				warehouses.OpIsNot, json.Value(`{"plan":"pro"}`)),
-			query: `"VALUES" <> PARSE_JSON('{"plan":"pro"}')`,
+				warehouses.OpIs, json.Value(`{}`)),
+			wantErr: "warehouses/snowflake: unexpected operand type json.Value",
 		},
 		{
 			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "weight", Type: types.Float(32)}, warehouses.OpIsLessThan, 6.5),
@@ -535,18 +529,6 @@ func Test_renderExpr(t *testing.T) {
 			query: `NOT COALESCE(CASE WHEN IS_VARCHAR(GET("METADATA", 'plan')) THEN CASE COLLATE(AS_VARCHAR(GET("METADATA", 'plan')), 'utf8') WHEN 'pro' THEN TRUE WHEN 'team' THEN TRUE ELSE FALSE END ELSE FALSE END, FALSE)`,
 		},
 		{
-			name: "JSON array contains encoded object",
-			expr: warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.Array(types.JSON())},
-				warehouses.OpContains, json.Value(`{"plan":"pro"}`)),
-			query: `ARRAY_CONTAINS(PARSE_JSON('{"plan":"pro"}'), "VALUES")`,
-		},
-		{
-			name: "JSON array does not contain encoded object",
-			expr: warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.Array(types.JSON())},
-				warehouses.OpDoesNotContain, json.Value(`{"plan":"pro"}`)),
-			query: `NOT ARRAY_CONTAINS(PARSE_JSON('{"plan":"pro"}'), "VALUES")`,
-		},
-		{
 			name: "JSON array contains",
 			expr: warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.Array(types.JSON())},
 				warehouses.OpContains, warehouses.JSONConditionValue{String: "foo"}),
@@ -563,12 +545,6 @@ func Test_renderExpr(t *testing.T) {
 			expr: warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.JSON()}, warehouses.OpIs,
 				warehouses.JSONConditionValue{String: "1e999999"}),
 			query: `COALESCE(CASE WHEN IS_VARCHAR("VALUES") THEN COLLATE(AS_VARCHAR("VALUES"), 'utf8') = '1e999999' ELSE FALSE END, FALSE)`,
-		},
-		{
-			name: "structural JSON number outside decimal limits",
-			expr: warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.JSON()}, warehouses.OpIs,
-				json.Value("1e76")),
-			query: `"VALUES" = PARSE_JSON('1e76')`,
 		},
 	}
 	for _, test := range tests {

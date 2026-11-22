@@ -69,7 +69,7 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 		return fmt.Errorf("invalid property name %q", c.Name)
 	}
 
-	// Validate precision and scale for decimal values and JSON decimals.
+	// Reject encoded JSON operands and validate decimal precision and scale.
 	for _, value := range baseExpr.Values {
 		var number *decimal.Decimal
 		switch value := value.(type) {

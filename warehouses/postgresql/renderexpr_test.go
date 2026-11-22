@@ -55,15 +55,9 @@ func Test_renderExpr(t *testing.T) {
 			query: `"a" <> "b"`,
 		},
 		{
-			name: "JSON structural equality with apostrophe",
+			name: "unsupported encoded JSON operand",
 			expr: warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.JSON()},
-				warehouses.OpIs, json.Value(`{"foo":2,"boo":true,"name":"O'Reilly"}`)),
-			wantErr: "warehouses/postgresql: unexpected operand type json.Value",
-		},
-		{
-			name: "JSON structural inequality",
-			expr: warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.JSON(), Nullable: true},
-				warehouses.OpIsNot, json.Value(`{"plan":"pro"}`)),
+				warehouses.OpIs, json.Value(`{}`)),
 			wantErr: "warehouses/postgresql: unexpected operand type json.Value",
 		},
 		{
@@ -346,18 +340,6 @@ func Test_renderExpr(t *testing.T) {
 			wantErr: "warehouses/postgresql: decimal operand exceeds precision 76 or scale 37",
 		},
 		{
-			name: "JSON array contains encoded object",
-			expr: warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.Array(types.JSON())},
-				warehouses.OpContains, json.Value(`{"plan":"pro"}`)),
-			wantErr: "warehouses/postgresql: unexpected operand type json.Value",
-		},
-		{
-			name: "JSON array does not contain encoded object",
-			expr: warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.Array(types.JSON())},
-				warehouses.OpDoesNotContain, json.Value(`{"plan":"pro"}`)),
-			wantErr: "warehouses/postgresql: unexpected operand type json.Value",
-		},
-		{
 			name: "JSON array contains",
 			expr: warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.Array(types.JSON())},
 				warehouses.OpContains, warehouses.JSONConditionValue{String: "foo"}),
@@ -374,12 +356,6 @@ func Test_renderExpr(t *testing.T) {
 			expr: warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.JSON()}, warehouses.OpIs,
 				warehouses.JSONConditionValue{String: "1e999999"}),
 			query: `COALESCE(CASE WHEN jsonb_typeof("values") = 'string' THEN ("values" #>> '{}') COLLATE "C" = '1e999999' ELSE FALSE END, FALSE)`,
-		},
-		{
-			name: "structural JSON number outside decimal limits",
-			expr: warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.JSON()}, warehouses.OpIs,
-				json.Value("1e76")),
-			wantErr: "warehouses/postgresql: unexpected operand type json.Value",
 		},
 	}
 	for _, test := range tests {
