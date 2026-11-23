@@ -64,10 +64,10 @@ func CheckSchemaVersion(ctx context.Context, database *db.DB) error {
 // at the next schema version but not finalized, as after a rollback to this
 // version of Krenalis. It fails if the database is empty or at any other
 // schema version. After it, the instances of the previous release can no
-// longer run on the database. It does
-// not check that none of them is running: the caller must ensure it, since
-// otherwise the behavior is undefined and may be destructive. It is safe to
-// call it concurrently from several Krenalis instances.
+// longer run on the database. It does not check that none of them is
+// running: the caller must ensure it, since otherwise the behavior is
+// undefined and may be destructive. It is safe to call it concurrently from
+// several Krenalis instances.
 func Finalize(ctx context.Context, database *db.DB) error {
 	return database.Transaction(ctx, func(tx *db.Tx) error {
 
