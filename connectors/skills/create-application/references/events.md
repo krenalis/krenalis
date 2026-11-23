@@ -47,6 +47,8 @@ Each yielded event is consumed unless postponed. `Discard(err)` reports a local 
 
 `SameUser` groups by anonymous ID and can yield events from different ordering groups and delivery endpoints in one call. When event types use different provider endpoints, select the endpoint from `Event.Type.ID` and batch only events accepted by that endpoint. If a later event needs a different endpoint, postpone it before modifying its values and finish the current batch. Test this with two event types for the same anonymous ID.
 
+If `Discard` leaves a `SameUser` batch empty, the next event in the same iteration can belong to a different anonymous ID. In both send and preview, take user-specific request fields from the first event you keep. If you prepared those fields from an event seen through `Peek`, clear them when you discard that event.
+
 Return `connectors.EventsError` with zero-based consumed-event indices for provider validation failures that can be attributed per event. Indices absent from the map are successes. A different non-nil error applies to all events consumed by the call and represents request-level failure.
 
 Correlate batch results by preserved order or a documented stable key. Do not report asynchronous job acceptance as confirmed delivery when later failures cannot be mapped. Apply the selected iteration and batching guidance for item and byte limits.

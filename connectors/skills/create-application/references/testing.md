@@ -16,6 +16,8 @@ There is no `connectors/internal/livetest` package and no `livetest.*` API. Do n
 
 For a `SameUser` batch, include events with distinct anonymous IDs and the same identified user. The iterator groups by anonymous ID. See `TestEventsIteratorSameUserUsesAnonymousID` in `core/testconnector/iterator_test.go`.
 
+For a connector that builds a user-specific request and can discard events locally, exercise the same case in send and preview. Call `Peek` on an event for A, discard it when yielded, then accept an event for B in the same `SameUser` iteration. Assert that the request identifies B and contains only B’s event. Use a test iterator that can switch users after the discard. `testconnector.NewEventsIterator` retains A’s anonymous ID in this case. See `Test_Sender_SameUserRebindPreservesOrder` in `core/internal/collector/sender/sender_test.go` for the production behavior.
+
 Include tests relevant to the capability:
 
 - registration and declared-interface alignment;
