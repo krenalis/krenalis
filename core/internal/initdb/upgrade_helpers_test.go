@@ -20,7 +20,7 @@ import (
 )
 
 // This file holds the helpers of the test of the database upgrade of a release,
-// migrate_release_test.go, which exists only while a release is prepared. See
+// upgrade_release_test.go, which exists only while a release is prepared. See
 // .agents/skills/release-upgrade/SKILL.md.
 
 // schemaSnapshotQuery describes the objects of the current schema regardless

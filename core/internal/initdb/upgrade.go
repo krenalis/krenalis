@@ -174,7 +174,7 @@ func Migrate(ctx context.Context, database *db.DB) error {
 // before and after it.
 //
 // It is written together with migrate, when a release that changes the
-// database is prepared, with its helpers in migrate_release.go, and emptied
+// database is prepared, with its helpers in upgrade_release.go, and emptied
 // after the release is published. See .agents/skills/release-upgrade/SKILL.md.
 func finalize(ctx context.Context, tx *db.Tx) error {
 	return nil
@@ -221,7 +221,7 @@ func lockSchemaVersion(ctx context.Context, tx *db.Tx) (version int, finalized b
 // they are replaced.
 //
 // It is written when a release that changes the database is prepared, from
-// the notes in RELEASE-UPGRADE.md, with its helpers in migrate_release.go, and
+// the notes in RELEASE-UPGRADE.md, with its helpers in upgrade_release.go, and
 // emptied after the release is published. See
 // .agents/skills/release-upgrade/SKILL.md.
 func migrate(ctx context.Context, tx *db.Tx) error {

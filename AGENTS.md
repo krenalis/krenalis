@@ -305,7 +305,7 @@ Every exported `core` method called by `cmd` starts with `<receiver>.core.mustBe
 
 ## Database upgrades
 
-Write or remove the database upgrade, in `migrate` and `finalize` of `core/internal/initdb/migrate.go`, and increment `schemaVersion` there, only during the release procedure. When a change requires upgrading an existing Krenalis PostgreSQL database, including a stored-data format change that leaves the schema unchanged, record it in `core/internal/initdb/RELEASE-UPGRADE.md` in the same change, following `.agents/skills/release-upgrade/SKILL.md`.
+Write or remove the database upgrade, in `migrate` and `finalize` of `core/internal/initdb/upgrade.go`, and increment `schemaVersion` there, only during the release procedure. When a change requires upgrading an existing Krenalis PostgreSQL database, including a stored-data format change that leaves the schema unchanged, record it in `core/internal/initdb/RELEASE-UPGRADE.md` in the same change, following `.agents/skills/release-upgrade/SKILL.md`.
 
 ## Compatibility with the previous release
 
