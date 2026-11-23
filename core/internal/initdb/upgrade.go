@@ -69,7 +69,8 @@ func CheckSchemaVersion(ctx context.Context, database *db.DB) error {
 // undefined and may be destructive. It is safe to call it concurrently from
 // several Krenalis instances.
 func Finalize(ctx context.Context, database *db.DB) error {
-	return database.Transaction(ctx, func(tx *db.Tx) error {
+	var done bool
+	err := database.Transaction(ctx, func(tx *db.Tx) error {
 
 		version, finalized, err := lockSchemaVersion(ctx, tx)
 		if err != nil {
@@ -102,10 +103,17 @@ func Finalize(ctx context.Context, database *db.DB) error {
 		if err != nil {
 			return fmt.Errorf("cannot write schema version of PostgreSQL database: %s", err)
 		}
-		slog.Info("PostgreSQL database finalized", "schema_version", schemaVersion)
+		done = true
 
 		return nil
 	})
+	if err != nil {
+		return err
+	}
+	if done {
+		slog.Info("PostgreSQL database finalized", "schema_version", schemaVersion)
+	}
+	return nil
 }
 
 // Migrate migrates Krenalis's PostgreSQL database, in a single transaction,
@@ -117,6 +125,7 @@ func Finalize(ctx context.Context, database *db.DB) error {
 // any other schema version. It is safe to call it concurrently from several
 // Krenalis instances.
 func Migrate(ctx context.Context, database *db.DB) error {
+	var done bool
 	err := database.Transaction(ctx, func(tx *db.Tx) error {
 
 		version, finalized, err := lockSchemaVersion(ctx, tx)
@@ -154,14 +163,16 @@ func Migrate(ctx context.Context, database *db.DB) error {
 		if err != nil {
 			return fmt.Errorf("cannot write schema version of PostgreSQL database: %s", err)
 		}
-		slog.Info("PostgreSQL database migrated", "schema_version", schemaVersion)
+		done = true
 
 		return nil
 	})
 	if err != nil {
 		return err
 	}
-	slog.Info("PostgreSQL database migration completed")
+	if done {
+		slog.Info("PostgreSQL database migrated", "schema_version", schemaVersion)
+	}
 	return nil
 }
 
