@@ -7,6 +7,7 @@ package postgresql
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 	"slices"
@@ -21,6 +22,7 @@ import (
 	"github.com/krenalis/krenalis/warehouses"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/jackc/pgx/v5/pgproto3"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
@@ -42,6 +44,66 @@ func newTestSettingsLoader(settings json.Value) *testSettingsLoader {
 
 func (loader *testSettingsLoader) Load(ctx context.Context, dst any) error {
 	return json.Unmarshal(loader.settings, dst)
+}
+
+// TestConnectionPoolMessageSizeLimit verifies that oversized messages
+// are rejected and the pool can recover by opening a new connection.
+func TestConnectionPoolMessageSizeLimit(t *testing.T) {
+
+	_, warehousePool := newTestPostgreSQLWarehouse(t)
+	config := warehousePool.Config()
+	config.MaxConns = 1
+	config.MinConns = 0
+	config.MinIdleConns = 0
+	pool, err := pgxpool.NewWithConfig(t.Context(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pool.Close()
+
+	const maxBodyBytes = 16 << 20
+	// A one-column DataRow has a two-byte field count and a four-byte field length.
+	const maxTextBytes = maxBodyBytes - 6
+	const query = `SELECT repeat('x', $1)`
+	var value string
+	err = pool.QueryRow(t.Context(), query, maxTextBytes).Scan(&value)
+	if err != nil {
+		t.Fatalf("expected a row at the message size limit, got %v", err)
+	}
+	if len(value) != maxTextBytes {
+		t.Fatalf("expected %d bytes, got %d", maxTextBytes, len(value))
+	}
+
+	err = pool.QueryRow(t.Context(), query, maxTextBytes+1).Scan(&value)
+	if err != nil {
+
+		limitErr, ok := errors.AsType[*pgproto3.ExceededMaxBodyLenErr](err)
+		if !ok {
+			t.Fatalf("expected ExceededMaxBodyLenErr, got %v", err)
+		}
+		if limitErr.MaxExpectedBodyLen != maxBodyBytes {
+			t.Fatalf("expected a limit of %d bytes, got %d", maxBodyBytes, limitErr.MaxExpectedBodyLen)
+		}
+		if limitErr.ActualBodyLen != maxBodyBytes+1 {
+			t.Fatalf("expected a body of %d bytes, got %d", maxBodyBytes+1, limitErr.ActualBodyLen)
+		}
+
+		var result int
+		err = pool.QueryRow(t.Context(), "SELECT 1").Scan(&result)
+		if err != nil {
+			t.Fatalf("expected the pool to return a row after rejecting the message, got %v", err)
+		}
+		if result != 1 {
+			t.Fatalf("expected 1, got %d", result)
+		}
+		if n := pool.Stat().NewConnsCount(); n != 2 {
+			t.Fatalf("expected the pool to have opened two connections, got %d", n)
+		}
+
+		return
+	}
+	t.Fatal("expected ExceededMaxBodyLenErr, got nil")
+
 }
 
 // TestCounts checks unconditional and conditional row counts.

@@ -542,6 +542,9 @@ func (warehouse *PostgreSQL) connectionPool(ctx context.Context, returnSchema bo
 	// since only single quotes are doubled for escaping.
 	config.ConnConfig.RuntimeParams["standard_conforming_strings"] = "on"
 	config.ConnConfig.DialFunc = warehouse.dialWith(config.ConnConfig.DialFunc)
+	// pgx reserves the declared body size before reading it. Leave room for
+	// wide profile rows and wire overhead on a 10 MiB read-only query result.
+	config.ConnConfig.MaxProtocolMessageBodyLen = 16 << 20
 	pool, err := pgxpool.NewWithConfig(ctx, config)
 	if err != nil {
 		return nil, "", err
