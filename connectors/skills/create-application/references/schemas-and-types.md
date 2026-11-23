@@ -78,7 +78,7 @@ If you need a constraint that is not covered above, check the `types.Type` metho
 
 ### String constraint combinations
 
-For each string type, choose one of these constraint forms, or leave it unconstrained:
+Strings with country or phone semantics forbid additional length, value, or pattern constraints (see `Test_TypeSemanticsConfigurationPanics` in `tools/types/semantics_test.go`). For other strings, choose one of these constraint forms, or leave the string unconstrained:
 
 - Length limits: `WithMaxLength` (Unicode code points), `WithMaxBytes` (UTF-8 bytes), or both. Each limit must be in `[1, types.MaxStringLen]` and may be set only once.
 - Allowed values: `WithValues(...)`, without a pattern or length limits. The list must be non-empty and contain valid UTF-8 strings; it may be set only once.

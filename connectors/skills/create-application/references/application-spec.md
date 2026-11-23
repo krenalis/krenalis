@@ -43,10 +43,4 @@ Add a built-in production package to the blank imports in `main.go`. Registratio
 
 ## Check runtime compatibility
 
-Before finishing, compare the spec with its runtime consumers. Known current mismatches must be surfaced rather than worked around:
-
-- `connectors.RegisterApplication` accepts source-only applications, but `core/internal/state/load.go` currently dereferences `AsDestination` while loading connector state.
-- Public comments around `Records.Peek` and the first-record `Records.Postpone` restriction do not fully match the tested `core/internal/connections/appwriter` iterator. Follow the tested runtime behavior for implementation, and report the documentation mismatch when it affects the design.
-- Public `connectors.Record.Err` is intended to report a provider item failure, but the current application-record runtime does not copy a connector-provided `Record.Err`. Do not rely on it for observable source item errors until that mismatch is resolved.
-
-Do not add an invented destination, misleading stub behavior, or a silent panic merely to pass registry validation.
+For a source-only application, leave `AsDestination` nil. Check the role flags and documentation against the application case in `core/internal/state/load.go`, which loads each declared role independently.

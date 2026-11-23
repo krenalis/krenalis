@@ -6,9 +6,9 @@ Treat iterator consumption and request rollback as one transaction. A batch is c
 
 Call exactly one of `All`/`Same`/`SameUser`/`First` on a given `Records` or `Events` value. A yielded item is consumed when produced. Breaking after an accepted item leaves later, unyielded items for the next call.
 
-Use `Peek` to inspect the next item without consuming or modifying it. The tested runtime permits an initial `Peek` for records as well as events, although the public `Records.Peek` comment is narrower.
+Use `Peek` to inspect the next item without consuming or modifying it. Call it before selecting an iterator or inside a yielding loop. See `Test_iterator_Peek` in `core/internal/connections/appwriter/iterator_test.go` and `TestEventsIteratorPeek` in `core/testconnector/iterator_test.go`.
 
-Call `Postpone` only during an iterator callback and only before modifying the current record attributes or event type values. It keeps that item unread for a later framework call. Production event iteration rejects postponing the first event; production record iteration currently permits the first record despite a contradictory comment. Ensure every successful call makes progress.
+Call `Postpone` only during an iterator callback and only before modifying the current record attributes or event type values. It keeps that item unread for a later framework call. The event sender panics if the first event is postponed. The record writer currently allows postponing the first record even though the public contract requires consuming it. Consume or discard the first item so the next call makes progress.
 
 Use `Discard(err)` for a deterministic item-local failure discovered before delivery. Do not both discard and return the same item error.
 
@@ -33,8 +33,8 @@ For an item-count limit, stop after the last accepted item without yielding the 
 1. preflight the first item with `Peek` when necessary;
 2. encode the current item into the unflushed candidate region;
 3. if it fits, flush/commit it and continue;
-4. if it does not fit, roll it back and call `Postpone` while it is still unchanged;
-5. if a first event cannot fit alone, discard it with a safe validation error or fail the call according to provider semantics—never postpone it.
+4. on overflow, roll back the candidate bytes. If the item cannot fit even in an empty batch, discard it with a safe validation error or fail the call according to provider semantics;
+5. if it fits alone but would overflow the current batch, call `Postpone` while the item is still unchanged and finish the batch.
 
 If the provider's limit applies to compressed bytes, `BodyBuffer.Len` is insufficient for `Gzip`; use a format/encoding strategy that can enforce the documented wire limit. Do not guess whether a published limit is compressed or uncompressed.
 

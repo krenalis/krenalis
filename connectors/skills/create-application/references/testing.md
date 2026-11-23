@@ -14,7 +14,7 @@ Use standard Go tests, `httptest`, or a controlled transport. `core/testconnecto
 
 There is no `connectors/internal/livetest` package and no `livetest.*` API. Do not reference or recreate that nonexistent harness.
 
-Use helpers only for behavior they model faithfully. In particular, the current `testconnector.NewEventsIterator` seeds `SameUser` from `UserID` but compares subsequent events by `AnonymousID`, unlike production grouping. Do not use it alone to prove `SameUser` behavior when those identifiers differ; supplement it with a focused local fake or the production iterator tests in `core/internal/collector/sender`.
+For a `SameUser` batch, include events with distinct anonymous IDs and the same identified user. The iterator groups by anonymous ID. See `TestEventsIteratorSameUserUsesAnonymousID` in `core/testconnector/iterator_test.go`.
 
 Include tests relevant to the capability:
 
