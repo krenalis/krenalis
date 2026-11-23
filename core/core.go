@@ -205,32 +205,15 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 	}()
 
 	// Open connection to PostgreSQL.
-	ps := conf.DB
-	db, err := dbpkg.Open(&dbpkg.Options{
-		Host:           ps.Host,
-		Port:           ps.Port,
-		Username:       ps.Username,
-		Password:       ps.Password,
-		Database:       ps.Database,
-		Schema:         ps.Schema,
-		MaxConnections: max(2, ps.MaxConnections),
-	})
+	db, err := openDB(ctx, conf.DB)
 	if err != nil {
-		return nil, fmt.Errorf("cannot connect to PostgreSQL: %s", err)
+		return nil, err
 	}
 	defer func() {
 		if err != nil {
 			db.Close()
 		}
 	}()
-
-	// Ping the PostgreSQL connection to test if it works.
-	pingCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
-	defer cancel()
-	err = db.Ping(pingCtx)
-	if err != nil {
-		return nil, fmt.Errorf("cannot connect to PostgreSQL: %s", err)
-	}
 
 	// Initialize the key manager.
 	kms, err := kms.New(ctx, conf.KMS)
