@@ -86,8 +86,10 @@ func TestCheckSchemaVersion(t *testing.T) {
 }
 
 // TestFinalizeSchemaVersions verifies how Finalize handles each schema version
-// of the database. Cases that set a schema version below 1 are skipped until
-// schemaVersion is high enough.
+// of the database, except when it runs finalize, which must run on a migrated
+// database: upgrade_release_test.go tests it while a release is prepared.
+// Cases that set a schema version below 1 are skipped until schemaVersion is
+// high enough.
 func TestFinalizeSchemaVersions(t *testing.T) {
 
 	type state struct {
@@ -107,7 +109,6 @@ func TestFinalizeSchemaVersions(t *testing.T) {
 		{name: "empty database", empty: true, fails: true},
 		{name: "new database", expected: &state{v, true}},
 		{name: "legacy database", legacy: true, fails: legacySchemaVersion != v, expected: &state{legacySchemaVersion, true}},
-		{name: "current, not finalized", set: &state{v, false}, expected: &state{v, true}},
 		{name: "next, not finalized", set: &state{v + 1, false}, expected: &state{v + 1, false}},
 		{name: "next, finalized", set: &state{v + 1, true}, fails: true, expected: &state{v + 1, true}},
 		{name: "previous, finalized", set: &state{v - 1, true}, fails: true, expected: &state{v - 1, true}},
@@ -184,25 +185,15 @@ func TestMigrateEmpty(t *testing.T) {
 }
 
 // TestMigrateSchemaVersions verifies how Migrate handles each schema version of
-// the database. Cases that set a schema version below 1 are skipped until
-// schemaVersion is high enough.
+// the database, except when it runs migrate, which must run on a database of
+// the previous schema version: upgrade_release_test.go tests it while a
+// release is prepared. Cases that set a schema version below 1 are skipped
+// until schemaVersion is high enough.
 func TestMigrateSchemaVersions(t *testing.T) {
 
 	type state struct {
 		version   int
 		finalized bool
-	}
-
-	// A database without the schema_version table is handled as a finalized
-	// database of the legacy schema version.
-	legacyExpected, legacyFails := state{legacySchemaVersion, true}, false
-	switch legacySchemaVersion {
-	case schemaVersion:
-		// There is nothing to migrate.
-	case schemaVersion - 1:
-		legacyExpected = state{schemaVersion, false}
-	default:
-		legacyFails = true
 	}
 
 	const v = schemaVersion
@@ -214,12 +205,11 @@ func TestMigrateSchemaVersions(t *testing.T) {
 		expected state // state after Migrate
 	}{
 		{name: "new database", expected: state{v, true}},
-		{name: "legacy database", legacy: true, fails: legacyFails, expected: legacyExpected},
+		{name: "legacy database", legacy: true, fails: legacySchemaVersion != v, expected: state{legacySchemaVersion, true}},
 		{name: "current, not finalized", set: &state{v, false}, expected: state{v, false}},
 		{name: "next, not finalized", set: &state{v + 1, false}, expected: state{v + 1, false}},
 		{name: "next, finalized", set: &state{v + 1, true}, fails: true, expected: state{v + 1, true}},
 		{name: "two ahead", set: &state{v + 2, false}, fails: true, expected: state{v + 2, false}},
-		{name: "previous, finalized", set: &state{v - 1, true}, expected: state{v, false}},
 		{name: "previous, not finalized", set: &state{v - 1, false}, fails: true, expected: state{v - 1, false}},
 		{name: "two behind", set: &state{v - 2, true}, fails: true, expected: state{v - 2, true}},
 	}
@@ -229,6 +219,9 @@ func TestMigrateSchemaVersions(t *testing.T) {
 
 			if test.set != nil && test.set.version < 1 {
 				t.Skipf("requires schemaVersion to be at least %d", v-test.set.version+1)
+			}
+			if test.legacy && legacySchemaVersion == v-1 {
+				t.Skip("Migrate would run migrate on a database with the current schema")
 			}
 			t.Parallel()
 
