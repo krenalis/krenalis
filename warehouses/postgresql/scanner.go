@@ -23,6 +23,10 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+// maxArrayScanBytes limits the combined size of an array's binary payload and
+// result slice, counting 16 bytes per result element.
+const maxArrayScanBytes = 16 << 20
+
 var errInvalidData = errors.New("PostgreSQL has returned invalid data")
 
 // scanner implements the warehouses.Rows interface to read and normalize the
@@ -43,7 +47,11 @@ func newScanner(columns []warehouses.Column, rows pgx.Rows) *scanner {
 	}
 	s.values = make([]any, len(columns))
 	for i := range len(s.columns) {
-		s.values[i] = scanValue{s}
+		if columns[i].Type.IsArray() {
+			s.values[i] = s
+		} else {
+			s.values[i] = scanValue{s}
+		}
 	}
 	return s
 }
@@ -69,6 +77,15 @@ func (s *scanner) Scan(dest ...any) error {
 	err := s.rows.Scan(s.values...)
 	s.dest = nil
 	return err
+}
+
+// ScanBytes reads an array projected as bytea from the current row buffer.
+func (s *scanner) ScanBytes(data []byte) error {
+	var v any
+	if data != nil {
+		v = data
+	}
+	return scanValue{s}.Scan(v)
 }
 
 // normalize normalizes the value v read from PostgreSQL.
@@ -177,6 +194,9 @@ func (s *scanner) scanArray(name string, typ types.Type, src any) ([]any, error)
 	if !ok {
 		return nil, errors.New("PostgreSQL has returned an unexpected value type for an array")
 	}
+	if len(data) > maxArrayScanBytes {
+		return nil, fmt.Errorf("binary array for column %s exceeds the %d-byte scan limit", name, maxArrayScanBytes)
+	}
 	p := 12
 	if len(data) < p {
 		return nil, errInvalidData
@@ -204,6 +224,10 @@ func (s *scanner) scanArray(name string, typ types.Type, src any) ([]any, error)
 	if size < typ.MinElements() || size > typ.MaxElements() {
 		return nil, fmt.Errorf("data warehouse returned an array with %d elements for column %s, "+
 			"which is not within the expected range of [%d, %d]", size, name, typ.MinElements(), typ.MaxElements())
+	}
+	// Use the 64-bit interface size (16 bytes) on every architecture.
+	if size > (maxArrayScanBytes-len(data))/16 {
+		return nil, fmt.Errorf("array for column %s exceeds the %d-byte scan limit", name, maxArrayScanBytes)
 	}
 	values := make([]any, size)
 	switch oid {

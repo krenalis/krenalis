@@ -20,14 +20,14 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-// TestScannerArrayBounds checks that array bounds are validated before decoding
-// elements.
+// TestScannerArrayBounds checks that array sizes and scan limits are validated
+// before decoding elements.
 func TestScannerArrayBounds(t *testing.T) {
 
 	tm := pgtype.NewMap()
-	encodeArray := func(t *testing.T, elements any) []byte {
+	encodeArray := func(t *testing.T, oid uint32, elements any) []byte {
 		t.Helper()
-		data, err := tm.Encode(pgtype.JSONArrayOID, pgtype.BinaryFormatCode, elements, nil)
+		data, err := tm.Encode(oid, pgtype.BinaryFormatCode, elements, nil)
 		if err != nil {
 			t.Fatalf("expected binary array, got %v", err)
 		}
@@ -49,11 +49,11 @@ func TestScannerArrayBounds(t *testing.T) {
 		elementCountOffset   = 12
 		elementLengthOffset  = 20
 	)
-	data := encodeArray(t, []string{`1`})
+	data := encodeArray(t, pgtype.JSONArrayOID, []string{`1`})
 	empty := withInt32(data[:elementCountOffset], dimensionCountOffset, 0)
 	excessCount := withInt32(data, elementCountOffset, 2)
 	zeroLengthElement := withInt32(data, elementLengthOffset, 0)
-	matrix := encodeArray(t, pgtype.Array[string]{
+	matrix := encodeArray(t, pgtype.JSONArrayOID, pgtype.Array[string]{
 		Elements: []string{`1`},
 		Dims:     []pgtype.ArrayDimension{{Length: 1, LowerBound: 1}, {Length: 1, LowerBound: 1}},
 		Valid:    true,
@@ -94,7 +94,7 @@ func TestScannerArrayBounds(t *testing.T) {
 			typ := types.Array(types.JSON()).WithMaxElements(test.max).WithMinElements(test.min)
 			s := newScanner([]warehouses.Column{{Name: "value", Type: typ}}, nil)
 			s.dest = make([]any, 1)
-			err := tm.Scan(pgtype.JSONArrayOID, pgtype.BinaryFormatCode, test.data, s.values[0])
+			err := tm.Scan(pgtype.ByteaOID, pgtype.BinaryFormatCode, test.data, s.values[0])
 			checkArrayScanError(t, err, test.err)
 			if test.err == nil && !reflect.DeepEqual(s.dest[0], test.want) {
 				t.Fatalf("expected %#v, got %#v", test.want, s.dest[0])
@@ -116,10 +116,9 @@ func TestScannerArrayBounds(t *testing.T) {
 		}
 	})
 
-	t.Run("above maximum without allocating the result slice", func(t *testing.T) {
-		const count = 4096
+	checkRejectedScan := func(t *testing.T, typ types.Type, src any, want error) {
+		t.Helper()
 		const runs = 100
-		var src any = encodeArray(t, slices.Repeat([]string{`1`}, count))
 		var err error
 		var before, after runtime.MemStats
 		runtime.ReadMemStats(&before)
@@ -127,7 +126,7 @@ func TestScannerArrayBounds(t *testing.T) {
 			_, err = s.scanArray("value", typ, src)
 		}
 		runtime.ReadMemStats(&after)
-		checkArrayScanError(t, err, rangeError(count, 0, 2))
+		checkArrayScanError(t, err, want)
 		// The 16 KiB limit leaves room to format the error. The result slice alone
 		// would require at least 32 KiB.
 		const maxBytesPerScan = 16 << 10
@@ -135,6 +134,53 @@ func TestScannerArrayBounds(t *testing.T) {
 		if bytesPerScan > maxBytesPerScan {
 			t.Fatalf("expected at most %d bytes per scan, got %d", maxBytesPerScan, bytesPerScan)
 		}
+	}
+	t.Run("above maximum without allocating the result slice", func(t *testing.T) {
+		const count = 4096
+		data := encodeArray(t, pgtype.JSONArrayOID, slices.Repeat([]string{`1`}, count))
+		checkRejectedScan(t, typ, data, rangeError(count, 0, 2))
+	})
+
+	t.Run("scan budget with default schema limit", func(t *testing.T) {
+
+		const (
+			headerBytes     = 20 // 12-byte header and one 8-byte dimension
+			elementBytes    = 5  // 4-byte length and one boolean byte
+			resultSlotBytes = 16 // fixed scan budget charge per element on every architecture
+			maxCount        = (maxArrayScanBytes - headerBytes) / (elementBytes + resultSlotBytes)
+		)
+		typ := types.Array(types.Boolean())
+		encodeBools := func(t *testing.T, elements []bool) []byte {
+			t.Helper()
+			data := encodeArray(t, pgtype.BoolArrayOID, elements)
+			if want := headerBytes + len(elements)*elementBytes; len(data) != want {
+				t.Fatalf("expected %d wire bytes, got %d", want, len(data))
+			}
+			return data
+		}
+
+		t.Run("largest bool array within scan limit", func(t *testing.T) {
+			elements := make([]bool, maxCount)
+			elements[maxCount-1] = true
+			data := encodeBools(t, elements)
+			values, err := s.scanArray("value", typ, data)
+			if err != nil {
+				t.Fatalf("expected array within scan limit, got %v", err)
+			}
+			if len(values) != maxCount {
+				t.Fatalf("expected %d elements, got %d", maxCount, len(values))
+			}
+			if got := values[maxCount-1]; got != true {
+				t.Fatalf("expected last element to be true, got %#v", got)
+			}
+		})
+
+		t.Run("smallest bool array above scan limit", func(t *testing.T) {
+			data := encodeBools(t, make([]bool, maxCount+1))
+			want := fmt.Errorf("array for column value exceeds the %d-byte scan limit", maxArrayScanBytes)
+			checkRejectedScan(t, typ, data, want)
+		})
+
 	})
 
 }
