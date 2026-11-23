@@ -54,7 +54,7 @@ func Main(assets fs.FS) {
 			" this flag is primarily intended for automated scenarios involving Docker and testing purposes")
 	flag.BoolVar(&migrateDB, "migrate-db", false,
 		"migrate Krenalis's PostgreSQL database to the current schema version, initializing it if it is empty,"+
-			" and exit")
+			" and exit; with -finalize-db, it also finalizes the database right after migrating it")
 	flag.BoolVar(&printVersion, "version", false, "print the Krenalis version and exit")
 	flag.Parse()
 	if flag.NArg() > 0 {
