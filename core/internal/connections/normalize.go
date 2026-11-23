@@ -70,6 +70,7 @@ func invalidType(name string, src any, typ types.Type) InputValidationError {
 
 // normalize normalizes a property value, and returns its normalized value. If
 // the value is not valid it returns an InputValidationError.
+// See Normalize.md for accepted inputs and conversion rules.
 func normalize(name string, typ types.Type, src any, nullable bool, layouts *state.TimeLayouts) (any, error) {
 	if src == nil {
 		if !nullable {

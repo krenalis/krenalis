@@ -129,7 +129,8 @@ When filling `Record.Attributes` from API responses:
 - For numeric types return `int`, `uint`, `float64`, or `decimal.Decimal` depending on the schema.
 - For `datetime`/`date`/`time` fields you may return:
   - `time.Time`, or
-  - a `string`/`[]byte` exactly as returned by the API; Krenalis will parse it (ISO 8601 by default, or using `ApplicationSpec.TimeLayouts` if you set it at registration), or
+  - a `string` that Krenalis parses using ISO 8601 by default or the layout set in `ApplicationSpec.TimeLayouts` at registration, or
+  - for `time` only, a `[]byte` containing text in the same format, or
   - for `datetime`, a Unix-epoch value (string or float64) if `TimeLayouts.DateTime` uses `"unix"`, `"unixmilli"`, `"unixmicro"`, or `"unixnano"`.
 - For `uuid` you may return a UUID string or a 16-byte slice (vendor dependent).
 - For `ip` you may return a string, `net.IP`, or `netip.Addr`.
