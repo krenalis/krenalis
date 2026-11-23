@@ -920,9 +920,11 @@ const (
 // keys. Each key is treated literally, including any dots. If Keys is empty,
 // these operators apply to the entire column.
 //
-// If the column's type supports OpIs and OpIsNot, either operator can compare
-// it with another column. Values contains the second Column as its sole
-// operand.
+// If the column's type supports OpIs and OpIsNot, either operator can be used
+// to compare it with another column. Values contains a single operand: the
+// second Column. A string column can be compared with an int or UUID column,
+// in either order, by comparing their text representations. For all other
+// type combinations, the columns must be directly comparable in the warehouse.
 type BaseExpr struct {
 	Column   Column
 	Keys     []string
