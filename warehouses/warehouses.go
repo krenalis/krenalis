@@ -921,7 +921,8 @@ const (
 // these operators apply to the entire column.
 //
 // If the column's type supports OpIs and OpIsNot, either operator can compare
-// it with another column. Values contains the second Column as its sole operand.
+// it with another column. Values contains the second Column as its sole
+// operand.
 type BaseExpr struct {
 	Column   Column
 	Keys     []string
