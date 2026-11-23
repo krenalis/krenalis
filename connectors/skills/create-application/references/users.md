@@ -4,7 +4,7 @@ Implement `RecordFetcher` for source users and `RecordUpserter` for destination 
 
 ## Import users with `Records`
 
-For each requested property in `Record.Attributes`, use one of the [Go values accepted on import](../../../ImportValues.md). Krenalis normalizes the value according to the property type.
+For each requested property in `Record.Attributes`, use one of the [Go values accepted on import](../../../../core/internal/connections/Normalize.md). Krenalis normalizes the value according to the property type.
 
 Honor the method contract:
 

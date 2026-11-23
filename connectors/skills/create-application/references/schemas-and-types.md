@@ -96,7 +96,9 @@ Test the schemas returned by `RecordSchema` / `EventTypeSchema` with accepted an
 
 ## Encode values at the boundary
 
-Use `ApplicationSpec.TimeLayouts` to parse non-default temporal strings returned by the connector on import. On export, `Upsert` receives date, time, and datetime attributes as `time.Time`, as does `SendEvents` for mapped values of those types. Encode them in the format required by the provider when building the request.
+On import, `date`, `datetime`, and `time` accept `time.Time` or a string. Of these, only `time` also accepts text as `[]byte`. Use `ApplicationSpec.TimeLayouts` for provider-specific formats. Time-only text requires an explicit layout. For example, set `TimeLayouts.Time` to `"15:04"` to accept `"09:30"`.
+
+On export, `Upsert` receives date, time, and datetime attributes as `time.Time`, as does `SendEvents` for mapped values of those types. Encode them in the format required by the provider when building the request.
 
 Return Go values that conform to the requested record schema. When encoding schema-governed values, use `types.Marshal` where it removes ambiguity; otherwise encode the natural provider payload directly with `BodyBuffer`. Do not build a second generic map solely to satisfy a stylistic rule.
 
