@@ -63,7 +63,8 @@ func (warehouse *PostgreSQL) Query(ctx context.Context, query warehouses.RowQuer
 		if c.Type.IsArray() {
 			// One extra byte lets the scanner detect truncation. Use a distinct
 			// alias so ORDER BY refers to the original array column.
-			fmt.Fprintf(&b, `substr(array_send(%s), 1, %d) AS "array data"`, quoteIdent(c.Name), maxArrayScanBytes+1)
+			fmt.Fprintf(&b, `pg_catalog.substr(pg_catalog.array_send(%s), 1, %d) AS "array data"`,
+				quoteIdent(c.Name), maxArrayScanBytes+1)
 		} else {
 			b.WriteString(quoteIdent(c.Name))
 		}

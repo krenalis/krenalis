@@ -185,6 +185,29 @@ func TestScannerArrayBounds(t *testing.T) {
 
 }
 
+// TestScannerNumericArrayBounds checks that out-of-schema numerics are rejected
+// before the scanner needs a connection to run the numeric codec.
+func TestScannerNumericArrayBounds(t *testing.T) {
+	tm := pgtype.NewMap()
+	typ := types.Array(types.Decimal(5, 2))
+	for _, value := range []string{"1000", "10000", "0.001", "NaN"} {
+		t.Run(value, func(t *testing.T) {
+			var n pgtype.Numeric
+			err := n.Scan(value)
+			if err != nil {
+				t.Fatalf("expected numeric fixture, got %v", err)
+			}
+			data, err := tm.Encode(pgtype.NumericArrayOID, pgtype.BinaryFormatCode, []pgtype.Numeric{n}, nil)
+			if err != nil {
+				t.Fatalf("expected binary array, got %v", err)
+			}
+			s := &scanner{}
+			_, err = s.scanArray("value", typ, data)
+			checkArrayScanError(t, err, errInvalidData)
+		})
+	}
+}
+
 // checkArrayScanError matches errInvalidData by identity and other errors by
 // their message.
 func checkArrayScanError(t *testing.T, err, want error) {

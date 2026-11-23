@@ -116,6 +116,7 @@ func Test_Merge(t *testing.T) {
 		{types.JSON(), json.Value(`{"foo":"boo"}`)},
 		{types.IP(), "127.0.0.1"},
 		{types.Array(types.Boolean()), []any{true, false}},
+		{types.Array(types.Decimal(5, 2)), []any{decimal.MustParse("-999.99"), decimal.MustParse("0.01")}},
 		{types.Array(types.Int(8)), []any{5, -2, 12}},
 		{types.Array(types.Int(16)), []any{32057, -9381, 1623}},
 		{types.Array(types.Int(16).AsYear()), []any{1, 1970, 2020, 9999}},

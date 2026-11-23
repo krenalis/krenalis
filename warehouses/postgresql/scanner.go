@@ -377,22 +377,32 @@ func (s *scanner) scanArray(name string, typ types.Type, src any) ([]any, error)
 			p += 8
 		}
 	case 1700: // numeric
+		elem := typ.Elem()
+		precision, scale := 20, 0 // uint64 is stored as numeric(20, 0)
+		if elem.IsDecimal() {
+			precision, scale = elem.Precision(), elem.Scale()
+		} else if !elem.IsUnsigned() || !elem.IsInt(64) {
+			return nil, errInvalidData
+		}
 		var v string
-		tm := s.rows.Conn().TypeMap()
-		ps := tm.PlanScan(oid, pgtype.BinaryFormatCode, &v)
+		var plan pgtype.ScanPlan
 		for i := range values {
-			if len(data) < p+4 {
+			if len(data)-p < 4 {
 				return nil, errInvalidData
 			}
 			l := int(int32(binary.BigEndian.Uint32(data[p:])))
-			if l <= 0 {
-				return nil, errInvalidData
-			}
 			p += 4
-			if len(data) < p+l {
+			if l < 8 || l > len(data)-p {
 				return nil, errInvalidData
 			}
-			err := ps.Scan(data[p:p+l], &v)
+			numeric := data[p : p+l]
+			if !validBinaryNumeric(numeric, precision, scale) {
+				return nil, errInvalidData
+			}
+			if i == 0 {
+				plan = s.rows.Conn().TypeMap().PlanScan(oid, pgtype.BinaryFormatCode, &v)
+			}
+			err := plan.Scan(numeric, &v)
 			if err != nil {
 				return nil, err
 			}
@@ -479,4 +489,47 @@ func (sv scanValue) Scan(v any) error {
 	sv.s.dest[sv.s.index] = v
 	sv.s.index = (sv.s.index + 1) % len(sv.s.columns)
 	return nil
+}
+
+// validBinaryNumeric reports whether a PostgreSQL binary numeric can be decoded
+// within the given decimal precision and scale. data must contain its header.
+func validBinaryNumeric(data []byte, precision, scale int) bool {
+
+	count := int(binary.BigEndian.Uint16(data))
+	weight := int(int16(binary.BigEndian.Uint16(data[2:])))
+	sign := binary.BigEndian.Uint16(data[4:])
+	dscale := int(binary.BigEndian.Uint16(data[6:]))
+	if len(data) != 8+2*count || (sign != 0 && sign != 0x4000) || dscale > scale {
+		return false
+	}
+	if count == 0 {
+		return true
+	}
+
+	// Each base-10000 digit covers four decimal places. Bound both ends
+	// before the codec expands the exponent or pads the fractional part.
+	integerDigits := precision - scale
+	lastWeight := weight - count + 1
+	if weight >= (integerDigits+3)/4 || lastWeight < -(dscale+3)/4 {
+		return false
+	}
+	for i := 8; i < len(data); i += 2 {
+		if binary.BigEndian.Uint16(data[i:]) >= 10000 {
+			return false
+		}
+	}
+
+	// The first and last groups can straddle the allowed decimal places.
+	if n := integerDigits % 4; n != 0 && weight == integerDigits/4 {
+		if int(binary.BigEndian.Uint16(data[8:])) >= int(math.Pow10(n)) {
+			return false
+		}
+	}
+	if n := dscale % 4; n != 0 && lastWeight == -(dscale+3)/4 {
+		if int(binary.BigEndian.Uint16(data[len(data)-2:]))%int(math.Pow10(4-n)) != 0 {
+			return false
+		}
+	}
+
+	return true
 }
