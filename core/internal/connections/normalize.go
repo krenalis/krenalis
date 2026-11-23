@@ -170,10 +170,22 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 				}
 				v = uint64(src)
 			case int8:
+				if src < 0 {
+					return nil, inputValidationErrorf(name,
+						"has a negative int8 value that cannot represent an unsigned int(%d) value", typ.BitSize())
+				}
 				v = uint64(src)
 			case int16:
+				if src < 0 {
+					return nil, inputValidationErrorf(name,
+						"has a negative int16 value that cannot represent an unsigned int(%d) value", typ.BitSize())
+				}
 				v = uint64(src)
 			case int32:
+				if src < 0 {
+					return nil, inputValidationErrorf(name,
+						"has a negative int32 value that cannot represent an unsigned int(%d) value", typ.BitSize())
+				}
 				v = uint64(src)
 			case int64:
 				if src < 0 {
@@ -349,15 +361,19 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 		case float32:
 			v = float64(src)
 		case float64:
-			if typ.BitSize() == 32 && !math.IsNaN(src) && float64(float32(src)) != src {
-				return nil, inputValidationErrorf(name, "has a float64 value that cannot represent a float(%d) value", typ.BitSize())
-			}
 			v = src
 		case decimal.Decimal:
 			var ok bool
-			v, ok = src.Float64()
+			if typ.BitSize() == 32 {
+				var f float32
+				f, ok = src.Float32()
+				v = float64(f)
+			} else {
+				v, ok = src.Float64()
+			}
 			if !ok {
-				return nil, inputValidationErrorf(name, "has a decimal.Decimal value that cannot represent a float(%d) value", typ.BitSize())
+				return nil, inputValidationErrorf(name,
+					"has a decimal.Decimal value that cannot represent a float(%d) value", typ.BitSize())
 			}
 		case string:
 			v, err = strconv.ParseFloat(src, typ.BitSize())
@@ -380,6 +396,10 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 				return nil, inputValidationErrorf(name, "has a value of NaN, which is not allowed")
 			}
 		} else {
+			if typ.BitSize() == 32 && float64(float32(v)) != v {
+				return nil, inputValidationErrorf(name,
+					"has a value of type %T that cannot represent a float(32) value", src)
+			}
 			min, max := typ.FloatRange()
 			if v < min || v > max {
 				return nil, inputValidationErrorf(name, "has a value %f that is not in the range [%f, %f]", v, min, max)
@@ -615,14 +635,17 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 			if ip == "" && nullable {
 				return nil, nil
 			}
-			// Remove the number of bits in the netmask, if any.
-			if i := strings.IndexByte(ip, '/'); i > 0 {
-				ip = ip[:i]
-			}
+			host, prefix, hasPrefix := strings.Cut(ip, "/")
 			var err error
-			addr, err = netip.ParseAddr(ip)
+			addr, err = netip.ParseAddr(host)
 			if err != nil {
 				return nil, inputValidationErrorf(name, "has a string value that cannot represent a valid ip value")
+			}
+			if hasPrefix {
+				bits, err := strconv.ParseUint(prefix, 10, 8)
+				if err != nil || int(bits) > addr.BitLen() {
+					return nil, inputValidationErrorf(name, "has an invalid IP prefix length")
+				}
 			}
 		case net.IP:
 			if ip == nil && nullable {
@@ -769,6 +792,9 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 		iter := rv.MapRange()
 		for iter.Next() {
 			k := iter.Key().String()
+			if !utf8.ValidString(k) {
+				return nil, inputValidationErrorf(name, "has a map key that is not valid UTF-8")
+			}
 			v := iter.Value().Interface()
 			m[k], err = normalize(name, t, v, false, layouts)
 			if err != nil {
