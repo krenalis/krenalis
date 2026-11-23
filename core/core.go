@@ -2290,6 +2290,22 @@ func isValidMemberToken(token string) bool {
 	return err == nil
 }
 
+// generateID returns a new 12-character Base58 identifier.
+//
+// If exists is provided, generateID keeps generating identifiers until it finds
+// one that does not already exist.
+func generateID[T any](exists func(string) (T, bool)) string {
+	for {
+		id := base58.Generate(12)
+		if exists == nil {
+			return id
+		}
+		if _, ok := exists(id); !ok {
+			return id
+		}
+	}
+}
+
 // openDB opens Krenalis's PostgreSQL database and checks that it can connect
 // to it.
 func openDB(ctx context.Context, conf DBConfig) (*dbpkg.DB, error) {
@@ -2313,22 +2329,6 @@ func openDB(ctx context.Context, conf DBConfig) (*dbpkg.DB, error) {
 		return nil, fmt.Errorf("cannot connect to PostgreSQL: %s", err)
 	}
 	return db, nil
-}
-
-// generateID returns a new 12-character Base58 identifier.
-//
-// If exists is provided, generateID keeps generating identifiers until it finds
-// one that does not already exist.
-func generateID[T any](exists func(string) (T, bool)) string {
-	for {
-		id := base58.Generate(12)
-		if exists == nil {
-			return id
-		}
-		if _, ok := exists(id); !ok {
-			return id
-		}
-	}
 }
 
 func stateToCoreTargets(targets state.ConnectorTargets) []Target {
