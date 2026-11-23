@@ -6,19 +6,31 @@ package postgresql
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/binary"
 	"errors"
 	"io"
+	"math/big"
 	"net"
 	"sync"
+	"sync/atomic"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgproto3"
 
 	"github.com/krenalis/krenalis/warehouses"
 )
 
+// cancellationTestDialer simulates failed or silently dropped cancellation
+// requests and counts cancellation attempts.
 type cancellationTestDialer struct {
 	mu           sync.Mutex
 	attempts     int // protected by mu
@@ -85,23 +97,94 @@ func (c *cancellationTestConn) Write(data []byte) (int, error) {
 	return c.Conn.Write(data)
 }
 
-// TestRetryClosedConnectionCancellation checks the pool hook on a real server.
+// TestConfigureCancellation checks primary connection lifetimes and invocation
+// of existing connection hooks, with and without TLS.
+func TestConfigureCancellation(t *testing.T) {
+
+	config, err := pgx.ParseConfig("host=127.0.0.1 user=test dbname=test sslmode=disable")
+	if err != nil {
+		t.Fatalf("expected connection config, got %v", err)
+	}
+
+	for _, c := range []struct {
+		name  string
+		isTLS bool
+	}{
+		{"plaintext", false},
+		{"tls", true},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+
+				client, server := net.Pipe()
+				defer client.Close()
+				defer server.Close()
+				ctx, cancel := context.WithCancel(t.Context())
+				defer cancel()
+				config := config.Copy()
+				config.DialFunc = func(context.Context, string, string) (net.Conn, error) {
+					return client, nil
+				}
+				hasCalledHook := false
+				config.AfterNetConnect = func(ctx context.Context, config *pgconn.Config, conn net.Conn) (net.Conn, error) {
+					hasCalledHook = true
+					return conn, nil
+				}
+				configureCancellation(config)
+				conn, err := config.DialFunc(ctx, "tcp", "127.0.0.1:5432")
+				if err != nil {
+					t.Fatalf("expected guarded connection, got %v", err)
+				}
+				if c.isTLS {
+					conn = tls.Client(conn, &tls.Config{})
+				}
+				primary := conn
+				conn, err = config.AfterNetConnect(ctx, &config.Config, conn)
+				if err != nil {
+					t.Fatalf("expected primary connection, got %v", err)
+				}
+				if !hasCalledHook {
+					t.Fatal("expected existing connection hook called, got no call")
+				}
+				if c.isTLS && conn != primary {
+					t.Fatalf("expected TLS connection %p, got %p", primary, conn)
+				}
+				if !c.isTLS && conn != client {
+					t.Fatalf("expected primary transport %p, got %p", client, conn)
+				}
+
+				cancel()
+				synctest.Wait()
+				done := make(chan error, 1)
+				go func() {
+					_, err := client.Write([]byte{42})
+					done <- err
+				}()
+				var data [1]byte
+				_, err = io.ReadFull(server, data[:])
+				if err != nil {
+					t.Fatalf("expected live primary transport after dialing context cancellation, got %v", err)
+				}
+				err = <-done
+				if err != nil {
+					t.Fatalf("expected successful primary transport write, got %v", err)
+				}
+				if data[0] != 42 {
+					t.Fatalf("expected byte 42, got %d", data[0])
+				}
+
+			})
+		})
+	}
+
+}
+
+// TestRetryClosedConnectionCancellation verifies cancellation retries
+// through the connection pool against a real PostgreSQL server.
 func TestRetryClosedConnectionCancellation(t *testing.T) {
 
 	original, originalPool := newTestPostgreSQLWarehouse(t)
-	observer, err := pgx.Connect(t.Context(), originalPool.Config().ConnConfig.ConnString())
-	if err != nil {
-		t.Fatalf("expected observer connection, got %v", err)
-	}
-	t.Cleanup(func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-		defer cancel()
-		err := observer.Close(ctx)
-		if err != nil {
-			t.Errorf("expected observer cleanup, got %v", err)
-		}
-	})
-	_, err = observer.Exec(t.Context(), "CREATE TABLE cancellation_writes (id int PRIMARY KEY)")
+	_, err := originalPool.Exec(t.Context(), "CREATE TABLE cancellation_writes (id int PRIMARY KEY)")
 	if err != nil {
 		t.Fatalf("expected transaction fixture, got %v", err)
 	}
@@ -122,6 +205,18 @@ func TestRetryClosedConnectionCancellation(t *testing.T) {
 	} {
 		t.Run(c.name, func(t *testing.T) {
 
+			observer, err := pgx.Connect(t.Context(), originalPool.Config().ConnConfig.ConnString())
+			if err != nil {
+				t.Fatalf("expected observer connection, got %v", err)
+			}
+			t.Cleanup(func() {
+				ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+				defer cancel()
+				err := observer.Close(ctx)
+				if err != nil {
+					t.Errorf("expected observer cleanup, got %v", err)
+				}
+			})
 			dialer := &cancellationTestDialer{failures: c.failures, discardFirst: c.discardFirst}
 			warehouse := New(original.settings, dialer.wrap)
 			t.Cleanup(func() {
@@ -140,7 +235,6 @@ func TestRetryClosedConnectionCancellation(t *testing.T) {
 			}
 			pid := acquired.Conn().PgConn().PID()
 			cleanup := acquired.Conn().PgConn().CleanupDone()
-			acquired.Release()
 			ctx, cancel := context.WithTimeout(t.Context(), 35*time.Second)
 			defer cancel()
 			var tx pgx.Tx
@@ -151,13 +245,15 @@ func TestRetryClosedConnectionCancellation(t *testing.T) {
 				cancel()
 				cleanupCtx, stop := context.WithTimeout(context.Background(), 3*time.Second)
 				defer stop()
-				_, err := observer.Exec(cleanupCtx, "SELECT pg_cancel_backend($1)", pid)
+				_, err := originalPool.Exec(cleanupCtx, "SELECT pg_cancel_backend($1)", pid)
 				if err != nil {
 					t.Errorf("expected fixture cancellation, got %v", err)
 				}
 				if finished != nil {
+					// The worker owns rollback and release after it starts.
 					select {
 					case <-finished:
+						return
 					case <-cleanupCtx.Done():
 						t.Error("expected interrupted query worker to finish, got timeout")
 						return
@@ -166,11 +262,12 @@ func TestRetryClosedConnectionCancellation(t *testing.T) {
 				if tx != nil {
 					_ = tx.Rollback(cleanupCtx)
 				}
+				acquired.Release()
 			})
 
 			if c.kind == "healthy" {
 				var value int
-				row := pool.QueryRow(ctx, "SELECT 42")
+				row := acquired.QueryRow(ctx, "SELECT 42")
 				err := row.Scan(&value)
 				if err != nil {
 					t.Fatalf("expected healthy query, got %v", err)
@@ -179,6 +276,7 @@ func TestRetryClosedConnectionCancellation(t *testing.T) {
 					t.Fatalf("expected value 42, got %d", value)
 				}
 				cancel()
+				acquired.Release()
 				err = warehouse.Close()
 				if err != nil {
 					t.Fatalf("expected healthy warehouse close, got %v", err)
@@ -190,7 +288,7 @@ func TestRetryClosedConnectionCancellation(t *testing.T) {
 			}
 
 			if c.kind == "transaction" {
-				tx, err = pool.Begin(t.Context())
+				tx, err = acquired.Begin(t.Context())
 				if err != nil {
 					t.Fatalf("expected transaction, got %v", err)
 				}
@@ -200,19 +298,17 @@ func TestRetryClosedConnectionCancellation(t *testing.T) {
 				}
 			}
 			done := make(chan error, 1)
-			finished = make(chan struct{})
 			if c.kind == "streaming" {
-				rows, err := pool.Query(ctx, `SELECT i,repeat('x',8192),
+				rows, err := acquired.Query(ctx, `SELECT i,repeat('x',8192),
 pg_sleep(CASE WHEN i<3 THEN 0 ELSE 30 END) FROM generate_series(1,3) i`)
 				if err != nil {
-					close(finished)
 					t.Fatalf("expected streaming query, got %v", err)
 				}
 				if !rows.Next() {
 					rows.Close()
-					close(finished)
 					t.Fatalf("expected first streamed row, got %v", rows.Err())
 				}
+				finished = make(chan struct{})
 				go func() {
 					defer close(finished)
 					count := 1
@@ -220,22 +316,29 @@ pg_sleep(CASE WHEN i<3 THEN 0 ELSE 30 END) FROM generate_series(1,3) i`)
 						count++
 						if count >= 3 {
 							rows.Close()
+							acquired.Release()
 							done <- errors.New("warehouses/postgresql: delayed row completed before cancellation")
 							return
 						}
 					}
 					rows.Close()
-					done <- rows.Err()
+					err := rows.Err()
+					acquired.Release()
+					done <- err
 				}()
 			} else {
+				finished = make(chan struct{})
 				go func() {
 					defer close(finished)
 					if tx != nil {
 						_, err := tx.Exec(ctx, "SELECT pg_sleep(30)")
+						_ = tx.Rollback(t.Context())
+						acquired.Release()
 						done <- err
 						return
 					}
-					_, err := pool.Exec(ctx, "SELECT pg_sleep(30)")
+					_, err := acquired.Exec(ctx, "SELECT pg_sleep(30)")
+					acquired.Release()
 					done <- err
 				}()
 			}
@@ -251,13 +354,8 @@ pg_sleep(CASE WHEN i<3 THEN 0 ELSE 30 END) FROM generate_series(1,3) i`)
 					break
 				}
 				t.Fatal("expected canceled operation, got success")
-			case <-time.After(time.Second):
+			case <-time.After(3 * time.Second):
 				t.Fatal("expected prompt caller return, got timeout")
-			}
-			if tx != nil {
-				// Rollback releases the pooled connection even when reporting
-				// that cancellation has already closed it.
-				_ = tx.Rollback(t.Context())
 			}
 			if c.kind == "unavailable" {
 
@@ -292,7 +390,7 @@ pg_sleep(CASE WHEN i<3 THEN 0 ELSE 30 END) FROM generate_series(1,3) i`)
 			waitForCancellationQuery(t, observer, pid, false)
 			select {
 			case <-cleanup:
-			case <-time.After(2 * time.Second):
+			case <-time.After(3 * time.Second):
 				t.Fatal("expected discarded connection cleanup, got timeout")
 			}
 			var replacement uint32
@@ -323,14 +421,412 @@ pg_sleep(CASE WHEN i<3 THEN 0 ELSE 30 END) FROM generate_series(1,3) i`)
 			if c.discardFirst || c.kind == "unavailable" {
 				minimum = 2
 			}
-			if count := dialer.count(); count < minimum || count > 16 {
-				t.Fatalf("expected %d to 16 cancellation attempts, got %d", minimum, count)
+			if count := dialer.count(); count < minimum {
+				t.Fatalf("expected at least %d cancellation attempts, got %d", minimum, count)
 			}
-			t.Logf("attempts=%d recovery_ms=%d", dialer.count(), time.Since(canceled).Milliseconds())
+			t.Logf("attempts=%d total_elapsed_ms=%d", dialer.count(), time.Since(canceled).Milliseconds())
 
 		})
 	}
 
+}
+
+// TestRetryClosedConnectionCancellationLimits verifies retry timeouts,
+// the overall retry deadline, and cleanup using simulated time and
+// in-memory connections.
+func TestRetryClosedConnectionCancellationLimits(t *testing.T) {
+
+	config, err := pgx.ParseConfig("host=127.0.0.1 user=test dbname=test sslmode=disable")
+	if err != nil {
+		t.Fatalf("expected connection config, got %v", err)
+	}
+
+	for _, c := range []struct {
+		name         string
+		blockAt      string
+		cleanupAfter time.Duration
+		wantAttempts int
+	}{
+		{"dial_errors", "", 0, 13},
+		{"blocked_dial", "dial", 0, 7},
+		{"blocked_write", "write", 0, 7},
+		{"blocked_read", "read", 0, 7},
+		{"cleanup_before_retry", "", 25 * time.Millisecond, 0},
+		{"cleanup_during_backoff", "", 75 * time.Millisecond, 1},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+
+				var attempts []time.Time
+				var servers []net.Conn
+				config := config.Copy()
+				config.DialFunc = func(ctx context.Context, network, address string) (net.Conn, error) {
+					attempts = append(attempts, time.Now())
+					deadline, ok := ctx.Deadline()
+					if limit := time.Until(deadline); !ok || limit <= 0 || limit > time.Second {
+						t.Errorf("expected cancellation deadline within one second, got %v", limit)
+					}
+					switch c.blockAt {
+					case "":
+						return nil, errors.New("simulated cancellation dial failure")
+					case "dial":
+						<-ctx.Done()
+						return nil, ctx.Err()
+					case "read", "write":
+						client, server := net.Pipe()
+						t.Cleanup(func() { _ = server.Close() })
+						servers = append(servers, server)
+						if c.blockAt == "read" {
+							go func() {
+								_, err := io.ReadFull(server, make([]byte, 16))
+								if err != nil {
+									t.Errorf("expected cancellation packet, got %v", err)
+								}
+							}()
+						}
+						return client, nil
+					default:
+						return nil, errors.New("warehouses/postgresql: unexpected blocking stage " + c.blockAt)
+					}
+				}
+				conn, finishCleanup := newCancellationTestConnection(t, config, nil)
+				done := make(chan struct{})
+				started := time.Now()
+				var elapsed time.Duration
+				go func() {
+					retryClosedConnectionCancellation(conn)
+					elapsed = time.Since(started)
+					close(done)
+				}()
+
+				limit := 10 * time.Second
+				if c.cleanupAfter > 0 {
+					limit = c.cleanupAfter
+				}
+				time.Sleep(limit - time.Nanosecond)
+				synctest.Wait()
+				select {
+				case <-done:
+					t.Fatal("expected retries pending until cleanup or budget, got early return")
+				default:
+				}
+				time.Sleep(time.Nanosecond)
+				if c.cleanupAfter > 0 {
+					finishCleanup()
+				}
+				synctest.Wait()
+				select {
+				case <-done:
+				default:
+					t.Fatal("expected retries stopped at cleanup or budget, got pending retries")
+				}
+				if elapsed != limit {
+					t.Fatalf("expected retry duration %v, got %v", limit, elapsed)
+				}
+				if len(attempts) != c.wantAttempts {
+					t.Fatalf("expected %d cancellation attempts, got %d", c.wantAttempts, len(attempts))
+				}
+				if len(attempts) > 0 && attempts[0].Sub(started) != 50*time.Millisecond {
+					t.Fatalf("expected first retry after 50ms, got %v", attempts[0].Sub(started))
+				}
+				for i := 1; i < len(attempts); i++ {
+					delay := attempts[i].Sub(attempts[i-1])
+					if c.blockAt != "" {
+						delay -= time.Second
+					}
+					if delay < 100*time.Millisecond || delay > time.Second {
+						t.Fatalf("expected retry delay in [100ms,1s], got %v", delay)
+					}
+				}
+
+				count := len(attempts)
+				time.Sleep(2 * time.Second)
+				synctest.Wait()
+				if len(attempts) != count {
+					t.Fatalf("expected no attempts after retries stopped, got %d", len(attempts)-count)
+				}
+				for _, server := range servers {
+					n, err := server.Read(make([]byte, 16))
+					if err != nil {
+						if !errors.Is(err, io.EOF) {
+							t.Fatalf("expected closed cancellation connection, got %v", err)
+						}
+						continue
+					}
+					t.Fatalf("expected closed cancellation connection, got %d bytes", n)
+				}
+				finishCleanup()
+				synctest.Wait()
+				select {
+				case <-conn.PgConn().CleanupDone():
+				default:
+					t.Fatal("expected connection cleanup, got pending cleanup")
+				}
+
+			})
+		})
+	}
+
+}
+
+// TestRetryClosedConnectionCancellationTLS checks that blocked TLS shutdown
+// respects cancellation request timeouts and the overall retry budget.
+func TestRetryClosedConnectionCancellationTLS(t *testing.T) {
+
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatalf("expected certificate key, got %v", err)
+	}
+	template := &x509.Certificate{SerialNumber: big.NewInt(1)}
+	der, err := x509.CreateCertificate(rand.Reader, template, template, key.Public(), key)
+	if err != nil {
+		t.Fatalf("expected certificate, got %v", err)
+	}
+	certificate := tls.Certificate{Certificate: [][]byte{der}, PrivateKey: key}
+	config, err := pgx.ParseConfig("host=127.0.0.1 user=test dbname=test sslmode=disable")
+	if err != nil {
+		t.Fatalf("expected connection config, got %v", err)
+	}
+
+	for _, c := range []struct {
+		name         string
+		negotiation  string
+		shouldRetry  bool
+		limit        time.Duration
+		wantRequests int
+	}{
+		{"request_timeout", "direct", false, time.Second, 1},
+		{"retry_budget", "direct", true, 10 * time.Second, 7},
+		{"request_timeout_postgres", "postgres", false, time.Second, 1},
+		{"retry_budget_postgres", "postgres", true, 10 * time.Second, 7},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+
+				serverTLS := &tls.Config{
+					Certificates:           []tls.Certificate{certificate},
+					SessionTicketsDisabled: true,
+				}
+				config := config.Copy()
+				config.SSLNegotiation = c.negotiation
+				config.TLSConfig = &tls.Config{
+					InsecureSkipVerify: true,
+				}
+				var servers []net.Conn
+				var received atomic.Int32
+				config.DialFunc = func(ctx context.Context, network, address string) (net.Conn, error) {
+					client, server := net.Pipe()
+					t.Cleanup(func() { _ = server.Close() })
+					servers = append(servers, server)
+					go func() {
+						if c.negotiation == "postgres" {
+							backend := pgproto3.NewBackend(server, server)
+							msg, err := backend.ReceiveStartupMessage()
+							if err != nil {
+								t.Errorf("expected SSL request, got %v", err)
+								return
+							}
+							if _, ok := msg.(*pgproto3.SSLRequest); !ok {
+								t.Errorf("expected SSL request, got %T", msg)
+								return
+							}
+							_, err = server.Write([]byte{'S'})
+							if err != nil {
+								t.Errorf("expected SSL acceptance, got %v", err)
+								return
+							}
+						}
+						peer := tls.Server(server, serverTLS)
+						_, err := io.ReadFull(peer, make([]byte, 16))
+						if err != nil {
+							t.Errorf("expected encrypted cancellation packet, got %v", err)
+							return
+						}
+						if !peer.ConnectionState().HandshakeComplete {
+							t.Error("expected completed TLS handshake, got incomplete handshake")
+							return
+						}
+						received.Add(1)
+						// Leave the transport open without reading close_notify.
+					}()
+					return client, nil
+				}
+				conn, finishCleanup := newCancellationTestConnection(t, config, serverTLS)
+				done := make(chan struct{})
+				started := time.Now()
+				var elapsed time.Duration
+				var callErr error
+				go func() {
+					if c.shouldRetry {
+						retryClosedConnectionCancellation(conn)
+					} else {
+						ctx, cancel := context.WithTimeout(t.Context(), c.limit)
+						callErr = conn.PgConn().CancelRequest(ctx)
+						cancel()
+					}
+					elapsed = time.Since(started)
+					close(done)
+				}()
+
+				time.Sleep(c.limit - time.Nanosecond)
+				synctest.Wait()
+				select {
+				case <-done:
+					t.Fatal("expected cancellation pending until its deadline, got early return")
+				default:
+				}
+				time.Sleep(time.Nanosecond)
+				synctest.Wait()
+				select {
+				case <-done:
+				default:
+					t.Fatal("expected cancellation stopped at its deadline, got pending TLS shutdown")
+				}
+				if callErr != nil {
+					t.Fatalf("expected delivered cancellation request, got %v", callErr)
+				}
+				if elapsed != c.limit {
+					t.Fatalf("expected cancellation duration %v, got %v", c.limit, elapsed)
+				}
+				if count := received.Load(); count != int32(c.wantRequests) {
+					t.Fatalf("expected %d encrypted cancellation requests, got %d", c.wantRequests, count)
+				}
+				for _, server := range servers {
+					n, err := server.Read(make([]byte, 1))
+					if err != nil {
+						if !errors.Is(err, io.EOF) {
+							t.Fatalf("expected closed cancellation transport, got %v", err)
+						}
+						continue
+					}
+					t.Fatalf("expected closed cancellation transport, got %d bytes", n)
+				}
+
+				time.Sleep(2 * time.Second)
+				synctest.Wait()
+				if count := received.Load(); count != int32(c.wantRequests) {
+					t.Fatalf("expected no requests after cancellation stopped, got %d", count-int32(c.wantRequests))
+				}
+				finishCleanup()
+				synctest.Wait()
+				select {
+				case <-conn.PgConn().CleanupDone():
+				default:
+					t.Fatal("expected connection cleanup, got pending cleanup")
+				}
+
+			})
+		})
+	}
+
+}
+
+// newCancellationTestConnection returns a closed connection whose cleanup
+// remains pending until the returned function is called.
+// It must be called inside a synctest bubble.
+// A non-nil serverTLS enables TLS on the in-memory server.
+func newCancellationTestConnection(t *testing.T, config *pgx.ConnConfig, serverTLS *tls.Config) (*pgx.Conn, context.CancelFunc) {
+
+	t.Helper()
+	client, server := net.Pipe()
+	t.Cleanup(func() { _ = client.Close() })
+	cleanupCtx, finishCleanup := context.WithCancel(t.Context())
+	t.Cleanup(finishCleanup)
+	go func() {
+
+		defer server.Close()
+		if serverTLS != nil {
+			if config.SSLNegotiation == "postgres" {
+				backend := pgproto3.NewBackend(server, server)
+				msg, err := backend.ReceiveStartupMessage()
+				if err != nil {
+					t.Errorf("expected SSL request, got %v", err)
+					return
+				}
+				if _, ok := msg.(*pgproto3.SSLRequest); !ok {
+					t.Errorf("expected SSL request, got %T", msg)
+					return
+				}
+				_, err = server.Write([]byte{'S'})
+				if err != nil {
+					t.Errorf("expected SSL acceptance, got %v", err)
+					return
+				}
+			}
+			server = tls.Server(server, serverTLS)
+		}
+		backend := pgproto3.NewBackend(server, server)
+		_, err := backend.ReceiveStartupMessage()
+		if err != nil {
+			t.Errorf("expected startup packet, got %v", err)
+			return
+		}
+		backend.Send(&pgproto3.AuthenticationOk{})
+		backend.Send(&pgproto3.BackendKeyData{ProcessID: 1, SecretKey: []byte{1, 2, 3, 4}})
+		backend.Send(&pgproto3.ReadyForQuery{TxStatus: 'I'})
+		err = backend.Flush()
+		if err != nil {
+			t.Errorf("expected startup response, got %v", err)
+			return
+		}
+
+		// Leave Terminate unread to hold CleanupDone open until the test allows it.
+		<-cleanupCtx.Done()
+		msg, err := backend.Receive()
+		if err != nil {
+			t.Errorf("expected termination packet, got %v", err)
+			return
+		}
+		if _, ok := msg.(*pgproto3.Terminate); !ok {
+			t.Errorf("expected termination packet, got %T", msg)
+		}
+		if serverTLS != nil {
+			_, err := server.Read(make([]byte, 1))
+			if err != nil {
+				if !errors.Is(err, io.EOF) {
+					t.Errorf("expected TLS connection close, got %v", err)
+				}
+				return
+			}
+			t.Error("expected TLS connection close, got application data")
+		}
+
+	}()
+
+	dial := config.DialFunc
+	initial := true
+	config.DialFunc = func(ctx context.Context, network, address string) (net.Conn, error) {
+		if initial {
+			initial = false
+			return client, nil
+		}
+		return dial(ctx, network, address)
+	}
+	configureCancellation(config)
+	conn, err := pgx.ConnectConfig(t.Context(), config)
+	if err != nil {
+		t.Fatalf("expected in-memory connection, got %v", err)
+	}
+
+	// Keep fixture shutdown alive through the test's cleanup callbacks.
+	closeCtx, stopClose := context.WithTimeout(context.Background(), 20*time.Second)
+	t.Cleanup(stopClose)
+	closeDone := make(chan error, 1)
+	go func() { closeDone <- conn.Close(closeCtx) }()
+	t.Cleanup(func() {
+		finishCleanup()
+		synctest.Wait()
+		err := <-closeDone
+		if err != nil {
+			t.Errorf("expected connection close, got %v", err)
+		}
+	})
+	synctest.Wait()
+	if !conn.IsClosed() {
+		t.Fatal("expected closed connection, got open connection")
+	}
+
+	return conn, finishCleanup
 }
 
 // waitForCancellationQuery observes execution independently of query context.
@@ -340,25 +836,28 @@ func waitForCancellationQuery(t *testing.T, observer *pgx.Conn, pid uint32, slee
 	defer cancel()
 	ticker := time.NewTicker(10 * time.Millisecond)
 	defer ticker.Stop()
+	lastActive, lastSleeps := -1, -1
 	for {
 		var active, sleeps int
-		queryCtx, stop := context.WithTimeout(t.Context(), time.Second)
-		row := observer.QueryRow(queryCtx, `SELECT count(*) FILTER (WHERE state='active'),
+		row := observer.QueryRow(ctx, `SELECT count(*) FILTER (WHERE state='active'),
 count(*) FILTER (WHERE wait_event='PgSleep') FROM pg_stat_activity WHERE pid=$1`, pid)
 		err := row.Scan(&active, &sleeps)
-		stop()
 		if err != nil {
+			if errors.Is(err, context.DeadlineExceeded) && lastActive >= 0 {
+				t.Fatalf("expected sleeping=%t, got last active=%d sleeping=%d", sleeping, lastActive, lastSleeps)
+			}
 			t.Fatalf("expected target activity, got %v", err)
 		}
 		if active < 0 || active > 1 || sleeps < 0 || sleeps > active {
 			t.Fatalf("expected bounded target activity, got %d/%d", active, sleeps)
 		}
+		lastActive, lastSleeps = active, sleeps
 		if sleeping && sleeps == 1 || !sleeping && active == 0 {
 			return
 		}
 		select {
 		case <-ctx.Done():
-			t.Fatalf("expected target sleeping=%t, got active=%d sleeping=%d", sleeping, active, sleeps)
+			t.Fatalf("expected sleeping=%t, got last active=%d sleeping=%d", sleeping, active, sleeps)
 		case <-ticker.C:
 		}
 	}
