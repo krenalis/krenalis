@@ -24,11 +24,12 @@ flags of Krenalis:
    `migrate` must not break them (see "Compatibility with the previous
    release").
 2. `-finalize-db` (`core.FinalizeDB`, `initdb.Finalize`) runs `finalize` in
-   `migrate.go`, once no instance of the previous release is running. It
-   removes what only those instances needed, such as the old columns and the
-   triggers that keep them in sync, and records the schema version as
-   finalized. After it, the previous release can no longer run on the
-   database.
+   `migrate.go`, once no instance of the previous release is running: it does
+   not check it, and otherwise the behavior is undefined and may be
+   destructive. It removes what only those instances needed, such as the old
+   columns and the triggers that keep them in sync, adds the constraints that
+   they could violate, and records the schema version as finalized. After it,
+   the previous release can no longer run on the database.
 
 Both run in a single transaction, under the advisory lock shared with the
 initialization and with `lock_timeout` set to 5 seconds, and check the recorded

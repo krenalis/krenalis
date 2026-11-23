@@ -2211,12 +2211,12 @@ func EventSchema() types.Type {
 	return schemas.Event
 }
 
-// FinalizeDB finalizes the migration of Krenalis's PostgreSQL database to the
-// schema version of this version of Krenalis, after which the instances of the
-// previous release can no longer run on it. It must be called only when
-// none of them is running. It reads only the DB field of conf. It is
-// idempotent, and it is safe to call it concurrently from several Krenalis
-// instances.
+// FinalizeDB finalizes Krenalis's PostgreSQL database at the schema version of
+// this version of Krenalis, after which the instances of the previous release
+// can no longer run on it. It must be called only when none of them is
+// running; otherwise the behavior is undefined and may be destructive. It
+// reads only the DB field of conf. It is idempotent, and it is safe to call it
+// concurrently from several Krenalis instances.
 func FinalizeDB(ctx context.Context, conf *Config) error {
 	db, err := openDB(ctx, conf.DB)
 	if err != nil {

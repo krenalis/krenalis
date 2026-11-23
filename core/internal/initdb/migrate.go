@@ -57,15 +57,15 @@ func CheckSchemaVersion(ctx context.Context, database *db.DB) error {
 	return nil
 }
 
-// Finalize finalizes, in a single transaction, the migration of Krenalis's
-// PostgreSQL database to the schema version of this version of Krenalis,
-// removing what only the Krenalis instances of the previous release need, and
-// records it as finalized. It does nothing if the database is already
-// finalized, and fails if the database is empty or at another schema version.
-// After it, the instances of the previous release can no longer run on the
-// database. It does not check that none of them is running: the caller must
-// ensure it. It is safe to call it concurrently from several Krenalis
-// instances.
+// Finalize finalizes, in a single transaction, Krenalis's PostgreSQL database
+// at the schema version of this version of Krenalis, removing what only the
+// Krenalis instances of the previous release need, and records it as
+// finalized. It does nothing if the database is already finalized, and fails
+// if the database is empty or at another schema version. After it, the
+// instances of the previous release can no longer run on the database. It does
+// not check that none of them is running: the caller must ensure it, since
+// otherwise the behavior is undefined and may be destructive. It is safe to
+// call it concurrently from several Krenalis instances.
 func Finalize(ctx context.Context, database *db.DB) error {
 	return database.Transaction(ctx, func(tx *db.Tx) error {
 
@@ -160,9 +160,10 @@ func Migrate(ctx context.Context, database *db.DB) error {
 
 // finalize removes, within the given transaction, what only the Krenalis
 // instances of the previous release need from a migrated database, such as the
-// old columns and the triggers that keep them in sync. It runs only when none
-// of them is running anymore. This version of Krenalis must run on the
-// database both before and after it.
+// old columns and the triggers that keep them in sync, and adds the
+// constraints that they could violate. It runs only when none of them is
+// running anymore. This version of Krenalis must run on the database both
+// before and after it.
 //
 // It is written together with migrate, when a release that changes the
 // database is prepared, with its helpers in migrate_release.go, and emptied
@@ -179,7 +180,7 @@ func lockSchemaVersion(ctx context.Context, tx *db.Tx) (version int, finalized b
 
 	_, err = tx.Exec(ctx, "SELECT pg_advisory_xact_lock($1)", initLockKey)
 	if err != nil {
-		return 0, false, fmt.Errorf("cannot lock PostgreSQL database for migration: %s", err)
+		return 0, false, fmt.Errorf("cannot lock PostgreSQL database: %s", err)
 	}
 
 	// Fail, instead of blocking the running Krenalis instances, when a lock on
@@ -188,7 +189,7 @@ func lockSchemaVersion(ctx context.Context, tx *db.Tx) (version int, finalized b
 	// still wait for each other.
 	_, err = tx.Exec(ctx, "SET LOCAL lock_timeout = '5s'")
 	if err != nil {
-		return 0, false, fmt.Errorf("cannot set lock timeout for migration: %s", err)
+		return 0, false, fmt.Errorf("cannot set lock timeout: %s", err)
 	}
 
 	isEmpty, err := databaseIsEmpty(ctx, tx)
