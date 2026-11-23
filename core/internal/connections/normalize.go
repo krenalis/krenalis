@@ -544,11 +544,7 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 				return nil, nil
 			}
 			var err error
-			if layouts.Time == "" {
-				t, err = iso8601.ParseString(src)
-			} else {
-				t, err = time.Parse(layouts.Time, src)
-			}
+			t, err = parseTimeOfDay(src, layouts.Time)
 			if err != nil {
 				return nil, inputValidationErrorf(name, "has a string value that does not represent a time value")
 			}
@@ -558,11 +554,7 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 				return nil, nil
 			}
 			var err error
-			if layouts.Time == "" {
-				t, err = iso8601.Parse(src)
-			} else {
-				t, err = time.Parse(layouts.Time, string(src))
-			}
+			t, err = parseTimeOfDay(string(src), layouts.Time)
 			if err != nil {
 				return nil, inputValidationErrorf(name, "has a []byte value that cannot represent a time value")
 			}
@@ -851,4 +843,18 @@ func dateTimeFromUnixFloat(n float64, layout string) (time.Time, bool) {
 		return time.Unix(0, int64(n)), true
 	}
 	return time.Time{}, false
+}
+
+// parseTimeOfDay parses a clock time or ISO 8601 date-time when layout is empty.
+func parseTimeOfDay(value, layout string) (time.Time, error) {
+	if layout != "" {
+		return time.Parse(layout, value)
+	}
+	if len(value) > 2 && value[2] == ':' {
+		if len(value) == len("15:04") {
+			return time.Parse("15:04", value)
+		}
+		return time.Parse(time.TimeOnly, value)
+	}
+	return iso8601.ParseString(value)
 }
