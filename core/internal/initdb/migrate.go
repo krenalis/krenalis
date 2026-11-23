@@ -27,8 +27,9 @@ const legacySchemaVersion = 1
 // CheckSchemaVersion checks that this version of Krenalis can run on the
 // database: its schema version must be the one of this version of Krenalis,
 // finalized or not, or the next one not finalized, as while the Krenalis
-// instances are being replaced or after a rollback. In the latter case it logs
-// a warning. It returns nil for an empty database.
+// instances are being replaced or after a rollback to this version of
+// Krenalis. In the latter case it logs a warning. It returns nil for an empty
+// database.
 func CheckSchemaVersion(ctx context.Context, database *db.DB) error {
 	isEmpty, err := databaseIsEmpty(ctx, database)
 	if err != nil {
@@ -60,9 +61,11 @@ func CheckSchemaVersion(ctx context.Context, database *db.DB) error {
 // Finalize finalizes, in a single transaction, Krenalis's PostgreSQL database
 // at the schema version of this version of Krenalis, removing what only the
 // Krenalis instances of the previous release need, and records it as
-// finalized. It does nothing if the database is already finalized, and fails
-// if the database is empty or at another schema version. After it, the
-// instances of the previous release can no longer run on the database. It does
+// finalized. It does nothing if the database is already finalized, or if it is
+// at the next schema version but not finalized, as after a rollback to this
+// version of Krenalis. It fails if the database is empty or at any other
+// schema version. After it, the instances of the previous release can no
+// longer run on the database. It does
 // not check that none of them is running: the caller must ensure it, since
 // otherwise the behavior is undefined and may be destructive. It is safe to
 // call it concurrently from several Krenalis instances.
@@ -83,6 +86,10 @@ func Finalize(ctx context.Context, database *db.DB) error {
 		case version < schemaVersion:
 			return fmt.Errorf("PostgreSQL database is at schema version %d, which must be migrated to"+
 				" schema version %d before finalizing it", version, schemaVersion)
+		case version == schemaVersion+1 && !finalized:
+			slog.Warn("PostgreSQL database is at the next schema version, not finalized, so it won't be finalized",
+				"schema_version", version)
+			return nil
 		default:
 			return fmt.Errorf("PostgreSQL database is at schema version %d, newer than schema version %d of"+
 				" this version of Krenalis", version, schemaVersion)
@@ -106,9 +113,10 @@ func Finalize(ctx context.Context, database *db.DB) error {
 // from the previous schema version to the one of this version of Krenalis, and
 // records it as not finalized. It does nothing if the database is already at
 // this schema version, or at the next one but not finalized, as after a
-// rollback. It fails if the database is empty, if the previous schema version
-// has not been finalized, or if the database is at any other schema version.
-// It is safe to call it concurrently from several Krenalis instances.
+// rollback to this version of Krenalis. It fails if the database is empty, if
+// the previous schema version has not been finalized, or if the database is at
+// any other schema version. It is safe to call it concurrently from several
+// Krenalis instances.
 func Migrate(ctx context.Context, database *db.DB) error {
 	err := database.Transaction(ctx, func(tx *db.Tx) error {
 

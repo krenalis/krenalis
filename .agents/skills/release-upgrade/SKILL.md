@@ -71,8 +71,9 @@ If a check fails, stop and report it without choosing another tag.
 
 During a rolling deployment, the instances of the previous release keep running
 on a migrated database until they are replaced, and they run on it again after
-a rollback. Meanwhile they keep reading and writing the database, and they
-exchange notifications with the instances of the new release.
+a rollback to the previous release. Meanwhile they keep reading and writing the
+database, and they exchange notifications with the instances of the new
+release.
 
 This is a requirement, with no exceptions: the upgrade to a release must never
 break the previous one. For the database, a single release is enough, if it

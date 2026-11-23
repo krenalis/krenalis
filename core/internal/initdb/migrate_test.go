@@ -108,7 +108,7 @@ func TestFinalizeSchemaVersions(t *testing.T) {
 		{name: "new database", expected: &state{v, true}},
 		{name: "legacy database", legacy: true, fails: legacySchemaVersion != v, expected: &state{legacySchemaVersion, true}},
 		{name: "current, not finalized", set: &state{v, false}, expected: &state{v, true}},
-		{name: "next, not finalized", set: &state{v + 1, false}, fails: true, expected: &state{v + 1, false}},
+		{name: "next, not finalized", set: &state{v + 1, false}, expected: &state{v + 1, false}},
 		{name: "next, finalized", set: &state{v + 1, true}, fails: true, expected: &state{v + 1, true}},
 		{name: "previous, finalized", set: &state{v - 1, true}, fails: true, expected: &state{v - 1, true}},
 		{name: "previous, not finalized", set: &state{v - 1, false}, fails: true, expected: &state{v - 1, false}},
