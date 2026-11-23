@@ -29,8 +29,7 @@ func TestWarehouse(t *testing.T) {
 	profileSchema := types.Object([]types.Property{
 		{Name: "email", Type: types.String().WithMaxLength(300), ReadOptional: true},
 	})
-	err := k.TestWorkspaceCreation("PostgreSQL", profileSchema, krenalistester.UIPreferences{},
-		"PostgreSQL", settings, krenalistester.Normal)
+	err := k.TestWorkspaceCreation("PostgreSQL", profileSchema, "PostgreSQL", settings, krenalistester.Normal)
 	var gotErr string
 	if err != nil {
 		gotErr = err.Error()

@@ -78,7 +78,7 @@ type Core struct {
 	smtp              *SMTPConfig
 	close             struct {
 		ctx       context.Context
-		cancelCtx context.CancelFunc
+		cancelCtx context.CancelCauseFunc
 		sync.WaitGroup
 	}
 	closed atomic.Bool
@@ -380,7 +380,7 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 		}
 	}()
 
-	core.close.ctx, core.close.cancelCtx = context.WithCancel(context.Background())
+	core.close.ctx, core.close.cancelCtx = context.WithCancelCause(context.Background())
 
 	// Instantiate a warehouses.Warehouse, used by the MCP server, for every workspace.
 	core.mcp = map[string]warehouses.Warehouse{}
@@ -428,34 +428,6 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 	}
 
 	return core, nil
-}
-
-// UpgradeDB upgrades Krenalis's PostgreSQL database.
-func UpgradeDB(ctx context.Context, conf *Config) error {
-	db, err := dbpkg.Open(&dbpkg.Options{
-		Host:           conf.DB.Host,
-		Port:           conf.DB.Port,
-		Username:       conf.DB.Username,
-		Password:       conf.DB.Password,
-		Database:       conf.DB.Database,
-		Schema:         conf.DB.Schema,
-		MaxConnections: max(2, conf.DB.MaxConnections),
-	})
-	if err != nil {
-		return fmt.Errorf("cannot connect to PostgreSQL: %s", err)
-	}
-	defer db.Close()
-
-	pingCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
-	defer cancel()
-	if err := db.Ping(pingCtx); err != nil {
-		return fmt.Errorf("cannot connect to PostgreSQL: %s", err)
-	}
-
-	if err := initdb.Upgrade(ctx, db); err != nil {
-		return fmt.Errorf("cannot upgrade PostgreSQL database: %s", err)
-	}
-	return nil
 }
 
 // AcceptInvitation accepts the invitation with the given invitation token. It
@@ -573,16 +545,19 @@ func (core *Core) ChangeMemberPasswordByToken(ctx context.Context, token string,
 
 // Close closes the Core. When Close is called, no other calls to Core's methods
 // should be in progress and no other shall be made.
+// cause is the reason for closing.
 // It panics if it has already been called.
-func (core *Core) Close(ctx context.Context) {
+func (core *Core) Close(ctx context.Context, cause error) {
 	if core.closed.Swap(true) {
 		panic("core already closed")
 	}
-	// Cancel pipeline runs initiated via the API.
-	core.close.cancelCtx()
+	// Cancel pipeline runs initiated via the API, Identity Resolutions, and
+	// profile schema alterations.
+	core.close.cancelCtx(cause)
 	// Close the pipeline scheduler.
 	core.pipelineScheduler.Close()
-	// Wait for the completion of pipelines initiated via API.
+	// Wait for the completion of pipelines initiated via API, Identity
+	// Resolutions, and profile schema alterations.
 	core.close.Wait()
 	// Close the pipeline cleaner.
 	core.pipelineCleaner.Close(context.Background())
@@ -1162,7 +1137,7 @@ func (core *Core) TransformData(ctx context.Context, organization string, data [
 	// Validate the mapping and the transformation.
 	switch {
 	case transformation.Mapping != nil:
-		mapping, err := mappings.New(transformation.Mapping, inSchema, outSchema, false)
+		mapping, err := mappings.New(transformation.Mapping, inSchema, outSchema)
 		if err != nil {
 			return nil, errors.BadRequest("mapping is not valid: %s", err)
 		}
@@ -1670,7 +1645,7 @@ func (core *Core) executeAlterProfileSchema(workspace, opID string, schema types
 			}
 			// In case of OperationError log it, then go on and send an
 			// EndAlterProfileSchema notification.
-			if err2, ok := err.(*warehouses.OperationError); ok {
+			if err2, ok := errors.AsType[*warehouses.OperationError](err); ok {
 				slog.Error("alter schema ended with an error", "error", err2)
 				alterSchemaErr = err2
 				break
@@ -1753,6 +1728,11 @@ Identifiers:
 				//
 				// Update the profile schema.
 				query := "UPDATE workspaces SET profile_schema = alter_profile_schema_schema," +
+					" profile_role_first_name = alter_profile_schema_role_first_name," +
+					" profile_role_last_name = alter_profile_schema_role_last_name," +
+					" profile_role_email = alter_profile_schema_role_email," +
+					" profile_role_country = alter_profile_schema_role_country," +
+					" profile_role_photo = alter_profile_schema_role_photo," +
 					" identifiers = $1 WHERE id = $2"
 				_, err := tx.Exec(ctx, query, nEnd.Identifiers, nEnd.Workspace)
 				if err != nil {
@@ -1774,7 +1754,10 @@ Identifiers:
 			// Set the alter schema update as completed.
 			query := "UPDATE workspaces SET alter_profile_schema_id = NULL," +
 				" alter_profile_schema_schema = 'null', alter_profile_schema_primary_sources = 'null'," +
-				" alter_profile_schema_operations = 'null', alter_profile_schema_end_time = $1," +
+				" alter_profile_schema_operations = 'null', alter_profile_schema_role_first_name = ''," +
+				" alter_profile_schema_role_last_name = '', alter_profile_schema_role_email = ''," +
+				" alter_profile_schema_role_country = '', alter_profile_schema_role_photo = ''," +
+				" alter_profile_schema_end_time = $1," +
 				" alter_profile_schema_error = $2 WHERE id = $3 AND alter_profile_schema_id = $4"
 			_, err = tx.Exec(ctx, query, nEnd.EndTime, nEnd.Err, nEnd.Workspace, nEnd.ID)
 			if err != nil {
@@ -1813,8 +1796,11 @@ func (core *Core) executeIdentityResolution(workspaceID, opID string) {
 	bo := backoff.New(200)
 	bo.SetCap(5 * time.Minute)
 	var unknownErrorMsg string
+	var resolutionCounts *warehouses.IdentityResolutionCounts
+	var operationErrorMessage string
 	for bo.Next(ctx) {
-		err := store.ResolveIdentities(ctx, opID)
+		var err error
+		resolutionCounts, err = store.ResolveIdentities(ctx, opID)
 		if err != nil {
 			// If the context has expired, just return.
 			if ctx.Err() != nil {
@@ -1829,6 +1815,10 @@ func (core *Core) executeIdentityResolution(workspaceID, opID string) {
 			// EndIdentityResolution notification.
 			if operationError, ok := errors.AsType[*warehouses.OperationError](err); ok {
 				slog.Error("identity resolution ended with an error", "error", operationError)
+				operationErrorMessage = operationError.Error()
+				if operationErrorMessage == "" {
+					operationErrorMessage = "Identity Resolution failed"
+				}
 				unknownErrorMsg = ""
 				break
 			}
@@ -1848,32 +1838,11 @@ func (core *Core) executeIdentityResolution(workspaceID, opID string) {
 		slog.Info("Identity resolution status checked successfully")
 		unknownErrorMsg = ""
 	}
-	// Count the currently visible profiles even if the Identity Resolution ended
-	// with an OperationError, because the profiles view may already have been
-	// replaced.
-	var profileCount int
-	bo = backoff.New(200)
-	bo.SetCap(5 * time.Minute)
-	for bo.Next(ctx) {
-		var err error
-		profileCount, err = store.CountProfiles(ctx)
-		if err == nil {
-			break
-		}
-		if msg := err.Error(); unknownErrorMsg != msg {
-			slog.Warn("failed to count profiles after Identity Resolution; retrying", "error", err)
-			unknownErrorMsg = msg
-		}
-	}
-	if ctx.Err() != nil {
-		return
-	}
-	if unknownErrorMsg != "" {
-		slog.Info("Profiles counted successfully after Identity Resolution")
-	}
+	successful := operationErrorMessage == ""
 	n := state.EndIdentityResolution{
 		Workspace: workspaceID,
 		ID:        opID,
+		EndTime:   time.Now().UTC().Truncate(time.Millisecond),
 	}
 	bo.Reset()
 	bo.SetCap(time.Second)
@@ -1895,17 +1864,40 @@ func (core *Core) executeIdentityResolution(workspaceID, opID string) {
 			if !pending {
 				return nil, nil
 			}
-			n.EndTime = time.Now().UTC()
-			// Record the resulting profile count in the same transaction that completes
-			// the Identity Resolution.
-			err = core.metrics.Usage.RecordProfileObservation(ctx, tx, organizationID, n.Workspace, profileCount, n.EndTime)
+			res, err := tx.Exec(ctx, `UPDATE identity_resolution_runs
+				SET end_time = $1, error = NULLIF($2, '')
+				WHERE id = $3 AND workspace = $4 AND end_time IS NULL`,
+				n.EndTime, operationErrorMessage, n.ID, n.Workspace)
 			if err != nil {
 				return nil, err
 			}
+			if res.RowsAffected() == 0 {
+				return nil, fmt.Errorf(
+					"core: cannot finalize open Identity Resolution run %s for workspace %s", n.ID, n.Workspace)
+			}
+			if successful {
+				// Record the dashboard result and reuse its profile total for the billing
+				// observation so both are committed atomically with lifecycle finalization.
+				err = core.metrics.IdentityResolutions.RecordResult(
+					ctx, tx, n.Workspace, n.EndTime, resolutionCounts)
+				if err != nil {
+					return nil, err
+				}
+				profileCount := resolutionCounts.Profiles.Anonymous + resolutionCounts.Profiles.Recognized
+				err = core.metrics.Usage.RecordProfileObservation(
+					ctx, tx, organizationID, n.Workspace, profileCount, n.EndTime)
+				if err != nil {
+					return nil, err
+				}
+			}
 			query = "UPDATE workspaces SET ir_id = NULL, ir_end_time = $1 WHERE id = $2 AND organization = $3 AND ir_id = $4"
-			_, err = tx.Exec(ctx, query, n.EndTime, n.Workspace, organizationID, n.ID)
+			res, err = tx.Exec(ctx, query, n.EndTime, n.Workspace, organizationID, n.ID)
 			if err != nil {
 				return nil, err
+			}
+			if res.RowsAffected() == 0 {
+				return nil, fmt.Errorf(
+					"core: cannot close Identity Resolution lifecycle %s for workspace %s", n.ID, n.Workspace)
 			}
 			return n, nil
 		})
@@ -1916,7 +1908,15 @@ func (core *Core) executeIdentityResolution(workspaceID, opID string) {
 			// Try again to do the query and send the notification.
 			continue
 		}
-		// No errors: break the loop.
+		// Refresh identity metrics after a successful resolution has been committed.
+		if successful {
+			err = core.metrics.Identities.Refresh(ctx, n.Workspace)
+			if err != nil {
+				slog.Error("core: cannot refresh identity metrics at the end of identity resolution",
+					"workspace", n.Workspace, "operation", n.ID, "error", err)
+			}
+		}
+		// Finalization is complete even if the metrics refresh failed.
 		break
 	}
 }
@@ -1971,15 +1971,17 @@ func (core *Core) onElectLeader(n state.ElectLeader) {
 	workspaces := core.state.Workspaces()
 	for _, ws := range workspaces {
 		if ws.IR.ID != nil {
-			go core.executeIdentityResolution(ws.ID, *ws.IR.ID)
+			core.close.Go(func() { core.executeIdentityResolution(ws.ID, *ws.IR.ID) })
 			// At most only one operation between Identity Resolution and update
 			// profile schema can be started, so continue to the next workspace.
 			continue
 		}
 		if ws.AlterProfileSchema.ID != nil {
-			go core.executeAlterProfileSchema(ws.ID, *ws.AlterProfileSchema.ID,
-				ws.AlterProfileSchema.Schema, ws.AlterProfileSchema.PrimarySources,
-				ws.AlterProfileSchema.Operations)
+			core.close.Go(func() {
+				core.executeAlterProfileSchema(ws.ID, *ws.AlterProfileSchema.ID,
+					ws.AlterProfileSchema.Schema, ws.AlterProfileSchema.PrimarySources,
+					ws.AlterProfileSchema.Operations)
+			})
 		}
 	}
 }
@@ -2000,7 +2002,9 @@ func (core *Core) onStartAlterProfileSchema(n state.StartAlterProfileSchema) {
 	if !core.state.IsLeader() {
 		return
 	}
-	go core.executeAlterProfileSchema(n.Workspace, n.ID, n.Schema, n.PrimarySources, n.Operations)
+	core.close.Go(func() {
+		core.executeAlterProfileSchema(n.Workspace, n.ID, n.Schema, n.PrimarySources, n.Operations)
+	})
 }
 
 // onStartIdentityResolution is called when the identity resolution is started.
@@ -2008,7 +2012,7 @@ func (core *Core) onStartIdentityResolution(n state.StartIdentityResolution) {
 	if !core.state.IsLeader() {
 		return
 	}
-	go core.executeIdentityResolution(n.Workspace, n.ID)
+	core.close.Go(func() { core.executeIdentityResolution(n.Workspace, n.ID) })
 }
 
 // onUpdateWarehouse is called when a warehouse is updated.
@@ -2067,7 +2071,7 @@ func (core *Core) removeMCPWarehouse(ws string) {
 //     profile schema update) is already running.
 //   - ConnectionNotExist, if a connection referred in the primary sources does
 //     not exist.
-func (core *Core) startAlterProfileSchema(ctx context.Context, ws string, schema types.Type, primarySources map[string]string, operations []warehouses.AlterOperation) error {
+func (core *Core) startAlterProfileSchema(ctx context.Context, ws string, schema types.Type, propertyRoles PropertyRoles, primarySources map[string]string, operations []warehouses.AlterOperation) error {
 	core.mustBeOpen()
 	opID := uuid.New()
 	n := state.StartAlterProfileSchema{
@@ -2075,6 +2079,7 @@ func (core *Core) startAlterProfileSchema(ctx context.Context, ws string, schema
 		ID:             opID.String(),
 		StartTime:      time.Now().UTC(),
 		Schema:         schema,
+		PropertyRoles:  state.PropertyRoles(propertyRoles),
 		PrimarySources: primarySources,
 		Operations:     operations,
 	}
@@ -2126,10 +2131,14 @@ func (core *Core) startAlterProfileSchema(ctx context.Context, ws string, schema
 		// Sets the alter profile schema operation to running.
 		query = "UPDATE workspaces SET alter_profile_schema_id = $1," +
 			" alter_profile_schema_schema = $2, alter_profile_schema_primary_sources = $3," +
-			" alter_profile_schema_operations = $4, alter_profile_schema_start_time = $5," +
-			" alter_profile_schema_end_time = NULL, alter_profile_schema_error = NULL WHERE id = $6"
+			" alter_profile_schema_operations = $4, alter_profile_schema_role_first_name = $5," +
+			" alter_profile_schema_role_last_name = $6, alter_profile_schema_role_email = $7," +
+			" alter_profile_schema_role_country = $8, alter_profile_schema_role_photo = $9," +
+			" alter_profile_schema_start_time = $10, alter_profile_schema_end_time = NULL," +
+			" alter_profile_schema_error = NULL WHERE id = $11"
 		_, err = tx.Exec(ctx, query, n.ID, n.Schema, n.PrimarySources, n.Operations,
-			n.StartTime, n.Workspace)
+			n.PropertyRoles.FirstName, n.PropertyRoles.LastName, n.PropertyRoles.Email, n.PropertyRoles.Country,
+			n.PropertyRoles.Photo, n.StartTime, n.Workspace)
 		if err != nil {
 			return nil, err
 		}
@@ -2152,7 +2161,7 @@ func (core *Core) startIdentityResolution(ctx context.Context, ws string) error 
 	n := state.StartIdentityResolution{
 		Workspace: ws,
 		ID:        opID.String(),
-		StartTime: time.Now().UTC(),
+		StartTime: time.Now().UTC().Truncate(time.Millisecond),
 	}
 	err := core.state.Transaction(ctx, func(tx *dbpkg.Tx) (any, error) {
 		var ongoingOp bool
@@ -2163,6 +2172,11 @@ func (core *Core) startIdentityResolution(ctx context.Context, ws string) error 
 		}
 		if ongoingOp {
 			return nil, errors.Unprocessable(OperationAlreadyExecuting, "another operation is already executing")
+		}
+		_, err = tx.Exec(ctx, `INSERT INTO identity_resolution_runs (id, workspace, start_time)
+			VALUES ($1, $2, $3)`, n.ID, n.Workspace, n.StartTime)
+		if err != nil {
+			return nil, err
 		}
 		query = "UPDATE workspaces SET ir_id = $1, ir_start_time = $2, ir_end_time = NULL WHERE id = $3"
 		_, err = tx.Exec(ctx, query, n.ID, n.StartTime, n.Workspace)

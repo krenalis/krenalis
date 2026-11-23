@@ -15,7 +15,6 @@
 package nats
 
 import (
-	"bufio"
 	"bytes"
 	"crypto/tls"
 	"crypto/x509"
@@ -50,7 +49,7 @@ import (
 
 // Default Constants
 const (
-	Version                   = "1.54.0"
+	Version                   = "1.56.0"
 	DefaultURL                = "nats://127.0.0.1:4222"
 	DefaultPort               = 4222
 	DefaultMaxReconnect       = 60
@@ -96,6 +95,13 @@ const (
 
 	// MAX_SUBSCRIPTIONS_ERR is for when nats server denies the connection due to server subscriptions limit.
 	MAX_SUBSCRIPTIONS_ERR = "maximum subscriptions exceeded"
+
+	// unknownProtoOpErr is sent by the server when it cannot parse what the
+	// client sent, after which it closes the connection.
+	unknownProtoOpErr = "unknown protocol operation"
+
+	// maxControlLineErr is sent by the server when a protocol line is too long.
+	maxControlLineErr = "maximum control line exceeded"
 )
 
 // Errors
@@ -348,7 +354,8 @@ type Options struct {
 	Secure bool
 
 	// TLSConfig is a custom TLS configuration to use for secure
-	// transports.
+	// transports. Setting it, RootCAsCB or TLSCertCB asks for TLS with
+	// every server, as Secure does.
 	TLSConfig *tls.Config
 
 	// TLSCertCB is used to fetch and return custom tls certificate.
@@ -687,6 +694,9 @@ type Conn struct {
 	ar            bool // abort reconnect
 	rqch          chan struct{}
 	ws            bool // true if a websocket connection
+	awaitInfo     bool // wait for the INFO after the first PONG before connected
+	// tlsReason says what made the client ask for TLS.
+	tlsReason string
 
 	// New style response handler
 	respSub       string               // The wildcard subject
@@ -710,13 +720,20 @@ type natsReader struct {
 
 type natsWriter struct {
 	w       io.Writer
+	conn    net.Conn
 	bufs    []byte
 	limit   int
 	pending *bytes.Buffer
 	plimit  int
+	// Error of a partial write that caused conn to be closed.
+	partialWriteErr error
 }
 
 // Subscription represents interest in a given subject.
+//
+// A Subscription is safe for concurrent use by multiple goroutines, for
+// example several goroutines may call NextMsg on the same Subscription.
+// Each message is delivered to only one of the callers.
 type Subscription struct {
 	mu sync.Mutex
 
@@ -796,6 +813,11 @@ func (s SubStatus) String() string {
 // Msg represents a message delivered by NATS. This structure is used
 // by Subscribers and PublishMsg().
 //
+// A new Msg is allocated for every delivered message and is not reused by
+// the library, so it is safe to keep a reference to it, and to its Data,
+// after a message handler returns, for example to process it asynchronously.
+// There is no need to copy the message first.
+//
 // # Types of Acknowledgements
 //
 // In case using JetStream, there are multiple ways to ack a Msg:
@@ -860,49 +882,62 @@ func (m *Msg) Size() int {
 	if m.wsz != 0 {
 		return m.wsz
 	}
-	hdr, _ := m.headerBytes()
-	return len(m.Subject) + len(m.Reply) + len(hdr) + len(m.Data)
+	hdrSize, _ := m.headerSize()
+	return len(m.Subject) + len(m.Reply) + hdrSize + len(m.Data)
 }
 
-func (m *Msg) headerBytes() ([]byte, error) {
-	var hdr []byte
+// pendingSize returns the data and encoded header size of a received message.
+func (m *Msg) pendingSize() int {
+	return m.wsz - len(m.Subject) - len(m.Reply)
+}
+
+// Validate the keys and calculate the exact total encoded size.
+//
+// We don't perform any special validation on header values because we
+// consider all strings to be valid values (including Unicode strings,
+// special characters, etc.).
+func (m *Msg) headerSize() (int, error) {
 	if len(m.Header) == 0 {
-		return hdr, nil
+		return 0, nil
 	}
 
-	// Validate the keys and calculate an upper bound for the total encoded
-	// size.
-	//
-	// The size calculation may not be exact if any values contain
-	// leading/trailing whitespace (as those will be trimmed later), but a
-	// slight over-estimation here is more preferable than an under-estimation
-	// (which could lead to unnecessary memory allocations).
-	//
-	// We don't perform any special validation on header values because we
-	// consider all strings to be valid values (including Unicode strings,
-	// special characters, etc.).
 	hdrSize := len(hdrLine) + len(crlf)
 	for k, vs := range m.Header {
 		if !isHeaderKeyValid(k) {
-			return nil, ErrBadHeaderMsg
+			return 0, ErrBadHeaderMsg
 		}
 		for _, v := range vs {
-			hdrSize += len(k) + len(v) + 4 // 4 is for the colon, space, CR, and LF
+			hdrSize += len(k) + len(textproto.TrimString(v)) + 4 // 4 is for the colon, space, CR, and LF
 		}
+	}
+
+	return hdrSize, nil
+}
+
+func (m *Msg) headerBytes() ([]byte, error) {
+	var b bytes.Buffer
+	return m.encodeHeaders(&b)
+}
+
+// encodeHeaders writes the headers into an empty buffer.
+func (m *Msg) encodeHeaders(b *bytes.Buffer) ([]byte, error) {
+	var hdr []byte
+	hdrSize, err := m.headerSize()
+	if hdrSize == 0 || err != nil {
+		return hdr, err
 	}
 
 	// NOTE: bytes.Buffer.WriteString() returns an error because bytes.Buffer
 	// is intended to be a valid implementation of the io.StringWriter interface.
 	// This implementation cannot actually fail in practice, so it is safe to
 	// ignore write errors here.
-	var b bytes.Buffer
 	b.Grow(hdrSize)
 	_, _ = b.WriteString(hdrLine)
 	for k, vs := range m.Header {
 		for _, v := range vs {
 			_, _ = b.WriteString(k)
 			_, _ = b.WriteString(": ")
-			writeHeaderValue(&b, v)
+			writeHeaderValue(b, v)
 			_, _ = b.WriteString(crlf)
 		}
 	}
@@ -1068,6 +1103,9 @@ type ServerInfo struct {
 	// IsSystemAccount indicates whether the connected client's account
 	// is the system account.
 	IsSystemAccount bool `json:"acc_is_sys,omitempty"`
+	// RemoteAccount is the name of the account the connected client is
+	// bound to.
+	RemoteAccount string `json:"remote_account,omitempty"`
 	// JSApiLevel is the JetStream API level advertised by the server.
 	// Requires nats-server v2.12.0 or later; older servers will report 0.
 	JSApiLevel int    `json:"api_lvl,omitempty"`
@@ -1940,7 +1978,7 @@ func processUrlString(url string) []string {
 	urls := strings.Split(url, ",")
 	var j int
 	for _, s := range urls {
-		u := strings.TrimSuffix(strings.TrimSpace(s), "/")
+		u := strings.TrimSpace(s)
 		if len(u) > 0 {
 			urls[j] = u
 			j++
@@ -1991,9 +2029,16 @@ func (o Options) Connect() (*Conn, error) {
 		}
 	}
 
+	nc.tlsReason = nc.Opts.tlsReason()
+
 	// If the TLSHandshakeFirst option is specified, make sure that
 	// the Secure boolean is true.
 	if nc.Opts.TLSHandshakeFirst {
+		nc.Opts.Secure = true
+	}
+
+	// A TLS configuration asks for TLS.
+	if nc.Opts.TLSConfig != nil || nc.Opts.RootCAsCB != nil || nc.Opts.TLSCertCB != nil {
 		nc.Opts.Secure = true
 	}
 
@@ -2070,6 +2115,7 @@ var _CRLF_BYTES_ = []byte(_CRLF_)
 const (
 	_OK_OP_   = "+OK"
 	_ERR_OP_  = "-ERR"
+	_PING_OP_ = "PING"
 	_PONG_OP_ = "PONG"
 	_INFO_OP_ = "INFO"
 )
@@ -2178,18 +2224,25 @@ func (nc *Conn) setupServerPool() error {
 		}
 	}
 
-	// Check for Scheme hint to move to TLS mode.
-	for _, srv := range nc.srvPool {
+	nc.secureFromSchemes(nc.srvPool)
+
+	return nc.pickServer()
+}
+
+// secureFromSchemes asks for TLS when a server in pool has a TLS scheme. One
+// such URL makes the whole connection TLS, at connect as after SetServerPool.
+func (nc *Conn) secureFromSchemes(pool []*Server) {
+	for _, srv := range pool {
 		if srv.URL.Scheme == tlsScheme || srv.URL.Scheme == wsSchemeTLS {
-			// FIXME(dlc), this is for all in the pool, should be case by case.
 			nc.Opts.Secure = true
+			if nc.tlsReason == _EMPTY_ {
+				nc.tlsReason = fmt.Sprintf("the URL %s://%s asks for TLS", srv.URL.Scheme, srv.URL.Host)
+			}
 			if nc.Opts.TLSConfig == nil {
 				nc.Opts.TLSConfig = &tls.Config{MinVersion: tls.VersionTLS12}
 			}
 		}
 	}
-
-	return nc.pickServer()
 }
 
 // Helper function to return scheme
@@ -2218,46 +2271,37 @@ func (nc *Conn) parseServerURL(sURL string, implicit, saveTLSName bool) (*Server
 	if !strings.Contains(sURL, "://") {
 		sURL = fmt.Sprintf("%s://%s", nc.connScheme(), sURL)
 	}
-	var (
-		u   *url.URL
-		err error
-	)
-	for i := 0; i < 2; i++ {
-		u, err = url.Parse(sURL)
-		if err != nil {
-			return nil, err
-		}
-		if u.Port() != "" {
-			break
-		}
-		// In case given URL is of the form "localhost:", just add
-		// the port number at the end, otherwise, add ":4222".
-		if sURL[len(sURL)-1] != ':' {
-			sURL += ":"
-		}
+	u, err := url.Parse(sURL)
+	if err != nil {
+		return nil, err
+	}
+	if u.Port() == "" {
+		port := defaultPortString
 		switch u.Scheme {
 		case wsScheme:
-			sURL += defaultWSPortString
+			port = defaultWSPortString
 		case wsSchemeTLS:
-			sURL += defaultWSSPortString
-		default:
-			sURL += defaultPortString
+			port = defaultWSSPortString
 		}
+		// "host:" has an empty port, so trim the colon before adding the default.
+		u.Host = strings.TrimSuffix(u.Host, ":") + ":" + port
 	}
 
 	var tlsName string
 	if implicit {
 		curl := nc.current.URL
-		// Check to see if we do not have a url.User but current connected
-		// url does. If so copy over.
-		if u.User == nil && curl.User != nil {
-			u.User = curl.User
-		}
+		// Use the reporting server's credentials, never the entry's own.
+		u.User = curl.User
 		// We are checking to see if we have a secure connection and are
 		// adding an implicit server that just has an IP. If so we will remember
-		// the current hostname we are connected to.
+		// the current hostname we are connected to. If we are connected to an
+		// IP ourselves, inherit the name that entry carries.
 		if saveTLSName && hostIsIP(u) {
-			tlsName = curl.Hostname()
+			if hostIsIP(curl) {
+				tlsName = nc.current.tlsName
+			} else {
+				tlsName = curl.Hostname()
+			}
 		}
 	}
 
@@ -2315,7 +2359,7 @@ func (nc *Conn) newReaderWriter() {
 
 func (nc *Conn) bindToNewConn() {
 	bw := nc.bw
-	bw.w, bw.bufs = nc.newWriter(), nil
+	bw.w, bw.conn, bw.bufs, bw.partialWriteErr = nc.newWriter(), nc.conn, nil, nil
 	br := nc.br
 	br.r, br.n, br.off = nc.conn, 0, -1
 }
@@ -2368,7 +2412,13 @@ func (w *natsWriter) flush() error {
 	// Do not skip calling w.w.Write() here if len(w.bufs) is 0 because
 	// the actual writer (if websocket for instance) may have things
 	// to do such as sending control frames, etc..
-	_, err := w.w.Write(w.bufs)
+	n, err := w.w.Write(w.bufs)
+	// A write that fails part way leaves a truncated protocol op on the
+	// wire, so the connection can no longer be used.
+	if err != nil && n > 0 && w.conn != nil {
+		w.partialWriteErr = err
+		w.conn.Close()
+	}
 	w.bufs = w.bufs[:0]
 	return err
 }
@@ -2856,6 +2906,26 @@ func (nc *Conn) IsSystemAccount() bool {
 	return nc.info.IsSystemAccount
 }
 
+// RemoteAccount returns the name of the account the connected client is
+// bound to, e.g. "$G" when the server has no accounts configured. The
+// server sends it in an INFO right after the PONG to the connection's
+// first PING, which is processed only after Connect returns, so call
+// Flush first when the value is needed immediately. The same applies
+// after a reconnect.
+func (nc *Conn) RemoteAccount() string {
+	if nc == nil {
+		return _EMPTY_
+	}
+
+	nc.mu.RLock()
+	defer nc.mu.RUnlock()
+
+	if nc.status != CONNECTED {
+		return _EMPTY_
+	}
+	return nc.info.RemoteAccount
+}
+
 // Low level setup for structs, etc
 func (nc *Conn) setup() {
 	nc.subs = make(map[int64]*Subscription)
@@ -2911,9 +2981,15 @@ func (nc *Conn) processConnectInit() error {
 		}
 	}
 
-	// Process the INFO protocol received from the server
+	// Process the INFO protocol received from the server. An INFO read before
+	// TLS is not authenticated, so a failed attempt leaves the server info as
+	// it was.
+	info := nc.info
 	err := nc.processExpectedInfo()
 	if err != nil {
+		if nc.tlsAfterInfo() {
+			nc.info = info
+		}
 		return nc.tlsHandshakeEOF(err)
 	}
 
@@ -2921,6 +2997,9 @@ func (nc *Conn) processConnectInit() error {
 	// Wait for the PONG response (or any error that we get from the server).
 	err = nc.sendConnect()
 	if err != nil {
+		if nc.tlsAfterInfo() {
+			nc.info = info
+		}
 		return nc.tlsHandshakeEOF(err)
 	}
 
@@ -3012,6 +3091,27 @@ func (nc *Conn) connect() (bool, error) {
 	return connectionEstablished, err
 }
 
+// tlsReason names the setting that asks for TLS, if any. Secure comes before
+// the TLS fields because the options that set it fill in TLSConfig too.
+func (o *Options) tlsReason() string {
+	var name string
+	switch {
+	case o.TLSHandshakeFirst:
+		name = "TLSHandshakeFirst"
+	case o.Secure:
+		name = "Secure (set by Secure, RootCAs, ClientCert or ClientTLSConfig)"
+	case o.TLSConfig != nil:
+		name = "TLSConfig"
+	case o.RootCAsCB != nil:
+		name = "RootCAsCB"
+	case o.TLSCertCB != nil:
+		name = "TLSCertCB"
+	default:
+		return _EMPTY_
+	}
+	return name + " asks for TLS"
+}
+
 // This will check to see if the connection should be
 // secure. This can be dictated from either end and should
 // only be called after the INIT protocol has been received.
@@ -3021,7 +3121,11 @@ func (nc *Conn) checkForSecure() error {
 
 	// Check for mismatch in setups
 	if o.Secure && !nc.info.TLSRequired && !nc.info.TLSAvailable {
-		return ErrSecureConnWanted
+		host := nc.current.URL.Host
+		if o.InProcessServer != nil {
+			host = "the in-process server"
+		}
+		return fmt.Errorf("%w: %s and %s does not offer it", ErrSecureConnWanted, nc.tlsReason, host)
 	} else if nc.info.TLSRequired && !o.Secure {
 		// Switch to Secure since server needs TLS.
 		o.Secure = true
@@ -3057,9 +3161,20 @@ func (nc *Conn) processExpectedInfo() error {
 		return ErrNoInfoReceived
 	}
 
-	// Parse the protocol
-	if err := nc.processInfo(c.args); err != nil {
-		return err
+	if c.args != _EMPTY_ {
+		if err := nc.parseInfo(c.args); err != nil {
+			return err
+		}
+	}
+
+	// An INFO read before the TLS upgrade is not authenticated, so its
+	// connect_urls are not used. A server new enough sends the list inside
+	// TLS right after the first PONG, and sendConnect waits for it.
+	nc.awaitInfo = false
+	if nc.tlsAfterInfo() {
+		nc.awaitInfo = !nc.Opts.IgnoreDiscoveredServers && sendsInfoAfterPong(nc.info.Version)
+	} else {
+		nc.updateServerPool()
 	}
 
 	if nc.Opts.Nkey != "" && nc.info.Nonce == "" {
@@ -3073,6 +3188,25 @@ func (nc *Conn) processExpectedInfo() error {
 	}
 
 	return nc.checkForSecure()
+}
+
+// tlsAfterInfo reports whether this attempt starts TLS after the INFO it has
+// read, which was therefore read in plaintext.
+func (nc *Conn) tlsAfterInfo() bool {
+	if nc.ws || nc.Opts.TLSHandshakeFirst {
+		return false
+	}
+	if sd, ok := nc.Opts.CustomDialer.(skipTLSDialer); ok && sd.SkipTLSHandshake() {
+		return false
+	}
+	return nc.Opts.Secure || nc.info.TLSRequired
+}
+
+// sendsInfoAfterPong reports whether a server of this version sends an INFO
+// right after the PONG that answers the first PING.
+func sendsInfoAfterPong(version string) bool {
+	major, minor, _, err := versionComponents(version)
+	return err == nil && (major > 2 || (major == 2 && minor >= 12))
 }
 
 // Sends a protocol control message by queuing into the bufio writer
@@ -3262,10 +3396,44 @@ func (nc *Conn) sendConnect() error {
 		return fmt.Errorf("nats: expected '%s', got '%s'", _PONG_OP_, proto)
 	}
 
+	if nc.awaitInfo {
+		if err := nc.readPostPongInfo(); err != nil {
+			return err
+		}
+	}
+
 	// This is where we are truly connected.
 	nc.changeConnStatus(CONNECTED)
 
 	return nil
+}
+
+// readPostPongInfo reads the INFO that follows the first PONG, answering
+// PINGs on the way, for up to Timeout from now. When the time runs out
+// before anything arrives, the connection goes on without it.
+func (nc *Conn) readPostPongInfo() error {
+	nc.conn.SetDeadline(time.Now().Add(nc.Opts.Timeout))
+	c := &control{}
+	for {
+		proto, err := nc.readProto()
+		if err != nil {
+			if errors.Is(err, os.ErrDeadlineExceeded) && proto == _EMPTY_ {
+				return nil
+			}
+			return err
+		}
+		parseControl(proto, c)
+		switch c.op {
+		case _INFO_OP_:
+			return nc.processInfo(c.args)
+		case _PING_OP_:
+			if err := nc.bw.writeDirect(pongProto); err != nil {
+				return err
+			}
+		default:
+			return fmt.Errorf("nats: expected '%s', got '%s'", _INFO_OP_, strings.TrimRight(proto, "\r\n"))
+		}
+	}
 }
 
 // reads a protocol line.
@@ -3459,6 +3627,7 @@ func (nc *Conn) doReconnect(err error, forceReconnect bool) {
 					rt.Stop()
 					nc.mu.Lock()
 					nc.rqch = make(chan struct{})
+					rqch = nc.rqch
 					nc.mu.Unlock()
 				case <-rt.C:
 				}
@@ -3491,9 +3660,12 @@ func (nc *Conn) doReconnect(err error, forceReconnect bool) {
 				rt.Stop()
 
 				// we need to reset the rqch channel to avoid
-				// closing a closed channel in the next iteration
+				// closing a closed channel in the next iteration,
+				// and keep selecting on the new channel so the
+				// delay is honored again on the next iteration.
 				nc.mu.Lock()
 				nc.rqch = make(chan struct{})
+				rqch = nc.rqch
 				nc.mu.Unlock()
 			case <-rt.C:
 			}
@@ -3531,6 +3703,10 @@ func (nc *Conn) doReconnect(err error, forceReconnect bool) {
 
 		// Process connect logic
 		if nc.err = nc.processConnectInit(); nc.err != nil {
+			if reconnectErrCB := nc.Opts.ReconnectErrCB; reconnectErrCB != nil {
+				reconnectErr := nc.err
+				nc.ach.push(func() { reconnectErrCB(nc, reconnectErr) })
+			}
 			// Check if we should abort reconnect. If so, break out
 			// of the loop and connection will be closed.
 			if nc.ar {
@@ -3727,6 +3903,12 @@ func (nc *Conn) readLoop() {
 			err = nc.parse(buf)
 		}
 		if err != nil {
+			// Report the write error rather than the read error it caused.
+			nc.mu.Lock()
+			if nc.bw.partialWriteErr != nil {
+				err = nc.bw.partialWriteErr
+			}
+			nc.mu.Unlock()
 			if shouldClose := nc.processOpErr(err, false); shouldClose {
 				nc.close(CLOSED, true, nil)
 			}
@@ -3778,7 +3960,7 @@ func (nc *Conn) waitForMsgs(s *Subscription) {
 				}
 				continue
 			}
-			msgLen = len(m.Data)
+			msgLen = m.pendingSize()
 		}
 		mcb := s.mcb
 		max = s.max
@@ -3952,7 +4134,7 @@ func (nc *Conn) processMsg(data []byte) {
 			if sub.pMsgs > sub.pMsgsMax {
 				sub.pMsgsMax = sub.pMsgs
 			}
-			sub.pBytes += len(m.Data)
+			sub.pBytes += m.pendingSize()
 			if sub.pBytes > sub.pBytesMax {
 				sub.pBytesMax = sub.pBytes
 			}
@@ -4101,7 +4283,7 @@ slowConsumer:
 func (sub *Subscription) releaseReserved(m *Msg) {
 	if sub.typ != ChanSubscription {
 		sub.pMsgs--
-		sub.pBytes -= len(m.Data)
+		sub.pBytes -= m.pendingSize()
 	}
 }
 
@@ -4247,29 +4429,42 @@ func (nc *Conn) processOK() {
 	// do nothing
 }
 
-// processInfo is used to parse the info messages sent
-// from the server.
-// This function may update the server pool.
+// processInfo applies an INFO received on an established connection: the
+// server info, the server pool and lame duck mode.
 func (nc *Conn) processInfo(info string) error {
 	if info == _EMPTY_ {
 		return nil
 	}
+	if err := nc.parseInfo(info); err != nil {
+		return err
+	}
+	nc.updateServerPool()
+	if !nc.initc && nc.info.LameDuckMode {
+		if lameDuckModeHandler := nc.Opts.LameDuckModeHandler; lameDuckModeHandler != nil {
+			nc.ach.push(func() { lameDuckModeHandler(nc) })
+		}
+	}
+	return nil
+}
+
+// parseInfo replaces the connection's server info with the parsed INFO.
+func (nc *Conn) parseInfo(info string) error {
 	var ncInfo ServerInfo
 	if err := json.Unmarshal([]byte(info), &ncInfo); err != nil {
 		return err
 	}
-
-	// Copy content into connection's info structure.
 	nc.info = ncInfo
+	return nil
+}
+
+// updateServerPool applies the connect_urls of the server info to the pool.
+func (nc *Conn) updateServerPool() {
 	// The array could be empty/not present on initial connect,
 	// if advertise is disabled on that server, or servers that
 	// did not include themselves in the async INFO protocol.
 	// If empty, do not remove the implicit servers from the pool.
 	if len(nc.info.ConnectURLs) == 0 || nc.Opts.IgnoreDiscoveredServers {
-		if !nc.initc && ncInfo.LameDuckMode && nc.Opts.LameDuckModeHandler != nil {
-			nc.ach.push(func() { nc.Opts.LameDuckModeHandler(nc) })
-		}
-		return nil
+		return
 	}
 	// Note about pool randomization: when the pool was first created,
 	// it was randomized (if allowed). We keep the order the same (removing
@@ -4281,7 +4476,17 @@ func (nc *Conn) processInfo(info string) error {
 	// Transform that to a map for easy lookups
 	tmp := make(map[string]struct{}, len(urls))
 	for _, curl := range urls {
+		// An entry is matched by its address; its user info is never used.
+		if at := strings.LastIndex(curl, "@"); at >= 0 {
+			curl = curl[at+1:]
+		}
 		tmp[curl] = struct{}{}
+	}
+	// A server listed over wss:// is dialed with wss://, also one learned
+	// earlier without TLS.
+	scheme := nc.connScheme()
+	if nc.ws && nc.current != nil && nc.current.URL.Scheme == wsSchemeTLS {
+		scheme = wsSchemeTLS
 	}
 	// Walk the pool and removed the implicit servers that are no longer in the
 	// given array/map
@@ -4294,6 +4499,9 @@ func (nc *Conn) processInfo(info string) error {
 		// Remove from the temp map so that at the end we are left with only
 		// new (or restarted) servers that need to be added to the pool.
 		delete(tmp, curl)
+		if inInfo && srv.isImplicit && scheme == wsSchemeTLS {
+			srv.URL.Scheme = wsSchemeTLS
+		}
 		// Keep servers that were set through Options, but also the one that
 		// we are currently connected to (even if it is a discovered server).
 		if !srv.isImplicit || srv.URL == nc.current.URL {
@@ -4307,8 +4515,9 @@ func (nc *Conn) processInfo(info string) error {
 			i--
 		}
 	}
-	// Figure out if we should save off the current non-IP hostname if we encounter a bare IP.
-	saveTLS := nc.current != nil && !hostIsIP(nc.current.URL)
+	// Figure out if we should save off the current non-IP hostname, or the
+	// name saved on the current IP entry, if we encounter a bare IP.
+	saveTLS := nc.current != nil && (!hostIsIP(nc.current.URL) || nc.current.tlsName != _EMPTY_)
 
 	// If there are any left in the tmp map, these are new (or restarted) servers
 	// and need to be added to the pool.
@@ -4318,7 +4527,7 @@ func (nc *Conn) processInfo(info string) error {
 		if _, present := nc.urls[curl]; !present {
 			hasNew = true
 		}
-		nc.addURLToPool(fmt.Sprintf("%s://%s", nc.connScheme(), curl), true, saveTLS)
+		nc.addURLToPool(fmt.Sprintf("%s://%s", scheme, curl), true, saveTLS)
 	}
 	if hasNew {
 		// Randomize the pool if allowed but leave the first URL in place.
@@ -4331,12 +4540,6 @@ func (nc *Conn) processInfo(info string) error {
 			}
 		}
 	}
-	if !nc.initc && ncInfo.LameDuckMode {
-		if lameDuckModeHandler := nc.Opts.LameDuckModeHandler; lameDuckModeHandler != nil {
-			nc.ach.push(func() { lameDuckModeHandler(nc) })
-		}
-	}
-	return nil
 }
 
 // processAsyncInfo does the same than processInfo, but is called
@@ -4344,8 +4547,14 @@ func (nc *Conn) processInfo(info string) error {
 // protection.
 func (nc *Conn) processAsyncInfo(info []byte) {
 	nc.mu.Lock()
+	remoteAcc, isSysAcc := nc.info.RemoteAccount, nc.info.IsSystemAccount
 	// Ignore errors, we will simply not update the server pool...
 	nc.processInfo(string(info))
+	// Only the INFO following the first PONG carries the account; later
+	// ones (cluster topology, lame duck mode) must not clear it.
+	if nc.info.RemoteAccount == _EMPTY_ {
+		nc.info.RemoteAccount, nc.info.IsSystemAccount = remoteAcc, isSysAcc
+	}
 	nc.mu.Unlock()
 }
 
@@ -4397,6 +4606,17 @@ func (nc *Conn) processErr(ie string) {
 		close = nc.processOpErr(ErrMaxConnectionsExceeded, false)
 	} else if e == MAX_ACCOUNT_CONNECTIONS_ERR {
 		close = nc.processOpErr(ErrMaxAccountConnectionsExceeded, false)
+	} else if e == unknownProtoOpErr {
+		close = nc.processOpErr(errors.New("nats: "+ne), false)
+	} else if e == maxControlLineErr {
+		close = true
+		err := errors.New("nats: " + ne)
+		nc.mu.Lock()
+		nc.err = err
+		if asyncErrorCB := nc.Opts.AsyncErrorCB; asyncErrorCB != nil {
+			nc.ach.push(func() { asyncErrorCB(nc, nil, err) })
+		}
+		nc.mu.Unlock()
 	} else if strings.HasPrefix(e, PERMISSIONS_ERR) {
 		nc.processTransientError(fmt.Errorf("%w: %s", ErrPermissionViolation, ne))
 	} else if strings.HasPrefix(e, MAX_SUBSCRIPTIONS_ERR) {
@@ -4500,22 +4720,38 @@ const (
 	statusLen          = 3 // e.g. 20x, 40x, 50x
 )
 
+// nextHeaderLine returns the next line in s mirroring textproto.Reader
+func nextHeaderLine(s string) (line, rest string, ok bool) {
+	i := strings.IndexByte(s, '\n')
+	if i < 0 {
+		return "", "", false
+	}
+	line = s[:i]
+	if len(line) > 0 && line[len(line)-1] == '\r' {
+		line = line[:len(line)-1]
+	}
+	return line, s[i+1:], true
+}
+
 // DecodeHeadersMsg will decode and headers.
 func DecodeHeadersMsg(data []byte) (Header, error) {
-	br := bufio.NewReaderSize(bytes.NewReader(data), 128)
-	tp := textproto.NewReader(br)
-	l, err := tp.ReadLine()
-	if err != nil || len(l) < hdrPreEnd || l[:hdrPreEnd] != hdrLine[:hdrPreEnd] {
+	// Copy the header block once; keys and values are substrings of it.
+	s := string(data)
+	l, s, ok := nextHeaderLine(s)
+	if !ok || len(l) < hdrPreEnd || l[:hdrPreEnd] != hdrLine[:hdrPreEnd] {
 		return nil, ErrBadHeaderMsg
 	}
 
-	mh, err := readMIMEHeader(tp)
+	h, err := readMIMEHeader(s)
 	if err != nil {
 		return nil, err
 	}
 
 	// Check if we have an inlined status.
 	if len(l) > hdrPreEnd {
+		if l[hdrPreEnd] != ' ' && l[hdrPreEnd] != '\t' {
+			return nil, ErrBadHeaderMsg
+		}
 		var description string
 		status := strings.TrimSpace(l[hdrPreEnd:])
 		if len(status) < statusLen {
@@ -4525,25 +4761,27 @@ func DecodeHeadersMsg(data []byte) (Header, error) {
 			description = strings.TrimSpace(status[statusLen:])
 			status = status[:statusLen]
 		}
-		mh.Add(statusHdr, status)
+		h.Add(statusHdr, status)
 		if len(description) > 0 {
-			mh.Add(descrHdr, description)
+			h.Add(descrHdr, description)
 		}
 	}
-	return Header(mh), nil
+	return h, nil
 }
 
 // readMIMEHeader returns a MIMEHeader that preserves the
-// original case of the MIME header, based on the implementation
-// of textproto.ReadMIMEHeader.
-//
-// https://golang.org/pkg/net/textproto/#Reader.ReadMIMEHeader
-func readMIMEHeader(tp *textproto.Reader) (textproto.MIMEHeader, error) {
-	m := make(textproto.MIMEHeader)
+// original case of the MIME header
+func readMIMEHeader(s string) (Header, error) {
+	m := make(Header)
 	for {
-		kv, err := tp.ReadLine()
+		kv, rest, ok := nextHeaderLine(s)
+		if !ok {
+			return nil, ErrBadHeaderMsg
+		}
+		s = rest
 		if len(kv) == 0 {
-			return m, err
+			// Blank line marks the end of the header block.
+			return m, nil
 		}
 
 		// Process key fetching original case.
@@ -4561,10 +4799,13 @@ func readMIMEHeader(tp *textproto.Reader) (textproto.MIMEHeader, error) {
 			i++
 		}
 		m[key] = append(m[key], kv[i:])
-		if err != nil {
-			return m, err
-		}
 	}
+}
+
+const maxPooledHeaderSize = 64 * 1024
+
+var publishHeaderPool = sync.Pool{
+	New: func() any { return new(bytes.Buffer) },
 }
 
 // PublishMsg publishes the Msg structure, which includes the
@@ -4573,9 +4814,22 @@ func (nc *Conn) PublishMsg(m *Msg) error {
 	if m == nil {
 		return ErrInvalidMsg
 	}
-	hdr, err := m.headerBytes()
-	if err != nil {
-		return err
+	var hdr []byte
+	if len(m.Header) > 0 {
+		b := publishHeaderPool.Get().(*bytes.Buffer)
+		defer func() {
+			// publish copies the headers into the writer's buffer before returning.
+			// Do not retain unusually large headers in the pool.
+			if b.Cap() <= maxPooledHeaderSize {
+				b.Reset()
+				publishHeaderPool.Put(b)
+			}
+		}()
+		var err error
+		hdr, err = m.encodeHeaders(b)
+		if err != nil {
+			return err
+		}
 	}
 	validateReply := m.Reply != _EMPTY_
 	return nc.publish(m.Subject, m.Reply, validateReply, hdr, m.Data)
@@ -4877,7 +5131,10 @@ func (nc *Conn) newRequest(subj string, hdr, data []byte, timeout time.Duration)
 	select {
 	case msg, ok = <-mch:
 		if !ok {
-			return nil, ErrConnectionClosed
+			if nc.IsClosed() {
+				return nil, ErrConnectionClosed
+			}
+			return nil, ErrDisconnected
 		}
 	case <-t.C:
 		nc.mu.Lock()
@@ -5767,7 +6024,7 @@ func (s *Subscription) processNextMsgDelivered(msg *Msg) error {
 
 	if s.typ == SyncSubscription {
 		s.pMsgs--
-		s.pBytes -= len(msg.Data)
+		s.pBytes -= msg.pendingSize()
 	}
 	if s.jsi != nil && s.jsi.resetPending {
 		s.tryResetOrderedConsumer()
@@ -5805,6 +6062,7 @@ func (s *Subscription) QueuedMsgs() (int, error) {
 }
 
 // Pending returns the number of queued messages and queued bytes in the client for this subscription.
+// The byte count includes data and encoded headers.
 func (s *Subscription) Pending() (int, int, error) {
 	if s == nil {
 		return -1, -1, ErrBadSubscription
@@ -5880,6 +6138,7 @@ func (s *Subscription) PendingLimits() (int, int, error) {
 }
 
 // SetPendingLimits sets the limits for pending msgs and bytes for this subscription.
+// The byte limit includes data and encoded headers.
 // Zero is not allowed. Any negative value means that the given metric is not limited.
 func (s *Subscription) SetPendingLimits(msgLimit, bytesLimit int) error {
 	if s == nil {
@@ -6098,6 +6357,12 @@ func (nc *Conn) resendSubscriptions() {
 	for sid, s := range subs {
 		adjustedMax := uint64(0)
 		s.mu.Lock()
+		// Draining subs are only removed locally once done, so resubscribing
+		// would leave orphaned interest on the server.
+		if s.draining {
+			s.mu.Unlock()
+			continue
+		}
 		// when resending subscriptions, the permissions error should be cleared
 		// since the user may have fixed the permissions issue
 		s.permissionsErr = nil
@@ -6349,6 +6614,11 @@ func (nc *Conn) drainConnection() {
 		min = 0
 	}
 	for time.Now().Before(timeout) {
+		// Close clears all subscriptions, including respMux, so min
+		// would never be reached.
+		if nc.IsClosed() {
+			return
+		}
 		if nc.NumSubscriptions() == min {
 			break
 		}
@@ -6375,8 +6645,16 @@ func (nc *Conn) drainConnection() {
 		pushErr(ErrDrainTimeout)
 	}
 
-	// Flip State
+	// Flip State, unless the connection was closed while we were
+	// draining subscriptions (for example by a concurrent Close call).
+	// In that case abort the publish drain: the connection is already
+	// terminal, and flipping the state here would resurrect it and
+	// start a new flush on a closed connection.
 	nc.mu.Lock()
+	if nc.isClosed() {
+		nc.mu.Unlock()
+		return
+	}
 	nc.changeConnStatus(DRAINING_PUBS)
 	nc.mu.Unlock()
 
@@ -6614,6 +6892,9 @@ func (nc *Conn) ServerPool() []Server {
 // can be called while the connection is active. It will return an error if the
 // connection is closed or if any of the provided URLs are invalid.
 //
+// A tls:// URL in the pool makes the client ask for TLS from every server, as
+// one given at connect does. Nothing in a pool turns TLS off.
+//
 // This function does not trigger an immediate reconnect. The new server
 // pool will be used on the next reconnect attempt.
 // If you want to trigger an immediate reconnect to apply the new server pool,
@@ -6663,6 +6944,10 @@ func (nc *Conn) SetServerPool(servers []string) error {
 
 	nc.srvPool = newPool
 	nc.urls = newURLs
+	// A WebSocket pool keeps dialing each URL with its own scheme.
+	if !nc.ws {
+		nc.secureFromSchemes(newPool)
+	}
 
 	// Update nc.current to point to the corresponding server in the new pool
 	// This is important because currentServer() uses pointer equality
@@ -6721,6 +7006,9 @@ func (nc *Conn) GetClientID() (uint64, error) {
 
 // StatusChanged returns a channel on which given list of connection status changes will be reported.
 // If no statuses are provided, defaults will be used: CONNECTED, RECONNECTING, DISCONNECTED, CLOSED.
+// The channel buffers up to 10 events; further events are dropped while it is full.
+// It stays registered, and is not closed when the connection closes, until it is
+// removed with RemoveStatusListener.
 func (nc *Conn) StatusChanged(statuses ...Status) chan Status {
 	if len(statuses) == 0 {
 		statuses = []Status{CONNECTED, RECONNECTING, DISCONNECTED, CLOSED}
@@ -6734,25 +7022,23 @@ func (nc *Conn) StatusChanged(statuses ...Status) chan Status {
 	return ch
 }
 
-// RemoveStatusListener removes a status change listener.
-// If the channel is not closed, it will be closed.
-// Listeners will be removed automatically on status change
-// as well, but this is a way to remove them manually.
+// RemoveStatusListener unregisters ch from all statuses and closes it.
+// Events already buffered can still be received. Use this instead of
+// closing the channel yourself.
 func (nc *Conn) RemoveStatusListener(ch chan (Status)) {
 	nc.mu.Lock()
 	defer nc.mu.Unlock()
 
-	select {
-	case <-ch:
-	default:
-		close(ch)
-	}
-
 	for _, listeners := range nc.statListeners {
-		for range listeners {
-			delete(listeners, ch)
-		}
+		delete(listeners, ch)
 	}
+	closeStatusListener(ch)
+}
+
+// closeStatusListener closes ch unless it is already closed.
+func closeStatusListener(ch chan Status) {
+	defer func() { _ = recover() }()
+	close(ch)
 }
 
 // registerStatusChangeListener registers a channel waiting for a specific status change event.
@@ -6773,22 +7059,27 @@ func (nc *Conn) registerStatusChangeListener(status Status, ch chan Status) {
 // If channel is closed, or there is no listener, sendStatusEvent
 // will not block. Lock should be held entering.
 func (nc *Conn) sendStatusEvent(s Status) {
-Loop:
 	for ch := range nc.statListeners[s] {
-		// make sure channel is not closed
-		select {
-		case <-ch:
-			// if chan is closed, remove it
+		if !notifyStatusListener(ch, s) {
 			delete(nc.statListeners[s], ch)
-			continue Loop
-		default:
-		}
-		// only send event if someone's listening
-		select {
-		case ch <- s:
-		default:
 		}
 	}
+}
+
+// notifyStatusListener sends s on ch unless its buffer is full, and reports
+// whether ch is still open. Receiving from ch to detect a closed channel
+// would consume an event the listener has not read yet.
+func notifyStatusListener(ch chan Status, s Status) (open bool) {
+	defer func() {
+		if recover() != nil {
+			open = false
+		}
+	}()
+	select {
+	case ch <- s:
+	default:
+	}
+	return true
 }
 
 // changeConnStatus changes connections status and sends events

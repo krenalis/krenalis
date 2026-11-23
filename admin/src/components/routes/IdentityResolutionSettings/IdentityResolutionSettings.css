@@ -12,7 +12,7 @@
 	width: 100%;
 }
 
-.identifiers > sl-spinner {
+.identifiers > wa-spinner {
 	display: block;
 	margin: auto;
 }
@@ -33,7 +33,7 @@
 	margin-left: auto;
 }
 
-.identifiers .combobox-input sl-input .combobox-input__error-icon {
+.identifiers .combobox-input wa-input .combobox-input__error-icon {
 	font-size: 9px;
 }
 
@@ -56,7 +56,7 @@
 }
 
 .identifiers__identifier-position {
-	background-color: var(--sl-color-neutral-400);
+	background-color: var(--wa-color-neutral-60);
 	color: var(--text-onaccent);
 	width: 25px;
 	height: 25px;

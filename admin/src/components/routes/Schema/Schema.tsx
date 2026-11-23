@@ -15,6 +15,7 @@ const Schema = () => {
 		schema,
 		isAltering,
 		setIsAltering,
+		latestAlterStartTime,
 		latestAlterError,
 	} = useSchema();
 
@@ -32,6 +33,7 @@ const Schema = () => {
 					consentPurposes,
 					isLoadingSchema,
 					setIsLoadingSchema,
+					latestAlterStartTime,
 					latestAlterError,
 					isAltering,
 					setIsAltering,

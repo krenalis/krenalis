@@ -11,14 +11,14 @@
 	margin-right: 8px;
 }
 
-.file-connector__storage sl-option::part(label) {
+.file-connector__storage wa-option::part(label) {
 	display: flex;
 	align-items: center;
 	gap: 8px;
 }
 
 .file-connector__storage-logo .little-logo svg,
-.file-connector__storage sl-option .little-logo svg {
+.file-connector__storage wa-option .little-logo svg {
 	height: 18px;
 }
 
@@ -46,7 +46,7 @@
 
 .file-connector__pipeline-type:last-child {
 	margin-bottom: 0;
-	border-bottom: 1px solid var(--sl-color-neutral-200);
+	border-bottom: 1px solid var(--wa-color-neutral-80);
 	border-bottom-left-radius: var(--radius);
 	border-bottom-right-radius: var(--radius);
 }

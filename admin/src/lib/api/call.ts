@@ -3,7 +3,68 @@ import JSONbig from 'json-bigint';
 import * as Sentry from '@sentry/react';
 import { scrubURL } from '../telemetry/scrubURL';
 
-const call = async (url: string, method: string, workspaceID?: string | null, body?: any, opt?: any) => {
+interface QueuedRequest {
+	url: string;
+	request: RequestInit;
+	isReadOnly: boolean;
+	resolve: (response: Response) => void;
+	reject: (error: unknown) => void;
+}
+
+const requestQueue: QueuedRequest[] = [];
+let isProcessingQueue = false;
+let syncToken: string | null = null;
+
+// processQueue processes queued requests sequentially, from sending
+// each request to receiving its response headers. Each request uses the
+// latest Sync-Token, which is updated from 200 response headers before
+// starting the next request. Read-only requests are sent with the
+// latest Sync-Token but are not awaited, and the Sync-Token of their
+// responses is discarded. Fetch errors reject the affected request
+// without stopping the queue.
+const processQueue = async () => {
+	if (isProcessingQueue) {
+		return;
+	}
+	isProcessingQueue = true;
+
+	while (requestQueue.length > 0) {
+		const pending = requestQueue.shift()!;
+		try {
+			const headers = new Headers(pending.request.headers);
+			if (syncToken != null) {
+				headers.set('Sync-Token', syncToken);
+			}
+			pending.request.headers = headers;
+			if (pending.isReadOnly) {
+				fetch(pending.url, pending.request).then(pending.resolve, pending.reject);
+				continue;
+			}
+			const response = await fetch(pending.url, pending.request);
+			if (response.status === 200) {
+				const token = response.headers.get('Sync-Token');
+				if (token == null) {
+					throw new Error('response is missing the Sync-Token header');
+				}
+				syncToken = token;
+			}
+			pending.resolve(response);
+		} catch (error) {
+			pending.reject(error);
+		}
+	}
+
+	isProcessingQueue = false;
+};
+
+const call = async (
+	url: string,
+	method: string,
+	isReadOnly: boolean,
+	workspaceID?: string | null,
+	body?: any,
+	opt?: any,
+) => {
 	let headers = {
 		'Content-Type': 'application/json',
 	};
@@ -26,7 +87,10 @@ const call = async (url: string, method: string, workspaceID?: string | null, bo
 
 	let res: Response;
 	try {
-		res = await fetch(url, request);
+		res = await new Promise<Response>((resolve, reject) => {
+			requestQueue.push({ url, request, isReadOnly, resolve, reject });
+			processQueue();
+		});
 	} catch (err) {
 		if (err.name === 'AbortError') {
 			throw err;

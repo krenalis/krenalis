@@ -60,6 +60,47 @@ func (k *Krenalis) AlterProfileSchemaAndWait(schema types.Type, primarySources m
 		"primarySources": primarySources,
 		"rePaths":        rePaths,
 	}
+	k.alterProfileSchemaAndWait(req)
+}
+
+// AlterProfileSchemaWithPropertyRolesAndWait alters the profile schema and its
+// property roles and waits for the operation to complete before returning.
+func (k *Krenalis) AlterProfileSchemaWithPropertyRolesAndWait(schema types.Type, propertyRoles PropertyRoles, primarySources map[string]string, rePaths map[string]any) {
+	req := map[string]any{
+		"schema":         schema,
+		"propertyRoles":  propertyRoles,
+		"primarySources": primarySources,
+		"rePaths":        rePaths,
+	}
+	k.alterProfileSchemaAndWait(req)
+}
+
+// TryAlterProfileSchema alters the profile schema, returning an error if it
+// fails. Unlike AlterProfileSchemaAndWait, it does not wait for completion.
+func (k *Krenalis) TryAlterProfileSchema(schema types.Type, primarySources map[string]string, rePaths map[string]any) error {
+	req := map[string]any{
+		"schema":         schema,
+		"primarySources": primarySources,
+		"rePaths":        rePaths,
+	}
+	return k.TryCall("PUT", "/v1/profiles/schema", nil, req, nil)
+}
+
+// TryAlterProfileSchemaWithPropertyRoles alters the profile schema and its
+// property roles, returning an error if it fails.
+func (k *Krenalis) TryAlterProfileSchemaWithPropertyRoles(schema types.Type, propertyRoles PropertyRoles, primarySources map[string]string, rePaths map[string]any) error {
+	req := map[string]any{
+		"schema":         schema,
+		"propertyRoles":  propertyRoles,
+		"primarySources": primarySources,
+		"rePaths":        rePaths,
+	}
+	return k.TryCall("PUT", "/v1/profiles/schema", nil, req, nil)
+}
+
+// alterProfileSchemaAndWait alters a profile schema with req and waits for it
+// to complete before returning.
+func (k *Krenalis) alterProfileSchemaAndWait(req map[string]any) {
 	ts := time.Now().UTC()
 	k.Call("PUT", "/v1/profiles/schema", nil, req, nil)
 	// Waits for the alter schema that was started following the call to this
@@ -77,17 +118,6 @@ func (k *Krenalis) AlterProfileSchemaAndWait(schema types.Type, primarySources m
 			break
 		}
 	}
-}
-
-// TryAlterProfileSchema alters the profile schema, returning an error if it
-// fails. Unlike AlterProfileSchemaAndWait, it does not wait for completion.
-func (k *Krenalis) TryAlterProfileSchema(schema types.Type, primarySources map[string]string, rePaths map[string]any) error {
-	req := map[string]any{
-		"schema":         schema,
-		"primarySources": primarySources,
-		"rePaths":        rePaths,
-	}
-	return k.TryCall("PUT", "/v1/profiles/schema", nil, req, nil)
 }
 
 // CanGetEvents reports whether the events (passing the given properties) can be
@@ -514,6 +544,19 @@ func (k *Krenalis) Identities(kpid uuid.UUID, first, limit int) ([]Identity, int
 	return response.Identities, response.Total
 }
 
+// IdentityResolutionRuns returns Identity Resolution run history.
+func (k *Krenalis) IdentityResolutionRuns(first, limit int, status string) []IdentityResolutionRun {
+	var response struct {
+		Runs []IdentityResolutionRun `json:"runs"`
+	}
+	path := fmt.Sprintf("/v1/identity-resolution/runs?first=%d&limit=%d", first, limit)
+	if status != "" {
+		path += "&status=" + url.QueryEscape(status)
+	}
+	k.Call("GET", path, nil, nil, &response)
+	return response.Runs
+}
+
 // JavaScriptSDKURL returns the JavaScript SDK URL from the public metadata.
 func (k *Krenalis) JavaScriptSDKURL() string {
 	var metadata map[string]any
@@ -676,23 +719,35 @@ func (k *Krenalis) ProfilePropertiesSuitableAsIdentifiers() types.Type {
 	return schema
 }
 
-// Profiles returns the profiles in the given range, together with their schema
-// and total count.
-func (k *Krenalis) Profiles(properties []string, order string, orderDesc bool, first, limit int) (users []Profile, schema types.Type, total int) {
-	queryString := url.Values{
+// Profiles returns the profiles in the given range and their total count.
+func (k *Krenalis) Profiles(properties []string, order string, orderDesc bool, first, limit int) (users []Profile, total int) {
+	var schema ProfileSchema
+	k.Call("GET", "/v1/profiles/schema", nil, nil, &schema)
+	users, total, _ = k.ProfilesWithSchema(schema.Schema, properties, order, orderDesc, first, limit)
+	return users, total
+}
+
+// ProfilesWithSchema returns profiles queried using schema, their total
+// count, and continuation state.
+func (k *Krenalis) ProfilesWithSchema(schema types.Type, properties []string, order string, orderDesc bool, first, limit int) ([]Profile, int, bool) {
+	body := map[string]any{
+		"schema":     schema,
 		"properties": properties,
-		"order":      []string{order},
-		"orderDesc":  []string{fmt.Sprintf("%t", orderDesc)},
-		"first":      []string{strconv.Itoa(first)},
-		"limit":      []string{strconv.Itoa(limit)},
+		"order":      order,
+		"orderDesc":  orderDesc,
+		"first":      first,
+		"limit":      limit,
 	}
 	var response struct {
-		Profiles []Profile  `json:"profiles"`
-		Schema   types.Type `json:"schema"`
-		Total    int        `json:"total"`
+		Profiles []Profile `json:"profiles"`
+		Total    int       `json:"total"`
+		HasNext  *bool     `json:"hasNext"`
 	}
-	k.Call("GET", "/v1/profiles?"+queryString.Encode(), nil, nil, &response)
-	return response.Profiles, response.Schema, response.Total
+	k.Call("POST", "/v1/profiles/query", nil, body, &response)
+	if response.HasNext == nil {
+		k.t.Fatal("expected hasNext to be a boolean, got missing or null")
+	}
+	return response.Profiles, response.Total, *response.HasNext
 }
 
 // RepairWarehouse repairs the warehouse.
@@ -709,7 +764,7 @@ func (k *Krenalis) TryRepairWarehouse() error {
 // RunIdentityResolutionAndWait runs the identity resolution and waits for it to
 // complete before returning.
 func (k *Krenalis) RunIdentityResolutionAndWait() {
-	ts := time.Now().UTC()
+	ts := time.Now().UTC().Truncate(time.Millisecond)
 	k.Call("POST", "/v1/identity-resolution/start", nil, nil, nil)
 	// Waits for the Identity Resolution that was started following the call to
 	// this method to finish.
@@ -874,20 +929,21 @@ func (k *Krenalis) TestWarehouseUpdate(settings json.Value) {
 
 // TestWorkspaceCreation tests creating a workspace with the given parameters,
 // returning an error if it fails.
-func (k *Krenalis) TestWorkspaceCreation(name string, profileSchema types.Type,
-	uiPreferences UIPreferences, whPlatform string, whSettings json.Value, mode WarehouseMode) error {
+func (k *Krenalis) TestWorkspaceCreation(name string, profileSchema types.Type, whPlatform string, whSettings json.Value, mode WarehouseMode) error {
 	headers := http.Header{
 		"Krenalis-Workspace": nil,
 	}
 	body := map[string]any{
-		"name":          name,
-		"profileSchema": profileSchema,
+		"name": name,
+		"profileSchema": map[string]any{
+			"schema":        profileSchema,
+			"propertyRoles": PropertyRoles{},
+		},
 		"warehouse": map[string]any{
 			"platform": whPlatform,
 			"mode":     mode,
 			"settings": whSettings,
 		},
-		"uiPreferences": uiPreferences,
 	}
 	return k.TryCall("POST", "/v1/workspaces/test", headers, body, nil)
 }

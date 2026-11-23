@@ -1,5 +1,18 @@
+import { FlatSchema } from './pipeline';
+
+// checkIfPropertyExists returns an error message if property is absent or hidden.
+const checkIfPropertyExists = (property: string, schema: FlatSchema, toHide?: string[]): string => {
+	if (schema == null || property === '' || property == null) {
+		return '';
+	}
+	if (schema[property] == null || toHide?.includes(property)) {
+		return `Property "${property}" does not exist`;
+	}
+	return '';
+};
+
 const isMetaProperty = (name: string): boolean => {
 	return name.startsWith('_');
 };
 
-export { isMetaProperty };
+export { checkIfPropertyExists, isMetaProperty };

@@ -21,11 +21,11 @@
 	margin-right: 10px;
 }
 
-.connector-settings__mode-field sl-option[aria-selected='true'] .connector-settings__mode-icon {
+.connector-settings__mode-field wa-option[aria-selected='true'] .connector-settings__mode-icon {
 	color: var(--text-onaccent);
 }
 
-.connector-settings__mode-field sl-option .connector-settings__mode-icon {
+.connector-settings__mode-field wa-option .connector-settings__mode-icon {
 	display: flex;
 	align-items: center;
 }
@@ -59,7 +59,7 @@
 .connector-settings__divider {
 	width: 100%;
 	border: none;
-	border-top: 1px solid var(--sl-color-neutral-200);
+	border-top: 1px solid var(--wa-color-neutral-80);
 	margin-top: 2.6rem;
 	margin-bottom: 0;
 }

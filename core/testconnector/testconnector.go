@@ -146,7 +146,7 @@ func TransformEvent(schema types.Type, event map[string]any, mapping map[string]
 			}
 		}
 	}
-	m, err := mappings.New(mapping, schemas.Event, schema, false)
+	m, err := mappings.New(mapping, schemas.Event, schema)
 	if err != nil {
 		return nil, err
 	}

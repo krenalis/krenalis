@@ -91,14 +91,15 @@ func records(ctx context.Context, warehouse warehouses.Warehouse, query Query, c
 
 	if matching == nil {
 
-		if query.OrderBy != "" {
-			c, ok := columnByProperty[query.OrderBy]
+		orderBy = make([]warehouses.Column, len(query.OrderBy))
+		for i, path := range query.OrderBy {
+			c, ok := columnByProperty[path]
 			if !ok {
-				return nil, fmt.Errorf("property path %s does not exist", query.OrderBy)
+				return nil, fmt.Errorf("property path %s does not exist", path)
 			}
-			orderBy = []warehouses.Column{c}
-			orderDesc = query.OrderDesc
+			orderBy[i] = c
 		}
+		orderDesc = query.OrderDesc && len(orderBy) > 0
 
 	} else {
 
@@ -164,7 +165,7 @@ func records(ctx context.Context, warehouse warehouses.Warehouse, query Query, c
 		Limit:     query.Limit,
 	}, false)
 	if err != nil {
-		return nil, unavailableError(err)
+		return nil, err
 	}
 
 	records := &Records{
@@ -366,6 +367,8 @@ func (r *Records) Close() error {
 
 // Err returns any error encountered during iteration which may have occurred
 // after an explicit or implicit Close.
+//
+// If a data warehouse error occurs, it returns a *WarehouseError.
 func (r *Records) Err() error {
 	return r.err
 }

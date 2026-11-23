@@ -1,5 +1,68 @@
 # Changelog
 
+## [v1.17.0](https://github.com/rabbitmq/amqp091-go/tree/v1.17.0) (2026-11-17)
+
+[Full Changelog](https://github.com/rabbitmq/amqp091-go/compare/v1.16.0...v1.17.0)
+
+**Fixed bugs:**
+
+- Close the socket on every DialConfig error after dialing [\#448](https://github.com/rabbitmq/amqp091-go/pull/448) ([suchitd](https://github.com/suchitd))
+- Close the socket when DefaultDial fails to set the deadline [\#447](https://github.com/rabbitmq/amqp091-go/pull/447) ([suchitd](https://github.com/suchitd))
+- Restore channel QoS after recovery regardless of topology recovery mode [\#445](https://github.com/rabbitmq/amqp091-go/pull/445) ([suchitd](https://github.com/suchitd))
+- Honor URI connection\_timeout during connection recovery [\#422](https://github.com/rabbitmq/amqp091-go/pull/422) ([fabrianivan](https://github.com/fabrianivan))
+- fix: build TLS config before dialing so config errors leave no open socket [\#421](https://github.com/rabbitmq/amqp091-go/pull/421) ([pcbeingused333](https://github.com/pcbeingused333))
+- Reject prefetchCount above 65535 in Channel.Qos [\#417](https://github.com/rabbitmq/amqp091-go/pull/417) ([suchitd](https://github.com/suchitd))
+- Guard prefetchSize in Channel.Qos and deprecate QosConfig.PrefetchSize [\#413](https://github.com/rabbitmq/amqp091-go/pull/413) ([AdamMagued](https://github.com/AdamMagued))
+
+**Closed issues:**
+
+- QoS \(prefetch\) is not restored after recovery when `TopologyRecoveryMode` is `TopologyRecoveryDisabled` [\#439](https://github.com/rabbitmq/amqp091-go/issues/439)
+
+**Merged pull requests:**
+
+- chore\(deps\): bump github/codeql-action from 4.39.1 to 4.39.3 in the github-actions group [\#432](https://github.com/rabbitmq/amqp091-go/pull/432) ([dependabot[bot]](https://github.com/apps/dependabot))
+- Correct inaccurate statements in CLAUDE.md [\#420](https://github.com/rabbitmq/amqp091-go/pull/420) ([suchitd](https://github.com/suchitd))
+- Deprecate QosConfig.Global and document global QoS in Channel.Qos [\#418](https://github.com/rabbitmq/amqp091-go/pull/418) ([suchitd](https://github.com/suchitd))
+- Bound content body pre-allocation when frame size is unlimited [\#416](https://github.com/rabbitmq/amqp091-go/pull/416) ([suchitd](https://github.com/suchitd))
+- Enforce pre-negotiation frame size on reconnect [\#415](https://github.com/rabbitmq/amqp091-go/pull/415) ([suchitd](https://github.com/suchitd))
+- chore\(deps\): bump github/codeql-action from 4.39.0 to 4.39.1 in the github-actions group [\#414](https://github.com/rabbitmq/amqp091-go/pull/414) ([dependabot[bot]](https://github.com/apps/dependabot))
+- chore\(deps\): bump github/codeql-action from 4.38.3 to 4.39.0 in the github-actions group [\#412](https://github.com/rabbitmq/amqp091-go/pull/412) ([dependabot[bot]](https://github.com/apps/dependabot))
+
+## [v1.16.0](https://github.com/rabbitmq/amqp091-go/tree/v1.16.0) (2026-10-19)
+
+[Full Changelog](https://github.com/rabbitmq/amqp091-go/compare/v1.15.0...v1.16.0)
+
+**Implemented enhancements:**
+
+- Add support for basic cancel ok response [\#405](https://github.com/rabbitmq/amqp091-go/pull/405) ([Zerpet](https://github.com/Zerpet))
+
+**Fixed bugs:**
+
+- Start recovery watcher only after a successful handshake [\#409](https://github.com/rabbitmq/amqp091-go/pull/409) ([suchitd](https://github.com/suchitd))
+- Reject out-of-range heartbeat in ParseURI [\#407](https://github.com/rabbitmq/amqp091-go/pull/407) ([suchitd](https://github.com/suchitd))
+- Reject heartbeat frames sent on a non-zero channel [\#402](https://github.com/rabbitmq/amqp091-go/pull/402) ([suchitd](https://github.com/suchitd))
+
+**Closed issues:**
+
+- DialConfig leaks a watchConnection goroutine when the AMQP handshake fails with Recovery enabled [\#408](https://github.com/rabbitmq/amqp091-go/issues/408)
+- panic: unexpected frame type [\#400](https://github.com/rabbitmq/amqp091-go/issues/400)
+- v1.13.0: openComplete\(\) zeroes caller-owned SASL credentials, breaking Config reuse across dials [\#394](https://github.com/rabbitmq/amqp091-go/issues/394)
+- Dial returns 403 "no access to this vhost" when the broker refuses connection.open with 530 NOT\_ALLOWED \(e.g. user connection limit reached\) [\#392](https://github.com/rabbitmq/amqp091-go/issues/392)
+- Question mark in password breaks connection string parsing [\#305](https://github.com/rabbitmq/amqp091-go/issues/305)
+
+**Merged pull requests:**
+
+- Fix golangci-lint v2.15.0 errcheck failures [\#411](https://github.com/rabbitmq/amqp091-go/pull/411) ([suchitd](https://github.com/suchitd))
+- chore\(deps\): bump github/codeql-action from 4.38.2 to 4.38.3 in the github-actions group [\#410](https://github.com/rabbitmq/amqp091-go/pull/410) ([dependabot[bot]](https://github.com/apps/dependabot))
+- chore\(deps\): bump github/codeql-action from 4.38.1 to 4.38.2 in the github-actions group [\#401](https://github.com/rabbitmq/amqp091-go/pull/401) ([dependabot[bot]](https://github.com/apps/dependabot))
+- Add Fuzzy tests for reader [\#399](https://github.com/rabbitmq/amqp091-go/pull/399) ([Zerpet](https://github.com/Zerpet))
+- chore\(deps\): bump github/codeql-action from 4.38.0 to 4.38.1 in the github-actions group [\#398](https://github.com/rabbitmq/amqp091-go/pull/398) ([dependabot[bot]](https://github.com/apps/dependabot))
+- Reader hardening [\#397](https://github.com/rabbitmq/amqp091-go/pull/397) ([Zerpet](https://github.com/Zerpet))
+- docs: document URI credential percent-encoding requirement \(\#305\) [\#396](https://github.com/rabbitmq/amqp091-go/pull/396) ([cipherprofessor](https://github.com/cipherprofessor))
+- chore: remove redundant legacy +build tag from fuzz.go [\#395](https://github.com/rabbitmq/amqp091-go/pull/395) ([cipherprofessor](https://github.com/cipherprofessor))
+- Surface the broker's connection.close reason from Dial instead of a hardcoded 403 [\#393](https://github.com/rabbitmq/amqp091-go/pull/393) ([mohammadkshn](https://github.com/mohammadkshn))
+- chore\(deps\): bump github/codeql-action from 4.37.9 to 4.38.0 in the github-actions group [\#391](https://github.com/rabbitmq/amqp091-go/pull/391) ([dependabot[bot]](https://github.com/apps/dependabot))
+
 ## [v1.15.0](https://github.com/rabbitmq/amqp091-go/tree/v1.15.0) (2026-09-15)
 
 [Full Changelog](https://github.com/rabbitmq/amqp091-go/compare/v1.14.0...v1.15.0)

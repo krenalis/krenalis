@@ -2,7 +2,7 @@ import React, { useContext, useEffect, useMemo, useState } from 'react';
 import './Snippet.css';
 import AppContext from '../../../context/AppContext';
 import { NotFoundError } from '../../../lib/api/errors';
-import SlCopyButton from '@shoelace-style/shoelace/dist/react/copy-button/index.js';
+import WaCopyButton from '@awesome.me/webawesome/dist/react/copy-button/index.js';
 
 import SyntaxHighlight from '../SyntaxHighlight/SyntaxHighlight';
 import Section from '../../base/Section/Section';
@@ -123,13 +123,13 @@ const Snippet = ({ connectorCode, connectionID }: SnippetProps) => {
 						>
 							{installCommand}
 						</SyntaxHighlight>
-						{!hasManualInstallation && <SlCopyButton value={installCommand} />}
+						{!hasManualInstallation && <WaCopyButton value={installCommand} />}
 					</>
 				)}
 				<SyntaxHighlight className='syntax-highlight--snippet' language={language}>
 					{completeSnippet}
 				</SyntaxHighlight>
-				<SlCopyButton value={completeSnippet} />
+				<WaCopyButton value={completeSnippet} />
 			</div>
 		</Section>
 	);

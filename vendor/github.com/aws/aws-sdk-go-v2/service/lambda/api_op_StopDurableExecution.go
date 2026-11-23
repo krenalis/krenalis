@@ -11,8 +11,8 @@ import (
 	"time"
 )
 
-// Stops a running [durable execution]. The execution transitions to STOPPED status and cannot be
-// resumed. Any in-progress operations are terminated.
+// Stops a running or paused [durable execution]. The execution transitions to STOPPED status and
+// cannot be resumed. Any in-progress operations are terminated.
 //
 // [durable execution]: https://docs.aws.amazon.com/lambda/latest/dg/durable-functions.html
 func (c *Client) StopDurableExecution(ctx context.Context, params *StopDurableExecutionInput, optFns ...func(*Options)) (*StopDurableExecutionOutput, error) {
@@ -37,7 +37,8 @@ type StopDurableExecutionInput struct {
 	// This member is required.
 	DurableExecutionArn *string
 
-	// Optional error details explaining why the execution is being stopped.
+	// Optional error details explaining why the execution is being stopped. The
+	// combined size of all error fields is limited to 1 MB.
 	Error *types.ErrorObject
 
 	noSmithyDocumentSerde

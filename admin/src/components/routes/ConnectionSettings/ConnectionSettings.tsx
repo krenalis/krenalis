@@ -5,10 +5,10 @@ import ConnectionConnectorSettings from './ConnectionConnectorSettings';
 import ConnectionKeys from './ConnectionKeys';
 import AppContext from '../../../context/AppContext';
 import ConnectionContext from '../../../context/ConnectionContext';
-import SlTab from '@shoelace-style/shoelace/dist/react/tab/index.js';
-import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
-import SlTabGroup from '@shoelace-style/shoelace/dist/react/tab-group/index.js';
-import SlTabPanel from '@shoelace-style/shoelace/dist/react/tab-panel/index.js';
+import WaTab from '@awesome.me/webawesome/dist/react/tab/index.js';
+import WaSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
+import WaTabGroup from '@awesome.me/webawesome/dist/react/tab-group/index.js';
+import WaTabPanel from '@awesome.me/webawesome/dist/react/tab-panel/index.js';
 import { ConnectorUIResponse } from '../../../lib/api/types/responses';
 import { debounce } from '../../../utils/debounce';
 import { Snippet } from '../../base/Snippet/Snippet';
@@ -101,7 +101,7 @@ const ConnectionSettings = () => {
 
 	if (isLoading) {
 		return (
-			<SlSpinner
+			<WaSpinner
 				className='connection-settings__spinner'
 				style={
 					{
@@ -109,7 +109,7 @@ const ConnectionSettings = () => {
 						'--track-width': '6px',
 					} as React.CSSProperties
 				}
-			></SlSpinner>
+			></WaSpinner>
 		);
 	}
 
@@ -117,56 +117,56 @@ const ConnectionSettings = () => {
 
 	return (
 		<div className={`connection-settings${isSmallViewport ? ' connection-settings--small-viewport' : ''}`}>
-			<SlTabGroup placement={isSmallViewport ? 'top' : 'start'}>
-				<SlTab slot='nav' panel='general'>
+			<WaTabGroup placement={isSmallViewport ? 'top' : 'start'}>
+				<WaTab slot='nav' panel='general'>
 					General
-				</SlTab>
-				<SlTabPanel name='general'>
+				</WaTab>
+				<WaTabPanel name='general'>
 					<div className='connection-settings__panel-title'>General</div>
 					<ConnectionGeneralSettings connection={c} onDelete={() => setIsDeleted(true)} />
-				</SlTabPanel>
+				</WaTabPanel>
 
 				{tabs.includes('snippet') && (
 					<>
-						<SlTab slot='nav' panel='snippet'>
+						<WaTab slot='nav' panel='snippet'>
 							Snippet
-						</SlTab>
-						<SlTabPanel name='snippet'>
+						</WaTab>
+						<WaTabPanel name='snippet'>
 							<div className='connection-settings__panel-title'>Snippet</div>
 							<div className='connection-settings__snippet-copy'>
 								<div>Embed the snippet in your website to start sending events:</div>
 								<Snippet connectorCode={c.connector.code} connectionID={c.id} />
 							</div>
-						</SlTabPanel>
+						</WaTabPanel>
 					</>
 				)}
 
 				{tabs.includes('connection') && (
 					<>
-						<SlTab slot='nav' panel='connection'>
+						<WaTab slot='nav' panel='connection'>
 							{connectorTypeHumanReadable} settings
-						</SlTab>
-						<SlTabPanel name='connection'>
+						</WaTab>
+						<WaTabPanel name='connection'>
 							<div className='connection-settings__panel-title'>
 								{connectorTypeHumanReadable} settings
 							</div>
 							<ConnectionConnectorSettings connection={c} />
-						</SlTabPanel>
+						</WaTabPanel>
 					</>
 				)}
 
 				{tabs.includes('keys') && (
 					<>
-						<SlTab slot='nav' panel='keys'>
+						<WaTab slot='nav' panel='keys'>
 							Event write keys
-						</SlTab>
-						<SlTabPanel name='keys'>
+						</WaTab>
+						<WaTabPanel name='keys'>
 							<div className='connection-settings__panel-title'>Event write keys</div>
 							<ConnectionKeys connection={c} />
-						</SlTabPanel>
+						</WaTabPanel>
 					</>
 				)}
-			</SlTabGroup>
+			</WaTabGroup>
 		</div>
 	);
 };

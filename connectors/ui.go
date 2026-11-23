@@ -213,8 +213,7 @@ func WarningAlert(msg string) *Alert { return &Alert{Message: msg, Variant: Warn
 // DangerAlert returns a danger alert.
 func DangerAlert(msg string) *Alert { return &Alert{Message: msg, Variant: Danger} }
 
-// AlertVariant represents the alert variants. The variants are taken from
-// Shoelace (see https://shoelace.style/components/alert).
+// AlertVariant represents the alert variants.
 type AlertVariant int
 
 const (

@@ -81,25 +81,21 @@
 }
 
 .header__account-avatar {
+	--size: 40px;
 	cursor: pointer;
-}
-
-.header__account-avatar::part(base) {
-	width: 40px;
-	height: 40px;
 	font-size: 18px;
 }
 
 .header__passwordless-tooltip {
 	width: 220px;
 	padding: 15px 20px;
-	border-right: 1px solid var(--sl-color-warning-600);
+	border-right: 1px solid var(--wa-color-warning-40);
 	font-size: 14px;
 	color: var(--text-onaccent);
-	background-color: var(--sl-color-primary-600);
+	background-color: var(--wa-color-brand-40);
 	border-top-left-radius: var(--radius);
 	border-bottom-left-radius: var(--radius);
-	border: 1px solid var(--sl-color-primary-600);
+	border: 1px solid var(--wa-color-brand-40);
 	border-right: 0;
 }
 
@@ -118,14 +114,14 @@
 	width: 179px;
 }
 
-.header__passwordless-create-account::part(base) {
+.header__passwordless-create-account::part(button) {
 	background-color: #eee;
 	color: #08044d;
 	line-height: 2.1rem;
 	padding-bottom: 1px;
 }
 
-.header__passwordless-create-account::part(base):hover {
+.header__passwordless-create-account::part(button):hover {
 	color: #39357b;
 }
 
@@ -133,14 +129,14 @@
 	font-size: 13px;
 }
 
-.header__account-menu-wrapper {
+.header__account-menu-wrapper::part(menu) {
 	display: flex;
 	padding: 0;
 	border: 0;
 	overflow: visible;
 }
 
-.header__account-menu-wrapper::before {
+.header__account-menu-wrapper::part(menu)::before {
 	content: '';
 	position: absolute;
 	width: 0;
@@ -153,14 +149,14 @@
 	top: 1px;
 }
 
-.header__account-menu-wrapper::after {
+.header__account-menu-wrapper::part(menu)::after {
 	content: '';
 	position: absolute;
 	width: 0;
 	height: 0;
 	border-left: 9px solid transparent;
 	border-right: 9px solid transparent;
-	border-bottom: 15px solid var(--sl-color-neutral-300);
+	border-bottom: 15px solid var(--wa-color-neutral-70);
 	z-index: -1;
 	right: 11px;
 	transform: translateY(-100%);
@@ -172,7 +168,7 @@
 	min-width: 250px;
 	border-top-right-radius: var(--radius);
 	border-bottom-right-radius: var(--radius);
-	border: 1px solid var(--sl-color-neutral-300);
+	border: 1px solid var(--wa-color-neutral-70);
 	border-left: 0;
 }
 
@@ -183,22 +179,21 @@
 	align-items: start;
 }
 
-.header__account-menu-heading sl-avatar::part(base) {
-	width: 35px;
-	height: 35px;
+.header__account-menu-heading wa-avatar {
+	--size: 35px;
 	font-size: 15px;
 }
 
 .header__account-menu-heading-name {
 	font-size: 14px;
-	color: var(--sl-color-neutral-800);
+	color: var(--wa-color-neutral-20);
 	font-weight: 500;
 }
 
 .header__account-menu-heading-email {
 	font-size: 12px;
 	margin-top: -3px;
-	color: var(--sl-color-neutral-500);
+	color: var(--wa-color-neutral-50);
 }
 
 .header__account-menu-item {
@@ -207,7 +202,7 @@
 	transition: background-color 0.5s;
 	border-radius: 4px;
 	font-size: 14px;
-	color: var(--sl-color-neutral-600);
+	color: var(--wa-color-neutral-40);
 	cursor: pointer;
 	align-items: center;
 	gap: 6px;
@@ -215,13 +210,13 @@
 }
 
 .header__account-menu-item:hover {
-	background-color: var(--sl-color-primary-50);
+	background-color: var(--wa-color-brand-95);
 }
 
 .header__account-menu-version {
 	padding: 5px 12px;
 	font-size: 12px;
-	color: var(--sl-color-neutral-500);
+	color: var(--wa-color-neutral-50);
 }
 
 .status-dot {

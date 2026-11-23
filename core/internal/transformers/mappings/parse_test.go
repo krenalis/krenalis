@@ -6,12 +6,83 @@ package mappings
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/krenalis/krenalis/tools/decimal"
 	"github.com/krenalis/krenalis/tools/types"
 )
+
+// TestCompileFunctionDepth checks the function nesting limit and evaluates
+// valid expressions.
+func TestCompileFunctionDepth(t *testing.T) {
+
+	const maxDepth = 10
+
+	nested := func(depth int, inner string) string {
+		return strings.Repeat("coalesce(", depth) + inner + strings.Repeat(")", depth)
+	}
+
+	schema := types.Object([]types.Property{{Name: "value", Type: types.String()}})
+	tests := []struct {
+		name         string
+		expr         string
+		typ          types.Type
+		expected     any
+		wantDepthErr bool
+	}{
+		{"no calls", "value", types.String(), "X", false},
+		{"one call", "coalesce(value)", types.String(), "X", false},
+		{"below limit", nested(maxDepth-1, "value"), types.String(), "X", false},
+		{"at limit", nested(maxDepth, "value"), types.String(), "X", false},
+		{"above limit", nested(maxDepth+1, "value"), types.String(), nil, true},
+		{"empty call at limit", nested(maxDepth-1, "array()"), types.Array(types.JSON()), []any{}, false},
+		{"empty call above limit", nested(maxDepth, "array()"), types.Array(types.JSON()), nil, true},
+		{"sibling calls", strings.Repeat("lower('X') ", maxDepth*2), types.String(), strings.Repeat("x", maxDepth*2), false},
+		{"sibling calls at limit", nested(maxDepth-1, "lower('X') upper('x')"), types.String(), "xX", false},
+		{"many arguments", "coalesce(" + strings.Repeat("null, ", maxDepth*2) + "value)", types.String(), "X", false},
+		{"function syntax in literal", strings.Repeat("lower(", maxDepth) + "'not((('" + strings.Repeat(")", maxDepth), types.String(), "not(((", false},
+		{"unselected branch at limit", "if(true, 'ok', " + nested(maxDepth-1, "value") + ")", types.String(), "ok", false},
+		{"unselected branch above limit", "if(true, 'ok', " + nested(maxDepth, "value") + ")", types.String(), nil, true},
+		{"depth error precedes invalid argument", nested(maxDepth+1, "@"), types.String(), nil, true},
+		{"mixed nested functions", "lower(trim(coalesce(value, 'fallback')))", types.String(), "x", false},
+	}
+	expectedErr := fmt.Sprintf("there are more than %d nested functions", maxDepth)
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+
+			expr, _, err := Compile(test.expr, schema, test.typ)
+			if err != nil {
+				if !test.wantDepthErr {
+					t.Fatalf("expected no compilation error, got %v", err)
+				}
+				if err.Error() != expectedErr {
+					t.Fatalf("expected error %q, got %q", expectedErr, err)
+				}
+				return
+			}
+			if test.wantDepthErr {
+				t.Fatal("expected nesting limit error, got nil")
+			}
+
+			got, typ, err := expr.Eval(map[string]any{"value": "X"})
+			if err != nil {
+				t.Fatalf("expected no evaluation error, got %v", err)
+			}
+			if !reflect.DeepEqual(got, test.expected) {
+				t.Fatalf("expected value %#v, got %#v", test.expected, got)
+			}
+			if !types.Equal(typ, test.typ) {
+				t.Fatalf("expected type %s, got %s", test.typ, typ)
+			}
+
+		})
+	}
+
+}
 
 func Test_parseExpression(t *testing.T) {
 
@@ -68,7 +139,7 @@ func Test_parseExpression(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		got, src, err := parse(test.src, 0, len(test.src))
+		got, src, err := parse(test.src, 0, len(test.src), 0)
 		if err != nil {
 			if test.err == nil {
 				t.Fatalf("%q. unexpected error: %s", test.src, err)

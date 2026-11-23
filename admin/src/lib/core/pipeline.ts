@@ -30,10 +30,10 @@ import {
 	isFloat,
 	isIP,
 	isInt,
+	isTime,
 	isUnsigned,
 	isUUID,
 	isValidPropertyPath,
-	isYear,
 	parseText,
 } from '../../utils/filters';
 import { RAW_TRANSFORMATION_FUNCTIONS } from '../../components/routes/PipelineWrapper/Pipeline.constants';
@@ -74,6 +74,7 @@ const FILTER_OPERATORS: FilterOperator[] = [
 
 const MAX_FILTER_DEPTH = 4;
 const MAX_FILTER_RULE_COUNT = 100;
+const MAX_FILTER_VALUE_LENGTH = 80;
 
 // isFilterGroup reports whether rule is a filter group.
 const isFilterGroup = (rule: FilterRule): rule is Filter => 'rules' in rule;
@@ -126,24 +127,24 @@ const UNARY_OPERATORS = new Set<FilterOperator>([
 ]);
 
 const typesByFilterOperator: string[][] = [
-	['int', 'float', 'decimal', 'datetime', 'date', 'time', 'year', 'uuid', 'json', 'ip', 'string'], // is
-	['int', 'float', 'decimal', 'datetime', 'date', 'time', 'year', 'uuid', 'json', 'ip', 'string'], // is not
+	['int', 'float', 'decimal', 'datetime', 'date', 'time', 'uuid', 'json', 'ip', 'string'], // is
+	['int', 'float', 'decimal', 'datetime', 'date', 'time', 'uuid', 'json', 'ip', 'string'], // is not
 	['int', 'float', 'decimal', 'json', 'string'], // is less than
 	['int', 'float', 'decimal', 'json', 'string'], // is less than or equal to
 	['int', 'float', 'decimal', 'json', 'string'], // is greater than
 	['int', 'float', 'decimal', 'json', 'string'], // is greater than or equal to
-	['int', 'float', 'decimal', 'year', 'datetime', 'date', 'time', 'json', 'string'], // is between
-	['int', 'float', 'decimal', 'year', 'datetime', 'date', 'time', 'json', 'string'], // is not between
+	['int', 'float', 'decimal', 'datetime', 'date', 'time', 'json', 'string'], // is between
+	['int', 'float', 'decimal', 'datetime', 'date', 'time', 'json', 'string'], // is not between
 	['json', 'string', 'array'], // contains
 	['json', 'string', 'array'], // does not contain
-	['int', 'float', 'decimal', 'year', 'datetime', 'date', 'time', 'json', 'string'], // is one of
-	['int', 'float', 'decimal', 'year', 'datetime', 'date', 'time', 'json', 'string'], // is not one of
+	['int', 'float', 'decimal', 'datetime', 'date', 'time', 'json', 'string'], // is one of
+	['int', 'float', 'decimal', 'datetime', 'date', 'time', 'json', 'string'], // is not one of
 	['json', 'string'], // starts with
 	['json', 'string'], // ends with
-	['datetime', 'date', 'time', 'year'], // is before
-	['datetime', 'date', 'time', 'year'], // is on or before
-	['datetime', 'date', 'time', 'year'], // is after
-	['datetime', 'date', 'time', 'year'], // is on or after
+	['datetime', 'date', 'time'], // is before
+	['datetime', 'date', 'time'], // is on or before
+	['datetime', 'date', 'time'], // is after
+	['datetime', 'date', 'time'], // is on or after
 	['boolean', 'json'], // is true
 	['boolean', 'json'], // is false
 	['json', 'string', 'array', 'map'], // is empty
@@ -155,7 +156,6 @@ const typesByFilterOperator: string[][] = [
 		'decimal',
 		'datetime',
 		'date',
-		'year',
 		'time',
 		'uuid',
 		'json',
@@ -172,7 +172,6 @@ const typesByFilterOperator: string[][] = [
 		'decimal',
 		'datetime',
 		'date',
-		'year',
 		'time',
 		'uuid',
 		'json',
@@ -189,7 +188,6 @@ const typesByFilterOperator: string[][] = [
 		'decimal',
 		'datetime',
 		'date',
-		'year',
 		'time',
 		'uuid',
 		'json',
@@ -206,7 +204,6 @@ const typesByFilterOperator: string[][] = [
 		'decimal',
 		'datetime',
 		'date',
-		'year',
 		'time',
 		'uuid',
 		'json',
@@ -339,17 +336,29 @@ const getCompatibleFilterOperators = (property: TransformedProperty, hasPath: bo
 			}
 		}
 
-		// text property with values can only be used with the operators
-		// 'is', 'is not', 'is one of', and 'is not one of'.
+		// Strings with allowed values do not support ordering, ranges,
+		// or prefix/suffix comparisons.
 		if (property.type === 'string' && (property.full.type as StringType).values != null) {
 			switch (op) {
-				case 'is':
-				case 'is not':
-				case 'is one of':
-				case 'is not one of':
-					break;
-				default:
+				case 'is less than':
+				case 'is less than or equal to':
+				case 'is greater than':
+				case 'is greater than or equal to':
+				case 'is between':
+				case 'is not between':
+				case 'starts with':
+				case 'ends with':
 					continue;
+				case 'is empty':
+				case 'is not empty': {
+					const values = (property.full.type as StringType).values!;
+					if (values.length > 0 && !values.includes('')) {
+						continue;
+					}
+					break;
+				}
+				default:
+					break;
 			}
 		}
 
@@ -971,23 +980,14 @@ const transformInPipelineToSet = async (
 		const isEventBasedUserImport = connection.isEventBased && connection.isSource && pipelineType.target === 'User';
 		const isAppEventsExport =
 			connection.isApplication && connection.isDestination && pipelineType.target === 'Event';
-		const draftFilter = omitEmptyFilterRules(pipeline.filter);
-		if (draftFilter != null) {
-			filter = mapFilterConditions(draftFilter, (condition) => {
-				const propertyName = condition.property;
-				const [base, path] = splitPropertyAndPath(propertyName, flattenedInputSchema);
+		const hiddenProperties = isEventBasedUserImport || isAppEventsExport || isEventImport ? ['kpid'] : null;
+		filter = validateAndNormalizeFilter(pipeline.filter, pipelineType.inputSchema, hiddenProperties);
+		if (filter != null) {
+			for (const condition of getFilterConditions(filter)) {
+				const [base] = splitPropertyAndPath(condition.property, flattenedInputSchema);
 				const property = flattenedInputSchema[base];
-				const normalized = validateAndNormalizeFilterCondition(
-					condition,
-					property,
-					path,
-					propertyName,
-					isEventBasedUserImport || isAppEventsExport || isEventImport ? ['kpid'] : null,
-				);
 				addPropertyToSchema(base, property.full, inSchema, flattenedInputSchema, property.indentation === 0);
-
-				return normalized;
-			});
+			}
 		}
 	}
 
@@ -2014,7 +2014,9 @@ const getTransformationFunctionReturnField = (
 			f += isPython ? 'False' : 'false';
 			break;
 		case 'int':
-			if (isPython) {
+			if (property.type.semantics === 'year') {
+				f += !isPython && property.type.bitSize === 64 ? '2000n' : '2000';
+			} else if (isPython) {
 				f += '0';
 			} else {
 				if (property.type.bitSize === 64) {
@@ -2038,9 +2040,6 @@ const getTransformationFunctionReturnField = (
 			break;
 		case 'time':
 			f += isPython ? 'datetime.time(0, 0, 0)' : "'00:00:00.000000000'";
-			break;
-		case 'year':
-			f += '2000';
 			break;
 		case 'uuid':
 			f += isPython
@@ -2168,6 +2167,20 @@ const validateAndNormalizeFilterCondition = (
 		values = conditionValues;
 	}
 
+	const hasAllowedValues = property.type === 'string' && (property.full.type as StringType).values != null;
+	if (!hasAllowedValues) {
+		for (const v of values) {
+			if ([...v].length > MAX_FILTER_VALUE_LENGTH) {
+				throw new Error(
+					`The filter value on the property "${propertyName}" is longer than ${MAX_FILTER_VALUE_LENGTH} characters`,
+				);
+			}
+			if (v.includes('\0')) {
+				throw new Error(`The filter value on the property "${propertyName}" cannot contain the NUL character`);
+			}
+		}
+	}
+
 	try {
 		validateFilterConditionValues(property.full.type, conditionValues, propertyName);
 	} catch (err) {
@@ -2181,11 +2194,77 @@ const validateAndNormalizeFilterCondition = (
 	return c;
 };
 
+// validateAndNormalizeFilter removes completely empty draft rules, validates
+// every remaining condition and returns the representation expected by the
+// API. Partially configured conditions are errors rather than being silently
+// discarded.
+const validateAndNormalizeFilter = (
+	filter: Filter,
+	schema: ObjectType,
+	propertiesToHide?: string[] | null,
+): Filter | null => {
+	const flatSchema = flattenSchema(schema);
+
+	const normalizeGroup = (group: Filter): Filter | null => {
+		const rules: FilterRule[] = [];
+		for (const rule of group.rules) {
+			if (isFilterGroup(rule)) {
+				const normalizedGroup = normalizeGroup(rule);
+				if (normalizedGroup != null) {
+					rules.push(normalizedGroup);
+				}
+				continue;
+			}
+
+			const values = rule.values ?? [];
+			const isEmptyDraft =
+				rule.property.trim() === '' &&
+				rule.operator === '' &&
+				values.every((value) => typeof value === 'string' && value.trim() === '');
+			if (isEmptyDraft) {
+				continue;
+			}
+			if (rule.property.trim() === '') {
+				throw new Error('Property of filter condition is required');
+			}
+			if (rule.operator !== '' && !isUnaryOperator(rule.operator)) {
+				const requiredValueCount = isBetweenOperator(rule.operator) ? 2 : 1;
+				if (values.length < requiredValueCount) {
+					throw new Error(`The filter value on the property "${rule.property.trim()}" is required`);
+				}
+			}
+
+			const propertyName = rule.property.trim();
+			const [base, path] = splitPropertyAndPath(propertyName, flatSchema);
+			const property = flatSchema[base];
+			const normalizedCondition = validateAndNormalizeFilterCondition(
+				{ ...rule, property: propertyName },
+				property,
+				path,
+				propertyName,
+				propertiesToHide,
+			);
+			const operatorIndex = FILTER_OPERATORS.indexOf(normalizedCondition.operator as FilterOperator);
+			if (!getCompatibleFilterOperators(property, path !== '').includes(operatorIndex)) {
+				throw new Error(
+					`Operator "${normalizedCondition.operator}" cannot be used with property "${propertyName}"`,
+				);
+			}
+
+			rules.push(normalizedCondition);
+		}
+
+		return rules.length === 0 ? null : { operator: group.operator, rules };
+	};
+
+	return normalizeGroup(filter);
+};
+
 const validateFilterConditionValues = (type: Type, values: string[], propertyName: string) => {
 	const throwIfInvalid = (isValid: boolean, typeKind: string, unsigned?: boolean) => {
 		if (!isValid) {
 			throw new Error(
-				`The filter value on the property "${propertyName}" is not a valid${unsigned === true ? 'unsigned ' : ''} ${typeKind}`,
+				`The filter value on the property "${propertyName}" is not a valid${unsigned === true ? ' unsigned' : ''} ${typeKind}`,
 			);
 		}
 	};
@@ -2205,8 +2284,8 @@ const validateFilterConditionValues = (type: Type, values: string[], propertyNam
 			throwIfInvalid(isDateTime(v), type.kind);
 		} else if (type.kind === 'date') {
 			throwIfInvalid(isDate(v), type.kind);
-		} else if (type.kind === 'year') {
-			throwIfInvalid(isYear(v), type.kind);
+		} else if (type.kind === 'time') {
+			throwIfInvalid(isTime(v), type.kind);
 		} else if (type.kind === 'uuid') {
 			throwIfInvalid(isUUID(v), type.kind);
 		} else if (type.kind === 'ip') {
@@ -2244,7 +2323,10 @@ const validateMatching = (inMatching: Property, outMatching: Property) => {
 		}
 	}
 
-	if (!typeSemanticsAreEqual(inMatching.type, outMatching.type)) {
+	// Check semantics compatibility.
+	const hasInSemantics = 'semantics' in inMatching.type && inMatching.type.semantics != null;
+	const hasOutSemantics = 'semantics' in outMatching.type && outMatching.type.semantics != null;
+	if (hasInSemantics && hasOutSemantics && !typeSemanticsAreEqual(inMatching.type, outMatching.type)) {
 		throw new Error('Input and output matching properties do not have the same semantics and options');
 	}
 };
@@ -2344,6 +2426,7 @@ export {
 	getSiblingPaths,
 	doesUpdatedAtColumnNeedFormat,
 	computeDefaultTransformationFunction,
+	validateAndNormalizeFilter,
 	validateAndNormalizeFilterCondition,
 	validateMatching,
 	typeSemanticsAreEqual,

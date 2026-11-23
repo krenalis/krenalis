@@ -6,13 +6,13 @@ import AppContext from '../../../context/AppContext';
 import PipelineContext from '../../../context/PipelineContext';
 import { UnprocessableError, NotFoundError } from '../../../lib/api/errors';
 import { CONFIRM_ANIMATION_DURATION, ERROR_ANIMATION_DURATION } from './Pipeline.constants';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import SlInput from '@shoelace-style/shoelace/dist/react/input/index.js';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
-import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
-import SlSelect from '@shoelace-style/shoelace/dist/react/select/index.js';
-import SlOption from '@shoelace-style/shoelace/dist/react/option/index.js';
-import SlDrawer from '@shoelace-style/shoelace/dist/react/drawer/index.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaInput from '@awesome.me/webawesome/dist/react/input/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
+import WaSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
+import WaSelect from '@awesome.me/webawesome/dist/react/select/index.js';
+import WaOption from '@awesome.me/webawesome/dist/react/option/index.js';
+import WaDrawer from '@awesome.me/webawesome/dist/react/drawer/index.js';
 import {
 	AbsolutePathResponse,
 	RecordsResponse,
@@ -166,6 +166,10 @@ const PipelineFile = () => {
 
 	const onFormatChange = (e) => {
 		const code = e.target.value;
+		// The select also reports the option that is already selected.
+		if (code === pipeline.format) {
+			return;
+		}
 		formatRef.current = code;
 		const format = connectors.find((c) => c.code === code);
 		const p = { ...pipeline };
@@ -215,14 +219,14 @@ const PipelineFile = () => {
 			padded={true}
 			annotated={true}
 		>
-			<SlSelect
+			<WaSelect
 				label='Format'
 				className='pipeline__file-format'
 				value={String(pipeline.format)}
-				onSlChange={onFormatChange}
+				onChange={onFormatChange}
 			>
 				{pipeline.format !== '' && (
-					<div className='pipeline__file-format-logo' slot='prefix'>
+					<div className='pipeline__file-format-logo' slot='start'>
 						<LittleLogo code={formatCode} path={CONNECTORS_ASSETS_PATH} />
 					</div>
 				)}
@@ -235,17 +239,17 @@ const PipelineFile = () => {
 						return null;
 					}
 					return (
-						<SlOption key={f.code} value={f.code}>
-							<div slot='prefix'>
+						<WaOption key={f.code} value={f.code}>
+							<div slot='start'>
 								<LittleLogo code={f.code} path={CONNECTORS_ASSETS_PATH} />
 							</div>
 							{f.label}
-						</SlOption>
+						</WaOption>
 					);
 				})}
-			</SlSelect>
+			</WaSelect>
 			{isFormatLoading ? (
-				<SlSpinner
+				<WaSpinner
 					style={
 						{
 							display: 'block',
@@ -256,7 +260,7 @@ const PipelineFile = () => {
 							'--track-width': '6px',
 						} as React.CSSProperties
 					}
-				></SlSpinner>
+				></WaSpinner>
 			) : (
 				pipeline.format !== '' && (
 					<div className='pipeline__file-settings'>
@@ -503,7 +507,7 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 	const onUpdateSheet = (e) => {
 		const p = { ...pipeline };
 		let sheet: string;
-		if (e.type === 'sl-change') {
+		if (e.type === 'change') {
 			sheet = sheets[e.currentTarget.value];
 		} else {
 			sheet = e.currentTarget.value;
@@ -743,12 +747,12 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 	return (
 		<div>
 			<div className='pipeline__file-path-wrapper'>
-				<SlInput
+				<WaInput
 					className='pipeline__file-path'
 					name='path'
 					value={pipeline.path!}
 					type='text'
-					onSlInput={onUpdatePath}
+					onInput={onUpdatePath}
 					placeholder={`${pipelineType.target.toLowerCase() + 's'}.${fileExtension}`}
 					ref={pathInputRef}
 				>
@@ -760,7 +764,7 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 								: ''}
 						</div>
 					</div>
-				</SlInput>
+				</WaInput>
 				<div
 					className={`pipeline__file-complete-path-error${absolutePathError !== '' ? ' pipeline__file-complete-path-error--visible' : ''}`}
 				>
@@ -775,8 +779,8 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 			{hasSheets &&
 				(connection.role === 'Source' ? (
 					<div className='pipeline__file-sheets-wrapper'>
-						<SlSelect
-							onSlFocus={onSheetsLoad}
+						<WaSelect
+							onFocus={onSheetsLoad}
 							className='pipeline__file-sheets'
 							ref={sheetsSelectRef}
 							name='sheet'
@@ -786,7 +790,7 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 									: Object.keys(sheets).find((k) => sheets[k] === pipeline.sheet)
 							}
 							label='Sheet'
-							onSlChange={onUpdateSheet}
+							onChange={onUpdateSheet}
 							disabled={
 								pipeline.path == null ||
 								pipeline.path === '' ||
@@ -795,45 +799,46 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 								(pathRef.current.lastSheetFetch === pathRef.current.lastUpdate && hasSheetsError)
 							}
 						>
-							{areSheetsLoading && <SlSpinner slot='prefix' />}
+							{areSheetsLoading && <WaSpinner slot='start' />}
 							{Object.entries(sheets).map(([i, sheet]) => {
 								return (
-									<SlOption key={i} value={i}>
+									<WaOption key={i} value={i}>
 										{sheet}
-									</SlOption>
+									</WaOption>
 								);
 							})}
-						</SlSelect>
-						<SlButton
+						</WaSelect>
+						<WaButton
+							appearance='outlined'
 							onClick={onSheetsReload}
 							disabled={pipeline.path == null || pipeline.path === '' || areSheetsLoading}
 						>
-							<SlIcon slot='prefix' name='arrow-clockwise' />
+							<WaIcon slot='start' name='arrow-clockwise' />
 							Reload
-						</SlButton>
+						</WaButton>
 					</div>
 				) : (
-					<SlInput
+					<WaInput
 						className='pipeline__file-sheets-input'
 						name='input'
 						value={pipeline.sheet!}
 						label='Sheet'
 						type='text'
-						onSlInput={onUpdateSheet}
+						onInput={onUpdateSheet}
 					/>
 				))}
-			<SlSelect
+			<WaSelect
 				className='pipeline__file-compression'
 				name='compression'
 				value={pipeline.compression}
 				label='Compression'
-				onSlChange={onCompressionChange}
+				onChange={onCompressionChange}
 			>
-				<SlOption value=''>None</SlOption>
-				<SlOption value='Zip'>Zip</SlOption>
-				<SlOption value='Gzip'>Gzip</SlOption>
-				<SlOption value='Snappy'>Snappy</SlOption>
-			</SlSelect>
+				<WaOption value=''>None</WaOption>
+				<WaOption value='Zip'>Zip</WaOption>
+				<WaOption value='Gzip'>Gzip</WaOption>
+				<WaOption value='Snappy'>Snappy</WaOption>
+			</WaSelect>
 			{pipelineType.fields.includes('OrderBy') && (
 				<div className='pipeline__file-ordering'>
 					<Combobox
@@ -854,16 +859,16 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 			)}
 			{isImport && (
 				<div className='pipeline__file-buttons'>
-					<SlButton
+					<WaButton
 						className='pipeline__file-preview'
 						variant='neutral'
-						size='small'
+						size='s'
 						onClick={onFilePreview}
 						loading={isLoadingPreview}
 						disabled={isLoadingPreview}
 					>
 						Preview
-					</SlButton>
+					</WaButton>
 					<FeedbackButton
 						ref={fileConfirmButtonRef}
 						className='pipeline__file-confirm'
@@ -880,12 +885,13 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 					/>
 				</div>
 			)}
-			<SlDrawer
+			<WaDrawer
 				className='pipeline__file-preview-drawer'
 				open={filePreviewColumns != null && filePreviewRows != null}
-				onSlAfterShow={() => setShowFilePreviewContent(true)}
-				onSlAfterHide={(e: any) => {
-					if (e.target.classList.contains('pipeline__issues')) {
+				lightDismiss
+				onWaAfterShow={() => setShowFilePreviewContent(true)}
+				onWaAfterHide={(e: any) => {
+					if (e.target !== e.currentTarget) {
 						e.stopPropagation();
 						return;
 					}
@@ -920,16 +926,16 @@ const FileSettings = ({ hasSheets, fileExtension, fileFields, pathInputRef }: Fi
 						}
 					/>
 				) : (
-					<SlSpinner
+					<WaSpinner
 						style={
 							{
 								fontSize: '3rem',
 								'--track-width': '6px',
 							} as React.CSSProperties
 						}
-					></SlSpinner>
+					></WaSpinner>
 				)}
-			</SlDrawer>
+			</WaDrawer>
 		</div>
 	);
 };

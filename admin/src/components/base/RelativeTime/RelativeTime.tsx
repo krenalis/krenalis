@@ -1,6 +1,6 @@
 import React from 'react';
 import './RelativeTime.css';
-import SlRelativeTime from '@shoelace-style/shoelace/dist/react/relative-time/index.js';
+import WaRelativeTime from '@awesome.me/webawesome/dist/react/relative-time/index.js';
 
 interface RelativeTimeProps {
 	date: Date | string;
@@ -15,7 +15,7 @@ const RelativeTime = ({ date }: RelativeTimeProps) => {
 		d = date;
 	}
 
-	return <SlRelativeTime date={d} lang='en-US' title={d.toLocaleString()} />;
+	return <WaRelativeTime date={d} lang='en-US' title={d.toLocaleString()} />;
 };
 
 export { RelativeTime };

@@ -12,6 +12,7 @@ import (
 	errors2 "github.com/snowflakedb/gosnowflake/v2/internal/errors"
 	"github.com/snowflakedb/gosnowflake/v2/internal/query"
 	"github.com/snowflakedb/gosnowflake/v2/internal/types"
+	"github.com/snowflakedb/gosnowflake/v2/sflog"
 	"math"
 	"math/big"
 	"reflect"
@@ -927,7 +928,9 @@ func timeTypeValueToString(tm time.Time, tsmode types.SnowflakeType) (bindingVal
 
 // extractTimestamp extracts the internal timestamp data to epoch time in seconds and milliseconds
 func extractTimestamp(srcValue *string) (sec int64, nsec int64, err error) {
-	logger.Debugf("SRC: %v", srcValue)
+	if logger.GetLogLevelInt() <= sflog.LevelDebug {
+		logger.Debugf("SRC: %v", srcValue)
+	}
 	var i int
 	for i = 0; i < len(*srcValue); i++ {
 		if (*srcValue)[i] == '.' {
@@ -952,7 +955,9 @@ func extractTimestamp(srcValue *string) (sec int64, nsec int64, err error) {
 			return 0, 0, err
 		}
 	}
-	logger.Infof("sec: %v, nsec: %v", sec, nsec)
+	if logger.GetLogLevelInt() <= sflog.LevelDebug {
+		logger.Debugf("sec: %v, nsec: %v", sec, nsec)
+	}
 	return sec, nsec, nil
 }
 
@@ -960,18 +965,23 @@ func extractTimestamp(srcValue *string) (sec int64, nsec int64, err error) {
 // This is mainly used in fetching data.
 func stringToValue(ctx context.Context, dest *driver.Value, srcColumnMeta query.ExecResponseRowType, srcValue *string, loc *time.Location, params *syncParams) error {
 	if srcValue == nil {
-		logger.Debugf("snowflake data type: %v, raw value: nil", srcColumnMeta.Type)
+		if logger.GetLogLevelInt() <= sflog.LevelDebug {
+			logger.Debugf("snowflake data type: %v, raw value: nil", srcColumnMeta.Type)
+		}
 		*dest = nil
 		return nil
 	}
 	structuredTypesEnabled := structuredTypesEnabled(ctx)
 
-	// Truncate large strings before logging to avoid secret masking performance issues
-	valueForLogging := *srcValue
-	if len(valueForLogging) > 1024 {
-		valueForLogging = valueForLogging[:1024] + fmt.Sprintf("... (%d bytes total)", len(*srcValue))
+	// Truncate large strings before logging to avoid secret masking performance issues.
+	// The truncation and the Debugf arguments run only when debug logging is on.
+	if logger.GetLogLevelInt() <= sflog.LevelDebug {
+		valueForLogging := *srcValue
+		if len(valueForLogging) > 1024 {
+			valueForLogging = valueForLogging[:1024] + fmt.Sprintf("... (%d bytes total)", len(*srcValue))
+		}
+		logger.Debugf("snowflake data type: %v, raw value: %v", srcColumnMeta.Type, valueForLogging)
 	}
-	logger.Debugf("snowflake data type: %v, raw value: %v", srcColumnMeta.Type, valueForLogging)
 	switch srcColumnMeta.Type {
 	case "object":
 		if len(srcColumnMeta.Fields) == 0 || !structuredTypesEnabled {
@@ -1062,7 +1072,9 @@ func stringToValue(ctx context.Context, dest *driver.Value, srcColumnMeta query.
 		*dest = time.Unix(sec, nsec).In(loc)
 		return nil
 	case "timestamp_tz":
-		logger.Debugf("tz: %v", *srcValue)
+		if logger.GetLogLevelInt() <= sflog.LevelDebug {
+			logger.Debugf("tz: %v", *srcValue)
+		}
 
 		tm := strings.Split(*srcValue, " ")
 		if len(tm) != 2 {
@@ -1558,7 +1570,9 @@ func arrowToValues(
 	if len(destcol) != srcValue.Len() {
 		return fmt.Errorf("array interface length mismatch")
 	}
-	logger.Debugf("snowflake data type: %v, arrow data type: %v", srcColumnMeta.Type, srcValue.DataType())
+	if logger.GetLogLevelInt() <= sflog.LevelDebug {
+		logger.Debugf("snowflake data type: %v, arrow data type: %v", srcColumnMeta.Type, srcValue.DataType())
+	}
 
 	var err error
 	snowflakeType := types.GetSnowflakeType(srcColumnMeta.Type)
@@ -1568,6 +1582,20 @@ func arrowToValues(
 		}
 	}
 	return nil
+}
+
+// unexpectedArrowStructured reports a native Arrow column that is not JSON text.
+// kind is ARRAY or OBJECT. expected is the native Arrow type required when the
+// column has field metadata and structured types are enabled.
+func unexpectedArrowStructured(src arrow.Array, hasSchema, enabled bool, kind, expected string) error {
+	got := src.DataType().String()
+	if !hasSchema {
+		return fmt.Errorf("semi-structured %s arrived as %s, expected a JSON string", kind, got)
+	}
+	if !enabled {
+		return errNativeArrowWithoutProperContext
+	}
+	return fmt.Errorf("structured %s arrived as %s, expected %s", kind, got, expected)
 }
 
 func arrowToValue(ctx context.Context, rowIdx int, srcColumnMeta query.FieldMetadata, srcValue arrow.Array, loc *time.Location, higherPrecision bool, params *syncParams, snowflakeType types.SnowflakeType) (snowflakeValue, error) {
@@ -1604,64 +1632,47 @@ func arrowToValue(ctx context.Context, rowIdx int, srcColumnMeta query.FieldMeta
 		}
 		return nil, nil
 	case types.ArrayType:
-		if len(srcColumnMeta.Fields) == 0 || !structuredTypesEnabled {
-			// semistructured type without schema
-			strings := srcValue.(*array.String)
-			if !srcValue.IsNull(rowIdx) {
-				return strings.Value(rowIdx), nil
-			}
-			return nil, nil
-		}
-		strings, ok := srcValue.(*array.String)
-		if ok {
-			// structured array as json
-			if !srcValue.IsNull(rowIdx) {
-				val := strings.Value(rowIdx)
-				var arr []any
-				decoder := decoderWithNumbersAsStrings(&val)
-				if err := decoder.Decode(&arr); err != nil {
-					return nil, err
-				}
-				return buildStructuredArray(ctx, srcColumnMeta.Fields[0], arr, params)
-			}
-			return nil, nil
-		}
-		if !structuredTypesEnabled {
-			return nil, errNativeArrowWithoutProperContext
-		}
-		return buildListFromNativeArrow(ctx, rowIdx, srcColumnMeta.Fields[0], srcValue, loc, higherPrecision, params)
-	case types.ObjectType:
-		if len(srcColumnMeta.Fields) == 0 || !structuredTypesEnabled {
-			// semistructured type without schema
-			strings := srcValue.(*array.String)
-			if !srcValue.IsNull(rowIdx) {
-				return strings.Value(rowIdx), nil
-			}
-			return nil, nil
-		}
-		strings, ok := srcValue.(*array.String)
-		if ok {
-			// structured objects as json
-			if !srcValue.IsNull(rowIdx) {
-				m := make(map[string]any)
-				value := strings.Value(rowIdx)
-				decoder := decoderWithNumbersAsStrings(&value)
-				if err := decoder.Decode(&m); err != nil {
-					return nil, err
-				}
-				return buildStructuredTypeRecursive(ctx, m, srcColumnMeta.Fields, params)
-			}
-			return nil, nil
-		}
-		// structured objects as native arrow
-		if !structuredTypesEnabled {
-			return nil, errNativeArrowWithoutProperContext
-		}
 		if srcValue.IsNull(rowIdx) {
 			return nil, nil
 		}
-		structs := srcValue.(*array.Struct)
-		return arrowToStructuredType(ctx, structs, srcColumnMeta.Fields, loc, rowIdx, higherPrecision, params)
+		// JSON text is the semi-structured representation. With field metadata present,
+		// structured types disabled keeps that string so existing callers still scan a string.
+		if stringColumn, ok := srcValue.(*array.String); ok {
+			text := stringColumn.Value(rowIdx)
+			if len(srcColumnMeta.Fields) == 0 || !structuredTypesEnabled {
+				return text, nil
+			}
+			var arr []any
+			decoder := decoderWithNumbersAsStrings(&text)
+			if err := decoder.Decode(&arr); err != nil {
+				return nil, err
+			}
+			return buildStructuredArray(ctx, srcColumnMeta.Fields[0], arr, params)
+		}
+		if len(srcColumnMeta.Fields) == 0 || !structuredTypesEnabled {
+			return nil, unexpectedArrowStructured(srcValue, len(srcColumnMeta.Fields) > 0, structuredTypesEnabled, "ARRAY", "an Arrow list")
+		}
+		return buildListFromNativeArrow(ctx, rowIdx, srcColumnMeta.Fields[0], srcValue, loc, higherPrecision, params)
+	case types.ObjectType:
+		if srcValue.IsNull(rowIdx) {
+			return nil, nil
+		}
+		if stringColumn, ok := srcValue.(*array.String); ok {
+			text := stringColumn.Value(rowIdx)
+			if len(srcColumnMeta.Fields) == 0 || !structuredTypesEnabled {
+				return text, nil
+			}
+			m := make(map[string]any)
+			decoder := decoderWithNumbersAsStrings(&text)
+			if err := decoder.Decode(&m); err != nil {
+				return nil, err
+			}
+			return buildStructuredTypeRecursive(ctx, m, srcColumnMeta.Fields, params)
+		}
+		if structs, ok := srcValue.(*array.Struct); ok && len(srcColumnMeta.Fields) > 0 && structuredTypesEnabled {
+			return arrowToStructuredType(ctx, structs, srcColumnMeta.Fields, loc, rowIdx, higherPrecision, params)
+		}
+		return nil, unexpectedArrowStructured(srcValue, len(srcColumnMeta.Fields) > 0, structuredTypesEnabled, "OBJECT", "an Arrow struct")
 	case types.MapType:
 		if srcValue.IsNull(rowIdx) {
 			return nil, nil
@@ -1724,7 +1735,10 @@ func buildMapFromNativeArrow(ctx context.Context, rowIdx int, keyMetadata, value
 }
 
 func buildListFromNativeArrow(ctx context.Context, rowIdx int, fieldMetadata query.FieldMetadata, srcValue arrow.Array, loc *time.Location, higherPrecision bool, params *syncParams) (snowflakeValue, error) {
-	list := srcValue.(*array.List)
+	list, ok := srcValue.(*array.List)
+	if !ok {
+		return nil, unexpectedArrowStructured(srcValue, true, true, "ARRAY", "an Arrow list")
+	}
 	if list.IsNull(rowIdx) {
 		return nil, nil
 	}
@@ -2265,7 +2279,10 @@ func buildListFromNativeArrowMap[K comparable, V any](ctx context.Context, rowId
 			return nil, nil
 		}
 		list, err := buildListFromNativeArrow(ctx, j, valueMetadata.Fields[0], items, loc, higherPrecision, params)
-		return list.([]V), err
+		if err != nil {
+			return nil, err
+		}
+		return list.([]V), nil
 	})
 }
 

@@ -1,4 +1,5 @@
 import React, { useState, useLayoutEffect } from 'react';
+import { flushSync } from 'react-dom';
 import { GridColumn, GridRow as GridRowType } from './Grid.types';
 
 const useGrid = (
@@ -8,6 +9,7 @@ const useGrid = (
 	gridColumns?: string,
 	isLoading?: boolean,
 	isShown?: boolean,
+	shouldSyncColumnWidths = false,
 ) => {
 	const [columnsWidths, setColumnsWidths] = useState<string>();
 	const [reloadWidths, setReloadWidths] = useState<boolean>();
@@ -40,7 +42,11 @@ const useGrid = (
 					widths += ` ${maxWidths[i]}px`;
 				}
 			}
-			setColumnsWidths(widths);
+			if (shouldSyncColumnWidths) {
+				flushSync(() => setColumnsWidths(widths));
+			} else {
+				setColumnsWidths(widths);
+			}
 		};
 		if (gridColumns != null) {
 			return;
@@ -57,7 +63,7 @@ const useGrid = (
 			return;
 		}
 		setTimeout(computeColumnsWidths);
-	}, [rows, columns, isLoading, isShown, reloadWidths]);
+	}, [rows, columns, isLoading, isShown, reloadWidths, shouldSyncColumnWidths]);
 
 	return { columnsWidths, reloadColumnsWidths: () => setReloadWidths(true) };
 };

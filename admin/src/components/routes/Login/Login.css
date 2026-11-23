@@ -39,29 +39,29 @@
 	font-family: inherit;
 	font-weight: inherit;
 	min-width: 0px;
-	color: var(--sl-input-color);
+	color: var(--text-light);
 	border: medium;
 	background: inherit;
 	box-shadow: none;
 	margin: 0px;
 	cursor: inherit;
 	appearance: none;
-	height: calc(var(--sl-input-height-medium) - var(--sl-input-border-width) * 2);
-	padding: 0 var(--sl-input-spacing-medium);
-	background-color: var(--sl-input-background-color);
-	border: solid var(--sl-input-border-width) var(--sl-input-border-color);
-	border-radius: var(--sl-input-border-radius-medium);
-	font-size: var(--sl-input-font-size-medium);
+	height: calc(var(--input-height-medium) - var(--wa-border-width-s) * 2);
+	padding: 0 var(--wa-space-m);
+	background-color: var(--wa-form-control-background-color);
+	border: solid var(--wa-border-width-s) var(--wa-form-control-border-color);
+	border-radius: var(--wa-border-radius-m);
+	font-size: var(--input-font-size);
 	transition:
-		var(--sl-transition-fast) color,
-		var(--sl-transition-fast) border,
-		var(--sl-transition-fast) box-shadow,
-		var(--sl-transition-fast) background-color;
+		var(--wa-transition-normal) color,
+		var(--wa-transition-normal) border,
+		var(--wa-transition-normal) box-shadow,
+		var(--wa-transition-normal) background-color;
 }
 
 .login__form input:hover {
-	background-color: var(--sl-input-background-color-hover);
-	border-color: var(--sl-input-border-color-hover);
+	background-color: var(--wa-form-control-background-color);
+	border-color: var(--wa-color-neutral-60);
 }
 
 .login__email {
@@ -76,7 +76,7 @@
 }
 
 .login__reset-password {
-	color: var(--sl-color-primary-500);
+	color: var(--wa-color-brand-50);
 	font-size: 14px;
 	width: fit-content;
 	margin-left: auto;

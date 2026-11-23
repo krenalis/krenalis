@@ -10,42 +10,18 @@
 	margin-bottom: 15px;
 }
 
-.general-settings sl-input::part(form-control-label) {
+.general-settings wa-input::part(form-control-label) {
 	font-weight: 400;
-}
-
-.general-settings__profile-properties {
-	margin: 30px 0 50px 0;
-}
-
-.general-settings__profile-properties-title {
-	font-size: 18px;
-	font-weight: 600;
-}
-
-.general-settings__profile-properties-description {
-	margin-bottom: 25px;
-}
-
-.general-settings__profile-properties-fields {
-	max-width: 70%;
-}
-
-.general-settings__profile-properties-fields .combobox-input {
-	margin-bottom: 20px;
-}
-
-.general-settings__profile-image {
-	margin-top: 5px;
 }
 
 .general-settings__save-workspace-button {
 	display: block;
 	max-width: 200px;
+	margin-top: 30px;
 	margin-left: auto;
 }
 
-.general-settings sl-divider {
+.general-settings wa-divider {
 	margin-top: 40px;
 	margin-bottom: 40px;
 }
@@ -63,7 +39,7 @@
 
 .general-settings__grid-alert-workspace-name {
 	font-family: var(--monospace-fonts);
-	background-color: var(--sl-color-neutral-100);
+	background-color: var(--wa-color-neutral-90);
 	display: inline-block;
 	padding: 0px 5px;
 	border-radius: 3px;

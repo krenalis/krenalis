@@ -34,9 +34,10 @@ type Metrics struct {
 	state     *state.State
 	datastore storeProvider
 
-	Identities Identities
-	Pipelines  Pipelines
-	Usage      Usage
+	Identities          Identities
+	IdentityResolutions IdentityResolutions
+	Pipelines           Pipelines
+	Usage               Usage
 
 	close struct {
 		ctx    context.Context
@@ -55,6 +56,7 @@ func New(db *db.DB, state *state.State, datastore *datastore.Datastore) *Metrics
 	}
 	m.Identities.metrics = m
 	m.Identities.now = time.Now
+	m.IdentityResolutions.metrics = m
 	m.Pipelines.metrics = m
 	m.Pipelines.pending = map[string]*pipelineMetrics{}
 	m.Pipelines.tick = 1

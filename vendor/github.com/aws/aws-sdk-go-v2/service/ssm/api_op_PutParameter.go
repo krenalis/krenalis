@@ -4,7 +4,9 @@ package ssm
 
 import (
 	"context"
+	"github.com/aws/aws-sdk-go-v2/service/ssm/schemas"
 	"github.com/aws/aws-sdk-go-v2/service/ssm/types"
+	smithy "github.com/aws/smithy-go"
 	"github.com/aws/smithy-go/middleware"
 )
 
@@ -108,8 +110,9 @@ type PutParameterInput struct {
 	// AllowedPattern=^\d+$
 	AllowedPattern *string
 
-	// The data type for a String parameter. Supported data types include plain text
-	// and Amazon Machine Image (AMI) IDs.
+	// The data type of the parameter value. Parameter Store validates the value
+	// against the data type when you create or update the parameter. The default is
+	// text , which performs no validation.
 	//
 	// The following data type values are supported.
 	//
@@ -118,6 +121,41 @@ type PutParameterInput struct {
 	//   - aws:ec2:image
 	//
 	//   - aws:ssm:integration
+	//
+	//   - aws:region
+	//
+	//   - aws:account:id
+	//
+	//   - boolean
+	//
+	//   - integer
+	//
+	//   - float
+	//
+	//   - binary
+	//
+	//   - hostname
+	//
+	//   - email
+	//
+	//   - ipv4-address
+	//
+	//   - ipv6-address
+	//
+	//   - url
+	//
+	//   - json
+	//
+	//   - jsonc
+	//
+	// For more information about the supported data types, see [Working with parameter data types in Parameter Store].
+	//
+	// Regardless of a parameter's data type, the Parameter Store API operations that
+	// retrieve parameters, such as GetParameter , GetParameters , and
+	// GetParametersByPath , return the parameter value as a string. For example, if a
+	// parameter has the data type integer and the value 443 , GetParameter returns
+	// the value as the string "443" . Convert the value to the type your application
+	// needs after you retrieve it.
 	//
 	// When you create a String parameter and specify aws:ec2:image , Amazon Web
 	// Services Systems Manager validates the parameter value is in the required
@@ -136,6 +174,7 @@ type PutParameterInput struct {
 	// created successfully, see [Setting up notifications or trigger actions based on Parameter Store events]. For more information about AMI format validation ,
 	// see [Native parameter support for Amazon Machine Image IDs].
 	//
+	// [Working with parameter data types in Parameter Store]: https://docs.aws.amazon.com/systems-manager/latest/userguide/parameter-store-data-types.html
 	// [Setting up notifications or trigger actions based on Parameter Store events]: https://docs.aws.amazon.com/systems-manager/latest/userguide/sysman-paramstore-cwe.html
 	// [Native parameter support for Amazon Machine Image IDs]: https://docs.aws.amazon.com/systems-manager/latest/userguide/parameter-store-ec2-aliases.html
 	DataType *string
@@ -259,6 +298,8 @@ type PutParameterInput struct {
 	//
 	//   - The parameter uses a parameter policy.
 	//
+	//   - The parameter uses the url , json , or jsonc data type.
+	//
 	//   - More than 10,000 parameters already exist in your Amazon Web Services
 	//   account in the current Amazon Web Services Region.
 	//
@@ -284,6 +325,48 @@ type PutParameterInput struct {
 	noSmithyDocumentSerde
 }
 
+func (v *PutParameterInput) Serialize(s smithy.ShapeSerializer) {
+	s.WriteStruct(schemas.PutParameterRequest)
+	v.SerializeMembers(s)
+	s.CloseStruct()
+}
+
+func (v *PutParameterInput) SerializeMembers(s smithy.ShapeSerializer) {
+	if v.AllowedPattern != nil {
+		s.WriteString(schemas.PutParameterRequest_AllowedPattern, *v.AllowedPattern)
+	}
+	if v.DataType != nil {
+		s.WriteString(schemas.PutParameterRequest_DataType, *v.DataType)
+	}
+	if v.Description != nil {
+		s.WriteString(schemas.PutParameterRequest_Description, *v.Description)
+	}
+	if v.KeyId != nil {
+		s.WriteString(schemas.PutParameterRequest_KeyId, *v.KeyId)
+	}
+	if v.Name != nil {
+		s.WriteString(schemas.PutParameterRequest_Name, *v.Name)
+	}
+	if v.Overwrite != nil {
+		s.WriteBool(schemas.PutParameterRequest_Overwrite, *v.Overwrite)
+	}
+	if v.Policies != nil {
+		s.WriteString(schemas.PutParameterRequest_Policies, *v.Policies)
+	}
+	if v.Tags != nil {
+		serializeTagList(s, schemas.PutParameterRequest_Tags, v.Tags)
+	}
+	if v.Tier != "" {
+		s.WriteString(schemas.PutParameterRequest_Tier, string(v.Tier))
+	}
+	if v.Type != "" {
+		s.WriteString(schemas.PutParameterRequest_Type, string(v.Type))
+	}
+	if v.Value != nil {
+		s.WriteString(schemas.PutParameterRequest_Value, *v.Value)
+	}
+}
+
 type PutParameterOutput struct {
 
 	// The tier assigned to the parameter.
@@ -303,13 +386,41 @@ type PutParameterOutput struct {
 	noSmithyDocumentSerde
 }
 
+func (v *PutParameterOutput) Serialize(s smithy.ShapeSerializer) {
+	s.WriteStruct(schemas.PutParameterResult)
+	v.SerializeMembers(s)
+	s.CloseStruct()
+}
+
+func (v *PutParameterOutput) SerializeMembers(s smithy.ShapeSerializer) {
+	if v.Tier != "" {
+		s.WriteString(schemas.PutParameterResult_Tier, string(v.Tier))
+	}
+	if v.Version != 0 {
+		s.WriteInt64(schemas.PutParameterResult_Version, v.Version)
+	}
+}
+func (v *PutParameterOutput) Deserialize(d smithy.ShapeDeserializer) error {
+	return smithy.ReadStruct(d, schemas.PutParameterResult, func(s *smithy.Schema) error {
+		switch s {
+		case schemas.PutParameterResult_Tier:
+			var ev string
+			if err := d.ReadString(schemas.PutParameterResult_Tier, &ev); err != nil {
+				return err
+			}
+			v.Tier = types.ParameterTier(ev)
+			return nil
+		case schemas.PutParameterResult_Version:
+			return d.ReadInt64(schemas.PutParameterResult_Version, &v.Version)
+		}
+		return nil
+	})
+}
 func (c *Client) addOperationPutParameterMiddlewares(stack *middleware.Stack, options Options) (err error) {
-	err = stack.Serialize.Add(&awsAwsjson11_serializeOpPutParameter{}, middleware.After)
-	if err != nil {
+	if err := stack.Serialize.Add(&serializeRequestMiddleware{options: &options, operationSchema: smithy.NewOperationSchema(schemas.PutParameter, schemas.PutParameterRequest, schemas.PutParameterResult)}, middleware.After); err != nil {
 		return err
 	}
-	err = stack.Deserialize.Add(&awsAwsjson11_deserializeOpPutParameter{}, middleware.After)
-	if err != nil {
+	if err := stack.Deserialize.Add(&deserializeResponseMiddleware{options: &options, operationSchema: smithy.NewOperationSchema(schemas.PutParameter, schemas.PutParameterRequest, schemas.PutParameterResult), output: &PutParameterOutput{}}, middleware.After); err != nil {
 		return err
 	}
 

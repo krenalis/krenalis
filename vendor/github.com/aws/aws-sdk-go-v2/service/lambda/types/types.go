@@ -9,6 +9,46 @@ import (
 	"time"
 )
 
+// The accelerator resource settings for a Lambda execution environment, including
+// the amount of accelerator memory to allocate.
+type AcceleratorConfig struct {
+
+	// The minimum amount of memory (in GB) of each accelerator device exposed to the
+	// execution environment. Lambda might allocate more, depending on the accelerator
+	// instance types available.
+	//
+	// This member is required.
+	AcceleratorMemorySize AcceleratorMemoryGB
+
+	noSmithyDocumentSerde
+}
+
+func (v *AcceleratorConfig) Serialize(s smithy.ShapeSerializer) {
+	s.WriteStruct(schemas.AcceleratorConfig)
+	v.SerializeMembers(s)
+	s.CloseStruct()
+}
+
+func (v *AcceleratorConfig) SerializeMembers(s smithy.ShapeSerializer) {
+	if v.AcceleratorMemorySize != 0 {
+		s.WriteInt32(schemas.AcceleratorConfig_AcceleratorMemorySize, int32(v.AcceleratorMemorySize))
+	}
+}
+func (v *AcceleratorConfig) Deserialize(d smithy.ShapeDeserializer) error {
+	return smithy.ReadStruct(d, schemas.AcceleratorConfig, func(s *smithy.Schema) error {
+		switch s {
+		case schemas.AcceleratorConfig_AcceleratorMemorySize:
+			var ev int32
+			if err := d.ReadInt32(schemas.AcceleratorConfig_AcceleratorMemorySize, &ev); err != nil {
+				return err
+			}
+			v.AcceleratorMemorySize = AcceleratorMemoryGB(ev)
+			return nil
+		}
+		return nil
+	})
+}
+
 // Limits that are related to concurrency and storage. All file and storage sizes
 // are in bytes.
 type AccountLimit struct {
@@ -216,7 +256,9 @@ func (v *AliasRoutingConfiguration) Serialize(s smithy.ShapeSerializer) {
 }
 
 func (v *AliasRoutingConfiguration) SerializeMembers(s smithy.ShapeSerializer) {
-	serializeAdditionalVersionWeights(s, schemas.AliasRoutingConfiguration_AdditionalVersionWeights, v.AdditionalVersionWeights)
+	if v.AdditionalVersionWeights != nil {
+		serializeAdditionalVersionWeights(s, schemas.AliasRoutingConfiguration_AdditionalVersionWeights, v.AdditionalVersionWeights)
+	}
 }
 func (v *AliasRoutingConfiguration) Deserialize(d smithy.ShapeDeserializer) error {
 	return smithy.ReadStruct(d, schemas.AliasRoutingConfiguration, func(s *smithy.Schema) error {
@@ -247,7 +289,9 @@ func (v *AllowedPublishers) Serialize(s smithy.ShapeSerializer) {
 }
 
 func (v *AllowedPublishers) SerializeMembers(s smithy.ShapeSerializer) {
-	serializeSigningProfileVersionArns(s, schemas.AllowedPublishers_SigningProfileVersionArns, v.SigningProfileVersionArns)
+	if v.SigningProfileVersionArns != nil {
+		serializeSigningProfileVersionArns(s, schemas.AllowedPublishers_SigningProfileVersionArns, v.SigningProfileVersionArns)
+	}
 }
 func (v *AllowedPublishers) Deserialize(d smithy.ShapeDeserializer) error {
 	return smithy.ReadStruct(d, schemas.AllowedPublishers, func(s *smithy.Schema) error {
@@ -853,7 +897,9 @@ func (v *CapacityProviderScalingConfig) SerializeMembers(s smithy.ShapeSerialize
 	if v.ScalingMode != "" {
 		s.WriteString(schemas.CapacityProviderScalingConfig_ScalingMode, string(v.ScalingMode))
 	}
-	serializeCapacityProviderScalingPoliciesList(s, schemas.CapacityProviderScalingConfig_ScalingPolicies, v.ScalingPolicies)
+	if v.ScalingPolicies != nil {
+		serializeCapacityProviderScalingPoliciesList(s, schemas.CapacityProviderScalingConfig_ScalingPolicies, v.ScalingPolicies)
+	}
 }
 func (v *CapacityProviderScalingConfig) Deserialize(d smithy.ShapeDeserializer) error {
 	return smithy.ReadStruct(d, schemas.CapacityProviderScalingConfig, func(s *smithy.Schema) error {
@@ -933,8 +979,12 @@ func (v *CapacityProviderVpcConfig) Serialize(s smithy.ShapeSerializer) {
 }
 
 func (v *CapacityProviderVpcConfig) SerializeMembers(s smithy.ShapeSerializer) {
-	serializeCapacityProviderSecurityGroupIds(s, schemas.CapacityProviderVpcConfig_SecurityGroupIds, v.SecurityGroupIds)
-	serializeCapacityProviderSubnetIds(s, schemas.CapacityProviderVpcConfig_SubnetIds, v.SubnetIds)
+	if v.SecurityGroupIds != nil {
+		serializeCapacityProviderSecurityGroupIds(s, schemas.CapacityProviderVpcConfig_SecurityGroupIds, v.SecurityGroupIds)
+	}
+	if v.SubnetIds != nil {
+		serializeCapacityProviderSubnetIds(s, schemas.CapacityProviderVpcConfig_SubnetIds, v.SubnetIds)
+	}
 }
 func (v *CapacityProviderVpcConfig) Deserialize(d smithy.ShapeDeserializer) error {
 	return smithy.ReadStruct(d, schemas.CapacityProviderVpcConfig, func(s *smithy.Schema) error {
@@ -1039,6 +1089,16 @@ type ChainedInvokeOptions struct {
 	// The tenant identifier for the chained invocation.
 	TenantId *string
 
+	// The X-Ray trace header to use when starting the chained invocation. This
+	// parameter is optional. If you omit this value, the child invocation inherits the
+	// parent durable execution's trace header.
+	//
+	// Specify this value on the START update for the chained invocation operation.
+	// For more information about the header format, see [Tracing header]in the X-Ray Developer Guide.
+	//
+	// [Tracing header]: https://docs.aws.amazon.com/xray/latest/devguide/xray-concepts.html#xray-concepts-tracingheader
+	XAmznTraceId *string
+
 	noSmithyDocumentSerde
 }
 
@@ -1055,6 +1115,9 @@ func (v *ChainedInvokeOptions) SerializeMembers(s smithy.ShapeSerializer) {
 	if v.TenantId != nil {
 		s.WriteString(schemas.ChainedInvokeOptions_TenantId, *v.TenantId)
 	}
+	if v.XAmznTraceId != nil {
+		s.WriteString(schemas.ChainedInvokeOptions_XAmznTraceId, *v.XAmznTraceId)
+	}
 }
 func (v *ChainedInvokeOptions) Deserialize(d smithy.ShapeDeserializer) error {
 	return smithy.ReadStruct(d, schemas.ChainedInvokeOptions, func(s *smithy.Schema) error {
@@ -1065,6 +1128,9 @@ func (v *ChainedInvokeOptions) Deserialize(d smithy.ShapeDeserializer) error {
 		case schemas.ChainedInvokeOptions_TenantId:
 			v.TenantId = new(string)
 			return d.ReadString(schemas.ChainedInvokeOptions_TenantId, v.TenantId)
+		case schemas.ChainedInvokeOptions_XAmznTraceId:
+			v.XAmznTraceId = new(string)
+			return d.ReadString(schemas.ChainedInvokeOptions_XAmznTraceId, v.XAmznTraceId)
 		}
 		return nil
 	})
@@ -1271,7 +1337,9 @@ func (v *CheckpointUpdatedExecutionState) SerializeMembers(s smithy.ShapeSeriali
 	if v.NextMarker != nil {
 		s.WriteString(schemas.CheckpointUpdatedExecutionState_NextMarker, *v.NextMarker)
 	}
-	serializeOperations(s, schemas.CheckpointUpdatedExecutionState_Operations, v.Operations)
+	if v.Operations != nil {
+		serializeOperations(s, schemas.CheckpointUpdatedExecutionState_Operations, v.Operations)
+	}
 }
 func (v *CheckpointUpdatedExecutionState) Deserialize(d smithy.ShapeDeserializer) error {
 	return smithy.ReadStruct(d, schemas.CheckpointUpdatedExecutionState, func(s *smithy.Schema) error {
@@ -1681,10 +1749,18 @@ func (v *Cors) SerializeMembers(s smithy.ShapeSerializer) {
 	if v.AllowCredentials != nil {
 		s.WriteBool(schemas.Cors_AllowCredentials, *v.AllowCredentials)
 	}
-	serializeHeadersList(s, schemas.Cors_AllowHeaders, v.AllowHeaders)
-	serializeAllowMethodsList(s, schemas.Cors_AllowMethods, v.AllowMethods)
-	serializeAllowOriginsList(s, schemas.Cors_AllowOrigins, v.AllowOrigins)
-	serializeHeadersList(s, schemas.Cors_ExposeHeaders, v.ExposeHeaders)
+	if v.AllowHeaders != nil {
+		serializeHeadersList(s, schemas.Cors_AllowHeaders, v.AllowHeaders)
+	}
+	if v.AllowMethods != nil {
+		serializeAllowMethodsList(s, schemas.Cors_AllowMethods, v.AllowMethods)
+	}
+	if v.AllowOrigins != nil {
+		serializeAllowOriginsList(s, schemas.Cors_AllowOrigins, v.AllowOrigins)
+	}
+	if v.ExposeHeaders != nil {
+		serializeHeadersList(s, schemas.Cors_ExposeHeaders, v.ExposeHeaders)
+	}
 	if v.MaxAge != nil {
 		s.WriteInt32(schemas.Cors_MaxAge, *v.MaxAge)
 	}
@@ -1930,7 +2006,9 @@ func (v *Environment) Serialize(s smithy.ShapeSerializer) {
 }
 
 func (v *Environment) SerializeMembers(s smithy.ShapeSerializer) {
-	serializeEnvironmentVariables(s, schemas.Environment_Variables, v.Variables)
+	if v.Variables != nil {
+		serializeEnvironmentVariables(s, schemas.Environment_Variables, v.Variables)
+	}
 }
 func (v *Environment) Deserialize(d smithy.ShapeDeserializer) error {
 	return smithy.ReadStruct(d, schemas.Environment, func(s *smithy.Schema) error {
@@ -2008,7 +2086,9 @@ func (v *EnvironmentResponse) SerializeMembers(s smithy.ShapeSerializer) {
 		v.Error.SerializeMembers(s)
 		s.CloseStruct()
 	}
-	serializeEnvironmentVariables(s, schemas.EnvironmentResponse_Variables, v.Variables)
+	if v.Variables != nil {
+		serializeEnvironmentVariables(s, schemas.EnvironmentResponse_Variables, v.Variables)
+	}
 }
 func (v *EnvironmentResponse) Deserialize(d smithy.ShapeDeserializer) error {
 	return smithy.ReadStruct(d, schemas.EnvironmentResponse, func(s *smithy.Schema) error {
@@ -2024,7 +2104,8 @@ func (v *EnvironmentResponse) Deserialize(d smithy.ShapeDeserializer) error {
 }
 
 // The size of the function's /tmp directory in MB. The default value is 512, but
-// can be any whole number between 512 and 10,240 MB. For more information, see [Configuring ephemeral storage (console)].
+// can be any whole number between 512 and 10,240 MB. For functions that use
+// AcceleratorConfig , the maximum is 32,768 MB. For more information, see [Configuring ephemeral storage (console)].
 //
 // [Configuring ephemeral storage (console)]: https://docs.aws.amazon.com/lambda/latest/dg/configuration-function-common.html#configuration-ephemeral-storage
 type EphemeralStorage struct {
@@ -2093,7 +2174,9 @@ func (v *ErrorObject) SerializeMembers(s smithy.ShapeSerializer) {
 	if v.ErrorType != nil {
 		s.WriteString(schemas.ErrorObject_ErrorType, *v.ErrorType)
 	}
-	serializeStackTraceEntries(s, schemas.ErrorObject_StackTrace, v.StackTrace)
+	if v.StackTrace != nil {
+		serializeStackTraceEntries(s, schemas.ErrorObject_StackTrace, v.StackTrace)
+	}
 }
 func (v *ErrorObject) Deserialize(d smithy.ShapeDeserializer) error {
 	return smithy.ReadStruct(d, schemas.ErrorObject, func(s *smithy.Schema) error {
@@ -2172,6 +2255,12 @@ type Event struct {
 
 	// Details about an execution that failed.
 	ExecutionFailedDetails *ExecutionFailedDetails
+
+	// The details of an ExecutionPaused event.
+	ExecutionPausedDetails *ExecutionPausedDetails
+
+	// The details of an ExecutionResumed event.
+	ExecutionResumedDetails *ExecutionResumedDetails
 
 	// Details about an execution that started.
 	ExecutionStartedDetails *ExecutionStartedDetails
@@ -2303,6 +2392,16 @@ func (v *Event) SerializeMembers(s smithy.ShapeSerializer) {
 		v.ExecutionFailedDetails.SerializeMembers(s)
 		s.CloseStruct()
 	}
+	if v.ExecutionPausedDetails != nil {
+		s.WriteStruct(schemas.Event_ExecutionPausedDetails)
+		v.ExecutionPausedDetails.SerializeMembers(s)
+		s.CloseStruct()
+	}
+	if v.ExecutionResumedDetails != nil {
+		s.WriteStruct(schemas.Event_ExecutionResumedDetails)
+		v.ExecutionResumedDetails.SerializeMembers(s)
+		s.CloseStruct()
+	}
 	if v.ExecutionStartedDetails != nil {
 		s.WriteStruct(schemas.Event_ExecutionStartedDetails)
 		v.ExecutionStartedDetails.SerializeMembers(s)
@@ -2426,6 +2525,12 @@ func (v *Event) Deserialize(d smithy.ShapeDeserializer) error {
 		case schemas.Event_ExecutionFailedDetails:
 			v.ExecutionFailedDetails = &ExecutionFailedDetails{}
 			return v.ExecutionFailedDetails.Deserialize(d)
+		case schemas.Event_ExecutionPausedDetails:
+			v.ExecutionPausedDetails = &ExecutionPausedDetails{}
+			return v.ExecutionPausedDetails.Deserialize(d)
+		case schemas.Event_ExecutionResumedDetails:
+			v.ExecutionResumedDetails = &ExecutionResumedDetails{}
+			return v.ExecutionResumedDetails.Deserialize(d)
 		case schemas.Event_ExecutionStartedDetails:
 			v.ExecutionStartedDetails = &ExecutionStartedDetails{}
 			return v.ExecutionStartedDetails.Deserialize(d)
@@ -2558,6 +2663,49 @@ func (v *EventInput) Deserialize(d smithy.ShapeDeserializer) error {
 	})
 }
 
+// The reason for pausing a durable execution, as recorded in the execution
+// history.
+type EventPauseReason struct {
+
+	// The reason that you provided when you paused the execution. This field is only
+	// present if you set IncludeExecutionData to true in the request.
+	Payload *string
+
+	// Specifies whether Lambda omitted the reason from the response because
+	// IncludeExecutionData is false .
+	Truncated *bool
+
+	noSmithyDocumentSerde
+}
+
+func (v *EventPauseReason) Serialize(s smithy.ShapeSerializer) {
+	s.WriteStruct(schemas.EventPauseReason)
+	v.SerializeMembers(s)
+	s.CloseStruct()
+}
+
+func (v *EventPauseReason) SerializeMembers(s smithy.ShapeSerializer) {
+	if v.Payload != nil {
+		s.WriteString(schemas.EventPauseReason_Payload, *v.Payload)
+	}
+	if v.Truncated != nil {
+		s.WriteBool(schemas.EventPauseReason_Truncated, *v.Truncated)
+	}
+}
+func (v *EventPauseReason) Deserialize(d smithy.ShapeDeserializer) error {
+	return smithy.ReadStruct(d, schemas.EventPauseReason, func(s *smithy.Schema) error {
+		switch s {
+		case schemas.EventPauseReason_Payload:
+			v.Payload = new(string)
+			return d.ReadString(schemas.EventPauseReason_Payload, v.Payload)
+		case schemas.EventPauseReason_Truncated:
+			v.Truncated = new(bool)
+			return d.ReadBool(schemas.EventPauseReason_Truncated, v.Truncated)
+		}
+		return nil
+	})
+}
+
 // Result information for an event.
 type EventResult struct {
 
@@ -2593,6 +2741,49 @@ func (v *EventResult) Deserialize(d smithy.ShapeDeserializer) error {
 		case schemas.EventResult_Truncated:
 			v.Truncated = new(bool)
 			return d.ReadBool(schemas.EventResult_Truncated, v.Truncated)
+		}
+		return nil
+	})
+}
+
+// The reason for resuming a durable execution, as recorded in the execution
+// history.
+type EventResumeReason struct {
+
+	// The reason that you provided when you resumed the execution. This field is only
+	// present if you set IncludeExecutionData to true in the request.
+	Payload *string
+
+	// Specifies whether Lambda omitted the reason from the response because
+	// IncludeExecutionData is false .
+	Truncated *bool
+
+	noSmithyDocumentSerde
+}
+
+func (v *EventResumeReason) Serialize(s smithy.ShapeSerializer) {
+	s.WriteStruct(schemas.EventResumeReason)
+	v.SerializeMembers(s)
+	s.CloseStruct()
+}
+
+func (v *EventResumeReason) SerializeMembers(s smithy.ShapeSerializer) {
+	if v.Payload != nil {
+		s.WriteString(schemas.EventResumeReason_Payload, *v.Payload)
+	}
+	if v.Truncated != nil {
+		s.WriteBool(schemas.EventResumeReason_Truncated, *v.Truncated)
+	}
+}
+func (v *EventResumeReason) Deserialize(d smithy.ShapeDeserializer) error {
+	return smithy.ReadStruct(d, schemas.EventResumeReason, func(s *smithy.Schema) error {
+		switch s {
+		case schemas.EventResumeReason_Payload:
+			v.Payload = new(string)
+			return d.ReadString(schemas.EventResumeReason_Payload, v.Payload)
+		case schemas.EventResumeReason_Truncated:
+			v.Truncated = new(bool)
+			return d.ReadBool(schemas.EventResumeReason_Truncated, v.Truncated)
 		}
 		return nil
 	})
@@ -2824,7 +3015,9 @@ func (v *EventSourceMappingConfiguration) SerializeMembers(s smithy.ShapeSeriali
 	if v.FunctionArn != nil {
 		s.WriteString(schemas.EventSourceMappingConfiguration_FunctionArn, *v.FunctionArn)
 	}
-	serializeFunctionResponseTypeList(s, schemas.EventSourceMappingConfiguration_FunctionResponseTypes, v.FunctionResponseTypes)
+	if v.FunctionResponseTypes != nil {
+		serializeFunctionResponseTypeList(s, schemas.EventSourceMappingConfiguration_FunctionResponseTypes, v.FunctionResponseTypes)
+	}
 	if v.KMSKeyArn != nil {
 		s.WriteString(schemas.EventSourceMappingConfiguration_KMSKeyArn, *v.KMSKeyArn)
 	}
@@ -2861,7 +3054,9 @@ func (v *EventSourceMappingConfiguration) SerializeMembers(s smithy.ShapeSeriali
 		v.ProvisionedPollerConfig.SerializeMembers(s)
 		s.CloseStruct()
 	}
-	serializeQueues(s, schemas.EventSourceMappingConfiguration_Queues, v.Queues)
+	if v.Queues != nil {
+		serializeQueues(s, schemas.EventSourceMappingConfiguration_Queues, v.Queues)
+	}
 	if v.ScalingConfig != nil {
 		s.WriteStruct(schemas.EventSourceMappingConfiguration_ScalingConfig)
 		v.ScalingConfig.SerializeMembers(s)
@@ -2877,7 +3072,9 @@ func (v *EventSourceMappingConfiguration) SerializeMembers(s smithy.ShapeSeriali
 		v.SelfManagedKafkaEventSourceConfig.SerializeMembers(s)
 		s.CloseStruct()
 	}
-	serializeSourceAccessConfigurations(s, schemas.EventSourceMappingConfiguration_SourceAccessConfigurations, v.SourceAccessConfigurations)
+	if v.SourceAccessConfigurations != nil {
+		serializeSourceAccessConfigurations(s, schemas.EventSourceMappingConfiguration_SourceAccessConfigurations, v.SourceAccessConfigurations)
+	}
 	if v.StartingPosition != "" {
 		s.WriteString(schemas.EventSourceMappingConfiguration_StartingPosition, string(v.StartingPosition))
 	}
@@ -2890,7 +3087,9 @@ func (v *EventSourceMappingConfiguration) SerializeMembers(s smithy.ShapeSeriali
 	if v.StateTransitionReason != nil {
 		s.WriteString(schemas.EventSourceMappingConfiguration_StateTransitionReason, *v.StateTransitionReason)
 	}
-	serializeTopics(s, schemas.EventSourceMappingConfiguration_Topics, v.Topics)
+	if v.Topics != nil {
+		serializeTopics(s, schemas.EventSourceMappingConfiguration_Topics, v.Topics)
+	}
 	if v.TumblingWindowInSeconds != nil {
 		s.WriteInt32(schemas.EventSourceMappingConfiguration_TumblingWindowInSeconds, *v.TumblingWindowInSeconds)
 	}
@@ -3078,7 +3277,9 @@ func (v *EventSourceMappingMetricsConfig) Serialize(s smithy.ShapeSerializer) {
 }
 
 func (v *EventSourceMappingMetricsConfig) SerializeMembers(s smithy.ShapeSerializer) {
-	serializeEventSourceMappingMetricList(s, schemas.EventSourceMappingMetricsConfig_Metrics, v.Metrics)
+	if v.Metrics != nil {
+		serializeEventSourceMappingMetricList(s, schemas.EventSourceMappingMetricsConfig_Metrics, v.Metrics)
+	}
 }
 func (v *EventSourceMappingMetricsConfig) Deserialize(d smithy.ShapeDeserializer) error {
 	return smithy.ReadStruct(d, schemas.EventSourceMappingMetricsConfig, func(s *smithy.Schema) error {
@@ -3266,6 +3467,114 @@ func (v *ExecutionFailedDetails) Deserialize(d smithy.ShapeDeserializer) error {
 		case schemas.ExecutionFailedDetails_Error:
 			v.Error = &EventError{}
 			return v.Error.Deserialize(d)
+		}
+		return nil
+	})
+}
+
+// Details about a [durable execution] that paused. The event timestamp is when the execution paused.
+//
+// [durable execution]: https://docs.aws.amazon.com/lambda/latest/dg/durable-functions.html
+type ExecutionPausedDetails struct {
+
+	// Specifies whether the pause also paused the execution timeout.
+	//
+	// This member is required.
+	ExecutionTimeoutPaused *bool
+
+	// The date and time when you requested the pause, in [ISO-8601 format] (YYYY-MM-DDThh:mm:ss.sTZD).
+	//
+	// [ISO-8601 format]: https://www.w3.org/TR/NOTE-datetime
+	//
+	// This member is required.
+	PauseRequestTimestamp *time.Time
+
+	// The reason that you provided when you paused the execution.
+	Reason *EventPauseReason
+
+	noSmithyDocumentSerde
+}
+
+func (v *ExecutionPausedDetails) Serialize(s smithy.ShapeSerializer) {
+	s.WriteStruct(schemas.ExecutionPausedDetails)
+	v.SerializeMembers(s)
+	s.CloseStruct()
+}
+
+func (v *ExecutionPausedDetails) SerializeMembers(s smithy.ShapeSerializer) {
+	if v.ExecutionTimeoutPaused != nil {
+		s.WriteBool(schemas.ExecutionPausedDetails_ExecutionTimeoutPaused, *v.ExecutionTimeoutPaused)
+	}
+	if v.PauseRequestTimestamp != nil {
+		s.WriteTime(schemas.ExecutionPausedDetails_PauseRequestTimestamp, *v.PauseRequestTimestamp)
+	}
+	if v.Reason != nil {
+		s.WriteStruct(schemas.ExecutionPausedDetails_Reason)
+		v.Reason.SerializeMembers(s)
+		s.CloseStruct()
+	}
+}
+func (v *ExecutionPausedDetails) Deserialize(d smithy.ShapeDeserializer) error {
+	return smithy.ReadStruct(d, schemas.ExecutionPausedDetails, func(s *smithy.Schema) error {
+		switch s {
+		case schemas.ExecutionPausedDetails_ExecutionTimeoutPaused:
+			v.ExecutionTimeoutPaused = new(bool)
+			return d.ReadBool(schemas.ExecutionPausedDetails_ExecutionTimeoutPaused, v.ExecutionTimeoutPaused)
+		case schemas.ExecutionPausedDetails_PauseRequestTimestamp:
+			v.PauseRequestTimestamp = new(time.Time)
+			return d.ReadTime(schemas.ExecutionPausedDetails_PauseRequestTimestamp, v.PauseRequestTimestamp)
+		case schemas.ExecutionPausedDetails_Reason:
+			v.Reason = &EventPauseReason{}
+			return v.Reason.Deserialize(d)
+		}
+		return nil
+	})
+}
+
+// Details about a [durable execution] that resumed. The event timestamp is when the execution
+// resumed.
+//
+// [durable execution]: https://docs.aws.amazon.com/lambda/latest/dg/durable-functions.html
+type ExecutionResumedDetails struct {
+
+	// The date and time when you requested the resume, in [ISO-8601 format] (YYYY-MM-DDThh:mm:ss.sTZD).
+	//
+	// [ISO-8601 format]: https://www.w3.org/TR/NOTE-datetime
+	//
+	// This member is required.
+	ResumeRequestTimestamp *time.Time
+
+	// The reason that you provided when you resumed the execution.
+	Reason *EventResumeReason
+
+	noSmithyDocumentSerde
+}
+
+func (v *ExecutionResumedDetails) Serialize(s smithy.ShapeSerializer) {
+	s.WriteStruct(schemas.ExecutionResumedDetails)
+	v.SerializeMembers(s)
+	s.CloseStruct()
+}
+
+func (v *ExecutionResumedDetails) SerializeMembers(s smithy.ShapeSerializer) {
+	if v.Reason != nil {
+		s.WriteStruct(schemas.ExecutionResumedDetails_Reason)
+		v.Reason.SerializeMembers(s)
+		s.CloseStruct()
+	}
+	if v.ResumeRequestTimestamp != nil {
+		s.WriteTime(schemas.ExecutionResumedDetails_ResumeRequestTimestamp, *v.ResumeRequestTimestamp)
+	}
+}
+func (v *ExecutionResumedDetails) Deserialize(d smithy.ShapeDeserializer) error {
+	return smithy.ReadStruct(d, schemas.ExecutionResumedDetails, func(s *smithy.Schema) error {
+		switch s {
+		case schemas.ExecutionResumedDetails_Reason:
+			v.Reason = &EventResumeReason{}
+			return v.Reason.Deserialize(d)
+		case schemas.ExecutionResumedDetails_ResumeRequestTimestamp:
+			v.ResumeRequestTimestamp = new(time.Time)
+			return d.ReadTime(schemas.ExecutionResumedDetails_ResumeRequestTimestamp, v.ResumeRequestTimestamp)
 		}
 		return nil
 	})
@@ -3541,7 +3850,9 @@ func (v *FilterCriteria) Serialize(s smithy.ShapeSerializer) {
 }
 
 func (v *FilterCriteria) SerializeMembers(s smithy.ShapeSerializer) {
-	serializeFilterList(s, schemas.FilterCriteria_Filters, v.Filters)
+	if v.Filters != nil {
+		serializeFilterList(s, schemas.FilterCriteria_Filters, v.Filters)
+	}
 }
 func (v *FilterCriteria) Deserialize(d smithy.ShapeDeserializer) error {
 	return smithy.ReadStruct(d, schemas.FilterCriteria, func(s *smithy.Schema) error {
@@ -3837,6 +4148,9 @@ func (v *FunctionCodeLocationError) Deserialize(d smithy.ShapeDeserializer) erro
 // Details about a function's configuration.
 type FunctionConfiguration struct {
 
+	// The accelerator resource settings for a Lambda execution environment.
+	AcceleratorConfig *AcceleratorConfig
+
 	// The instruction set architecture that the function supports. Architecture is a
 	// string array with one of the valid values. The default architecture value is
 	// x86_64 .
@@ -3871,7 +4185,8 @@ type FunctionConfiguration struct {
 	Environment *EnvironmentResponse
 
 	// The size of the function's /tmp directory in MB. The default value is 512, but
-	// can be any whole number between 512 and 10,240 MB. For more information, see [Configuring ephemeral storage (console)].
+	// can be any whole number between 512 and 10,240 MB. For functions that use
+	// AcceleratorConfig , the maximum is 32,768 MB. For more information, see [Configuring ephemeral storage (console)].
 	//
 	// [Configuring ephemeral storage (console)]: https://docs.aws.amazon.com/lambda/latest/dg/configuration-function-common.html#configuration-ephemeral-storage
 	EphemeralStorage *EphemeralStorage
@@ -3974,6 +4289,10 @@ type FunctionConfiguration struct {
 	// [Supported runtimes]: https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtimes.html#runtimes-supported
 	Runtime Runtime
 
+	// The customer-managed runtime configuration for your function. Specifies the
+	// customer-managed runtime and the runtime alias that your function uses.
+	RuntimeConfig *FunctionRuntimeConfig
+
 	// The ARN of the runtime and any errors that occured.
 	RuntimeVersionConfig *RuntimeVersionConfig
 
@@ -4028,7 +4347,14 @@ func (v *FunctionConfiguration) Serialize(s smithy.ShapeSerializer) {
 }
 
 func (v *FunctionConfiguration) SerializeMembers(s smithy.ShapeSerializer) {
-	serializeArchitecturesList(s, schemas.FunctionConfiguration_Architectures, v.Architectures)
+	if v.AcceleratorConfig != nil {
+		s.WriteStruct(schemas.FunctionConfiguration_AcceleratorConfig)
+		v.AcceleratorConfig.SerializeMembers(s)
+		s.CloseStruct()
+	}
+	if v.Architectures != nil {
+		serializeArchitecturesList(s, schemas.FunctionConfiguration_Architectures, v.Architectures)
+	}
 	if v.CapacityProviderConfig != nil {
 		s.WriteStruct(schemas.FunctionConfiguration_CapacityProviderConfig)
 		v.CapacityProviderConfig.SerializeMembers(s)
@@ -4066,7 +4392,9 @@ func (v *FunctionConfiguration) SerializeMembers(s smithy.ShapeSerializer) {
 		v.EphemeralStorage.SerializeMembers(s)
 		s.CloseStruct()
 	}
-	serializeFileSystemConfigList(s, schemas.FunctionConfiguration_FileSystemConfigs, v.FileSystemConfigs)
+	if v.FileSystemConfigs != nil {
+		serializeFileSystemConfigList(s, schemas.FunctionConfiguration_FileSystemConfigs, v.FileSystemConfigs)
+	}
 	if v.FunctionArn != nil {
 		s.WriteString(schemas.FunctionConfiguration_FunctionArn, *v.FunctionArn)
 	}
@@ -4096,7 +4424,9 @@ func (v *FunctionConfiguration) SerializeMembers(s smithy.ShapeSerializer) {
 	if v.LastUpdateStatusReasonCode != "" {
 		s.WriteString(schemas.FunctionConfiguration_LastUpdateStatusReasonCode, string(v.LastUpdateStatusReasonCode))
 	}
-	serializeLayersReferenceList(s, schemas.FunctionConfiguration_Layers, v.Layers)
+	if v.Layers != nil {
+		serializeLayersReferenceList(s, schemas.FunctionConfiguration_Layers, v.Layers)
+	}
 	if v.LoggingConfig != nil {
 		s.WriteStruct(schemas.FunctionConfiguration_LoggingConfig)
 		v.LoggingConfig.SerializeMembers(s)
@@ -4119,6 +4449,11 @@ func (v *FunctionConfiguration) SerializeMembers(s smithy.ShapeSerializer) {
 	}
 	if v.Runtime != "" {
 		s.WriteString(schemas.FunctionConfiguration_Runtime, string(v.Runtime))
+	}
+	if v.RuntimeConfig != nil {
+		s.WriteStruct(schemas.FunctionConfiguration_RuntimeConfig)
+		v.RuntimeConfig.SerializeMembers(s)
+		s.CloseStruct()
 	}
 	if v.RuntimeVersionConfig != nil {
 		s.WriteStruct(schemas.FunctionConfiguration_RuntimeVersionConfig)
@@ -4170,6 +4505,9 @@ func (v *FunctionConfiguration) SerializeMembers(s smithy.ShapeSerializer) {
 func (v *FunctionConfiguration) Deserialize(d smithy.ShapeDeserializer) error {
 	return smithy.ReadStruct(d, schemas.FunctionConfiguration, func(s *smithy.Schema) error {
 		switch s {
+		case schemas.FunctionConfiguration_AcceleratorConfig:
+			v.AcceleratorConfig = &AcceleratorConfig{}
+			return v.AcceleratorConfig.Deserialize(d)
 		case schemas.FunctionConfiguration_Architectures:
 			return deserializeArchitecturesList(d, schemas.FunctionConfiguration_Architectures, &v.Architectures)
 		case schemas.FunctionConfiguration_CapacityProviderConfig:
@@ -4266,6 +4604,9 @@ func (v *FunctionConfiguration) Deserialize(d smithy.ShapeDeserializer) error {
 			}
 			v.Runtime = Runtime(ev)
 			return nil
+		case schemas.FunctionConfiguration_RuntimeConfig:
+			v.RuntimeConfig = &FunctionRuntimeConfig{}
+			return v.RuntimeConfig.Deserialize(d)
 		case schemas.FunctionConfiguration_RuntimeVersionConfig:
 			v.RuntimeVersionConfig = &RuntimeVersionConfig{}
 			return v.RuntimeVersionConfig.Deserialize(d)
@@ -4393,6 +4734,53 @@ func (v *FunctionEventInvokeConfig) Deserialize(d smithy.ShapeDeserializer) erro
 		case schemas.FunctionEventInvokeConfig_MaximumRetryAttempts:
 			v.MaximumRetryAttempts = new(int32)
 			return d.ReadInt32(schemas.FunctionEventInvokeConfig_MaximumRetryAttempts, v.MaximumRetryAttempts)
+		}
+		return nil
+	})
+}
+
+// The customer-managed runtime configuration for your function. Specifies the
+// customer-managed runtime and the runtime alias that your function uses.
+type FunctionRuntimeConfig struct {
+
+	// The name of the customer-managed runtime alias that your function uses. A
+	// runtime alias is a name that points to a runtime version.
+	//
+	// This member is required.
+	RuntimeAlias *string
+
+	// The Amazon Resource Name (ARN) of the customer-managed runtime that your
+	// function uses.
+	//
+	// This member is required.
+	RuntimeArn *string
+
+	noSmithyDocumentSerde
+}
+
+func (v *FunctionRuntimeConfig) Serialize(s smithy.ShapeSerializer) {
+	s.WriteStruct(schemas.FunctionRuntimeConfig)
+	v.SerializeMembers(s)
+	s.CloseStruct()
+}
+
+func (v *FunctionRuntimeConfig) SerializeMembers(s smithy.ShapeSerializer) {
+	if v.RuntimeAlias != nil {
+		s.WriteString(schemas.FunctionRuntimeConfig_RuntimeAlias, *v.RuntimeAlias)
+	}
+	if v.RuntimeArn != nil {
+		s.WriteString(schemas.FunctionRuntimeConfig_RuntimeArn, *v.RuntimeArn)
+	}
+}
+func (v *FunctionRuntimeConfig) Deserialize(d smithy.ShapeDeserializer) error {
+	return smithy.ReadStruct(d, schemas.FunctionRuntimeConfig, func(s *smithy.Schema) error {
+		switch s {
+		case schemas.FunctionRuntimeConfig_RuntimeAlias:
+			v.RuntimeAlias = new(string)
+			return d.ReadString(schemas.FunctionRuntimeConfig_RuntimeAlias, v.RuntimeAlias)
+		case schemas.FunctionRuntimeConfig_RuntimeArn:
+			v.RuntimeArn = new(string)
+			return d.ReadString(schemas.FunctionRuntimeConfig_RuntimeArn, v.RuntimeArn)
 		}
 		return nil
 	})
@@ -4641,8 +5029,12 @@ func (v *ImageConfig) Serialize(s smithy.ShapeSerializer) {
 }
 
 func (v *ImageConfig) SerializeMembers(s smithy.ShapeSerializer) {
-	serializeStringList(s, schemas.ImageConfig_Command, v.Command)
-	serializeStringList(s, schemas.ImageConfig_EntryPoint, v.EntryPoint)
+	if v.Command != nil {
+		serializeStringList(s, schemas.ImageConfig_Command, v.Command)
+	}
+	if v.EntryPoint != nil {
+		serializeStringList(s, schemas.ImageConfig_EntryPoint, v.EntryPoint)
+	}
 	if v.WorkingDirectory != nil {
 		s.WriteString(schemas.ImageConfig_WorkingDirectory, *v.WorkingDirectory)
 	}
@@ -4772,9 +5164,15 @@ func (v *InstanceRequirements) Serialize(s smithy.ShapeSerializer) {
 }
 
 func (v *InstanceRequirements) SerializeMembers(s smithy.ShapeSerializer) {
-	serializeInstanceTypeSet(s, schemas.InstanceRequirements_AllowedInstanceTypes, v.AllowedInstanceTypes)
-	serializeArchitecturesList(s, schemas.InstanceRequirements_Architectures, v.Architectures)
-	serializeInstanceTypeSet(s, schemas.InstanceRequirements_ExcludedInstanceTypes, v.ExcludedInstanceTypes)
+	if v.AllowedInstanceTypes != nil {
+		serializeInstanceTypeSet(s, schemas.InstanceRequirements_AllowedInstanceTypes, v.AllowedInstanceTypes)
+	}
+	if v.Architectures != nil {
+		serializeArchitecturesList(s, schemas.InstanceRequirements_Architectures, v.Architectures)
+	}
+	if v.ExcludedInstanceTypes != nil {
+		serializeInstanceTypeSet(s, schemas.InstanceRequirements_ExcludedInstanceTypes, v.ExcludedInstanceTypes)
+	}
 }
 func (v *InstanceRequirements) Deserialize(d smithy.ShapeDeserializer) error {
 	return smithy.ReadStruct(d, schemas.InstanceRequirements, func(s *smithy.Schema) error {
@@ -5098,14 +5496,18 @@ func (v *KafkaSchemaRegistryConfig) Serialize(s smithy.ShapeSerializer) {
 }
 
 func (v *KafkaSchemaRegistryConfig) SerializeMembers(s smithy.ShapeSerializer) {
-	serializeKafkaSchemaRegistryAccessConfigList(s, schemas.KafkaSchemaRegistryConfig_AccessConfigs, v.AccessConfigs)
+	if v.AccessConfigs != nil {
+		serializeKafkaSchemaRegistryAccessConfigList(s, schemas.KafkaSchemaRegistryConfig_AccessConfigs, v.AccessConfigs)
+	}
 	if v.EventRecordFormat != "" {
 		s.WriteString(schemas.KafkaSchemaRegistryConfig_EventRecordFormat, string(v.EventRecordFormat))
 	}
 	if v.SchemaRegistryURI != nil {
 		s.WriteString(schemas.KafkaSchemaRegistryConfig_SchemaRegistryURI, *v.SchemaRegistryURI)
 	}
-	serializeKafkaSchemaValidationConfigList(s, schemas.KafkaSchemaRegistryConfig_SchemaValidationConfigs, v.SchemaValidationConfigs)
+	if v.SchemaValidationConfigs != nil {
+		serializeKafkaSchemaValidationConfigList(s, schemas.KafkaSchemaRegistryConfig_SchemaValidationConfigs, v.SchemaValidationConfigs)
+	}
 }
 func (v *KafkaSchemaRegistryConfig) Deserialize(d smithy.ShapeDeserializer) error {
 	return smithy.ReadStruct(d, schemas.KafkaSchemaRegistryConfig, func(s *smithy.Schema) error {
@@ -5535,8 +5937,12 @@ func (v *LayerVersionsListItem) Serialize(s smithy.ShapeSerializer) {
 }
 
 func (v *LayerVersionsListItem) SerializeMembers(s smithy.ShapeSerializer) {
-	serializeCompatibleArchitectures(s, schemas.LayerVersionsListItem_CompatibleArchitectures, v.CompatibleArchitectures)
-	serializeCompatibleRuntimes(s, schemas.LayerVersionsListItem_CompatibleRuntimes, v.CompatibleRuntimes)
+	if v.CompatibleArchitectures != nil {
+		serializeCompatibleArchitectures(s, schemas.LayerVersionsListItem_CompatibleArchitectures, v.CompatibleArchitectures)
+	}
+	if v.CompatibleRuntimes != nil {
+		serializeCompatibleRuntimes(s, schemas.LayerVersionsListItem_CompatibleRuntimes, v.CompatibleRuntimes)
+	}
 	if v.CreatedDate != nil {
 		s.WriteString(schemas.LayerVersionsListItem_CreatedDate, *v.CreatedDate)
 	}
@@ -5967,7 +6373,8 @@ type OperationUpdate struct {
 	// Options for context operations.
 	ContextOptions *ContextOptions
 
-	// The error information for failed operations.
+	// The error information for failed operations. The combined size of all error
+	// fields is limited to 1 MB.
 	Error *ErrorObject
 
 	// The customer-provided name for this operation.
@@ -5978,9 +6385,9 @@ type OperationUpdate struct {
 	ParentId *string
 
 	// The payload for successful operations. The maximum payload size is 6 MB for
-	// synchronous EXECUTION operations (RequestResponse invocationType), 1 MB for
-	// asynchronous EXECUTION (Event invocationType) and CHAINED_INVOKE operations,
-	// and 256 KB for CONTEXT , STEP , WAIT , and CALLBACK operations.
+	// synchronous EXECUTION operations (RequestResponse invocationType), and 1 MB for
+	// asynchronous EXECUTION (Event invocationType), CHAINED_INVOKE , CONTEXT , STEP ,
+	// WAIT , and CALLBACK operations.
 	Payload *string
 
 	// Options for step operations.
@@ -6109,6 +6516,64 @@ func (v *OperationUpdate) Deserialize(d smithy.ShapeDeserializer) error {
 	})
 }
 
+// Details about a [durable execution] that is pausing or paused.
+//
+// [durable execution]: https://docs.aws.amazon.com/lambda/latest/dg/durable-functions.html
+type PauseDetails struct {
+
+	// Specifies whether the pause also pauses the execution timeout.
+	//
+	// This member is required.
+	ExecutionTimeoutPaused *bool
+
+	// The date and time when you requested the pause, in [ISO-8601 format] (YYYY-MM-DDThh:mm:ss.sTZD).
+	//
+	// [ISO-8601 format]: https://www.w3.org/TR/NOTE-datetime
+	//
+	// This member is required.
+	PauseRequestTimestamp *time.Time
+
+	// The reason that you provided when you paused the execution. This field is only
+	// present if you set IncludeExecutionData to true in the request.
+	Reason *string
+
+	noSmithyDocumentSerde
+}
+
+func (v *PauseDetails) Serialize(s smithy.ShapeSerializer) {
+	s.WriteStruct(schemas.PauseDetails)
+	v.SerializeMembers(s)
+	s.CloseStruct()
+}
+
+func (v *PauseDetails) SerializeMembers(s smithy.ShapeSerializer) {
+	if v.ExecutionTimeoutPaused != nil {
+		s.WriteBool(schemas.PauseDetails_ExecutionTimeoutPaused, *v.ExecutionTimeoutPaused)
+	}
+	if v.PauseRequestTimestamp != nil {
+		s.WriteTime(schemas.PauseDetails_PauseRequestTimestamp, *v.PauseRequestTimestamp)
+	}
+	if v.Reason != nil {
+		s.WriteString(schemas.PauseDetails_Reason, *v.Reason)
+	}
+}
+func (v *PauseDetails) Deserialize(d smithy.ShapeDeserializer) error {
+	return smithy.ReadStruct(d, schemas.PauseDetails, func(s *smithy.Schema) error {
+		switch s {
+		case schemas.PauseDetails_ExecutionTimeoutPaused:
+			v.ExecutionTimeoutPaused = new(bool)
+			return d.ReadBool(schemas.PauseDetails_ExecutionTimeoutPaused, v.ExecutionTimeoutPaused)
+		case schemas.PauseDetails_PauseRequestTimestamp:
+			v.PauseRequestTimestamp = new(time.Time)
+			return d.ReadTime(schemas.PauseDetails_PauseRequestTimestamp, v.PauseRequestTimestamp)
+		case schemas.PauseDetails_Reason:
+			v.Reason = new(string)
+			return d.ReadString(schemas.PauseDetails_Reason, v.Reason)
+		}
+		return nil
+	})
+}
+
 // Configuration for tag propagation to managed resources launched by the capacity
 // provider.
 type PropagateTags struct {
@@ -6131,7 +6596,9 @@ func (v *PropagateTags) Serialize(s smithy.ShapeSerializer) {
 }
 
 func (v *PropagateTags) SerializeMembers(s smithy.ShapeSerializer) {
-	serializeTags(s, schemas.PropagateTags_ExplicitTags, v.ExplicitTags)
+	if v.ExplicitTags != nil {
+		serializeTags(s, schemas.PropagateTags_ExplicitTags, v.ExplicitTags)
+	}
 	if v.Mode != "" {
 		s.WriteString(schemas.PropagateTags_Mode, string(v.Mode))
 	}
@@ -6583,7 +7050,9 @@ func (v *SelfManagedEventSource) Serialize(s smithy.ShapeSerializer) {
 }
 
 func (v *SelfManagedEventSource) SerializeMembers(s smithy.ShapeSerializer) {
-	serializeEndpoints(s, schemas.SelfManagedEventSource_Endpoints, v.Endpoints)
+	if v.Endpoints != nil {
+		serializeEndpoints(s, schemas.SelfManagedEventSource_Endpoints, v.Endpoints)
+	}
 }
 func (v *SelfManagedEventSource) Deserialize(d smithy.ShapeDeserializer) error {
 	return smithy.ReadStruct(d, schemas.SelfManagedEventSource, func(s *smithy.Schema) error {
@@ -6606,6 +7075,26 @@ type SelfManagedKafkaEventSourceConfig struct {
 	// [Customizable consumer group ID]: https://docs.aws.amazon.com/lambda/latest/dg/with-kafka-process.html#services-smaa-topic-add
 	ConsumerGroupId *string
 
+	// The mode that Lambda uses to consume records from your self-managed Apache
+	// Kafka topic. Valid values are the following:
+	//
+	//   - Stream (default) – Lambda consumes records using a Kafka consumer group and
+	//   preserves the order of records within each partition.
+	//
+	//   - Queue – Lambda consumes records using a Kafka share group. Multiple
+	//   consumers can process records from the same partition concurrently, so Lambda
+	//   doesn't preserve per-partition order. To use Queue mode, your cluster must run
+	//   Apache Kafka version 4.2 or later with share groups enabled.
+	//
+	// If you omit this parameter, Lambda uses Stream .
+	//
+	// You cannot change ConsumptionMode after you create the event source mapping. To
+	// use a different consumption mode, create a new event source mapping.
+	//
+	// When ConsumptionMode is Queue , the StartingPosition , StartingPositionTimestamp
+	// , and MaximumBatchingWindowInSeconds parameters are not supported.
+	ConsumptionMode KafkaEventSourceMappingConsumptionMode
+
 	// Specific configuration settings for a Kafka schema registry.
 	SchemaRegistryConfig *KafkaSchemaRegistryConfig
 
@@ -6622,6 +7111,9 @@ func (v *SelfManagedKafkaEventSourceConfig) SerializeMembers(s smithy.ShapeSeria
 	if v.ConsumerGroupId != nil {
 		s.WriteString(schemas.SelfManagedKafkaEventSourceConfig_ConsumerGroupId, *v.ConsumerGroupId)
 	}
+	if v.ConsumptionMode != "" {
+		s.WriteString(schemas.SelfManagedKafkaEventSourceConfig_ConsumptionMode, string(v.ConsumptionMode))
+	}
 	if v.SchemaRegistryConfig != nil {
 		s.WriteStruct(schemas.SelfManagedKafkaEventSourceConfig_SchemaRegistryConfig)
 		v.SchemaRegistryConfig.SerializeMembers(s)
@@ -6634,6 +7126,13 @@ func (v *SelfManagedKafkaEventSourceConfig) Deserialize(d smithy.ShapeDeserializ
 		case schemas.SelfManagedKafkaEventSourceConfig_ConsumerGroupId:
 			v.ConsumerGroupId = new(string)
 			return d.ReadString(schemas.SelfManagedKafkaEventSourceConfig_ConsumerGroupId, v.ConsumerGroupId)
+		case schemas.SelfManagedKafkaEventSourceConfig_ConsumptionMode:
+			var ev string
+			if err := d.ReadString(schemas.SelfManagedKafkaEventSourceConfig_ConsumptionMode, &ev); err != nil {
+				return err
+			}
+			v.ConsumptionMode = KafkaEventSourceMappingConsumptionMode(ev)
+			return nil
 		case schemas.SelfManagedKafkaEventSourceConfig_SchemaRegistryConfig:
 			v.SchemaRegistryConfig = &KafkaSchemaRegistryConfig{}
 			return v.SchemaRegistryConfig.Deserialize(d)
@@ -7329,8 +7828,12 @@ func (v *VpcConfig) SerializeMembers(s smithy.ShapeSerializer) {
 	if v.Ipv6AllowedForDualStack != nil {
 		s.WriteBool(schemas.VpcConfig_Ipv6AllowedForDualStack, *v.Ipv6AllowedForDualStack)
 	}
-	serializeSecurityGroupIds(s, schemas.VpcConfig_SecurityGroupIds, v.SecurityGroupIds)
-	serializeSubnetIds(s, schemas.VpcConfig_SubnetIds, v.SubnetIds)
+	if v.SecurityGroupIds != nil {
+		serializeSecurityGroupIds(s, schemas.VpcConfig_SecurityGroupIds, v.SecurityGroupIds)
+	}
+	if v.SubnetIds != nil {
+		serializeSubnetIds(s, schemas.VpcConfig_SubnetIds, v.SubnetIds)
+	}
 }
 func (v *VpcConfig) Deserialize(d smithy.ShapeDeserializer) error {
 	return smithy.ReadStruct(d, schemas.VpcConfig, func(s *smithy.Schema) error {
@@ -7376,8 +7879,12 @@ func (v *VpcConfigResponse) SerializeMembers(s smithy.ShapeSerializer) {
 	if v.Ipv6AllowedForDualStack != nil {
 		s.WriteBool(schemas.VpcConfigResponse_Ipv6AllowedForDualStack, *v.Ipv6AllowedForDualStack)
 	}
-	serializeSecurityGroupIds(s, schemas.VpcConfigResponse_SecurityGroupIds, v.SecurityGroupIds)
-	serializeSubnetIds(s, schemas.VpcConfigResponse_SubnetIds, v.SubnetIds)
+	if v.SecurityGroupIds != nil {
+		serializeSecurityGroupIds(s, schemas.VpcConfigResponse_SecurityGroupIds, v.SecurityGroupIds)
+	}
+	if v.SubnetIds != nil {
+		serializeSubnetIds(s, schemas.VpcConfigResponse_SubnetIds, v.SubnetIds)
+	}
 	if v.VpcId != nil {
 		s.WriteString(schemas.VpcConfigResponse_VpcId, *v.VpcId)
 	}
@@ -7467,7 +7974,7 @@ func (v *WaitDetails) Deserialize(d smithy.ShapeDeserializer) error {
 	})
 }
 
-// Specifies how long to pause the durable execution.
+// Specifies how long the durable execution waits.
 type WaitOptions struct {
 
 	// The duration to wait, in seconds.

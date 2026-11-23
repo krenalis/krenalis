@@ -61,6 +61,9 @@ type UpdateFunctionConfigurationInput struct {
 	// This member is required.
 	FunctionName *string
 
+	// The accelerator resource settings for a Lambda execution environment.
+	AcceleratorConfig *types.AcceleratorConfig
+
 	// Configuration for the capacity provider that manages compute resources for
 	// Lambda functions.
 	CapacityProviderConfig *types.CapacityProviderConfig
@@ -87,7 +90,8 @@ type UpdateFunctionConfigurationInput struct {
 	Environment *types.Environment
 
 	// The size of the function's /tmp directory in MB. The default value is 512, but
-	// can be any whole number between 512 and 10,240 MB. For more information, see [Configuring ephemeral storage (console)].
+	// can be any whole number between 512 and 10,240 MB. For functions that use
+	// AcceleratorConfig , the maximum is 32,768 MB. For more information, see [Configuring ephemeral storage (console)].
 	//
 	// [Configuring ephemeral storage (console)]: https://docs.aws.amazon.com/lambda/latest/dg/configuration-function-common.html#configuration-ephemeral-storage
 	EphemeralStorage *types.EphemeralStorage
@@ -173,6 +177,10 @@ type UpdateFunctionConfigurationInput struct {
 	// [Supported runtimes]: https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtimes.html#runtimes-supported
 	Runtime types.Runtime
 
+	// The customer-managed runtime configuration for your function. Specifies the
+	// customer-managed runtime and the runtime alias that your function uses.
+	RuntimeConfig *types.FunctionRuntimeConfig
+
 	// The function's [SnapStart] setting.
 	//
 	// [SnapStart]: https://docs.aws.amazon.com/lambda/latest/dg/snapstart.html
@@ -211,6 +219,11 @@ func (v *UpdateFunctionConfigurationInput) Serialize(s smithy.ShapeSerializer) {
 }
 
 func (v *UpdateFunctionConfigurationInput) SerializeMembers(s smithy.ShapeSerializer) {
+	if v.AcceleratorConfig != nil {
+		s.WriteStruct(schemas.UpdateFunctionConfigurationRequest_AcceleratorConfig)
+		v.AcceleratorConfig.SerializeMembers(s)
+		s.CloseStruct()
+	}
 	if v.CapacityProviderConfig != nil {
 		s.WriteStruct(schemas.UpdateFunctionConfigurationRequest_CapacityProviderConfig)
 		v.CapacityProviderConfig.SerializeMembers(s)
@@ -239,7 +252,9 @@ func (v *UpdateFunctionConfigurationInput) SerializeMembers(s smithy.ShapeSerial
 		v.EphemeralStorage.SerializeMembers(s)
 		s.CloseStruct()
 	}
-	serializeFileSystemConfigList(s, schemas.UpdateFunctionConfigurationRequest_FileSystemConfigs, v.FileSystemConfigs)
+	if v.FileSystemConfigs != nil {
+		serializeFileSystemConfigList(s, schemas.UpdateFunctionConfigurationRequest_FileSystemConfigs, v.FileSystemConfigs)
+	}
 	if v.FunctionName != nil {
 		s.WriteString(schemas.UpdateFunctionConfigurationRequest_FunctionName, *v.FunctionName)
 	}
@@ -254,7 +269,9 @@ func (v *UpdateFunctionConfigurationInput) SerializeMembers(s smithy.ShapeSerial
 	if v.KMSKeyArn != nil {
 		s.WriteString(schemas.UpdateFunctionConfigurationRequest_KMSKeyArn, *v.KMSKeyArn)
 	}
-	serializeLayerList(s, schemas.UpdateFunctionConfigurationRequest_Layers, v.Layers)
+	if v.Layers != nil {
+		serializeLayerList(s, schemas.UpdateFunctionConfigurationRequest_Layers, v.Layers)
+	}
 	if v.LoggingConfig != nil {
 		s.WriteStruct(schemas.UpdateFunctionConfigurationRequest_LoggingConfig)
 		v.LoggingConfig.SerializeMembers(s)
@@ -271,6 +288,11 @@ func (v *UpdateFunctionConfigurationInput) SerializeMembers(s smithy.ShapeSerial
 	}
 	if v.Runtime != "" {
 		s.WriteString(schemas.UpdateFunctionConfigurationRequest_Runtime, string(v.Runtime))
+	}
+	if v.RuntimeConfig != nil {
+		s.WriteStruct(schemas.UpdateFunctionConfigurationRequest_RuntimeConfig)
+		v.RuntimeConfig.SerializeMembers(s)
+		s.CloseStruct()
 	}
 	if v.SnapStart != nil {
 		s.WriteStruct(schemas.UpdateFunctionConfigurationRequest_SnapStart)
@@ -294,6 +316,9 @@ func (v *UpdateFunctionConfigurationInput) SerializeMembers(s smithy.ShapeSerial
 
 // Details about a function's configuration.
 type UpdateFunctionConfigurationOutput struct {
+
+	// The accelerator resource settings for a Lambda execution environment.
+	AcceleratorConfig *types.AcceleratorConfig
 
 	// The instruction set architecture that the function supports. Architecture is a
 	// string array with one of the valid values. The default architecture value is
@@ -329,7 +354,8 @@ type UpdateFunctionConfigurationOutput struct {
 	Environment *types.EnvironmentResponse
 
 	// The size of the function's /tmp directory in MB. The default value is 512, but
-	// can be any whole number between 512 and 10,240 MB. For more information, see [Configuring ephemeral storage (console)].
+	// can be any whole number between 512 and 10,240 MB. For functions that use
+	// AcceleratorConfig , the maximum is 32,768 MB. For more information, see [Configuring ephemeral storage (console)].
 	//
 	// [Configuring ephemeral storage (console)]: https://docs.aws.amazon.com/lambda/latest/dg/configuration-function-common.html#configuration-ephemeral-storage
 	EphemeralStorage *types.EphemeralStorage
@@ -432,6 +458,10 @@ type UpdateFunctionConfigurationOutput struct {
 	// [Supported runtimes]: https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtimes.html#runtimes-supported
 	Runtime types.Runtime
 
+	// The customer-managed runtime configuration for your function. Specifies the
+	// customer-managed runtime and the runtime alias that your function uses.
+	RuntimeConfig *types.FunctionRuntimeConfig
+
 	// The ARN of the runtime and any errors that occured.
 	RuntimeVersionConfig *types.RuntimeVersionConfig
 
@@ -489,7 +519,14 @@ func (v *UpdateFunctionConfigurationOutput) Serialize(s smithy.ShapeSerializer) 
 }
 
 func (v *UpdateFunctionConfigurationOutput) SerializeMembers(s smithy.ShapeSerializer) {
-	serializeArchitecturesList(s, schemas.FunctionConfiguration_Architectures, v.Architectures)
+	if v.AcceleratorConfig != nil {
+		s.WriteStruct(schemas.FunctionConfiguration_AcceleratorConfig)
+		v.AcceleratorConfig.SerializeMembers(s)
+		s.CloseStruct()
+	}
+	if v.Architectures != nil {
+		serializeArchitecturesList(s, schemas.FunctionConfiguration_Architectures, v.Architectures)
+	}
 	if v.CapacityProviderConfig != nil {
 		s.WriteStruct(schemas.FunctionConfiguration_CapacityProviderConfig)
 		v.CapacityProviderConfig.SerializeMembers(s)
@@ -527,7 +564,9 @@ func (v *UpdateFunctionConfigurationOutput) SerializeMembers(s smithy.ShapeSeria
 		v.EphemeralStorage.SerializeMembers(s)
 		s.CloseStruct()
 	}
-	serializeFileSystemConfigList(s, schemas.FunctionConfiguration_FileSystemConfigs, v.FileSystemConfigs)
+	if v.FileSystemConfigs != nil {
+		serializeFileSystemConfigList(s, schemas.FunctionConfiguration_FileSystemConfigs, v.FileSystemConfigs)
+	}
 	if v.FunctionArn != nil {
 		s.WriteString(schemas.FunctionConfiguration_FunctionArn, *v.FunctionArn)
 	}
@@ -557,7 +596,9 @@ func (v *UpdateFunctionConfigurationOutput) SerializeMembers(s smithy.ShapeSeria
 	if v.LastUpdateStatusReasonCode != "" {
 		s.WriteString(schemas.FunctionConfiguration_LastUpdateStatusReasonCode, string(v.LastUpdateStatusReasonCode))
 	}
-	serializeLayersReferenceList(s, schemas.FunctionConfiguration_Layers, v.Layers)
+	if v.Layers != nil {
+		serializeLayersReferenceList(s, schemas.FunctionConfiguration_Layers, v.Layers)
+	}
 	if v.LoggingConfig != nil {
 		s.WriteStruct(schemas.FunctionConfiguration_LoggingConfig)
 		v.LoggingConfig.SerializeMembers(s)
@@ -580,6 +621,11 @@ func (v *UpdateFunctionConfigurationOutput) SerializeMembers(s smithy.ShapeSeria
 	}
 	if v.Runtime != "" {
 		s.WriteString(schemas.FunctionConfiguration_Runtime, string(v.Runtime))
+	}
+	if v.RuntimeConfig != nil {
+		s.WriteStruct(schemas.FunctionConfiguration_RuntimeConfig)
+		v.RuntimeConfig.SerializeMembers(s)
+		s.CloseStruct()
 	}
 	if v.RuntimeVersionConfig != nil {
 		s.WriteStruct(schemas.FunctionConfiguration_RuntimeVersionConfig)
@@ -631,6 +677,9 @@ func (v *UpdateFunctionConfigurationOutput) SerializeMembers(s smithy.ShapeSeria
 func (v *UpdateFunctionConfigurationOutput) Deserialize(d smithy.ShapeDeserializer) error {
 	return smithy.ReadStruct(d, schemas.FunctionConfiguration, func(s *smithy.Schema) error {
 		switch s {
+		case schemas.FunctionConfiguration_AcceleratorConfig:
+			v.AcceleratorConfig = &types.AcceleratorConfig{}
+			return v.AcceleratorConfig.Deserialize(d)
 		case schemas.FunctionConfiguration_Architectures:
 			return deserializeArchitecturesList(d, schemas.FunctionConfiguration_Architectures, &v.Architectures)
 		case schemas.FunctionConfiguration_CapacityProviderConfig:
@@ -727,6 +776,9 @@ func (v *UpdateFunctionConfigurationOutput) Deserialize(d smithy.ShapeDeserializ
 			}
 			v.Runtime = types.Runtime(ev)
 			return nil
+		case schemas.FunctionConfiguration_RuntimeConfig:
+			v.RuntimeConfig = &types.FunctionRuntimeConfig{}
+			return v.RuntimeConfig.Deserialize(d)
 		case schemas.FunctionConfiguration_RuntimeVersionConfig:
 			v.RuntimeVersionConfig = &types.RuntimeVersionConfig{}
 			return v.RuntimeVersionConfig.Deserialize(d)

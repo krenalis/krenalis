@@ -1,7 +1,7 @@
 import React, { ReactNode, useContext } from 'react';
 import './Organization.css';
 import ListTile from '../../base/ListTile/ListTile';
-import SlIcon from '@shoelace-style/shoelace/dist/react/icon/index.js';
+import WaIcon from '@awesome.me/webawesome/dist/react/icon/index.js';
 import { Link } from '../../base/Link/Link';
 import { Outlet, useLocation } from 'react-router-dom';
 import appContext from '../../../context/AppContext';
@@ -23,11 +23,11 @@ const Organization = () => {
 				<Link path='organization/access-keys'>
 					<ListTile
 						className='organization__entry'
-						icon={<SlIcon name='key' />}
+						icon={<WaIcon name='key' />}
 						name={'API and MCP keys'}
 						description='View and modify your API and MCP keys'
 						showHover={true}
-						action={<SlIcon name='chevron-right' />}
+						action={<WaIcon name='chevron-right' />}
 					/>
 				</Link>
 			</>
@@ -60,11 +60,11 @@ const MembersLink = () => {
 		<Link path='organization/members'>
 			<ListTile
 				className='organization__entry'
-				icon={<SlIcon name='people' />}
+				icon={<WaIcon name='people' />}
 				name={'Team members'}
 				description='View and modify your team members'
 				showHover={true}
-				action={<SlIcon name='chevron-right' />}
+				action={<WaIcon name='chevron-right' />}
 			/>
 		</Link>
 	);

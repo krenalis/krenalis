@@ -1122,8 +1122,8 @@ func (d *decoder) decodeContextSection(section *contextSection) (map[string]any,
 			}
 			d, err := decimal.Float64(f, typ.Precision(), typ.Scale())
 			if err != nil {
-				return nil, errors.BadRequest("property 'context.%s.%s' exceeds the allowed precision of %d",
-					section.name, name, typ.Precision())
+				return nil, errors.BadRequest("property 'context.%s.%s' cannot be represented as decimal(%d,%d)",
+					section.name, name, typ.Precision(), typ.Scale())
 			}
 			if d.Sign() == 0 {
 				continue

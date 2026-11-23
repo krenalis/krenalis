@@ -3,9 +3,10 @@
 
 services:
   krenalis:
-    image: krenalis/krenalis:v0.46.0
+    image: krenalis/krenalis:v0.48.0
     command: -init-db-if-empty -init-docker-member
     restart: on-failure
+    stop_grace_period: 30s # the 10s default may cut the shutdown short
     ports:
       - ${KRENALIS_DOCKER_COMPOSE_PORT-2022}:2022
     environment:
@@ -35,6 +36,27 @@ services:
       KRENALIS_TRANSFORMERS_LOCAL_DOAS_USER: transformeruser
       KRENALIS_CONNECTOR_FILESYSTEM_ROOT: /var/krenalis/storage
       KRENALIS_CONNECTOR_FILESYSTEM_DISPLAYED_ROOT: ${PWD}/storage
+
+      # Optional variables, passed to Krenalis only when set in the shell or
+      # in the '.env' file. They must be listed here to reach the container.
+      KRENALIS_INVITE_MEMBERS_VIA_EMAIL:
+      KRENALIS_MEMBER_EMAIL_FROM:
+      KRENALIS_SMTP_HOST:
+      KRENALIS_SMTP_PORT:
+      KRENALIS_SMTP_USERNAME:
+      KRENALIS_SMTP_PASSWORD:
+      KRENALIS_MAXMIND_DB_PATH:
+      KRENALIS_TELEMETRY_LEVEL:
+      KRENALIS_TRANSFORMERS_AWS_LAMBDA_ROLE:
+      KRENALIS_TRANSFORMERS_AWS_LAMBDA_NODEJS_RUNTIME:
+      KRENALIS_TRANSFORMERS_AWS_LAMBDA_NODEJS_LAYER:
+      KRENALIS_TRANSFORMERS_AWS_LAMBDA_PYTHON_RUNTIME:
+      KRENALIS_TRANSFORMERS_AWS_LAMBDA_PYTHON_LAYER:
+      AWS_REGION:
+      AWS_DEFAULT_REGION:
+      AWS_ACCESS_KEY_ID:
+      AWS_SECRET_ACCESS_KEY:
+      AWS_SESSION_TOKEN:
 
     volumes:
       - ./storage:/var/krenalis/storage

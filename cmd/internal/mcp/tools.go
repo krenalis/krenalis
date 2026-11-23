@@ -130,7 +130,7 @@ var tools = []server.ServerTool{
 			if err != nil {
 				return nil, err
 			}
-			schemaInfo := profileSchemaInfoForMCPClient(ws.ProfileSchema, ws.ColumnTypeDescription)
+			schemaInfo := profileSchemaInfoForMCPClient(ws.ProfileSchema.Schema, ws.ColumnTypeDescription)
 			encoded, err := json.Marshal(schemaInfo)
 			if err != nil {
 				return nil, err

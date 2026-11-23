@@ -8,9 +8,10 @@ import { RelativeTime } from '../../RelativeTime/RelativeTime';
 interface GridCellProps {
 	cell: GridCellInterface;
 	className?: string;
+	isInteractiveGrid?: boolean;
 }
 
-const GridCell = ({ cell, className }: GridCellProps) => {
+const GridCell = ({ cell, className, isInteractiveGrid }: GridCellProps) => {
 	let value;
 	switch (cell.type) {
 		case 'json':
@@ -41,7 +42,10 @@ const GridCell = ({ cell, className }: GridCellProps) => {
 	}
 
 	return (
-		<div className={`${className}${cell.alignment != null ? ` grid__cell--${cell.alignment}` : ''}`}>
+		<div
+			role={isInteractiveGrid ? 'gridcell' : undefined}
+			className={`${className}${cell.alignment != null ? ` grid__cell--${cell.alignment}` : ''}`}
+		>
 			<div className='grid__cell-content'>
 				{cell.type === 'object' ? (
 					<span className='grid__cell-content-object'> {value}</span>

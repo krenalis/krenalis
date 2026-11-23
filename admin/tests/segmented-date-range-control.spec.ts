@@ -33,6 +33,8 @@ test('limits calendar and editable input selections without losing focus', async
 	await expect(output).toHaveText('2026-08-21:2026-08-21');
 	await expect(inputs.first()).toBeFocused();
 
+	// A new document, as Web Awesome cannot define its elements twice.
+	await page.goto('about:blank');
 	await page.setContent('<div id="root"></div>');
 	await page.addScriptTag({ content: componentScript });
 	await expect(page.getByTestId('limited')).toBeAttached();

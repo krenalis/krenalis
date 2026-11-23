@@ -17,14 +17,20 @@ import (
 	"time"
 )
 
+// goTestFlags are the flags passed to every 'go test' invocation.
+var goTestFlags = []string{
+	"-count",
+	"1",
+	"-failfast",
+	// It is important to specify a timeout, because otherwise 'go test'
+	// has a default timeout of 10 minutes (see 'go help testflag'),
+	// which may not be sufficient to run all the tests inside "/test".
+	"--timeout=2h",
+}
+
 func main() {
 
 	cliOptions := parseCli()
-
-	if cliOptions.justTestAdmin {
-		runGoTestAdmin()
-		os.Exit(0)
-	}
 
 	// The KRENALIS_SKIP_SNOWFLAKE_TESTS environment variable is set internally
 	// by this script when -no-snowflake-tests is used. It must not be set
@@ -38,14 +44,15 @@ func main() {
 
 	start := time.Now()
 
-	// Find modules and packages in the current working directory, then ensure
-	// that the script has been launched with the correct working directory.
-	modules, packages := findModulesPackages(".")
-	for _, mod := range []string{"."} { // just some random modules in the repository (currently we have just one).
-		if !slices.Contains(modules, mod) {
-			fatal("module %q was expected in the repository but not found, maybe because you ran this script incorrectly or this script is out-of-date", mod)
-		}
+	// Find the packages of the root module, then ensure that the script has
+	// been launched with the correct working directory. Other modules in the
+	// repository, such as ignored local ones, are not considered.
+	_, err := os.Stat("go.mod")
+	if err != nil {
+		fatal("root module was expected in the current working directory but not found, maybe because"+
+			" you ran this script incorrectly or this script is out-of-date: %s", err)
 	}
+	packages := findPackages(".")
 	for _, pkg := range []string{"core", "connectors", "warehouses"} { // just some random top-level packages in the repository.
 		if !slices.Contains(packages, pkg) {
 			fatal("package %q was expected in the repository but not found, maybe because you ran this script incorrectly or this script is out-of-date", pkg)
@@ -58,40 +65,39 @@ func main() {
 		fatal("cannot read the current working directory: %s", err)
 	}
 
-	// Tidy modules.
-	fmt.Println("Tidy modules")
-	for _, module := range modules {
-		removeGoSum(repo, module)
-		NewCmd("go", "mod", "tidy").InDir(repo, module).Run()
+	if cliOptions.justTestAdmin {
+		runGoTestAdmin(repo)
+		fmt.Printf("\nDone! (took ~%v)\n", time.Since(start).Round(time.Second))
+		os.Exit(0)
 	}
 
-	// Go-fix modules.
-	fmt.Println("Go-fixing modules")
-	for _, module := range modules {
-		// Call the command 3 times, because some fixes are applied in
-		// subsequent calls. 3 is a reasonable number to most likely perform all
-		// the necessary fixes.
-		for range 3 {
-			NewCmd("go", "fix", "./...").InDir(repo, module).Run()
-		}
+	// Tidy the module.
+	fmt.Println("Tidy the module")
+	removeGoSum(repo)
+	NewCmd("go", "mod", "tidy").InDir(repo).Run()
+
+	// Go-fix the module.
+	fmt.Println("Go-fixing the module")
+	// Call the command 3 times, because some fixes are applied in subsequent
+	// calls. 3 is a reasonable number to most likely perform all the necessary
+	// fixes.
+	for range 3 {
+		NewCmd("go", "fix", "./...").InDir(repo).Run()
 	}
 
-	// Format modules.
-	fmt.Println("Format modules")
-	for _, module := range modules {
-		NewCmd("go", "fmt", "./...").InDir(repo, module).Run()
-	}
+	// Format the module.
+	fmt.Println("Format the module")
+	NewCmd("go", "fmt", "./...").InDir(repo).Run()
 
-	// Running 'go vet' on every module.
-	fmt.Println("Running 'go vet' on every module")
-	for _, module := range modules {
-		NewCmd("go", "vet", "./...").InDir(repo, module).Run()
-	}
+	// Running 'go vet' on the module.
+	fmt.Println("Running 'go vet' on the module")
+	NewCmd("go", "vet", "./...").InDir(repo).Run()
 
 	// Update the Go vendor.
 	NewCmd("go", "mod", "vendor").InDir(repo).Run()
 
 	// Run checks and do operations on the Admin.
+	// Keep the commands that regenerate the Admin files in sync with runGoTestAdmin.
 	fmt.Println("Run checks and do operations on the Admin")
 	NewCmd("npm", "ci").InDir(repo, "admin").Run()
 	NewCmd("npm", "run", "prettier").InDir(repo, "admin").Run()
@@ -108,29 +114,39 @@ func main() {
 	// Run Go tests.
 	if runGoTests := !cliOptions.noGoTest; runGoTests {
 		fmt.Println("Run Go tests")
-		args := []string{
-			"test",
-			"-count",
-			"1",
-			"-failfast",
-			"-v",
-			// It is important to specify a timeout, because otherwise 'go test'
-			// has a default timeout of 10 minutes (see 'go help testflag'),
-			// which may not be sufficient to run all the tests inside "/test".
-			"--timeout=2h",
-		}
+		args := append([]string{"test"}, goTestFlags...)
 		if cliOptions.short {
 			args = append(args, "-short")
 		}
-		for _, pkg := range packages {
-			if cliOptions.noConnectorTests && strings.HasPrefix(pkg, "connectors"+string(os.PathSeparator)) {
-				continue // skip this package.
+		if cliOptions.concurrent {
+			// Test all the packages with a single 'go test' command, without -v
+			// to minimize noise in the output.
+			var pkgPaths []string
+			for _, pkg := range packages {
+				if cliOptions.noConnectorTests && strings.HasPrefix(pkg, "connectors"+string(os.PathSeparator)) {
+					continue // skip this package.
+				}
+				pkgPaths = append(pkgPaths, "./"+filepath.ToSlash(pkg))
 			}
-			cmd := NewCmd("go", args...).InDir(repo, pkg)
+			cmd := NewCmd("go", append(args, pkgPaths...)...).InDir(repo)
 			if cliOptions.noSnowflakeTests {
 				cmd = cmd.WithEnv("KRENALIS_SKIP_SNOWFLAKE_TESTS", "true")
 			}
 			cmd.Run()
+		} else {
+			// Test the packages one at a time; since they run sequentially, the
+			// output printed by -v is convenient and informative.
+			args = append(args, "-v")
+			for _, pkg := range packages {
+				if cliOptions.noConnectorTests && strings.HasPrefix(pkg, "connectors"+string(os.PathSeparator)) {
+					continue // skip this package.
+				}
+				cmd := NewCmd("go", args...).InDir(repo, pkg)
+				if cliOptions.noSnowflakeTests {
+					cmd = cmd.WithEnv("KRENALIS_SKIP_SNOWFLAKE_TESTS", "true")
+				}
+				cmd.Run()
+			}
 		}
 	}
 
@@ -138,6 +154,7 @@ func main() {
 }
 
 type cliOptions struct {
+	concurrent       bool
 	justTestAdmin    bool
 	noConnectorTests bool
 	noSnowflakeTests bool
@@ -147,6 +164,7 @@ type cliOptions struct {
 
 func parseCli() cliOptions {
 
+	var concurrent bool
 	var justTestAdmin bool
 	var noGoTest bool
 	var printHelp bool
@@ -158,8 +176,10 @@ func parseCli() cliOptions {
 		" so some parts of the software and/or changes made may not be validated " +
 		"when running the script with this option"
 
-	flag.BoolVar(&justTestAdmin, "just-test-admin", false, "just run the Go tests on the Admin console. "+
-		reducedTestSetWarning)
+	flag.BoolVar(&concurrent, "concurrent", false, "run the Go test packages in parallel,"+
+		" with a single 'go test' command. Only the packages that fail print their output. Experimental")
+	flag.BoolVar(&justTestAdmin, "just-test-admin", false, "just regenerate the Admin files and run the Go tests"+
+		" on the Admin console. "+reducedTestSetWarning)
 	flag.BoolVar(&noConnectorTests, "no-connector-tests", false, "do not run 'go test' within the 'connectors' directory. "+reducedTestSetWarning)
 	flag.BoolVar(&noSnowflakeTests, "no-snowflake-tests", false, "skip Go tests that need a Snowflake environment. "+reducedTestSetWarning)
 	flag.BoolVar(&noGoTest, "no-go-test", false, "do not run 'go test' at all."+
@@ -196,15 +216,19 @@ func parseCli() cliOptions {
 	}
 
 	// Flags incompatible with '--just-test-admin'.
+	mutualExclusive(justTestAdmin, concurrent, "-just-test-admin", "-concurrent")
 	mutualExclusive(justTestAdmin, noConnectorTests, "-just-test-admin", "-no-connector-tests")
 	mutualExclusive(justTestAdmin, noGoTest, "-just-test-admin", "-no-go-test")
 	mutualExclusive(justTestAdmin, short, "-just-test-admin", "-short")
+	mutualExclusive(justTestAdmin, noSnowflakeTests, "-just-test-admin", "-no-snowflake-tests")
 	// Flags incompatible with '--no-go-test'.
+	mutualExclusive(noGoTest, concurrent, "-no-go-test", "-concurrent")
 	mutualExclusive(noGoTest, short, "-no-go-test", "-short")
 	mutualExclusive(noGoTest, noConnectorTests, "-no-go-test", "-no-connector-tests")
 	mutualExclusive(noGoTest, noSnowflakeTests, "-no-go-test", "-no-snowflake-tests")
 
 	return cliOptions{
+		concurrent:       concurrent,
 		justTestAdmin:    justTestAdmin,
 		noConnectorTests: noConnectorTests,
 		noSnowflakeTests: noSnowflakeTests,
@@ -213,10 +237,11 @@ func parseCli() cliOptions {
 	}
 }
 
-// findModulesPackages finds the Go modules and packages within the given dir.
-// Both the modules and packages are sorted in alphabetical order.
-// This function skips directories named "vendor".
-func findModulesPackages(dir string) (modules, packages []string) {
+// findPackages finds the Go packages of the module rooted at the given dir,
+// sorted in alphabetical order. This function skips directories named "vendor"
+// and the directories of other modules, which contain a "go.mod" file.
+func findPackages(dir string) []string {
+	var packages []string
 	err := filepath.Walk(dir, func(path string, fi fs.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -224,9 +249,15 @@ func findModulesPackages(dir string) (modules, packages []string) {
 		if fi.IsDir() && fi.Name() == "vendor" {
 			return filepath.SkipDir
 		}
-		// Module found.
-		if filepath.Base(path) == "go.mod" {
-			modules = append(modules, filepath.Dir(path))
+		// Other module found.
+		if fi.IsDir() && path != dir {
+			_, err := os.Stat(filepath.Join(path, "go.mod"))
+			if err == nil {
+				return filepath.SkipDir
+			}
+			if !errors.Is(err, fs.ErrNotExist) {
+				return err
+			}
 		}
 		// Package found.
 		if filepath.Ext(path) == ".go" {
@@ -238,11 +269,10 @@ func findModulesPackages(dir string) (modules, packages []string) {
 		return nil
 	})
 	if err != nil {
-		fatal("cannot read modules and packages in the repository: %s", err)
+		fatal("cannot read packages in the repository: %s", err)
 	}
-	slices.Sort(modules)
 	slices.Sort(packages)
-	return modules, packages
+	return packages
 }
 
 func logCmd(dir, cmd string) {
@@ -293,18 +323,23 @@ func fatal(msg string, args ...any) {
 	os.Exit(1)
 }
 
-func removeGoSum(repo, module string) {
-	logCmd(filepath.Join(repo, module), "rm go.sum")
-	err := os.Remove(filepath.Join(repo, module, "go.sum"))
+func removeGoSum(repo string) {
+	logCmd(repo, "rm go.sum")
+	err := os.Remove(filepath.Join(repo, "go.sum"))
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		fatal("cannot remove 'go.sum': %s", err)
 	}
 }
 
-// runGoTestAdmin runs Admin tests via go test.
-func runGoTestAdmin() {
+// runGoTestAdmin runs Admin tests via go test, after regenerating the Admin
+// files embedded in the Krenalis instance that the tests build.
+func runGoTestAdmin(repo string) {
+	// Keep in sync with the corresponding commands in the main function.
+	NewCmd("npm", "ci").InDir(repo, "admin").Run()
+	NewCmd("npm", "run", "minify-snippet").InDir(repo, "admin").Run()
+	NewCmd("npm", "run", "makevendor").InDir(repo, "admin").Run()
 	start := time.Now()
-	args := []string{"test", "-run", "^TestAdmin$", "github.com/krenalis/krenalis/test", "-count", "1", "-v"}
+	args := append([]string{"test", "-v", "-run", "^TestAdmin$", "github.com/krenalis/krenalis/test"}, goTestFlags...)
 	NewCmd("go", args...).Run()
 	elapsed := time.Since(start)
 	if elapsed < 2*time.Second {

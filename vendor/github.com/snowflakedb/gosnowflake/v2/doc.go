@@ -254,6 +254,8 @@ Alternatively, use OpenWithConfig() function to create a database handle with th
 
     When workloadIdentityProvider=AZURE, workloadIdentityEntraResource can be optionally set to customize entra resource used to fetch JWT token.
 
+    When workloadIdentityProvider=AZURE, workloadIdentityAzureClientId can be optionally set to the client id of a user-assigned managed identity. When unset, the MANAGED_IDENTITY_CLIENT_ID environment variable is used. The value is sent as client_id on the Azure IMDS and App Service identity requests, which is required when the VM has no system-assigned identity.
+
     When workloadIdentityProvider=GCP or AWS, workloadIdentityImpersonationPath can be optionally set to customize impersonation path. This is a comma separated list. For GCP the last parameter is a target service account and the rest are chained delegation. For AWS this is the list of role ARNs to assume.
 
     When workloadIdentityProvider=AWS, workloadIdentityHost can be optionally set to override the STS host, for endpoints that cannot be derived from the region. Accepts either a bare host (e.g., sts.example.com) or a full URL (e.g., https://sts.example.com); the default is the regional STS endpoint. The value must be an STS endpoint for the region the workload runs in: the SigV4 signing region is taken from the environment (e.g. AWS_REGION) and is not overridden, so an endpoint belonging to a different region is rejected. Note which side reaches the host - by default Snowflake calls it when replaying the attestation, whereas with workloadIdentityAwsUseOutboundToken the driver calls it directly, so a privately routed endpoint (such as an interface VPC endpoint) also requires that option. When workloadIdentityHost is set, FIPS and dualstack endpoint preferences no longer apply to STS.
@@ -1479,7 +1481,18 @@ conventions. Ensure that you specify path names appropriately. This is
 particularly important on Windows, which uses the backslash character as
 both an escape character and as a separator in path names.
 
-To send information from a stream (rather than a file) use code similar to the code below.
+To upload a reader as one stage object, use `SnowflakeConnection.UploadStream`.
+The destination name is a basename. Put directories in `UploadStreamConfig.DestPrefix`.
+The driver gzips by default and does not close `src`. Close `src` after `UploadStream` returns:
+
+	err = conn.Raw(func(x any) error {
+		sc := x.(SnowflakeConnection)
+		return sc.UploadStream(ctx, "@~", "data1.txt", src)
+	})
+
+Use `UploadStreamWithConfig` for `CompressionNone`, `MaxBuffer`, `SpillDir`, or `Overwrite`.
+
+`WithFilePutStream` still works but buffers the entire object in memory before uploading it. Prefer `UploadStream`.
 (The ReplaceAll() function is needed on Windows to handle backslashes in the path to the file.)
 
 	fileStream, _ := os.Open(fname)
@@ -1523,6 +1536,12 @@ To download a file as a stream, use `SnowflakeConnection.DownloadStream` via `da
 		_, err = io.Copy(dst, r)
 		return err
 	})
+
+The stage name can be an @-stage (for example `@~`, `@my_stage` or `@%my_table`; a missing "@" is added)
+or the `snow://` URL of an object's embedded stage, such as
+`snow://workspace/<db>.<schema>.<workspace>/versions/head`. A `snow://` URL is not prefixed with "@"
+and is sent as a single-quoted literal, so quoted identifiers inside it are preserved. For the URL
+format, see https://docs.snowflake.com/en/user-guide/ui-snowsight/workspaces-sql.
 
 Use `DownloadStreamWithConfig` to configure the download.
 

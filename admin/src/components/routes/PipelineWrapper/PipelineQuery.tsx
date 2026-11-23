@@ -7,9 +7,9 @@ import { CONFIRM_ANIMATION_DURATION, ERROR_ANIMATION_DURATION } from './Pipeline
 import { NotFoundError } from '../../../lib/api/errors';
 import PipelineContext from '../../../context/PipelineContext';
 import AppContext from '../../../context/AppContext';
-import SlButton from '@shoelace-style/shoelace/dist/react/button/index.js';
-import SlSpinner from '@shoelace-style/shoelace/dist/react/spinner/index.js';
-import SlDrawer from '@shoelace-style/shoelace/dist/react/drawer/index.js';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
+import WaSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
+import WaDrawer from '@awesome.me/webawesome/dist/react/drawer/index.js';
 import { GridColumn, GridRow } from '../../base/Grid/Grid.types';
 import { ExecQueryResponse } from '../../../lib/api/types/responses';
 import { Popover } from '../../base/Popover/Popover';
@@ -163,14 +163,9 @@ const PipelineQuery = () => {
 					onChange={onUpdateQuery}
 				/>
 				<div className='pipeline__query-buttons'>
-					<SlButton
-						className='pipeline__query-preview'
-						variant='neutral'
-						size='small'
-						onClick={onQueryPreview}
-					>
+					<WaButton className='pipeline__query-preview' variant='neutral' size='s' onClick={onQueryPreview}>
 						Preview
-					</SlButton>
+					</WaButton>
 					<FeedbackButton
 						ref={queryConfirmButtonRef}
 						className='pipeline__query-confirm'
@@ -187,12 +182,13 @@ const PipelineQuery = () => {
 					/>
 				</div>
 			</Section>
-			<SlDrawer
+			<WaDrawer
 				className='pipeline__query-preview-drawer'
 				open={queryPreviewColumns != null && queryPreviewRows != null}
-				onSlAfterShow={() => setShowPreview(true)}
-				onSlAfterHide={(e: any) => {
-					if (e.target.classList.contains('pipeline__issues')) {
+				lightDismiss
+				onWaAfterShow={() => setShowPreview(true)}
+				onWaAfterHide={(e: any) => {
+					if (e.target !== e.currentTarget) {
 						e.stopPropagation();
 						return;
 					}
@@ -225,16 +221,16 @@ const PipelineQuery = () => {
 						}
 					/>
 				) : (
-					<SlSpinner
+					<WaSpinner
 						style={
 							{
 								fontSize: '3rem',
 								'--track-width': '6px',
 							} as React.CSSProperties
 						}
-					></SlSpinner>
+					></WaSpinner>
 				)}
-			</SlDrawer>
+			</WaDrawer>
 		</>
 	);
 };

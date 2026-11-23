@@ -1,4 +1,4 @@
-.members sl-spinner {
+.members wa-spinner {
 	display: block;
 	margin: 20px auto;
 }
@@ -11,7 +11,7 @@
 	padding-left: 5px;
 }
 
-.members__back-button sl-icon {
+.members__back-button wa-icon {
 	position: relative;
 	top: 2px;
 }
@@ -43,9 +43,8 @@
 	grid-template-columns: 55px 1fr;
 }
 
-.members__member .list-tile__icon sl-avatar::part(base) {
-	width: 40px;
-	height: 40px;
+.members__member .list-tile__icon wa-avatar {
+	--size: 40px;
 }
 
 .members__member:last-child {
@@ -66,26 +65,26 @@
 	margin-bottom: 10px;
 }
 
-.members__invite-dialog sl-input {
+.members__invite-dialog wa-input {
 	margin-bottom: 15px;
 }
 
-.members__invite-dialog sl-input::part(form-control-label)::after {
-	color: var(--sl-color-danger-500);
+.members__invite-dialog wa-input::part(form-control-label)::after {
+	color: var(--wa-color-danger-50);
 }
 
 .members__invite-dialog-error {
-	color: var(--sl-color-danger-600);
+	color: var(--wa-color-danger-40);
 	display: flex;
 	align-items: center;
 	gap: 7px;
 }
 
-.members__invite-dialog-error sl-icon {
-	color: var(--sl-color-danger-600);
+.members__invite-dialog-error wa-icon {
+	color: var(--wa-color-danger-40);
 }
 
-.members__invite-dialog sl-button {
+.members__invite-dialog wa-button {
 	display: block;
 	margin: auto;
 	margin-top: 30px;

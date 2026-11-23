@@ -259,7 +259,7 @@
 }
 
 .connections-map__warehouse-content .little-logo > img,
-.connections-map__warehouse-content .little-logo sl-icon {
+.connections-map__warehouse-content .little-logo wa-icon {
 	width: 45px;
 	height: 45px;
 	object-fit: contain;
@@ -273,7 +273,7 @@
 
 .connections-map__database-subtitle {
 	margin-top: 2px;
-	color: var(--sl-color-neutral-500);
+	color: var(--wa-color-neutral-50);
 	font-size: 12px;
 	line-height: 1;
 }
@@ -307,7 +307,7 @@
 	font-size: 14px;
 	cursor: pointer;
 	will-change: transform;
-	border-bottom: 1px solid var(--sl-color-neutral-200);
+	border-bottom: 1px solid var(--wa-color-neutral-80);
 }
 
 .connections-map__sources > a:nth-last-child(2) .connection-block,
@@ -316,7 +316,7 @@
 }
 
 .connection-block[data-is-hovered='true'] {
-	background-color: var(--sl-color-primary-50);
+	background-color: var(--wa-color-brand-95);
 }
 
 @keyframes connection-block-fade-in {

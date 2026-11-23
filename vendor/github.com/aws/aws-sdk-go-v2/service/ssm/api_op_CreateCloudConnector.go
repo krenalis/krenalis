@@ -4,7 +4,9 @@ package ssm
 
 import (
 	"context"
+	"github.com/aws/aws-sdk-go-v2/service/ssm/schemas"
 	"github.com/aws/aws-sdk-go-v2/service/ssm/types"
+	smithy "github.com/aws/smithy-go"
 	"github.com/aws/smithy-go/middleware"
 )
 
@@ -27,12 +29,6 @@ func (c *Client) CreateCloudConnector(ctx context.Context, params *CreateCloudCo
 
 type CreateCloudConnectorInput struct {
 
-	// The ARN of the Amazon Web Services Config connector associated with this cloud
-	// connector.
-	//
-	// This member is required.
-	ConfigConnectorArn *string
-
 	// The configuration details for connecting to the third-party cloud environment.
 	//
 	// This member is required.
@@ -49,6 +45,11 @@ type CreateCloudConnectorInput struct {
 	// This member is required.
 	RoleArn *string
 
+	// The ARN of the Amazon Web Services Config connector to associate with this
+	// cloud connector. If you omit it, the cloud connector is created without Amazon
+	// Web Services Config integration.
+	ConfigConnectorArn *string
+
 	// A description for the cloud connector.
 	Description *string
 
@@ -57,6 +58,33 @@ type CreateCloudConnectorInput struct {
 	Tags []types.Tag
 
 	noSmithyDocumentSerde
+}
+
+func (v *CreateCloudConnectorInput) Serialize(s smithy.ShapeSerializer) {
+	s.WriteStruct(schemas.CreateCloudConnectorRequest)
+	v.SerializeMembers(s)
+	s.CloseStruct()
+}
+
+func (v *CreateCloudConnectorInput) SerializeMembers(s smithy.ShapeSerializer) {
+	if v.ConfigConnectorArn != nil {
+		s.WriteString(schemas.CreateCloudConnectorRequest_ConfigConnectorArn, *v.ConfigConnectorArn)
+	}
+	if v.Configuration != nil {
+		serializeCloudConnectorConfiguration(s, schemas.CreateCloudConnectorRequest_Configuration, v.Configuration)
+	}
+	if v.Description != nil {
+		s.WriteString(schemas.CreateCloudConnectorRequest_Description, *v.Description)
+	}
+	if v.DisplayName != nil {
+		s.WriteString(schemas.CreateCloudConnectorRequest_DisplayName, *v.DisplayName)
+	}
+	if v.RoleArn != nil {
+		s.WriteString(schemas.CreateCloudConnectorRequest_RoleArn, *v.RoleArn)
+	}
+	if v.Tags != nil {
+		serializeTagList(s, schemas.CreateCloudConnectorRequest_Tags, v.Tags)
+	}
 }
 
 type CreateCloudConnectorOutput struct {
@@ -70,13 +98,32 @@ type CreateCloudConnectorOutput struct {
 	noSmithyDocumentSerde
 }
 
+func (v *CreateCloudConnectorOutput) Serialize(s smithy.ShapeSerializer) {
+	s.WriteStruct(schemas.CreateCloudConnectorResult)
+	v.SerializeMembers(s)
+	s.CloseStruct()
+}
+
+func (v *CreateCloudConnectorOutput) SerializeMembers(s smithy.ShapeSerializer) {
+	if v.CloudConnectorId != nil {
+		s.WriteString(schemas.CreateCloudConnectorResult_CloudConnectorId, *v.CloudConnectorId)
+	}
+}
+func (v *CreateCloudConnectorOutput) Deserialize(d smithy.ShapeDeserializer) error {
+	return smithy.ReadStruct(d, schemas.CreateCloudConnectorResult, func(s *smithy.Schema) error {
+		switch s {
+		case schemas.CreateCloudConnectorResult_CloudConnectorId:
+			v.CloudConnectorId = new(string)
+			return d.ReadString(schemas.CreateCloudConnectorResult_CloudConnectorId, v.CloudConnectorId)
+		}
+		return nil
+	})
+}
 func (c *Client) addOperationCreateCloudConnectorMiddlewares(stack *middleware.Stack, options Options) (err error) {
-	err = stack.Serialize.Add(&awsAwsjson11_serializeOpCreateCloudConnector{}, middleware.After)
-	if err != nil {
+	if err := stack.Serialize.Add(&serializeRequestMiddleware{options: &options, operationSchema: smithy.NewOperationSchema(schemas.CreateCloudConnector, schemas.CreateCloudConnectorRequest, schemas.CreateCloudConnectorResult)}, middleware.After); err != nil {
 		return err
 	}
-	err = stack.Deserialize.Add(&awsAwsjson11_deserializeOpCreateCloudConnector{}, middleware.After)
-	if err != nil {
+	if err := stack.Deserialize.Add(&deserializeResponseMiddleware{options: &options, operationSchema: smithy.NewOperationSchema(schemas.CreateCloudConnector, schemas.CreateCloudConnectorRequest, schemas.CreateCloudConnectorResult), output: &CreateCloudConnectorOutput{}}, middleware.After); err != nil {
 		return err
 	}
 
