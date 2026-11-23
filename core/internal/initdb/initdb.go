@@ -2,6 +2,11 @@
 // Use of this source code is governed by an Elastic License 2.0
 // that can be found in the LICENSE file.
 
+// Package initdb initializes and upgrades Krenalis's PostgreSQL database: it
+// initializes an empty database, checks at startup that Krenalis can run on
+// the schema version of the database, and upgrades the database to a new
+// schema version, first migrating and then finalizing it. See
+// .agents/skills/release-upgrade/SKILL.md.
 package initdb
 
 import (
