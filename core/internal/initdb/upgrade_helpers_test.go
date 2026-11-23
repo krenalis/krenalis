@@ -5,7 +5,6 @@
 package initdb
 
 import (
-	"context"
 	"io/fs"
 	"os"
 	"path"
@@ -135,7 +134,7 @@ func loadTestState(t *testing.T, database *db.DB) {
 	if err != nil {
 		t.Fatalf("expected the state to be loaded, got error %q", err)
 	}
-	st.Close(context.Background())
+	st.Close(ctx)
 }
 
 // newBaseTestDatabase returns a test database with the schema of the base
