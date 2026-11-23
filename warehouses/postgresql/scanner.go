@@ -149,17 +149,12 @@ func (s *scanner) normalize(name string, typ types.Type, v any) (any, error) {
 			return ip, nil
 		}
 	case types.ArrayKind:
-		v, err := s.scanArray(v)
+		v, err := s.scanArray(name, typ, v)
 		if err != nil {
 			return nil, err
 		}
-		n := len(v)
-		if n < typ.MinElements() || n > typ.MaxElements() {
-			return nil, fmt.Errorf("data warehouse returned an array with %d elements for column %s, which is not within the expected range of [%d, %d]",
-				n, name, typ.MinElements(), typ.MaxElements())
-		}
 		t := typ.Elem()
-		for i := range n {
+		for i := range v {
 			v[i], err = s.normalize(name, t, v[i])
 			if err != nil {
 				return nil, err
@@ -177,7 +172,7 @@ func (s *scanner) normalize(name string, typ types.Type, v any) (any, error) {
 }
 
 // scanArray scans an array and returns the values.
-func (s *scanner) scanArray(src any) ([]any, error) {
+func (s *scanner) scanArray(name string, typ types.Type, src any) ([]any, error) {
 	data, ok := src.([]byte)
 	if !ok {
 		return nil, errors.New("PostgreSQL has returned an unexpected value type for an array")
@@ -187,6 +182,9 @@ func (s *scanner) scanArray(src any) ([]any, error) {
 		return nil, errInvalidData
 	}
 	dimensions := int(int32(binary.BigEndian.Uint32(data[:4])))
+	if dimensions < 0 {
+		return nil, errInvalidData
+	}
 	if dimensions > 1 {
 		return nil, errors.New("type is not supported")
 	}
@@ -198,6 +196,14 @@ func (s *scanner) scanArray(src any) ([]any, error) {
 		}
 		size = int(int32(binary.BigEndian.Uint32(data[12 : 12+4])))
 		p += 8
+	}
+	// Each element has a four-byte length prefix.
+	if size < 0 || size > (len(data)-p)/4 {
+		return nil, errInvalidData
+	}
+	if size < typ.MinElements() || size > typ.MaxElements() {
+		return nil, fmt.Errorf("data warehouse returned an array with %d elements for column %s, "+
+			"which is not within the expected range of [%d, %d]", size, name, typ.MinElements(), typ.MaxElements())
 	}
 	values := make([]any, size)
 	switch oid {
