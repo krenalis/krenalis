@@ -19,7 +19,7 @@ When the provider supplies field labels or descriptions, map them to `DisplayNam
 
 Return an object schema for records. Use `types.Object` only when locally defined properties are known valid; use `types.ObjectOf` when provider-derived names can fail validation. Follow [Property name syntax](#property-name-syntax) to validate or map external names, and test the resulting data behavior. Return a schema error for collisions or invalid metadata outside the documented name-syntax exception.
 
-Use the narrowest accurate type and provider-documented bounds. Preserve decimal and timestamp precision instead of converting through `float64` or inventing `time.Now`. Configure `ApplicationSpec.TimeLayouts` only when the provider format differs from the framework defaults.
+Use the narrowest accurate type and provider-documented bounds. Preserve decimal and timestamp precision instead of converting through `float64` or inventing `time.Now`. Add semantics when the provider documents the field’s meaning and representation. For example, model a calendar year with `AsYear()` on an integer of the appropriate width. See [Go values and semantics for property types](../../../../tools/types/Values.md) for the supported combinations and for the distinction between an absent property, a nullable property set to `nil`, and a JSON value containing `null`.
 
 ## Choose static or dynamic schemas
 
@@ -95,6 +95,8 @@ For dynamic fields, validate metadata before constructing types and compile prov
 Test the schemas returned by `RecordSchema` / `EventTypeSchema` with accepted and rejected values, including length boundaries. Also test any requirements enforced separately in the connector. If metadata controls constraints, cover valid combinations and verify that invalid metadata returns an error rather than panicking.
 
 ## Encode values at the boundary
+
+Use `ApplicationSpec.TimeLayouts` to parse non-default temporal strings returned by the connector on import. On export, `Upsert` receives date, time, and datetime attributes as `time.Time`, as does `SendEvents` for mapped values of those types. Encode them in the format required by the provider when building the request.
 
 Return Go values that conform to the requested record schema. When encoding schema-governed values, use `types.Marshal` where it removes ambiguity; otherwise encode the natural provider payload directly with `BodyBuffer`. Do not build a second generic map solely to satisfy a stylistic rule.
 

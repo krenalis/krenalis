@@ -43,7 +43,9 @@ Choose one iterator:
 - `SameUser` when the provider request must contain events for one anonymous identity;
 - `All` for a mixed-user batch endpoint.
 
-Each yielded event is consumed unless postponed. The production iterator groups `SameUser` by anonymous ID. `Discard(err)` reports a local event failure without sending it. The first event in a sequence cannot be postponed; preflight it with `Peek` or discard a deterministically oversized/invalid first event instead of panicking.
+Each yielded event is consumed unless postponed. `Discard(err)` reports a local event failure without sending it. The first event in a sequence cannot be postponed; preflight it with `Peek` or discard a deterministically oversized/invalid first event instead of panicking.
+
+`SameUser` groups by anonymous ID and can yield events from different ordering groups and delivery endpoints in one call. When event types use different provider endpoints, select the endpoint from `Event.Type.ID` and batch only events accepted by that endpoint. If a later event needs a different endpoint, postpone it before modifying its values and finish the current batch. Test this with two event types for the same anonymous ID.
 
 Return `connectors.EventsError` with zero-based consumed-event indices for provider validation failures that can be attributed per event. Indices absent from the map are successes. A different non-nil error applies to all events consumed by the call and represents request-level failure.
 

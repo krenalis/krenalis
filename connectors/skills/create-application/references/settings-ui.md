@@ -14,9 +14,9 @@ Use `ApplicationEnv.Settings.Load` and `Store`. The current environment does not
 
 Define an internal settings struct with stable JSON names. A conventional flow is:
 
-- `load`: load persisted settings, marshal them for `UI.Settings`, and return the form;
-- `save`: decode the supplied `json.Value`, validate it, optionally perform a bounded provider check, store it, and return;
-- custom event: handle it explicitly or return `connectors.ErrUIEventNotExist`.
+- On `load`, read persisted settings, marshal them for `UI.Settings`, and return the form. During connection creation, every returned non-nil UI must include at least one button.
+- On `save`, decode the supplied `json.Value`, validate it, optionally perform a bounded provider check, and store the settings. Return `(nil, nil)` on success and `(nil, err)` on failure.
+- For a custom event, handle it explicitly or return `connectors.ErrUIEventNotExist`.
 
 Return `connectors.NewInvalidSettingsError` or `connectors.NewInvalidSettingsErrorf` for correctable user input. Return operational errors normally. Do not persist partially validated settings.
 

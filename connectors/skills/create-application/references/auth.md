@@ -18,6 +18,8 @@ Use an input of type `password` for secrets. Do not return an existing secret to
 
 Set `ApplicationSpec.OAuth.AuthURL` and `ApplicationSpec.OAuth.TokenURL`, plus role-specific `SourceScopes` and `DestinationScopes`. Set `EndpointGroup.RequireOAuth` only for patterns that need the access token. Registry validation requires at least one OAuth endpoint group when `AuthURL` is set and forbids `RequireOAuth` without OAuth support.
 
+Ensure an endpoint group matches `POST` to `OAuth.TokenURL`, including its host when patterns are host-specific. The framework uses that route for both authorization-code exchange and refresh, and sends those requests without a bearer token.
+
 Implement:
 
 ```go
