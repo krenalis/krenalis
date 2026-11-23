@@ -309,7 +309,7 @@ Write or remove the database upgrade, in `migrate` and `finalize` of `core/inter
 
 ## Compatibility with the previous release
 
-During every rolling deployment, and after a rollback to the previous release, the instances of two consecutive releases run together on the same database and exchange notifications, and the upgrade to a release must never break the previous one. How the database and the messages stay compatible is described in `.agents/skills/release-upgrade/SKILL.md`; write the application code so that:
+During every rolling deployment, and after a rollback to the previous release, the instances of two consecutive releases run together on the same database and exchange notifications, and the upgrade to a release must never break the previous one. How the database and the messages stay compatible, and the only exception, are described in `.agents/skills/release-upgrade/SKILL.md`; write the application code so that:
 
 - It works both on the migrated database and on the finalized one, because the finalization may come long after the deployment: until then the database still holds what only the previous release uses, and lacks the constraints that `finalize` adds.
 - It reads and writes only the representation of the data of its own schema version, and never the old one that the previous release still uses; the triggers added by `migrate` keep the two in sync.

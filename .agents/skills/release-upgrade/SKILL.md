@@ -75,9 +75,14 @@ a rollback to the previous release. Meanwhile they keep reading and writing the
 database, and they exchange notifications with the instances of the new
 release.
 
-This is a requirement, with no exceptions: the upgrade to a release must never
-break the previous one. For the database, a single release is enough, if it
-follows the rules below.
+This is a requirement: the upgrade to a release must never break the previous
+one. For the database, a single release is enough, if it follows the rules
+below.
+
+The only exception is the upgrade from `v0.48.0`, which has neither
+`-migrate-db` nor `initdb.CheckSchemaVersion`: since Krenalis is not in
+production yet, it may break `v0.48.0`, so neither a rolling deployment nor a
+rollback to `v0.48.0` is supported. Remove this paragraph after that release.
 
 ### The database
 

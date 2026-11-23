@@ -28,7 +28,7 @@ upgrade a database of the base release. See
   nested groups, and conditions on other types. Complete both schema and
   filter conversions in the same upgrade transaction before loading state.
 - The two conversions above break the instances of the base release, which
-  cannot read the new types; this is accepted because Krenalis is not in
-  production yet.
+  cannot read the new types; this is allowed by the exception for `v0.48.0`
+  in `.agents/skills/release-upgrade/SKILL.md`.
 
 ## Finalization
