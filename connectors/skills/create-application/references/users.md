@@ -4,6 +4,8 @@ Implement `RecordFetcher` for source users and `RecordUpserter` for destination 
 
 ## Import users with `Records`
 
+For each requested property in `Record.Attributes`, use one of the [Go values accepted on import](../../../ImportValues.md). Krenalis normalizes the value according to the property type.
+
 Honor the method contract:
 
 - make `RecordSchema` handle `TargetUser` with both valid role values, and make `Records` accept `TargetUser`;
@@ -24,6 +26,8 @@ If the provider lacks a trustworthy incremental filter or update timestamp, surf
 For a failure specific to a record with a known ID, return the ID and `Record.Err` alongside the other records. The runtime preserves that error and skips the record’s timestamp and attributes. Return a method error for a page failure or when the failing record cannot be identified. See `TestAppRecordsPreservesConnectorRecordError` in `core/internal/connections/application_test.go`.
 
 ## Consume `Records` correctly in `Upsert`
+
+`Upsert` receives [canonical Go values](../../../../tools/types/Values.md) in `Record.Attributes`.
 
 Choose one iterator method:
 

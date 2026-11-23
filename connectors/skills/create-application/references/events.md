@@ -25,7 +25,7 @@ Declare `TargetEvent`, implement `connectors.EventSender`, and choose a non-`Non
 
 For value constraints, follow [Express constraints in the schema](schemas-and-types.md#express-constraints-in-the-schema-prefer-schema-over-runtime-checks), including the supported string constraint combinations.
 
-Use `Event.Received` for standard event fields and `Event.Type.Values` for schema-governed mapped values. Do not mutate `Type.Values` before a possible postpone; clone maps when payload normalization would otherwise mutate caller state.
+Use `Event.Received` for standard event fields. In `SendEvents` and `PreviewSendEvents`, the mapped properties in `Event.Type.Values` have the [canonical Go representations](../../../../tools/types/Values.md). Do not mutate `Type.Values` before a possible postpone; clone maps when payload normalization would otherwise mutate caller state.
 
 ## Preview without delivery
 
