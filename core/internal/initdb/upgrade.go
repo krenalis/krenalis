@@ -28,8 +28,7 @@ const legacySchemaVersion = 1
 // database: its schema version must be the one of this version of Krenalis,
 // finalized or not, or the next one not finalized, as while the Krenalis
 // instances are being replaced or after a rollback to this version of
-// Krenalis. In the latter case it logs a warning. It returns nil for an empty
-// database.
+// Krenalis. It returns nil for an empty database.
 func CheckSchemaVersion(ctx context.Context, database *db.DB) error {
 	isEmpty, err := databaseIsEmpty(ctx, database)
 	if err != nil {
@@ -46,7 +45,7 @@ func CheckSchemaVersion(ctx context.Context, database *db.DB) error {
 	case version == schemaVersion:
 		// This version of Krenalis runs on it.
 	case version == schemaVersion+1 && !finalized:
-		slog.Warn("PostgreSQL database is at the next schema version, not finalized,"+
+		slog.Info("PostgreSQL database is at the next schema version, not finalized,"+
 			" on which this version of Krenalis can still run", "schema_version", version)
 	case version > schemaVersion:
 		return fmt.Errorf("PostgreSQL database is at schema version %d, on which this version of Krenalis,"+
@@ -87,7 +86,7 @@ func Finalize(ctx context.Context, database *db.DB) error {
 			return fmt.Errorf("PostgreSQL database is at schema version %d, which must be migrated to"+
 				" schema version %d before finalizing it", version, schemaVersion)
 		case version == schemaVersion+1 && !finalized:
-			slog.Warn("PostgreSQL database is at the next schema version, not finalized, so it won't be finalized",
+			slog.Info("PostgreSQL database is at the next schema version, not finalized, so it won't be finalized",
 				"schema_version", version)
 			return nil
 		default:
@@ -131,7 +130,7 @@ func Migrate(ctx context.Context, database *db.DB) error {
 				"schema_version", version)
 			return nil
 		case version == schemaVersion+1 && !finalized:
-			slog.Warn("PostgreSQL database is at the next schema version, not finalized, so it won't be migrated",
+			slog.Info("PostgreSQL database is at the next schema version, not finalized, so it won't be migrated",
 				"schema_version", version)
 			return nil
 		case version > schemaVersion:
