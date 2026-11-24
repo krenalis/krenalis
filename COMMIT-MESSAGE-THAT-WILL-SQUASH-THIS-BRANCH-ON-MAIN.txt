@@ -50,9 +50,7 @@ starts if the database is:
 
 - at its schema version, finalized or not;
 - at the next schema version, not yet finalized, as during the
-  deployment of the next release, which has already migrated it, or
-  after a rollback from that release. Not being finalized yet, the
-  database is still guaranteed to be compatible.
+  deployment of the next release or after a rollback from it.
 
 It refuses to start if the database is:
 
