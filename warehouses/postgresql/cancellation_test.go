@@ -378,14 +378,11 @@ pg_sleep(CASE WHEN i<3 THEN 0 ELSE 30 END) FROM generate_series(1,3) i`)
 				t.Fatal("expected replacement connection, got discarded backend reused")
 			}
 			if tx != nil {
-				var count int
-				row := originalPool.QueryRow(t.Context(), "SELECT count(*) FROM cancellation_writes")
-				err := row.Scan(&count)
+				checkCtx, stop := context.WithTimeout(t.Context(), 3*time.Second)
+				defer stop()
+				_, err := originalPool.Exec(checkCtx, "INSERT INTO cancellation_writes VALUES (1)")
 				if err != nil {
-					t.Fatalf("expected transaction state, got %v", err)
-				}
-				if count != 0 {
-					t.Fatalf("expected uncommitted write rolled back, got %d rows", count)
+					t.Fatalf("expected to reuse the primary key after rollback, got %v", err)
 				}
 			}
 			err = warehouse.Close()
@@ -485,14 +482,16 @@ func TestRetryClosedConnectionCancellationLimits(t *testing.T) {
 				if len(attempts) > 0 && attempts[0].Sub(started) != 50*time.Millisecond {
 					t.Fatalf("expected first retry after 50ms, got %v", attempts[0].Sub(started))
 				}
+				wantDelay := 100 * time.Millisecond
 				for i := 1; i < len(attempts); i++ {
 					delay := attempts[i].Sub(attempts[i-1])
 					if c.blockAt != "" {
 						delay -= time.Second
 					}
-					if delay < 100*time.Millisecond || delay > time.Second {
-						t.Fatalf("expected retry delay in [100ms,1s], got %v", delay)
+					if delay != wantDelay {
+						t.Fatalf("expected delay %v before retry %d, got %v", wantDelay, i+1, delay)
 					}
+					wantDelay = min(2*wantDelay, time.Second)
 				}
 
 				count := len(attempts)
@@ -544,6 +543,7 @@ func TestRetryClosedConnectionCancellationSecretKey(t *testing.T) {
 				if err != nil {
 					t.Fatalf("expected connection config, got %v", err)
 				}
+				config.MaxProtocolVersion = "3.2"
 				attempts := 0
 				config.DialFunc = func(context.Context, string, string) (net.Conn, error) {
 					attempts++
