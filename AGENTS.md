@@ -123,6 +123,8 @@ When a parsing or validation sequence is dense, covers several distinct values o
 
 Exported functions and methods validate their own arguments. Exception: exported methods in `core/internal/metrics` assume valid arguments and do not revalidate them; values read from a data warehouse must still be validated per the trust boundary.
 
+For methods of `warehouses.Warehouse`, Krenalis is responsible for ensuring that all arguments satisfy the preconditions defined by each method's contract. Drivers may assume these preconditions are satisfied and are not required to validate them, except for checks explicitly required by the contract. If a driver detects a violated precondition, it must treat it as an unexpected situation (see Errors versus panics).
+
 ## Block spacing
 
 Decide the spacing of every brace-delimited block on its own, from the inside out:

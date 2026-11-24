@@ -186,6 +186,8 @@ type Counts struct {
 }
 
 // Warehouse is the interface implemented by warehouses.
+// All methods assume that the provided arguments satisfy the method's contract.
+// Otherwise, the behavior is undefined. Krenalis always passes valid arguments.
 type Warehouse interface {
 
 	// AlterProfileSchema alters the profile schema.
@@ -884,7 +886,8 @@ func (err *SettingsNotReadOnly) Error() string {
 	return err.Err.Error()
 }
 
-// Expr represents a subset of SQL expressions.
+// Expr represents a subset of SQL expressions. The filter rules in
+// core/filters.go specify which operators each property type supports.
 type Expr interface {
 	expr()
 }
@@ -919,22 +922,28 @@ const (
 // represents an absent JSON property; JSON null represents a present null.
 // Existence operators require a read-optional property or a JSON path.
 // JSON filter operands have type JSONConditionValue.
-// For JSON columns, OpIs and OpIsNot accept a Column operand if Keys is empty.
 // Decimal operands, including JSONConditionValue.Number, must fit a
 // decimal(p,s) with p <= 76 and 0 <= s <= min(p,37), independently of the
 // column's precision and scale. Rendering rejects operands beyond these limits.
+//
+// If the column's type supports OpIs and OpIsNot, either operator can be used
+// to compare it with another column. For JSON columns, Keys must be empty.
+// Values contains a single operand: the second Column.
+// A string column can be compared with an int or UUID column,
+// in either order, by comparing their text representations. For all other
+// type combinations, the columns must be directly comparable in the warehouse.
 type BaseExpr struct {
 	Column   Column
 	Keys     []string
 	Operator Operator
-	Values   []any // may be nil for unary expressions.
+	Values   []any // empty for unary expressions
 }
 
 func (*BaseExpr) expr() {}
 
 // NewBaseExpr returns a new BaseExpr expression that applies to the given
 // column with the given operator and values.
-// If the operator is unary, value should be nil.
+// For a unary operator, callers must omit the operands.
 func NewBaseExpr(column Column, operator Operator, values ...any) *BaseExpr {
 	return &BaseExpr{Column: column, Operator: operator, Values: values}
 }
