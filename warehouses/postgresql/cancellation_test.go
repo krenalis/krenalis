@@ -30,8 +30,8 @@ import (
 	"github.com/krenalis/krenalis/warehouses"
 )
 
-const cancellationTestDSN = "host=127.0.0.1 user=test dbname=test sslmode=disable target_session_attrs=any" +
-	" require_auth=none channel_binding=disable"
+const cancellationTestDSN = "host=127.0.0.1 user=test dbname=test sslmode=disable sslcertmode=disable sslrootcert=''" +
+	" target_session_attrs=any require_auth=none channel_binding=disable"
 
 // cancellationTestDialer simulates failed or silently dropped cancellation
 // requests and counts cancellation attempts.
