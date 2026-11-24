@@ -30,7 +30,8 @@ import (
 	"github.com/krenalis/krenalis/warehouses"
 )
 
-const cancellationTestDSN = "host=127.0.0.1 user=test dbname=test sslmode=disable target_session_attrs=any"
+const cancellationTestDSN = "host=127.0.0.1 user=test dbname=test sslmode=disable target_session_attrs=any" +
+	" require_auth=none channel_binding=disable"
 
 // cancellationTestDialer simulates failed or silently dropped cancellation
 // requests and counts cancellation attempts.
@@ -139,7 +140,7 @@ func TestConfigureCancellation(t *testing.T) {
 // while pgx is still negotiating TLS on the primary connection.
 func TestConfigureCancellationConnectTimeout(t *testing.T) {
 
-	config, err := pgx.ParseConfig("host=127.0.0.1 user=test dbname=test sslmode=require")
+	config, err := pgx.ParseConfig("host=127.0.0.1 user=test dbname=test sslmode=require sslnegotiation=postgres")
 	if err != nil {
 		t.Fatalf("expected connection config, got %v", err)
 	}
