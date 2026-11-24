@@ -1589,15 +1589,7 @@ const FullscreenTransformation = ({
 				let res: FindProfilesResponse;
 				try {
 					filter = pipeline.filter == null ? null : validateAndNormalizeFilter(pipeline.filter, inputSchema);
-					res = await api.workspaces.profiles.find(
-						properties,
-						filter,
-						'',
-						true,
-						0,
-						20,
-						inputSchema,
-					);
+					res = await api.workspaces.profiles.find(properties, filter, '', true, 0, 20, inputSchema);
 				} catch (err) {
 					setIsLoading(false);
 					handleError(err);
