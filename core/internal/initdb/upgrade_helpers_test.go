@@ -68,8 +68,9 @@ const schemaSnapshotQuery = `
 const testKMSKey = "key:DJ0UMRTROH4pjY/Esh3fAErsPbdYmvsnfDCZtc9K4iU"
 
 // TestTestDatabaseFromSQL verifies that newTestDatabaseFromSQL, given the SQL
-// files of the current schema, creates the same schema as initialize, and that
-// loadTestState loads the state from a newly initialized database.
+// files of the current schema, creates the same schema as initialize and
+// records the given schema version, and that loadTestState loads the state
+// from a newly initialized database.
 func TestTestDatabaseFromSQL(t *testing.T) {
 
 	t.Run("schema", func(t *testing.T) {
@@ -79,9 +80,19 @@ func TestTestDatabaseFromSQL(t *testing.T) {
 			"rate_limiter_leases.sql": {Data: []byte(createRateLimiterLeasesFunction)},
 		}
 		expected := schemaSnapshot(t, newInitializedTestDatabase(t))
-		got := schemaSnapshot(t, newTestDatabaseFromSQL(t, files, schemaVersion))
+		// Use a version other than the one recorded by initialize.
+		database := newTestDatabaseFromSQL(t, files, schemaVersion+1)
+		got := schemaSnapshot(t, database)
 		if got != expected {
 			t.Fatalf("expected schema %s, got %s", expected, got)
+		}
+		version, finalized, err := readSchemaVersion(t.Context(), database)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if version != schemaVersion+1 || !finalized {
+			t.Fatalf("expected schema version %d, finalized, got %d, finalized %t",
+				schemaVersion+1, version, finalized)
 		}
 	})
 

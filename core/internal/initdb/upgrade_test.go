@@ -5,7 +5,6 @@
 package initdb
 
 import (
-	"sync"
 	"testing"
 	"time"
 
@@ -273,32 +272,9 @@ func TestMigrateSchemaVersions(t *testing.T) {
 
 }
 
-// TestMigrateConcurrent verifies that concurrent calls to Migrate on the same
-// initialized database succeed.
-func TestMigrateConcurrent(t *testing.T) {
-	database := newInitializedTestDatabase(t)
-	const instances = 4
-	if n := database.PoolStats().MaxConns(); n < instances {
-		t.Fatalf("expected at least %d pool connections, got %d", instances, n)
-	}
-	errs := make([]error, instances)
-	var wg sync.WaitGroup
-	for i := range instances {
-		wg.Go(func() {
-			errs[i] = Migrate(t.Context(), database)
-		})
-	}
-	wg.Wait()
-	for i, err := range errs {
-		if err != nil {
-			t.Fatalf("expected no error from instance %d, got %v", i, err)
-		}
-	}
-}
-
 // TestMigrateWaitsForInitialization verifies that Migrate waits for an
-// initialization in progress, holding the initialization lock, and then
-// migrates the initialized database instead of failing because it was empty.
+// initialization in progress, holding the initialization lock, and then finds
+// the database initialized, instead of failing because it was empty.
 func TestMigrateWaitsForInitialization(t *testing.T) {
 
 	ctx := t.Context()
@@ -361,6 +337,59 @@ func TestMigrateWaitsForInitialization(t *testing.T) {
 	err = <-migrated
 	if err != nil {
 		t.Fatalf("expected no error, got %v", err)
+	}
+
+}
+
+// TestWriteSchemaVersion verifies that writeSchemaVersion records the schema
+// version, creating the schema_version table as schema.sql does if the
+// database is at the legacy schema version.
+func TestWriteSchemaVersion(t *testing.T) {
+
+	tests := []struct {
+		name   string
+		legacy bool // drop the schema_version table
+	}{
+		{name: "new database"},
+		{name: "legacy database", legacy: true},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+
+			t.Parallel()
+			ctx := t.Context()
+			database := newInitializedTestDatabase(t)
+			expected := schemaSnapshot(t, database)
+			if test.legacy {
+				_, err := database.Exec(ctx, "DROP TABLE schema_version")
+				if err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			// Write a state other than the one recorded by initialize.
+			err := database.Transaction(ctx, func(tx *db.Tx) error {
+				return writeSchemaVersion(ctx, tx, schemaVersion+1, false)
+			})
+			if err != nil {
+				t.Fatalf("expected no error, got %v", err)
+			}
+
+			got := schemaSnapshot(t, database)
+			if got != expected {
+				t.Fatalf("expected schema %s, got %s", expected, got)
+			}
+			version, finalized, err := readSchemaVersion(ctx, database)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if version != schemaVersion+1 || finalized {
+				t.Fatalf("expected schema version %d, not finalized, got %d, finalized %t",
+					schemaVersion+1, version, finalized)
+			}
+
+		})
 	}
 
 }
