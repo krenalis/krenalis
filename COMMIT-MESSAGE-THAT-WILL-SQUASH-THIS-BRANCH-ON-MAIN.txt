@@ -71,8 +71,9 @@ The upgrade lives in the "core/internal/initdb" package, whose name now
 covers only part of what it does. The package keeps its name for now;
 whether to rename it will be evaluated in the future.
 
-Add test helpers for the upgrade test of each release, and update
-"AGENTS.md" and the "release-upgrade" skill.
+Add test helpers for the upgrade test of each release, add to
+"AGENTS.md" the rules that keep the code compatible with the previous
+release, and update the "release-upgrade" skill.
 
 The documentation on krenalis.com and in the "krenalis/internal"
 repository will be updated after this commit.
