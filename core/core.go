@@ -2237,7 +2237,9 @@ func MigrateDB(ctx context.Context, conf DBConfig, kmsURI string) error {
 	defer db.Close()
 
 	// Initialize the database if it is empty, as on the first deployment,
-	// before any Krenalis instance has started.
+	// before any Krenalis instance has started, so that every deployment, the
+	// first one included, follows the same procedure: migrate the database,
+	// then start the instances.
 	kms, err := kms.New(ctx, kmsURI)
 	if err != nil {
 		return err

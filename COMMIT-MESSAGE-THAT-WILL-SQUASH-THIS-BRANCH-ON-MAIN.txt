@@ -13,14 +13,14 @@ those of the previous release. The finalization runs once only new
 instances are left. When it is done, the database is "finalized", and
 the previous release can no longer run on it.
 
-In detail, the migration is started with the new "-migrate-db" flag. It
-initializes the database if it is empty. Otherwise it migrates a
+The migration is started with the new "-migrate-db" flag. It migrates a
 finalized database of the previous schema version with the "migrate"
 function, and records the new schema version as not finalized. It does
 nothing on a database already at its schema version, or at the next one
 but not finalized, as after a rollback from the next release, and fails
 in any other case, such as when a release that changes the database is
-skipped.
+skipped. It initializes an empty database instead, so that the first
+deployment runs the migration like the following ones.
 
 The finalization is started with the new "-finalize-db" flag. It runs
 the "finalize" function and records the schema version as finalized. It
