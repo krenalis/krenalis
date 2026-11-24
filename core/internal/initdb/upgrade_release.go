@@ -24,23 +24,23 @@ const schemaVersion = 1
 // running anymore. This version of Krenalis must run on the database both
 // before and after it.
 //
-// It is written together with migrate, when a release that changes the
-// database is prepared, with its helpers in this file, and emptied after the
-// release is published, when the helpers are removed. See
-// .agents/skills/release-upgrade/SKILL.md.
-func finalize(ctx context.Context, tx *db.Tx) error {
-	return nil
-}
+// It is set together with migrate, when a release that changes the database
+// is prepared, with its helpers in this file, to a function that does nothing
+// if there is nothing to finalize. It is set back to nil after the release is
+// published, when the helpers are removed, so that Finalize fails, instead of
+// recording the database as finalized, in the later releases at the same
+// schema version. See .agents/skills/release-upgrade/SKILL.md.
+var finalize func(ctx context.Context, tx *db.Tx) error
 
 // migrate migrates, within the given transaction, a database of the previous
 // schema version to the current schema. It must not break the Krenalis
 // instances of the previous release, which keep running on the database until
 // they are replaced.
 //
-// It is written when a release that changes the database is prepared, from
-// the notes in RELEASE-UPGRADE.md, with its helpers in this file, and emptied
-// after the release is published, when the helpers are removed. See
-// .agents/skills/release-upgrade/SKILL.md.
-func migrate(ctx context.Context, tx *db.Tx) error {
-	return nil
-}
+// It is set when a release that changes the database is prepared, from the
+// notes in RELEASE-UPGRADE.md, with its helpers in this file, to a function
+// that does nothing if there is nothing to migrate. It is set back to nil after
+// the release is published, when the helpers are removed, so that Migrate
+// fails, instead of recording the database as migrated, in the later releases
+// at the same schema version. See .agents/skills/release-upgrade/SKILL.md.
+var migrate func(ctx context.Context, tx *db.Tx) error

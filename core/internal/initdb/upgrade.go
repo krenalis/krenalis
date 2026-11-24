@@ -57,7 +57,9 @@ func CheckSchemaVersion(ctx context.Context, database *db.DB) error {
 // longer run on the database. It does not check that none of them is
 // running: the caller must ensure it, since otherwise the behavior is
 // undefined and may be destructive. It is safe to call it concurrently from
-// several Krenalis instances.
+// several Krenalis instances. It fails, instead of finalizing the database, if
+// finalize is nil, as in the releases after the one that introduced this schema
+// version.
 func Finalize(ctx context.Context, database *db.DB) error {
 	var done bool
 	err := database.Transaction(ctx, func(tx *db.Tx) error {
@@ -89,6 +91,11 @@ func Finalize(ctx context.Context, database *db.DB) error {
 				" this version of Krenalis", dbSchemaVersion, schemaVersion)
 		}
 
+		if finalize == nil {
+			return fmt.Errorf("PostgreSQL database is at schema version %d, not finalized, and this version of"+
+				" Krenalis cannot finalize it; finalize it with the release that introduced schema version %d",
+				dbSchemaVersion, schemaVersion)
+		}
 		err = finalize(ctx, tx)
 		if err != nil {
 			return err
@@ -117,7 +124,8 @@ func Finalize(ctx context.Context, database *db.DB) error {
 // rollback to this version of Krenalis. It fails if the database is empty, if
 // the previous schema version has not been finalized, or if the database is at
 // any other schema version. It is safe to call it concurrently from several
-// Krenalis instances.
+// Krenalis instances. It fails, instead of migrating the database, if migrate
+// is nil, as in the releases after the one that introduced this schema version.
 func Migrate(ctx context.Context, database *db.DB) error {
 	var done bool
 	err := database.Transaction(ctx, func(tx *db.Tx) error {
@@ -153,6 +161,11 @@ func Migrate(ctx context.Context, database *db.DB) error {
 				" to schema version %d; migrate it one schema version at a time", dbSchemaVersion, schemaVersion)
 		}
 
+		if migrate == nil {
+			return fmt.Errorf("PostgreSQL database is at schema version %d, and this version of Krenalis cannot"+
+				" migrate it to schema version %d; migrate it with the release that introduced schema version %d",
+				dbSchemaVersion, schemaVersion, schemaVersion)
+		}
 		err = migrate(ctx, tx)
 		if err != nil {
 			return err
