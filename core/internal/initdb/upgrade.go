@@ -27,24 +27,24 @@ var ErrNotInitialized = errors.New("Krenalis's PostgreSQL database has not been 
 // instances are being replaced or after a rollback to this version of
 // Krenalis. It returns ErrNotInitialized if the database is empty.
 func CheckSchemaVersion(ctx context.Context, database *db.DB) error {
-	version, finalized, err := readSchemaVersion(ctx, database)
+	dbSchemaVersion, finalized, err := readSchemaVersion(ctx, database)
 	if err != nil {
 		return err
 	}
 	switch {
-	case version == schemaVersion:
+	case dbSchemaVersion == schemaVersion:
 		// Same schema version as this Krenalis, finalized or not.
 		return nil
-	case version == schemaVersion+1 && !finalized:
+	case dbSchemaVersion == schemaVersion+1 && !finalized:
 		slog.Info("PostgreSQL database is at the next schema version, not finalized,"+
-			" on which this version of Krenalis can still run", "schema_version", version)
+			" on which this version of Krenalis can still run", "schema_version", dbSchemaVersion)
 		return nil
-	case version > schemaVersion:
+	case dbSchemaVersion > schemaVersion:
 		return fmt.Errorf("PostgreSQL database is at schema version %d, on which this version of Krenalis,"+
-			" at schema version %d, can no longer run", version, schemaVersion)
+			" at schema version %d, can no longer run", dbSchemaVersion, schemaVersion)
 	}
 	return fmt.Errorf("PostgreSQL database is at schema version %d, but this version of Krenalis"+
-		" requires schema version %d; migrate the database first", version, schemaVersion)
+		" requires schema version %d; migrate the database first", dbSchemaVersion, schemaVersion)
 }
 
 // Finalize finalizes, in a single transaction, Krenalis's PostgreSQL database
@@ -66,27 +66,27 @@ func Finalize(ctx context.Context, database *db.DB) error {
 		if err != nil {
 			return err
 		}
-		version, finalized, err := readSchemaVersion(ctx, tx)
+		dbSchemaVersion, finalized, err := readSchemaVersion(ctx, tx)
 		if err != nil {
 			return err
 		}
 
 		switch {
-		case version == schemaVersion && finalized:
-			slog.Info("PostgreSQL database is already finalized", "schema_version", version)
+		case dbSchemaVersion == schemaVersion && finalized:
+			slog.Info("PostgreSQL database is already finalized", "schema_version", dbSchemaVersion)
 			return nil
-		case version == schemaVersion:
+		case dbSchemaVersion == schemaVersion:
 			// It is finalized below.
-		case version < schemaVersion:
+		case dbSchemaVersion < schemaVersion:
 			return fmt.Errorf("PostgreSQL database is at schema version %d, which must be migrated to"+
-				" schema version %d before finalizing it", version, schemaVersion)
-		case version == schemaVersion+1 && !finalized:
+				" schema version %d before finalizing it", dbSchemaVersion, schemaVersion)
+		case dbSchemaVersion == schemaVersion+1 && !finalized:
 			slog.Info("PostgreSQL database is at the next schema version, not finalized, so it won't be finalized",
-				"schema_version", version)
+				"schema_version", dbSchemaVersion)
 			return nil
 		default:
 			return fmt.Errorf("PostgreSQL database is at schema version %d, newer than schema version %d of"+
-				" this version of Krenalis", version, schemaVersion)
+				" this version of Krenalis", dbSchemaVersion, schemaVersion)
 		}
 
 		err = finalize(ctx, tx)
@@ -126,31 +126,31 @@ func Migrate(ctx context.Context, database *db.DB) error {
 		if err != nil {
 			return err
 		}
-		version, finalized, err := readSchemaVersion(ctx, tx)
+		dbSchemaVersion, finalized, err := readSchemaVersion(ctx, tx)
 		if err != nil {
 			return err
 		}
 
 		switch {
-		case version == schemaVersion:
+		case dbSchemaVersion == schemaVersion:
 			slog.Info("PostgreSQL database is already at the schema version of this version of Krenalis",
-				"schema_version", version)
+				"schema_version", dbSchemaVersion)
 			return nil
-		case version == schemaVersion+1 && !finalized:
+		case dbSchemaVersion == schemaVersion+1 && !finalized:
 			slog.Info("PostgreSQL database is at the next schema version, not finalized, so it won't be migrated",
-				"schema_version", version)
+				"schema_version", dbSchemaVersion)
 			return nil
-		case version > schemaVersion:
+		case dbSchemaVersion > schemaVersion:
 			return fmt.Errorf("PostgreSQL database is at schema version %d, on which this version of Krenalis,"+
-				" at schema version %d, can no longer run", version, schemaVersion)
-		case version == schemaVersion-1 && finalized:
+				" at schema version %d, can no longer run", dbSchemaVersion, schemaVersion)
+		case dbSchemaVersion == schemaVersion-1 && finalized:
 			// It is migrated below.
-		case version == schemaVersion-1:
+		case dbSchemaVersion == schemaVersion-1:
 			return fmt.Errorf("PostgreSQL database is at schema version %d, which must be finalized before"+
-				" migrating it to schema version %d", version, schemaVersion)
+				" migrating it to schema version %d", dbSchemaVersion, schemaVersion)
 		default:
 			return fmt.Errorf("PostgreSQL database is at schema version %d, which cannot be migrated directly"+
-				" to schema version %d; migrate it one schema version at a time", version, schemaVersion)
+				" to schema version %d; migrate it one schema version at a time", dbSchemaVersion, schemaVersion)
 		}
 
 		err = migrate(ctx, tx)
