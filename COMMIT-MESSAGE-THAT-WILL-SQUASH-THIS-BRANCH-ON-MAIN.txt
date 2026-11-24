@@ -43,18 +43,11 @@ mechanism, counts as schema version 1, finalized. As Krenalis is not in
 production yet, upgrading from v0.48.0 requires stopping it first, with
 no way back.
 
-At startup, Krenalis now checks the schema version of the database. It
-starts if the database is:
-
-- at its schema version, finalized or not;
-- at the next schema version, not yet finalized, as during the
-  deployment of the next release or after a rollback from it.
-
-It refuses to start if the database is:
-
-- at an older schema version, not yet migrated;
-- at the next schema version, already finalized;
-- at any later schema version.
+At startup, Krenalis now checks the schema version of the database, and
+starts only on a database at its own schema version, finalized or not,
+or at the next one but not finalized, as during the deployment of the
+next release or after a rollback from it. It refuses to start in any
+other case, such as on a database not yet migrated.
 
 The two releases also exchange notifications and NATS messages while
 they run together. Keeping them compatible is not covered by this
