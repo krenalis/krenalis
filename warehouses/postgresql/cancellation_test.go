@@ -16,6 +16,7 @@ import (
 	"io"
 	"math/big"
 	"net"
+	"slices"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -197,7 +198,7 @@ func TestRetryClosedConnectionCancellation(t *testing.T) {
 		kind         string
 	}{
 		{"lost_first_request", 0, true, "query"},
-		{"lost_primary_connection", 1, false, "disconnect"},
+		{"lost_primary_connection", 2, false, "disconnect"},
 		{"blocked_first_request", 0, false, "blocked"},
 		{"transient_errors", 3, false, "query"},
 		{"healthy_connection", 0, false, "healthy"},
@@ -461,8 +462,8 @@ pg_sleep(CASE WHEN i<3 THEN 0 ELSE 30 END) FROM generate_series(1,3) i`)
 
 }
 
-// TestRetryClosedConnectionCancellationAfterCleanup checks the deadline of the
-// final retry when local cleanup finishes early or near the end of the budget.
+// TestRetryClosedConnectionCancellationAfterCleanup checks that an unconfirmed
+// cancellation is retried until delivery or the original budget expires.
 func TestRetryClosedConnectionCancellationAfterCleanup(t *testing.T) {
 
 	config, err := pgx.ParseConfig(cancellationTestDSN)
@@ -470,8 +471,17 @@ func TestRetryClosedConnectionCancellationAfterCleanup(t *testing.T) {
 		t.Fatalf("expected connection config, got %v", err)
 	}
 
-	for _, cleanupAfter := range []time.Duration{0, 9750 * time.Millisecond} {
-		t.Run(cleanupAfter.String(), func(t *testing.T) {
+	for _, c := range []struct {
+		name         string
+		cleanupAfter time.Duration
+		blockRead    bool
+		wantDuration time.Duration
+	}{
+		{"blocked_dial", 0, false, 10 * time.Second},
+		{"budget_nearly_exhausted", 9750 * time.Millisecond, false, 10 * time.Second},
+		{"cleanup_during_read", 75 * time.Millisecond, true, 75 * time.Millisecond},
+	} {
+		t.Run(c.name, func(t *testing.T) {
 			synctest.Test(t, func(t *testing.T) {
 
 				config := config.Copy()
@@ -481,6 +491,21 @@ func TestRetryClosedConnectionCancellationAfterCleanup(t *testing.T) {
 					attempts = append(attempts, time.Now())
 					if len(attempts) == 1 {
 						return nil, dialErr
+					}
+					if c.blockRead {
+						client, server := net.Pipe()
+						t.Cleanup(func() { _ = server.Close() })
+						acknowledge := len(attempts) >= 3
+						go func() {
+							_, err := io.ReadFull(server, make([]byte, 16))
+							if err != nil {
+								t.Errorf("expected cancellation packet, got %v", err)
+							}
+							if acknowledge {
+								_ = server.Close()
+							}
+						}()
+						return client, nil
 					}
 					<-ctx.Done()
 					return nil, ctx.Err()
@@ -498,14 +523,19 @@ func TestRetryClosedConnectionCancellationAfterCleanup(t *testing.T) {
 				}
 
 				started := time.Now()
-				time.AfterFunc(cleanupAfter, finishCleanup)
+				time.AfterFunc(c.cleanupAfter, finishCleanup)
 				retryClosedConnectionCancellation(conn)
-				wantDuration := min(cleanupAfter+time.Second, 10*time.Second)
-				if elapsed := time.Since(started); elapsed != wantDuration {
-					t.Fatalf("expected retry duration %v, got %v", wantDuration, elapsed)
+				if elapsed := time.Since(started); elapsed != c.wantDuration {
+					t.Fatalf("expected retry duration %v, got %v", c.wantDuration, elapsed)
 				}
-				if len(attempts) < 2 || attempts[len(attempts)-1].Sub(started) != cleanupAfter {
-					t.Fatalf("expected a final cancellation attempt at cleanup, got %v", attempts)
+				if !slices.Contains(attempts[1:], started.Add(c.cleanupAfter)) {
+					t.Fatalf("expected a cancellation attempt at cleanup, got %v", attempts)
+				}
+				if c.blockRead && len(attempts) != 3 {
+					t.Fatalf("expected 3 attempts including the acknowledged retry, got %d", len(attempts))
+				}
+				if c.cleanupAfter == 0 && (len(attempts) < 3 || attempts[2].Sub(attempts[1]) != 1100*time.Millisecond) {
+					t.Fatalf("expected a 100ms backoff after the one-second attempt, got %v", attempts)
 				}
 
 			})

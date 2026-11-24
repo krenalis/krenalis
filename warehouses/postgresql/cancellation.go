@@ -74,8 +74,9 @@ func configureCancellation(config *pgx.ConnConfig) {
 // Retries have a 10-second overall budget and a one-second limit per attempt.
 // While local cleanup is pending, the first retry starts after 50 milliseconds
 // and subsequent delays double up to one second. If cleanup finishes after
-// pgx attempted to cancel and no pool retry succeeded, make one final bounded
-// attempt. pgx does not expose the outcome of its automatic request.
+// pgx attempted to cancel and no pool retry succeeded, retry immediately and
+// continue with backoff until a retry succeeds or the same budget expires.
+// pgx does not expose the outcome of its automatic request.
 //
 // CleanupDone does not confirm that the server stopped the query. If the
 // cancellation channel is unavailable, the server may continue executing.
@@ -96,53 +97,53 @@ func retryClosedConnectionCancellation(conn *pgx.Conn) {
 	retryCtx := context.WithValue(context.Background(), cancellationRetryKey{}, true)
 	budget, endBudget := context.WithTimeout(retryCtx, 10*time.Second)
 	defer endBudget()
-	ctx, cancel := context.WithCancel(budget)
+	cleanupCtx, cancel := context.WithCancel(budget)
 	defer cancel()
 	go func() {
 		select {
 		case <-target.CleanupDone():
 			cancel()
-		case <-ctx.Done():
+		case <-cleanupCtx.Done():
 		}
 	}()
 
 	delay := 50 * time.Millisecond
 	timer := time.NewTimer(delay)
 	defer timer.Stop()
+	ctx := cleanupCtx
 	delivered := false
-retry:
 	for {
 		select {
 		case <-ctx.Done():
-			break retry
 		case <-timer.C:
+		}
+		if budget.Err() != nil {
+			return
 		}
 		// Cleanup may have finished at the same time as the timer.
 		select {
 		case <-target.CleanupDone():
-			break retry
-		case <-ctx.Done():
-			break retry
+			automaticCancel := target.CustomData()[automaticCancelKey].(*atomic.Bool)
+			if delivered || !automaticCancel.Load() {
+				return
+			}
+			ctx = budget
 		default:
-			// The connection still needs bounded cleanup attempts.
+			// Local cleanup can still interrupt this attempt.
 		}
 		attempt, stop := context.WithTimeout(ctx, time.Second)
-		// Delivery failures are best effort too: retry until cleanup or the
-		// overall budget, without changing the caller's original error.
+		// pgx ignores read errors while waiting for the server to close the
+		// cancellation socket, including when our context interrupts the read.
 		err := target.CancelRequest(attempt)
-		if err == nil {
+		if err == nil && attempt.Err() == nil {
 			delivered = true
 		}
 		stop()
+		if delivered && ctx == budget {
+			return
+		}
 		delay = min(2*delay, time.Second)
 		timer.Reset(delay)
-	}
-
-	automaticCancel := target.CustomData()[automaticCancelKey].(*atomic.Bool)
-	if !delivered && automaticCancel.Load() && budget.Err() == nil {
-		attempt, stop := context.WithTimeout(budget, time.Second)
-		defer stop()
-		_ = target.CancelRequest(attempt)
 	}
 
 }
