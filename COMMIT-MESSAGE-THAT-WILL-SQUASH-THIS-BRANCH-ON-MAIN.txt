@@ -49,23 +49,23 @@ or at the next one but not finalized, as during the deployment of the
 next release or after a rollback from it. It refuses to start in any
 other case, such as on a database not yet migrated.
 
-The two releases also exchange notifications and NATS messages while
-they run together. Keeping them compatible is not covered by this
-commit, and is still open (see #2796).
-
 The "migrate" and "finalize" functions are written when a release that
 changes the database is prepared, from the notes in
 "core/internal/initdb/RELEASE-UPGRADE.md", which now separate the
 migration from the finalization. The functions are emptied after the
 release.
 
-The upgrade lives in the "core/internal/initdb" package, whose name now
-covers only part of what it does. The package keeps its name for now;
-whether to rename it will be evaluated in the future.
-
 Add test helpers for the upgrade test of each release, add to
 "AGENTS.md" the rules that keep the code compatible with the previous
 release, and update the "release-upgrade" skill.
 
-The documentation on krenalis.com and in the "krenalis/internal"
-repository will be updated after this commit.
+Also note that:
+
+- the two releases exchange notifications and NATS messages while they
+  run together: keeping them compatible is not covered by this
+  commit, and is still open (see #2796);
+- the upgrade lives in the "core/internal/initdb" package, whose name
+  now covers only part of what it does: whether to rename it will be
+  evaluated in the future;
+- the documentation on krenalis.com and in the "krenalis/internal"
+  repository will be updated after this commit.
