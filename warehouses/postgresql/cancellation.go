@@ -14,6 +14,10 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
+const automaticCancelKey = "warehouses/postgresql.automaticCancel"
+
+type cancellationRetryKey struct{}
+
 // cancellationConn closes the transport when its context ends, even if TLS
 // shutdown extends the write deadline set by pgx.
 type cancellationConn struct {
@@ -33,9 +37,10 @@ func configureCancellation(config *pgx.ConnConfig) {
 
 	// pgx uses the same dialer for startup (including fallbacks) and later
 	// cancellation requests. Leave all startup transports under pgx's control.
-	var connected atomic.Bool
+	var connected, automaticCancel atomic.Bool
 	afterConnect := config.AfterConnect
 	config.AfterConnect = func(ctx context.Context, conn *pgconn.PgConn) error {
+		conn.CustomData()[automaticCancelKey] = &automaticCancel
 		connected.Store(true)
 		if afterConnect != nil {
 			return afterConnect(ctx, conn)
@@ -47,6 +52,9 @@ func configureCancellation(config *pgx.ConnConfig) {
 	config.DialFunc = func(ctx context.Context, network, address string) (net.Conn, error) {
 		if !connected.Load() {
 			return dial(ctx, network, address)
+		}
+		if ctx.Value(cancellationRetryKey{}) == nil {
+			automaticCancel.Store(true)
 		}
 		conn, err := dial(ctx, network, address)
 		if err != nil {
@@ -64,9 +72,10 @@ func configureCancellation(config *pgx.ConnConfig) {
 // so releasing the connection does not wait for retries.
 //
 // Retries have a 10-second overall budget and a one-second limit per attempt.
-// The first attempt starts after 50 milliseconds, with increasing delays capped
-// at one second. Completion of the connection's local cleanup cancels any
-// pending retry. The pool closes healthy connections normally.
+// While local cleanup is pending, the first retry starts after 50 milliseconds
+// and subsequent delays double up to one second. If cleanup finishes after
+// pgx attempted to cancel and no pool retry succeeded, make one final bounded
+// attempt. pgx does not expose the outcome of its automatic request.
 //
 // CleanupDone does not confirm that the server stopped the query. If the
 // cancellation channel is unavailable, the server may continue executing.
@@ -84,7 +93,10 @@ func retryClosedConnectionCancellation(conn *pgx.Conn) {
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	retryCtx := context.WithValue(context.Background(), cancellationRetryKey{}, true)
+	budget, endBudget := context.WithTimeout(retryCtx, 10*time.Second)
+	defer endBudget()
+	ctx, cancel := context.WithCancel(budget)
 	defer cancel()
 	go func() {
 		select {
@@ -97,28 +109,40 @@ func retryClosedConnectionCancellation(conn *pgx.Conn) {
 	delay := 50 * time.Millisecond
 	timer := time.NewTimer(delay)
 	defer timer.Stop()
+	delivered := false
+retry:
 	for {
 		select {
 		case <-ctx.Done():
-			return
+			break retry
 		case <-timer.C:
 		}
 		// Cleanup may have finished at the same time as the timer.
 		select {
 		case <-target.CleanupDone():
-			return
+			break retry
 		case <-ctx.Done():
-			return
+			break retry
 		default:
 			// The connection still needs bounded cleanup attempts.
 		}
 		attempt, stop := context.WithTimeout(ctx, time.Second)
 		// Delivery failures are best effort too: retry until cleanup or the
 		// overall budget, without changing the caller's original error.
-		_ = target.CancelRequest(attempt)
+		err := target.CancelRequest(attempt)
+		if err == nil {
+			delivered = true
+		}
 		stop()
 		delay = min(2*delay, time.Second)
 		timer.Reset(delay)
+	}
+
+	automaticCancel := target.CustomData()[automaticCancelKey].(*atomic.Bool)
+	if !delivered && automaticCancel.Load() && budget.Err() == nil {
+		attempt, stop := context.WithTimeout(budget, time.Second)
+		defer stop()
+		_ = target.CancelRequest(attempt)
 	}
 
 }

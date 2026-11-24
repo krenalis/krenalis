@@ -197,6 +197,7 @@ func TestRetryClosedConnectionCancellation(t *testing.T) {
 		kind         string
 	}{
 		{"lost_first_request", 0, true, "query"},
+		{"lost_primary_connection", 1, false, "disconnect"},
 		{"blocked_first_request", 0, false, "blocked"},
 		{"transient_errors", 3, false, "query"},
 		{"healthy_connection", 0, false, "healthy"},
@@ -208,10 +209,12 @@ func TestRetryClosedConnectionCancellation(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 
 			dialer := &cancellationTestDialer{failures: c.failures, discardFirst: c.discardFirst}
-			var firstPending chan struct{}
+			var beforeRelease <-chan struct{}
 			var releaseFirst context.CancelFunc
 			if c.kind == "blocked" {
-				firstPending = make(chan struct{})
+				// Hold pgx's first write before pool release can start a retry.
+				firstPending := make(chan struct{})
+				beforeRelease = firstPending
 				var hold context.Context
 				hold, releaseFirst = context.WithCancel(t.Context())
 				defer releaseFirst()
@@ -236,7 +239,12 @@ func TestRetryClosedConnectionCancellation(t *testing.T) {
 				t.Fatalf("expected warehouse connection, got %v", err)
 			}
 			pid := acquired.Conn().PgConn().PID()
+			transport := acquired.Conn().PgConn().Conn()
 			cleanup := acquired.Conn().PgConn().CleanupDone()
+			if c.kind == "disconnect" {
+				// Exercise the case where local cleanup finishes before pool release.
+				beforeRelease = cleanup
+			}
 			ctx, cancel := context.WithTimeout(t.Context(), 35*time.Second)
 			defer cancel()
 			var tx pgx.Tx
@@ -340,10 +348,9 @@ pg_sleep(CASE WHEN i<3 THEN 0 ELSE 30 END) FROM generate_series(1,3) i`)
 						return
 					}
 					_, err := acquired.Exec(ctx, "SELECT pg_sleep(30)")
-					if firstPending != nil {
-						// Let pgx reach its first write before pool release can start a retry.
+					if beforeRelease != nil {
 						select {
-						case <-firstPending:
+						case <-beforeRelease:
 						case <-t.Context().Done():
 						}
 					}
@@ -353,12 +360,21 @@ pg_sleep(CASE WHEN i<3 THEN 0 ELSE 30 END) FROM generate_series(1,3) i`)
 			}
 			waitForCancellationQuery(t, originalPool, pid, true)
 			canceled := time.Now()
-			cancel()
+			wantErr := context.Canceled
+			if c.kind == "disconnect" {
+				wantErr = pgconn.ErrConnClosed
+				err := transport.Close()
+				if err != nil {
+					t.Fatalf("expected primary socket to close, got %v", err)
+				}
+			} else {
+				cancel()
+			}
 			select {
 			case err := <-done:
 				if err != nil {
-					if !errors.Is(err, context.Canceled) {
-						t.Fatalf("expected context cancellation, got %v", err)
+					if !errors.Is(err, wantErr) {
+						t.Fatalf("expected %v, got %v", wantErr, err)
 					}
 					break
 				}
@@ -440,6 +456,59 @@ pg_sleep(CASE WHEN i<3 THEN 0 ELSE 30 END) FROM generate_series(1,3) i`)
 			}
 			t.Logf("attempts=%d total_elapsed_ms=%d", dialer.count(), time.Since(canceled).Milliseconds())
 
+		})
+	}
+
+}
+
+// TestRetryClosedConnectionCancellationAfterCleanup checks the deadline of the
+// final retry when local cleanup finishes early or near the end of the budget.
+func TestRetryClosedConnectionCancellationAfterCleanup(t *testing.T) {
+
+	config, err := pgx.ParseConfig(cancellationTestDSN)
+	if err != nil {
+		t.Fatalf("expected connection config, got %v", err)
+	}
+
+	for _, cleanupAfter := range []time.Duration{0, 9750 * time.Millisecond} {
+		t.Run(cleanupAfter.String(), func(t *testing.T) {
+			synctest.Test(t, func(t *testing.T) {
+
+				config := config.Copy()
+				dialErr := errors.New("simulated cancellation dial failure")
+				var attempts []time.Time
+				config.DialFunc = func(ctx context.Context, _, _ string) (net.Conn, error) {
+					attempts = append(attempts, time.Now())
+					if len(attempts) == 1 {
+						return nil, dialErr
+					}
+					<-ctx.Done()
+					return nil, ctx.Err()
+				}
+				conn, finishCleanup := newCancellationTestConnection(t, config, nil, 4)
+				// Use the same request as pgx's automatic cancellation.
+				err := conn.PgConn().CancelRequest(t.Context())
+				if err != nil {
+					if !errors.Is(err, dialErr) {
+						t.Fatalf("expected initial dial failure, got %v", err)
+					}
+				}
+				if err == nil {
+					t.Fatal("expected initial dial failure, got success")
+				}
+
+				started := time.Now()
+				time.AfterFunc(cleanupAfter, finishCleanup)
+				retryClosedConnectionCancellation(conn)
+				wantDuration := min(cleanupAfter+time.Second, 10*time.Second)
+				if elapsed := time.Since(started); elapsed != wantDuration {
+					t.Fatalf("expected retry duration %v, got %v", wantDuration, elapsed)
+				}
+				if len(attempts) < 2 || attempts[len(attempts)-1].Sub(started) != cleanupAfter {
+					t.Fatalf("expected a final cancellation attempt at cleanup, got %v", attempts)
+				}
+
+			})
 		})
 	}
 
