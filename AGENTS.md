@@ -60,7 +60,7 @@ Initialize an empty writable map with `map[K]V{}`, or with `make(map[K]V, capaci
 Every `switch`, including type switches and switches without an expression, has a `default` clause that makes explicit what happens to unmatched values:
 
 - If they cannot occur, treat them as an unexpected situation (see Errors versus panics), naming the value or type in the message.
-- If they need no action, leave `default` empty except for a short comment saying why.
+- If they need no action, leave `default` empty, optionally with a short comment saying why.
 
 Omit `default` only when:
 
