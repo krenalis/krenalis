@@ -30,6 +30,8 @@ import (
 	"github.com/krenalis/krenalis/warehouses"
 )
 
+const cancellationTestDSN = "host=127.0.0.1 user=test dbname=test sslmode=disable target_session_attrs=any"
+
 // cancellationTestDialer simulates failed or silently dropped cancellation
 // requests and counts cancellation attempts.
 type cancellationTestDialer struct {
@@ -101,12 +103,14 @@ func (c *cancellationTestConn) Write(data []byte) (int, error) {
 // TestConfigureCancellation checks that the configured hooks receive the
 // established primary connection.
 func TestConfigureCancellation(t *testing.T) {
+
+	config, err := pgx.ParseConfig(cancellationTestDSN)
+	if err != nil {
+		t.Fatalf("expected connection config, got %v", err)
+	}
+
 	synctest.Test(t, func(t *testing.T) {
 
-		config, err := pgx.ParseConfig("host=127.0.0.1 user=test dbname=test sslmode=disable")
-		if err != nil {
-			t.Fatalf("expected connection config, got %v", err)
-		}
 		var transport net.Conn
 		config.AfterNetConnect = func(_ context.Context, _ *pgconn.Config, conn net.Conn) (net.Conn, error) {
 			transport = conn
@@ -128,17 +132,20 @@ func TestConfigureCancellation(t *testing.T) {
 		}
 
 	})
+
 }
 
 // TestConfigureCancellationConnectTimeout checks the error from a timeout
 // while pgx is still negotiating TLS on the primary connection.
 func TestConfigureCancellationConnectTimeout(t *testing.T) {
+
+	config, err := pgx.ParseConfig("host=127.0.0.1 user=test dbname=test sslmode=require")
+	if err != nil {
+		t.Fatalf("expected connection config, got %v", err)
+	}
+
 	synctest.Test(t, func(t *testing.T) {
 
-		config, err := pgx.ParseConfig("host=127.0.0.1 user=test dbname=test sslmode=require")
-		if err != nil {
-			t.Fatalf("expected connection config, got %v", err)
-		}
 		client, server := net.Pipe()
 		defer client.Close()
 		defer server.Close()
@@ -154,7 +161,7 @@ func TestConfigureCancellationConnectTimeout(t *testing.T) {
 
 		ctx, cancel := context.WithTimeout(t.Context(), time.Second)
 		defer cancel()
-		_, err = pgx.ConnectConfig(ctx, config)
+		_, err := pgx.ConnectConfig(ctx, config)
 		if err != nil {
 			if !errors.Is(err, context.DeadlineExceeded) {
 				t.Fatalf("expected connection deadline exceeded, got %v", err)
@@ -164,6 +171,7 @@ func TestConfigureCancellationConnectTimeout(t *testing.T) {
 		t.Fatal("expected connection deadline exceeded, got success")
 
 	})
+
 }
 
 // TestRetryClosedConnectionCancellation verifies cancellation retries
@@ -408,7 +416,7 @@ pg_sleep(CASE WHEN i<3 THEN 0 ELSE 30 END) FROM generate_series(1,3) i`)
 // in-memory connections.
 func TestRetryClosedConnectionCancellationLimits(t *testing.T) {
 
-	config, err := pgx.ParseConfig("host=127.0.0.1 user=test dbname=test sslmode=disable")
+	config, err := pgx.ParseConfig(cancellationTestDSN)
 	if err != nil {
 		t.Fatalf("expected connection config, got %v", err)
 	}
@@ -527,6 +535,13 @@ func TestRetryClosedConnectionCancellationLimits(t *testing.T) {
 // TestRetryClosedConnectionCancellationSecretKey checks which backend keys can
 // be used for a retry.
 func TestRetryClosedConnectionCancellationSecretKey(t *testing.T) {
+
+	config, err := pgx.ParseConfig(cancellationTestDSN)
+	if err != nil {
+		t.Fatalf("expected connection config, got %v", err)
+	}
+	config.MaxProtocolVersion = "3.2"
+
 	for _, c := range []struct {
 		name         string
 		keyLength    int
@@ -539,11 +554,7 @@ func TestRetryClosedConnectionCancellationSecretKey(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			synctest.Test(t, func(t *testing.T) {
 
-				config, err := pgx.ParseConfig("host=127.0.0.1 user=test dbname=test sslmode=disable")
-				if err != nil {
-					t.Fatalf("expected connection config, got %v", err)
-				}
-				config.MaxProtocolVersion = "3.2"
+				config := config.Copy()
 				attempts := 0
 				config.DialFunc = func(context.Context, string, string) (net.Conn, error) {
 					attempts++
@@ -560,6 +571,7 @@ func TestRetryClosedConnectionCancellationSecretKey(t *testing.T) {
 			})
 		})
 	}
+
 }
 
 // TestRetryClosedConnectionCancellationTLS checks that blocked TLS shutdown
@@ -576,7 +588,7 @@ func TestRetryClosedConnectionCancellationTLS(t *testing.T) {
 		t.Fatalf("expected certificate, got %v", err)
 	}
 	certificate := tls.Certificate{Certificate: [][]byte{der}, PrivateKey: key}
-	config, err := pgx.ParseConfig("host=127.0.0.1 user=test dbname=test sslmode=disable")
+	config, err := pgx.ParseConfig(cancellationTestDSN)
 	if err != nil {
 		t.Fatalf("expected connection config, got %v", err)
 	}
@@ -712,11 +724,16 @@ func newCancellationTestConnection(t *testing.T, config *pgx.ConnConfig, serverT
 
 	t.Helper()
 	client, server := net.Pipe()
-	t.Cleanup(func() { _ = client.Close() })
 	cleanupCtx, finishCleanup := context.WithCancel(t.Context())
-	t.Cleanup(finishCleanup)
+	serverDone := make(chan struct{})
+	t.Cleanup(func() {
+		finishCleanup()
+		_ = client.Close()
+		<-serverDone
+	})
 	go func() {
 
+		defer close(serverDone)
 		defer server.Close()
 		if serverTLS != nil {
 			if config.SSLNegotiation == "postgres" {
@@ -835,11 +852,12 @@ count(*) FILTER (WHERE wait_event='PgSleep') FROM pg_stat_activity WHERE pid=$1`
 			}
 			t.Fatalf("expected target activity, got %v", err)
 		}
-		if active < 0 || active > 1 || sleeps < 0 || sleeps > active {
+		if active < 0 || active > 1 || sleeps < 0 || sleeps > 1 {
 			t.Fatalf("expected bounded target activity, got %d/%d", active, sleeps)
 		}
 		lastActive, lastSleeps = active, sleeps
-		if sleeping && sleeps == 1 || !sleeping && active == 0 {
+		// PostgreSQL samples state and wait_event independently.
+		if sleeping && active == 1 && sleeps == 1 || !sleeping && active == 0 && sleeps == 0 {
 			return
 		}
 		select {
