@@ -13,13 +13,6 @@ import (
 	"github.com/krenalis/krenalis/tools/errors"
 )
 
-// schemaVersion is the schema version of the database of this version of
-// Krenalis, an integer unrelated to the Krenalis version. It is incremented
-// only by the releases that change the database, whose migrate migrates a
-// database of the previous schema version to it. See
-// .agents/skills/release-upgrade/SKILL.md.
-const schemaVersion = 1
-
 // legacySchemaVersion is the schema version of a database without the
 // schema_version table, that is, a database of v0.48.0.
 const legacySchemaVersion = 1
@@ -181,20 +174,6 @@ func Migrate(ctx context.Context, database *db.DB) error {
 	return nil
 }
 
-// finalize removes, within the given transaction, what only the Krenalis
-// instances of the previous release need from a migrated database, such as the
-// old columns and the triggers that keep them in sync, and adds the
-// constraints that they could violate. It runs only when none of them is
-// running anymore. This version of Krenalis must run on the database both
-// before and after it.
-//
-// It is written together with migrate, when a release that changes the
-// database is prepared, with its helpers in upgrade_release.go, and emptied
-// after the release is published. See .agents/skills/release-upgrade/SKILL.md.
-func finalize(ctx context.Context, tx *db.Tx) error {
-	return nil
-}
-
 // lockForUpgrade takes, within the given transaction, the lock that serializes
 // the initialization, the migration, and the finalization of the database, and
 // limits the wait for the locks on database objects taken afterwards.
@@ -214,19 +193,6 @@ func lockForUpgrade(ctx context.Context, tx *db.Tx) error {
 		return fmt.Errorf("cannot set lock timeout: %s", err)
 	}
 
-	return nil
-}
-
-// migrate migrates, within the given transaction, a database of the previous
-// schema version to the current schema. It must not break the Krenalis
-// instances of the previous release, which keep running on the database until
-// they are replaced.
-//
-// It is written when a release that changes the database is prepared, from
-// the notes in RELEASE-UPGRADE.md, with its helpers in upgrade_release.go, and
-// emptied after the release is published. See
-// .agents/skills/release-upgrade/SKILL.md.
-func migrate(ctx context.Context, tx *db.Tx) error {
 	return nil
 }
 

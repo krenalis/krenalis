@@ -5,16 +5,16 @@ description: Record in core/internal/initdb/RELEASE-UPGRADE.md how a change alte
 
 # Release upgrade
 
-Krenalis's PostgreSQL database has a schema version: an integer, unrelated to the Krenalis version, recorded in the single row of the `schema_version` table together with whether it has been finalized. A database without that table, that is, a database of `v0.48.0`, is at schema version 1, finalized. The constant `schemaVersion` in `core/internal/initdb/upgrade.go` is the schema version of the current code; it is incremented only by the releases that change the database, so a release that does not change it needs no migration.
+Krenalis's PostgreSQL database has a schema version: an integer, unrelated to the Krenalis version, recorded in the single row of the `schema_version` table together with whether it has been finalized. A database without that table, that is, a database of `v0.48.0`, is at schema version 1, finalized. The constant `schemaVersion` in `core/internal/initdb/upgrade_release.go` is the schema version of the current code; it is incremented only by the releases that change the database, so a release that does not change it needs no migration.
 
 A release that changes the database upgrades it in two steps, both permanent flags of Krenalis:
 
-1. `-migrate-db` (`core.MigrateDB`, `initdb.Migrate`) runs `migrate` in `upgrade.go`. It migrates a finalized database of the previous schema version and records the new schema version, not finalized. It runs while the Krenalis instances of the previous release are still running, so `migrate` must not break them (see "Compatibility with the previous release").
-2. `-finalize-db` (`core.FinalizeDB`, `initdb.Finalize`) runs `finalize` in `upgrade.go`, once no instance of the previous release is running: it does not check it, and otherwise the behavior is undefined and may be destructive. It removes what only those instances needed, such as the old columns and the triggers that keep them in sync, adds the constraints that they could violate, and records the schema version as finalized. After it, the previous release can no longer run on the database.
+1. `-migrate-db` (`core.MigrateDB`, `initdb.Migrate`) runs `migrate` in `upgrade_release.go`. It migrates a finalized database of the previous schema version and records the new schema version, not finalized. It runs while the Krenalis instances of the previous release are still running, so `migrate` must not break them (see "Compatibility with the previous release").
+2. `-finalize-db` (`core.FinalizeDB`, `initdb.Finalize`) runs `finalize` in `upgrade_release.go`, once no instance of the previous release is running: it does not check it, and otherwise the behavior is undefined and may be destructive. It removes what only those instances needed, such as the old columns and the triggers that keep them in sync, adds the constraints that they could violate, and records the schema version as finalized. After it, the previous release can no longer run on the database.
 
 Both run in a single transaction, under the advisory lock shared with the initialization and with `lock_timeout` set to 5 seconds, and check the recorded schema version, so they do nothing when run again. At startup, `initdb.CheckSchemaVersion` lets Krenalis run only on its own schema version, or on the next one not yet finalized. The check compares schema versions, not releases, so it also lets an older release at the same schema version as the previous release run; only the previous release, however, is required to keep working (see "Compatibility with the previous release"). A database at schema version N must be finalized before the release with schema version N+1 can migrate it, so the releases that change the database are deployed one at a time, in order.
 
-`migrate` and `finalize` hold the upgrade of a single release. Together with their helpers in `upgrade_release.go`, their test in `upgrade_release_test.go`, and the SQL files of the base release in `core/internal/initdb/testdata`, they exist on `main` only while a release is prepared; otherwise both do nothing. Between releases, changes record what the upgrade must do in `core/internal/initdb/RELEASE-UPGRADE.md`, and `migrate` and `finalize` are written from those notes when the next release is prepared. So a commit of `main` that changes the database cannot be deployed on an existing database.
+`migrate` and `finalize`, in `upgrade_release.go`, hold the upgrade of a single release; `upgrade.go` holds the mechanism, which does not change between releases. Their helpers, in the same file, their test in `upgrade_release_test.go`, and the SQL files of the base release in `core/internal/initdb/testdata` exist on `main` only while a release is prepared; otherwise `migrate` and `finalize` do nothing. Between releases, changes record what the upgrade must do in `core/internal/initdb/RELEASE-UPGRADE.md`, and `migrate` and `finalize` are written from those notes when the next release is prepared. So a commit of `main` that changes the database cannot be deployed on an existing database.
 
 ## Base release
 
@@ -55,7 +55,7 @@ The two releases also exchange notifications and NATS messages, which no trigger
 
 Record a change when it requires an existing database to be upgraded: changes to `schema.sql` and to the other SQL files of `core/internal/initdb`, as well as changes to the format of data stored in the database, such as JSON in a column, that leave the schema unchanged.
 
-1. If `migrate` or `finalize` in `upgrade.go` does something, a release is being prepared, or the upgrade of the previous release was not removed: stop and ask the user how to proceed.
+1. If `migrate` or `finalize` in `upgrade_release.go` does something, a release is being prepared, or the upgrade of the previous release was not removed: stop and ask the user how to proceed.
 2. If `RELEASE-UPGRADE.md` does not exist, ask the user for the base release and create the file:
 
    ```markdown
@@ -98,7 +98,7 @@ The notes describe the net change since the base release, not the history of `ma
 
 1. Read the base release from `RELEASE-UPGRADE.md` and confirm it with the user, because it must still be the latest release in production. If the file does not exist, ask the user for the base release.
 2. Compare the notes with `git diff <base> HEAD -- core/internal/initdb/`. Every difference must be covered by an entry, and every entry by the diff or by a change in the format of stored data; ask the user about any mismatch. If the database has not changed, write nothing and leave `schemaVersion` unchanged.
-3. Check that `schemaVersion` is the schema version of the base release: `git show <base>:core/internal/initdb/upgrade.go`, or 1 if the base release has no `schemaVersion`. Then increment it by one.
+3. Check that `schemaVersion` is the schema version of the base release: `git grep 'const schemaVersion' <base> -- core/internal/initdb/`, or 1 if the base release has no `schemaVersion`. Then increment it by one.
 4. Write `migrate` from the entries under "Migration", and `finalize` from those under "Finalization", each within the transaction it receives, with the helpers they need in `upgrade_release.go`:
    - Use SQL for DDL, triggers, and backfills that a statement can express. Use Go for conversions that are recursive, as of JSON values, or that depend on other data; in Go, work on the decoded JSON, such as `map[string]any` decoded with `UseNumber`, not on the types of the current code, which already describe the new format and may reject the old one.
    - When `migrate` adds triggers that convert between two formats, the backfill must produce the same values as the triggers. Prefer writing the conversion once, in a SQL function that both the triggers and the backfill use.
@@ -115,4 +115,4 @@ The notes describe the net change since the base release, not the history of `ma
 
 ## Removing the upgrade after a release
 
-Once the release is published, empty the bodies of `migrate` and `finalize` so that they return `nil`, and delete `upgrade_release.go`, `upgrade_release_test.go`, and `testdata/<base>`. Keep `schemaVersion` at its new value, and keep `upgrade_helpers_test.go`, `-migrate-db`, `-finalize-db`, `core.MigrateDB`, `core.FinalizeDB`, `initdb.Migrate`, `initdb.Finalize`, and `initdb.CheckSchemaVersion`.
+Once the release is published, empty the bodies of `migrate` and `finalize` so that they return `nil`, remove their helpers from `upgrade_release.go`, and delete `upgrade_release_test.go` and `testdata/<base>`. Keep `schemaVersion` at its new value, and keep `upgrade_helpers_test.go`, `-migrate-db`, `-finalize-db`, `core.MigrateDB`, `core.FinalizeDB`, `initdb.Migrate`, `initdb.Finalize`, and `initdb.CheckSchemaVersion`.
