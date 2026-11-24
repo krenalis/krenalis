@@ -1,12 +1,12 @@
-cmd, core: add the `-migrate-db` and `-finalize-db` flags (#2778)
+cmd, core: add a two-step database upgrade kept across releases (#2778)
 
-Currently the database updater is written before a release and thrown
+Currently the database upgrade is written before a release and thrown
 away after it (see #2767). Also, it cannot be used on AWS ECS, where a
 one-off task must migrate the database before the service is updated,
 and where the instances of the previous and of the new release run
 together during a rolling deployment.
 
-This commit lays the groundwork for the updater, so that we can start
+This commit lays the groundwork for the upgrade, so that we can start
 using it, also on AWS.
 
 The idea of this commit is to upgrade the database in two separate
