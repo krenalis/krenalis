@@ -35,8 +35,9 @@ behavior is undefined and may be destructive.
 
 Both flags remain in Krenalis across releases, and can be combined to
 migrate and then finalize. Each step can be retried until it succeeds
-and run from several instances at once. A short lock timeout makes it
-give up, rather than wait for a lock and stall the running instances.
+and run from several instances at once. A short lock timeout makes them
+give up, rather than wait for a lock held by the running instances and
+stall them.
 
 To know where it stands, the database records its schema version,
 incremented only by the releases that change the database, and whether
@@ -65,7 +66,8 @@ commit, and is still open (see #2796).
 The "migrate" and "finalize" functions are written when a release that
 changes the database is prepared, from the notes in
 "core/internal/initdb/RELEASE-UPGRADE.md", which now separate the
-migration from the finalization, and are emptied after the release.
+migration from the finalization. The functions are emptied after the
+release.
 
 The upgrade lives in the "core/internal/initdb" package, whose name now
 covers only part of what it does. The package keeps its name for now;
