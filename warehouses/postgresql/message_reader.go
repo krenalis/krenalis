@@ -29,7 +29,9 @@ type messageReader struct {
 	prefix    net.Buffers // received prefix, retained across short reads and timeouts
 }
 
-// Read returns bytes from the PostgreSQL message stream.
+// Read returns bytes from the PostgreSQL message stream. It rejects wire
+// lengths below four bytes and returns *pgproto3.ExceededMaxBodyLenErr for
+// bodies larger than maxMessageBodyLen.
 func (r *messageReader) Read(p []byte) (int, error) {
 
 	if len(p) == 0 {
@@ -78,6 +80,8 @@ func (r *messageReader) Read(p []byte) (int, error) {
 
 // startMessage validates the wire length, which includes the four length bytes
 // but excludes the type byte, and sets how much to read before forwarding it.
+// It rejects lengths below four and returns *pgproto3.ExceededMaxBodyLenErr
+// for bodies larger than maxMessageBodyLen.
 func (r *messageReader) startMessage(length int32) error {
 	if length < 4 {
 		return fmt.Errorf("invalid PostgreSQL message length: %d", length)

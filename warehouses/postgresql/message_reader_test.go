@@ -14,6 +14,39 @@ import (
 	"github.com/jackc/pgx/v5/pgproto3"
 )
 
+// TestMessageReaderDataRowHeader checks that the reader releases the header
+// of a 33 MiB DataRow as soon as half its body has arrived.
+func TestMessageReaderDataRowHeader(t *testing.T) {
+
+	const bodyBytes = 33 << 20
+	// A one-column DataRow has a two-byte field count and a four-byte field length.
+	row := pgproto3.DataRow{Values: [][]byte{make([]byte, bodyBytes-6)}}
+	frame, err := row.Encode(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var header [5]byte
+	if got := len(frame) - len(header); got != bodyBytes {
+		t.Fatalf("expected a %d-byte DataRow body, got %d bytes", bodyBytes, got)
+	}
+
+	source := &io.LimitedReader{R: bytes.NewReader(frame), N: int64(len(header) + bodyBytes/2 - 1)}
+	r := messageReader{src: bufio.NewReader(source)}
+	n, err := r.Read(header[:])
+	if n != 0 || err == nil {
+		t.Fatalf("expected no header one byte before half the body, got %d bytes and %v", n, err)
+	}
+	source.N = 1
+	_, err = io.ReadFull(&r, header[:])
+	if err != nil {
+		t.Fatalf("expected the header after half the body, got %v", err)
+	}
+	if !bytes.Equal(header[:], frame[:len(header)]) {
+		t.Fatalf("expected header %x, got %x", frame[:len(header)], header)
+	}
+
+}
+
 // TestMessageReaderPartialReads checks that an interrupted read retains the
 // prefix and withholds the header without reserving the declared body size.
 func TestMessageReaderPartialReads(t *testing.T) {
@@ -108,9 +141,18 @@ func TestMessageReaderPartialReads(t *testing.T) {
 
 }
 
-// TestMessageReaderProtocolLimit checks the actual wire length boundary
+// TestMessageReaderProtocolLimit checks both wire length boundaries
 // without allocating a maximum-size message.
 func TestMessageReaderProtocolLimit(t *testing.T) {
+
+	t.Run("wire length below four", func(t *testing.T) {
+		header := []byte{'1', 0, 0, 0, 3}
+		r := messageReader{src: bufio.NewReader(bytes.NewReader(header))}
+		n, err := r.Read(make([]byte, len(header)))
+		if n != 0 || err == nil {
+			t.Fatalf("expected zero bytes and an error for wire length 3, got %d bytes and %v", n, err)
+		}
+	})
 
 	const maxBody = 1<<30 - 2
 	for _, tc := range []struct {
