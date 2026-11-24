@@ -34,16 +34,9 @@ var ErrNotInitialized = errors.New("Krenalis's PostgreSQL database has not been 
 // instances are being replaced or after a rollback to this version of
 // Krenalis. It returns ErrNotInitialized if the database is empty.
 func CheckSchemaVersion(ctx context.Context, database *db.DB) error {
-	isEmpty, err := databaseIsEmpty(ctx, database)
-	if err != nil {
-		return fmt.Errorf("cannot check if PostgreSQL database is empty or not: %s", err)
-	}
-	if isEmpty {
-		return ErrNotInitialized
-	}
 	version, finalized, err := readSchemaVersion(ctx, database)
 	if err != nil {
-		return fmt.Errorf("cannot read schema version of PostgreSQL database: %s", err)
+		return err
 	}
 	switch {
 	case version == schemaVersion:
@@ -76,7 +69,11 @@ func Finalize(ctx context.Context, database *db.DB) error {
 	var done bool
 	err := database.Transaction(ctx, func(tx *db.Tx) error {
 
-		version, finalized, err := lockSchemaVersion(ctx, tx)
+		err := lockForUpgrade(ctx, tx)
+		if err != nil {
+			return err
+		}
+		version, finalized, err := readSchemaVersion(ctx, tx)
 		if err != nil {
 			return err
 		}
@@ -132,7 +129,11 @@ func Migrate(ctx context.Context, database *db.DB) error {
 	var done bool
 	err := database.Transaction(ctx, func(tx *db.Tx) error {
 
-		version, finalized, err := lockSchemaVersion(ctx, tx)
+		err := lockForUpgrade(ctx, tx)
+		if err != nil {
+			return err
+		}
+		version, finalized, err := readSchemaVersion(ctx, tx)
 		if err != nil {
 			return err
 		}
@@ -194,15 +195,14 @@ func finalize(ctx context.Context, tx *db.Tx) error {
 	return nil
 }
 
-// lockSchemaVersion takes, within the given transaction, the lock that
-// serializes the initialization, the migration, and the finalization of the
-// database, and returns its schema version and whether it has been
-// finalized. It fails if the database is empty.
-func lockSchemaVersion(ctx context.Context, tx *db.Tx) (version int, finalized bool, err error) {
+// lockForUpgrade takes, within the given transaction, the lock that serializes
+// the initialization, the migration, and the finalization of the database, and
+// limits the wait for the locks on database objects taken afterwards.
+func lockForUpgrade(ctx context.Context, tx *db.Tx) error {
 
-	_, err = tx.Exec(ctx, "SELECT pg_advisory_xact_lock($1)", initLockKey)
+	_, err := tx.Exec(ctx, "SELECT pg_advisory_xact_lock($1)", initLockKey)
 	if err != nil {
-		return 0, false, fmt.Errorf("cannot lock PostgreSQL database: %s", err)
+		return fmt.Errorf("cannot lock PostgreSQL database: %s", err)
 	}
 
 	// Fail, instead of blocking the running Krenalis instances, when a lock on
@@ -211,22 +211,10 @@ func lockSchemaVersion(ctx context.Context, tx *db.Tx) (version int, finalized b
 	// still wait for each other.
 	_, err = tx.Exec(ctx, "SET LOCAL lock_timeout = '5s'")
 	if err != nil {
-		return 0, false, fmt.Errorf("cannot set lock timeout: %s", err)
+		return fmt.Errorf("cannot set lock timeout: %s", err)
 	}
 
-	isEmpty, err := databaseIsEmpty(ctx, tx)
-	if err != nil {
-		return 0, false, fmt.Errorf("cannot check if PostgreSQL database is empty or not: %s", err)
-	}
-	if isEmpty {
-		return 0, false, ErrNotInitialized
-	}
-	version, finalized, err = readSchemaVersion(ctx, tx)
-	if err != nil {
-		return 0, false, fmt.Errorf("cannot read schema version of PostgreSQL database: %s", err)
-	}
-
-	return version, finalized, nil
+	return nil
 }
 
 // migrate migrates, within the given transaction, a database of the previous
@@ -244,18 +232,29 @@ func migrate(ctx context.Context, tx *db.Tx) error {
 
 // readSchemaVersion returns the schema version of the database and whether it
 // has been finalized. A database without the schema_version table is at the
-// legacy schema version, finalized.
+// legacy schema version, finalized. It returns ErrNotInitialized if the
+// database is empty.
 func readSchemaVersion(ctx context.Context, conn db.Connection) (version int, finalized bool, err error) {
+	isEmpty, err := databaseIsEmpty(ctx, conn)
+	if err != nil {
+		return 0, false, fmt.Errorf("cannot check if PostgreSQL database is empty or not: %s", err)
+	}
+	if isEmpty {
+		return 0, false, ErrNotInitialized
+	}
 	var exists bool
 	err = conn.QueryRow(ctx, "SELECT to_regclass('schema_version') IS NOT NULL").Scan(&exists)
 	if err != nil {
-		return 0, false, err
+		return 0, false, fmt.Errorf("cannot read schema version of PostgreSQL database: %s", err)
 	}
 	if !exists {
 		return legacySchemaVersion, true, nil
 	}
 	err = conn.QueryRow(ctx, "SELECT version, finalized FROM schema_version").Scan(&version, &finalized)
-	return version, finalized, err
+	if err != nil {
+		return 0, false, fmt.Errorf("cannot read schema version of PostgreSQL database: %s", err)
+	}
+	return version, finalized, nil
 }
 
 // writeSchemaVersion records, within the given transaction, the schema version
