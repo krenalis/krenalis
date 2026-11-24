@@ -7,10 +7,7 @@ and where the instances of the previous and of the new release run
 together during a rolling deployment.
 
 This commit lays the groundwork for the updater, so that we can start
-using it, also on AWS. It aims to be correct, not to be the ideal
-updater: both the mechanism and the policy for writing the upgrade code
-of each release can be refined over time, as we gain experience with
-real upgrades.
+using it, also on AWS.
 
 The idea of this commit is to upgrade the database in two separate
 steps: the migration and the finalization. The migration runs before the
@@ -73,3 +70,6 @@ whether to rename it will be evaluated in the future.
 
 Add test helpers for the upgrade test of each release, and update
 "AGENTS.md" and the "release-upgrade" skill.
+
+The documentation on krenalis.com and in the "krenalis/internal"
+repository will be updated after this commit.
