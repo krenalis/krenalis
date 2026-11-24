@@ -40,8 +40,10 @@ give up, rather than wait for a lock and stall the running instances.
 
 To know where it stands, the database records its schema version,
 incremented only by the releases that change the database, and whether
-it has been finalized. A database of v0.48.0, which lacks this record,
-is taken to be at schema version 1, finalized.
+it has been finalized. A database of v0.48.0, which predates this
+mechanism, counts as schema version 1, finalized. As Krenalis is not in
+production yet, upgrading from v0.48.0 requires stopping it first, with
+no way back.
 
 At startup, Krenalis now checks the schema version of the database. It
 starts if the database is:
