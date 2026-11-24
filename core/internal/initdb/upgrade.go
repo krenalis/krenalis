@@ -47,18 +47,18 @@ func CheckSchemaVersion(ctx context.Context, database *db.DB) error {
 	}
 	switch {
 	case version == schemaVersion:
-		// This version of Krenalis runs on it.
+		// Same schema version as this Krenalis, finalized or not.
+		return nil
 	case version == schemaVersion+1 && !finalized:
 		slog.Info("PostgreSQL database is at the next schema version, not finalized,"+
 			" on which this version of Krenalis can still run", "schema_version", version)
+		return nil
 	case version > schemaVersion:
 		return fmt.Errorf("PostgreSQL database is at schema version %d, on which this version of Krenalis,"+
 			" at schema version %d, can no longer run", version, schemaVersion)
-	default:
-		return fmt.Errorf("PostgreSQL database is at schema version %d, but this version of Krenalis"+
-			" requires schema version %d; migrate the database first", version, schemaVersion)
 	}
-	return nil
+	return fmt.Errorf("PostgreSQL database is at schema version %d, but this version of Krenalis"+
+		" requires schema version %d; migrate the database first", version, schemaVersion)
 }
 
 // Finalize finalizes, in a single transaction, Krenalis's PostgreSQL database
