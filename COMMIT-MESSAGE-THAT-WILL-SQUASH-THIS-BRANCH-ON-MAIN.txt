@@ -40,9 +40,10 @@ Krenalis command even between releases, unlike what we used to do before), exit
 when done, and can be combined (to carry out both the migration and the
 subsequent finalization). Each runs in a single transaction, under the advisory
 lock used by the database initialization, and with a 5-second lock timeout
-(which limits the maximum lock duration, to avoid blocking running Krenalis
-instances). Both operations can be retried until they succeed, and run
-concurrently from several instances. To know where the database stands, the
+(so that a statement that cannot acquire a lock within that time fails, instead
+of waiting and making the running Krenalis instances queue behind it). Both
+operations can be retried until they succeed, and run concurrently from several
+instances. To know where the database stands, the
 database records its schema version, an integer incremented only by the releases
 that change the database, and whether it has been finalized. By convention, a
 database of v0.48.0 (which is the version already released, and which therefore
