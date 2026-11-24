@@ -61,7 +61,7 @@ func TestMessageReaderPartialReads(t *testing.T) {
 	r := &messageReader{src: bufio.NewReader(&source)}
 	var header [5]byte
 	start := 0
-	for _, end := range []int{2, 5, 65539} {
+	for _, end := range []int{2, 5, 6, 65539} {
 		source.Write(frame[start:end])
 		start = end
 		n, err := r.Read(header[:])
@@ -184,14 +184,20 @@ func TestMessageReaderProtocolLimit(t *testing.T) {
 	if n != 0 {
 		t.Fatalf("expected zero bytes for an oversized body, got %d", n)
 	}
+	requireMessageBodyLimitError(t, err, maxBody, oversizedBody)
+
+}
+
+// requireMessageBodyLimitError checks both lengths reported for a rejected body.
+func requireMessageBodyLimitError(t *testing.T, err error, limit, bodyLen int) {
+	t.Helper()
 	if err != nil {
 		limitErr, ok := errors.AsType[*pgproto3.ExceededMaxBodyLenErr](err)
-		if !ok || limitErr.MaxExpectedBodyLen != maxBody || limitErr.ActualBodyLen != oversizedBody {
+		if !ok || limitErr.MaxExpectedBodyLen != limit || limitErr.ActualBodyLen != bodyLen {
 			t.Fatalf("expected ExceededMaxBodyLenErr for %d bytes with limit %d, got %T (%v)",
-				oversizedBody, maxBody, err, err)
+				bodyLen, limit, err, err)
 		}
 		return
 	}
 	t.Fatal("expected ExceededMaxBodyLenErr, got nil")
-
 }

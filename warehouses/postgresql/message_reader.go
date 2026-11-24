@@ -26,7 +26,8 @@ type messageReader struct {
 	src       *bufio.Reader
 	remaining int         // bytes still to deliver in this message, including the header
 	toBuffer  int         // bytes still needed before the header can be forwarded
-	prefix    net.Buffers // received prefix, retained across short reads and timeouts
+	prefix    net.Buffers // blocks to deliver once the prefix is complete
+	pending   []byte      // unfilled suffix of the last prefix block
 }
 
 // Read returns bytes from the PostgreSQL message stream. It rejects wire
@@ -50,18 +51,17 @@ func (r *messageReader) Read(p []byte) (int, error) {
 
 	for r.toBuffer > 0 {
 		const chunkSize = 64 << 10
-		last := len(r.prefix) - 1
-		if last < 0 || len(r.prefix[last]) == cap(r.prefix[last]) {
-			r.prefix = append(r.prefix, make([]byte, 0, min(chunkSize, r.toBuffer)))
-			last++
+		if r.pending == nil {
+			r.pending = make([]byte, min(chunkSize, r.toBuffer))
+			r.prefix = append(r.prefix, r.pending)
 		}
-		chunk := r.prefix[last]
-		n, err := io.ReadFull(r.src, chunk[len(chunk):cap(chunk)])
-		r.prefix[last] = chunk[:len(chunk)+n]
+		n, err := io.ReadFull(r.src, r.pending)
 		r.toBuffer -= n
 		if err != nil {
+			r.pending = r.pending[n:]
 			return 0, err
 		}
+		r.pending = nil
 	}
 
 	if len(r.prefix) > 0 {

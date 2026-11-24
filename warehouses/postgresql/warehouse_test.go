@@ -7,7 +7,6 @@ package postgresql
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -103,34 +102,19 @@ func TestConnectionPoolMessageSizeLimit(t *testing.T) {
 	}
 
 	err = pool.QueryRow(t.Context(), query, maxTextBytes+1).Scan(&value)
+	requireMessageBodyLimitError(t, err, maxBodyBytes, maxBodyBytes+1)
+
+	var result int
+	err = pool.QueryRow(t.Context(), "SELECT 1").Scan(&result)
 	if err != nil {
-
-		limitErr, ok := errors.AsType[*pgproto3.ExceededMaxBodyLenErr](err)
-		if !ok {
-			t.Fatalf("expected ExceededMaxBodyLenErr, got %v", err)
-		}
-		if limitErr.MaxExpectedBodyLen != maxBodyBytes {
-			t.Fatalf("expected a limit of %d bytes, got %d", maxBodyBytes, limitErr.MaxExpectedBodyLen)
-		}
-		if limitErr.ActualBodyLen != maxBodyBytes+1 {
-			t.Fatalf("expected a body of %d bytes, got %d", maxBodyBytes+1, limitErr.ActualBodyLen)
-		}
-
-		var result int
-		err = pool.QueryRow(t.Context(), "SELECT 1").Scan(&result)
-		if err != nil {
-			t.Fatalf("expected the pool to return a row after rejecting the message, got %v", err)
-		}
-		if result != 1 {
-			t.Fatalf("expected 1, got %d", result)
-		}
-		if n := pool.Stat().NewConnsCount(); n != 2 {
-			t.Fatalf("expected the pool to have opened two connections, got %d", n)
-		}
-
-		return
+		t.Fatalf("expected the pool to return a row after rejecting the message, got %v", err)
 	}
-	t.Fatal("expected ExceededMaxBodyLenErr, got nil")
+	if result != 1 {
+		t.Fatalf("expected 1, got %d", result)
+	}
+	if n := pool.Stat().NewConnsCount(); n != 2 {
+		t.Fatalf("expected the pool to have opened two connections, got %d", n)
+	}
 
 }
 
@@ -213,14 +197,7 @@ func TestConnectionPoolStartupMessage(t *testing.T) {
 		default:
 			t.Fatal("expected pgx to receive the header at the prefix boundary, got pending startup")
 		}
-		if err != nil {
-			limitErr, ok := errors.AsType[*pgproto3.ExceededMaxBodyLenErr](err)
-			if !ok || limitErr.MaxExpectedBodyLen != prefixBytes || limitErr.ActualBodyLen != len(frame)-headerBytes {
-				t.Fatalf("expected pgx to reject the first response header at the prefix boundary, got %v", err)
-			}
-			return
-		}
-		t.Fatal("expected startup to fail, got nil")
+		requireMessageBodyLimitError(t, err, prefixBytes, len(frame)-headerBytes)
 
 	})
 
