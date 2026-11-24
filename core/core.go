@@ -2201,11 +2201,10 @@ func EventSchema() types.Type {
 // can no longer run on it. It must be called only when none of them is
 // running; otherwise the behavior is undefined and may be destructive. It does
 // nothing if the database is at the next schema version but not finalized, as
-// after a rollback to this version of Krenalis. It reads only the DB field of
-// conf. It is idempotent, and it is safe to call it concurrently from several
-// Krenalis instances.
-func FinalizeDB(ctx context.Context, conf *Config) error {
-	db, err := openDB(ctx, conf.DB)
+// after a rollback to this version of Krenalis. It is idempotent, and it is
+// safe to call it concurrently from several Krenalis instances.
+func FinalizeDB(ctx context.Context, conf DBConfig) error {
+	db, err := openDB(ctx, conf)
 	if err != nil {
 		return err
 	}
@@ -2227,11 +2226,11 @@ func IsValidID(id string) bool {
 // version to the one of this version of Krenalis, or initializes it if it is
 // empty. It does nothing if the database is already at this schema version, or
 // at the next one but not finalized, as after a rollback to this version of
-// Krenalis. It reads only the DB and KMS fields of conf. It is idempotent, and
-// it is safe to call it concurrently from several Krenalis instances.
-func MigrateDB(ctx context.Context, conf *Config) error {
+// Krenalis. It is idempotent, and it is safe to call it concurrently from
+// several Krenalis instances.
+func MigrateDB(ctx context.Context, conf DBConfig, kmsURI string) error {
 
-	db, err := openDB(ctx, conf.DB)
+	db, err := openDB(ctx, conf)
 	if err != nil {
 		return err
 	}
@@ -2239,7 +2238,7 @@ func MigrateDB(ctx context.Context, conf *Config) error {
 
 	// Initialize the database if it is empty, as on the first deployment,
 	// before any Krenalis instance has started.
-	kms, err := kms.New(ctx, conf.KMS)
+	kms, err := kms.New(ctx, kmsURI)
 	if err != nil {
 		return err
 	}

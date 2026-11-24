@@ -118,15 +118,14 @@ func Main(assets fs.FS) {
 	// If the -migrate-db or the -finalize-db flag is provided, migrate or
 	// finalize the PostgreSQL database, or both, and exit.
 	if migrateDB || finalizeDB {
-		dbConf := &core.Config{DB: conf.DB, KMS: conf.KMS}
 		if migrateDB {
-			err = core.MigrateDB(ctx, dbConf)
+			err = core.MigrateDB(ctx, conf.DB, conf.KMS)
 			if err != nil {
 				fatal(1, err.Error())
 			}
 		}
 		if finalizeDB {
-			err = core.FinalizeDB(ctx, dbConf)
+			err = core.FinalizeDB(ctx, conf.DB)
 			if err != nil {
 				fatal(1, err.Error())
 			}
