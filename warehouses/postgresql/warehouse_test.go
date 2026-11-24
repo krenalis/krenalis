@@ -10,10 +10,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"reflect"
 	"slices"
 	"strings"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/krenalis/krenalis/test/testimages"
@@ -129,6 +131,98 @@ func TestConnectionPoolMessageSizeLimit(t *testing.T) {
 		return
 	}
 	t.Fatal("expected ExceededMaxBodyLenErr, got nil")
+
+}
+
+// TestConnectionPoolStartupMessage verifies that pgx receives the header of
+// a large first response only after the required body prefix arrives.
+func TestConnectionPoolStartupMessage(t *testing.T) {
+
+	const settings = `{"host":"127.0.0.1","port":5432,"username":"test","database":"test","schema":"public"}`
+	warehouse := warehouses.Registered("PostgreSQL").New(newTestSettingsLoader(json.Value(settings)), nil).(*PostgreSQL)
+	warehousePool, _, err := warehouse.connectionPool(t.Context(), false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer warehousePool.Close()
+
+	const prefixBytes = 16 << 20
+	response := pgproto3.ErrorResponse{
+		Severity: "FATAL",
+		Code:     "57P03",
+		Message:  "starting up",
+		Detail:   strings.Repeat("x", prefixBytes),
+	}
+	frame, err := response.Encode(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	synctest.Test(t, func(t *testing.T) {
+
+		client, server := net.Pipe()
+		config := warehousePool.Config()
+		config.ConnConfig.DialFunc = func(context.Context, string, string) (net.Conn, error) { return client, nil }
+		config.ConnConfig.TLSConfig = nil
+		config.ConnConfig.Fallbacks = nil
+		// pgx reports this limit as soon as it sees the header, before reading the body.
+		config.ConnConfig.MaxProtocolMessageBodyLen = prefixBytes
+		pool, err := pgxpool.NewWithConfig(t.Context(), config)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer pool.Close()
+		defer server.Close()
+		result := make(chan error, 1)
+		go func() {
+			defer client.Close()
+			result <- pool.Ping(t.Context())
+		}()
+
+		backend := pgproto3.NewBackend(server, server)
+		startup, err := backend.ReceiveStartupMessage()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, ok := startup.(*pgproto3.StartupMessage); !ok {
+			t.Fatalf("expected StartupMessage, got %T", startup)
+		}
+
+		const headerBytes = 5
+		const prefixEnd = headerBytes + prefixBytes
+		for _, part := range [][]byte{frame[:headerBytes], frame[headerBytes : prefixEnd-1]} {
+			_, err = server.Write(part)
+			if err != nil {
+				t.Fatal(err)
+			}
+			synctest.Wait()
+			select {
+			case err := <-result:
+				t.Fatalf("expected startup to wait for the prefix, got %v", err)
+			default:
+				// Startup is still waiting for the rest of the prefix.
+			}
+		}
+		_, err = server.Write(frame[prefixEnd-1 : prefixEnd])
+		if err != nil {
+			t.Fatal(err)
+		}
+		synctest.Wait()
+		select {
+		case err = <-result:
+		default:
+			t.Fatal("expected pgx to receive the header at the prefix boundary, got pending startup")
+		}
+		if err != nil {
+			limitErr, ok := errors.AsType[*pgproto3.ExceededMaxBodyLenErr](err)
+			if !ok || limitErr.MaxExpectedBodyLen != prefixBytes || limitErr.ActualBodyLen != len(frame)-headerBytes {
+				t.Fatalf("expected pgx to reject the first response header at the prefix boundary, got %v", err)
+			}
+			return
+		}
+		t.Fatal("expected startup to fail, got nil")
+
+	})
 
 }
 
