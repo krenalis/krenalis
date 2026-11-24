@@ -24,18 +24,22 @@ const schemaVersion = 1
 // schema_version table, that is, a database of v0.48.0.
 const legacySchemaVersion = 1
 
+// ErrNotInitialized is returned when Krenalis's PostgreSQL database is empty,
+// as it has not been initialized.
+var ErrNotInitialized = errors.New("Krenalis's PostgreSQL database has not been initialized")
+
 // CheckSchemaVersion checks that this version of Krenalis can run on the
 // database: its schema version must be the one of this version of Krenalis,
 // finalized or not, or the next one not finalized, as while the Krenalis
 // instances are being replaced or after a rollback to this version of
-// Krenalis. It returns nil for an empty database.
+// Krenalis. It returns ErrNotInitialized if the database is empty.
 func CheckSchemaVersion(ctx context.Context, database *db.DB) error {
 	isEmpty, err := databaseIsEmpty(ctx, database)
 	if err != nil {
 		return fmt.Errorf("cannot check if PostgreSQL database is empty or not: %s", err)
 	}
 	if isEmpty {
-		return nil
+		return ErrNotInitialized
 	}
 	version, finalized, err := readSchemaVersion(ctx, database)
 	if err != nil {
@@ -215,7 +219,7 @@ func lockSchemaVersion(ctx context.Context, tx *db.Tx) (version int, finalized b
 		return 0, false, fmt.Errorf("cannot check if PostgreSQL database is empty or not: %s", err)
 	}
 	if isEmpty {
-		return 0, false, errors.New("Krenalis's PostgreSQL database has not been initialized")
+		return 0, false, ErrNotInitialized
 	}
 	version, finalized, err = readSchemaVersion(ctx, tx)
 	if err != nil {

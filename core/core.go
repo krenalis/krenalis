@@ -231,10 +231,12 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 	}
 
 	// Check that this version of Krenalis can run on the schema version of the
-	// database, before loading the state from it. An empty database is reported as not
-	// initialized when the state is loaded.
+	// database, before loading the state from it.
 	err = initdb.CheckSchemaVersion(ctx, db)
 	if err != nil {
+		if errors.Is(err, initdb.ErrNotInitialized) {
+			return nil, &DBNotInitializedError{msg: err.Error()}
+		}
 		return nil, err
 	}
 

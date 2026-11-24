@@ -10,7 +10,22 @@ import (
 	"time"
 
 	"github.com/krenalis/krenalis/core/internal/db"
+	"github.com/krenalis/krenalis/tools/errors"
 )
+
+// TestCheckSchemaVersionEmpty verifies that CheckSchemaVersion returns
+// ErrNotInitialized on an empty database.
+func TestCheckSchemaVersionEmpty(t *testing.T) {
+	database := newTestDatabase(t)
+	err := CheckSchemaVersion(t.Context(), database)
+	if err != nil {
+		if !errors.Is(err, ErrNotInitialized) {
+			t.Fatalf("expected ErrNotInitialized, got %v", err)
+		}
+		return
+	}
+	t.Fatal("expected an error, got nil")
+}
 
 // TestCheckSchemaVersion verifies on which schema versions of the database
 // CheckSchemaVersion lets this version of Krenalis run. Cases that set a
@@ -25,12 +40,10 @@ func TestCheckSchemaVersion(t *testing.T) {
 	const v = schemaVersion
 	tests := []struct {
 		name   string
-		empty  bool   // use an empty database
 		legacy bool   // drop the schema_version table
 		set    *state // state set on the newly initialized database, if not nil
 		fails  bool
 	}{
-		{name: "empty database", empty: true},
 		{name: "new database"},
 		{name: "legacy database", legacy: true, fails: legacySchemaVersion != v},
 		{name: "current, not finalized", set: &state{v, false}},
@@ -50,12 +63,7 @@ func TestCheckSchemaVersion(t *testing.T) {
 			t.Parallel()
 
 			ctx := t.Context()
-			var database *db.DB
-			if test.empty {
-				database = newTestDatabase(t)
-			} else {
-				database = newInitializedTestDatabase(t)
-			}
+			database := newInitializedTestDatabase(t)
 			if test.legacy {
 				_, err := database.Exec(ctx, "DROP TABLE schema_version")
 				if err != nil {
