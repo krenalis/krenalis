@@ -6,15 +6,12 @@ one-off task must migrate the database before the service is updated,
 and where the instances of the previous and of the new release run
 together during a rolling deployment.
 
-This commit lays the groundwork for the upgrade, so that we can start
-using it, also on AWS.
-
-The idea of this commit is to upgrade the database in two separate
-steps: the migration and the finalization. The migration runs before the
-instances are replaced, and must not break those of the previous
-release. The finalization runs once only new instances are left. When it
-is done, the database is "finalized", and the previous release can no
-longer run on it.
+This commit keeps the upgrade in Krenalis across releases, and splits
+it into two separate steps: the migration and the finalization. The
+migration runs before the instances are replaced, and must not break
+those of the previous release. The finalization runs once only new
+instances are left. When it is done, the database is "finalized", and
+the previous release can no longer run on it.
 
 In detail, the migration is started with the new "-migrate-db" flag. It
 initializes the database if it is empty. Otherwise it migrates a
