@@ -49,7 +49,7 @@ func (loader *testSettingsLoader) Load(ctx context.Context, dst any) error {
 	return json.Unmarshal(loader.settings, dst)
 }
 
-// testReadBudget checks the buffers pgx requests while receiving a valid row.
+// testReadBudget checks the size of read requests to the underlying source.
 type testReadBudget struct {
 	reader io.Reader
 	read   int

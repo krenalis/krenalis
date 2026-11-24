@@ -7,6 +7,7 @@ package postgresql
 import (
 	"bufio"
 	"bytes"
+	"encoding/binary"
 	"errors"
 	"io"
 	"testing"
@@ -162,6 +163,7 @@ func TestMessageReaderProtocolLimit(t *testing.T) {
 		{0, 0},
 		{16 << 20, 0},
 		{(16 << 20) + 1, 5 + (16 << 20)},
+		{(32 << 20) + 1, 5 + (16 << 20) + 1},
 		{maxBody, 5 + maxBody/2},
 	} {
 		var r messageReader
@@ -175,12 +177,18 @@ func TestMessageReaderProtocolLimit(t *testing.T) {
 		}
 	}
 
-	var r messageReader
-	err := r.startMessage(maxBody + 5)
+	const oversizedBody = maxBody + 1
+	header := binary.BigEndian.AppendUint32([]byte{'D'}, oversizedBody+4)
+	r := messageReader{src: bufio.NewReader(bytes.NewReader(header))}
+	n, err := r.Read(make([]byte, len(header)))
+	if n != 0 {
+		t.Fatalf("expected zero bytes for an oversized body, got %d", n)
+	}
 	if err != nil {
 		limitErr, ok := errors.AsType[*pgproto3.ExceededMaxBodyLenErr](err)
-		if !ok || limitErr.MaxExpectedBodyLen != maxBody || limitErr.ActualBodyLen != maxBody+1 {
-			t.Fatalf("expected a %d-byte body to exceed the %d-byte limit, got %v", maxBody+1, maxBody, err)
+		if !ok || limitErr.MaxExpectedBodyLen != maxBody || limitErr.ActualBodyLen != oversizedBody {
+			t.Fatalf("expected ExceededMaxBodyLenErr for %d bytes with limit %d, got %T (%v)",
+				oversizedBody, maxBody, err, err)
 		}
 		return
 	}
