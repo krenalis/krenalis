@@ -33,13 +33,14 @@ import (
 const cancellationTestDSN = "host=127.0.0.1 user=test dbname=test sslmode=disable sslcertmode=disable sslrootcert=''" +
 	" target_session_attrs=any require_auth=none channel_binding=disable"
 
-// cancellationTestDialer simulates failed or silently dropped cancellation
+// cancellationTestDialer simulates delayed, failed or dropped cancellation
 // requests and counts cancellation attempts.
 type cancellationTestDialer struct {
 	mu           sync.Mutex
 	attempts     int // protected by mu
 	failures     int
 	discardFirst bool
+	blockFirst   func()
 }
 
 func (d *cancellationTestDialer) count() int {
@@ -74,7 +75,7 @@ func (c *cancellationTestConn) Read(data []byte) (int, error) {
 	return c.Conn.Read(data)
 }
 
-// Write drops or rejects selected cancellation requests before delivery.
+// Write delays, drops or rejects selected cancellation requests before delivery.
 func (c *cancellationTestConn) Write(data []byte) (int, error) {
 	if c.first {
 		c.first = false
@@ -85,6 +86,9 @@ func (c *cancellationTestConn) Write(data []byte) (int, error) {
 			c.dialer.attempts++
 			attempt := c.dialer.attempts
 			c.dialer.mu.Unlock()
+			if attempt == 1 && c.dialer.blockFirst != nil {
+				c.dialer.blockFirst()
+			}
 			if attempt <= c.dialer.failures {
 				return 0, errors.New("simulated cancellation delivery failure")
 			}
@@ -192,6 +196,7 @@ func TestRetryClosedConnectionCancellation(t *testing.T) {
 		kind         string
 	}{
 		{"lost_first_request", 0, true, "query"},
+		{"blocked_first_request", 0, false, "blocked"},
 		{"transient_errors", 3, false, "query"},
 		{"healthy_connection", 0, false, "healthy"},
 		{"streaming", 0, true, "streaming"},
@@ -202,6 +207,18 @@ func TestRetryClosedConnectionCancellation(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 
 			dialer := &cancellationTestDialer{failures: c.failures, discardFirst: c.discardFirst}
+			var firstPending chan struct{}
+			var releaseFirst context.CancelFunc
+			if c.kind == "blocked" {
+				firstPending = make(chan struct{})
+				var hold context.Context
+				hold, releaseFirst = context.WithCancel(t.Context())
+				defer releaseFirst()
+				dialer.blockFirst = func() {
+					close(firstPending)
+					<-hold.Done()
+				}
+			}
 			warehouse := New(original.settings, dialer.wrap)
 			t.Cleanup(func() {
 				err := warehouse.Close()
@@ -322,6 +339,13 @@ pg_sleep(CASE WHEN i<3 THEN 0 ELSE 30 END) FROM generate_series(1,3) i`)
 						return
 					}
 					_, err := acquired.Exec(ctx, "SELECT pg_sleep(30)")
+					if firstPending != nil {
+						// Let pgx reach its first write before pool release can start a retry.
+						select {
+						case <-firstPending:
+						case <-t.Context().Done():
+						}
+					}
 					acquired.Release()
 					done <- err
 				}()
@@ -341,6 +365,7 @@ pg_sleep(CASE WHEN i<3 THEN 0 ELSE 30 END) FROM generate_series(1,3) i`)
 			case <-time.After(3 * time.Second):
 				t.Fatal("expected prompt caller return, got timeout")
 			}
+
 			if c.kind == "unavailable" {
 
 				// Observe a failed retry while every cancellation channel is
@@ -371,7 +396,14 @@ pg_sleep(CASE WHEN i<3 THEN 0 ELSE 30 END) FROM generate_series(1,3) i`)
 				}
 
 			}
+
 			waitForCancellationQuery(t, originalPool, pid, false)
+			if releaseFirst != nil {
+				if count := dialer.count(); count < 2 {
+					t.Fatalf("expected a retry while the first request was pending, got %d attempts", count)
+				}
+				releaseFirst()
+			}
 			select {
 			case <-cleanup:
 			case <-time.After(3 * time.Second):
