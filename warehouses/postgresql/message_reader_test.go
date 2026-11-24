@@ -57,6 +57,7 @@ func TestMessageReaderPartialReads(t *testing.T) {
 		t.Fatal(err)
 	}
 	source.Write(trailer)
+	source.Write(frame[:len(header)])
 	frontend := pgproto3.NewFrontend(r, io.Discard)
 	msg, err := frontend.Receive()
 	if err != nil {
@@ -77,6 +78,33 @@ func TestMessageReaderPartialReads(t *testing.T) {
 	if *ready != *next {
 		t.Fatalf("expected %v, got %v", next, ready)
 	}
+
+	if n := frontend.ReadBufferLen(); n != 0 {
+		t.Fatalf("expected no bytes of the next header in pgx, got %d", n)
+	}
+
+	// Deliver all but the last byte required to release the next header.
+	const prefixEnd = len(header) + maxEagerBodyLen
+	source.Write(frame[len(header) : prefixEnd-1])
+	n, err := r.Read(header[:])
+	if n != 0 {
+		t.Fatalf("expected the next header to be withheld, got %d bytes", n)
+	}
+	if err != nil {
+		if err != io.EOF && err != io.ErrUnexpectedEOF {
+			t.Fatalf("expected end of input, got %v", err)
+		}
+		source.Write(frame[prefixEnd-1 : prefixEnd])
+		_, err = io.ReadFull(r, header[:])
+		if err != nil {
+			t.Fatalf("expected the next header once the prefix arrived, got %v", err)
+		}
+		if !bytes.Equal(header[:], frame[:len(header)]) {
+			t.Fatalf("expected header %x, got %x", frame[:len(header)], header)
+		}
+		return
+	}
+	t.Fatal("expected end of input, got nil")
 
 }
 
