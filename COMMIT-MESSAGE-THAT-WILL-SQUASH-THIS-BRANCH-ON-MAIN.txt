@@ -24,13 +24,13 @@ initializes the database if it is empty. Otherwise it migrates a
 finalized database of the previous schema version with "migrate", and
 records the new schema version as not finalized. It does nothing on a
 database already at its schema version, or at the next one but not
-finalized, as after a rollback to the previous release, and fails in any
-other case, such as a skipped release.
+finalized, as after a rollback from the next release, and fails in any
+other case, such as when a release that changes the database is skipped.
 
 The finalization, instead, is started with the new "-finalize-db" flag.
 It runs "finalize", and records the schema version as finalized. It does
 nothing on a database already finalized, or at the next schema version
-but not finalized, as after a rollback to the previous release. It must
+but not finalized, as after a rollback from the next release. It must
 run only when no instance of the previous release is running anymore,
 which it does not check; otherwise the behavior is undefined and may be
 destructive.
@@ -49,10 +49,10 @@ At startup, Krenalis now checks the schema version of the database. It
 starts if the database is:
 
 - at its schema version, finalized or not;
-- at the next schema version, not yet finalized; this occurs, for example, in
-  the case of a rollback of Krenalis to a previous version. As the database has
-  not yet been finalized, compatibility with the previous version of Krenalis is
-  guaranteed.
+- at the next schema version, not yet finalized, as during the
+  deployment of the next release, which has already migrated it, or
+  after a rollback from that release. Not being finalized yet, the
+  database is still guaranteed to be compatible.
 
 It refuses to start if the database is:
 
