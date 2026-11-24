@@ -18,19 +18,20 @@ longer run on it.
 
 In detail, the migration is started with the new "-migrate-db" flag. It
 initializes the database if it is empty. Otherwise it migrates a
-finalized database of the previous schema version with "migrate", and
-records the new schema version as not finalized. It does nothing on a
-database already at its schema version, or at the next one but not
-finalized, as after a rollback from the next release, and fails in any
-other case, such as when a release that changes the database is skipped.
+finalized database of the previous schema version with the "migrate"
+function, and records the new schema version as not finalized. It does
+nothing on a database already at its schema version, or at the next one
+but not finalized, as after a rollback from the next release, and fails
+in any other case, such as when a release that changes the database is
+skipped.
 
 The finalization is started with the new "-finalize-db" flag. It runs
-"finalize" and records the schema version as finalized. It does nothing
-on a database already finalized at its schema version, or at the next
-one but not finalized, and fails in any other case, such as a database
-not yet migrated. It must run only once no instance of the previous
-release is left: it does not check this, and otherwise the behavior is
-undefined and may be destructive.
+the "finalize" function and records the schema version as finalized. It
+does nothing on a database already finalized at its schema version, or
+at the next one but not finalized, and fails in any other case, such as
+a database not yet migrated. It must run only once no instance of the
+previous release is left: it does not check this, and otherwise the
+behavior is undefined and may be destructive.
 
 Both flags remain in Krenalis across releases, and can be combined to
 migrate and then finalize. Each step can be retried until it succeeds
@@ -59,8 +60,8 @@ The two releases also exchange notifications and NATS messages while
 they run together. Keeping them compatible is not covered by this
 commit, and is still open (see #2796).
 
-"migrate" and "finalize" are written when a release that changes the
-database is prepared, from the notes in
+The "migrate" and "finalize" functions are written when a release that
+changes the database is prepared, from the notes in
 "core/internal/initdb/RELEASE-UPGRADE.md", which now separate the
 migration from the finalization, and are emptied after the release.
 
