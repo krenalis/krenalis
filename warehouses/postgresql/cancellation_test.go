@@ -145,7 +145,7 @@ func TestConfigureCancellation(t *testing.T) {
 func TestConfigureCancellationConnectTimeout(t *testing.T) {
 
 	config, err := pgx.ParseConfig("host=127.0.0.1 port=5432 user=test dbname=test" +
-		" sslmode=require sslnegotiation=postgres")
+		" sslmode=require sslnegotiation=postgres sslcertmode=disable sslrootcert=''")
 	if err != nil {
 		t.Fatalf("expected connection config, got %v", err)
 	}
