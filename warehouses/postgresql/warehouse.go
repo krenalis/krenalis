@@ -542,7 +542,10 @@ func (warehouse *PostgreSQL) connectionPool(ctx context.Context, returnSchema bo
 	// since only single quotes are doubled for escaping.
 	config.ConnConfig.RuntimeParams["standard_conforming_strings"] = "on"
 	config.ConnConfig.DialFunc = warehouse.dialWith(config.ConnConfig.DialFunc)
-	configureCancellation(config.ConnConfig)
+	config.BeforeConnect = func(_ context.Context, connConfig *pgx.ConnConfig) error {
+		configureCancellation(connConfig)
+		return nil
+	}
 	config.BeforeClose = retryClosedConnectionCancellation
 	pool, err := pgxpool.NewWithConfig(ctx, config)
 	if err != nil {
