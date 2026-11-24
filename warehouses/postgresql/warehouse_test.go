@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"reflect"
 	"slices"
 	"strings"
@@ -46,12 +47,38 @@ func (loader *testSettingsLoader) Load(ctx context.Context, dst any) error {
 	return json.Unmarshal(loader.settings, dst)
 }
 
+// testReadBudget checks the buffers pgx requests while receiving a valid row.
+type testReadBudget struct {
+	reader io.Reader
+	read   int
+}
+
+// Read bounds the next read request relative to the data received so far.
+func (r *testReadBudget) Read(p []byte) (int, error) {
+	if len(p) > max(16<<20, 2*r.read) {
+		return 0, fmt.Errorf("requested %d bytes after receiving only %d", len(p), r.read)
+	}
+	n, err := r.reader.Read(p)
+	r.read += n
+	return n, err
+}
+
 // TestConnectionPoolMessageSizeLimit verifies that oversized messages
 // are rejected and the pool can recover by opening a new connection.
 func TestConnectionPoolMessageSizeLimit(t *testing.T) {
 
 	_, warehousePool := newTestPostgreSQLWarehouse(t)
 	config := warehousePool.Config()
+	if got := config.ConnConfig.MaxProtocolMessageBodyLen; got != 1<<30-2 {
+		t.Fatalf("expected a message body limit of %d bytes, got %d", 1<<30-2, got)
+	}
+	// Exercise both sides of the pgx limit without transferring a 1 GiB row.
+	const maxBodyBytes = 33 << 20
+	config.ConnConfig.MaxProtocolMessageBodyLen = maxBodyBytes
+	buildFrontend := config.ConnConfig.BuildFrontend
+	config.ConnConfig.BuildFrontend = func(r io.Reader, w io.Writer) *pgproto3.Frontend {
+		return buildFrontend(&testReadBudget{reader: r}, w)
+	}
 	config.MaxConns = 1
 	config.MinConns = 0
 	config.MinIdleConns = 0
@@ -61,7 +88,6 @@ func TestConnectionPoolMessageSizeLimit(t *testing.T) {
 	}
 	defer pool.Close()
 
-	const maxBodyBytes = 16 << 20
 	// A one-column DataRow has a two-byte field count and a four-byte field length.
 	const maxTextBytes = maxBodyBytes - 6
 	const query = `SELECT repeat('x', $1)`
@@ -145,6 +171,54 @@ func TestCounts(t *testing.T) {
 	want := []int{4, 2, 1, 3, 1}
 	if !slices.Equal(counts, want) {
 		t.Fatalf("expected counts %v, got %v", want, counts)
+	}
+
+}
+
+// TestWideProfile verifies that two valid properties can be read together
+// even when their combined DataRow exceeds the eager allocation limit.
+func TestWideProfile(t *testing.T) {
+
+	warehouse, _ := newTestPostgreSQLWarehouse(t)
+	const width = 8 << 20
+	text := types.String().WithMaxBytes(width)
+	properties := []warehouses.Column{{Name: "first_text", Type: text}, {Name: "second_text", Type: text}}
+	err := warehouse.Initialize(t.Context(), properties)
+	if err != nil {
+		t.Fatal(err)
+	}
+	table := warehouses.Table{
+		Name: "krenalis_profiles_0",
+		Keys: []string{"_kpid"},
+		Columns: append([]warehouses.Column{
+			{Name: "_kpid", Type: types.UUID()},
+			{Name: "_anonymous_count", Type: types.Int(32)},
+			{Name: "_recognized_count", Type: types.Int(32)},
+			{Name: "_updated_at", Type: types.DateTime()},
+		}, properties...),
+	}
+	first, second := strings.Repeat("a", width), strings.Repeat("b", width)
+	row := []any{"e5a5c059-bc78-4c9c-b4d1-e9fb187562b1", 0, 1, time.Now().UTC(), first, second}
+	err = warehouse.Merge(t.Context(), table, [][]any{row}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rows, _, err := warehouse.Query(t.Context(), warehouses.RowQuery{Table: "profiles", Columns: properties}, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	if !rows.Next() {
+		t.Fatalf("expected the profile row, got end of results with error %v", rows.Err())
+	}
+	got := make([]any, len(properties))
+	err = rows.Scan(got...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got[0] != first || got[1] != second {
+		t.Fatal("expected both original property values, got different data")
 	}
 
 }
