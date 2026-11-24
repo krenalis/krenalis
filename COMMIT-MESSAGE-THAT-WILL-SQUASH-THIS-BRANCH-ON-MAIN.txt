@@ -35,22 +35,27 @@ run only when no instance of the previous release is running anymore,
 which it does not check; otherwise the behavior is undefined and may be
 destructive.
 
-Both flags are permanent, exit when done, and can be combined. Each runs
-in a single transaction, under the advisory lock used by the database
-initialization, and with a 5-second lock timeout, so that DDL does not
-block the running instances. So they can be retried until they succeed,
-and run concurrently from several instances. To know where the database
-stands, the database records its schema version, an integer incremented
-only by the releases that change the database, and whether it has been
-finalized. By convention, a database of v0.48.0, which does not record
-it, is taken to be at schema version 1, finalized.
+Both flags are permanent (that is, they are designed to remain within the
+Krenalis command even between releases, unlike what we used to do before), exit
+when done, and can be combined (to carry out both the migration and the
+subsequent finalization). Each runs in a single transaction, under the advisory
+lock used by the database initialization, and with a 5-second lock timeout
+(which limits the maximum lock duration, to avoid blocking running Krenalis
+instances). Both operations can be retried until they succeed, and run
+concurrently from several instances. To know where the database stands, the
+database records its schema version, an integer incremented only by the releases
+that change the database, and whether it has been finalized. By convention, a
+database of v0.48.0 (which is the version already released, and which therefore
+lacks such a mechanism) is taken to be at schema version 1, finalized.
 
 At startup, Krenalis now checks the schema version of the database. It
 starts if the database is:
 
 - at its schema version, finalized or not;
-- at the next schema version, not yet finalized, as while the instances
-  are being replaced or after a rollback to the previous release.
+- at the next schema version, not yet finalized; this occurs, for example, in
+  the case of a rollback of Krenalis to a previous version. As the database has
+  not yet been finalized, compatibility with the previous version of Krenalis is
+  guaranteed.
 
 It refuses to start if the database is:
 
