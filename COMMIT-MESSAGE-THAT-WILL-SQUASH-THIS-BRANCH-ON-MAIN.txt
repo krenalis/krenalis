@@ -24,13 +24,13 @@ database already at its schema version, or at the next one but not
 finalized, as after a rollback from the next release, and fails in any
 other case, such as when a release that changes the database is skipped.
 
-The finalization, instead, is started with the new "-finalize-db" flag.
-It runs "finalize", and records the schema version as finalized. It does
-nothing on a database already finalized, or at the next schema version
-but not finalized, as after a rollback from the next release. It must
-run only when no instance of the previous release is running anymore,
-which it does not check; otherwise the behavior is undefined and may be
-destructive.
+The finalization is started with the new "-finalize-db" flag. It runs
+"finalize" and records the schema version as finalized. It does nothing
+on a database already finalized at its schema version, or at the next
+one but not finalized, and fails in any other case, such as a database
+not yet migrated. It must run only once no instance of the previous
+release is left: it does not check this, and otherwise the behavior is
+undefined and may be destructive.
 
 Both flags remain in Krenalis across releases, and can be combined to
 migrate and then finalize. Each step can be retried until it succeeds
