@@ -393,11 +393,12 @@ type Table struct {
 // Column represents a database table column. If Type is invalid, Issue
 // describes the problem, and the other fields are not meaningful.
 type Column struct {
-	Name     string     // column name
-	Type     types.Type // data type of the column
-	Nullable bool       // true if the column can contain NULL values
-	Writable bool       // true if the column is writable
-	Issue    string     // issue message
+	Name         string     // column name
+	Type         types.Type // data type of the column
+	Nullable     bool       // true if the column can contain NULL values
+	ReadOptional bool       // true if the filtered property may be absent
+	Writable     bool       // true if the column is writable
+	Issue        string     // issue message
 }
 
 // Rows is the result of a database query. Its cursor starts before the first
@@ -916,13 +917,19 @@ const (
 )
 
 // BaseExpr represents an SQL expression that applies an operator to a column.
-// For OpIsTrue and OpIsFalse on JSON columns, Keys specifies successive object
-// keys. Each key is treated literally, including any dots. If Keys is empty,
-// these operators apply to the entire column.
+// On JSON columns, Keys specifies successive object keys, treated literally,
+// including any dots. An empty Keys applies to the entire column. SQL NULL
+// represents an absent JSON property; JSON null represents a present null.
+// Existence operators require a read-optional property or a JSON path.
+// JSON filter operands have type JSONConditionValue.
+// Decimal operands, including JSONConditionValue.Number, must fit a
+// decimal(p,s) with p <= 76 and 0 <= s <= min(p,37), independently of the
+// column's precision and scale. Rendering rejects operands beyond these limits.
 //
 // If the column's type supports OpIs and OpIsNot, either operator can be used
-// to compare it with another column. Values contains a single operand: the
-// second Column. A string column can be compared with an int or UUID column,
+// to compare it with another column. For JSON columns, Keys must be empty.
+// Values contains a single operand: the second Column.
+// A string column can be compared with an int or UUID column,
 // in either order, by comparing their text representations. For all other
 // type combinations, the columns must be directly comparable in the warehouse.
 type BaseExpr struct {
@@ -939,6 +946,17 @@ func (*BaseExpr) expr() {}
 // For a unary operator, callers must omit the operands.
 func NewBaseExpr(column Column, operator Operator, values ...any) *BaseExpr {
 	return &BaseExpr{Column: column, Operator: operator, Values: values}
+}
+
+// JSONConditionValue is an operand for a JSON value or array(json) element.
+// String is compared with JSON strings; Number, when non-nil, is also compared
+// with JSON numbers. Other JSON kinds do not match either representation.
+// Number must fit a decimal(p,s) with p <= 76 and 0 <= s <= min(p,37).
+// String must be valid UTF-8 and must not contain a NUL byte.
+// Number may be nil even when String represents a number outside these limits.
+type JSONConditionValue struct {
+	String string
+	Number *decimal.Decimal
 }
 
 // Operator presents a unary or binary operator of a BaseExpr.
@@ -969,4 +987,6 @@ const (
 	OpIsNotEmpty                             // is not empty
 	OpIsNull                                 // is null
 	OpIsNotNull                              // is not null
+	OpExists                                 // exists
+	OpDoesNotExist                           // does not exist
 )
