@@ -229,7 +229,8 @@ func TestPlainJSONNumbers(t *testing.T) {
 	}
 }
 
-// TestSerializeJSONNumbers checks how JSON numbers are written to CSV.
+// TestSerializeJSONNumbers checks how the CSV writer expands JSON numbers while
+// preserving the usual formatting of strings and native numbers.
 func TestSerializeJSONNumbers(t *testing.T) {
 	for _, test := range []struct {
 		name  string
@@ -238,6 +239,8 @@ func TestSerializeJSONNumbers(t *testing.T) {
 		want  string
 	}{
 		{"json", types.JSON(), json.Value(`{"n":1e2,"s":"someone's"}`), `'{"n":100,"s":"someone''s"}'`},
+		{"json numeric string", types.JSON(), json.Value(`{"s":"1e2","n":1e2}`), `'{"s":"1e2","n":100}'`},
+		{"json large integers", types.JSON(), json.Value(`[12345678901234567890,1.234567890123456789e19]`), `'[12345678901234567890,12345678901234567890]'`},
 		{"decimal array", types.Array(types.Decimal(38, 0)), []any{decimal.MustParse("12345678901234567890")}, `'[12345678901234567890]'`},
 		{"float array", types.Array(types.Float(64)), []any{1234567.1}, `'[1234567.1]'`},
 		{"json array", types.Array(types.JSON()), []any{json.Value(`{"n":1e2}`)}, `'[{"n":100}]'`},
@@ -254,18 +257,19 @@ func TestSerializeJSONNumbers(t *testing.T) {
 			if err != nil {
 				t.Fatalf("expected CSV value, got %v", err)
 			}
-			if b.String() != test.want {
-				t.Fatalf("expected %q, got %q", test.want, b.String())
+			if got := b.String(); got != test.want {
+				t.Fatalf("expected %q, got %q", test.want, got)
 			}
 		})
 	}
-	var b bytes.Buffer
-	err := serializeValueToCSV(&b, types.JSON(), json.Value(`{"n":1e2,`))
-	if err != nil {
+	t.Run("invalid JSON", func(t *testing.T) {
+		var b bytes.Buffer
+		err := serializeValueToCSV(&b, types.JSON(), json.Value(`{"n":1e2,`))
+		if err == nil {
+			t.Fatal("expected invalid JSON error, got nil")
+		}
 		if b.Len() != 0 {
 			t.Fatalf("expected no CSV bytes on error, got %q", b.String())
 		}
-		return
-	}
-	t.Fatal("expected invalid JSON error, got nil")
+	})
 }
