@@ -174,7 +174,9 @@ func TestPlainJSONNumberGenerated(t *testing.T) {
 	}
 }
 
-// TestPlainJSONNumbers checks that bytes outside rewritten numbers stay intact.
+// TestPlainJSONNumbers checks that rewriting numbers leaves the input intact
+// and preserves all other bytes in the result. When no replacements are needed,
+// the function must return the original slice.
 func TestPlainJSONNumbers(t *testing.T) {
 	for _, test := range []struct{ input, want string }{
 		{"  1E2 \n", "  100 \n"},
@@ -183,28 +185,46 @@ func TestPlainJSONNumbers(t *testing.T) {
 		{"{ \"é\" : 1E2, \"escape\":\"\\u0065\\n\\\"\", \"n\":1e-38 }", "{ \"é\" : 100, \"escape\":\"\\u0065\\n\\\"\", \"n\":1e-38 }"},
 		{`[1e38,1e-38,100.00,1e99999999999999999999]`, `[1e38,1e-38,100.00,1e99999999999999999999]`},
 		{`{"text":"1e2 and someone's name","n":100}`, `{"text":"1e2 and someone's name","n":100}`},
+		{`1e+2`, `100`},
+		{`1e-2`, `0.01`},
+		{`-1.25E-3`, `-0.00125`},
+		{`[1e2,2e3,3e4]`, `[100,2000,30000]`},
+		{`"1e2"`, `"1e2"`},
+		{`{}`, `{}`},
 		{`[]`, `[]`},
 		{`null`, `null`},
 	} {
 		t.Run(test.input, func(t *testing.T) {
+
 			input := json.Value(test.input)
 			got, err := plainJSONNumbers(input)
 			if err != nil {
-				t.Fatalf("expected rewritten document, got %v", err)
+				t.Fatalf("expected successful first call, got %v", err)
 			}
-			if string(got) != test.want || string(input) != test.input {
-				t.Fatalf("expected %q with unchanged input, got %q and %q", test.want, got, input)
+			if string(got) != test.want {
+				t.Fatalf("expected %q, got %q", test.want, got)
 			}
-			again, err := plainJSONNumbers(got)
-			if err != nil {
-				t.Fatalf("expected idempotent document, got %v", err)
-			}
-			if !bytes.Equal(got, again) {
-				t.Fatalf("expected %q, got %q", got, again)
+			if string(input) != test.input {
+				t.Fatalf("expected unchanged input %q, got %q", test.input, input)
 			}
 			if test.input == test.want && &input[0] != &got[0] {
 				t.Fatal("expected original slice without replacements, got a copy")
 			}
+
+			again, err := plainJSONNumbers(got)
+			if err != nil {
+				t.Fatalf("expected successful second call, got %v", err)
+			}
+			if string(again) != test.want {
+				t.Fatalf("expected second result %q, got %q", test.want, again)
+			}
+			if string(got) != test.want {
+				t.Fatalf("expected unchanged input %q after second call, got %q", test.want, got)
+			}
+			if &got[0] != &again[0] {
+				t.Fatal("expected original slice on second call, got a copy")
+			}
+
 		})
 	}
 }
