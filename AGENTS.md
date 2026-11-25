@@ -313,7 +313,7 @@ Write or remove the database upgrade, in `migrate` and `finalize` of `core/inter
 
 During every rolling deployment, the instances of two consecutive releases run together on the same database and exchange notifications, and after a rollback the previous release runs again on the migrated database: the upgrade to a release must never break the previous one. How the database stays compatible, what is still open for the messages, and the only exception, are described in `.agents/skills/release-upgrade/SKILL.md`; write the application code so that:
 
-- It works both on the migrated database and on the finalized one, because the finalization may come long after the deployment: until then the database still holds what only the previous release uses, and lacks the constraints that `finalize` adds.
+- It works on the migrated database, while it is being finalized, and on the finalized one, because the finalization may come long after the deployment: until then the database still holds what only the previous release uses, and lacks the constraints that `finalize` adds.
 - It reads and writes only the representation of the data of its own schema version, and never the old one that the previous release still uses; the triggers added by `migrate` keep the two in sync. Even in an unchanged column, it writes no value that the previous release cannot read, such as a new enum label.
 - It handles the values that the previous release can still write until the finalization, such as the default of a new column in the rows it inserts, unless a trigger fills them.
 - It changes a notification or the format of the events published on NATS only after asking the user, since how to keep them compatible is still open (https://github.com/krenalis/krenalis/issues/2796).

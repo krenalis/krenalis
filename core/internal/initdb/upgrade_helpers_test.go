@@ -86,13 +86,12 @@ func TestTestDatabaseFromSQL(t *testing.T) {
 		if got != expected {
 			t.Fatalf("expected schema %s, got %s", expected, got)
 		}
-		version, finalized, err := readSchemaVersion(t.Context(), database)
+		version, state, err := readSchemaVersion(t.Context(), database)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if version != schemaVersion+1 || !finalized {
-			t.Fatalf("expected schema version %d, finalized, got %d, finalized %t",
-				schemaVersion+1, version, finalized)
+		if version != schemaVersion+1 || state != stateFinalized {
+			t.Fatalf("expected schema version %d, %s, got %d, %s", schemaVersion+1, stateFinalized, version, state)
 		}
 	})
 
@@ -204,7 +203,7 @@ func newTestDatabaseFromSQL(t *testing.T, fsys fs.FS, version int) *db.DB {
 		t.Fatal(err)
 	}
 	if hasVersion {
-		_, err = database.Exec(ctx, "INSERT INTO schema_version (version, finalized) VALUES ($1, true)", version)
+		_, err = database.Exec(ctx, "INSERT INTO schema_version (version, state) VALUES ($1, 'Finalized')", version)
 		if err != nil {
 			t.Fatal(err)
 		}

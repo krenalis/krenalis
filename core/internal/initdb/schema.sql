@@ -539,8 +539,10 @@ INSERT INTO metadata (
     100
 );
 
+CREATE TYPE schema_state AS ENUM ('MigratingToNext', 'Migrated', 'Finalizing', 'Finalized');
+
 CREATE TABLE schema_version (
     singleton boolean PRIMARY KEY DEFAULT true CHECK (singleton),
     version integer NOT NULL CHECK (version > 0),
-    finalized boolean NOT NULL
+    state schema_state NOT NULL
 );

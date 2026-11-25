@@ -340,28 +340,7 @@ func (db *DB) Transaction(ctx context.Context, f func(tx *Tx) error) error {
 	if err != nil {
 		return err
 	}
-	return func() error {
-		defer func() {
-			if err := recover(); err != nil {
-				_ = pqTx.Rollback(ctx)
-				panic(err)
-			}
-		}()
-		tx := &Tx{pqTx, true, nil}
-		err := f(tx)
-		if err != nil {
-			_ = pqTx.Rollback(ctx)
-			return convertErr(err)
-		}
-		err = pqTx.Commit(ctx)
-		if err != nil && err != sql.ErrTxDone {
-			return convertErr(err)
-		}
-		if tx.ack != nil {
-			<-tx.ack
-		}
-		return nil
-	}()
+	return runTransaction(ctx, pqTx, f)
 }
 
 // Conn represents a connection from the connection pool.
@@ -434,6 +413,16 @@ func (c *Conn) QueryScan(ctx context.Context, query string, args ...any) error {
 func (c *Conn) QueryRow(ctx context.Context, query string, args ...any) *Row {
 	row := c.conn.QueryRow(ctx, query, args...)
 	return &Row{Row: row}
+}
+
+// Transaction is like [DB.Transaction], but executes the transaction on the
+// connection.
+func (c *Conn) Transaction(ctx context.Context, f func(tx *Tx) error) error {
+	pqTx, err := c.conn.BeginTx(ctx, pgx.TxOptions{IsoLevel: pgx.ReadCommitted})
+	if err != nil {
+		return err
+	}
+	return runTransaction(ctx, pqTx, f)
 }
 
 // Underlying returns the underlying connection.
@@ -726,4 +715,29 @@ func convertErr(err error) error {
 		return sql.ErrNoRows
 	}
 	return err
+}
+
+// runTransaction executes f in the transaction pqTx, as described in
+// [DB.Transaction].
+func runTransaction(ctx context.Context, pqTx pgx.Tx, f func(tx *Tx) error) error {
+	defer func() {
+		if err := recover(); err != nil {
+			_ = pqTx.Rollback(ctx)
+			panic(err)
+		}
+	}()
+	tx := &Tx{pqTx, true, nil}
+	err := f(tx)
+	if err != nil {
+		_ = pqTx.Rollback(ctx)
+		return convertErr(err)
+	}
+	err = pqTx.Commit(ctx)
+	if err != nil && err != sql.ErrTxDone {
+		return convertErr(err)
+	}
+	if tx.ack != nil {
+		<-tx.ack
+	}
+	return nil
 }

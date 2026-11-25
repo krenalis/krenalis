@@ -4,8 +4,8 @@
 
 // Package initdb initializes and upgrades Krenalis's PostgreSQL database: it
 // initializes an empty database, checks at startup that Krenalis can run on
-// the schema version of the database, and upgrades the database to a new
-// schema version, first migrating and then finalizing it. See
+// the schema version and state of the database, and upgrades the database to
+// a new schema version, first migrating and then finalizing it. See
 // .agents/skills/release-upgrade/SKILL.md.
 package initdb
 
@@ -180,7 +180,7 @@ func initialize(ctx context.Context, tx *db.Tx, dockerMember bool) error {
 		return err
 	}
 	// Record the schema version. A new database has nothing to finalize.
-	_, err := tx.Exec(ctx, "INSERT INTO schema_version (version, finalized) VALUES ($1, true)", schemaVersion)
+	_, err := tx.Exec(ctx, "INSERT INTO schema_version (version, state) VALUES ($1, 'Finalized')", schemaVersion)
 	if err != nil {
 		return err
 	}

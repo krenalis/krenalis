@@ -5,6 +5,7 @@
 package initdb
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -26,31 +27,36 @@ func TestCheckSchemaVersionEmpty(t *testing.T) {
 	t.Fatal("expected an error, got nil")
 }
 
-// TestCheckSchemaVersion verifies on which schema versions of the database
-// CheckSchemaVersion lets this version of Krenalis run. Cases that set a
-// schema version below 1 are skipped until schemaVersion is high enough.
+// TestCheckSchemaVersion verifies on which schema versions and states of the
+// database CheckSchemaVersion lets this version of Krenalis run. Cases that set
+// a schema version below 1 are skipped until schemaVersion is high enough.
 func TestCheckSchemaVersion(t *testing.T) {
 
 	type state struct {
-		version   int
-		finalized bool
+		version int
+		state   schemaState
 	}
 
 	const v = schemaVersion
 	tests := []struct {
 		name   string
-		legacy bool   // drop the schema_version table
+		legacy bool   // drop the schema_version table and its type
 		set    *state // state set on the newly initialized database, if not nil
 		fails  bool
 	}{
 		{name: "new database"},
 		{name: "legacy database", legacy: true, fails: legacySchemaVersion != v},
-		{name: "current, not finalized", set: &state{v, false}},
-		{name: "next, not finalized", set: &state{v + 1, false}},
-		{name: "next, finalized", set: &state{v + 1, true}, fails: true},
-		{name: "two ahead", set: &state{v + 2, false}, fails: true},
-		{name: "previous, finalized", set: &state{v - 1, true}, fails: true},
-		{name: "previous, not finalized", set: &state{v - 1, false}, fails: true},
+		{name: "current, migrating to next", set: &state{v, stateMigratingToNext}},
+		{name: "current, migrated", set: &state{v, stateMigrated}},
+		{name: "current, finalizing", set: &state{v, stateFinalizing}},
+		{name: "next, migrated", set: &state{v + 1, stateMigrated}},
+		{name: "next, finalizing", set: &state{v + 1, stateFinalizing}, fails: true},
+		{name: "next, finalized", set: &state{v + 1, stateFinalized}, fails: true},
+		{name: "next, migrating to next", set: &state{v + 1, stateMigratingToNext}, fails: true},
+		{name: "two ahead", set: &state{v + 2, stateMigrated}, fails: true},
+		{name: "previous, migrating to next", set: &state{v - 1, stateMigratingToNext}, fails: true},
+		{name: "previous, finalized", set: &state{v - 1, stateFinalized}, fails: true},
+		{name: "previous, migrated", set: &state{v - 1, stateMigrated}, fails: true},
 	}
 
 	for _, test := range tests {
@@ -64,14 +70,14 @@ func TestCheckSchemaVersion(t *testing.T) {
 			ctx := t.Context()
 			database := newInitializedTestDatabase(t)
 			if test.legacy {
-				_, err := database.Exec(ctx, "DROP TABLE schema_version")
+				_, err := database.Exec(ctx, "DROP TABLE schema_version; DROP TYPE schema_state")
 				if err != nil {
 					t.Fatal(err)
 				}
 			}
 			if test.set != nil {
-				_, err := database.Exec(ctx, "UPDATE schema_version SET version = $1, finalized = $2",
-					test.set.version, test.set.finalized)
+				_, err := database.Exec(ctx, "UPDATE schema_version SET version = $1, state = $2",
+					test.set.version, test.set.state)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -92,37 +98,101 @@ func TestCheckSchemaVersion(t *testing.T) {
 
 }
 
+// TestFinalizeResume verifies that Finalize records the database as being
+// finalized before running finalize, resumes an interrupted finalization, and
+// records the database as finalized only once finalize succeeds. It replaces
+// finalize, so it must not run in parallel with other tests.
+func TestFinalizeResume(t *testing.T) {
+
+	ctx := t.Context()
+	database := newInitializedTestDatabase(t)
+	_, err := database.Exec(ctx, "UPDATE schema_version SET state = 'Migrated'")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	saved := finalize
+	t.Cleanup(func() { finalize = saved })
+	var calls int
+	var finalizeErr error
+	finalize = func(ctx context.Context, conn *db.Conn) error {
+		calls++
+		assertSchemaState(t, conn, schemaVersion, stateFinalizing)
+		return finalizeErr
+	}
+
+	// Interrupt the finalization.
+	finalizeErr = errors.New("finalization interrupted")
+	err = Finalize(ctx, database)
+	if err != nil {
+		if !errors.Is(err, finalizeErr) {
+			t.Fatalf("expected the error of finalize, got %v", err)
+		}
+	}
+	if err == nil {
+		t.Fatal("expected an error, got nil")
+	}
+	assertSchemaState(t, database, schemaVersion, stateFinalizing)
+	err = CheckSchemaVersion(ctx, database)
+	if err != nil {
+		t.Fatalf("expected no error from CheckSchemaVersion, got %v", err)
+	}
+
+	// Resume the finalization.
+	finalizeErr = nil
+	err = Finalize(ctx, database)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	assertSchemaState(t, database, schemaVersion, stateFinalized)
+
+	// Finalize again, which does nothing.
+	err = Finalize(ctx, database)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if calls != 2 {
+		t.Fatalf("expected finalize to be called 2 times, got %d", calls)
+	}
+
+}
+
 // TestFinalizeSchemaVersions verifies how Finalize handles each schema version
-// of the database. When Finalize must run finalize, which must run on a
-// migrated database, the case runs only if finalize is nil, and Finalize must
-// fail: upgrade_release_test.go tests finalize while a release is prepared.
-// Cases that set a schema version below 1 are skipped until schemaVersion is
-// high enough.
+// and state of the database. When Finalize must run finalize, which must run on
+// a migrated database, the case runs only if finalize is nil, and Finalize must
+// fail without changing the state: upgrade_release_test.go tests finalize while
+// a release is prepared. Cases that set a schema version below 1 are skipped
+// until schemaVersion is high enough.
 func TestFinalizeSchemaVersions(t *testing.T) {
 
 	type state struct {
-		version   int
-		finalized bool
+		version int
+		state   schemaState
 	}
 
 	const v = schemaVersion
 	tests := []struct {
 		name          string
 		empty         bool   // use an empty database
-		legacy        bool   // drop the schema_version table
+		legacy        bool   // drop the schema_version table and its type
 		set           *state // state set on the newly initialized database, if not nil
 		needsFinalize bool   // Finalize must run finalize
 		fails         bool
 		expected      *state // state after Finalize, if not nil
 	}{
 		{name: "empty database", empty: true, fails: true},
-		{name: "new database", expected: &state{v, true}},
-		{name: "legacy database", legacy: true, fails: legacySchemaVersion != v, expected: &state{legacySchemaVersion, true}},
-		{name: "current, not finalized", set: &state{v, false}, needsFinalize: true, fails: true, expected: &state{v, false}},
-		{name: "next, not finalized", set: &state{v + 1, false}, expected: &state{v + 1, false}},
-		{name: "next, finalized", set: &state{v + 1, true}, fails: true, expected: &state{v + 1, true}},
-		{name: "previous, finalized", set: &state{v - 1, true}, fails: true, expected: &state{v - 1, true}},
-		{name: "previous, not finalized", set: &state{v - 1, false}, fails: true, expected: &state{v - 1, false}},
+		{name: "new database", expected: &state{v, stateFinalized}},
+		{name: "legacy database", legacy: true, fails: legacySchemaVersion != v, expected: &state{legacySchemaVersion, stateFinalized}},
+		{name: "current, migrating to next", set: &state{v, stateMigratingToNext}, expected: &state{v, stateMigratingToNext}},
+		{name: "current, migrated", set: &state{v, stateMigrated}, needsFinalize: true, fails: true, expected: &state{v, stateMigrated}},
+		{name: "current, finalizing", set: &state{v, stateFinalizing}, needsFinalize: true, fails: true, expected: &state{v, stateFinalizing}},
+		{name: "next, migrated", set: &state{v + 1, stateMigrated}, expected: &state{v + 1, stateMigrated}},
+		{name: "next, finalizing", set: &state{v + 1, stateFinalizing}, fails: true, expected: &state{v + 1, stateFinalizing}},
+		{name: "next, finalized", set: &state{v + 1, stateFinalized}, fails: true, expected: &state{v + 1, stateFinalized}},
+		{name: "next, migrating to next", set: &state{v + 1, stateMigratingToNext}, fails: true, expected: &state{v + 1, stateMigratingToNext}},
+		{name: "previous, migrating to next", set: &state{v - 1, stateMigratingToNext}, fails: true, expected: &state{v - 1, stateMigratingToNext}},
+		{name: "previous, finalized", set: &state{v - 1, stateFinalized}, fails: true, expected: &state{v - 1, stateFinalized}},
+		{name: "previous, migrated", set: &state{v - 1, stateMigrated}, fails: true, expected: &state{v - 1, stateMigrated}},
 	}
 
 	for _, test := range tests {
@@ -144,14 +214,14 @@ func TestFinalizeSchemaVersions(t *testing.T) {
 				database = newInitializedTestDatabase(t)
 			}
 			if test.legacy {
-				_, err := database.Exec(ctx, "DROP TABLE schema_version")
+				_, err := database.Exec(ctx, "DROP TABLE schema_version; DROP TYPE schema_state")
 				if err != nil {
 					t.Fatal(err)
 				}
 			}
 			if test.set != nil {
-				_, err := database.Exec(ctx, "UPDATE schema_version SET version = $1, finalized = $2",
-					test.set.version, test.set.finalized)
+				_, err := database.Exec(ctx, "UPDATE schema_version SET version = $1, state = $2",
+					test.set.version, test.set.state)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -168,14 +238,7 @@ func TestFinalizeSchemaVersions(t *testing.T) {
 			}
 
 			if test.expected != nil {
-				var got state
-				got.version, got.finalized, err = readSchemaVersion(ctx, database)
-				if err != nil {
-					t.Fatal(err)
-				}
-				if got != *test.expected {
-					t.Fatalf("expected version %+v, got %+v", *test.expected, got)
-				}
+				assertSchemaState(t, database, test.expected.version, test.expected.state)
 			}
 
 		})
@@ -197,37 +260,118 @@ func TestMigrateEmpty(t *testing.T) {
 	t.Fatal("expected an error, got nil")
 }
 
-// TestMigrateSchemaVersions verifies how Migrate handles each schema version of
-// the database. When Migrate must run migrate, which must run on a database of
-// the previous schema version, the case runs only if migrate is nil, and
-// Migrate must fail: upgrade_release_test.go tests migrate while a release is
-// prepared. Cases that set a schema version below 1 are skipped until
-// schemaVersion is high enough.
+// TestMigrateResume verifies that Migrate records the database, still at the
+// previous schema version, as being migrated to the next one before running
+// migrate, resumes an interrupted migration, runs migrate on a connection with
+// the lock timeout, and records the database as migrated only once migrate
+// succeeds. It replaces migrate, so it must not run in parallel with other
+// tests.
+func TestMigrateResume(t *testing.T) {
+
+	// Set the database to the previous schema version, finalized, allowing
+	// schema version 0 while schemaVersion is 1.
+	ctx := t.Context()
+	database := newInitializedTestDatabase(t)
+	_, err := database.Exec(ctx, "ALTER TABLE schema_version DROP CONSTRAINT schema_version_version_check")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = database.Exec(ctx, "UPDATE schema_version SET version = $1", schemaVersion-1)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	saved := migrate
+	t.Cleanup(func() { migrate = saved })
+	var calls int
+	var migrateErr error
+	migrate = func(ctx context.Context, conn *db.Conn) error {
+		calls++
+		assertSchemaState(t, conn, schemaVersion-1, stateMigratingToNext)
+		var timeout string
+		err := conn.QueryRow(ctx, "SHOW lock_timeout").Scan(&timeout)
+		if err != nil {
+			return err
+		}
+		if timeout != "5s" {
+			t.Errorf("expected lock timeout 5s, got %s", timeout)
+		}
+		return migrateErr
+	}
+
+	// Interrupt the migration.
+	migrateErr = errors.New("migration interrupted")
+	err = Migrate(ctx, database)
+	if err != nil {
+		if !errors.Is(err, migrateErr) {
+			t.Fatalf("expected the error of migrate, got %v", err)
+		}
+	}
+	if err == nil {
+		t.Fatal("expected an error, got nil")
+	}
+	assertSchemaState(t, database, schemaVersion-1, stateMigratingToNext)
+	err = CheckSchemaVersion(ctx, database)
+	if err == nil {
+		t.Fatal("expected an error from CheckSchemaVersion, got nil")
+	}
+
+	// Resume the migration.
+	migrateErr = nil
+	err = Migrate(ctx, database)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	assertSchemaState(t, database, schemaVersion, stateMigrated)
+
+	// Migrate again, which does nothing.
+	err = Migrate(ctx, database)
+	if err != nil {
+		t.Fatalf("expected no error, got %v", err)
+	}
+	if calls != 2 {
+		t.Fatalf("expected migrate to be called 2 times, got %d", calls)
+	}
+
+}
+
+// TestMigrateSchemaVersions verifies how Migrate handles each schema version
+// and state of the database. When Migrate must run migrate, which must run on a
+// database of the previous schema version, the case runs only if migrate is
+// nil, and Migrate must fail without changing the state:
+// upgrade_release_test.go tests migrate while a release is prepared. Cases that
+// set a schema version below 1 are skipped until schemaVersion is high enough.
 func TestMigrateSchemaVersions(t *testing.T) {
 
 	type state struct {
-		version   int
-		finalized bool
+		version int
+		state   schemaState
 	}
 
 	const v = schemaVersion
 	tests := []struct {
 		name         string
-		legacy       bool   // drop the schema_version table
+		legacy       bool   // drop the schema_version table and its type
 		set          *state // state set on the newly initialized database, if not nil
 		needsMigrate bool   // Migrate must run migrate
 		fails        bool
 		expected     state // state after Migrate
 	}{
-		{name: "new database", expected: state{v, true}},
-		{name: "legacy database", legacy: true, needsMigrate: legacySchemaVersion == v-1, fails: legacySchemaVersion != v, expected: state{legacySchemaVersion, true}},
-		{name: "current, not finalized", set: &state{v, false}, expected: state{v, false}},
-		{name: "next, not finalized", set: &state{v + 1, false}, expected: state{v + 1, false}},
-		{name: "next, finalized", set: &state{v + 1, true}, fails: true, expected: state{v + 1, true}},
-		{name: "two ahead", set: &state{v + 2, false}, fails: true, expected: state{v + 2, false}},
-		{name: "previous, finalized", set: &state{v - 1, true}, needsMigrate: true, fails: true, expected: state{v - 1, true}},
-		{name: "previous, not finalized", set: &state{v - 1, false}, fails: true, expected: state{v - 1, false}},
-		{name: "two behind", set: &state{v - 2, true}, fails: true, expected: state{v - 2, true}},
+		{name: "new database", expected: state{v, stateFinalized}},
+		{name: "legacy database", legacy: true, needsMigrate: legacySchemaVersion == v-1, fails: legacySchemaVersion != v, expected: state{legacySchemaVersion, stateFinalized}},
+		{name: "current, migrating to next", set: &state{v, stateMigratingToNext}, expected: state{v, stateMigratingToNext}},
+		{name: "current, migrated", set: &state{v, stateMigrated}, expected: state{v, stateMigrated}},
+		{name: "current, finalizing", set: &state{v, stateFinalizing}, expected: state{v, stateFinalizing}},
+		{name: "next, migrated", set: &state{v + 1, stateMigrated}, expected: state{v + 1, stateMigrated}},
+		{name: "next, finalizing", set: &state{v + 1, stateFinalizing}, fails: true, expected: state{v + 1, stateFinalizing}},
+		{name: "next, finalized", set: &state{v + 1, stateFinalized}, fails: true, expected: state{v + 1, stateFinalized}},
+		{name: "next, migrating to next", set: &state{v + 1, stateMigratingToNext}, fails: true, expected: state{v + 1, stateMigratingToNext}},
+		{name: "two ahead", set: &state{v + 2, stateMigrated}, fails: true, expected: state{v + 2, stateMigrated}},
+		{name: "previous, finalized", set: &state{v - 1, stateFinalized}, needsMigrate: true, fails: true, expected: state{v - 1, stateFinalized}},
+		{name: "previous, migrating to next", set: &state{v - 1, stateMigratingToNext}, needsMigrate: true, fails: true, expected: state{v - 1, stateMigratingToNext}},
+		{name: "previous, migrated", set: &state{v - 1, stateMigrated}, fails: true, expected: state{v - 1, stateMigrated}},
+		{name: "previous, finalizing", set: &state{v - 1, stateFinalizing}, fails: true, expected: state{v - 1, stateFinalizing}},
+		{name: "two behind", set: &state{v - 2, stateFinalized}, fails: true, expected: state{v - 2, stateFinalized}},
 	}
 
 	for _, test := range tests {
@@ -244,14 +388,14 @@ func TestMigrateSchemaVersions(t *testing.T) {
 			ctx := t.Context()
 			database := newInitializedTestDatabase(t)
 			if test.legacy {
-				_, err := database.Exec(ctx, "DROP TABLE schema_version")
+				_, err := database.Exec(ctx, "DROP TABLE schema_version; DROP TYPE schema_state")
 				if err != nil {
 					t.Fatal(err)
 				}
 			}
 			if test.set != nil {
-				_, err := database.Exec(ctx, "UPDATE schema_version SET version = $1, finalized = $2",
-					test.set.version, test.set.finalized)
+				_, err := database.Exec(ctx, "UPDATE schema_version SET version = $1, state = $2",
+					test.set.version, test.set.state)
 				if err != nil {
 					t.Fatal(err)
 				}
@@ -267,14 +411,7 @@ func TestMigrateSchemaVersions(t *testing.T) {
 				t.Fatal("expected an error, got nil")
 			}
 
-			var got state
-			got.version, got.finalized, err = readSchemaVersion(ctx, database)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if got != test.expected {
-				t.Fatalf("expected version %+v, got %+v", test.expected, got)
-			}
+			assertSchemaState(t, database, test.expected.version, test.expected.state)
 
 		})
 	}
@@ -351,13 +488,13 @@ func TestMigrateWaitsForInitialization(t *testing.T) {
 }
 
 // TestWriteSchemaVersion verifies that writeSchemaVersion records the schema
-// version, creating the schema_version table as schema.sql does if the
-// database is at the legacy schema version.
+// version and state, creating the schema_version table as schema.sql does if
+// the database is at the legacy schema version.
 func TestWriteSchemaVersion(t *testing.T) {
 
 	tests := []struct {
 		name   string
-		legacy bool // drop the schema_version table
+		legacy bool // drop the schema_version table and its type
 	}{
 		{name: "new database"},
 		{name: "legacy database", legacy: true},
@@ -371,16 +508,19 @@ func TestWriteSchemaVersion(t *testing.T) {
 			database := newInitializedTestDatabase(t)
 			expected := schemaSnapshot(t, database)
 			if test.legacy {
-				_, err := database.Exec(ctx, "DROP TABLE schema_version")
+				_, err := database.Exec(ctx, "DROP TABLE schema_version; DROP TYPE schema_state")
 				if err != nil {
 					t.Fatal(err)
 				}
 			}
 
 			// Write a state other than the one recorded by initialize.
-			err := database.Transaction(ctx, func(tx *db.Tx) error {
-				return writeSchemaVersion(ctx, tx, schemaVersion+1, false)
-			})
+			conn, err := database.Conn(ctx)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer conn.Close()
+			err = writeSchemaVersion(ctx, conn, schemaVersion+1, stateMigratingToNext)
 			if err != nil {
 				t.Fatalf("expected no error, got %v", err)
 			}
@@ -389,16 +529,22 @@ func TestWriteSchemaVersion(t *testing.T) {
 			if got != expected {
 				t.Fatalf("expected schema %s, got %s", expected, got)
 			}
-			version, finalized, err := readSchemaVersion(ctx, database)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if version != schemaVersion+1 || finalized {
-				t.Fatalf("expected schema version %d, not finalized, got %d, finalized %t",
-					schemaVersion+1, version, finalized)
-			}
+			assertSchemaState(t, database, schemaVersion+1, stateMigratingToNext)
 
 		})
 	}
 
+}
+
+// assertSchemaState verifies that the database is at the given schema version
+// and state.
+func assertSchemaState(t *testing.T, conn db.Connection, version int, state schemaState) {
+	t.Helper()
+	gotVersion, gotState, err := readSchemaVersion(t.Context(), conn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if gotVersion != version || gotState != state {
+		t.Fatalf("expected schema version %d, %s, got %d, %s", version, state, gotVersion, gotState)
+	}
 }

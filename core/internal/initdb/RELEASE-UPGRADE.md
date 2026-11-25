@@ -6,9 +6,9 @@ What the migration and the finalization of the next release must do to upgrade a
 
 ## Migration
 
-- Create the `schema_version` table: `migrate` has nothing to do, because `Migrate` creates it when it records the new schema version.
+- Create the `schema_state` type and the `schema_version` table: `migrate` has nothing to do, because `Migrate` creates them when it records the new schema version.
 - Replace every `{"kind":"year"}` type with a signed `int` of `bitSize: 16` and `semantics: "year"`, recursively in `workspaces.profile_schema`, `workspaces.alter_profile_schema_schema`, types in `workspaces.alter_profile_schema_operations`, and `pipelines.in_schema` and `pipelines.out_schema`. Preserve all property metadata and enclosing array, map, and object types. Set `minimum: 1` and `maximum: 9999` explicitly to preserve the existing range. This representation keeps the existing Go and JSON values and remains compatible with the existing warehouse column types; no warehouse DDL or record conversion is required.
-- In `pipelines.filter`, recursively convert conditions on properties whose input type was `year`: `IsBefore` to `IsLessThan`, `IsOnOrBefore` to `IsLessThanOrEqualTo`, `IsAfter` to `IsGreaterThan`, and `IsOnOrAfter` to `IsGreaterThanOrEqualTo`. Identify these properties from the original input schema before replacing its types. Preserve condition values, nested groups, and conditions on other types.
+- In `pipelines.filter`, recursively convert conditions on properties whose input type was `year`: `IsBefore` to `IsLessThan`, `IsOnOrBefore` to `IsLessThanOrEqualTo`, `IsAfter` to `IsGreaterThan`, and `IsOnOrAfter` to `IsGreaterThanOrEqualTo`. Identify these properties from the original input schema before replacing its types. Preserve condition values, nested groups, and conditions on other types. Convert the filter and the schemas of each pipeline in the same transaction, since a resumed migration could not identify these properties from an input schema already converted.
 - The two conversions above break the instances of the base release, which cannot read the new types; this is allowed by the exception for `v0.48.0` in `.agents/skills/release-upgrade/SKILL.md`.
 
 ## Finalization
