@@ -54,16 +54,16 @@ func TestEqualityOfMergeFiles(t *testing.T) {
 			"and kept in sync")
 	}
 
-	file1, err = os.ReadFile("../connectors/snowflake/jsonwrite_test.go")
+	file1, err = os.ReadFile("../connectors/snowflake/merge_test.go")
 	if err != nil {
 		t.Fatalf("expected connector file, got %v", err)
 	}
-	file2, err = os.ReadFile("../warehouses/snowflake/jsonwrite_test.go")
+	file2, err = os.ReadFile("../warehouses/snowflake/merge_test.go")
 	if err != nil {
 		t.Fatalf("expected warehouse file, got %v", err)
 	}
 	if !bytes.Equal(file1, file2) {
-		t.Fatal("expected identical Snowflake jsonwrite_test.go files, got different contents")
+		t.Fatal("expected identical Snowflake merge_test.go files, got different contents")
 	}
 
 }
