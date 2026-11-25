@@ -168,17 +168,19 @@ func TestEvents(t *testing.T) {
 	})
 
 	for _, test := range []struct {
-		operator string
-		want     []string
+		name string
+		rule string
+		want []string
 	}{
-		{"exists", []string{"group"}},
-		{"does not exist", []string{"identify", "track", "track", "track", "track"}},
+		{"groupId exists", `{"property":"groupId","operator":"exists"}`, []string{"group"}},
+		{"groupId does not exist", `{"property":"groupId","operator":"does not exist"}`, []string{"identify", "track", "track", "track", "track"}},
+		{"type contains", `{"property":"type","operator":"contains","values":["track"]}`, []string{"track", "track", "track", "track"}},
+		{"type does not contain", `{"property":"type","operator":"does not contain","values":["track"]}`, []string{"group", "identify"}},
 	} {
-		t.Run("groupId "+test.operator, func(t *testing.T) {
+		t.Run(test.name, func(t *testing.T) {
 			query := url.Values{
 				"properties": {"type"},
-				"filter": {`{"operator":"and","rules":[{"property":"groupId","operator":"` +
-					test.operator + `"}]}`},
+				"filter":     {`{"operator":"and","rules":[` + test.rule + `]}`},
 			}
 			var response struct {
 				Events []struct {

@@ -165,6 +165,9 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 			serializeValue(b, baseExpr.Values[0], c.Type)
 			b.WriteString(" IN ")
 			b.WriteString(qname)
+			if c.Type.Values() != nil {
+				b.WriteString("::text")
+			}
 			if op == warehouses.OpContains {
 				b.WriteString(") > 0")
 			} else {

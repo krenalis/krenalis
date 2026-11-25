@@ -1579,6 +1579,20 @@ func Test_validateFilter(t *testing.T) {
 			err: errors.New(`value of the "o" property is not among the allowed values`),
 		},
 		{
+			name: "contains outside allowed values",
+			filter: Filter{Operator: OpAnd, Rules: []FilterRule{
+				&FilterCondition{Property: "o", Operator: OpContains, Values: []string{"fo"}},
+			}},
+			err: errors.New(`value of the "o" property is not among the allowed values`),
+		},
+		{
+			name: "does not contain outside allowed values",
+			filter: Filter{Operator: OpAnd, Rules: []FilterRule{
+				&FilterCondition{Property: "o", Operator: OpDoesNotContain, Values: []string{"fo"}},
+			}},
+			err: errors.New(`value of the "o" property is not among the allowed values`),
+		},
+		{
 			name: "is empty when empty string is not allowed",
 			filter: Filter{
 				Operator: OpAnd,
@@ -1712,6 +1726,8 @@ func Test_validateFilter(t *testing.T) {
 					&FilterCondition{Property: "o", Operator: OpIs, Values: []string{"foo"}},
 					&FilterCondition{Property: "o", Operator: OpIs, Values: []string{""}},
 					&FilterCondition{Property: "o", Operator: OpIsOneOf, Values: []string{"foo", "boo"}},
+					&FilterCondition{Property: "o", Operator: OpContains, Values: []string{"foo"}},
+					&FilterCondition{Property: "o", Operator: OpDoesNotContain, Values: []string{"boo"}},
 					&FilterCondition{Property: "o", Operator: OpIsNotNull},
 					&FilterCondition{Property: "o", Operator: OpIsEmpty},
 					&FilterCondition{Property: "o", Operator: OpIsNotEmpty},

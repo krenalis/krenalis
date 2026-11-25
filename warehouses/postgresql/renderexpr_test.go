@@ -121,6 +121,16 @@ func Test_renderExpr(t *testing.T) {
 			query: `POSITION('boo' IN "name") = 0`,
 		},
 		{
+			name:  "enum contains",
+			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "type", Type: types.String().WithValues("alias", "track")}, warehouses.OpContains, "track"),
+			query: `POSITION('track' IN "type"::text) > 0`,
+		},
+		{
+			name:  "enum does not contain",
+			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "type", Type: types.String().WithValues("alias", "track")}, warehouses.OpDoesNotContain, "track"),
+			query: `POSITION('track' IN "type"::text) = 0`,
+		},
+		{
 			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.Array(types.Int(32))}, warehouses.OpContains, 5),
 			query: `5 = ANY("values")`,
 		},
