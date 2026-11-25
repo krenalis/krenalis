@@ -23,6 +23,7 @@ func TestLivez(t *testing.T) {
 	k := krenalistester.NewKrenalisInstance(t)
 	k.Start()
 	t.Cleanup(k.Stop)
+
 	t.Cleanup(func() {
 		client := &http.Client{Timeout: 5 * time.Second}
 		res, err := client.Get("http://" + k.Addr() + "/livez")

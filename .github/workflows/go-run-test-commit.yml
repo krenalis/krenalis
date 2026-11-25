@@ -79,7 +79,10 @@ jobs:
       - name: Check embedded test server startup with the race detector
         env:
           KRENALIS_TEST_EMBEDDED_SERVER: "true"
-        run: go test -race ./test -run '^TestConnections$' -count=1
+        run: |
+          test ! -e admin/assets/index.js.br
+          go test -race ./test -run '^TestConnections$' -count=1
+          test -s admin/assets/index.js.br
 
       - name: Check that the repository is clean
         run: ./test/commit/repo_is_clean.bash
