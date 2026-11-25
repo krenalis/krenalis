@@ -47,25 +47,23 @@ func TestEqualityOfMergeFiles(t *testing.T) {
 	}
 	file2 = bytes.Replace(file2, []byte("\t\"github.com/krenalis/krenalis/warehouses\"\n"), nil, 1)
 	file2 = bytes.ReplaceAll(file2, []byte(`warehouses.`), []byte(`connectors.`))
+	file2 = bytes.ReplaceAll(file2, []byte("warehouses/snowflake:"), []byte("connectors/snowflake:"))
 	if !bytes.Equal(file1, file2) {
 		t.Fatal("the content of 'connectors/snowflake/merge.go' differs from " +
 			"'warehouses/snowflake/merge.go', whereas the two files should be identical " +
 			"and kept in sync")
 	}
 
-	for _, name := range []string{"jsonwrite.go", "jsonwrite_test.go"} {
-		file1, err := os.ReadFile("../connectors/snowflake/" + name)
-		if err != nil {
-			t.Fatalf("expected connector file, got %v", err)
-		}
-		file2, err := os.ReadFile("../warehouses/snowflake/" + name)
-		if err != nil {
-			t.Fatalf("expected warehouse file, got %v", err)
-		}
-		file2 = bytes.ReplaceAll(file2, []byte("warehouses/snowflake:"), []byte("connectors/snowflake:"))
-		if !bytes.Equal(file1, file2) {
-			t.Fatalf("expected identical Snowflake %s files, got different contents", name)
-		}
+	file1, err = os.ReadFile("../connectors/snowflake/jsonwrite_test.go")
+	if err != nil {
+		t.Fatalf("expected connector file, got %v", err)
+	}
+	file2, err = os.ReadFile("../warehouses/snowflake/jsonwrite_test.go")
+	if err != nil {
+		t.Fatalf("expected warehouse file, got %v", err)
+	}
+	if !bytes.Equal(file1, file2) {
+		t.Fatal("expected identical Snowflake jsonwrite_test.go files, got different contents")
 	}
 
 }
