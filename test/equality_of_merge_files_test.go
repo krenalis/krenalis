@@ -67,4 +67,5 @@ func TestEqualityOfMergeFiles(t *testing.T) {
 			t.Fatalf("expected identical Snowflake %s files, got different contents", name)
 		}
 	}
+
 }

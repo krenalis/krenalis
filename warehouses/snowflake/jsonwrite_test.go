@@ -18,6 +18,7 @@ import (
 	"github.com/krenalis/krenalis/tools/types"
 )
 
+// TestPlainJSONNumber checks the precision and scale limits of NUMBER.
 func TestPlainJSONNumber(t *testing.T) {
 	for _, test := range []struct{ input, want string }{
 		{"1E2", "100"},
@@ -65,12 +66,12 @@ func TestPlainJSONNumberExact(t *testing.T) {
 		"1.234567890123456789", strings.Repeat("9", 38), strings.Repeat("9", 39)} {
 		for exponent := -45; exponent <= 45; exponent++ {
 			text := fmt.Sprintf("%se%d", coefficient, exponent)
-			value, ok := new(big.Rat).SetString(text)
+			value, ok := (&big.Rat{}).SetString(text)
 			if !ok {
 				t.Fatalf("expected rational fixture, got %s", text)
 			}
 			fixed := value.FloatString(37)
-			rounded, _ := new(big.Rat).SetString(fixed)
+			rounded, _ := (&big.Rat{}).SetString(fixed)
 			fixed = strings.TrimRight(strings.TrimRight(fixed, "0"), ".")
 			whole, fraction, _ := strings.Cut(strings.TrimPrefix(fixed, "-"), ".")
 			fits := rounded.Cmp(value) == 0 && len(strings.TrimLeft(whole, "0"))+len(fraction) <= 38
@@ -81,7 +82,7 @@ func TestPlainJSONNumberExact(t *testing.T) {
 			if plain == nil {
 				continue
 			}
-			got, ok := new(big.Rat).SetString(string(plain))
+			got, ok := (&big.Rat{}).SetString(string(plain))
 			if !ok || got.Cmp(value) != 0 || len(plain) > 40 || !json.Valid(plain) {
 				t.Fatalf("expected exact bounded JSON number for %s, got %q", text, plain)
 			}
@@ -92,7 +93,6 @@ func TestPlainJSONNumberExact(t *testing.T) {
 // TestPlainJSONNumberGenerated checks deterministic generated tokens with an
 // independent oracle that scales rationals until they become integers.
 func TestPlainJSONNumberGenerated(t *testing.T) {
-
 	random := rand.New(rand.NewPCG(4721, 987))
 	for trial := range 2048 {
 
@@ -122,19 +122,19 @@ func TestPlainJSONNumberGenerated(t *testing.T) {
 		if !json.Valid([]byte(text)) {
 			t.Fatalf("expected valid JSON fixture, got %s", text)
 		}
-		value, ok := new(big.Rat).SetString(text)
+		value, ok := (&big.Rat{}).SetString(text)
 		if !ok {
 			t.Fatalf("expected rational fixture, got %s", text)
 		}
 
-		scaled := new(big.Rat).Set(value)
+		scaled := (&big.Rat{}).Set(value)
 		ten := big.NewRat(10, 1)
 		scale := 0
 		for !scaled.IsInt() && scale < 38 {
 			scaled.Mul(scaled, ten)
 			scale++
 		}
-		digits := len(new(big.Int).Abs(scaled.Num()).String())
+		digits := len((&big.Int{}).Abs(scaled.Num()).String())
 		fits := scaled.IsInt() && scale <= 37 && digits <= 38
 		plain := plainJSONNumber(text)
 		if (plain != nil) != fits {
@@ -143,7 +143,7 @@ func TestPlainJSONNumberGenerated(t *testing.T) {
 		if plain == nil {
 			continue
 		}
-		got, ok := new(big.Rat).SetString(string(plain))
+		got, ok := (&big.Rat{}).SetString(string(plain))
 		if !ok || got.Cmp(value) != 0 || len(plain) > 40 || !json.Valid(plain) || bytes.ContainsAny(plain, "eE+") {
 			t.Fatalf("expected exact bounded plain JSON number for %s, got %q", text, plain)
 		}
@@ -152,9 +152,9 @@ func TestPlainJSONNumberGenerated(t *testing.T) {
 		}
 
 	}
-
 }
 
+// TestPlainJSONNumbers checks that bytes outside rewritten numbers stay intact.
 func TestPlainJSONNumbers(t *testing.T) {
 	for _, test := range []struct{ input, want string }{
 		{"  1E2 \n", "  100 \n"},
@@ -189,6 +189,7 @@ func TestPlainJSONNumbers(t *testing.T) {
 	}
 }
 
+// TestSerializeJSONNumbers checks how JSON numbers are written to CSV.
 func TestSerializeJSONNumbers(t *testing.T) {
 	for _, test := range []struct {
 		name  string
