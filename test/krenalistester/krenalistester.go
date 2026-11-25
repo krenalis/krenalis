@@ -380,8 +380,8 @@ func (k *Krenalis) Start() {
 			buildKrenalis(k.t, k.repo, krenalisDir)
 			krenalisAlreadyBuilt = true
 		}
+		k.krenalisRunning = make(chan struct{})
 		go func() {
-			k.krenalisRunning = make(chan struct{})
 			defer func() {
 				close(k.krenalisRunning)
 			}()
@@ -430,8 +430,8 @@ func (k *Krenalis) Start() {
 		if err != nil {
 			k.t.Fatal(err)
 		}
+		k.krenalisRunning = make(chan struct{})
 		go func() {
-			k.krenalisRunning = make(chan struct{})
 			defer func() {
 				close(k.krenalisRunning)
 			}()
