@@ -341,6 +341,50 @@ test(`Validate an invalid date when applying filters and allow correcting it`, a
 	]);
 });
 
+test(`Apply a filter on a JSON property path`, async ({ page }) => {
+	const jsonSchema: ObjectType = {
+		...schema,
+		properties: [
+			...schema.properties,
+			{ ...schema.properties[0], name: 'metadata', displayName: 'Metadata', type: { kind: 'json' } },
+		],
+	};
+	await page.route('**/v1/profiles/schema', (route) =>
+		route.fulfill({
+			json: {
+				schema: jsonSchema,
+				propertyRoles: { firstName: 'name', lastName: '', email: '', country: '', photo: '' },
+				primarySources: {},
+			},
+		}),
+	);
+	await page.route('**/v1/profiles/query', (route) =>
+		route.fulfill({ json: { profiles, total: profiles.length, hasNext: false } }),
+	);
+	await page.goto('https://example.test/');
+	await page.addStyleTag({ content: componentStyles });
+	await page.addScriptTag({ content: componentScript });
+	await page.getByRole('button', { name: 'Add filter', exact: true }).click();
+	const editor = page.getByRole('region', { name: 'Profile filters' });
+	const property = editor.locator('.filter-editor__property');
+	await property.locator('input').click();
+	await property.locator('.combobox-list__item .schema-combobox-item__name', { hasText: /^Metadata$/ }).click();
+	await editor.locator('.filter-editor__path input').fill('score');
+	await editor.locator('.filter-editor__value-input input').fill('1.25');
+	const [request] = await Promise.all([
+		page.waitForRequest(
+			(request) => request.url().endsWith('/v1/profiles/query') && request.postDataJSON().filter != null,
+		),
+		editor.getByRole('button', { name: 'Apply filters', exact: true }).click(),
+	]);
+	const body = request.postDataJSON();
+	expect(body.schema).toEqual(jsonSchema);
+	expect(body.filter).toEqual({
+		operator: 'and',
+		rules: [{ property: 'metadata.score', operator: 'is', values: ['1.25'] }],
+	});
+});
+
 test(`Apply several edits with one request and keep history independent from queries`, async ({ page }) => {
 	const gridFilters: (Filter | null)[] = [];
 	await page.route(/\/v1\/profiles\/query$/, async (route) => {

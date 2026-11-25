@@ -7,7 +7,9 @@ package test
 import (
 	"context"
 	"encoding/json"
+	"net/url"
 	"reflect"
+	"slices"
 	"testing"
 	"time"
 	"uuid"
@@ -102,15 +104,15 @@ func TestEvents(t *testing.T) {
 		GroupId: "uy55IELNg",
 	})
 
-	// Send 3 events.
-	for i := range 3 {
+	// Send one Basic event followed by three Enterprise events.
+	for i, plan := range []string{"Basic", "Enterprise", "Enterprise", "Enterprise"} {
 		k.SendEvent(javaScriptKey, analytics.Track{
 			UserId:      "f4ca124298",
 			AnonymousId: "baeeb556-96f3-4631-a22d-928431af8bf6",
 			Event:       "Signed Up",
 			Properties: analytics.Properties{
-				"plan":       "Enterprise",
-				"some-index": 42 + i,
+				"plan":       plan,
+				"some-index": 41 + i,
 			},
 			Context: &analytics.Context{
 				Page: analytics.PageInfo{
@@ -127,12 +129,76 @@ func TestEvents(t *testing.T) {
 	k.WaitConnectionIdentitiesStoredIntoWarehouse(ctx, javaScriptID, 1)
 	k.RunIdentityResolutionAndWait()
 
-	const expectedEventsCount = 5
+	const expectedEventsCount = 6
 
 	k.WaitEventsStoredIntoWarehouse(ctx, expectedEventsCount)
 
 	// Run the identity resolution, so that the events KPID are updated.
 	k.RunIdentityResolutionAndWait()
+
+	t.Run("filter on a JSON property path", func(t *testing.T) {
+
+		query := url.Values{
+			"properties": {"properties"},
+			"filter": {`{"operator":"and","rules":[` +
+				`{"property":"properties.plan","operator":"is","values":["Enterprise"]}]}`},
+		}
+		var response struct {
+			Events []struct {
+				Properties struct {
+					Index int `json:"some-index"`
+				} `json:"properties"`
+			} `json:"events"`
+		}
+		err := k.TryCall("GET", "/v1/events?"+query.Encode(), nil, nil, &response)
+		if err != nil {
+			t.Fatalf("expected GET /v1/events to succeed, got %v", err)
+		}
+
+		indices := make([]int, len(response.Events))
+		for i, event := range response.Events {
+			indices[i] = event.Properties.Index
+		}
+		slices.Sort(indices)
+		want := []int{42, 43, 44}
+		if !slices.Equal(want, indices) {
+			t.Fatalf("expected event indices %v, got %v", want, indices)
+		}
+
+	})
+
+	for _, test := range []struct {
+		operator string
+		want     []string
+	}{
+		{"exists", []string{"group"}},
+		{"does not exist", []string{"identify", "track", "track", "track", "track"}},
+	} {
+		t.Run("groupId "+test.operator, func(t *testing.T) {
+			query := url.Values{
+				"properties": {"type"},
+				"filter": {`{"operator":"and","rules":[{"property":"groupId","operator":"` +
+					test.operator + `"}]}`},
+			}
+			var response struct {
+				Events []struct {
+					Type string
+				}
+			}
+			err := k.TryCall("GET", "/v1/events?"+query.Encode(), nil, nil, &response)
+			if err != nil {
+				t.Fatalf("expected GET /v1/events to succeed, got %v", err)
+			}
+			got := make([]string, len(response.Events))
+			for i, event := range response.Events {
+				got[i] = event.Type
+			}
+			slices.Sort(got)
+			if !slices.Equal(test.want, got) {
+				t.Errorf("expected event types %v, got %v", test.want, got)
+			}
+		})
+	}
 
 	// Retrieve the profile imported from the event.
 	profiles, total := k.Profiles([]string{"email"}, "", false, 0, 100)

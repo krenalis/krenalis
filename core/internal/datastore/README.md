@@ -60,3 +60,9 @@ This table is based on the following principles:
 [^arraymapcomposite]: Supporting `array(T)` or `map(T)`, where `T` is of type `array`, `object` or `map`, would open up major implementation issues, especially in the Admin console, which would need to expose a way to handle the creation and mapping to these types. However, it should be noted that it is not yet clear whether such types could actually be supported and used in data warehouses, and so it might not be worth the effort anyway.
 
 [^issue-956]: Currently, the minimum and maximum value for numeric types is allowed for profile schema properties but cannot be specified when declaring types using the Admin console. See the issue [#956](https://github.com/krenalis/krenalis/issues/956) for more details.
+
+## JSON filters
+
+SQL `NULL` represents an absent property, and JSON `null` represents a present value. An object represented by multiple columns exists if any descendant column is present, so a flattened empty object counts as absent. See the [filter documentation](https://www.krenalis.com/docs/filters) for syntax and operators.
+
+A filter operand retains its original text for string comparisons and can also represent an exact decimal with precision up to 76 and scale up to 37. PostgreSQL compares stored JSON numbers as `numeric`. Snowflake compares fixed-point JSON numbers exactly and uses the decimal representation returned by `TO_JSON` for `DOUBLE` values. Comparisons reflect the precision available after storage.

@@ -17,6 +17,7 @@ import {
 	syncTokenHeaders,
 } from './utils';
 import { ConsentPurpose } from '../src/lib/api/types/workspace';
+import type { PipelineSchemasResponse } from '../src/lib/api/types/responses';
 import { join } from 'path';
 import { writeFile } from 'fs';
 
@@ -378,6 +379,144 @@ test(`Add "Export customers" pipeline on Dummy`, async ({ page }) => {
 
 	await expect(page.locator('.connection-pipelines__grid')).toBeAttached();
 });
+
+test('Submit a JSON filter when saving a User export', async ({ page }) => {
+	const id = await addDummyDestination(page);
+	await page.route(`**/connections/${id}/pipelines/schemas/User`, async (route) => {
+		const response = await route.fetch();
+		const schemas: PipelineSchemasResponse = await response.json();
+		schemas.in.properties.push({
+			name: 'metadata',
+			type: { kind: 'json' },
+			displayName: 'Metadata',
+			description: '',
+			prefilled: '',
+			createRequired: false,
+			updateRequired: false,
+			readOptional: true,
+			nullable: false,
+		});
+		await route.fulfill({ response, json: schemas });
+	});
+	await page.goto(`${adminURL}/connections/${id}/pipelines`);
+	const tile = page.locator('.connection-pipelines__no-pipeline-pipeline-types .list-tile__name', {
+		hasText: 'Export customers',
+	});
+	await tile.locator('..').locator('..').locator('wa-button').click();
+
+	const filters = page.locator('.pipeline__filters');
+	await filters.getByRole('button', { name: 'Add filter', exact: true }).click();
+	const property = filters.locator('.filter-editor__property');
+	await property.locator('input').click();
+	await property.locator('.combobox-list__item .schema-combobox-item__name', { hasText: /^Metadata$/ }).click();
+	await filters.locator('.filter-editor__path input').fill('plan');
+	const operator = filters.locator('.filter-editor__operator');
+	await operator.locator('[part="display-input"]').click();
+	await operator.getByRole('option', { name: 'is one of', exact: true }).click();
+	await filters.locator('.filter-editor__add-value').click();
+	const values = filters.locator('.filter-editor__is-one-of-values .filter-editor__value-input input');
+	await values.nth(0).fill('pro');
+	await values.nth(1).fill('team');
+
+	const exportMode = page.locator('.pipeline__export-mode wa-select');
+	await exportMode.locator('[part="display-input"]').click();
+	await exportMode.locator('wa-option[value="UpdateOnly"]').click();
+	const matching = page.locator('.pipeline__matching-properties');
+	await matching.locator('[data-id="in"] input').fill('email');
+	await page.keyboard.press('Escape');
+	await matching.locator('[data-id="out"] input').fill('email');
+	await page.keyboard.press('Escape');
+	await page.locator('.pipeline__transformation .combobox[data-id="firstName"] input').fill('first_name');
+	await page.keyboard.press('Escape');
+
+	await page.route('**/v1/pipelines', async (route) => {
+		if (route.request().method() === 'POST') {
+			await route.fulfill({ json: { id: 'json-filter-pipeline' }, headers: syncTokenHeaders() });
+			return;
+		}
+		await route.fallback();
+	});
+	const [request] = await Promise.all([
+		page.waitForRequest((request) => request.url().endsWith('/v1/pipelines') && request.method() === 'POST'),
+		page.locator('.pipeline__header-save button').click(),
+	]);
+	const body = request.postDataJSON();
+	expect(body.target).toBe('User');
+	expect(body.filter).toEqual({
+		operator: 'and',
+		rules: [{ property: 'metadata.plan', operator: 'is one of', values: ['pro', 'team'] }],
+	});
+	expect(body.inSchema.properties).toContainEqual(
+		expect.objectContaining({ name: 'metadata', type: { kind: 'json' } }),
+	);
+	await expect(page.locator('.pipeline__header')).toHaveCount(0);
+});
+
+for (const scenario of [
+	{
+		name: 'Normalize a quoted operand in a User export preview',
+		rule: { property: 'email', operator: 'is', values: ['preview@example.test'] },
+		draftValue: '"preview@example.test"',
+	},
+	{
+		name: 'Omit values for a saved unary filter in a User export preview',
+		rule: { property: 'email', operator: 'exists' },
+		draftValue: null,
+	},
+]) {
+	test(scenario.name, async ({ page }) => {
+		const id = await addDummyDestination(page);
+		const pipelinesURL = `${adminURL}/connections/${id}/pipelines`;
+		await page.goto(pipelinesURL);
+		const tile = page.locator('.connection-pipelines__no-pipeline-pipeline-types .list-tile__name', {
+			hasText: 'Export customers',
+		});
+		await tile.locator('..').locator('..').locator('wa-button').click();
+
+		const exportMode = page.locator('.pipeline__export-mode wa-select');
+		await exportMode.locator('[part="display-input"]').click();
+		await exportMode.locator('wa-option[value="UpdateOnly"]').click();
+		const matching = page.locator('.pipeline__matching-properties');
+		for (const side of ['in', 'out']) {
+			await matching.locator(`[data-id="${side}"] input`).fill('email');
+			await page.keyboard.press('Escape');
+		}
+
+		const filters = page.locator('.pipeline__filters');
+		await filters.getByRole('button', { name: 'Add filter', exact: true }).click();
+		const property = filters.locator('.filter-editor__property');
+		await property.locator('input').click();
+		await property.locator('.combobox-list__item .schema-combobox-item__name', { hasText: /^email$/ }).click();
+		const operator = filters.locator('.filter-editor__operator');
+		await operator.getByRole('option', { name: scenario.rule.operator, exact: true }).click();
+		if (scenario.draftValue != null) {
+			await filters.locator('.filter-editor__value-input input').fill(scenario.draftValue);
+		} else {
+			await page.locator('.pipeline__transformation .combobox[data-id="firstName"] input').fill('first_name');
+			await page.keyboard.press('Escape');
+			const [response] = await Promise.all([
+				page.waitForResponse(
+					(response) => response.url().endsWith('/v1/pipelines') && response.request().method() === 'POST',
+				),
+				page.locator('.pipeline__header-save button').click(),
+			]);
+			expect(response.ok()).toBe(true);
+			const pipeline = await response.json();
+			await page.goto(`${pipelinesURL}/edit/${pipeline.id}`);
+		}
+
+		await page.route('**/profiles/query', async (route) => {
+			await route.fulfill({ json: { profiles: [], total: 0, hasNext: false }, headers: syncTokenHeaders() });
+		});
+		const [response] = await Promise.all([
+			page.waitForResponse(
+				(response) => response.url().endsWith('/profiles/query') && response.request().method() === 'POST',
+			),
+			page.getByRole('button', { name: 'Edit in full mode', exact: true }).click(),
+		]);
+		expect(response.request().postDataJSON().filter).toEqual({ operator: 'and', rules: [scenario.rule] });
+	});
+}
 
 test.describe('Matching semantics', () => {
 	const openPipeline = async (page: Page, hasRequiredPhone = false) => {
