@@ -18,7 +18,9 @@ import (
 	"github.com/krenalis/krenalis/tools/types"
 )
 
-// TestPlainJSONNumber checks the precision and scale limits of NUMBER.
+// TestPlainJSONNumber checks that scientific notation expands to exact,
+// normalized decimal notation within NUMBER's precision and scale limits.
+// Plain numbers and out-of-range values must yield a nil replacement.
 func TestPlainJSONNumber(t *testing.T) {
 	for _, test := range []struct{ input, want string }{
 		{"1E2", "100"},
@@ -38,21 +40,35 @@ func TestPlainJSONNumber(t *testing.T) {
 		{"1e38", ""},
 		{"1e-37", "0." + strings.Repeat("0", 36) + "1"},
 		{"1e-38", ""},
+		{"-1e37", "-1" + strings.Repeat("0", 37)},
+		{"-1e38", ""},
+		{"-1e-37", "-0." + strings.Repeat("0", 36) + "1"},
+		{"-1e-38", ""},
 		{strings.Repeat("9", 38) + "e0", strings.Repeat("9", 38)},
 		{strings.Repeat("9", 39) + "e-1", ""},
 		{"0." + strings.Repeat("9", 37) + "e0", "0." + strings.Repeat("9", 37)},
 		{"0." + strings.Repeat("9", 38) + "e0", ""},
+		{"1." + strings.Repeat("9", 37) + "e0", "1." + strings.Repeat("9", 37)},
+		{"12." + strings.Repeat("9", 37) + "e0", ""},
+		{strings.Repeat("9", 38) + "0e-1", strings.Repeat("9", 38)},
+		{"0." + strings.Repeat("9", 37) + "0e0", "0." + strings.Repeat("9", 37)},
 		{"1" + strings.Repeat("0", 1000) + "e-1000", "1"},
 		{"0." + strings.Repeat("0", 1000) + "1e1001", "1"},
 		{"1e9223372036854775807", ""},
 		{"1e-9223372036854775808", ""},
+		{"10e9223372036854775807", ""},
+		{"0.1e-9223372036854775808", ""},
 		{"1e999999999999999999999999999", ""},
 		{"1e-999999999999999999999999999", ""},
 		{"100", ""},
 		{"1.1000", ""},
 	} {
 		t.Run(test.input, func(t *testing.T) {
-			if got := string(plainJSONNumber(test.input)); got != test.want {
+			got := plainJSONNumber(test.input)
+			if test.want == "" && got != nil {
+				t.Fatalf("expected nil replacement, got %q", got)
+			}
+			if string(got) != test.want {
 				t.Fatalf("expected %q, got %q", test.want, got)
 			}
 		})
