@@ -313,11 +313,6 @@ func (k *Krenalis) Start() {
 		Jar: jar,
 	}
 
-	// If the assets are needed, wait for them to be generated.
-	if k.assetsGenerated != nil {
-		<-k.assetsGenerated
-	}
-
 	// Launch Krenalis.
 	ctxWithCancel, cancel := context.WithCancel(ctx)
 	k.cancel = cancel
@@ -371,16 +366,12 @@ func (k *Krenalis) Start() {
 			buildKrenalis(k.t, k.repo, krenalisDir)
 			krenalisAlreadyBuilt = true
 		}
-		k.krenalisRunning = make(chan struct{})
-		go func() {
-			defer func() {
-				close(k.krenalisRunning)
-			}()
+		k.startServer(func() {
 			err := launchKrenalis(ctxWithCancel, env)
 			if err != nil && ctxWithCancel.Err() == nil {
 				log.Printf("[error] %s", err)
 			}
-		}()
+		})
 	} else {
 		// Krenalis settings.
 		// Keep these in sync with the environment variables set above.
@@ -421,11 +412,7 @@ func (k *Krenalis) Start() {
 		if err != nil {
 			k.t.Fatal(err)
 		}
-		k.krenalisRunning = make(chan struct{})
-		go func() {
-			defer func() {
-				close(k.krenalisRunning)
-			}()
+		k.startServer(func() {
 			assets := os.DirFS(filepath.Join(k.repo, "admin", "assets"))
 			{
 				// A random file, 'index.js.br', is opened just to verify if the
@@ -442,7 +429,7 @@ func (k *Krenalis) Start() {
 				log.Printf("[error] %s", err)
 				return
 			}
-		}()
+		})
 	}
 
 	// Wait a second for Krenalis to load.
@@ -601,6 +588,18 @@ func (k *Krenalis) login() error {
 		"password": "krenalis-password",
 	}
 	return k.tryCall("POST", "/v1/members/login", nil, body, nil, true)
+}
+
+// startServer waits for any pending assets and launches the server goroutine.
+func (k *Krenalis) startServer(run func()) {
+	if k.assetsGenerated != nil {
+		<-k.assetsGenerated
+	}
+	k.krenalisRunning = make(chan struct{})
+	go func() {
+		defer close(k.krenalisRunning)
+		run()
+	}()
 }
 
 // ExecQueryTestDatabase executes a query on the test database.
