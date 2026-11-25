@@ -37,10 +37,6 @@ import (
 	_postgres "github.com/testcontainers/testcontainers-go/modules/postgres"
 )
 
-// Krenalis runs in a separate process by default. Set
-// KRENALIS_TEST_EMBEDDED_SERVER=true to run a single test in process.
-var launchKrenalisExternally = os.Getenv("KRENALIS_TEST_EMBEDDED_SERVER") != "true"
-
 // Krenalis represents an instance of Krenalis which responds to HTTP requests and
 // exposes methods to make calls to the APIs.
 type Krenalis struct {
@@ -61,6 +57,7 @@ type Krenalis struct {
 	stopWarehouseContainer func() error
 
 	repo            string
+	embeddedServer  bool
 	assetsGenerated chan struct{}
 
 	// Options.
@@ -82,22 +79,24 @@ func (k *Krenalis) Addr() string {
 }
 
 // NewKrenalisInstance initializes a new instance of Krenalis for testing.
+// Krenalis runs in a separate process by default. Set
+// KRENALIS_TEST_EMBEDDED_SERVER=true to run a single test in process.
 //
 // After initializing an instance, its options can be set (via
 // [PopulateProfileSchema], [SetFileSystemRoot], [SetNATSAckWait],
 // [SetPropertyRoles], and [SetProfileSchema]) before calling [Start].
 func NewKrenalisInstance(t *testing.T) *Krenalis {
 
-	if !launchKrenalisExternally {
+	k := Krenalis{
+		t:                     t,
+		embeddedServer:        os.Getenv("KRENALIS_TEST_EMBEDDED_SERVER") == "true",
+		populateProfileSchema: true,
+	}
+	if k.embeddedServer {
 		if krenalisAlreadyLaunched {
 			t.Fatal("test/krenalistester: only one instance can run with KRENALIS_TEST_EMBEDDED_SERVER=true")
 		}
 		krenalisAlreadyLaunched = true
-	}
-
-	k := Krenalis{
-		t:                     t,
-		populateProfileSchema: true,
 	}
 
 	// Determine the root of the repository.
@@ -118,7 +117,7 @@ func NewKrenalisInstance(t *testing.T) *Krenalis {
 	// generate the assets. If it is run externally, the assets are generated
 	// separately, when Krenalis is compiled, so there is no need to compile
 	// them.
-	if !launchKrenalisExternally {
+	if k.embeddedServer {
 		k.assetsGenerated = make(chan struct{})
 		ctx := t.Context()
 		go func() {
@@ -319,7 +318,7 @@ func (k *Krenalis) Start() {
 	serverCtx, cancel := context.WithCancel(ctx)
 	k.cancel = cancel
 
-	if launchKrenalisExternally {
+	if !k.embeddedServer {
 		// Create, if necessary, the directory that will hold the Krenalis
 		// executable (as well as the other files needed for the execution).
 		krenalisDir := filepath.Join(k.repo, "test", "krenalis-executable-for-tests")
