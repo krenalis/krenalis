@@ -9,12 +9,19 @@ import JSONbig from 'json-bigint';
 import WaRelativeTime from '@awesome.me/webawesome/dist/react/relative-time/index.js';
 
 const ConnectionEvents = () => {
+	const { connection } = useContext(ConnectionContext);
+	return <LiveEvents key={connection.id} connectionID={connection.id} />;
+};
+
+interface LiveEventsProps {
+	connectionID: string;
+}
+
+const LiveEvents = ({ connectionID }: LiveEventsProps) => {
 	const [events, setEvents] = useState<EventListenerEvent[]>([]);
 	const [selectedEvent, setSelectedEvent] = useState<EventListenerEvent>(null);
 	const [omitted, setOmitted] = useState<number>(0);
 	const [hideContent, setHideContent] = useState<boolean>(false);
-
-	const { connection: c } = useContext(ConnectionContext);
 
 	const collectEvents = (newly: EventListenerEvent[]) => {
 		for (const e of newly) {
@@ -24,7 +31,7 @@ const ConnectionEvents = () => {
 		setEvents((prevEvents) => [...prevEvents, ...newly]);
 	};
 
-	const { startListening } = useEventListener(collectEvents, setOmitted, c.id);
+	const { startListening } = useEventListener(collectEvents, setOmitted, connectionID);
 
 	useEffect(() => {
 		startListening();
