@@ -20,6 +20,8 @@ import (
 func Test_renderExpr(t *testing.T) {
 	decimalColumn := warehouses.Column{Name: "value", Type: types.Decimal(3, 2)}
 	decimalArrayColumn := warehouses.Column{Name: "value", Type: types.Array(types.Decimal(3, 2))}
+	datetimeArrayColumn := warehouses.Column{Name: "values", Type: types.Array(types.DateTime())}
+	instant := time.Date(2026, 10, 20, 23, 30, 45, 123456000, time.UTC)
 	tests := []struct {
 		name    string
 		expr    warehouses.Expr
@@ -137,6 +139,16 @@ func Test_renderExpr(t *testing.T) {
 		{
 			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.Array(types.Int(32))}, warehouses.OpDoesNotContain, 7),
 			query: `NOT (7 = ANY("values"))`,
+		},
+		{
+			name:  "datetime array contains with positive offset",
+			expr:  warehouses.NewBaseExpr(datetimeArrayColumn, warehouses.OpContains, instant.In(time.FixedZone("", 2*60*60))),
+			query: `'2026-10-20 23:30:45.123456' = ANY("values")`,
+		},
+		{
+			name:  "datetime array does not contain with negative offset",
+			expr:  warehouses.NewBaseExpr(datetimeArrayColumn, warehouses.OpDoesNotContain, instant.In(time.FixedZone("", -5*60*60))),
+			query: `NOT ('2026-10-20 23:30:45.123456' = ANY("values"))`,
 		},
 		{
 			expr:  warehouses.NewBaseExpr(decimalArrayColumn, warehouses.OpContains, decimal.MustParse("1e75")),

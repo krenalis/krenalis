@@ -567,7 +567,7 @@ func serializeValue(b *strings.Builder, v any, t types.Type) {
 		b.WriteByte('\'')
 		switch t.Kind() {
 		case types.DateTimeKind:
-			b.WriteString(v.Format("2006-01-02 15:04:05.999999"))
+			b.WriteString(v.UTC().Format("2006-01-02 15:04:05.999999"))
 		case types.DateKind:
 			b.WriteString(v.Format(time.DateOnly))
 		case types.TimeKind:
