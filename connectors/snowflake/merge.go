@@ -5,7 +5,8 @@
 package snowflake
 
 // Keep this file in sync between the warehouse and the connector, except for
-// the "warehouses" and "connectors" import lines.
+// the "warehouses" and "connectors" import lines and the package prefixes of
+// error messages.
 
 import (
 	"bytes"
@@ -151,7 +152,13 @@ func merge(ctx context.Context, conn *sql.Conn, table connectors.Table, rows [][
 	// Copy the rows into the temporary table.
 	if len(rows) > 0 {
 		// Put the rows into the temporary table's stage.
-		_, err = conn.ExecContext(gosnowflake.WithFilePutStream(ctx, rowsCSV), `PUT file://rows.csv @%"`+tempTableName+`"`)
+		err = conn.Raw(func(driverConn any) error {
+			sc, ok := driverConn.(gosnowflake.SnowflakeConnection)
+			if !ok {
+				return fmt.Errorf("connectors/snowflake: unexpected driver connection type %T", driverConn)
+			}
+			return sc.UploadStream(ctx, `@%"`+tempTableName+`"`, "rows.csv", rowsCSV)
+		})
 		if err != nil {
 			return err
 		}
@@ -174,7 +181,13 @@ func merge(ctx context.Context, conn *sql.Conn, table connectors.Table, rows [][
 	// Copy the deleted rows into the temporary table.
 	if len(deleted) > 0 {
 		// Put the deleted rows into the temporary table's stage.
-		_, err = conn.ExecContext(gosnowflake.WithFilePutStream(ctx, deletedCSV), `PUT file://rows.csv @%"`+tempTableName+`"`)
+		err = conn.Raw(func(driverConn any) error {
+			sc, ok := driverConn.(gosnowflake.SnowflakeConnection)
+			if !ok {
+				return fmt.Errorf("connectors/snowflake: unexpected driver connection type %T", driverConn)
+			}
+			return sc.UploadStream(ctx, `@%"`+tempTableName+`"`, "rows.csv", deletedCSV)
+		})
 		if err != nil {
 			return err
 		}
