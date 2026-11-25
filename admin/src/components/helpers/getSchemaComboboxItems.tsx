@@ -1,10 +1,8 @@
 import React from 'react';
 import { FlatSchema, flattenSchema, getCompatibleFilterOperators } from '../../lib/core/pipeline';
 import { DecimalType, ObjectType } from '../../lib/api/types/types';
-import { ConnectionRole } from '../../lib/api/types/connection';
 import { ComboboxItem } from '../base/Combobox/Combobox.types';
 import { TypeIcon } from '../base/TypeIcon/TypeIcon';
-import { PipelineTarget } from '../../lib/api/types/pipeline';
 import { getPropertyPathDisplayValue } from './getPropertyPathDisplayValue';
 
 const getSchemaComboboxItems = (schema: ObjectType | FlatSchema, toHide?: string[]): ComboboxItem[] => {
@@ -39,12 +37,7 @@ const getMatchingComboboxItems = (schema: FlatSchema): ComboboxItem[] => {
 	return computeItems(filteredSchema);
 };
 
-const getFilterPropertyComboboxItems = (
-	schema: ObjectType,
-	role: ConnectionRole,
-	target: PipelineTarget,
-	toHide?: string[],
-): ComboboxItem[] => {
+const getFilterPropertyComboboxItems = (schema: ObjectType, toHide?: string[]): ComboboxItem[] => {
 	if (schema == null) {
 		return [];
 	}
@@ -60,8 +53,6 @@ const getFilterPropertyComboboxItems = (
 			if (compatibleOperators.length === 0) {
 				continue;
 			}
-		} else if (property.type === 'json' && role === 'Destination' && target === 'User') {
-			continue;
 		}
 		filteredSchema[name] = property;
 	}

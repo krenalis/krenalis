@@ -424,16 +424,15 @@ func TestProfilesPagination(t *testing.T) {
 	}
 
 	// Compatible alterations and subsequent IR publications keep old arguments usable.
+	metadata := types.Property{Name: "metadata", Type: types.JSON(), ReadOptional: true}
 	newProperties := requestSchema.Properties().Slice()
-	newProperties = append(newProperties, types.Property{
-		Name: "metadata", Type: types.JSON(), ReadOptional: true,
-	})
+	newProperties = append(newProperties, metadata)
 	k.AlterProfileSchemaAndWait(types.Object(newProperties), nil, nil)
 	partialSchema := types.Object([]types.Property{emailProperty})
+	jsonFilter := json.Value(`{"operator":"and","rules":[` +
+		`{"property":"metadata.score","operator":"is","values":["1.25"]}]}`)
 
 	t.Run("JSON filter property outside request schema", func(t *testing.T) {
-		jsonFilter := json.Value(`{"operator":"and","rules":[` +
-			`{"property":"metadata.score","operator":"is","values":["1.25"]}]}`)
 		err := k.TryCall("POST", "/v1/profiles/query", nil, map[string]any{
 			"schema": partialSchema, "properties": []string{"email"}, "filter": jsonFilter,
 		}, nil)
@@ -468,7 +467,7 @@ func TestProfilesPagination(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer pool.Close()
-	_, err = pool.Exec(t.Context(), "UPDATE profiles SET email = $1 WHERE _kpid = $2",
+	_, err = pool.Exec(t.Context(), `UPDATE profiles SET email = $1, metadata = '{"score":1.25}' WHERE _kpid = $2`,
 		"changed@example.com", firstPage[0].KPID.String())
 	if err != nil {
 		t.Fatal(err)
@@ -476,6 +475,24 @@ func TestProfilesPagination(t *testing.T) {
 	k.Call("POST", attributesPath, nil, attributesBody, &attributesResponse)
 	if attributesResponse.Attributes["email"] != "changed@example.com" {
 		t.Fatalf("expected email changed@example.com after update, got %v", attributesResponse.Attributes["email"])
+	}
+
+	// A JSON property used only in the filter is resolved through the request schema.
+	postPage.Profiles = nil
+	k.Call("POST", "/v1/profiles/query", nil, map[string]any{
+		"schema": types.Object([]types.Property{emailProperty, metadata}), "properties": []string{"email"},
+		"filter": jsonFilter,
+	}, &postPage)
+	if len(postPage.Profiles) != 1 || postPage.Total != 1 || postPage.HasNext {
+		t.Fatalf("expected one JSON match, total 1 and no continuation, got %d profiles, total %d and continuation %t",
+			len(postPage.Profiles), postPage.Total, postPage.HasNext)
+	}
+	if postPage.Profiles[0].KPID != firstPage[0].KPID {
+		t.Fatalf("expected profile %s, got %s", firstPage[0].KPID, postPage.Profiles[0].KPID)
+	}
+	attributes := postPage.Profiles[0].Attributes
+	if len(attributes) != 1 || attributes["email"] != "changed@example.com" {
+		t.Fatalf("expected only email changed@example.com, got %v", attributes)
 	}
 	// A partial nested object describes both the selected columns and serialization.
 	android, _ := requestSchema.Properties().ByName("android")

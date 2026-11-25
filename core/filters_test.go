@@ -1181,14 +1181,9 @@ func Test_validateFilter(t *testing.T) {
 		{Name: "t", Type: types.Array(types.JSON())},
 		{Name: "u", Type: types.String().WithValues(longAllowedValue)},
 	})
-	destinationRole := state.Destination
-	eventTarget := state.TargetEvent
-
 	type testCase struct {
 		name     string
 		filter   Filter
-		role     *state.Role
-		target   *state.Target
 		expected []string
 		err      error
 	}
@@ -1489,6 +1484,16 @@ func Test_validateFilter(t *testing.T) {
 			err: errors.New(`only one value can be used with the operator "contains"`),
 		},
 		{
+			name: "empty operand in JSON membership list",
+			filter: Filter{
+				Operator: OpAnd,
+				Rules: []FilterRule{
+					&FilterCondition{Property: "d.s.a", Operator: OpIsOneOf, Values: []string{"5.0", ""}},
+				},
+			},
+			err: errors.New("condition value is empty"),
+		},
+		{
 			name: "NUL byte in value",
 			filter: Filter{
 				Operator: OpOr,
@@ -1574,6 +1579,20 @@ func Test_validateFilter(t *testing.T) {
 			err: errors.New(`value of the "o" property is not among the allowed values`),
 		},
 		{
+			name: "contains outside allowed values",
+			filter: Filter{Operator: OpAnd, Rules: []FilterRule{
+				&FilterCondition{Property: "o", Operator: OpContains, Values: []string{"fo"}},
+			}},
+			err: errors.New(`value of the "o" property is not among the allowed values`),
+		},
+		{
+			name: "does not contain outside allowed values",
+			filter: Filter{Operator: OpAnd, Rules: []FilterRule{
+				&FilterCondition{Property: "o", Operator: OpDoesNotContain, Values: []string{"fo"}},
+			}},
+			err: errors.New(`value of the "o" property is not among the allowed values`),
+		},
+		{
 			name: "is empty when empty string is not allowed",
 			filter: Filter{
 				Operator: OpAnd,
@@ -1614,7 +1633,7 @@ func Test_validateFilter(t *testing.T) {
 			err: errors.New(`operator "is not empty" can only be used with json, string, array, and map properties`),
 		},
 		{
-			name: "is empty on source user object",
+			name: "is empty on object",
 			filter: Filter{
 				Operator: OpAnd,
 				Rules: []FilterRule{
@@ -1624,7 +1643,7 @@ func Test_validateFilter(t *testing.T) {
 			err: errors.New(`operator "is empty" can only be used with json, string, array, and map properties`),
 		},
 		{
-			name: "is not empty on source user object",
+			name: "is not empty on object",
 			filter: Filter{
 				Operator: OpAnd,
 				Rules: []FilterRule{
@@ -1634,37 +1653,14 @@ func Test_validateFilter(t *testing.T) {
 			err: errors.New(`operator "is not empty" can only be used with json, string, array, and map properties`),
 		},
 		{
-			name: "is empty on destination user object",
-			filter: Filter{
-				Operator: OpAnd,
-				Rules: []FilterRule{
-					&FilterCondition{Property: "m", Operator: OpIsEmpty},
-				},
-			},
-			role: &destinationRole,
-			err:  errors.New(`operator "is empty" can only be used with json, string, array, and map properties`),
-		},
-		{
-			name: "is not empty on event object",
-			filter: Filter{
-				Operator: OpAnd,
-				Rules: []FilterRule{
-					&FilterCondition{Property: "m", Operator: OpIsNotEmpty},
-				},
-			},
-			target: &eventTarget,
-			err:    errors.New(`operator "is not empty" can only be used with json, string, array, and map properties`),
-		},
-		{
-			name: "JSON in destination user filter",
+			name: "is not empty on a nested JSON path",
 			filter: Filter{
 				Operator: OpAnd,
 				Rules: []FilterRule{
 					&FilterCondition{Property: "d.p", Operator: OpIsNotEmpty},
 				},
 			},
-			role: &destinationRole,
-			err:  errors.New(`property "d" has type json, which is not supported in data warehouse exports`),
+			expected: []string{"d"},
 		},
 		{
 			name: "numeric comparisons on year semantics",
@@ -1730,6 +1726,8 @@ func Test_validateFilter(t *testing.T) {
 					&FilterCondition{Property: "o", Operator: OpIs, Values: []string{"foo"}},
 					&FilterCondition{Property: "o", Operator: OpIs, Values: []string{""}},
 					&FilterCondition{Property: "o", Operator: OpIsOneOf, Values: []string{"foo", "boo"}},
+					&FilterCondition{Property: "o", Operator: OpContains, Values: []string{"foo"}},
+					&FilterCondition{Property: "o", Operator: OpDoesNotContain, Values: []string{"boo"}},
 					&FilterCondition{Property: "o", Operator: OpIsNotNull},
 					&FilterCondition{Property: "o", Operator: OpIsEmpty},
 					&FilterCondition{Property: "o", Operator: OpIsNotEmpty},
@@ -1809,15 +1807,7 @@ func Test_validateFilter(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			role := state.Source
-			if test.role != nil {
-				role = *test.role
-			}
-			target := state.TargetUser
-			if test.target != nil {
-				target = *test.target
-			}
-			got, err := validateFilter(&test.filter, schema, role, target)
+			got, err := validateFilter(&test.filter, schema)
 			if err != nil {
 				if test.err == nil {
 					t.Fatalf("expected no error, got error %q (type %T)", err, err)
@@ -1836,6 +1826,57 @@ func Test_validateFilter(t *testing.T) {
 		})
 	}
 
+}
+
+// Test_validateFilterJSONRoundTrip checks that validation and conversion
+// leave JSON filters unchanged and that a round trip preserves their operands.
+func Test_validateFilterJSONRoundTrip(t *testing.T) {
+	schema := types.Object([]types.Property{
+		{Name: "value", Type: types.JSON(), ReadOptional: true},
+		{Name: "array", Type: types.Array(types.JSON()), ReadOptional: true},
+		{Name: "map", Type: types.Map(types.JSON()), ReadOptional: true},
+	})
+	for _, test := range []struct {
+		name     string
+		property string
+		operator FilterOperator
+		values   []string
+	}{
+		{"scalar membership", "value", OpIsOneOf, []string{"5", "5.0", "5e0", " Foo ", "é", "e\u0301"}},
+		{"nested range", "value.a.b", OpIsBetween, []string{"0.0050", "1e76"}},
+		{"array containment", "array", OpContains, []string{"  Pro  "}},
+		{"negated array containment", "array", OpDoesNotContain, []string{"-1e999999"}},
+		{"map emptiness", "map", OpIsEmpty, nil},
+		{"map absence", "map", OpDoesNotExist, nil},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+
+			filter := &Filter{Operator: OpAnd, Rules: []FilterRule{
+				&FilterCondition{Property: test.property, Operator: test.operator, Values: slices.Clone(test.values)},
+			}}
+			want := &Filter{Operator: OpAnd, Rules: []FilterRule{
+				&FilterCondition{Property: test.property, Operator: test.operator, Values: test.values},
+			}}
+
+			_, err := validateFilter(filter, schema)
+			if err != nil {
+				t.Fatalf("expected valid filter, got %v", err)
+			}
+			if diff := cmp.Diff(want, filter); diff != "" {
+				t.Fatalf("expected unchanged filter after validation, got difference (-want +got):\n%s", diff)
+			}
+
+			where := convertFilterToWhere(filter, schema)
+			if diff := cmp.Diff(want, filter); diff != "" {
+				t.Errorf("expected unchanged filter after convertFilterToWhere, got difference (-want +got):\n%s", diff)
+			}
+			got := convertWhereToFilter(where, schema)
+			if diff := cmp.Diff(want, got); diff != "" {
+				t.Errorf("expected original filter after round trip, got difference (-want +got):\n%s", diff)
+			}
+
+		})
+	}
 }
 
 // Test_validateFilterLimits verifies filter complexity limits for values built
@@ -1870,7 +1911,7 @@ func Test_validateFilterLimits(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			_, err := validateFilter(test.filter, schema, state.Source, state.TargetUser)
+			_, err := validateFilter(test.filter, schema)
 			if !reflect.DeepEqual(test.expected, err) {
 				t.Fatalf("expected error %q (type %T), got error %q (type %T)", test.expected, test.expected, err, err)
 			}
@@ -1896,7 +1937,7 @@ func Test_validateFilterRejectsNilRules(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			filter := &Filter{Operator: OpAnd, Rules: []FilterRule{test.rule}}
-			_, err := validateFilter(filter, schema, state.Source, state.TargetUser)
+			_, err := validateFilter(filter, schema)
 			if !reflect.DeepEqual(test.err, err) {
 				t.Fatalf("expected error %q (type %T), got error %q (type %T)", test.err, test.err, err, err)
 			}
