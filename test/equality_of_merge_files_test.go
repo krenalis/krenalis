@@ -10,9 +10,9 @@ import (
 	"testing"
 )
 
-// TestEqualityOfMergeFiles ensures that the contents of the 'merge.go' files in
-// the repository, kept in sync across connectors and data warehouses, are
-// identical and synchronized.
+// TestEqualityOfMergeFiles checks that each connector's merge.go stays in sync
+// with its warehouse counterpart for PostgreSQL and Snowflake. For Snowflake,
+// it also checks that the two merge_test.go files are identical.
 func TestEqualityOfMergeFiles(t *testing.T) {
 
 	// Check #1: the 'merge.go' file in the PostgreSQL connector must be
