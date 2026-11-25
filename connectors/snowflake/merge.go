@@ -5,8 +5,7 @@
 package snowflake
 
 // Keep this file in sync between the warehouse and the connector, except for
-// the "warehouses" and "connectors" import lines and the package prefixes of
-// error messages.
+// the "warehouses" and "connectors" import lines.
 
 import (
 	"bytes"
@@ -155,7 +154,7 @@ func merge(ctx context.Context, conn *sql.Conn, table connectors.Table, rows [][
 		err = conn.Raw(func(driverConn any) error {
 			sc, ok := driverConn.(gosnowflake.SnowflakeConnection)
 			if !ok {
-				return fmt.Errorf("connectors/snowflake: unexpected driver connection type %T", driverConn)
+				return fmt.Errorf("snowflake: unexpected driver connection type %T", driverConn)
 			}
 			return sc.UploadStream(ctx, `@%"`+tempTableName+`"`, "rows.csv", rowsCSV)
 		})
@@ -184,7 +183,7 @@ func merge(ctx context.Context, conn *sql.Conn, table connectors.Table, rows [][
 		err = conn.Raw(func(driverConn any) error {
 			sc, ok := driverConn.(gosnowflake.SnowflakeConnection)
 			if !ok {
-				return fmt.Errorf("connectors/snowflake: unexpected driver connection type %T", driverConn)
+				return fmt.Errorf("snowflake: unexpected driver connection type %T", driverConn)
 			}
 			return sc.UploadStream(ctx, `@%"`+tempTableName+`"`, "rows.csv", deletedCSV)
 		})
