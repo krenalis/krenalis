@@ -75,11 +75,12 @@ func TestPlainJSONNumber(t *testing.T) {
 	}
 }
 
-// TestPlainJSONNumberExact uses rational arithmetic and a fixed-scale decimal
-// rendering as an independent oracle for representability and preservation.
+// TestPlainJSONNumberExact uses rational arithmetic to check the exact decimal
+// representation of each input. Inputs outside NUMBER's limits must yield nil.
 func TestPlainJSONNumberExact(t *testing.T) {
 	for _, coefficient := range []string{"0", "-0", "1", "-1", "1.1", "-0.00012300", "100000",
-		"1.234567890123456789", strings.Repeat("9", 38), strings.Repeat("9", 39)} {
+		"1.234567890123456789", strings.Repeat("9", 38), strings.Repeat("9", 39),
+		strings.Repeat("9", 38) + "0", strings.Repeat("9", 37) + ".0", strings.Repeat("9", 38) + ".0"} {
 		for exponent := -45; exponent <= 45; exponent++ {
 			text := fmt.Sprintf("%se%d", coefficient, exponent)
 			value, ok := (&big.Rat{}).SetString(text)
@@ -90,17 +91,17 @@ func TestPlainJSONNumberExact(t *testing.T) {
 			rounded, _ := (&big.Rat{}).SetString(fixed)
 			fixed = strings.TrimRight(strings.TrimRight(fixed, "0"), ".")
 			whole, fraction, _ := strings.Cut(strings.TrimPrefix(fixed, "-"), ".")
-			fits := rounded.Cmp(value) == 0 && len(strings.TrimLeft(whole, "0"))+len(fraction) <= 38
+			fits := rounded.Cmp(value) == 0 && len(whole)+len(fraction) <= 38
 			plain := plainJSONNumber(text)
 			if (plain != nil) != fits {
 				t.Fatalf("expected representability %t for %s, got %q", fits, text, plain)
 			}
-			if plain == nil {
-				continue
+			// A rational zero loses the sign of the input.
+			if value.Sign() == 0 && strings.HasPrefix(coefficient, "-") {
+				fixed = "-0"
 			}
-			got, ok := (&big.Rat{}).SetString(string(plain))
-			if !ok || got.Cmp(value) != 0 || len(plain) > 40 || !json.Valid(plain) {
-				t.Fatalf("expected exact bounded JSON number for %s, got %q", text, plain)
+			if fits && string(plain) != fixed {
+				t.Fatalf("expected %q for %s, got %q", fixed, text, plain)
 			}
 		}
 	}
