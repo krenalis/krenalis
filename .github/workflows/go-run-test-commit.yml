@@ -73,7 +73,12 @@ jobs:
           KRENALIS_TEST_POSTHOG_PROJECT_REGION: ${{ secrets.KRENALIS_TEST_POSTHOG_PROJECT_REGION }}
         run: go run ./test/commit
 
-      - name: Check test server startup with the race detector
+      - name: Check external test server startup with the race detector
+        run: go test -race ./test -run '^TestConnections$' -count=1
+
+      - name: Check embedded test server startup with the race detector
+        env:
+          KRENALIS_TEST_EMBEDDED_SERVER: "true"
         run: go test -race ./test -run '^TestConnections$' -count=1
 
       - name: Check that the repository is clean
