@@ -315,8 +315,8 @@ func (k *Krenalis) Start() {
 		Jar: jar,
 	}
 
-	// Launch Krenalis.
-	ctxWithCancel, cancel := context.WithCancel(k.t.Context())
+	// Keep the server available to test cleanups until Stop cancels it.
+	serverCtx, cancel := context.WithCancel(ctx)
 	k.cancel = cancel
 
 	if launchKrenalisExternally {
@@ -368,9 +368,9 @@ func (k *Krenalis) Start() {
 			buildKrenalis(k.t, k.repo, krenalisDir)
 			krenalisAlreadyBuilt = true
 		}
-		err = k.startServer(ctxWithCancel, func() {
-			err := launchKrenalis(ctxWithCancel, env)
-			if err != nil && ctxWithCancel.Err() == nil {
+		err = k.startServer(k.t.Context(), func() {
+			err := launchKrenalis(serverCtx, env)
+			if err != nil && serverCtx.Err() == nil {
 				log.Printf("[error] %s", err)
 			}
 		})
@@ -414,7 +414,7 @@ func (k *Krenalis) Start() {
 		if err != nil {
 			k.t.Fatal(err)
 		}
-		err = k.startServer(ctxWithCancel, func() {
+		err = k.startServer(k.t.Context(), func() {
 			assets := os.DirFS(filepath.Join(k.repo, "admin", "assets"))
 			{
 				// A random file, 'index.js.br', is opened just to verify if the
@@ -426,7 +426,7 @@ func (k *Krenalis) Start() {
 				}
 				_ = f.Close()
 			}
-			err := cmd.Run(ctxWithCancel, &setts, assets, true, false)
+			err := cmd.Run(serverCtx, &setts, assets, true, false)
 			if err != nil {
 				log.Printf("[error] %s", err)
 				return
