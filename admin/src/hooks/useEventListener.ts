@@ -80,11 +80,17 @@ const useEventListener = (
 				try {
 					res = await api.workspaces.eventListeners.events(listenerID);
 				} catch (err) {
+					if (isCancelled) {
+						return;
+					}
 					if (err instanceof NotFoundError) {
 						setIsListenerNotFound(true);
 						return;
 					}
 					handleError(err);
+					return;
+				}
+				if (isCancelled) {
 					return;
 				}
 				const newly: EventListenerEvent[] = [];

@@ -69,34 +69,42 @@ test('Live events switches listeners when going back to another connection', asy
 	await expect(page.getByText('Click on one event')).toBeVisible();
 });
 
-test('Live events stays on the current connection when a previous connection finishes loading', async ({ page }) => {
-	const listeners = await openLiveEvents(page);
-	const eventsFromB = page.getByText('Event from B', { exact: true });
-	await expect(eventsFromB.first()).toBeVisible();
+for (const status of [200, 500]) {
+	test(`Live events stays on the current connection after a late pipeline-types HTTP ${status} response`, async ({
+		page,
+	}) => {
+		const listeners = await openLiveEvents(page);
+		const eventsFromB = page.getByText('Event from B', { exact: true });
+		await expect(eventsFromB.first()).toBeVisible();
 
-	const heldA = Promise.withResolvers<Route>();
-	await page.route('**/v1/connections/A/pipeline-types', (route) => heldA.resolve(route));
-	await page.goBack();
-	const requestA = await heldA.promise;
-	await expect(page.locator('wa-spinner')).toBeVisible();
-	await expect(page.getByRole('banner')).toBeEmpty();
-	await expect(page.getByRole('link', { name: 'Settings' })).toHaveCount(0);
-	await expect(page.locator('.connection-events')).toHaveCount(0);
-	const loadedB = page.waitForResponse('**/v1/connections/B/pipeline-types');
-	await page.goForward();
-	await loadedB;
-	await expect(eventsFromB.first()).toBeVisible();
+		const heldA = Promise.withResolvers<Route>();
+		await page.route('**/v1/connections/A/pipeline-types', (route) => heldA.resolve(route));
+		await page.goBack();
+		const requestA = await heldA.promise;
+		await expect(page.locator('wa-spinner')).toBeVisible();
+		await expect(page.getByRole('banner')).toBeEmpty();
+		await expect(page.getByRole('link', { name: 'Settings' })).toHaveCount(0);
+		await expect(page.locator('.connection-events')).toHaveCount(0);
+		const loadedB = page.waitForResponse('**/v1/connections/B/pipeline-types');
+		await page.goForward();
+		await loadedB;
+		await expect(eventsFromB.first()).toBeVisible();
 
-	const loadedA = page.waitForResponse('**/v1/connections/A/pipeline-types');
-	await requestA.fulfill({ json: [] });
-	await loadedA;
-	await expect(page).toHaveURL(/\/B\/events$/);
-	const count = await eventsFromB.count();
-	await expect.poll(() => eventsFromB.count()).toBeGreaterThan(count);
-	expect([...listeners.values()]).toEqual(['B']);
-	await expect(page.locator('.connection-wrapper__name')).toHaveText('Connections / Sources / B');
-	await expect(page.getByRole('link', { name: 'Settings' })).toHaveAttribute('href', '/admin/connections/B/settings');
-});
+		const loadedA = page.waitForResponse('**/v1/connections/A/pipeline-types');
+		await requestA.fulfill({ status, json: [] });
+		await loadedA;
+		await expect(page).toHaveURL(/\/B\/events$/);
+		const count = await eventsFromB.count();
+		await expect.poll(() => eventsFromB.count()).toBeGreaterThan(count);
+		await expect(page.getByRole('alert')).toHaveCount(0);
+		expect([...listeners.values()]).toEqual(['B']);
+		await expect(page.locator('.connection-wrapper__name')).toHaveText('Connections / Sources / B');
+		await expect(page.getByRole('link', { name: 'Settings' })).toHaveAttribute(
+			'href',
+			'/admin/connections/B/settings',
+		);
+	});
+}
 
 test('A late ConnectionNotExist error leaves the current connection open', async ({ page }) => {
 	const listeners = await openLiveEvents(page);
@@ -139,4 +147,22 @@ test('A late 404 for connection details leaves the current connection open', asy
 	await expect.poll(() => eventsFromB.count()).toBeGreaterThan(count);
 	await expect(page).toHaveURL(/\/B\/events$/);
 	expect([...listeners.values()]).toEqual(['B']);
+});
+
+test('A late polling error from B does not show an alert on A', async ({ page }) => {
+	const listeners = await openLiveEvents(page);
+	await expect(page.getByText('Event from B', { exact: true }).first()).toBeVisible();
+	const [listenerB] = listeners.keys();
+	const heldPoll = Promise.withResolvers<Route>();
+	await page.route(`**/v1/events/listeners/${listenerB}`, (route) => heldPoll.resolve(route), { times: 1 });
+	const pollB = await heldPoll.promise;
+	expect(pollB.request().method()).toBe('GET');
+	await page.goBack();
+	const eventsFromA = page.getByText('Event from A', { exact: true });
+	await expect(eventsFromA.first()).toBeVisible();
+
+	await pollB.fulfill({ status: 500 });
+	const count = await eventsFromA.count();
+	await expect.poll(() => eventsFromA.count()).toBeGreaterThan(count);
+	await expect(page.getByRole('alert')).toHaveCount(0);
 });
