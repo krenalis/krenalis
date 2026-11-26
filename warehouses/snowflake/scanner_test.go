@@ -34,6 +34,7 @@ func TestScannerArrayBounds(t *testing.T) {
 		count, min, max int
 	}{
 		{"above maximum", `[true]`, 1, 0, 0},
+		{"below minimum", `[1]`, 1, 2, 2},
 		{"empty below minimum", `[]`, 0, 2, 2},
 		{"one element below minimum", `[true]`, 1, 2, 2},
 	} {

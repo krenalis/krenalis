@@ -85,13 +85,16 @@ func TestQueryArrayScanErrorNamesColumn(t *testing.T) {
 func TestQueryArrayScanLimit(t *testing.T) {
 
 	warehouse, db := newTestPostgreSQLWarehouse(t)
-	mustExecSQL(t, db, `CREATE TABLE "query_arrays" ("_anonymous_ids" text[])`)
-	mustExecSQL(t, db, fmt.Sprintf(`INSERT INTO "query_arrays" VALUES (ARRAY[repeat('a', %d)])`, maxArrayScanBytes))
+	mustExecSQL(t, db, fmt.Sprintf(`CREATE VIEW "query_arrays" AS SELECT ARRAY[repeat('a', %d)] AS "_anonymous_ids",
+		current_query() AS "statement"`, maxArrayScanBytes))
 
 	query := warehouses.RowQuery{
-		Table:   "query_arrays",
-		Columns: []warehouses.Column{{Name: "_anonymous_ids", Type: types.Array(types.String())}},
-		Limit:   1,
+		Table: "query_arrays",
+		Columns: []warehouses.Column{
+			{Name: "_anonymous_ids", Type: types.Array(types.String())},
+			{Name: "statement", Type: types.String()},
+		},
+		Limit: 1,
 	}
 	rows, _, err := warehouse.Query(t.Context(), query, false)
 	if err != nil {
@@ -101,10 +104,17 @@ func TestQueryArrayScanLimit(t *testing.T) {
 	if !rows.Next() {
 		t.Fatalf("expected one row, got none (err %v)", rows.Err())
 	}
-	if n := len(rows.(*scanner).rows.RawValues()[0]); n != maxArrayScanBytes+1 {
+	raw := rows.(*scanner).rows.RawValues()
+	statement := string(raw[1])
+	for _, call := range []string{"pg_catalog.substr(", "pg_catalog.array_send("} {
+		if !strings.Contains(statement, call) {
+			t.Fatalf("expected query to contain %q, got %q", call, statement)
+		}
+	}
+	if n := len(raw[0]); n != maxArrayScanBytes+1 {
 		t.Fatalf("expected %d wire bytes, got %d", maxArrayScanBytes+1, n)
 	}
-	values := make([]any, 1)
+	values := make([]any, len(query.Columns))
 	err = rows.Scan(values...)
 	if err != nil {
 		want := fmt.Sprintf("binary array for column _anonymous_ids exceeds the %d-byte scan limit", maxArrayScanBytes)

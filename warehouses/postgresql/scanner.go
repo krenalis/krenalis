@@ -392,8 +392,8 @@ func (s *scanner) scanArray(name string, typ types.Type, src any) ([]any, error)
 			if l < 8 || l > len(data)-p {
 				return nil, errInvalidData
 			}
-			numeric := data[p : p+l]
-			if !validBinaryNumeric(numeric, precision, scale) {
+			numeric := boundedBinaryNumeric(data[p:p+l], precision, scale)
+			if numeric == nil {
 				return nil, errInvalidData
 			}
 			if i == 0 {
@@ -491,45 +491,48 @@ func (sv scanValue) Scan(v any) error {
 	return nil
 }
 
-// validBinaryNumeric reports whether a PostgreSQL binary numeric can be decoded
-// within the given decimal precision and scale. data must contain its header.
-func validBinaryNumeric(data []byte, precision, scale int) bool {
+// boundedBinaryNumeric returns a binary numeric with at most the given scale,
+// or nil if it cannot be represented exactly. data must contain its header.
+func boundedBinaryNumeric(data []byte, precision, scale int) []byte {
 
 	count := int(binary.BigEndian.Uint16(data))
 	weight := int(int16(binary.BigEndian.Uint16(data[2:])))
 	sign := binary.BigEndian.Uint16(data[4:])
 	dscale := int(binary.BigEndian.Uint16(data[6:]))
-	if len(data) != 8+2*count || (sign != 0 && sign != 0x4000) || dscale > scale {
-		return false
-	}
-	if count == 0 {
-		return true
+	if len(data) != 8+2*count || (sign != 0 && sign != 0x4000) {
+		return nil
 	}
 
-	// Each base-10000 digit covers four decimal places. Bound both ends
-	// before the codec expands the exponent or pads the fractional part.
+	// Discard whole groups of trailing zeros before checking the scale.
+	fractionDigits := min(dscale, scale)
+	digits := data[8:]
+	for len(digits) > 0 && binary.BigEndian.Uint16(digits[len(digits)-2:]) == 0 {
+		digits = digits[:len(digits)-2]
+	}
+
+	// Each group covers four decimal places. The groups at either end may
+	// have fewer than four places available within the schema.
 	integerDigits := precision - scale
-	lastWeight := weight - count + 1
-	if weight >= (integerDigits+3)/4 || lastWeight < -(dscale+3)/4 {
-		return false
-	}
-	for i := 8; i < len(data); i += 2 {
-		if binary.BigEndian.Uint16(data[i:]) >= 10000 {
-			return false
+	minWeight := -(fractionDigits + 3) / 4
+	for i := 0; i < len(digits); i += 2 {
+		w := weight - i/2
+		digit := int(binary.BigEndian.Uint16(digits[i:]))
+		if digit >= 10000 || w >= (integerDigits+3)/4 || w < minWeight {
+			return nil
+		}
+		if n := integerDigits % 4; n != 0 && w == integerDigits/4 && digit >= int(math.Pow10(n)) {
+			return nil
+		}
+		if n := fractionDigits % 4; n != 0 && w == minWeight && digit%int(math.Pow10(4-n)) != 0 {
+			return nil
 		}
 	}
 
-	// The first and last groups can straddle the allowed decimal places.
-	if n := integerDigits % 4; n != 0 && weight == integerDigits/4 {
-		if int(binary.BigEndian.Uint16(data[8:])) >= int(math.Pow10(n)) {
-			return false
-		}
-	}
-	if n := dscale % 4; n != 0 && lastWeight == -(dscale+3)/4 {
-		if int(binary.BigEndian.Uint16(data[len(data)-2:]))%int(math.Pow10(4-n)) != 0 {
-			return false
-		}
+	if len(digits) != len(data)-8 || dscale > scale {
+		data = bytes.Clone(data[:8+len(digits)])
+		binary.BigEndian.PutUint16(data, uint16(len(digits)/2))
+		binary.BigEndian.PutUint16(data[6:], uint16(fractionDigits))
 	}
 
-	return true
+	return data
 }

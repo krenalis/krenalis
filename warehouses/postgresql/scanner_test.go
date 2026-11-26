@@ -189,12 +189,13 @@ func TestScannerArrayBounds(t *testing.T) {
 
 }
 
-// TestScannerNumericArrayBounds checks that out-of-schema numerics are rejected
-// before the scanner needs a connection to run the numeric codec.
+// TestScannerNumericArrayBounds checks that excess scale is removed without
+// rounding and out-of-schema numerics are rejected before decoding.
 func TestScannerNumericArrayBounds(t *testing.T) {
+
 	tm := pgtype.NewMap()
 	typ := types.Array(types.Decimal(5, 2))
-	for _, value := range []string{"1000", "10000", "0.001", "NaN"} {
+	for _, value := range []string{"1000", "10000", "0.001", "8.4101", "8.41000001", "NaN"} {
 		t.Run(value, func(t *testing.T) {
 			var n pgtype.Numeric
 			err := n.Scan(value)
@@ -210,6 +211,28 @@ func TestScannerNumericArrayBounds(t *testing.T) {
 			checkArrayScanError(t, err, errInvalidData)
 		})
 	}
+
+	t.Run("trailing fractional zeros", func(t *testing.T) {
+		_, db := newTestPostgreSQLWarehouse(t)
+		rows, err := db.Query(t.Context(),
+			`SELECT pg_catalog.array_send(ARRAY[8.4100, -8.41::numeric(1000, 900), 0.0000])`)
+		if err != nil {
+			t.Fatalf("expected numeric array, got %v", err)
+		}
+		defer rows.Close()
+		if !rows.Next() {
+			t.Fatalf("expected one row, got none (err %v)", rows.Err())
+		}
+		s := &scanner{rows: rows}
+		values, err := s.scanArray("value", typ, rows.RawValues()[0])
+		if err != nil {
+			t.Fatalf("expected representable numeric values, got %v", err)
+		}
+		if want := []any{"8.41", "-8.41", "0"}; !reflect.DeepEqual(values, want) {
+			t.Fatalf("expected %v, got %v", want, values)
+		}
+	})
+
 }
 
 // TestScannerStringArrayEmptyElements checks that the scanner
