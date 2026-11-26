@@ -100,7 +100,8 @@ func TestCheckSchemaVersion(t *testing.T) {
 
 // TestFinalizeResume verifies that Finalize records the database as being
 // finalized before running finalize, resumes an interrupted finalization, runs
-// finalize on a connection with the lock timeout, and records the database as
+// finalize on a connection with the lock timeout while holding the upgrade
+// lock, releases the lock when finalize fails, and records the database as
 // finalized only once finalize succeeds. It replaces finalize, so it must not
 // run in parallel with other tests.
 func TestFinalizeResume(t *testing.T) {
@@ -120,6 +121,7 @@ func TestFinalizeResume(t *testing.T) {
 		calls++
 		assertSchemaState(t, conn, schemaVersion, stateFinalizing)
 		assertLockTimeout(t, conn)
+		waitForUpgradeLock(t, database, true)
 		return finalizeErr
 	}
 
@@ -134,6 +136,7 @@ func TestFinalizeResume(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected an error, got nil")
 	}
+	waitForUpgradeLock(t, database, false)
 	assertSchemaState(t, database, schemaVersion, stateFinalizing)
 	err = CheckSchemaVersion(ctx, database)
 	if err != nil {
@@ -265,7 +268,8 @@ func TestMigrateEmpty(t *testing.T) {
 // TestMigrateResume verifies that Migrate records the database, still at the
 // previous schema version, as being migrated to the next one before running
 // migrate, resumes an interrupted migration, runs migrate on a connection with
-// the lock timeout, and records the database as migrated only once migrate
+// the lock timeout while holding the upgrade lock, releases the lock when
+// migrate fails, and records the database as migrated only once migrate
 // succeeds. It replaces migrate, so it must not run in parallel with other
 // tests.
 func TestMigrateResume(t *testing.T) {
@@ -291,6 +295,7 @@ func TestMigrateResume(t *testing.T) {
 		calls++
 		assertSchemaState(t, conn, schemaVersion-1, stateMigratingToNext)
 		assertLockTimeout(t, conn)
+		waitForUpgradeLock(t, database, true)
 		return migrateErr
 	}
 
@@ -305,6 +310,7 @@ func TestMigrateResume(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected an error, got nil")
 	}
+	waitForUpgradeLock(t, database, false)
 	assertSchemaState(t, database, schemaVersion-1, stateMigratingToNext)
 	err = CheckSchemaVersion(ctx, database)
 	if err == nil {
@@ -555,5 +561,38 @@ func assertSchemaState(t *testing.T, conn db.Connection, version int, state sche
 	}
 	if gotVersion != version || gotState != state {
 		t.Fatalf("expected schema version %d, %s, got %d, %s", version, state, gotVersion, gotState)
+	}
+}
+
+// waitForUpgradeLock waits until the lock taken by lockForUpgrade is held by a
+// session, if held is true, or by none, and fails the test after 5 seconds. It
+// reads pg_locks, since a connection of the pool can be the one holding the
+// lock, on which acquiring it again succeeds. Waiting is needed for the
+// release, because the server releases the lock when it ends the session of
+// the closed connection, which may happen just after the upgrade step returns.
+func waitForUpgradeLock(t *testing.T, database *db.DB, held bool) {
+	t.Helper()
+	ctx := t.Context()
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		var got bool
+		err := database.QueryRow(ctx, `
+			SELECT EXISTS (
+				SELECT FROM pg_locks
+				WHERE locktype = 'advisory' AND objid::bigint = $1 AND objsubid = 1 AND granted
+			)`, initLockKey).Scan(&got)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got == held {
+			return
+		}
+		if time.Now().After(deadline) {
+			if held {
+				t.Fatal("expected the upgrade lock to be held, got it free")
+			}
+			t.Fatal("expected the upgrade lock to be free, got it held")
+		}
+		time.Sleep(10 * time.Millisecond)
 	}
 }
