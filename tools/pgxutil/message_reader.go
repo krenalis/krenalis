@@ -102,7 +102,11 @@ func (r *messageReader) startMessage(length int32) error {
 
 // ConfigureMessageReader limits how much memory pgx can reserve from a header
 // alone, starting with the first response and preserving support for wide rows.
+// config must not be nil.
 func ConfigureMessageReader(config *pgconn.Config) {
+	if config == nil {
+		panic("tools/pgxutil: nil config")
+	}
 	config.MaxProtocolMessageBodyLen = maxMessageBodyLen
 	config.BuildFrontend = func(r io.Reader, w io.Writer) *pgproto3.Frontend {
 		return pgproto3.NewFrontend(&messageReader{src: bufio.NewReaderSize(r, 8192)}, w)

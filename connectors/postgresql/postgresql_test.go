@@ -155,7 +155,7 @@ func TestStartupMessageBuffering(t *testing.T) {
 	t.Setenv("PGSSLMODE", "disable")
 	settings := innerSettings{Host: "127.0.0.1", Port: 5432, Database: testDatabase, Username: testUser}
 	response := pgproto3.ErrorResponse{
-		Severity: "FATAL", Code: "57P03", Message: "starting up", Detail: strings.Repeat("x", 16<<20),
+		Severity: "FATAL", Code: "57P03", Message: "starting up", Detail: strings.Repeat("x", 17<<20),
 	}
 	frame, err := response.Encode(nil)
 	if err != nil {
