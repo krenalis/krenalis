@@ -5,7 +5,8 @@
 package snowflake
 
 // Keep this file in sync between the warehouse and the connector, except for
-// the "warehouses" and "connectors" import lines.
+// the "warehouses" and "connectors" imports and the package path prefix in
+// error messages.
 
 import (
 	"bytes"
