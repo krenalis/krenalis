@@ -18,37 +18,42 @@ import (
 
 const testMaxMessageBodyLen = 1<<30 - 2
 
-// TestMessageReaderBufferingThresholds checks how many bytes the reader plans
-// to buffer at key body sizes without reading or allocating the body.
+// TestMessageReaderBufferingThresholds verifies how much data the reader would
+// buffer without actually reading or allocating the message body.
 func TestMessageReaderBufferingThresholds(t *testing.T) {
 	for _, tc := range []struct {
-		name   string
-		body   int32
-		prefix int
+		name       string
+		bodyLen    int32
+		wantPrefix int
 	}{
 		{"empty body", 0, 0},
+		{"one byte", 1, 0},
+		{"16 MiB minus one", (16 << 20) - 1, 0},
 		{"16 MiB", 16 << 20, 0},
 		{"16 MiB plus one", (16 << 20) + 1, 5 + (16 << 20)},
+		{"32 MiB minus one", (32 << 20) - 1, 5 + (16 << 20)},
 		{"32 MiB", 32 << 20, 5 + (16 << 20)},
 		{"32 MiB plus one", (32 << 20) + 1, 5 + (16 << 20) + 1},
 		{"maximum body", testMaxMessageBodyLen, 5 + testMaxMessageBodyLen/2},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			var r messageReader
-			err := r.startMessage(tc.body + 4)
+			err := r.startMessage(tc.bodyLen + 4)
 			if err != nil {
-				t.Fatalf("expected a %d-byte body to be accepted, got %v", tc.body, err)
+				t.Fatalf("expected a %d-byte body to be accepted, got %v", tc.bodyLen, err)
 			}
-			if r.remaining != int(tc.body)+5 || r.toBuffer != tc.prefix {
-				t.Fatalf("expected %d frame bytes and %d prefix bytes, got %d and %d",
-					int(tc.body)+5, tc.prefix, r.remaining, r.toBuffer)
+			if want := int(tc.bodyLen) + 5; r.remaining != want {
+				t.Errorf("expected %d frame bytes, got %d", want, r.remaining)
+			}
+			if r.toBuffer != tc.wantPrefix {
+				t.Errorf("expected %d prefix bytes, got %d", tc.wantPrefix, r.toBuffer)
 			}
 		})
 	}
 }
 
-// TestMessageReaderDataRowHeader checks that the reader withholds the header
-// of a DataRow with a 33 MiB body until it has read half the body.
+// TestMessageReaderDataRowHeader checks that the reader does not return the
+// header of a DataRow with a 33 MiB body until it has read half of the body.
 func TestMessageReaderDataRowHeader(t *testing.T) {
 
 	const bodyBytes = 33 << 20
@@ -63,14 +68,14 @@ func TestMessageReaderDataRowHeader(t *testing.T) {
 		t.Fatalf("expected a %d-byte DataRow body, got %d bytes", bodyBytes, got)
 	}
 
-	const supplied = len(header) + bodyBytes/2 - 1
-	source := &io.LimitedReader{R: bytes.NewReader(frame), N: int64(supplied)}
+	const initialBytes = len(header) + bodyBytes/2 - 1
+	source := &io.LimitedReader{R: bytes.NewReader(frame), N: int64(initialBytes)}
 	r := messageReader{src: bufio.NewReader(source)}
 	n, err := r.Read(header[:])
 	if n != 0 {
 		t.Fatalf("expected no header one byte before half the body, got %d bytes", n)
 	}
-	requireEndOfInput(t, err, supplied)
+	requireEndOfInput(t, err, initialBytes)
 	if source.N != 0 {
 		t.Fatalf("expected the available prefix to be consumed, got %d bytes remaining", source.N)
 	}
@@ -88,14 +93,16 @@ func TestMessageReaderDataRowHeader(t *testing.T) {
 
 }
 
-// TestMessageReaderPartialReads checks that the reader limits prefix storage
-// during partial reads, withholds each large message's header until it has
-// read the required body prefix, and preserves message contents and boundaries.
+// TestMessageReaderPartialReads checks that the reader limits the capacity of
+// the prefix buffer, withholds large message headers until the required body
+// prefix is available, and preserves message contents and boundaries across
+// partial reads.
 func TestMessageReaderPartialReads(t *testing.T) {
 
 	const chunkBytes = 64 << 10
+	rng := rand.NewChaCha8([32]byte{})
 	data := make([]byte, maxEagerBodyLen+2*chunkBytes+1)
-	rand.NewChaCha8([32]byte{}).Read(data)
+	rng.Read(data)
 	frame, err := (&pgproto3.CopyData{Data: data}).Encode(nil)
 	if err != nil {
 		t.Fatal(err)
@@ -103,6 +110,7 @@ func TestMessageReaderPartialReads(t *testing.T) {
 	var source bytes.Buffer
 	r := &messageReader{src: bufio.NewReader(&source)}
 	var header [5]byte
+	const prefixEnd = len(header) + maxEagerBodyLen
 
 	checkHeaderWithheld := func(supplied int) {
 		t.Helper()
@@ -115,7 +123,7 @@ func TestMessageReaderPartialReads(t *testing.T) {
 			capacity += cap(chunk)
 		}
 		if capacity > supplied+chunkBytes {
-			t.Fatalf("expected at most %d bytes of prefix storage after %d bytes, got %d",
+			t.Fatalf("expected at most %d bytes of prefix capacity after %d bytes, got %d",
 				supplied+chunkBytes, supplied, capacity)
 		}
 		requireEndOfInput(t, err, supplied)
@@ -123,7 +131,9 @@ func TestMessageReaderPartialReads(t *testing.T) {
 
 	start := 0
 	// The first buffered chunk includes the header.
-	for _, end := range []int{2, len(header), len(header) + 1, chunkBytes - 1, chunkBytes, chunkBytes + 1} {
+	for _, end := range []int{
+		2, len(header), len(header) + 1, chunkBytes - 1, chunkBytes, chunkBytes + 1, prefixEnd - 1,
+	} {
 		source.Write(frame[start:end])
 		start = end
 		checkHeaderWithheld(end)
@@ -136,7 +146,13 @@ func TestMessageReaderPartialReads(t *testing.T) {
 		t.Fatal(err)
 	}
 	source.Write(trailer)
-	source.Write(frame[:len(header)])
+	secondData := make([]byte, len(data))
+	rng.Read(secondData)
+	secondFrame, err := (&pgproto3.CopyData{Data: secondData}).Encode(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	source.Write(secondFrame[:len(header)])
 	frontend := pgproto3.NewFrontend(r, io.Discard)
 	msg, err := frontend.Receive()
 	if err != nil {
@@ -164,34 +180,34 @@ func TestMessageReaderPartialReads(t *testing.T) {
 	if n := frontend.ReadBufferLen(); n != 0 {
 		t.Fatalf("expected no bytes of the next header in pgx, got %d", n)
 	}
+	checkHeaderWithheld(len(header))
 
 	// Deliver all but the last byte required to release the next header.
-	const prefixEnd = len(header) + maxEagerBodyLen
-	source.Write(frame[len(header) : prefixEnd-1])
+	source.Write(secondFrame[len(header) : prefixEnd-1])
 	checkHeaderWithheld(prefixEnd - 1)
-	source.Write(frame[prefixEnd-1 : prefixEnd])
+	source.Write(secondFrame[prefixEnd-1 : prefixEnd])
 	_, err = io.ReadFull(r, header[:])
 	if err != nil {
 		t.Fatalf("expected the next header once the prefix arrived, got %v", err)
 	}
-	if !bytes.Equal(header[:], frame[:len(header)]) {
-		t.Fatalf("expected header %x, got %x", frame[:len(header)], header)
+	if !bytes.Equal(header[:], secondFrame[:len(header)]) {
+		t.Fatalf("expected header %x, got %x", secondFrame[:len(header)], header)
 	}
 
-	source.Write(frame[prefixEnd:])
-	body := make([]byte, len(data))
+	source.Write(secondFrame[prefixEnd:])
+	body := make([]byte, len(secondData))
 	_, err = io.ReadFull(r, body)
 	if err != nil {
 		t.Fatalf("expected the next CopyData body, got %v", err)
 	}
-	if !bytes.Equal(body, data) {
-		t.Fatal("expected the original payload in the next CopyData body, got different data")
+	if !bytes.Equal(body, secondData) {
+		t.Fatal("expected the second CopyData payload, got different data")
 	}
 
 }
 
-// TestMessageReaderProtocolLimits checks that the reader rejects message
-// lengths outside the protocol limits without allocating large messages.
+// TestMessageReaderProtocolLimits checks that the reader rejects messages with
+// invalid lengths based on their headers alone.
 func TestMessageReaderProtocolLimits(t *testing.T) {
 
 	t.Run("below minimum length", func(t *testing.T) {
