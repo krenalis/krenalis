@@ -177,6 +177,10 @@
 	padding-block: 12px;
 }
 
+.combobox-list__tabs wa-tab[active]::part(base) {
+	background-color: #696bd31a;
+}
+
 .combobox-list__tabs wa-tab-panel {
 	--padding: 8px 0;
 }
