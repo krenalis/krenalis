@@ -92,7 +92,7 @@ const useConnection = () => {
 		};
 	}, [connections, params.id]);
 
-	return { isLoading, connection, setConnection };
+	return { isLoading: isLoading || connection?.id !== params.id, connection, setConnection };
 };
 
 export { useConnection };

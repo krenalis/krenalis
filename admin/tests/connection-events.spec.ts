@@ -61,6 +61,8 @@ test('Live events switches listeners when going back to another connection', asy
 
 	await page.goBack();
 	await expect(page.getByText('Event from A', { exact: true }).first()).toBeVisible();
+	await expect(page.locator('.connection-wrapper__name')).toHaveText('Connections / Sources / A');
+	await expect(page.getByRole('link', { name: 'Settings' })).toHaveAttribute('href', '/admin/connections/A/settings');
 	expect([...listeners.values()]).toEqual(['A']);
 	await expect(previousEvent).toHaveCount(0);
 	await expect(page.locator('.connection-events__omitted')).toHaveCount(0);
@@ -76,6 +78,10 @@ test('Live events stays on the current connection when a previous connection fin
 	await page.route('**/v1/connections/A/pipeline-types', (route) => heldA.resolve(route));
 	await page.goBack();
 	const requestA = await heldA.promise;
+	await expect(page.locator('wa-spinner')).toBeVisible();
+	await expect(page.getByRole('banner')).toBeEmpty();
+	await expect(page.getByRole('link', { name: 'Settings' })).toHaveCount(0);
+	await expect(page.locator('.connection-events')).toHaveCount(0);
 	const loadedB = page.waitForResponse('**/v1/connections/B/pipeline-types');
 	await page.goForward();
 	await loadedB;
@@ -88,5 +94,30 @@ test('Live events stays on the current connection when a previous connection fin
 	const count = await eventsFromB.count();
 	await expect.poll(() => eventsFromB.count()).toBeGreaterThan(count);
 	expect([...listeners.values()]).toEqual(['B']);
+	await expect(page.locator('.connection-wrapper__name')).toHaveText('Connections / Sources / B');
 	await expect(page.getByRole('link', { name: 'Settings' })).toHaveAttribute('href', '/admin/connections/B/settings');
+});
+
+test('A late ConnectionNotExist error leaves the current connection open', async ({ page }) => {
+	const listeners = await openLiveEvents(page);
+	const eventsFromB = page.getByText('Event from B', { exact: true });
+	await expect(eventsFromB.first()).toBeVisible();
+
+	const heldCreate = Promise.withResolvers<Route>();
+	await page.route('**/v1/events/listeners', (route) => heldCreate.resolve(route), { times: 1 });
+	await page.goBack();
+	const createA = await heldCreate.promise;
+	expect(createA.request().postDataJSON().connection).toBe('A');
+	await page.goForward();
+	await expect(page).toHaveURL(/\/B\/events$/);
+	await expect(page.locator('.connection-events')).toHaveCount(0);
+
+	await createA.fulfill({
+		status: 422,
+		json: { error: { code: 'ConnectionNotExist', message: 'Connection deleted' } },
+	});
+	await expect(eventsFromB.first()).toBeVisible();
+	await expect(page).toHaveURL(/\/B\/events$/);
+	await expect(page.getByRole('alert')).toHaveCount(0);
+	expect([...listeners.values()]).toEqual(['B']);
 });

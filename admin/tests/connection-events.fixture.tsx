@@ -2,11 +2,12 @@
 // Use of this source code is governed by an Elastic License 2.0
 // that can be found in the LICENSE file.
 
-import React from 'react';
+import React, { useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Route, Routes, useNavigate } from 'react-router-dom';
 import ConnectionEvents from '../src/components/routes/ConnectionEvents/ConnectionEvents';
 import ConnectionWrapper from '../src/components/routes/ConnectionWrapper/ConnectionWrapper';
+import { UI_BASE_PATH } from '../src/constants/paths';
 import AppContext from '../src/context/AppContext';
 import API from '../src/lib/api/api';
 import type TransformedConnection from '../src/lib/core/connection';
@@ -23,21 +24,35 @@ const connections = ['A', 'B'].map<FixtureConnection>((id) => ({
 	connector: { code: 'javascript' },
 	isSDK: true,
 }));
-const context = {
-	api: new API(location.origin, 'workspace'),
-	connections,
-	publicMetadata: { externalAssetsURLs: [] },
-	setTitle: () => {},
-} as unknown as React.ContextType<typeof AppContext>;
+const api = new API(location.origin, 'workspace');
 
-createRoot(document.getElementById('root')!).render(
-	<AppContext.Provider value={context}>
-		<BrowserRouter>
+const Fixture = () => {
+	const [title, setTitle] = useState<React.ReactNode>('');
+	const [error, setError] = useState('');
+	const navigate = useNavigate();
+	const context = {
+		api,
+		connections,
+		publicMetadata: { externalAssetsURLs: [] },
+		setTitle,
+		redirect: (path: string) => navigate(UI_BASE_PATH + path),
+		handleError: (error: Error | string) => setError(String(error)),
+	} as unknown as React.ContextType<typeof AppContext>;
+	return (
+		<AppContext.Provider value={context}>
+			<header>{title}</header>
+			{error !== '' && <div role='alert'>{error}</div>}
 			<Routes>
 				<Route path='/admin/connections/:id' element={<ConnectionWrapper />}>
 					<Route path='events' element={<ConnectionEvents />} />
 				</Route>
 			</Routes>
-		</BrowserRouter>
-	</AppContext.Provider>,
+		</AppContext.Provider>
+	);
+};
+
+createRoot(document.getElementById('root')!).render(
+	<BrowserRouter>
+		<Fixture />
+	</BrowserRouter>,
 );

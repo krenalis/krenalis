@@ -45,6 +45,9 @@ const useEventListener = (
 			try {
 				listener = await api.workspaces.eventListeners.create(connection, 3, filter, requiredConsents);
 			} catch (err) {
+				if (isCancelled) {
+					return;
+				}
 				setIsStarted(false);
 				if (err instanceof UnprocessableError) {
 					if (err.code === 'ConnectionNotExist') {
