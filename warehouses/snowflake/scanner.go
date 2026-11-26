@@ -6,14 +6,20 @@ package snowflake
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
 )
+
+// maxArrayScanBytes limits the combined size of an array's JSON payload and
+// result slice, counting 16 bytes per result element.
+const maxArrayScanBytes = 16 << 20
 
 // scanner implements the warehouses.Rows interface to read and normalize the rows
 // read from Snowflake.
@@ -130,12 +136,11 @@ func (s *scanner) normalize(name string, typ types.Type, v any) (any, error) {
 			return warehouses.ValidateIP(name, v)
 		}
 	case types.ArrayKind:
-		if v, ok := v.(string); ok {
-			r := strings.NewReader(v)
-			if v, err := types.Decode[[]any](r, typ); err == nil {
-				return v, nil
-			}
+		values, err := s.scanArray(typ, v)
+		if err != nil {
+			return nil, fmt.Errorf("column %s: %w", name, err)
 		}
+		return values, nil
 	case types.MapKind:
 		if v, ok := v.(string); ok {
 			r := strings.NewReader(v)
@@ -145,6 +150,59 @@ func (s *scanner) normalize(name string, typ types.Type, v any) (any, error) {
 		}
 	}
 	return nil, fmt.Errorf("Snowflake has returned an unsupported type %T for column %s", v, name)
+}
+
+var errInvalidArray = errors.New("Snowflake has returned invalid array data")
+
+// scanArray checks the JSON size and element count before decoding the array.
+func (s *scanner) scanArray(typ types.Type, src any) ([]any, error) {
+
+	data, ok := src.(string)
+	if !ok {
+		return nil, errors.New("Snowflake has returned an unexpected value type for an array")
+	}
+	if len(data) == 0 {
+		return nil, fmt.Errorf("expected an array within the %d-byte scan limit", maxArrayScanBytes)
+	}
+	if len(data) > maxArrayScanBytes {
+		return nil, fmt.Errorf("array exceeds the %d-byte scan limit", maxArrayScanBytes)
+	}
+
+	r := strings.NewReader(data)
+	dec := json.NewDecoder(r)
+	token, err := dec.ReadToken()
+	if err != nil {
+		return nil, errInvalidArray
+	}
+	if token.Kind() != '[' {
+		return nil, errInvalidArray
+	}
+	maxCount := (maxArrayScanBytes - len(data)) / 16
+	count := 0
+	for dec.PeekKind() != ']' {
+		if count == maxCount {
+			return nil, fmt.Errorf("array exceeds the %d-byte scan limit", maxArrayScanBytes)
+		}
+		err = dec.SkipValue()
+		if err != nil {
+			return nil, errInvalidArray
+		}
+		count++
+	}
+	if count < typ.MinElements() || count > typ.MaxElements() {
+		return nil, fmt.Errorf("data warehouse returned an array with %d elements, "+
+			"which is not within the expected range of [%d, %d]", count, typ.MinElements(), typ.MaxElements())
+	}
+
+	// Decode with the exact initial capacity so the result slice cannot grow
+	// beyond the budget.
+	r.Reset(data)
+	values, err := types.Decode[[]any](r, typ.WithMinElements(count))
+	if err != nil {
+		return nil, errInvalidArray
+	}
+
+	return values, nil
 }
 
 // scanValue implements the sql.Scanner interface to read the values.

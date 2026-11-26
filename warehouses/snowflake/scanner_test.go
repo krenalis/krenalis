@@ -1,0 +1,107 @@
+// Copyright 2026 Open2b. All rights reserved.
+// Use of this source code is governed by the MIT license
+// that can be found in the LICENSE file.
+
+package snowflake
+
+import (
+	"fmt"
+	"reflect"
+	"runtime"
+	"strings"
+	"testing"
+
+	"github.com/krenalis/krenalis/tools/types"
+	"github.com/krenalis/krenalis/warehouses"
+)
+
+// TestScannerArrayBounds checks that array sizes and scan limits are validated
+// before decoding elements.
+func TestScannerArrayBounds(t *testing.T) {
+
+	s := &scanner{}
+	typ := types.Array(types.Boolean())
+	t.Run("at both bounds", func(t *testing.T) {
+		values, err := s.scanArray(typ.WithMaxElements(1).WithMinElements(1), `[true]`)
+		if err != nil {
+			t.Fatalf("expected array at both bounds, got %v", err)
+		}
+		if !reflect.DeepEqual(values, []any{true}) {
+			t.Fatalf("expected [true], got %#v", values)
+		}
+	})
+	for _, test := range []struct {
+		name, data      string
+		count, min, max int
+	}{
+		{"above maximum", `[true]`, 1, 0, 0},
+		{"below minimum", `[1]`, 1, 2, 2},
+		{"empty below minimum", `[]`, 0, 2, 2},
+		{"one element below minimum", `[true]`, 1, 2, 2},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			column := warehouses.Column{Name: "value", Type: typ.WithMaxElements(test.max).WithMinElements(test.min)}
+			s := newScanner([]warehouses.Column{column}, nil)
+			s.dest = make([]any, 1)
+			err := (scanValue{s}).Scan(test.data)
+			if err != nil {
+				want := fmt.Sprintf("column value: data warehouse returned an array with %d elements, "+
+					"which is not within the expected range of [%d, %d]", test.count, test.min, test.max)
+				if err.Error() != want {
+					t.Fatalf("expected %q, got %v", want, err)
+				}
+				return
+			}
+			t.Fatal("expected array cardinality error, got nil")
+		})
+	}
+
+	// An array of n true values takes 5*n+1 JSON bytes and 16*n result bytes.
+	const maxCount = (maxArrayScanBytes - 1) / (5 + 16)
+	payload := "[" + strings.Repeat("true,", maxCount-1) + "true]"
+	t.Run("largest bool array within scan limit", func(t *testing.T) {
+		values, err := s.scanArray(typ, payload)
+		if err != nil {
+			t.Fatalf("expected array within scan limit, got %v", err)
+		}
+		if len(values) != maxCount {
+			t.Fatalf("expected %d elements, got %d", maxCount, len(values))
+		}
+		if cap(values) != maxCount {
+			t.Fatalf("expected capacity %d, got %d", maxCount, cap(values))
+		}
+		if got := values[maxCount-1]; got != true {
+			t.Fatalf("expected last element to be true, got %#v", got)
+		}
+	})
+
+	for _, test := range []struct{ name, data string }{
+		{"smallest bool array above scan limit", payload[:len(payload)-1] + ",true]"},
+		{"oversized JSON payload", strings.Repeat(" ", maxArrayScanBytes) + "[]"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			const runs = 4
+			var err error
+			var before, after runtime.MemStats
+			runtime.ReadMemStats(&before)
+			for range runs {
+				_, err = s.scanArray(typ, test.data)
+			}
+			runtime.ReadMemStats(&after)
+			bytesPerScan := (after.TotalAlloc - before.TotalAlloc) / runs
+			sliceBytes := uint64(maxCount+1) * uint64(reflect.TypeFor[any]().Size())
+			if bytesPerScan >= sliceBytes {
+				t.Fatalf("expected less than %d bytes per scan, got %d", sliceBytes, bytesPerScan)
+			}
+			if err != nil {
+				want := fmt.Sprintf("array exceeds the %d-byte scan limit", maxArrayScanBytes)
+				if err.Error() != want {
+					t.Fatalf("expected %q, got %v", want, err)
+				}
+				return
+			}
+			t.Fatal("expected scan limit error, got nil")
+		})
+	}
+
+}

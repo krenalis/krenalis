@@ -5,6 +5,7 @@
 package postgresql
 
 import (
+	"fmt"
 	"slices"
 	"strings"
 	"testing"
@@ -43,6 +44,87 @@ func Test_appendJoins(t *testing.T) {
 	if err := appendJoins(&b, []warehouses.Join{bad}); err == nil {
 		t.Fatal("expected error for bad join condition")
 	}
+}
+
+// TestQueryArrayScanErrorNamesColumn checks which array failed to decode.
+func TestQueryArrayScanErrorNamesColumn(t *testing.T) {
+
+	warehouse, db := newTestPostgreSQLWarehouse(t)
+	mustExecSQL(t, db, `CREATE TABLE "query_arrays" ("tags" text[], "amounts" numeric[])`)
+	mustExecSQL(t, db, `INSERT INTO "query_arrays" VALUES (ARRAY['a'], ARRAY['NaN'::numeric])`)
+
+	query := warehouses.RowQuery{
+		Table: "query_arrays",
+		Columns: []warehouses.Column{
+			{Name: "tags", Type: types.Array(types.String())},
+			{Name: "amounts", Type: types.Array(types.Decimal(5, 2))},
+		},
+	}
+	rows, _, err := warehouse.Query(t.Context(), query, false)
+	if err != nil {
+		t.Fatalf("expected query to succeed, got %v", err)
+	}
+	defer rows.Close()
+	if !rows.Next() {
+		t.Fatalf("expected one row, got none (err %v)", rows.Err())
+	}
+	values := make([]any, len(query.Columns))
+	err = rows.Scan(values...)
+	if err != nil {
+		if !strings.Contains(err.Error(), "column amounts:") {
+			t.Fatalf("expected error naming column amounts, got %v", err)
+		}
+		return
+	}
+	t.Fatal("expected incompatible array element error, got nil")
+
+}
+
+// TestQueryArrayScanLimit checks that the wire size is capped and scanning an
+// oversized array returns the expected error.
+func TestQueryArrayScanLimit(t *testing.T) {
+
+	warehouse, db := newTestPostgreSQLWarehouse(t)
+	mustExecSQL(t, db, fmt.Sprintf(`CREATE VIEW "query_arrays" AS SELECT ARRAY[repeat('a', %d)] AS "_anonymous_ids",
+		current_query() AS "statement"`, maxArrayScanBytes))
+
+	query := warehouses.RowQuery{
+		Table: "query_arrays",
+		Columns: []warehouses.Column{
+			{Name: "_anonymous_ids", Type: types.Array(types.String())},
+			{Name: "statement", Type: types.String()},
+		},
+		Limit: 1,
+	}
+	rows, _, err := warehouse.Query(t.Context(), query, false)
+	if err != nil {
+		t.Fatalf("expected query to succeed, got %v", err)
+	}
+	defer rows.Close()
+	if !rows.Next() {
+		t.Fatalf("expected one row, got none (err %v)", rows.Err())
+	}
+	raw := rows.(*scanner).rows.RawValues()
+	statement := string(raw[1])
+	for _, call := range []string{"pg_catalog.substr(", "pg_catalog.array_send("} {
+		if !strings.Contains(statement, call) {
+			t.Fatalf("expected query to contain %q, got %q", call, statement)
+		}
+	}
+	if n := len(raw[0]); n != maxArrayScanBytes+1 {
+		t.Fatalf("expected %d wire bytes, got %d", maxArrayScanBytes+1, n)
+	}
+	values := make([]any, len(query.Columns))
+	err = rows.Scan(values...)
+	if err != nil {
+		want := fmt.Sprintf("column _anonymous_ids: binary array exceeds the %d-byte scan limit", maxArrayScanBytes)
+		if !strings.Contains(err.Error(), want) {
+			t.Fatalf("expected error containing %q, got %v", want, err)
+		}
+		return
+	}
+	t.Fatal("expected scan limit error, got nil")
+
 }
 
 // TestQueryOrdering verifies that an empty OrderBy is omitted and descending order is applied to every ordered column.

@@ -23,6 +23,10 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+// maxArrayScanBytes limits the combined size of an array's binary payload and
+// result slice, counting 16 bytes per result element.
+const maxArrayScanBytes = 16 << 20
+
 var errInvalidData = errors.New("PostgreSQL has returned invalid data")
 
 // scanner implements the warehouses.Rows interface to read and normalize the
@@ -43,7 +47,11 @@ func newScanner(columns []warehouses.Column, rows pgx.Rows) *scanner {
 	}
 	s.values = make([]any, len(columns))
 	for i := range len(s.columns) {
-		s.values[i] = scanValue{s}
+		if columns[i].Type.IsArray() {
+			s.values[i] = s
+		} else {
+			s.values[i] = scanValue{s}
+		}
 	}
 	return s
 }
@@ -69,6 +77,15 @@ func (s *scanner) Scan(dest ...any) error {
 	err := s.rows.Scan(s.values...)
 	s.dest = nil
 	return err
+}
+
+// ScanBytes reads an array projected as bytea from the current row buffer.
+func (s *scanner) ScanBytes(data []byte) error {
+	var v any
+	if data != nil {
+		v = data
+	}
+	return scanValue{s}.Scan(v)
 }
 
 // normalize normalizes the value v read from PostgreSQL.
@@ -149,9 +166,9 @@ func (s *scanner) normalize(name string, typ types.Type, v any) (any, error) {
 			return ip, nil
 		}
 	case types.ArrayKind:
-		v, err := s.scanArray(name, typ, v)
+		v, err := s.scanArray(typ, v)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("column %s: %w", name, err)
 		}
 		t := typ.Elem()
 		for i := range v {
@@ -172,10 +189,13 @@ func (s *scanner) normalize(name string, typ types.Type, v any) (any, error) {
 }
 
 // scanArray scans an array and returns the values.
-func (s *scanner) scanArray(name string, typ types.Type, src any) ([]any, error) {
+func (s *scanner) scanArray(typ types.Type, src any) ([]any, error) {
 	data, ok := src.([]byte)
 	if !ok {
 		return nil, errors.New("PostgreSQL has returned an unexpected value type for an array")
+	}
+	if len(data) > maxArrayScanBytes {
+		return nil, fmt.Errorf("binary array exceeds the %d-byte scan limit", maxArrayScanBytes)
 	}
 	p := 12
 	if len(data) < p {
@@ -202,8 +222,12 @@ func (s *scanner) scanArray(name string, typ types.Type, src any) ([]any, error)
 		return nil, errInvalidData
 	}
 	if size < typ.MinElements() || size > typ.MaxElements() {
-		return nil, fmt.Errorf("data warehouse returned an array with %d elements for column %s, "+
-			"which is not within the expected range of [%d, %d]", size, name, typ.MinElements(), typ.MaxElements())
+		return nil, fmt.Errorf("data warehouse returned an array with %d elements, "+
+			"which is not within the expected range of [%d, %d]", size, typ.MinElements(), typ.MaxElements())
+	}
+	// Use the 64-bit interface size (16 bytes) on every architecture.
+	if size > (maxArrayScanBytes-len(data))/16 {
+		return nil, fmt.Errorf("array exceeds the %d-byte scan limit", maxArrayScanBytes)
 	}
 	values := make([]any, size)
 	switch oid {
@@ -350,22 +374,32 @@ func (s *scanner) scanArray(name string, typ types.Type, src any) ([]any, error)
 			p += 8
 		}
 	case 1700: // numeric
+		elem := typ.Elem()
+		precision, scale := 20, 0 // uint64 is stored as numeric(20, 0)
+		if elem.IsDecimal() {
+			precision, scale = elem.Precision(), elem.Scale()
+		} else if !elem.IsUnsigned() || !elem.IsInt(64) {
+			return nil, errInvalidData
+		}
 		var v string
-		tm := s.rows.Conn().TypeMap()
-		ps := tm.PlanScan(oid, pgtype.BinaryFormatCode, &v)
+		var plan pgtype.ScanPlan
 		for i := range values {
-			if len(data) < p+4 {
+			if len(data)-p < 4 {
 				return nil, errInvalidData
 			}
 			l := int(int32(binary.BigEndian.Uint32(data[p:])))
-			if l <= 0 {
-				return nil, errInvalidData
-			}
 			p += 4
-			if len(data) < p+l {
+			if l < 8 || l > len(data)-p {
 				return nil, errInvalidData
 			}
-			err := ps.Scan(data[p:p+l], &v)
+			numeric := boundedBinaryNumeric(data[p:p+l], precision, scale)
+			if numeric == nil {
+				return nil, errInvalidData
+			}
+			if i == 0 {
+				plan = s.rows.Conn().TypeMap().PlanScan(oid, pgtype.BinaryFormatCode, &v)
+			}
+			err := plan.Scan(numeric, &v)
 			if err != nil {
 				return nil, err
 			}
@@ -452,4 +486,50 @@ func (sv scanValue) Scan(v any) error {
 	sv.s.dest[sv.s.index] = v
 	sv.s.index = (sv.s.index + 1) % len(sv.s.columns)
 	return nil
+}
+
+// boundedBinaryNumeric returns a binary numeric with at most the given scale,
+// or nil if it cannot be represented exactly. data must contain its header.
+func boundedBinaryNumeric(data []byte, precision, scale int) []byte {
+
+	count := int(binary.BigEndian.Uint16(data))
+	weight := int(int16(binary.BigEndian.Uint16(data[2:])))
+	sign := binary.BigEndian.Uint16(data[4:])
+	dscale := int(binary.BigEndian.Uint16(data[6:]))
+	if len(data) != 8+2*count || (sign != 0 && sign != 0x4000) {
+		return nil
+	}
+
+	// Discard whole groups of trailing zeros before checking the scale.
+	fractionDigits := min(dscale, scale)
+	digits := data[8:]
+	for len(digits) > 0 && binary.BigEndian.Uint16(digits[len(digits)-2:]) == 0 {
+		digits = digits[:len(digits)-2]
+	}
+
+	// Each group covers four decimal places. The groups at either end may
+	// have fewer than four places available within the schema.
+	integerDigits := precision - scale
+	minWeight := -(fractionDigits + 3) / 4
+	for i := 0; i < len(digits); i += 2 {
+		w := weight - i/2
+		digit := int(binary.BigEndian.Uint16(digits[i:]))
+		if digit >= 10000 || w >= (integerDigits+3)/4 || w < minWeight {
+			return nil
+		}
+		if n := integerDigits % 4; n != 0 && w == integerDigits/4 && digit >= int(math.Pow10(n)) {
+			return nil
+		}
+		if n := fractionDigits % 4; n != 0 && w == minWeight && digit%int(math.Pow10(4-n)) != 0 {
+			return nil
+		}
+	}
+
+	if len(digits) != len(data)-8 || dscale > scale {
+		data = bytes.Clone(data[:8+len(digits)])
+		binary.BigEndian.PutUint16(data, uint16(len(digits)/2))
+		binary.BigEndian.PutUint16(data[6:], uint16(fractionDigits))
+	}
+
+	return data
 }
