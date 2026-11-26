@@ -57,6 +57,8 @@ func TestCheckSchemaVersion(t *testing.T) {
 		{name: "previous, migrating to next", set: &state{v - 1, stateMigratingToNext}, fails: true},
 		{name: "previous, finalized", set: &state{v - 1, stateFinalized}, fails: true},
 		{name: "previous, migrated", set: &state{v - 1, stateMigrated}, fails: true},
+		{name: "previous, finalizing", set: &state{v - 1, stateFinalizing}, fails: true},
+		{name: "two behind", set: &state{v - 2, stateFinalized}, fails: true},
 	}
 
 	for _, test := range tests {
@@ -215,9 +217,12 @@ func TestFinalizeSchemaVersions(t *testing.T) {
 		{name: "next, finalizing", set: &state{v + 1, stateFinalizing}, fails: true, expected: &state{v + 1, stateFinalizing}},
 		{name: "next, finalized", set: &state{v + 1, stateFinalized}, fails: true, expected: &state{v + 1, stateFinalized}},
 		{name: "next, migrating to next", set: &state{v + 1, stateMigratingToNext}, fails: true, expected: &state{v + 1, stateMigratingToNext}},
+		{name: "two ahead", set: &state{v + 2, stateMigrated}, fails: true, expected: &state{v + 2, stateMigrated}},
 		{name: "previous, migrating to next", set: &state{v - 1, stateMigratingToNext}, fails: true, expected: &state{v - 1, stateMigratingToNext}},
 		{name: "previous, finalized", set: &state{v - 1, stateFinalized}, fails: true, expected: &state{v - 1, stateFinalized}},
 		{name: "previous, migrated", set: &state{v - 1, stateMigrated}, fails: true, expected: &state{v - 1, stateMigrated}},
+		{name: "previous, finalizing", set: &state{v - 1, stateFinalizing}, fails: true, expected: &state{v - 1, stateFinalizing}},
+		{name: "two behind", set: &state{v - 2, stateFinalized}, fails: true, expected: &state{v - 2, stateFinalized}},
 	}
 
 	for _, test := range tests {
