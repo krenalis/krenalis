@@ -121,3 +121,22 @@ test('A late ConnectionNotExist error leaves the current connection open', async
 	await expect(page.getByRole('alert')).toHaveCount(0);
 	expect([...listeners.values()]).toEqual(['B']);
 });
+
+test('A late 404 for connection details leaves the current connection open', async ({ page }) => {
+	const listeners = await openLiveEvents(page);
+	const eventsFromB = page.getByText('Event from B', { exact: true });
+	await expect(eventsFromB.first()).toBeVisible();
+
+	const heldDetails = Promise.withResolvers<Route>();
+	await page.route('**/v1/connections/A', (route) => heldDetails.resolve(route));
+	await page.goBack();
+	const detailsA = await heldDetails.promise;
+	await page.goForward();
+	await expect(eventsFromB.first()).toBeVisible();
+
+	await detailsA.fulfill({ status: 404, json: { error: { code: 'NotFound', message: 'Connection deleted' } } });
+	const count = await eventsFromB.count();
+	await expect.poll(() => eventsFromB.count()).toBeGreaterThan(count);
+	await expect(page).toHaveURL(/\/B\/events$/);
+	expect([...listeners.values()]).toEqual(['B']);
+});

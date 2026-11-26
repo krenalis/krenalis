@@ -35,6 +35,7 @@ const Fixture = () => {
 		connections,
 		publicMetadata: { externalAssetsURLs: [] },
 		setTitle,
+		showNotFound: () => navigate(UI_BASE_PATH + 'not-found'),
 		redirect: (path: string) => navigate(UI_BASE_PATH + path),
 		handleError: (error: Error | string) => setError(String(error)),
 	} as unknown as React.ContextType<typeof AppContext>;
