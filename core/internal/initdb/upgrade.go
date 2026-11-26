@@ -69,16 +69,18 @@ func CheckSchemaVersion(ctx context.Context, database *db.DB) error {
 // after which no earlier release starts on it, then runs finalize and
 // records the database as finalized. If the database is already being
 // finalized, as after an interrupted finalization, it resumes the finalization.
+//
 // It does nothing if the database is already finalized, even if it is being
 // migrated to the next schema version, or if it is at the next schema version,
 // migrated and not yet being finalized, as after a rollback to this version of
 // Krenalis. It fails if the database is empty, if it has not been migrated to
-// this schema version, or if it is at any other schema version. It does not
-// check that no instance of an earlier release is running: the caller must
-// ensure it, since otherwise the behavior is undefined and may be destructive.
-// It is safe to call it concurrently from several Krenalis instances. It fails,
+// this schema version, or if it is at any other schema version. It also fails,
 // instead of finalizing the database, if finalize is nil, as in the releases
 // after the one that introduced this schema version.
+//
+// It is safe to call it concurrently from several Krenalis instances. It does
+// not check that no instance of an earlier release is running: the caller must
+// ensure it, since otherwise the behavior is undefined and may be destructive.
 func Finalize(ctx context.Context, database *db.DB) error {
 
 	conn, release, err := lockForUpgrade(ctx, database)
@@ -147,14 +149,17 @@ func Finalize(ctx context.Context, database *db.DB) error {
 // database, still at the previous schema version, as being migrated to the next
 // one, then runs migrate and records the database as migrated to this schema
 // version. If the database is already being migrated to this schema version, as
-// after an interrupted migration, it resumes the migration. It does nothing if
-// the database is already migrated to this schema version, or if it is at the
-// next one, migrated and not yet being finalized, as after a rollback to this
-// version of Krenalis. It fails if the database is empty, if the previous
-// schema version has not been finalized, or if the database is at any other
-// schema version. It is safe to call it concurrently from several Krenalis
-// instances. It fails, instead of migrating the database, if migrate is nil, as
-// in the releases after the one that introduced this schema version.
+// after an interrupted migration, it resumes the migration.
+//
+// It does nothing if the database is already migrated to this schema version,
+// or if it is at the next one, migrated and not yet being finalized, as after a
+// rollback to this version of Krenalis. It fails if the database is empty, if
+// the previous schema version has not been finalized, or if the database is at
+// any other schema version. It also fails, instead of migrating the database,
+// if migrate is nil, as in the releases after the one that introduced this
+// schema version.
+//
+// It is safe to call it concurrently from several Krenalis instances.
 func Migrate(ctx context.Context, database *db.DB) error {
 
 	conn, release, err := lockForUpgrade(ctx, database)
