@@ -98,6 +98,26 @@ func TestCheckSchemaVersion(t *testing.T) {
 
 }
 
+// TestCheckSchemaVersionUnknownState verifies that CheckSchemaVersion fails on
+// a state unknown to this version of Krenalis, as one added by a later
+// release, even at the schema version of this version of Krenalis.
+func TestCheckSchemaVersionUnknownState(t *testing.T) {
+	ctx := t.Context()
+	database := newInitializedTestDatabase(t)
+	_, err := database.Exec(ctx, "ALTER TYPE schema_state ADD VALUE 'Unknown'")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = database.Exec(ctx, "UPDATE schema_version SET state = 'Unknown'")
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = CheckSchemaVersion(ctx, database)
+	if err == nil {
+		t.Fatal("expected an error, got nil")
+	}
+}
+
 // TestFinalizeResume verifies that Finalize records the database as being
 // finalized before running finalize, resumes an interrupted finalization, runs
 // finalize on a connection with the lock timeout while holding the upgrade
