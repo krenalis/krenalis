@@ -471,16 +471,16 @@ const Combobox = ({
 		if (properties != null) {
 			groups.push({ name: 'properties', label: 'Properties', type: 'property', items: properties });
 		}
-		const hasOptions = properties?.length > 0 || functions?.length > 0;
-		if (isExpression && functions != null && (enumItems != null || hasOptions)) {
+		if (isExpression && functions != null) {
 			groups.push({ name: 'functions', label: 'Functions', type: 'function', items: functions });
 		}
 		return groups;
 	};
 	const groups = getGroups(menuMode === 'all');
-	const hasTabs = groups.some((group) => group.type !== 'property');
-	const activeGroup = groups.find((group) => group.name === selectedTab) ?? groups[0];
-	const isListVisible = isOpen && (selectedFunction != null || hasTabs || activeGroup?.items.length > 0);
+	const availableGroups = groups.filter((group) => group.items.length > 0);
+	const activeGroup = availableGroups.find((group) => group.name === selectedTab) ?? availableGroups[0];
+	const hasTabs = activeGroup != null && groups.some((group) => group.type !== 'property');
+	const isListVisible = isOpen && (selectedFunction != null || activeGroup != null);
 
 	let highlight: number | null = null;
 	if (keyboardHighlight != null && activeGroup?.name === keyboardHighlight.group) {
@@ -642,22 +642,20 @@ const Combobox = ({
 			if (hasModifier || (key !== 'ArrowDown' && key !== 'ArrowUp')) {
 				return;
 			}
-			if (key === 'ArrowUp' || activeGroup.items.length > 0) {
-				programmaticFocus.current = true;
-				inputRef.current.focus();
-				if (key === 'ArrowDown') {
-					highlightOption(activeGroup, 0);
-				}
+			programmaticFocus.current = true;
+			inputRef.current.focus();
+			if (key === 'ArrowDown') {
+				highlightOption(activeGroup, 0);
 			}
 		} else if (!hasModifier && (key === 'ArrowDown' || key === 'ArrowUp')) {
-			let available = groups.filter((group) => group.items.length > 0);
-			if (key === 'ArrowDown' && (!isListVisible || available.length === 0)) {
-				available = getGroups(true).filter((group) => group.items.length > 0);
+			let group = activeGroup;
+			if (key === 'ArrowDown' && (!isListVisible || group == null)) {
+				const available = getGroups(true).filter((group) => group.items.length > 0);
+				group = available.find((group) => group.name === selectedTab) ?? available[0];
 				setMenuMode('all');
 			} else if (!isOpen) {
 				setMenuMode('filtered');
 			}
-			const group = available.find((group) => group.name === selectedTab) ?? available[0];
 			if (group != null) {
 				const count = group.items.length;
 				const index = key === 'ArrowDown' ? (highlight ?? -1) + 1 : (highlight ?? 0) - 1;
@@ -667,10 +665,9 @@ const Combobox = ({
 				return;
 			}
 		} else if (!hasModifier && highlight != null && (key === 'ArrowLeft' || key === 'ArrowRight')) {
-			const available = groups.filter((group) => group.items.length > 0);
-			if (available.length > 1) {
-				const index = available.indexOf(activeGroup) + (key === 'ArrowRight' ? 1 : -1);
-				highlightOption(available[(index + available.length) % available.length], 0);
+			if (availableGroups.length > 1) {
+				const index = availableGroups.indexOf(activeGroup) + (key === 'ArrowRight' ? 1 : -1);
+				highlightOption(availableGroups[(index + availableGroups.length) % availableGroups.length], 0);
 			}
 		} else if (!hasModifier && key === 'Enter' && highlight != null) {
 			const item = activeGroup.items[highlight];
@@ -807,6 +804,10 @@ const Combobox = ({
 										key={group.name}
 										slot='nav'
 										panel={group.name}
+										disabled={group.items.length === 0}
+										onMouseDown={
+											group.items.length === 0 ? (event) => event.preventDefault() : undefined
+										}
 										onFocus={() => setKeyboardHighlight(null)}
 									>
 										{group.label} ({group.items.length})

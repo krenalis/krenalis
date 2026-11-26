@@ -124,6 +124,7 @@ test(`Add "Import customers" pipeline on Dummy`, async ({ page }) => {
 	const functions = email.getByRole('tab', { name: /^Functions/ });
 	await emailInput.fill('ema');
 	await expect(options).toHaveText(['email']);
+	await expect(functions).toBeDisabled();
 	await emailInput.press('ArrowDown');
 	await expect(selected).toHaveText('email');
 	await emailInput.press('Escape');
@@ -155,6 +156,8 @@ test(`Add "Import customers" pipeline on Dummy`, async ({ page }) => {
 	await emailInput.fill('lower(emax)');
 	await emailInput.press('ArrowLeft');
 	await expect(options).toHaveCount(0);
+	await expect(email.getByRole('tab')).toHaveCount(0);
+	await expect(email.locator('.combobox-list__function-signature')).toBeVisible();
 	await expect(email.locator('.combobox-input__error')).toBeVisible();
 	await emailInput.press('ArrowDown');
 	await expect(options.filter({ hasText: 'dummyId' })).toBeVisible();
@@ -164,9 +167,14 @@ test(`Add "Import customers" pipeline on Dummy`, async ({ page }) => {
 
 	await emailInput.fill('upper');
 	await expect(properties).toHaveText('Properties (0)');
-	await properties.click();
-	await page.keyboard.press('ArrowDown');
-	await expect(properties).toBeFocused();
+	await expect(properties).toBeDisabled();
+	await expect(functions).toHaveAttribute('aria-selected', 'true');
+	await properties.click({ force: true });
+	await expect(emailInput).toBeFocused();
+	await expect(functions).toHaveAttribute('aria-selected', 'true');
+	await functions.click();
+	await page.keyboard.press('ArrowLeft');
+	await expect(functions).toBeFocused();
 	await page.keyboard.press('ArrowUp');
 	await expect(emailInput).toBeFocused();
 	await emailInput.press('ArrowDown');
@@ -174,7 +182,7 @@ test(`Add "Import customers" pipeline on Dummy`, async ({ page }) => {
 	await expect(selected).toContainText('upper');
 	await emailInput.press('ArrowLeft');
 	await expect(selected).toContainText('upper');
-	await properties.click();
+	await functions.click();
 	await page.keyboard.press('Escape');
 	await expect(emailInput).toBeFocused();
 
