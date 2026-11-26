@@ -166,3 +166,21 @@ test('A late polling error from B does not show an alert on A', async ({ page })
 	await expect.poll(() => eventsFromA.count()).toBeGreaterThan(count);
 	await expect(page.getByRole('alert')).toHaveCount(0);
 });
+
+test('A failed connection load can be retried without showing the previous connection', async ({ page }) => {
+	const listeners = await openLiveEvents(page);
+	await expect(page.getByText('Event from B', { exact: true }).first()).toBeVisible();
+	await page.route('**/v1/connections/A/pipeline-types', (route) => route.fulfill({ status: 500 }), { times: 1 });
+	await page.goBack();
+	await expect(page.getByRole('alert')).toBeVisible();
+	await expect(page.locator('wa-spinner')).toHaveCount(0);
+	await expect(page.getByRole('banner')).toBeEmpty();
+	await expect(page.getByRole('link', { name: 'Settings' })).toHaveCount(0);
+	await expect(page.locator('.connection-events')).toHaveCount(0);
+
+	await page.getByRole('button', { name: 'Retry' }).click();
+	await expect(page.getByText('Event from A', { exact: true }).first()).toBeVisible();
+	await expect(page.getByRole('alert')).toHaveCount(0);
+	await expect(page.locator('.connection-wrapper__name')).toHaveText('Connections / Sources / A');
+	expect([...listeners.values()]).toEqual(['A']);
+});

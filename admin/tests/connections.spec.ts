@@ -1,5 +1,5 @@
-import { test, expect } from '@playwright/test';
-import { login, logout, config, adminURL } from './utils';
+import { test, expect, type Route } from '@playwright/test';
+import { login, logout, config, adminURL, addDummySource } from './utils';
 
 test.beforeEach(async ({ page }) => {
 	await login(page);
@@ -7,6 +7,39 @@ test.beforeEach(async ({ page }) => {
 
 test.afterEach(async ({ page }) => {
 	await logout(page);
+});
+
+test('A failed refresh preserves unsaved connection settings', async ({ page }) => {
+	const id = await addDummySource(page);
+	await page.goto(`${adminURL}/connections/${id}/settings`);
+	const name = page.getByRole('textbox', { name: 'Name', exact: true });
+	await name.fill('Saved name');
+
+	const refresh = Promise.withResolvers<Route>();
+	await page.route(`**/v1/connections/${id}/pipeline-types`, (route) => refresh.resolve(route), { times: 1 });
+	await page.getByRole('button', { name: 'Save', exact: true }).click();
+	const request = await refresh.promise;
+	await name.fill('Unsaved name');
+	await request.fulfill({ status: 500 });
+
+	await expect(page.locator('wa-toast-item')).toBeVisible();
+	await expect(name).toHaveValue('Unsaved name');
+	await expect(page.getByRole('button', { name: 'Retry' })).toHaveCount(0);
+});
+
+test('Retry cancels a connection error that has not been shown yet', async ({ page }) => {
+	const id = await addDummySource(page);
+	await page.clock.install({ time: new Date('2026-01-01T00:00:00Z') });
+	const firstLoad = Promise.withResolvers<Route>();
+	await page.route(`**/v1/connections/${id}/pipeline-types`, (route) => firstLoad.resolve(route), { times: 1 });
+	await page.goto(`${adminURL}/connections/${id}/settings`);
+	const request = await firstLoad.promise;
+	await page.clock.pauseAt(new Date('2026-01-01T00:01:00Z'));
+	await request.fulfill({ status: 500 });
+	await page.getByRole('button', { name: 'Retry' }).click();
+	await page.clock.resume();
+	await expect(page.getByRole('textbox', { name: 'Name', exact: true })).toBeVisible();
+	await expect(page.locator('wa-toast-item')).toHaveCount(0);
 });
 
 test(`Add Dummy source`, async ({ page }) => {
