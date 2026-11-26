@@ -23,8 +23,8 @@ var ErrNotInitialized = errors.New("Krenalis's PostgreSQL database has not been 
 
 // schemaState is the state of the upgrade of the database, recorded in the
 // schema_version table together with the schema version, which is always the
-// highest one on which Krenalis can run. With stateMigrated, Krenalis can also
-// run on the previous schema version.
+// highest one on which Krenalis can run. With stateMigrated, the releases at
+// the previous schema version can also run on it.
 type schemaState string
 
 const (
