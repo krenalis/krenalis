@@ -6,6 +6,8 @@ package snowflake
 
 import (
 	"fmt"
+	"reflect"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -29,6 +31,9 @@ func TestScannerArrayBounds(t *testing.T) {
 		if len(values) != maxCount {
 			t.Fatalf("expected %d elements, got %d", maxCount, len(values))
 		}
+		if cap(values) != maxCount {
+			t.Fatalf("expected capacity %d, got %d", maxCount, cap(values))
+		}
 		if got := values[maxCount-1]; got != true {
 			t.Fatalf("expected last element to be true, got %#v", got)
 		}
@@ -39,7 +44,19 @@ func TestScannerArrayBounds(t *testing.T) {
 		{"oversized JSON payload", strings.Repeat(" ", maxArrayScanBytes) + "[]"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			_, err := s.scanArray("value", typ, test.data)
+			const runs = 4
+			var err error
+			var before, after runtime.MemStats
+			runtime.ReadMemStats(&before)
+			for range runs {
+				_, err = s.scanArray("value", typ, test.data)
+			}
+			runtime.ReadMemStats(&after)
+			bytesPerScan := (after.TotalAlloc - before.TotalAlloc) / runs
+			sliceBytes := uint64(maxCount+1) * uint64(reflect.TypeFor[any]().Size())
+			if bytesPerScan >= sliceBytes {
+				t.Fatalf("expected less than %d bytes per scan, got %d", sliceBytes, bytesPerScan)
+			}
 			if err != nil {
 				want := fmt.Sprintf("array for column value exceeds the %d-byte scan limit", maxArrayScanBytes)
 				if err.Error() != want {

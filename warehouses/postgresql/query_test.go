@@ -46,6 +46,40 @@ func Test_appendJoins(t *testing.T) {
 	}
 }
 
+// TestQueryArrayScanErrorNamesColumn checks which array failed to decode.
+func TestQueryArrayScanErrorNamesColumn(t *testing.T) {
+
+	warehouse, db := newTestPostgreSQLWarehouse(t)
+	mustExecSQL(t, db, `CREATE TABLE "query_arrays" ("tags" text[], "amounts" numeric[])`)
+	mustExecSQL(t, db, `INSERT INTO "query_arrays" VALUES (ARRAY['a'], ARRAY['NaN'::numeric])`)
+
+	query := warehouses.RowQuery{
+		Table: "query_arrays",
+		Columns: []warehouses.Column{
+			{Name: "tags", Type: types.Array(types.String())},
+			{Name: "amounts", Type: types.Array(types.Decimal(5, 2))},
+		},
+	}
+	rows, _, err := warehouse.Query(t.Context(), query, false)
+	if err != nil {
+		t.Fatalf("expected query to succeed, got %v", err)
+	}
+	defer rows.Close()
+	if !rows.Next() {
+		t.Fatalf("expected one row, got none (err %v)", rows.Err())
+	}
+	values := make([]any, len(query.Columns))
+	err = rows.Scan(values...)
+	if err != nil {
+		if !strings.Contains(err.Error(), "column amounts:") {
+			t.Fatalf("expected error naming column amounts, got %v", err)
+		}
+		return
+	}
+	t.Fatal("expected incompatible array element error, got nil")
+
+}
+
 // TestQueryArrayScanLimit checks that the wire size is capped and scanning an
 // oversized array returns the expected error.
 func TestQueryArrayScanLimit(t *testing.T) {

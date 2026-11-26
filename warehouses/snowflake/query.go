@@ -61,10 +61,11 @@ func (warehouse *Snowflake) Query(ctx context.Context, query warehouses.RowQuery
 			b.WriteByte(',')
 		}
 		if c.Type.IsArray() {
-			// Empty text signals an oversized array; SQL NULL is preserved.
+			// Return JSON only when the array fits, and preserve SQL NULL.
 			column := quoteIdent(c.Name)
-			fmt.Fprintf(&b, `IFF(ARRAY_SIZE(%[1]s) * 16 + OCTET_LENGTH(TO_JSON(%[1]s)) > %[2]d, '', `+
-				`TO_JSON(%[1]s)) AS "array data"`, column, maxArrayScanBytes)
+			fmt.Fprintf(&b, `CASE WHEN %[1]s IS NULL THEN NULL `+
+				`WHEN ARRAY_SIZE(%[1]s) * 16 + OCTET_LENGTH(TO_JSON(%[1]s)) <= %[2]d THEN TO_JSON(%[1]s) `+
+				`ELSE '' END AS "array data"`, column, maxArrayScanBytes)
 		} else {
 			b.WriteString(quoteIdent(c.Name))
 		}

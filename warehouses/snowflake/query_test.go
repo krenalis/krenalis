@@ -5,6 +5,7 @@
 package snowflake
 
 import (
+	"database/sql/driver"
 	"fmt"
 	"strings"
 	"testing"
@@ -13,18 +14,23 @@ import (
 	"github.com/krenalis/krenalis/warehouses"
 )
 
-// TestQueryArrayScanLimit checks that an oversized array is rejected at the
-// source and produces a scan error.
-func TestQueryArrayScanLimit(t *testing.T) {
+// TestQueryArrayScanErrorNamesColumn checks which array failed to decode.
+func TestQueryArrayScanErrorNamesColumn(t *testing.T) {
 
-	warehouse, db := newTestSnowflakeWarehouse(t)
-	mustExecSQL(t, db, `CREATE TABLE "QUERY_ARRAYS" ("_ANONYMOUS_IDS" ARRAY)`)
-	mustExecSQL(t, db, `INSERT INTO "QUERY_ARRAYS" SELECT TRANSFORM(ARRAY_GENERATE_RANGE(0, 1000000), i -> 'a')`)
+	db, _ := newCheckReadOnlyTestDB(t, []checkReadOnlyQuery{{
+		match: `FROM "QUERY_ARRAYS"`,
+		cols:  []string{"array data", "array data"},
+		rows:  [][]driver.Value{{`["a"]`, `[1]`}},
+	}})
+	defer db.Close()
+	warehouse := &Snowflake{db: db}
 
 	query := warehouses.RowQuery{
-		Table:   "query_arrays",
-		Columns: []warehouses.Column{{Name: "_anonymous_ids", Type: types.Array(types.String())}},
-		Limit:   1,
+		Table: "query_arrays",
+		Columns: []warehouses.Column{
+			{Name: "tags", Type: types.Array(types.String())},
+			{Name: "amounts", Type: types.Array(types.String())},
+		},
 	}
 	rows, _, err := warehouse.Query(t.Context(), query, false)
 	if err != nil {
@@ -34,24 +40,72 @@ func TestQueryArrayScanLimit(t *testing.T) {
 	if !rows.Next() {
 		t.Fatalf("expected one row, got none (err %v)", rows.Err())
 	}
-	var payload string
-	err = rows.(*scanner).rows.Scan(&payload)
-	if err != nil {
-		t.Fatalf("expected array projection, got %v", err)
-	}
-	if len(payload) != 0 {
-		t.Fatalf("expected 0 payload bytes, got %d", len(payload))
-	}
-	values := make([]any, 1)
+	values := make([]any, len(query.Columns))
 	err = rows.Scan(values...)
 	if err != nil {
-		want := fmt.Sprintf("array for column _anonymous_ids exceeds the %d-byte scan limit", maxArrayScanBytes)
-		if !strings.Contains(err.Error(), want) {
-			t.Fatalf("expected error containing %q, got %v", want, err)
+		if !strings.Contains(err.Error(), "column amounts:") {
+			t.Fatalf("expected error naming column amounts, got %v", err)
 		}
 		return
 	}
-	t.Fatal("expected scan limit error, got nil")
+	t.Fatal("expected incompatible array element error, got nil")
+
+}
+
+// TestQueryArrayScanLimit checks that an oversized array is rejected at the
+// source and produces a scan error.
+func TestQueryArrayScanLimit(t *testing.T) {
+
+	warehouse, db := newTestSnowflakeWarehouse(t)
+	mustExecSQL(t, db, `CREATE TABLE "QUERY_ARRAYS" ("_ANONYMOUS_IDS" ARRAY, "OBJECT_VALUE" VARIANT, `+
+		`"NULL_VALUE" VARIANT)`)
+	// JSON escaping doubles each quotation mark, so the object's JSON exceeds the limit.
+	mustExecSQL(t, db, fmt.Sprintf(`INSERT INTO "QUERY_ARRAYS" SELECT TRANSFORM(ARRAY_GENERATE_RANGE(0, 1000000),`+
+		` i -> 'a'), OBJECT_CONSTRUCT('s', REPEAT('"', %d)), NULL`, maxArrayScanBytes/2))
+
+	for _, name := range []string{"_anonymous_ids", "object_value"} {
+		t.Run(name, func(t *testing.T) {
+
+			typ := types.Array(types.String())
+			query := warehouses.RowQuery{
+				Table:   "query_arrays",
+				Columns: []warehouses.Column{{Name: "null_value", Type: typ, Nullable: true}, {Name: name, Type: typ}},
+				Limit:   1,
+			}
+			rows, _, err := warehouse.Query(t.Context(), query, false)
+			if err != nil {
+				t.Fatalf("expected query to succeed, got %v", err)
+			}
+			defer rows.Close()
+			if !rows.Next() {
+				t.Fatalf("expected one row, got none (err %v)", rows.Err())
+			}
+			var nullValue *string
+			var payload string
+			if err := rows.(*scanner).rows.Scan(&nullValue, &payload); err != nil {
+				t.Fatalf("expected array projections, got %v", err)
+			}
+			if nullValue != nil {
+				t.Fatal("expected SQL NULL, got a string")
+			}
+			if len(payload) != 0 {
+				t.Fatalf("expected 0 payload bytes, got %d", len(payload))
+			}
+
+			values := make([]any, len(query.Columns))
+			err = rows.Scan(values...)
+			if err != nil {
+				want := fmt.Sprintf("column %s: expected an array within the %d-byte scan limit",
+					name, maxArrayScanBytes)
+				if !strings.Contains(err.Error(), want) {
+					t.Fatalf("expected error containing %q, got %v", want, err)
+				}
+				return
+			}
+			t.Fatal("expected scan limit error, got nil")
+
+		})
+	}
 
 }
 

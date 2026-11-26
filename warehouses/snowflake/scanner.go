@@ -21,8 +21,6 @@ import (
 // result slice, counting 16 bytes per result element.
 const maxArrayScanBytes = 16 << 20
 
-var errInvalidArray = errors.New("Snowflake has returned invalid array data")
-
 // scanner implements the warehouses.Rows interface to read and normalize the rows
 // read from Snowflake.
 type scanner struct {
@@ -154,6 +152,8 @@ func (s *scanner) normalize(name string, typ types.Type, v any) (any, error) {
 	return nil, fmt.Errorf("Snowflake has returned an unsupported type %T for column %s", v, name)
 }
 
+var errInvalidArray = errors.New("Snowflake has returned invalid array data")
+
 // scanArray checks the JSON size and element count before decoding the array.
 func (s *scanner) scanArray(name string, typ types.Type, src any) ([]any, error) {
 
@@ -161,7 +161,10 @@ func (s *scanner) scanArray(name string, typ types.Type, src any) ([]any, error)
 	if !ok {
 		return nil, errors.New("Snowflake has returned an unexpected value type for an array")
 	}
-	if len(data) == 0 || len(data) > maxArrayScanBytes {
+	if len(data) == 0 {
+		return nil, fmt.Errorf("expected an array within the %d-byte scan limit", maxArrayScanBytes)
+	}
+	if len(data) > maxArrayScanBytes {
 		return nil, fmt.Errorf("array for column %s exceeds the %d-byte scan limit", name, maxArrayScanBytes)
 	}
 
@@ -217,6 +220,9 @@ func (sv scanValue) Scan(v any) error {
 	}
 	if err != nil {
 		sv.s.index = 0
+		if c.Type.IsArray() {
+			return fmt.Errorf("column %s: %w", c.Name, err)
+		}
 		return err
 	}
 	sv.s.dest[sv.s.index] = v

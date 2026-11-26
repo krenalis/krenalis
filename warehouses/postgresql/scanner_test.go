@@ -95,7 +95,11 @@ func TestScannerArrayBounds(t *testing.T) {
 			s := newScanner([]warehouses.Column{{Name: "value", Type: typ}}, nil)
 			s.dest = make([]any, 1)
 			err := tm.Scan(pgtype.ByteaOID, pgtype.BinaryFormatCode, test.data, s.values[0])
-			checkArrayScanError(t, err, test.err)
+			want := test.err
+			if want != nil {
+				want = fmt.Errorf("column value: %w", want)
+			}
+			checkArrayScanError(t, err, want)
 			if test.err == nil && !reflect.DeepEqual(s.dest[0], test.want) {
 				t.Fatalf("expected %#v, got %#v", test.want, s.dest[0])
 			}
@@ -254,6 +258,9 @@ func checkArrayScanError(t *testing.T, err, want error) {
 	if err != nil {
 		if err == want {
 			return
+		}
+		if errors.Is(want, errInvalidData) && !errors.Is(err, errInvalidData) {
+			t.Fatalf("expected errInvalidData in the error chain, got %v", err)
 		}
 		if want != nil && want != errInvalidData && err.Error() == want.Error() {
 			return

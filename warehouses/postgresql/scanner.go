@@ -481,6 +481,9 @@ func (sv scanValue) Scan(v any) error {
 	}
 	if err != nil {
 		sv.s.index = 0
+		if c.Type.IsArray() {
+			return fmt.Errorf("column %s: %w", c.Name, err)
+		}
 		return err
 	}
 	sv.s.dest[sv.s.index] = v
