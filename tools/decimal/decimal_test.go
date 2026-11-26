@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"math/big"
 	"reflect"
 	"strconv"
 	"strings"
@@ -114,6 +115,49 @@ func Test_Decimal_Float32(t *testing.T) {
 			}
 			if exact != test.exact {
 				t.Fatalf("expected exact %t, got %t", test.exact, exact)
+			}
+		})
+	}
+
+}
+
+// Test_Decimal_Float64 checks rounding, exactness, underflow, and overflow when
+// converting a Decimal to float64.
+func Test_Decimal_Float64(t *testing.T) {
+
+	// The smallest positive float64 is 2^-1074, and 2^-n equals 5^n * 10^-n.
+	var coefficient big.Int
+	halfSubnormal := coefficient.Exp(big.NewInt(5), big.NewInt(1075), nil).String() + "e-1075"
+	quarterSubnormal := coefficient.Exp(big.NewInt(5), big.NewInt(1076), nil).String() + "e-1076"
+	tests := []struct {
+		name     string
+		value    Decimal
+		expected float64
+		exact    bool
+	}{
+		{"zero at minimum scale", New(0, MinScale), 0, true},
+		{"zero at maximum scale", New(0, MaxScale), 0, true},
+		{"inexact fraction", MustParse("0.1"), 0.1, false},
+		{"exact fraction", MustParse("-1.5"), -1.5, true},
+		{"exact large integer", MustParse("9007199254740994"), 9007199254740994, true},
+		{"tie to even down", MustParse("9007199254740993"), 9007199254740992, false},
+		{"tie to even up", MustParse("9007199254740995"), 9007199254740996, false},
+		{"exact maximum finite", MustParse(fmt.Sprintf("%.0f", math.MaxFloat64)), math.MaxFloat64, true},
+		{"overflow", MustParse("1e309"), math.Inf(1), false},
+		{"exact subnormal", MustParse(fmt.Sprintf("%.1074f", math.SmallestNonzeroFloat64)), math.SmallestNonzeroFloat64, true},
+		{"rounded subnormal", MustParse("1e-310"), 1e-310, false},
+		{"rounded to zero", MustParse(quarterSubnormal), 0, false},
+		{"rounded to negative zero", MustParse("-" + quarterSubnormal), math.Copysign(0, -1), false},
+		{"subnormal tie to zero", MustParse(halfSubnormal), 0, false},
+		{"maximum scale", New(-1, MaxScale), math.Copysign(0, -1), false},
+		{"minimum scale", New(-1, MinScale), math.Inf(-1), false},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, exact := test.value.Float64()
+			if math.Float64bits(got) != math.Float64bits(test.expected) || exact != test.exact {
+				t.Fatalf("expected (%g, %t), got (%g, %t)", test.expected, test.exact, got, exact)
 			}
 		})
 	}

@@ -52,6 +52,7 @@ import (
 	"math"
 	"math/big"
 	"reflect"
+	"strconv"
 	"strings"
 
 	"github.com/ericlagergren/decimal"
@@ -181,9 +182,14 @@ func (x Decimal) Float32() (float32, bool) {
 }
 
 // Float64 returns the float64 value closest to x and a bool indicating whether
-// the float64 represents exactly x.
+// the float64 exactly represents x. Overflow returns an infinity and false.
 func (x Decimal) Float64() (float64, bool) {
-	return x.b.Float64()
+	f, err := strconv.ParseFloat(x.b.String(), 64)
+	if err != nil {
+		return f, false
+	}
+	var back decimal.Big
+	return f, x.b.Cmp(back.SetFloat64(f)) == 0
 }
 
 // Format implements the fmt.Formatter interface.
