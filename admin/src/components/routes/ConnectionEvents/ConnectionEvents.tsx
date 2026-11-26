@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useContext, ReactNode } from 'react';
+import React, { useState, useEffect, ReactNode } from 'react';
+import { useParams } from 'react-router-dom';
 import './ConnectionEvents.css';
 import IconWrapper from '../../base/IconWrapper/IconWrapper';
-import ConnectionContext from '../../../context/ConnectionContext';
 import SyntaxHighlight from '../../base/SyntaxHighlight/SyntaxHighlight';
 import useEventListener from '../../../hooks/useEventListener';
 import { EventListenerEvent } from '../../../hooks/useEventListener';
@@ -9,8 +9,8 @@ import JSONbig from 'json-bigint';
 import WaRelativeTime from '@awesome.me/webawesome/dist/react/relative-time/index.js';
 
 const ConnectionEvents = () => {
-	const { connection } = useContext(ConnectionContext);
-	return <LiveEvents key={connection.id} connectionID={connection.id} />;
+	const { id } = useParams();
+	return <LiveEvents key={id} connectionID={id} />;
 };
 
 interface LiveEventsProps {

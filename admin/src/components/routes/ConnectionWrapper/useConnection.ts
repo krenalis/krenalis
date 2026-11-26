@@ -17,12 +17,16 @@ const useConnection = () => {
 	const params = useParams();
 
 	useEffect(() => {
+		let isCancelled = false;
 		const fetchData = async () => {
 			const connectionID = params.id ?? '';
 			let fetchedConnection: Connection;
 			try {
 				fetchedConnection = await api.workspaces.connections.get(connectionID);
 			} catch (err) {
+				if (isCancelled) {
+					return;
+				}
 				if (err instanceof NotFoundError) {
 					showNotFound();
 					return;
@@ -30,11 +34,19 @@ const useConnection = () => {
 				handleError(err);
 				return;
 			}
+			if (isCancelled) {
+				return;
+			}
 			let pipelineTypes: PipelineType[];
 			try {
 				pipelineTypes = await api.workspaces.connections.pipelineTypes(connectionID);
 			} catch (err) {
-				handleError(err);
+				if (!isCancelled) {
+					handleError(err);
+				}
+				return;
+			}
+			if (isCancelled) {
 				return;
 			}
 			const providedConnection = connections.find((c) => c.id === connectionID);
@@ -69,10 +81,15 @@ const useConnection = () => {
 			}
 			setConnection(connection);
 			setTimeout(() => {
-				setIsLoading(false);
+				if (!isCancelled) {
+					setIsLoading(false);
+				}
 			}, 300);
 		};
 		fetchData();
+		return () => {
+			isCancelled = true;
+		};
 	}, [connections, params.id]);
 
 	return { isLoading, connection, setConnection };

@@ -1,3 +1,7 @@
+// Copyright 2026 Open2b. All rights reserved.
+// Use of this source code is governed by an Elastic License 2.0
+// that can be found in the LICENSE file.
+
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
@@ -5,12 +9,17 @@ import ConnectionEvents from '../src/components/routes/ConnectionEvents/Connecti
 import ConnectionWrapper from '../src/components/routes/ConnectionWrapper/ConnectionWrapper';
 import AppContext from '../src/context/AppContext';
 import API from '../src/lib/api/api';
+import type TransformedConnection from '../src/lib/core/connection';
 
-const connections = ['A', 'B'].map((id) => ({
+interface FixtureConnection extends Pick<TransformedConnection, 'id' | 'name' | 'role' | 'status' | 'isSDK'> {
+	connector: Pick<TransformedConnection['connector'], 'code'>;
+}
+
+const connections = ['A', 'B'].map<FixtureConnection>((id) => ({
 	id,
 	name: id,
 	role: 'Source',
-	status: 'active',
+	status: { text: 'Working properly', variant: 'success' },
 	connector: { code: 'javascript' },
 	isSDK: true,
 }));
