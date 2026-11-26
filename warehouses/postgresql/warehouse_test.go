@@ -7,11 +7,15 @@ package postgresql
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
+	"io"
+	"net"
 	"reflect"
 	"slices"
 	"strings"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/krenalis/krenalis/test/testimages"
@@ -21,6 +25,7 @@ import (
 	"github.com/krenalis/krenalis/warehouses"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/jackc/pgx/v5/pgproto3"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
@@ -42,6 +47,161 @@ func newTestSettingsLoader(settings json.Value) *testSettingsLoader {
 
 func (loader *testSettingsLoader) Load(ctx context.Context, dst any) error {
 	return json.Unmarshal(loader.settings, dst)
+}
+
+// testReadBudget checks the size of read requests to the underlying source.
+type testReadBudget struct {
+	reader io.Reader
+	read   int
+}
+
+// Read bounds the next read request relative to the data received so far.
+func (r *testReadBudget) Read(p []byte) (int, error) {
+	if len(p) > max(16<<20, 2*r.read) {
+		return 0, fmt.Errorf("requested %d bytes after receiving only %d", len(p), r.read)
+	}
+	n, err := r.reader.Read(p)
+	r.read += n
+	return n, err
+}
+
+// TestConnectionPoolMessageSizeLimit verifies that oversized messages
+// are rejected and the pool can recover by opening a new connection.
+func TestConnectionPoolMessageSizeLimit(t *testing.T) {
+
+	_, warehousePool := newTestPostgreSQLWarehouse(t)
+	config := warehousePool.Config()
+	if got := config.ConnConfig.MaxProtocolMessageBodyLen; got != 1<<30-2 {
+		t.Fatalf("expected a message body limit of %d bytes, got %d", 1<<30-2, got)
+	}
+	// Exercise both sides of the pgx limit without transferring a 1 GiB row.
+	const maxBodyBytes = 33 << 20
+	config.ConnConfig.MaxProtocolMessageBodyLen = maxBodyBytes
+	buildFrontend := config.ConnConfig.BuildFrontend
+	config.ConnConfig.BuildFrontend = func(r io.Reader, w io.Writer) *pgproto3.Frontend {
+		return buildFrontend(&testReadBudget{reader: r}, w)
+	}
+	config.MaxConns = 1
+	config.MinConns = 0
+	config.MinIdleConns = 0
+	pool, err := pgxpool.NewWithConfig(t.Context(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pool.Close()
+
+	// A one-column DataRow has a two-byte field count and a four-byte field length.
+	const maxTextBytes = maxBodyBytes - 6
+	const query = `SELECT repeat('x', $1)`
+	var value string
+	err = pool.QueryRow(t.Context(), query, maxTextBytes).Scan(&value)
+	if err != nil {
+		t.Fatalf("expected a row at the message size limit, got %v", err)
+	}
+	if len(value) != maxTextBytes {
+		t.Fatalf("expected %d bytes, got %d", maxTextBytes, len(value))
+	}
+
+	err = pool.QueryRow(t.Context(), query, maxTextBytes+1).Scan(&value)
+	requireMessageBodyLimitError(t, err, maxBodyBytes, maxBodyBytes+1)
+
+	var result int
+	err = pool.QueryRow(t.Context(), "SELECT 1").Scan(&result)
+	if err != nil {
+		t.Fatalf("expected the pool to return a row after rejecting the message, got %v", err)
+	}
+	if result != 1 {
+		t.Fatalf("expected 1, got %d", result)
+	}
+	if n := pool.Stat().NewConnsCount(); n != 2 {
+		t.Fatalf("expected the pool to have opened two connections, got %d", n)
+	}
+
+}
+
+// TestConnectionPoolStartupMessage verifies that pgx receives the header of
+// a large first response only after the required body prefix arrives.
+func TestConnectionPoolStartupMessage(t *testing.T) {
+
+	const settings = `{"host":"127.0.0.1","port":5432,"username":"test","database":"test","schema":"public"}`
+	warehouse := warehouses.Registered("PostgreSQL").New(newTestSettingsLoader(json.Value(settings)), nil).(*PostgreSQL)
+	warehousePool, _, err := warehouse.connectionPool(t.Context(), false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer warehousePool.Close()
+
+	const prefixBytes = 16 << 20
+	response := pgproto3.ErrorResponse{
+		Severity: "FATAL",
+		Code:     "57P03",
+		Message:  "starting up",
+		Detail:   strings.Repeat("x", prefixBytes),
+	}
+	frame, err := response.Encode(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	synctest.Test(t, func(t *testing.T) {
+
+		client, server := net.Pipe()
+		config := warehousePool.Config()
+		config.ConnConfig.DialFunc = func(context.Context, string, string) (net.Conn, error) { return client, nil }
+		config.ConnConfig.TLSConfig = nil
+		config.ConnConfig.Fallbacks = nil
+		// pgx reports this limit as soon as it sees the header, before reading the body.
+		config.ConnConfig.MaxProtocolMessageBodyLen = prefixBytes
+		pool, err := pgxpool.NewWithConfig(t.Context(), config)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer pool.Close()
+		defer server.Close()
+		result := make(chan error, 1)
+		go func() {
+			defer client.Close()
+			result <- pool.Ping(t.Context())
+		}()
+
+		backend := pgproto3.NewBackend(server, server)
+		startup, err := backend.ReceiveStartupMessage()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, ok := startup.(*pgproto3.StartupMessage); !ok {
+			t.Fatalf("expected StartupMessage, got %T", startup)
+		}
+
+		const headerBytes = 5
+		const prefixEnd = headerBytes + prefixBytes
+		for _, part := range [][]byte{frame[:headerBytes], frame[headerBytes : prefixEnd-1]} {
+			_, err = server.Write(part)
+			if err != nil {
+				t.Fatal(err)
+			}
+			synctest.Wait()
+			select {
+			case err := <-result:
+				t.Fatalf("expected startup to wait for the prefix, got %v", err)
+			default:
+				// Startup is still waiting for the rest of the prefix.
+			}
+		}
+		_, err = server.Write(frame[prefixEnd-1 : prefixEnd])
+		if err != nil {
+			t.Fatal(err)
+		}
+		synctest.Wait()
+		select {
+		case err = <-result:
+		default:
+			t.Fatal("expected pgx to receive the header at the prefix boundary, got pending startup")
+		}
+		requireMessageBodyLimitError(t, err, prefixBytes, len(frame)-headerBytes)
+
+	})
+
 }
 
 // TestCounts checks unconditional and conditional row counts.
@@ -83,6 +243,54 @@ func TestCounts(t *testing.T) {
 	want := []int{4, 2, 1, 3, 1}
 	if !slices.Equal(counts, want) {
 		t.Fatalf("expected counts %v, got %v", want, counts)
+	}
+
+}
+
+// TestWideProfile verifies that two valid properties can be read together
+// even when their combined DataRow exceeds the eager allocation limit.
+func TestWideProfile(t *testing.T) {
+
+	warehouse, _ := newTestPostgreSQLWarehouse(t)
+	const width = 8 << 20
+	text := types.String().WithMaxBytes(width)
+	properties := []warehouses.Column{{Name: "first_text", Type: text}, {Name: "second_text", Type: text}}
+	err := warehouse.Initialize(t.Context(), properties)
+	if err != nil {
+		t.Fatal(err)
+	}
+	table := warehouses.Table{
+		Name: "krenalis_profiles_0",
+		Keys: []string{"_kpid"},
+		Columns: append([]warehouses.Column{
+			{Name: "_kpid", Type: types.UUID()},
+			{Name: "_anonymous_count", Type: types.Int(32)},
+			{Name: "_recognized_count", Type: types.Int(32)},
+			{Name: "_updated_at", Type: types.DateTime()},
+		}, properties...),
+	}
+	first, second := strings.Repeat("a", width), strings.Repeat("b", width)
+	row := []any{"e5a5c059-bc78-4c9c-b4d1-e9fb187562b1", 0, 1, time.Now().UTC(), first, second}
+	err = warehouse.Merge(t.Context(), table, [][]any{row}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rows, _, err := warehouse.Query(t.Context(), warehouses.RowQuery{Table: "profiles", Columns: properties}, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	if !rows.Next() {
+		t.Fatalf("expected the profile row, got end of results with error %v", rows.Err())
+	}
+	got := make([]any, len(properties))
+	err = rows.Scan(got...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got[0] != first || got[1] != second {
+		t.Fatal("expected both original property values, got different data")
 	}
 
 }
@@ -647,4 +855,22 @@ func mustExecSQL(t *testing.T, pool *pgxpool.Pool, sql string) {
 	if _, err := pool.Exec(context.Background(), sql); err != nil {
 		t.Fatalf("cannot execute SQL %q: %s", sql, err)
 	}
+}
+
+// requireMessageBodyLimitError checks that err reports a body size limit
+// violation with the expected limit and body length.
+func requireMessageBodyLimitError(t *testing.T, err error, limit, bodyLen int) {
+	t.Helper()
+	if err != nil {
+		limitErr, ok := errors.AsType[*pgproto3.ExceededMaxBodyLenErr](err)
+		if !ok {
+			t.Fatalf("expected ExceededMaxBodyLenErr, got %T (%v)", err, err)
+		}
+		if limitErr.MaxExpectedBodyLen != limit || limitErr.ActualBodyLen != bodyLen {
+			t.Fatalf("expected body length %d and limit %d, got %d and %d",
+				bodyLen, limit, limitErr.ActualBodyLen, limitErr.MaxExpectedBodyLen)
+		}
+		return
+	}
+	t.Fatal("expected ExceededMaxBodyLenErr, got nil")
 }

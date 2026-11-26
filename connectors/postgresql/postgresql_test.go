@@ -7,7 +7,9 @@ package postgresql
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
+	"net"
 	"reflect"
 	"slices"
 	"strings"
@@ -21,6 +23,8 @@ import (
 	"github.com/krenalis/krenalis/tools/json"
 	"github.com/krenalis/krenalis/tools/types"
 
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgproto3"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 )
@@ -31,6 +35,19 @@ const (
 	testPassword = "krenalis"
 	testSchema   = "public"
 )
+
+// startupReadConn bounds individual reads from the simulated backend.
+type startupReadConn struct {
+	net.Conn
+}
+
+// Read rejects requests larger than 16 MiB.
+func (conn startupReadConn) Read(p []byte) (int, error) {
+	if len(p) > 16<<20 {
+		return 0, fmt.Errorf("read request exceeds 16 MiB: %d bytes", len(p))
+	}
+	return conn.Conn.Read(p)
+}
 
 // TestQueryWithNonConformingStrings verifies that string and JSON literals
 // are handled correctly when the database defaults to
@@ -126,6 +143,67 @@ func TestQueryWithNonConformingStrings(t *testing.T) {
 			if !slices.Equal(ids, []int{2}) {
 				t.Fatalf("expected matching IDs [2], got %v", ids)
 			}
+		})
+	}
+
+}
+
+// TestStartupMessageBuffering checks that both connector paths read a large
+// first response without requesting the full body from the connection at once.
+func TestStartupMessageBuffering(t *testing.T) {
+
+	t.Setenv("PGSSLMODE", "disable")
+	settings := innerSettings{Host: "127.0.0.1", Port: 5432, Database: testDatabase, Username: testUser}
+	response := pgproto3.ErrorResponse{
+		Severity: "FATAL", Code: "57P03", Message: "starting up", Detail: strings.Repeat("x", 17<<20),
+	}
+	frame, err := response.Encode(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, path := range []string{"pool", "settings"} {
+		t.Run(path, func(t *testing.T) {
+
+			connector, err := testconnector.NewDatabase[*PostgreSQL]("postgresql", settings)
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer connector.Close()
+			connector.env.DialWith = func(connectors.DialFunc) connectors.DialFunc {
+				return func(context.Context, string, string) (net.Conn, error) {
+					client, server := net.Pipe()
+					go func() {
+						defer server.Close()
+						backend := pgproto3.NewBackend(server, server)
+						_, err := backend.ReceiveStartupMessage()
+						if err != nil {
+							return
+						}
+						server.Write(frame)
+					}()
+					return startupReadConn{client}, nil
+				}
+			}
+
+			if path == "pool" {
+				err = connector.openDB(t.Context())
+				if err != nil {
+					t.Fatal(err)
+				}
+				err = connector.pool.Ping(t.Context())
+			} else {
+				err = testConnection(t.Context(), &settings, connector.env.DialWith)
+			}
+			if err != nil {
+				pgErr, ok := errors.AsType[*pgconn.PgError](err)
+				if !ok || pgErr.Code != response.Code || pgErr.Detail != response.Detail {
+					t.Fatalf("expected the complete startup error %s, got %v", response.Code, err)
+				}
+				return
+			}
+			t.Fatal("expected a startup error, got nil")
+
 		})
 	}
 
