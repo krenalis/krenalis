@@ -14,7 +14,7 @@ Krenalis's PostgreSQL database has a schema version: an integer, unrelated to th
 | `Finalizing`      | being finalized                                            | V                            |
 | `Finalized`       | finalized                                                  | V                            |
 
-So `MigratingToNext` is the only state about the upgrade to the next schema version; the others are about the upgrade to the recorded one. For example, an upgrade from 10 to 11 goes through `(10, Finalized)`, `(10, MigratingToNext)`, `(11, Migrated)`, `(11, Finalizing)`, and `(11, Finalized)`.
+So `MigratingToNext` is the only state about the upgrade to the next schema version; the others are about the upgrade to the recorded one. For example, an upgrade from 10 to 11 goes through `(10, Finalized)`, `(10, MigratingToNext)`, `(11, Migrated)`, `(11, Finalizing)`, and `(11, Finalized)`. The name says `ToNext` because `Migrating` alone could also be read as being migrated to the recorded schema version, which means something entirely different and would be misleading.
 
 A database without that table, that is, a database of `v0.48.0`, is at schema version 1, `Finalized`. The constant `schemaVersion` in `core/internal/initdb/upgrade_release.go` is the schema version of the current code; it is incremented only by the releases that change the database, so a release that does not change it needs no migration.
 
