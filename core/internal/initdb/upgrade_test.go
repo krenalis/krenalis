@@ -246,14 +246,14 @@ func TestFinalizeSchemaVersions(t *testing.T) {
 
 }
 
-// TestMigrateEmpty verifies that Migrate fails on an empty database.
+// TestMigrateEmpty verifies that Migrate returns ErrNotInitialized on an empty
+// database.
 func TestMigrateEmpty(t *testing.T) {
 	database := newTestDatabase(t)
 	err := Migrate(t.Context(), database)
 	if err != nil {
-		const expected = "Krenalis's PostgreSQL database has not been initialized"
-		if err.Error() != expected {
-			t.Fatalf("expected error %q, got %q", expected, err)
+		if !errors.Is(err, ErrNotInitialized) {
+			t.Fatalf("expected ErrNotInitialized, got %v", err)
 		}
 		return
 	}
