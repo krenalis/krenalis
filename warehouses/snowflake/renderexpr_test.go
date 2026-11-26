@@ -177,9 +177,10 @@ func Test_renderExpr(t *testing.T) {
 	stringColumn := warehouses.Column{Name: "label", Type: types.String()}
 	uuidColumn := warehouses.Column{Name: "uid", Type: types.UUID()}
 	tests := []struct {
+		name    string
 		expr    warehouses.Expr
 		query   string
-		invalid bool
+		wantErr string
 	}{
 		{
 			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "id", Type: types.String()}, warehouses.OpIs, "qwerty"),
@@ -210,8 +211,22 @@ func Test_renderExpr(t *testing.T) {
 			query: `"LABEL" = "UID"`,
 		},
 		{
-			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.JSON()}, warehouses.OpIs, json.Value(`{"foo":2,"boo":true}`)),
-			query: `"VALUES" = PARSE_JSON('{"foo":2,"boo":true}')`,
+			name: "JSON column equality",
+			expr: warehouses.NewBaseExpr(warehouses.Column{Name: "a", Type: types.JSON(), Nullable: true},
+				warehouses.OpIs, warehouses.Column{Name: "b", Type: types.JSON(), Nullable: true}),
+			query: `"A" = "B"`,
+		},
+		{
+			name: "JSON column inequality",
+			expr: warehouses.NewBaseExpr(warehouses.Column{Name: "a", Type: types.JSON(), Nullable: true},
+				warehouses.OpIsNot, warehouses.Column{Name: "b", Type: types.JSON(), Nullable: true}),
+			query: `"A" <> "B"`,
+		},
+		{
+			name: "unsupported encoded JSON operand",
+			expr: warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.JSON()},
+				warehouses.OpIs, json.Value(`{}`)),
+			wantErr: "warehouses/snowflake: unexpected operand type json.Value",
 		},
 		{
 			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "weight", Type: types.Float(32)}, warehouses.OpIsLessThan, 6.5),
@@ -272,6 +287,16 @@ func Test_renderExpr(t *testing.T) {
 		{
 			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "name", Type: types.String()}, warehouses.OpDoesNotContain, "boo"),
 			query: `NOT CONTAINS("NAME", 'boo')`,
+		},
+		{
+			name:  "enum contains",
+			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "type", Type: types.String().WithValues("alias", "track")}, warehouses.OpContains, "track"),
+			query: `CONTAINS("TYPE", 'track')`,
+		},
+		{
+			name:  "enum does not contain",
+			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "type", Type: types.String().WithValues("alias", "track")}, warehouses.OpDoesNotContain, "track"),
+			query: `NOT CONTAINS("TYPE", 'track')`,
 		},
 		{
 			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.Array(types.Int(32))}, warehouses.OpContains, 5),
@@ -398,6 +423,16 @@ func Test_renderExpr(t *testing.T) {
 			query: `"ID" IS NOT NULL`,
 		},
 		{
+			name:  "string column exists",
+			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "id", Type: types.String(), ReadOptional: true}, warehouses.OpExists),
+			query: `"ID" IS NOT NULL`,
+		},
+		{
+			name:  "string column does not exist",
+			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "id", Type: types.String(), ReadOptional: true}, warehouses.OpDoesNotExist),
+			query: `"ID" IS NULL`,
+		},
+		{
 			expr: warehouses.NewMultiExpr(
 				warehouses.OpAnd,
 				[]warehouses.Expr{
@@ -441,33 +476,124 @@ func Test_renderExpr(t *testing.T) {
 			query: `("ID" = 'abc_42' OR "ID" = 'abc_50' OR "ID" = 'abc_60') AND ("COUNT" = 100 OR "COUNT" = 200 OR "COUNT" = 300)`,
 		},
 		{
+			name: "combined emptiness checks with JSON",
 			expr: warehouses.NewMultiExpr(
 				warehouses.OpOr,
 				[]warehouses.Expr{
 					warehouses.NewBaseExpr(warehouses.Column{Name: "type", Type: types.String(), Nullable: true}, warehouses.OpIsNotEmpty),
-					// warehouses.NewBaseExpr(warehouses.Column{Name: "properties", Type: types.JSON()}, warehouses.OpIsEmpty), // See issue https://github.com/krenalis/krenalis/issues/1804.
+					warehouses.NewBaseExpr(warehouses.Column{Name: "properties", Type: types.JSON()}, warehouses.OpIsEmpty),
 					warehouses.NewBaseExpr(warehouses.Column{Name: "scores", Type: types.Array(types.Int(32)), Nullable: true}, warehouses.OpIsEmpty),
 					warehouses.NewBaseExpr(warehouses.Column{Name: "properties", Type: types.Map(types.String())}, warehouses.OpIsNotEmpty),
 				}),
-			query: `("TYPE" IS NOT NULL AND "TYPE" <> '') OR ("SCORES" IS NULL OR "SCORES" = ARRAY_CONSTRUCT()) OR "PROPERTIES" <> OBJECT_CONSTRUCT()`,
+			query: `("TYPE" IS NOT NULL AND "TYPE" <> '') OR COALESCE(("PROPERTIES" IS NULL OR IS_NULL_VALUE("PROPERTIES") OR AS_VARCHAR("PROPERTIES") = '' OR ARRAY_SIZE(AS_ARRAY("PROPERTIES")) = 0 OR ARRAY_SIZE(OBJECT_KEYS(AS_OBJECT("PROPERTIES"))) = 0), FALSE) OR ("SCORES" IS NULL OR "SCORES" = ARRAY_CONSTRUCT()) OR "PROPERTIES" <> OBJECT_CONSTRUCT()`,
+		},
+		{
+			name:    "decimal excessive precision",
+			expr:    warehouses.NewBaseExpr(decimalColumn, warehouses.OpIs, decimal.MustParse("1e76")),
+			wantErr: "warehouses/snowflake: decimal operand exceeds precision 76 or scale 37",
+		},
+		{
+			name:    "decimal excessive scale",
+			expr:    warehouses.NewBaseExpr(decimalColumn, warehouses.OpIsLessThan, decimal.MustParse("1e-38")),
+			wantErr: "warehouses/snowflake: decimal operand exceeds precision 76 or scale 37",
+		},
+		{
+			name:    "decimal large positive exponent",
+			expr:    warehouses.NewBaseExpr(decimalColumn, warehouses.OpIs, decimal.MustParse("1e999999")),
+			wantErr: "warehouses/snowflake: decimal operand exceeds precision 76 or scale 37",
+		},
+		{
+			name:    "decimal large negative exponent",
+			expr:    warehouses.NewBaseExpr(decimalColumn, warehouses.OpIs, decimal.MustParse("1e-999999")),
+			wantErr: "warehouses/snowflake: decimal operand exceeds precision 76 or scale 37",
+		},
+		{
+			name:    "decimal between invalid second operand",
+			expr:    warehouses.NewBaseExpr(decimalColumn, warehouses.OpIsBetween, decimal.MustInt(0), decimal.MustParse("1e-38")),
+			wantErr: "warehouses/snowflake: decimal operand exceeds precision 76 or scale 37",
+		},
+		{
+			name:    "decimal membership invalid second operand",
+			expr:    warehouses.NewBaseExpr(decimalColumn, warehouses.OpIsOneOf, decimal.MustInt(0), decimal.MustParse("1e76")),
+			wantErr: "warehouses/snowflake: decimal operand exceeds precision 76 or scale 37",
+		},
+		{
+			name:    "decimal array excessive precision",
+			expr:    warehouses.NewBaseExpr(decimalArrayColumn, warehouses.OpContains, decimal.MustParse("1e76")),
+			wantErr: "warehouses/snowflake: decimal operand exceeds precision 76 or scale 37",
+		},
+		{
+			name:    "decimal array excessive scale",
+			expr:    warehouses.NewBaseExpr(decimalArrayColumn, warehouses.OpDoesNotContain, decimal.MustParse("1e-38")),
+			wantErr: "warehouses/snowflake: decimal operand exceeds precision 76 or scale 37",
+		},
+		{
+			name: "decimal invalid nested expression after valid expression",
+			expr: warehouses.NewMultiExpr(warehouses.OpAnd, []warehouses.Expr{
+				warehouses.NewBaseExpr(decimalColumn, warehouses.OpIs, decimal.MustInt(0)),
+				warehouses.NewMultiExpr(warehouses.OpOr, []warehouses.Expr{
+					warehouses.NewBaseExpr(decimalColumn, warehouses.OpIs, decimal.MustParse("1e76")),
+				}),
+			}),
+			wantErr: "warehouses/snowflake: decimal operand exceeds precision 76 or scale 37",
+		},
+		{
+			name: "JSON string is one of",
+			expr: &warehouses.BaseExpr{
+				Column:   warehouses.Column{Name: "metadata", Type: types.JSON()},
+				Keys:     []string{"plan"},
+				Operator: warehouses.OpIsOneOf,
+				Values:   []any{warehouses.JSONConditionValue{String: "pro"}, warehouses.JSONConditionValue{String: "team's"}},
+			},
+			query: `COALESCE(CASE WHEN IS_VARCHAR(GET("METADATA", 'plan')) THEN CASE COLLATE(AS_VARCHAR(GET("METADATA", 'plan')), 'utf8') WHEN 'pro' THEN TRUE WHEN 'team\'s' THEN TRUE ELSE FALSE END ELSE FALSE END, FALSE)`,
+		},
+		{
+			name: "JSON string is not one of",
+			expr: &warehouses.BaseExpr{
+				Column:   warehouses.Column{Name: "metadata", Type: types.JSON()},
+				Keys:     []string{"plan"},
+				Operator: warehouses.OpIsNotOneOf,
+				Values:   []any{warehouses.JSONConditionValue{String: "pro"}, warehouses.JSONConditionValue{String: "team"}},
+			},
+			query: `NOT COALESCE(CASE WHEN IS_VARCHAR(GET("METADATA", 'plan')) THEN CASE COLLATE(AS_VARCHAR(GET("METADATA", 'plan')), 'utf8') WHEN 'pro' THEN TRUE WHEN 'team' THEN TRUE ELSE FALSE END ELSE FALSE END, FALSE)`,
+		},
+		{
+			name: "JSON array contains",
+			expr: warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.Array(types.JSON())},
+				warehouses.OpContains, warehouses.JSONConditionValue{String: "foo"}),
+			query: `COALESCE((ARRAY_SIZE(FILTER("VALUES", krenalis_json_element -> CASE WHEN IS_VARCHAR(krenalis_json_element) THEN COLLATE(AS_VARCHAR(krenalis_json_element), 'utf8') = 'foo' ELSE FALSE END)) > 0), FALSE)`,
+		},
+		{
+			name: "JSON array does not contain",
+			expr: warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.Array(types.JSON())},
+				warehouses.OpDoesNotContain, warehouses.JSONConditionValue{String: "foo"}),
+			query: `NOT COALESCE((ARRAY_SIZE(FILTER("VALUES", krenalis_json_element -> CASE WHEN IS_VARCHAR(krenalis_json_element) THEN COLLATE(AS_VARCHAR(krenalis_json_element), 'utf8') = 'foo' ELSE FALSE END)) > 0), FALSE)`,
+		},
+		{
+			name: "JSON numeric text without number",
+			expr: warehouses.NewBaseExpr(warehouses.Column{Name: "values", Type: types.JSON()}, warehouses.OpIs,
+				warehouses.JSONConditionValue{String: "1e999999"}),
+			query: `COALESCE(CASE WHEN IS_VARCHAR("VALUES") THEN COLLATE(AS_VARCHAR("VALUES"), 'utf8') = '1e999999' ELSE FALSE END, FALSE)`,
 		},
 	}
 	for _, test := range tests {
-		t.Run("", func(t *testing.T) {
+		t.Run(test.name, func(t *testing.T) {
 			var b strings.Builder
 			err := renderExpr(&b, test.expr)
 			if err != nil {
-				if !test.invalid {
-					t.Fatalf("expected query %q, got error: %s", test.query, err)
+				if test.wantErr == "" {
+					t.Fatalf("expected query %q, got error %q", test.query, err)
+				}
+				if err.Error() != test.wantErr {
+					t.Fatalf("expected error %q, got %q", test.wantErr, err.Error())
 				}
 				return
 			}
-			got := b.String()
-			if test.invalid {
-				t.Fatalf("expected invalid, got query %q", got)
+			if test.wantErr != "" {
+				t.Fatalf("expected error %q, got nil and SQL %q", test.wantErr, b.String())
 			}
-			if test.query != got {
-				t.Fatalf("\nexpected query:  %s\ngot:             %s", test.query, got)
+			if got := b.String(); test.query != got {
+				t.Fatalf("expected query %q, got %q", test.query, got)
 			}
 		})
 	}
