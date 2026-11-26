@@ -20,8 +20,8 @@ const schemaVersion = 1
 // finalize removes, on conn, what only the Krenalis instances of the previous
 // release need from a migrated database, such as the old columns and the
 // triggers that keep them in sync, and adds the constraints that they could
-// violate. It runs only when none of them is running anymore. This version of
-// Krenalis must run on the database before, during, and after it.
+// violate. It runs only when no earlier release is running anymore. This
+// version of Krenalis must run on the database before, during, and after it.
 //
 // It may run its steps on conn outside a transaction, or group some of them
 // in transactions with conn.Transaction. If it is interrupted, Finalize runs

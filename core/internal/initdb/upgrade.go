@@ -23,14 +23,14 @@ var ErrNotInitialized = errors.New("Krenalis's PostgreSQL database has not been 
 
 // schemaState is the state of the upgrade of the database, recorded in the
 // schema_version table together with the schema version, which is always the
-// highest one on which Krenalis can run. With stateMigrated, the releases at
-// the previous schema version can also run on it.
+// highest one on which Krenalis can run. The releases at the previous schema
+// version can also run on it, but only with stateMigrated.
 type schemaState string
 
 const (
 	stateMigratingToNext schemaState = "MigratingToNext" // being migrated to the next schema version
-	stateMigrated        schemaState = "Migrated"        // migrated, not finalized; the previous release can run
-	stateFinalizing      schemaState = "Finalizing"      // being finalized; the previous release can no longer run
+	stateMigrated        schemaState = "Migrated"        // migrated, not finalized
+	stateFinalizing      schemaState = "Finalizing"      // being finalized
 	stateFinalized       schemaState = "Finalized"       // finalized
 )
 
@@ -66,7 +66,7 @@ func CheckSchemaVersion(ctx context.Context, database *db.DB) error {
 // Finalize finalizes Krenalis's PostgreSQL database at the schema version of
 // this version of Krenalis, removing what only the Krenalis instances of the
 // previous release need. It first records the database as being finalized,
-// after which those instances no longer start on it, then runs finalize and
+// after which no earlier release starts on it, then runs finalize and
 // records the database as finalized. If the database is already being
 // finalized, as after an interrupted finalization, it resumes the finalization.
 // It does nothing if the database is already finalized, even if it is being
@@ -74,7 +74,7 @@ func CheckSchemaVersion(ctx context.Context, database *db.DB) error {
 // migrated and not yet being finalized, as after a rollback to this version of
 // Krenalis. It fails if the database is empty, if it has not been migrated to
 // this schema version, or if it is at any other schema version. It does not
-// check that no instance of the previous release is running: the caller must
+// check that no instance of an earlier release is running: the caller must
 // ensure it, since otherwise the behavior is undefined and may be destructive.
 // It is safe to call it concurrently from several Krenalis instances. It fails,
 // instead of finalizing the database, if finalize is nil, as in the releases
@@ -120,7 +120,7 @@ func Finalize(ctx context.Context, database *db.DB) error {
 	}
 
 	// Record that the finalization has started before changing anything, so
-	// that the instances of the previous release no longer start, and that an
+	// that the instances of earlier releases no longer start, and that an
 	// interrupted finalization can be resumed.
 	if state == stateMigrated {
 		err = writeSchemaVersion(ctx, conn, schemaVersion, stateFinalizing)

@@ -2197,7 +2197,7 @@ func EventSchema() types.Type {
 }
 
 // FinalizeDB finalizes Krenalis's PostgreSQL database at the schema version of
-// this version of Krenalis, after which the instances of the previous release
+// this version of Krenalis, after which the instances of earlier releases
 // can no longer run on it. It must be called only when none of them is
 // running; otherwise the behavior is undefined and may be destructive. It
 // resumes an interrupted finalization. It does nothing if the database is at
