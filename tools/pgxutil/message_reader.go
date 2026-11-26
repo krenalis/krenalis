@@ -2,7 +2,7 @@
 // Use of this source code is governed by the MIT license
 // that can be found in the LICENSE file.
 
-package postgresql
+package pgxutil
 
 import (
 	"bufio"
@@ -11,6 +11,7 @@ import (
 	"io"
 	"net"
 
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgproto3"
 )
 
@@ -99,7 +100,11 @@ func (r *messageReader) startMessage(length int32) error {
 	return nil
 }
 
-// newFrontend installs the message reader before pgx reads its first response.
-func newFrontend(r io.Reader, w io.Writer) *pgproto3.Frontend {
-	return pgproto3.NewFrontend(&messageReader{src: bufio.NewReaderSize(r, 8192)}, w)
+// ConfigureMessageReader limits how much memory pgx can reserve from a header
+// alone, starting with the first response and preserving support for wide rows.
+func ConfigureMessageReader(config *pgconn.Config) {
+	config.MaxProtocolMessageBodyLen = maxMessageBodyLen
+	config.BuildFrontend = func(r io.Reader, w io.Writer) *pgproto3.Frontend {
+		return pgproto3.NewFrontend(&messageReader{src: bufio.NewReaderSize(r, 8192)}, w)
+	}
 }

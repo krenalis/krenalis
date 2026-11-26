@@ -20,6 +20,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/krenalis/krenalis/tools/json"
+	"github.com/krenalis/krenalis/tools/pgxutil"
 	"github.com/krenalis/krenalis/tools/types"
 	"github.com/krenalis/krenalis/warehouses"
 
@@ -542,10 +543,7 @@ func (warehouse *PostgreSQL) connectionPool(ctx context.Context, returnSchema bo
 	// since only single quotes are doubled for escaping.
 	config.ConnConfig.RuntimeParams["standard_conforming_strings"] = "on"
 	config.ConnConfig.DialFunc = warehouse.dialWith(config.ConnConfig.DialFunc)
-	// Preserve the full pgx row size range. The frontend limits what a
-	// warehouse can make pgx allocate from a message header alone.
-	config.ConnConfig.MaxProtocolMessageBodyLen = maxMessageBodyLen
-	config.ConnConfig.BuildFrontend = newFrontend
+	pgxutil.ConfigureMessageReader(&config.ConnConfig.Config)
 	pool, err := pgxpool.NewWithConfig(ctx, config)
 	if err != nil {
 		return nil, "", err

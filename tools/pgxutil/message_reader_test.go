@@ -2,7 +2,7 @@
 // Use of this source code is governed by the MIT license
 // that can be found in the LICENSE file.
 
-package postgresql
+package pgxutil
 
 import (
 	"bufio"
@@ -227,7 +227,18 @@ func TestMessageReaderProtocolLimits(t *testing.T) {
 		if n != 0 {
 			t.Fatalf("expected zero bytes for an oversized body, got %d", n)
 		}
-		requireMessageBodyLimitError(t, err, testMaxMessageBodyLen, oversizedBody)
+		if err != nil {
+			limitErr, ok := errors.AsType[*pgproto3.ExceededMaxBodyLenErr](err)
+			if !ok {
+				t.Fatalf("expected ExceededMaxBodyLenErr, got %T (%v)", err, err)
+			}
+			if limitErr.MaxExpectedBodyLen != testMaxMessageBodyLen || limitErr.ActualBodyLen != oversizedBody {
+				t.Fatalf("expected body length %d and limit %d, got %d and %d",
+					oversizedBody, testMaxMessageBodyLen, limitErr.ActualBodyLen, limitErr.MaxExpectedBodyLen)
+			}
+			return
+		}
+		t.Fatal("expected ExceededMaxBodyLenErr, got nil")
 	})
 
 }
@@ -242,22 +253,4 @@ func requireEndOfInput(t *testing.T, err error, supplied int) {
 		return
 	}
 	t.Fatalf("expected end of input after %d bytes, got nil", supplied)
-}
-
-// requireMessageBodyLimitError checks that err reports a body size limit
-// violation with the expected limit and body length.
-func requireMessageBodyLimitError(t *testing.T, err error, limit, bodyLen int) {
-	t.Helper()
-	if err != nil {
-		limitErr, ok := errors.AsType[*pgproto3.ExceededMaxBodyLenErr](err)
-		if !ok {
-			t.Fatalf("expected ExceededMaxBodyLenErr, got %T (%v)", err, err)
-		}
-		if limitErr.MaxExpectedBodyLen != limit || limitErr.ActualBodyLen != bodyLen {
-			t.Fatalf("expected body length %d and limit %d, got %d and %d",
-				bodyLen, limit, limitErr.ActualBodyLen, limitErr.MaxExpectedBodyLen)
-		}
-		return
-	}
-	t.Fatal("expected ExceededMaxBodyLenErr, got nil")
 }
