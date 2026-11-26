@@ -188,14 +188,24 @@ func (x Decimal) Float64() (float64, bool) {
 		return 0, true
 	}
 	// Avoid huge powers of ten for values that round to infinity or zero.
-	order := x.b.Precision() - x.b.Scale()
+	scale := x.b.Scale()
+	order := x.b.Precision() - scale
 	if order > 309 {
 		return math.Inf(sign), false
 	}
 	if order < -323 {
 		return math.Copysign(0, float64(sign)), false
 	}
-	f, exact := x.b.Rat(nil).Float64()
+	var r big.Rat
+	if scale > 19 {
+		// Compute denominators larger than uint64 without growing the shared table of powers of ten.
+		var denominator big.Int
+		denominator.Exp(bigTen, big.NewInt(int64(scale)), nil)
+		r.SetFrac(x.b.SetScale(0).Int(nil), &denominator)
+	} else {
+		x.b.Rat(&r)
+	}
+	f, exact := r.Float64()
 	// A nonzero decimal that rounds to zero is always inexact.
 	return f, f != 0 && exact
 }
