@@ -60,7 +60,7 @@ Initialize an empty writable map with `map[K]V{}`, or with `make(map[K]V, capaci
 Every `switch`, including type switches and switches without an expression, has a `default` clause that makes explicit what happens to unmatched values:
 
 - If they cannot occur, treat them as an unexpected situation (see Errors versus panics), naming the value or type in the message.
-- If they need no action, leave `default` empty except for a short comment saying why.
+- If they need no action, leave `default` empty, optionally with a short comment saying why.
 
 Omit `default` only when:
 
@@ -122,6 +122,8 @@ Extract a parser, validator, or converter only when it captures non-trivial, reu
 When a parsing or validation sequence is dense, covers several distinct values or groups, and is hard to scan, precede each group with a short comment naming the operation and subject, such as `// Validate start and end.`, one per group rather than per condition. Add a blank line before it only when it clarifies the boundary. Skip this for single checks, short sequences, or comments that would restate the conditions.
 
 Exported functions and methods validate their own arguments. Exception: exported methods in `core/internal/metrics` assume valid arguments and do not revalidate them; values read from a data warehouse must still be validated per the trust boundary.
+
+For methods of `warehouses.Warehouse`, Krenalis is responsible for ensuring that all arguments satisfy the preconditions defined by each method's contract. Drivers may assume these preconditions are satisfied and are not required to validate them, except for checks explicitly required by the contract. If a driver detects a violated precondition, it must treat it as an unexpected situation (see Errors versus panics).
 
 ## Block spacing
 

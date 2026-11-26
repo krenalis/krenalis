@@ -208,6 +208,45 @@ func TestScannerNumericArrayBounds(t *testing.T) {
 	}
 }
 
+// TestScannerStringArrayEmptyElements checks that the scanner
+// correctly handles empty strings in binary PostgreSQL arrays.
+func TestScannerStringArrayEmptyElements(t *testing.T) {
+
+	tm := pgtype.NewMap()
+	typ := types.Array(types.String())
+	tests := []struct {
+		name string
+		want []any
+	}{
+		{"empty_array", []any{}},
+		{"empty_element", []any{""}},
+		{"trailing_empty", []any{"a", ""}},
+		{"leading_empty", []any{"", "ab"}},
+		{"middle_empty", []any{"a", "", "ab"}},
+		{"all_empty", []any{"", ""}},
+	}
+
+	for _, oid := range []uint32{pgtype.TextArrayOID, pgtype.VarcharArrayOID, pgtype.BPCharArrayOID} {
+		for _, test := range tests {
+			t.Run(fmt.Sprintf("%d/%s", oid, test.name), func(t *testing.T) {
+				data, err := tm.Encode(oid, pgtype.BinaryFormatCode, test.want, nil)
+				if err != nil {
+					t.Fatalf("expected encoding to succeed, got %v", err)
+				}
+				s := &scanner{}
+				got, err := s.normalize("value", typ, data)
+				if err != nil {
+					t.Fatalf("expected normalization to succeed, got %v", err)
+				}
+				if !reflect.DeepEqual(got, test.want) {
+					t.Errorf("expected %#v, got %#v", test.want, got)
+				}
+			})
+		}
+	}
+
+}
+
 // checkArrayScanError matches errInvalidData by identity and other errors by
 // their message.
 func checkArrayScanError(t *testing.T, err, want error) {

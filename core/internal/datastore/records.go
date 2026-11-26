@@ -133,7 +133,8 @@ func records(ctx context.Context, warehouse warehouses.Warehouse, query Query, c
 			joins[0].Type = warehouses.InnerJoin
 		case state.CreateOnly:
 			// Include only users without a corresponding match.
-			where = andExpressions(where, warehouses.NewBaseExpr(warehouses.Column{Name: "_pipeline", Type: types.String()}, warehouses.OpIsNull))
+			pipelineColumn := warehouses.Column{Name: "_pipeline", Type: types.String(), Nullable: true}
+			where = andExpressions(where, warehouses.NewBaseExpr(pipelineColumn, warehouses.OpIsNull))
 			fallthrough
 		case state.CreateOrUpdate:
 			// Perform a LEFT JOIN to also return users without a matching destination user.

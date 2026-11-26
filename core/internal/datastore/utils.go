@@ -170,8 +170,9 @@ func profileColumnByProperty(schema types.Type) map[string]warehouses.Column {
 		}
 		name := strings.ReplaceAll(path, ".", "_")
 		columnByProperty[path] = warehouses.Column{
-			Name: name,
-			Type: p.Type,
+			Name:         name,
+			Type:         p.Type,
+			ReadOptional: p.ReadOptional,
 			// Profile schema properties are always non-nullable, while profile
 			// columns are always nullable.
 			Nullable: true,
