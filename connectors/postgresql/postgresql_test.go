@@ -362,9 +362,13 @@ func Test_Merge_Query(t *testing.T) {
 	for i := range columns {
 		dest[i] = &scanner
 	}
+	seen := false
 	for rows.Next() {
+		if seen {
+			t.Fatal("expected one row, got at least two")
+		}
+		seen = true
 		if err := rows.Scan(dest...); err != nil {
-			_ = rows.Close()
 			t.Fatalf("cannot scan row: %s", err)
 		}
 		for i, v := range scanner.values {
@@ -378,6 +382,9 @@ func Test_Merge_Query(t *testing.T) {
 	}
 	if err := rows.Err(); err != nil {
 		t.Fatalf("cannot scan row: %s", err)
+	}
+	if !seen {
+		t.Fatal("expected one row, got none")
 	}
 
 }

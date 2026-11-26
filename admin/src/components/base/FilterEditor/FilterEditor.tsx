@@ -26,15 +26,8 @@ import {
 	splitPropertyAndPath,
 	TransformedProperty,
 } from '../../../lib/core/pipeline';
-import {
-	Filter,
-	FilterCondition,
-	FilterLogical,
-	FilterOperator,
-	PipelineTarget,
-} from '../../../lib/api/types/pipeline';
+import { Filter, FilterCondition, FilterLogical, FilterOperator } from '../../../lib/api/types/pipeline';
 import { ObjectType, StringType } from '../../../lib/api/types/types';
-import { ConnectionRole } from '../../../lib/api/types/connection';
 
 // countFilterRules returns the number of groups and conditions below filter.
 const countFilterRules = (filter: Filter): number =>
@@ -85,12 +78,10 @@ interface FilterEditorProps {
 	onChange: (filter: Filter | null) => void;
 	onCommit?: (filter: Filter | null) => void;
 	propertiesToHide?: string[];
-	role: ConnectionRole;
 	rootActions?: ReactNode;
 	schema: ObjectType;
 	showEmptyFilterAsCondition?: boolean;
 	subject: string;
-	target: PipelineTarget;
 	validationAttempt?: number;
 }
 
@@ -102,12 +93,10 @@ const FilterEditor = ({
 	onChange,
 	onCommit,
 	propertiesToHide = NO_HIDDEN_PROPERTIES,
-	role,
 	rootActions,
 	schema,
 	showEmptyFilterAsCondition = false,
 	subject,
-	target,
 	validationAttempt,
 }: FilterEditorProps) => {
 	const editorID = useId();
@@ -118,8 +107,8 @@ const FilterEditor = ({
 	const editableFilter = filter ?? (showEmptyFilterAsCondition ? EMPTY_FILTER_WITH_CONDITION : EMPTY_FILTER);
 	const flatInputSchema = useMemo(() => flattenSchema(schema), [schema]);
 	const propertyItems = useMemo(
-		() => getFilterPropertyComboboxItems(schema, role, target, propertiesToHide),
-		[propertiesToHide, role, schema, target],
+		() => getFilterPropertyComboboxItems(schema, propertiesToHide),
+		[propertiesToHide, schema],
 	);
 	const filterRuleCount = countFilterRules(editableFilter);
 

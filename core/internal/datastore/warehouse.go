@@ -29,7 +29,7 @@ func (err *WarehouseError) Unwrap() error {
 }
 
 // warehouse wraps a warehouses.Warehouse and its rows, returning their errors
-// as *WarehouseError values. Argument validation is delegated to the warehouse.
+// as *WarehouseError values.
 type warehouse struct {
 	inner warehouses.Warehouse
 }

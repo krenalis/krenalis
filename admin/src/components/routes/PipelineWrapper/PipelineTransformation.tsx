@@ -36,6 +36,7 @@ import {
 	propertyTypesAreEqual,
 	splitPropertyAndPath,
 	transformInPipelineToSet,
+	validateAndNormalizeFilter,
 	validateAndNormalizeFilterCondition,
 	computeDefaultTransformationFunction,
 	checkMapping,
@@ -83,6 +84,7 @@ import { UnprocessableError } from '../../../lib/api/errors';
 import ConnectionContext from '../../../context/ConnectionContext';
 import Workspace, { EventConsentLocation } from '../../../lib/api/types/workspace';
 import {
+	Filter,
 	PipelineToSet,
 	EventListenerConsents,
 	TransformationFunction,
@@ -1583,23 +1585,17 @@ const FullscreenTransformation = ({
 				for (const prop of inputSchema.properties) {
 					properties.push(prop.name);
 				}
+				let filter: Filter | null;
 				let res: FindProfilesResponse;
 				try {
-					res = await api.workspaces.profiles.find(
-						properties,
-						normalizedFilter,
-						'',
-						true,
-						0,
-						20,
-						inputSchema,
-					);
+					filter = pipeline.filter == null ? null : validateAndNormalizeFilter(pipeline.filter, inputSchema);
+					res = await api.workspaces.profiles.find(properties, filter, '', true, 0, 20, inputSchema);
 				} catch (err) {
 					setIsLoading(false);
 					handleError(err);
 					return;
 				}
-				if (res.profiles.length === 0 && normalizedFilter == null) {
+				if (res.profiles.length === 0 && filter == null) {
 					// No users have been imported in the warehouse yet.
 					if (isReloadingSamples) {
 						hasReloadedSamples.current = true;
