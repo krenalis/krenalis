@@ -3,6 +3,9 @@ import { NotFoundError, UnprocessableError } from '../lib/api/errors';
 import AppContext from '../context/AppContext';
 import { Event, CreateEventListenerResponse, EventListenerEventsResponse } from '../lib/api/types/responses';
 import { Filter, EventListenerConsents } from '../lib/api/types/pipeline';
+import { sleep } from '../utils/sleep';
+
+const MAX_DELETE_RETRY_DELAY = 30000;
 
 interface EventListenerEvent {
 	id: number;
@@ -40,7 +43,30 @@ const useEventListener = (
 		let isCancelled = false;
 		let listenerID: string;
 		let interval: number;
-		const removeListener = (id: string) => api.workspaces.eventListeners.delete(id).catch(handleError);
+		let dismissError: (() => void) | undefined;
+		const removeListener = async (id: string) => {
+			let delay = 1000;
+			for (;;) {
+				try {
+					await api.workspaces.eventListeners.delete(id);
+					return;
+				} catch (err) {
+					// A failed fetch leaves the outcome unknown. Deleting the same listener again is safe.
+					if (!(err.cause instanceof TypeError)) {
+						handleError(err);
+						return;
+					}
+				}
+				if (navigator.onLine) {
+					await sleep(delay);
+					delay = Math.min(delay * 2, MAX_DELETE_RETRY_DELAY);
+				} else {
+					await new Promise<void>((resolve) =>
+						window.addEventListener('online', () => resolve(), { once: true }),
+					);
+				}
+			}
+		};
 		const startListener = async () => {
 			let listener: CreateEventListenerResponse;
 			try {
@@ -56,11 +82,13 @@ const useEventListener = (
 						return;
 					}
 					if (err.code === 'TooManyListeners') {
-						handleError('Please note that the number of event listeners allowed has been exceeded');
+						dismissError = handleError(
+							'Please note that the number of event listeners allowed has been exceeded',
+						);
 						return;
 					}
 				}
-				handleError(err);
+				dismissError = handleError(err);
 				return;
 			}
 			if (isCancelled) {
@@ -82,7 +110,7 @@ const useEventListener = (
 						setIsListenerNotFound(true);
 						return;
 					}
-					handleError(err);
+					dismissError = handleError(err);
 					return;
 				}
 				if (isCancelled) {
@@ -107,6 +135,7 @@ const useEventListener = (
 		return () => {
 			isCancelled = true;
 			clearInterval(interval);
+			dismissError?.();
 			if (listenerID != null) {
 				removeListener(listenerID);
 			}

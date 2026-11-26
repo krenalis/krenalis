@@ -1,5 +1,5 @@
 import { test, expect, type Route } from '@playwright/test';
-import { login, logout, config, adminURL, addDummySource } from './utils';
+import { login, logout, config, adminURL, addDummySource, addJavascriptSource } from './utils';
 
 test.beforeEach(async ({ page }) => {
 	await login(page);
@@ -40,6 +40,40 @@ test('Retry cancels a connection error that has not been shown yet', async ({ pa
 	await page.clock.resume();
 	await expect(page.getByRole('textbox', { name: 'Name', exact: true })).toBeVisible();
 	await expect(page.locator('wa-toast-item')).toHaveCount(0);
+});
+
+test('Going back dismisses a pending polling error from the connection being left', async ({ page }) => {
+	const a = await addJavascriptSource(page);
+	const b = await addJavascriptSource(page);
+	await page.clock.install({ time: new Date('2026-01-01T00:00:00Z') });
+	const heldPoll = Promise.withResolvers<Route>();
+	await page.route('**/v1/events/listeners/*', (route) => heldPoll.resolve(route), { times: 1 });
+	await page.goto(`${adminURL}/connections/${b}/events`);
+	const pollB = await heldPoll.promise;
+	expect(pollB.request().method()).toBe('GET');
+	await page.evaluate(
+		({ a, b }) => {
+			history.replaceState(history.state, '', `/admin/connections/${a}/events`);
+			history.pushState(history.state, '', `/admin/connections/${b}/events`);
+		},
+		{ a, b },
+	);
+
+	await page.clock.pauseAt(new Date('2026-01-01T00:01:00Z'));
+	await pollB.fulfill({ status: 500 });
+	await pollB.request().response();
+	await page.route('**/v1/events/listeners/*', (route) => {
+		if (route.request().method() !== 'GET' || route.request().url() === pollB.request().url()) {
+			return route.continue();
+		}
+		const event = { type: 'track', event: 'Event from A', receivedAt: '2026-01-01T00:00:00Z' };
+		return route.fulfill({ json: { events: [event], omitted: 0 } });
+	});
+	await page.goBack();
+	await expect(page).toHaveURL(`${adminURL}/connections/${a}/events`);
+	await page.clock.resume();
+	await expect(page.getByText('Event from A', { exact: true }).first()).toBeVisible();
+	await expect(page.locator('wa-toast-item', { hasText: 'Internal server error' })).toHaveCount(0);
 });
 
 test(`Add Dummy source`, async ({ page }) => {

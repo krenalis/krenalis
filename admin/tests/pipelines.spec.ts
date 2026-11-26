@@ -1,4 +1,4 @@
-import { test, expect, type Page, type Route } from '@playwright/test';
+import { test, expect, type Page, type Request, type Route } from '@playwright/test';
 import Type, { ObjectType, Property } from '../src/lib/api/types/types';
 import {
 	addDummyDestination,
@@ -1706,13 +1706,17 @@ test(`Add "Import events" pipeline on JavaScript`, async ({ page }) => {
 	await expect(page.locator('.connection-pipelines__grid')).toBeAttached();
 });
 
-test('The transformation editor ignores a poll that returns while its listener is being deleted', async ({ page }) => {
+const openUserImportPipeline = async (page: Page) => {
 	const id = await addJavascriptSource(page);
 	await page.goto(`${adminURL}/connections/${id}/pipelines`);
 	const tile = page.locator('.connection-pipelines__no-pipeline-pipeline-types .list-tile__name', {
 		hasText: 'Import users',
 	});
 	await tile.locator('..').locator('..').locator('wa-button').click();
+};
+
+test('The transformation editor ignores a poll that returns while its listener is being deleted', async ({ page }) => {
+	await openUserImportPipeline(page);
 
 	const heldPoll = Promise.withResolvers<Route>();
 	const heldDelete = Promise.withResolvers<Route>();
@@ -1749,6 +1753,50 @@ test('The transformation editor ignores a poll that returns while its listener i
 	const samples = page.locator('.fullscreen-transformation__event-name');
 	await expect(samples.filter({ hasText: 'New sample' }).first()).toBeVisible();
 	await expect(samples.filter({ hasText: 'Late sample' })).toHaveCount(0);
+});
+
+test('Closing the editor retries listener deletion when the browser comes back online', async ({ page, context }) => {
+	await openUserImportPipeline(page);
+	const created = page.waitForResponse('**/v1/events/listeners');
+	await page.getByRole('button', { name: 'Edit in full mode' }).click();
+	const response = await created;
+	const listener = await response.json();
+	const url = `${response.url()}/${listener.id}`;
+	await page.waitForResponse(url);
+
+	const isListenerDelete = (request: Request) => request.method() === 'DELETE' && request.url() === url;
+	await context.setOffline(true);
+	const deleted = page.waitForResponse((res) => isListenerDelete(res.request()));
+	try {
+		const failed = page.waitForEvent('requestfailed', isListenerDelete);
+		await page.getByRole('button', { name: 'Exit full mode' }).click();
+		await failed;
+		// The browser comes back online before the server is reachable.
+		await page.route(url, (route) => route.abort('connectionreset'), { times: 1 });
+	} finally {
+		await context.setOffline(false);
+	}
+	expect((await deleted).ok()).toBe(true);
+});
+
+test('Closing the editor deletes a listener created afterwards without polling it', async ({ page }) => {
+	await openUserImportPipeline(page);
+	await page.clock.install();
+	const heldCreate = Promise.withResolvers<Route>();
+	await page.route('**/v1/events/listeners', (route) => heldCreate.resolve(route));
+	const methods: string[] = [];
+	await page.route('**/v1/events/listeners/late-listener', (route) => {
+		methods.push(route.request().method());
+		return route.fulfill({ headers: syncTokenHeaders(), json: { events: [], omitted: 0 } });
+	});
+
+	await page.getByRole('button', { name: 'Edit in full mode' }).click();
+	const create = await heldCreate.promise;
+	await page.getByRole('button', { name: 'Exit full mode' }).click();
+	await create.fulfill({ headers: syncTokenHeaders(), json: { id: 'late-listener' } });
+	await expect.poll(() => methods).toContain('DELETE');
+	await page.clock.runFor(5000);
+	expect(methods).toEqual(['DELETE']);
 });
 
 test(`Add "Import users" pipeline on JavaScript`, async ({ page }) => {
