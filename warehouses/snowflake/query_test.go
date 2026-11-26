@@ -58,12 +58,25 @@ func TestQueryArrayScanLimit(t *testing.T) {
 
 	warehouse, db := newTestSnowflakeWarehouse(t)
 	mustExecSQL(t, db, `CREATE TABLE "QUERY_ARRAYS" ("_ANONYMOUS_IDS" ARRAY, "OBJECT_VALUE" VARIANT, `+
-		`"NULL_VALUE" VARIANT)`)
+		`"UTF8_VALUE" ARRAY, "NULL_VALUE" VARIANT)`)
 	// JSON escaping doubles each quotation mark, so the object's JSON exceeds the limit.
+	// The UTF-8 string and its result slot fill the budget before the JSON delimiters.
 	mustExecSQL(t, db, fmt.Sprintf(`INSERT INTO "QUERY_ARRAYS" SELECT TRANSFORM(ARRAY_GENERATE_RANGE(0, 1000000),`+
-		` i -> 'a'), OBJECT_CONSTRUCT('s', REPEAT('"', %d)), NULL`, maxArrayScanBytes/2))
+		` i -> 'a'), OBJECT_CONSTRUCT('s', REPEAT('"', %d)), ARRAY_CONSTRUCT(REPEAT('é', %d)), NULL`,
+		maxArrayScanBytes/2, (maxArrayScanBytes-16)/len("é")))
 
-	for _, name := range []string{"_anonymous_ids", "object_value"} {
+	var chars, bytes int
+	err := db.QueryRowContext(t.Context(), `SELECT LENGTH(TO_JSON("UTF8_VALUE")), OCTET_LENGTH(TO_JSON("UTF8_VALUE"))
+		FROM "QUERY_ARRAYS"`).Scan(&chars, &bytes)
+	if err != nil {
+		t.Fatalf("expected UTF-8 payload sizes, got %v", err)
+	}
+	if chars+16 > maxArrayScanBytes || bytes+16 <= maxArrayScanBytes {
+		t.Fatalf("expected only the byte count plus one slot to exceed %d, got %d characters and %d bytes",
+			maxArrayScanBytes, chars, bytes)
+	}
+
+	for _, name := range []string{"_anonymous_ids", "object_value", "utf8_value"} {
 		t.Run(name, func(t *testing.T) {
 
 			typ := types.Array(types.String())

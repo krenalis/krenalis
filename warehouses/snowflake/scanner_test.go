@@ -20,6 +20,37 @@ func TestScannerArrayBounds(t *testing.T) {
 
 	s := &scanner{}
 	typ := types.Array(types.Boolean())
+	t.Run("at both bounds", func(t *testing.T) {
+		values, err := s.scanArray("value", typ.WithMaxElements(1).WithMinElements(1), `[true]`)
+		if err != nil {
+			t.Fatalf("expected array at both bounds, got %v", err)
+		}
+		if !reflect.DeepEqual(values, []any{true}) {
+			t.Fatalf("expected [true], got %#v", values)
+		}
+	})
+	for _, test := range []struct {
+		name, data      string
+		count, min, max int
+	}{
+		{"above maximum", `[true]`, 1, 0, 0},
+		{"empty below minimum", `[]`, 0, 2, 2},
+		{"one element below minimum", `[true]`, 1, 2, 2},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			_, err := s.scanArray("value", typ.WithMaxElements(test.max).WithMinElements(test.min), test.data)
+			if err != nil {
+				want := fmt.Sprintf("data warehouse returned an array with %d elements for column value, "+
+					"which is not within the expected range of [%d, %d]", test.count, test.min, test.max)
+				if err.Error() != want {
+					t.Fatalf("expected %q, got %v", want, err)
+				}
+				return
+			}
+			t.Fatal("expected array cardinality error, got nil")
+		})
+	}
+
 	// An array of n true values takes 5*n+1 JSON bytes and 16*n result bytes.
 	const maxCount = (maxArrayScanBytes - 1) / (5 + 16)
 	payload := "[" + strings.Repeat("true,", maxCount-1) + "true]"
