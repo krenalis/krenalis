@@ -20,6 +20,9 @@ import (
 func Test_renderExpr(t *testing.T) {
 	decimalColumn := warehouses.Column{Name: "value", Type: types.Decimal(3, 2)}
 	decimalArrayColumn := warehouses.Column{Name: "value", Type: types.Array(types.Decimal(3, 2))}
+	intColumn := warehouses.Column{Name: "number", Type: types.Int(32)}
+	stringColumn := warehouses.Column{Name: "label", Type: types.String()}
+	uuidColumn := warehouses.Column{Name: "uid", Type: types.UUID()}
 	tests := []struct {
 		name    string
 		expr    warehouses.Expr
@@ -41,6 +44,22 @@ func Test_renderExpr(t *testing.T) {
 		{
 			expr:  warehouses.NewBaseExpr(warehouses.Column{Name: "a", Type: types.String()}, warehouses.OpIs, warehouses.Column{Name: "b", Type: types.String()}),
 			query: `"a" = "b"`,
+		},
+		{
+			expr:  warehouses.NewBaseExpr(intColumn, warehouses.OpIs, stringColumn),
+			query: `"number"::text = "label"`,
+		},
+		{
+			expr:  warehouses.NewBaseExpr(stringColumn, warehouses.OpIsNot, intColumn),
+			query: `"label" <> "number"::text`,
+		},
+		{
+			expr:  warehouses.NewBaseExpr(uuidColumn, warehouses.OpIsNot, stringColumn),
+			query: `"uid"::text <> "label"`,
+		},
+		{
+			expr:  warehouses.NewBaseExpr(stringColumn, warehouses.OpIs, uuidColumn),
+			query: `"label" = "uid"::text`,
 		},
 		{
 			name: "JSON column equality",
