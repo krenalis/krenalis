@@ -52,18 +52,19 @@ func TestQueryArrayScanErrorNamesColumn(t *testing.T) {
 
 }
 
-// TestQueryArrayScanLimit checks that an oversized array is rejected at the
-// source and produces a scan error.
+// TestQueryArrayScanLimit checks that an array at the limit is returned intact
+// and oversized arrays are rejected at the source.
 func TestQueryArrayScanLimit(t *testing.T) {
 
 	warehouse, db := newTestSnowflakeWarehouse(t)
 	mustExecSQL(t, db, `CREATE TABLE "QUERY_ARRAYS" ("_ANONYMOUS_IDS" ARRAY, "OBJECT_VALUE" VARIANT, `+
-		`"UTF8_VALUE" ARRAY, "NULL_VALUE" VARIANT)`)
+		`"UTF8_VALUE" ARRAY, "NULL_VALUE" VARIANT, "AT_LIMIT" ARRAY)`)
+	const stringBytes = maxArrayScanBytes - 4 - 16 // JSON delimiters and one result slot
 	// JSON escaping doubles each quotation mark, so the object's JSON exceeds the limit.
 	// The UTF-8 string and its result slot fill the budget before the JSON delimiters.
 	mustExecSQL(t, db, fmt.Sprintf(`INSERT INTO "QUERY_ARRAYS" SELECT TRANSFORM(ARRAY_GENERATE_RANGE(0, 1000000),`+
-		` i -> 'a'), OBJECT_CONSTRUCT('s', REPEAT('"', %d)), ARRAY_CONSTRUCT(REPEAT('é', %d)), NULL`,
-		maxArrayScanBytes/2, (maxArrayScanBytes-16)/len("é")))
+		` i -> 'a'), OBJECT_CONSTRUCT('s', REPEAT('"', %d)), ARRAY_CONSTRUCT(REPEAT('é', %d)), NULL, `+
+		`ARRAY_CONSTRUCT(REPEAT('a', %d))`, maxArrayScanBytes/2, (maxArrayScanBytes-16)/len("é"), stringBytes))
 
 	var chars, bytes int
 	err := db.QueryRowContext(t.Context(), `SELECT LENGTH(TO_JSON("UTF8_VALUE")), OCTET_LENGTH(TO_JSON("UTF8_VALUE"))
@@ -75,6 +76,34 @@ func TestQueryArrayScanLimit(t *testing.T) {
 		t.Fatalf("expected only the byte count plus one slot to exceed %d, got %d characters and %d bytes",
 			maxArrayScanBytes, chars, bytes)
 	}
+
+	t.Run("at limit", func(t *testing.T) {
+		query := warehouses.RowQuery{
+			Table:   "query_arrays",
+			Columns: []warehouses.Column{{Name: "at_limit", Type: types.Array(types.String())}},
+			Limit:   1,
+		}
+		rows, _, err := warehouse.Query(t.Context(), query, false)
+		if err != nil {
+			t.Fatalf("expected query to succeed, got %v", err)
+		}
+		defer rows.Close()
+		if !rows.Next() {
+			t.Fatalf("expected one row, got none (err %v)", rows.Err())
+		}
+		values := make([]any, 1)
+		err = rows.Scan(values...)
+		if err != nil {
+			t.Fatalf("expected array at scan limit, got %v", err)
+		}
+		array, ok := values[0].([]any)
+		if !ok || len(array) != 1 {
+			t.Fatalf("expected one-element array, got %T with %d elements", values[0], len(array))
+		}
+		if array[0] != strings.Repeat("a", stringBytes) {
+			t.Fatalf("expected %d ASCII 'a' bytes, got a different value", stringBytes)
+		}
+	})
 
 	for _, name := range []string{"_anonymous_ids", "object_value", "utf8_value"} {
 		t.Run(name, func(t *testing.T) {

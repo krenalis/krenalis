@@ -60,7 +60,7 @@ func TestScannerArrayBounds(t *testing.T) {
 	})
 
 	rangeError := func(count, min, max int) error {
-		return fmt.Errorf("data warehouse returned an array with %d elements for column value, "+
+		return fmt.Errorf("data warehouse returned an array with %d elements, "+
 			"which is not within the expected range of [%d, %d]", count, min, max)
 	}
 
@@ -112,7 +112,7 @@ func TestScannerArrayBounds(t *testing.T) {
 		var src any = excessCount
 		var err error
 		allocs := testing.AllocsPerRun(100, func() {
-			_, err = s.scanArray("value", typ, src)
+			_, err = s.scanArray(typ, src)
 		})
 		checkArrayScanError(t, err, errInvalidData)
 		if allocs != 0 {
@@ -127,7 +127,7 @@ func TestScannerArrayBounds(t *testing.T) {
 		var before, after runtime.MemStats
 		runtime.ReadMemStats(&before)
 		for range runs {
-			_, err = s.scanArray("value", typ, src)
+			_, err = s.scanArray(typ, src)
 		}
 		runtime.ReadMemStats(&after)
 		checkArrayScanError(t, err, want)
@@ -167,7 +167,7 @@ func TestScannerArrayBounds(t *testing.T) {
 			elements := make([]bool, maxCount)
 			elements[maxCount-1] = true
 			data := encodeBools(t, elements)
-			values, err := s.scanArray("value", typ, data)
+			values, err := s.scanArray(typ, data)
 			if err != nil {
 				t.Fatalf("expected array within scan limit, got %v", err)
 			}
@@ -181,7 +181,7 @@ func TestScannerArrayBounds(t *testing.T) {
 
 		t.Run("smallest bool array above scan limit", func(t *testing.T) {
 			data := encodeBools(t, make([]bool, maxCount+1))
-			want := fmt.Errorf("array for column value exceeds the %d-byte scan limit", maxArrayScanBytes)
+			want := fmt.Errorf("array exceeds the %d-byte scan limit", maxArrayScanBytes)
 			checkRejectedScan(t, typ, data, want)
 		})
 
@@ -207,7 +207,7 @@ func TestScannerNumericArrayBounds(t *testing.T) {
 				t.Fatalf("expected binary array, got %v", err)
 			}
 			s := &scanner{}
-			_, err = s.scanArray("value", typ, data)
+			_, err = s.scanArray(typ, data)
 			checkArrayScanError(t, err, errInvalidData)
 		})
 	}
@@ -224,7 +224,7 @@ func TestScannerNumericArrayBounds(t *testing.T) {
 			t.Fatalf("expected one row, got none (err %v)", rows.Err())
 		}
 		s := &scanner{rows: rows}
-		values, err := s.scanArray("value", typ, rows.RawValues()[0])
+		values, err := s.scanArray(typ, rows.RawValues()[0])
 		if err != nil {
 			t.Fatalf("expected representable numeric values, got %v", err)
 		}

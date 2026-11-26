@@ -136,9 +136,9 @@ func (s *scanner) normalize(name string, typ types.Type, v any) (any, error) {
 			return warehouses.ValidateIP(name, v)
 		}
 	case types.ArrayKind:
-		values, err := s.scanArray(name, typ, v)
+		values, err := s.scanArray(typ, v)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("column %s: %w", name, err)
 		}
 		return values, nil
 	case types.MapKind:
@@ -155,7 +155,7 @@ func (s *scanner) normalize(name string, typ types.Type, v any) (any, error) {
 var errInvalidArray = errors.New("Snowflake has returned invalid array data")
 
 // scanArray checks the JSON size and element count before decoding the array.
-func (s *scanner) scanArray(name string, typ types.Type, src any) ([]any, error) {
+func (s *scanner) scanArray(typ types.Type, src any) ([]any, error) {
 
 	data, ok := src.(string)
 	if !ok {
@@ -165,7 +165,7 @@ func (s *scanner) scanArray(name string, typ types.Type, src any) ([]any, error)
 		return nil, fmt.Errorf("expected an array within the %d-byte scan limit", maxArrayScanBytes)
 	}
 	if len(data) > maxArrayScanBytes {
-		return nil, fmt.Errorf("array for column %s exceeds the %d-byte scan limit", name, maxArrayScanBytes)
+		return nil, fmt.Errorf("array exceeds the %d-byte scan limit", maxArrayScanBytes)
 	}
 
 	r := strings.NewReader(data)
@@ -181,7 +181,7 @@ func (s *scanner) scanArray(name string, typ types.Type, src any) ([]any, error)
 	count := 0
 	for dec.PeekKind() != ']' {
 		if count == maxCount {
-			return nil, fmt.Errorf("array for column %s exceeds the %d-byte scan limit", name, maxArrayScanBytes)
+			return nil, fmt.Errorf("array exceeds the %d-byte scan limit", maxArrayScanBytes)
 		}
 		err = dec.SkipValue()
 		if err != nil {
@@ -190,8 +190,8 @@ func (s *scanner) scanArray(name string, typ types.Type, src any) ([]any, error)
 		count++
 	}
 	if count < typ.MinElements() || count > typ.MaxElements() {
-		return nil, fmt.Errorf("data warehouse returned an array with %d elements for column %s, "+
-			"which is not within the expected range of [%d, %d]", count, name, typ.MinElements(), typ.MaxElements())
+		return nil, fmt.Errorf("data warehouse returned an array with %d elements, "+
+			"which is not within the expected range of [%d, %d]", count, typ.MinElements(), typ.MaxElements())
 	}
 
 	// Decode with the exact initial capacity so the result slice cannot grow
@@ -220,9 +220,6 @@ func (sv scanValue) Scan(v any) error {
 	}
 	if err != nil {
 		sv.s.index = 0
-		if c.Type.IsArray() {
-			return fmt.Errorf("column %s: %w", c.Name, err)
-		}
 		return err
 	}
 	sv.s.dest[sv.s.index] = v

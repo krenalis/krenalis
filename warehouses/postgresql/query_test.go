@@ -117,7 +117,7 @@ func TestQueryArrayScanLimit(t *testing.T) {
 	values := make([]any, len(query.Columns))
 	err = rows.Scan(values...)
 	if err != nil {
-		want := fmt.Sprintf("binary array for column _anonymous_ids exceeds the %d-byte scan limit", maxArrayScanBytes)
+		want := fmt.Sprintf("column _anonymous_ids: binary array exceeds the %d-byte scan limit", maxArrayScanBytes)
 		if !strings.Contains(err.Error(), want) {
 			t.Fatalf("expected error containing %q, got %v", want, err)
 		}

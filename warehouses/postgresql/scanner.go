@@ -166,9 +166,9 @@ func (s *scanner) normalize(name string, typ types.Type, v any) (any, error) {
 			return ip, nil
 		}
 	case types.ArrayKind:
-		v, err := s.scanArray(name, typ, v)
+		v, err := s.scanArray(typ, v)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("column %s: %w", name, err)
 		}
 		t := typ.Elem()
 		for i := range v {
@@ -189,13 +189,13 @@ func (s *scanner) normalize(name string, typ types.Type, v any) (any, error) {
 }
 
 // scanArray scans an array and returns the values.
-func (s *scanner) scanArray(name string, typ types.Type, src any) ([]any, error) {
+func (s *scanner) scanArray(typ types.Type, src any) ([]any, error) {
 	data, ok := src.([]byte)
 	if !ok {
 		return nil, errors.New("PostgreSQL has returned an unexpected value type for an array")
 	}
 	if len(data) > maxArrayScanBytes {
-		return nil, fmt.Errorf("binary array for column %s exceeds the %d-byte scan limit", name, maxArrayScanBytes)
+		return nil, fmt.Errorf("binary array exceeds the %d-byte scan limit", maxArrayScanBytes)
 	}
 	p := 12
 	if len(data) < p {
@@ -222,12 +222,12 @@ func (s *scanner) scanArray(name string, typ types.Type, src any) ([]any, error)
 		return nil, errInvalidData
 	}
 	if size < typ.MinElements() || size > typ.MaxElements() {
-		return nil, fmt.Errorf("data warehouse returned an array with %d elements for column %s, "+
-			"which is not within the expected range of [%d, %d]", size, name, typ.MinElements(), typ.MaxElements())
+		return nil, fmt.Errorf("data warehouse returned an array with %d elements, "+
+			"which is not within the expected range of [%d, %d]", size, typ.MinElements(), typ.MaxElements())
 	}
 	// Use the 64-bit interface size (16 bytes) on every architecture.
 	if size > (maxArrayScanBytes-len(data))/16 {
-		return nil, fmt.Errorf("array for column %s exceeds the %d-byte scan limit", name, maxArrayScanBytes)
+		return nil, fmt.Errorf("array exceeds the %d-byte scan limit", maxArrayScanBytes)
 	}
 	values := make([]any, size)
 	switch oid {
@@ -481,9 +481,6 @@ func (sv scanValue) Scan(v any) error {
 	}
 	if err != nil {
 		sv.s.index = 0
-		if c.Type.IsArray() {
-			return fmt.Errorf("column %s: %w", c.Name, err)
-		}
 		return err
 	}
 	sv.s.dest[sv.s.index] = v

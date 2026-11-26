@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/krenalis/krenalis/tools/types"
+	"github.com/krenalis/krenalis/warehouses"
 )
 
 // TestScannerArrayBounds checks that array sizes and scan limits are validated
@@ -21,7 +22,7 @@ func TestScannerArrayBounds(t *testing.T) {
 	s := &scanner{}
 	typ := types.Array(types.Boolean())
 	t.Run("at both bounds", func(t *testing.T) {
-		values, err := s.scanArray("value", typ.WithMaxElements(1).WithMinElements(1), `[true]`)
+		values, err := s.scanArray(typ.WithMaxElements(1).WithMinElements(1), `[true]`)
 		if err != nil {
 			t.Fatalf("expected array at both bounds, got %v", err)
 		}
@@ -39,9 +40,12 @@ func TestScannerArrayBounds(t *testing.T) {
 		{"one element below minimum", `[true]`, 1, 2, 2},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			_, err := s.scanArray("value", typ.WithMaxElements(test.max).WithMinElements(test.min), test.data)
+			column := warehouses.Column{Name: "value", Type: typ.WithMaxElements(test.max).WithMinElements(test.min)}
+			s := newScanner([]warehouses.Column{column}, nil)
+			s.dest = make([]any, 1)
+			err := (scanValue{s}).Scan(test.data)
 			if err != nil {
-				want := fmt.Sprintf("data warehouse returned an array with %d elements for column value, "+
+				want := fmt.Sprintf("column value: data warehouse returned an array with %d elements, "+
 					"which is not within the expected range of [%d, %d]", test.count, test.min, test.max)
 				if err.Error() != want {
 					t.Fatalf("expected %q, got %v", want, err)
@@ -56,7 +60,7 @@ func TestScannerArrayBounds(t *testing.T) {
 	const maxCount = (maxArrayScanBytes - 1) / (5 + 16)
 	payload := "[" + strings.Repeat("true,", maxCount-1) + "true]"
 	t.Run("largest bool array within scan limit", func(t *testing.T) {
-		values, err := s.scanArray("value", typ, payload)
+		values, err := s.scanArray(typ, payload)
 		if err != nil {
 			t.Fatalf("expected array within scan limit, got %v", err)
 		}
@@ -81,7 +85,7 @@ func TestScannerArrayBounds(t *testing.T) {
 			var before, after runtime.MemStats
 			runtime.ReadMemStats(&before)
 			for range runs {
-				_, err = s.scanArray("value", typ, test.data)
+				_, err = s.scanArray(typ, test.data)
 			}
 			runtime.ReadMemStats(&after)
 			bytesPerScan := (after.TotalAlloc - before.TotalAlloc) / runs
@@ -90,7 +94,7 @@ func TestScannerArrayBounds(t *testing.T) {
 				t.Fatalf("expected less than %d bytes per scan, got %d", sliceBytes, bytesPerScan)
 			}
 			if err != nil {
-				want := fmt.Sprintf("array for column value exceeds the %d-byte scan limit", maxArrayScanBytes)
+				want := fmt.Sprintf("array exceeds the %d-byte scan limit", maxArrayScanBytes)
 				if err.Error() != want {
 					t.Fatalf("expected %q, got %v", want, err)
 				}
