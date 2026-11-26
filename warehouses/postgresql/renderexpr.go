@@ -118,9 +118,23 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 
 	// Render the column identifier, the operator, and, if necessary, the values.
 	switch op := baseExpr.Operator; op {
+	case warehouses.OpIs, warehouses.OpIsNot:
+		right, isColumn := baseExpr.Values[0].(warehouses.Column)
+		b.WriteString(qname)
+		if isColumn && right.Type.IsString() && (c.Type.IsInt() || c.Type.IsUUID()) {
+			b.WriteString("::text")
+		}
+		if op == warehouses.OpIs {
+			b.WriteString(" = ")
+		} else {
+			b.WriteString(" <> ")
+		}
+		serializeValue(b, baseExpr.Values[0], c.Type)
+		if isColumn && c.Type.IsString() && (right.Type.IsInt() || right.Type.IsUUID()) {
+			b.WriteString("::text")
+		}
+
 	case
-		warehouses.OpIs,
-		warehouses.OpIsNot,
 		warehouses.OpIsLessThan,
 		warehouses.OpIsLessThanOrEqualTo,
 		warehouses.OpIsGreaterThan,
@@ -133,10 +147,6 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 		b.WriteString(qname)
 
 		switch op {
-		case warehouses.OpIs:
-			b.WriteString(" = ")
-		case warehouses.OpIsNot:
-			b.WriteString(" <> ")
 		case warehouses.OpIsLessThan, warehouses.OpIsBefore:
 			b.WriteString(" < ")
 		case warehouses.OpIsLessThanOrEqualTo, warehouses.OpIsOnOrBefore:
@@ -165,6 +175,9 @@ func renderExpr(b *strings.Builder, exp warehouses.Expr) error {
 			serializeValue(b, baseExpr.Values[0], c.Type)
 			b.WriteString(" IN ")
 			b.WriteString(qname)
+			if c.Type.Values() != nil {
+				b.WriteString("::text")
+			}
 			if op == warehouses.OpContains {
 				b.WriteString(") > 0")
 			} else {

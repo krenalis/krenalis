@@ -168,6 +168,9 @@ func Test_Merge_Query(t *testing.T) {
 		{"DATE", time.Date(2024, 11, 7, 0, 0, 0, 0, time.UTC), types.Date(), time.Date(2024, 11, 7, 0, 0, 0, 0, time.UTC)},
 		{"TIME", time.Date(1, 1, 1, 17, 29, 46, 320176551, time.UTC), types.Time(), time.Date(1970, 1, 1, 17, 29, 46, 320176551, time.UTC)},
 		{"VARIANT", "{\n  \"foo\": \"boo\"\n}", types.JSON(), json.Value(`{"foo":"boo"}`)},
+		{"VARIANT", "12345678901234567890", types.JSON(), json.Value(`1.234567890123456789E19`)},
+		{"VARIANT", "100.000000000000001", types.JSON(), json.Value(`1.00000000000000001E2`)},
+		{"VARIANT", "1.1", types.JSON(), json.Value(`1.1E0`)},
 		{"VARCHAR", "foo", types.String().WithMaxBytes(16_777_216).WithMaxLength(16_777_216), "foo"},
 		{"VARCHAR", "O'Brien", types.String().WithMaxBytes(16_777_216).WithMaxLength(16_777_216), "O'Brien"},
 		{"VARCHAR", "a'", types.String().WithMaxBytes(16_777_216).WithMaxLength(16_777_216), "a'"},
@@ -266,6 +269,7 @@ func Test_Merge_Query(t *testing.T) {
 	if err != nil {
 		t.Fatalf("query execution is failed: %s", err)
 	}
+	defer rows.Close()
 	if len(table.Columns) != len(columns) {
 		t.Fatalf("expected %d columns, got %d", len(table.Columns), len(columns))
 	}
@@ -281,9 +285,13 @@ func Test_Merge_Query(t *testing.T) {
 	for i := range columns {
 		dest[i] = &scanner
 	}
+	seen := false
 	for rows.Next() {
+		if seen {
+			t.Fatal("expected one row, got at least two")
+		}
+		seen = true
 		if err := rows.Scan(dest...); err != nil {
-			_ = rows.Close()
 			t.Fatalf("cannot scan row: %s", err)
 		}
 		for i, v := range scanner.values {
@@ -294,6 +302,9 @@ func Test_Merge_Query(t *testing.T) {
 	}
 	if err := rows.Err(); err != nil {
 		t.Fatalf("cannot scan row: %s", err)
+	}
+	if !seen {
+		t.Fatal("expected one row, got none")
 	}
 
 }

@@ -99,7 +99,6 @@ type RecordWriter interface {
 	Issue(format string, a ...any)
 
 	// Record writes a record represented as a string to any map.
-	// The record's length must equal to the number of columns.
 	Record(record map[string]any) error
 
 	// RecordSlice writes a record represented as a slice of any.

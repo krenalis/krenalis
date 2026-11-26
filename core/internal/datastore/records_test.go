@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -109,8 +110,9 @@ func Test_Records(t *testing.T) {
 
 	now := time.Now().UTC()
 
+	const jakeID = "e5a5c059-bc78-4c9c-b4d1-e9fb187562b1"
 	initUsers := [][]any{
-		{"e5a5c059-bc78-4c9c-b4d1-e9fb187562b1", 0, 1, now, "1", "1", "Jake Thompson", 43, true, json.Value(`{"ads":true}`)},
+		{jakeID, 0, 1, now, "1", "1", "Jake Thompson", 43, true, json.Value(`{"ads":true}`)},
 		{"943a0a39-fd0b-4f7b-a113-59046fb8a511", 0, 1, now, "2", "2", "Emily Davis", 58, nil, json.Value(`{"ads":true}`)},
 		{"2a3654ca-a387-49c3-8eb8-8420ab8a7532", 0, 1, now, "3", "3", "Michael Carter", 31, true, json.Value(`{"ads":false}`)},
 		{"243abf79-cbc3-4c6e-8739-e1406f2f6b51", 0, 1, now, "2", "2", "Sophia Harris", 19, false, json.Value(`{"ads":"true"}`)},
@@ -140,6 +142,9 @@ func Test_Records(t *testing.T) {
 		{pipelineID, "Ex6", "5"},
 		{otherPipeline2, "034", "a"},
 		{otherPipeline2, "089", "b"},
+		{otherPipeline2, "age", "43"},
+		{otherPipeline2, "padded-age", "043"},
+		{otherPipeline2, "uuid", jakeID},
 	}
 	err = dw.Merge(ctx, destinationsUsersTable, initDestinations, nil)
 	if err != nil {
@@ -293,6 +298,36 @@ func Test_Records(t *testing.T) {
 			}
 		})
 
+	}
+
+	for _, test := range []struct {
+		property   string
+		value      any
+		externalID string
+	}{
+		{"age", 43, "age"},
+		{"_kpid", jakeID, "uuid"},
+	} {
+		t.Run("match on "+test.property, func(t *testing.T) {
+			query := Query{table: "profiles", Properties: []string{test.property}}
+			match := &Matching{Pipeline: otherPipeline2, InProperty: test.property, ExportMode: state.UpdateOnly}
+			r, err := records(t.Context(), dw, query, ConsentCondition{}, "_kpid", profileColumnByProperty, true, match)
+			if err != nil {
+				t.Fatalf("expected records, got %v", err)
+			}
+			got := slices.Collect(r.All(t.Context()))
+			if err := r.Err(); err != nil {
+				t.Fatalf("expected complete iteration, got %v", err)
+			}
+			want := []Record{{
+				ID:         jakeID,
+				ExternalID: test.externalID,
+				Attributes: map[string]any{test.property: test.value},
+			}}
+			if !reflect.DeepEqual(got, want) {
+				t.Errorf("expected %#v, got %#v", want, got)
+			}
+		})
 	}
 
 	t.Run("filters and consents", func(t *testing.T) {

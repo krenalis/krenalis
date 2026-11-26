@@ -19,6 +19,7 @@ import (
 
 	"github.com/krenalis/krenalis/connectors"
 	"github.com/krenalis/krenalis/tools/json"
+	"github.com/krenalis/krenalis/tools/pgxutil"
 	"github.com/krenalis/krenalis/tools/types"
 
 	"github.com/jackc/pgx/v5"
@@ -236,6 +237,7 @@ func (pg *PostgreSQL) openDB(ctx context.Context) error {
 	// since only single quotes are doubled for escaping.
 	config.ConnConfig.RuntimeParams["standard_conforming_strings"] = "on"
 	config.ConnConfig.DialFunc = pg.env.DialWith(config.ConnConfig.DialFunc)
+	pgxutil.ConfigureMessageReader(&config.ConnConfig.Config)
 	pool, err := pgxpool.NewWithConfig(ctx, config)
 	if err != nil {
 		return err
@@ -292,6 +294,7 @@ func testConnection(ctx context.Context, settings *innerSettings, dialWith conne
 		return err
 	}
 	connConfig.DialFunc = dialWith(connConfig.DialFunc)
+	pgxutil.ConfigureMessageReader(&connConfig.Config)
 	driverName := stdlib.RegisterConnConfig(connConfig)
 	defer stdlib.UnregisterConnConfig(driverName)
 	db, err := sql.Open("pgx", driverName)
