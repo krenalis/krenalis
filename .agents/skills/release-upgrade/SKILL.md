@@ -9,10 +9,10 @@ Krenalis's PostgreSQL database has a schema version: an integer, unrelated to th
 
 | State             | Meaning                                                    | Schema versions that can run |
 |-------------------|------------------------------------------------------------|------------------------------|
-| `MigratingToNext` | being migrated to the next schema version                  | V                            |
-| `Migrated`        | migrated from the previous schema version, not finalized   | V-1 and V                    |
-| `Finalizing`      | being finalized                                            | V                            |
-| `Finalized`       | finalized                                                  | V                            |
+| `MigratingToNext` | Being migrated to the next schema version                  | V                            |
+| `Migrated`        | Migrated from the previous schema version, not finalized   | V-1 and V                    |
+| `Finalizing`      | Being finalized                                            | V                            |
+| `Finalized`       | Finalized                                                  | V                            |
 
 So `MigratingToNext` is the only state about the upgrade to the next schema version; the others are about the upgrade to the recorded one. For example, an upgrade from 10 to 11 goes through `(10, Finalized)`, `(10, MigratingToNext)`, `(11, Migrated)`, `(11, Finalizing)`, and `(11, Finalized)`. The name says `ToNext` because `Migrating` alone could also be read as being migrated to the recorded schema version, which means something entirely different and would be misleading.
 
