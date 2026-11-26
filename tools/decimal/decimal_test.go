@@ -139,6 +139,7 @@ func Test_Decimal_Float64(t *testing.T) {
 		{"zero at maximum scale", New(0, MaxScale), 0, true},
 		{"inexact fraction", MustParse("0.1"), 0.1, false},
 		{"exact fraction", MustParse("-1.5"), -1.5, true},
+		{"no double rounding", MustParse("1.0000000000000003"), 1.0000000000000002, false},
 		{"exact large integer", MustParse("9007199254740994"), 9007199254740994, true},
 		{"tie to even down", MustParse("9007199254740993"), 9007199254740992, false},
 		{"tie to even up", MustParse("9007199254740995"), 9007199254740996, false},
