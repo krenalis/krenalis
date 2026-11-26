@@ -99,9 +99,10 @@ func TestCheckSchemaVersion(t *testing.T) {
 }
 
 // TestFinalizeResume verifies that Finalize records the database as being
-// finalized before running finalize, resumes an interrupted finalization, and
-// records the database as finalized only once finalize succeeds. It replaces
-// finalize, so it must not run in parallel with other tests.
+// finalized before running finalize, resumes an interrupted finalization, runs
+// finalize on a connection with the lock timeout, and records the database as
+// finalized only once finalize succeeds. It replaces finalize, so it must not
+// run in parallel with other tests.
 func TestFinalizeResume(t *testing.T) {
 
 	ctx := t.Context()
@@ -118,6 +119,7 @@ func TestFinalizeResume(t *testing.T) {
 	finalize = func(ctx context.Context, conn *db.Conn) error {
 		calls++
 		assertSchemaState(t, conn, schemaVersion, stateFinalizing)
+		assertLockTimeout(t, conn)
 		return finalizeErr
 	}
 
@@ -288,14 +290,7 @@ func TestMigrateResume(t *testing.T) {
 	migrate = func(ctx context.Context, conn *db.Conn) error {
 		calls++
 		assertSchemaState(t, conn, schemaVersion-1, stateMigratingToNext)
-		var timeout string
-		err := conn.QueryRow(ctx, "SHOW lock_timeout").Scan(&timeout)
-		if err != nil {
-			return err
-		}
-		if timeout != "5s" {
-			t.Errorf("expected lock timeout 5s, got %s", timeout)
-		}
+		assertLockTimeout(t, conn)
 		return migrateErr
 	}
 
@@ -534,6 +529,20 @@ func TestWriteSchemaVersion(t *testing.T) {
 		})
 	}
 
+}
+
+// assertLockTimeout verifies that conn has the lock timeout set by
+// lockForUpgrade.
+func assertLockTimeout(t *testing.T, conn *db.Conn) {
+	t.Helper()
+	var timeout string
+	err := conn.QueryRow(t.Context(), "SHOW lock_timeout").Scan(&timeout)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if timeout != "5s" {
+		t.Fatalf("expected lock timeout 5s, got %s", timeout)
+	}
 }
 
 // assertSchemaState verifies that the database is at the given schema version
