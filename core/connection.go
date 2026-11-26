@@ -859,17 +859,23 @@ func (this *Connection) ExecQuery(ctx context.Context, query string, limit int) 
 
 	// Execute the query.
 	database := this.database()
+	defer database.Close()
+	updatedAt, err := database.UpdatedAtPlaceholder(nil)
+	if err != nil {
+		if _, ok := errors.AsType[*connections.UnavailableError](err); ok {
+			err = errors.Unavailable("%s", err)
+		}
+		return nil, types.Type{}, nil, err
+	}
 	replacer := func(name string) (string, bool) {
 		switch name {
 		case "updated_at":
-			v, _ := database.UpdatedAtPlaceholder(nil)
-			return v, true
+			return updatedAt, true
 		case "limit":
 			return strconv.Itoa(limit), true
 		}
 		return "", false
 	}
-	defer database.Close()
 	rows, schema, issues, err := database.Query(ctx, query, replacer)
 	if err != nil {
 		switch err.(type) {

@@ -103,8 +103,11 @@ func TestQueryWithNonConformingStrings(t *testing.T) {
 		{"JSON", "document", document, types.JSON()},
 	} {
 		t.Run(test.name, func(t *testing.T) {
-			query := "SELECT id FROM quoted_values WHERE " + quoteIdent(test.column) + " = " +
-				connector.SQLLiteral(test.value, test.typ)
+			literal, err := connector.SQLLiteral(test.value, test.typ)
+			if err != nil {
+				t.Fatalf("expected SQL literal, got %v", err)
+			}
+			query := "SELECT id FROM quoted_values WHERE " + quoteIdent(test.column) + " = " + literal
 			rows, _, err := connector.Query(t.Context(), query)
 			if err != nil {
 				t.Fatalf("expected query execution, got %v", err)

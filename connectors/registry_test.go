@@ -375,8 +375,8 @@ func (testDatabaseConnector) Query(context.Context, string) (Rows, []Column, err
 	return nil, nil, nil
 }
 
-func (testDatabaseConnector) SQLLiteral(any, types.Type) string {
-	return ""
+func (testDatabaseConnector) SQLLiteral(any, types.Type) (string, error) {
+	return "", nil
 }
 
 func (testDatabaseConnector) ServeUI(context.Context, string, json.Value, Role) (*UI, error) {
