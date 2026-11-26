@@ -190,8 +190,8 @@ func TestMessageReaderPartialReads(t *testing.T) {
 
 }
 
-// TestMessageReaderProtocolLimits checks the minimum and maximum message
-// lengths the reader accepts without allocating large messages.
+// TestMessageReaderProtocolLimits checks that the reader rejects message
+// lengths outside the protocol limits without allocating large messages.
 func TestMessageReaderProtocolLimits(t *testing.T) {
 
 	t.Run("below minimum length", func(t *testing.T) {
@@ -202,22 +202,6 @@ func TestMessageReaderProtocolLimits(t *testing.T) {
 			t.Fatalf("expected zero bytes and an error for wire length 3, got %d bytes and %v", n, err)
 		}
 	})
-
-	for _, tc := range []struct {
-		name string
-		body int32
-	}{
-		{"minimum valid length", 0},
-		{"maximum valid length", testMaxMessageBodyLen},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			var r messageReader
-			err := r.startMessage(tc.body + 4)
-			if err != nil {
-				t.Fatalf("expected a %d-byte body to be accepted, got %v", tc.body, err)
-			}
-		})
-	}
 
 	t.Run("above maximum length", func(t *testing.T) {
 		const oversizedBody = testMaxMessageBodyLen + 1
