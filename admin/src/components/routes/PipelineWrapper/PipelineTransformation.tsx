@@ -1444,7 +1444,8 @@ const FullscreenTransformation = ({
 		return consents;
 	}, [isEventBasedUserImport, pipeline.requiredConsents, consentPurposes]);
 
-	const { startListening, stopListening } = useEventListener(
+	useEventListener(
+		isFullscreenTransformationOpen && (isEventBasedUserImport || isAppEventsExport),
 		(newly: EventListenerEvent[]) => {
 			setEvents((prevEvents) => [...prevEvents, ...newly]);
 		},
@@ -1453,17 +1454,6 @@ const FullscreenTransformation = ({
 		normalizedFilter,
 		normalizedConsents,
 	);
-
-	useEffect(() => {
-		if (!isEventBasedUserImport && !isAppEventsExport) {
-			return;
-		}
-		if (isFullscreenTransformationOpen) {
-			startListening();
-		} else {
-			stopListening();
-		}
-	}, [isFullscreenTransformationOpen]);
 
 	useEffect(() => {
 		// Reset the output of the transformation tests when the user

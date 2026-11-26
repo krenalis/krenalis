@@ -28,7 +28,7 @@ const api = new API(location.origin, 'workspace');
 
 const Fixture = () => {
 	const [title, setTitle] = useState<React.ReactNode>('');
-	const [error, setError] = useState('');
+	const [error, setError] = useState<Error | string>('');
 	const navigate = useNavigate();
 	const context = {
 		api,
@@ -38,12 +38,15 @@ const Fixture = () => {
 		hideStatus: () => setError(''),
 		showNotFound: () => navigate(UI_BASE_PATH + 'not-found'),
 		redirect: (path: string) => navigate(UI_BASE_PATH + path),
-		handleError: (error: Error | string) => setError(String(error)),
+		handleError: (error: Error | string) => {
+			setError(error);
+			return () => setError((current) => (current === error ? '' : current));
+		},
 	} as unknown as React.ContextType<typeof AppContext>;
 	return (
 		<AppContext.Provider value={context}>
 			<header>{title}</header>
-			{error !== '' && <div role='alert'>{error}</div>}
+			{error !== '' && <div role='alert'>{String(error)}</div>}
 			<Routes>
 				<Route path='/admin/connections/:id' element={<ConnectionWrapper />}>
 					<Route path='events' element={<ConnectionEvents />} />

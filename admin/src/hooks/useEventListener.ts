@@ -12,19 +12,17 @@ interface EventListenerEvent {
 }
 
 const useEventListener = (
+	isListening: boolean,
 	setEvents: (events: EventListenerEvent[]) => void,
 	setOmitted?: React.Dispatch<React.SetStateAction<number>>,
 	connection?: string | null,
 	filter?: Filter,
 	requiredConsents?: EventListenerConsents | null,
 ) => {
-	const [isStarted, setIsStarted] = useState<boolean>(false);
 	const [isListenerNotFound, setIsListenerNotFound] = useState<boolean>(false);
 
 	const { api, handleError, redirect } = useContext(AppContext);
 
-	const eventListenerID = useRef<string | null>(null);
-	const eventIntervalID = useRef<number | null>(null);
 	const lastEventID = useRef<number | null>(0);
 
 	// requiredConsentsKey changes only when the content of requiredConsents
@@ -32,7 +30,7 @@ const useEventListener = (
 	const requiredConsentsKey = JSON.stringify(requiredConsents ?? null);
 
 	useEffect(() => {
-		if (!isStarted) {
+		if (!isListening) {
 			return;
 		}
 		if (isListenerNotFound) {
@@ -40,6 +38,9 @@ const useEventListener = (
 			return;
 		}
 		let isCancelled = false;
+		let listenerID: string;
+		let interval: number;
+		const removeListener = (id: string) => api.workspaces.eventListeners.delete(id).catch(handleError);
 		const startListener = async () => {
 			let listener: CreateEventListenerResponse;
 			try {
@@ -48,7 +49,6 @@ const useEventListener = (
 				if (isCancelled) {
 					return;
 				}
-				setIsStarted(false);
 				if (err instanceof UnprocessableError) {
 					if (err.code === 'ConnectionNotExist') {
 						redirect('connections');
@@ -66,16 +66,11 @@ const useEventListener = (
 			if (isCancelled) {
 				// The listener has been stopped, or must be created again, while
 				// it was being created.
-				try {
-					await api.workspaces.eventListeners.delete(listener.id);
-				} catch (err) {
-					handleError(err);
-				}
+				removeListener(listener.id);
 				return;
 			}
-			const listenerID = listener.id;
-			eventListenerID.current = listener.id;
-			const interval = window.setInterval(async () => {
+			listenerID = listener.id;
+			interval = window.setInterval(async () => {
 				let res: EventListenerEventsResponse;
 				try {
 					res = await api.workspaces.eventListeners.events(listenerID);
@@ -107,46 +102,16 @@ const useEventListener = (
 				setEvents(newly);
 				setOmitted && setOmitted((prevOmitted) => prevOmitted + res.omitted);
 			}, 2500);
-			eventIntervalID.current = interval;
 		};
 		startListener();
 		return () => {
 			isCancelled = true;
-			const removeListener = async () => {
-				try {
-					await api.workspaces.eventListeners.delete(eventListenerID.current);
-				} catch (err) {
-					handleError(err);
-					return;
-				}
-			};
-			if (eventListenerID.current == null) {
-				return;
+			clearInterval(interval);
+			if (listenerID != null) {
+				removeListener(listenerID);
 			}
-			removeListener();
-			clearInterval(eventIntervalID.current);
 		};
-	}, [isStarted, isListenerNotFound, requiredConsentsKey]);
-
-	const startListening = () => {
-		setIsStarted(true);
-	};
-
-	const stopListening = async () => {
-		if (eventListenerID.current == null) {
-			return;
-		}
-		try {
-			await api.workspaces.eventListeners.delete(eventListenerID.current);
-		} catch (err) {
-			handleError(err);
-			return;
-		}
-		clearInterval(eventIntervalID.current);
-		setIsStarted(false);
-	};
-
-	return { startListening, stopListening };
+	}, [isListening, isListenerNotFound, requiredConsentsKey]);
 };
 
 export default useEventListener;

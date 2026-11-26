@@ -11,7 +11,8 @@ import { PipelineTarget } from '../lib/api/types/pipeline';
 
 interface AppContext {
 	api: API;
-	handleError: (err: Error | string) => void;
+	// For errors local to the page, returns a function that dismisses that notification if it is still current.
+	handleError: (err: Error | string) => (() => void) | undefined;
 	showStatus: (status: Status) => void;
 	hideStatus: () => void;
 	showNotFound: () => void;

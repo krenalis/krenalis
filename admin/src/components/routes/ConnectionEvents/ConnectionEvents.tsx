@@ -1,4 +1,4 @@
-import React, { useState, useEffect, ReactNode } from 'react';
+import React, { useState, ReactNode } from 'react';
 import { useParams } from 'react-router-dom';
 import './ConnectionEvents.css';
 import IconWrapper from '../../base/IconWrapper/IconWrapper';
@@ -31,11 +31,7 @@ const LiveEvents = ({ connectionID }: LiveEventsProps) => {
 		setEvents((prevEvents) => [...prevEvents, ...newly]);
 	};
 
-	const { startListening } = useEventListener(collectEvents, setOmitted, connectionID);
-
-	useEffect(() => {
-		startListening();
-	}, []);
+	useEventListener(true, collectEvents, setOmitted, connectionID);
 
 	const onEventClick = (event: EventListenerEvent) => {
 		if (event.id === selectedEvent?.id) {

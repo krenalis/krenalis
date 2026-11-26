@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page, type Route } from '@playwright/test';
 import Type, { ObjectType, Property } from '../src/lib/api/types/types';
 import {
 	addDummyDestination,
@@ -1704,6 +1704,51 @@ test(`Add "Import events" pipeline on JavaScript`, async ({ page }) => {
 	await page.reload();
 
 	await expect(page.locator('.connection-pipelines__grid')).toBeAttached();
+});
+
+test('The transformation editor ignores a poll that returns while its listener is being deleted', async ({ page }) => {
+	const id = await addJavascriptSource(page);
+	await page.goto(`${adminURL}/connections/${id}/pipelines`);
+	const tile = page.locator('.connection-pipelines__no-pipeline-pipeline-types .list-tile__name', {
+		hasText: 'Import users',
+	});
+	await tile.locator('..').locator('..').locator('wa-button').click();
+
+	const heldPoll = Promise.withResolvers<Route>();
+	const heldDelete = Promise.withResolvers<Route>();
+	const releaseDelete = Promise.withResolvers<void>();
+	let firstListenerURL: string;
+	const event = { type: 'track', event: 'New sample', receivedAt: '2026-01-01T00:00:00Z' };
+	await page.route('**/v1/events/listeners/*', async (route) => {
+		const url = route.request().url();
+		if (route.request().method() === 'DELETE') {
+			if (url === firstListenerURL) {
+				heldDelete.resolve(route);
+				await releaseDelete.promise;
+			}
+			await route.continue();
+		} else if (firstListenerURL == null) {
+			firstListenerURL = url;
+			heldPoll.resolve(route);
+		} else {
+			await route.fulfill({ json: { events: url === firstListenerURL ? [] : [event], omitted: 0 } });
+		}
+	});
+	const edit = page.getByRole('button', { name: 'Edit in full mode' });
+	await edit.click();
+	const poll = await heldPoll.promise;
+	await page.getByRole('button', { name: 'Exit full mode' }).click();
+	const deletion = await heldDelete.promise;
+	await poll.fulfill({ json: { events: [{ ...event, event: 'Late sample' }], omitted: 0 } });
+	await (await poll.request().response()).finished();
+	releaseDelete.resolve();
+	expect((await deletion.request().response()).ok()).toBe(true);
+
+	await edit.click();
+	await page.getByRole('button', { name: 'Samples', exact: true }).click();
+	const samples = page.locator('.fullscreen-transformation__event-name');
+	await expect(samples.filter({ hasText: 'New sample' }).first()).toBeVisible();
+	await expect(samples.filter({ hasText: 'Late sample' })).toHaveCount(0);
 });
 
 test(`Add "Import users" pipeline on JavaScript`, async ({ page }) => {

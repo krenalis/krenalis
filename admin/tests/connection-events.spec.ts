@@ -184,3 +184,17 @@ test('A failed connection load can be retried without showing the previous conne
 	await expect(page.locator('.connection-wrapper__name')).toHaveText('Connections / Sources / A');
 	expect([...listeners.values()]).toEqual(['A']);
 });
+
+test('Going forward after a connection fails to load dismisses its error', async ({ page }) => {
+	await openLiveEvents(page);
+	const eventsFromB = page.getByText('Event from B', { exact: true });
+	await expect(eventsFromB.first()).toBeVisible();
+	await page.route('**/v1/connections/A/pipeline-types', (route) => route.fulfill({ status: 500 }));
+	await page.goBack();
+	await expect(page.getByRole('alert')).toContainText('Internal server error');
+
+	await page.goForward();
+	await expect(page).toHaveURL(/\/B\/events$/);
+	await expect(eventsFromB.first()).toBeVisible();
+	await expect(page.getByRole('alert')).toHaveCount(0);
+});

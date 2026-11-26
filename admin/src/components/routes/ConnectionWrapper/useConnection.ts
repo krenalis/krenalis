@@ -14,12 +14,13 @@ const useConnection = () => {
 
 	const [failedID, setFailedID] = useState<string | null>(null);
 	const [attempt, setAttempt] = useState(0);
-	const { api, handleError, hideStatus, showNotFound, connections } = useContext(AppContext);
+	const { api, handleError, showNotFound, connections } = useContext(AppContext);
 
 	const params = useParams();
 
 	useEffect(() => {
 		let isCancelled = false;
+		let dismissLoadError: (() => void) | undefined;
 		setFailedID(null);
 		const fetchData = async () => {
 			const connectionID = params.id ?? '';
@@ -35,7 +36,7 @@ const useConnection = () => {
 					return;
 				}
 				setFailedID(connectionID);
-				handleError(err);
+				dismissLoadError = handleError(err);
 				return;
 			}
 			if (isCancelled) {
@@ -47,7 +48,7 @@ const useConnection = () => {
 			} catch (err) {
 				if (!isCancelled) {
 					setFailedID(connectionID);
-					handleError(err);
+					dismissLoadError = handleError(err);
 				}
 				return;
 			}
@@ -94,11 +95,11 @@ const useConnection = () => {
 		fetchData();
 		return () => {
 			isCancelled = true;
+			dismissLoadError?.();
 		};
 	}, [connections, params.id, attempt]);
 
 	const retry = () => {
-		hideStatus();
 		setFailedID(null);
 		setIsLoading(true);
 		setAttempt((previous) => previous + 1);
