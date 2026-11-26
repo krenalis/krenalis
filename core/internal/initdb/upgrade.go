@@ -29,8 +29,8 @@ type schemaState string
 
 const (
 	stateMigratingToNext schemaState = "MigratingToNext" // being migrated to the next schema version
-	stateMigrated        schemaState = "Migrated"        // migrated, not finalized; the previous one can run
-	stateFinalizing      schemaState = "Finalizing"      // being finalized; the previous one can no longer run
+	stateMigrated        schemaState = "Migrated"        // migrated, not finalized; the previous release can run
+	stateFinalizing      schemaState = "Finalizing"      // being finalized; the previous release can no longer run
 	stateFinalized       schemaState = "Finalized"       // finalized
 )
 
