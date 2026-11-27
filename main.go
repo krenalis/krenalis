@@ -35,6 +35,7 @@ import (
 	// Import connectors.
 	_ "github.com/krenalis/krenalis/connectors/brevo"
 	_ "github.com/krenalis/krenalis/connectors/clickhouse"
+	_ "github.com/krenalis/krenalis/connectors/commerceready"
 	_ "github.com/krenalis/krenalis/connectors/csv"
 	_ "github.com/krenalis/krenalis/connectors/excel"
 	_ "github.com/krenalis/krenalis/connectors/filesystem"
