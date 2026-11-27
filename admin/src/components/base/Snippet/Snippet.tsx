@@ -17,9 +17,24 @@ type CMP = 'none' | 'ketch';
 // published on the same CDN, and in the same directory, of the JavaScript SDK.
 const KETCH_SCRIPT_NAME = 'krenalis-ketch.min.js';
 
-// storedCMP returns the CMP stored in the localStorage, or 'none'.
-const storedCMP = (): CMP => {
-	return localStorage.getItem(JAVASCRIPT_SNIPPET_CMP_KEY) === 'ketch' ? 'ketch' : 'none';
+// storedCMPs returns the CMP preferences keyed by workspace and connection.
+const storedCMPs = (): Record<string, CMP> => {
+	let cmps: unknown;
+	try {
+		cmps = JSON.parse(localStorage.getItem(JAVASCRIPT_SNIPPET_CMP_KEY) ?? '{}');
+	} catch {
+		return {};
+	}
+	if (cmps == null || typeof cmps !== 'object' || Array.isArray(cmps)) {
+		return {};
+	}
+	const preferences: Record<string, CMP> = {};
+	for (const [key, value] of Object.entries(cmps)) {
+		if (value === 'none' || value === 'ketch') {
+			preferences[key] = value;
+		}
+	}
+	return preferences;
 };
 
 interface SnippetProps {
@@ -38,18 +53,22 @@ const Snippet = ({ connectorCode, connectionID }: SnippetProps) => {
 	const [snippet, setSnippet] = useState<string>();
 	const [installCommand, setInstallCommand] = useState<string>();
 	const [documentationLink, setDocumentationLink] = useState<string>();
-	const [cmp, setCMP] = useState<CMP>(storedCMP);
+	const [cmps, setCMPs] = useState(storedCMPs);
 
-	const { api, handleError, redirect, publicMetadata, connectors } = useContext(AppContext);
+	const { api, handleError, redirect, publicMetadata, connectors, selectedWorkspace } = useContext(AppContext);
+
+	const connectionKey = `${selectedWorkspace}/${connectionID}`;
+	const cmp = cmps[connectionKey] ?? 'none';
 
 	const onChangeCMP = (e: any) => {
-		const value: CMP = e.target.value === 'ketch' ? 'ketch' : 'none';
-		setCMP(value);
-		if (value === 'none') {
-			localStorage.removeItem(JAVASCRIPT_SNIPPET_CMP_KEY);
+		const updatedCMPs = storedCMPs();
+		if (e.target.value === 'ketch') {
+			updatedCMPs[connectionKey] = 'ketch';
 		} else {
-			localStorage.setItem(JAVASCRIPT_SNIPPET_CMP_KEY, value);
+			delete updatedCMPs[connectionKey];
 		}
+		localStorage.setItem(JAVASCRIPT_SNIPPET_CMP_KEY, JSON.stringify(updatedCMPs));
+		setCMPs(updatedCMPs);
 	};
 
 	useEffect(() => {
