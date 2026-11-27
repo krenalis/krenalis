@@ -274,6 +274,10 @@ Mirror file names per responsibility, declaration order, type, function, and var
 
 Similarity is a means, not an end. Express genuine differences in SQL dialect, type system, quoting, driver behavior, and features naturally where they occur, without pointless abstraction, dead code kept for symmetry, tests that assert nothing on a platform, or renaming of concepts a platform names differently for good reason. Keep necessary divergences local, leaving the surrounding code identical.
 
+# Outbound network traffic
+
+Every connection established on behalf of an organization, including those a third-party library opens on its own, is dialed through `core/internal/dialer`, so that its bytes sent are attributed to that organization; connectors and warehouse drivers use the dial functions or HTTP client of their environment, wrapping a library's dialer rather than replacing it. Platform traffic, such as Krenalis's own database, NATS, and Sentry, is not counted.
+
 # `core` and `cmd` conventions
 
 ## API errors and validation
