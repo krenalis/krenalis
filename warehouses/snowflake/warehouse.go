@@ -500,7 +500,13 @@ func (warehouse *Snowflake) MergeIdentities(ctx context.Context, columns []wareh
 	// Copy the rows into the temporary table.
 	if len(rows) > 0 {
 		// Put the rows into the temporary table's stage.
-		_, err = conn.ExecContext(gosnowflake.WithFilePutStream(ctx, csvReader), `PUT file://rows.csv @%"`+tempTableName+`"`)
+		err = conn.Raw(func(driverConn any) error {
+			sc, ok := driverConn.(gosnowflake.SnowflakeConnection)
+			if !ok {
+				return fmt.Errorf("warehouses/snowflake: unexpected driver connection type %T", driverConn)
+			}
+			return sc.UploadStream(ctx, `@%"`+tempTableName+`"`, "rows.csv", csvReader)
+		})
 		if err != nil {
 			return snowflake(err)
 		}
