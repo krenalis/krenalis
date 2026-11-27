@@ -94,7 +94,7 @@ const Snippet = ({ connectorCode, connectionID }: SnippetProps) => {
 			if (cmp === 'ketch') {
 				// Load the Ketch integration before the snippet, and let it load the SDK.
 				const ketchScriptURL = new URL(KETCH_SCRIPT_NAME, publicMetadata.javascriptSDKURL).toString();
-				s3 = `<script src=${JSON.stringify(ketchScriptURL)}></script>\n` + s3;
+				s3 = `<script src="${ketchScriptURL}"></script>\n` + s3;
 				s3 = s3.replace('krenalis.load(', 'withKetch(krenalis).load(');
 			}
 		}
