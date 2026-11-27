@@ -205,32 +205,15 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 	}()
 
 	// Open connection to PostgreSQL.
-	ps := conf.DB
-	db, err := dbpkg.Open(&dbpkg.Options{
-		Host:           ps.Host,
-		Port:           ps.Port,
-		Username:       ps.Username,
-		Password:       ps.Password,
-		Database:       ps.Database,
-		Schema:         ps.Schema,
-		MaxConnections: max(2, ps.MaxConnections),
-	})
+	db, err := openDB(ctx, conf.DB)
 	if err != nil {
-		return nil, fmt.Errorf("cannot connect to PostgreSQL: %s", err)
+		return nil, err
 	}
 	defer func() {
 		if err != nil {
 			db.Close()
 		}
 	}()
-
-	// Ping the PostgreSQL connection to test if it works.
-	pingCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
-	defer cancel()
-	err = db.Ping(pingCtx)
-	if err != nil {
-		return nil, fmt.Errorf("cannot connect to PostgreSQL: %s", err)
-	}
 
 	// Initialize the key manager.
 	kms, err := kms.New(ctx, conf.KMS)
@@ -245,6 +228,16 @@ func New(ctx context.Context, conf *Config) (_ *Core, err error) {
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	// Check that this version of Krenalis can run on the schema version of the
+	// database, before loading the state from it.
+	err = initdb.CheckSchemaVersion(ctx, db)
+	if err != nil {
+		if errors.Is(err, initdb.ErrNotInitialized) {
+			return nil, &DBNotInitializedError{msg: err.Error()}
+		}
+		return nil, err
 	}
 
 	var smtp *SMTPConfig
@@ -2203,10 +2196,67 @@ func EventSchema() types.Type {
 	return schemas.Event
 }
 
+// FinalizeDB finalizes Krenalis's PostgreSQL database at the schema version of
+// this version of Krenalis, after which the instances of earlier releases
+// can no longer run on it. It must be called only when none of them is
+// running; otherwise the behavior is undefined and may be destructive. It
+// resumes an interrupted finalization. It does nothing if the database is at
+// the next schema version and its finalization has not started, as after a
+// rollback to this version of Krenalis. It is idempotent, and it is safe to
+// call it concurrently from several Krenalis instances.
+func FinalizeDB(ctx context.Context, conf DBConfig) error {
+	db, err := openDB(ctx, conf)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+	err = initdb.Finalize(ctx, db)
+	if err != nil {
+		return fmt.Errorf("cannot finalize PostgreSQL database: %s", err)
+	}
+	return nil
+}
+
 // IsValidID reports whether id is a valid resource identifier (organizations,
 // members, access keys, workspaces, connections, pipelines, and pipeline runs).
 func IsValidID(id string) bool {
 	return len(id) == 12 && base58.IsValid(id)
+}
+
+// MigrateDB migrates Krenalis's PostgreSQL database from the previous schema
+// version to the one of this version of Krenalis, or initializes it if it is
+// empty. It resumes an interrupted migration. It does nothing if the database
+// is already migrated to this schema version, or at the next one and its
+// finalization has not started, as after a rollback to this version of
+// Krenalis. It is idempotent, and it is safe to call it concurrently from
+// several Krenalis instances.
+func MigrateDB(ctx context.Context, conf DBConfig, kmsURI string) error {
+
+	db, err := openDB(ctx, conf)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+
+	// Initialize the database if it is empty, as on the first deployment,
+	// before any Krenalis instance has started, so that every deployment, the
+	// first one included, follows the same procedure: migrate the database,
+	// then start the instances.
+	kms, err := kms.New(ctx, kmsURI)
+	if err != nil {
+		return err
+	}
+	err = initdb.InitIfEmpty(ctx, db, kms, false)
+	if err != nil {
+		return err
+	}
+
+	err = initdb.Migrate(ctx, db)
+	if err != nil {
+		return fmt.Errorf("cannot migrate PostgreSQL database: %s", err)
+	}
+
+	return nil
 }
 
 // RequestID returns the request ID associated with ctx.
@@ -2259,6 +2309,31 @@ func generateID[T any](exists func(string) (T, bool)) string {
 			return id
 		}
 	}
+}
+
+// openDB opens Krenalis's PostgreSQL database and checks that it can connect
+// to it.
+func openDB(ctx context.Context, conf DBConfig) (*dbpkg.DB, error) {
+	db, err := dbpkg.Open(&dbpkg.Options{
+		Host:           conf.Host,
+		Port:           conf.Port,
+		Username:       conf.Username,
+		Password:       conf.Password,
+		Database:       conf.Database,
+		Schema:         conf.Schema,
+		MaxConnections: max(2, conf.MaxConnections),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("cannot connect to PostgreSQL: %s", err)
+	}
+	pingCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+	err = db.Ping(pingCtx)
+	if err != nil {
+		db.Close()
+		return nil, fmt.Errorf("cannot connect to PostgreSQL: %s", err)
+	}
+	return db, nil
 }
 
 func stateToCoreTargets(targets state.ConnectorTargets) []Target {

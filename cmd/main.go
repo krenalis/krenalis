@@ -36,16 +36,25 @@ func Main(assets fs.FS) {
 
 	var help bool
 	var configStore string
+	var finalizeDB bool
 	var initDBIfEmpty bool
 	var initDockerMember bool
+	var migrateDB bool
 	var printVersion bool
 	flag.BoolVar(&help, "help", false, "print the help for krenalis and exit")
 	flag.StringVar(&configStore, "config-store", "env:",
 		"configuration source: 'env:' to read KRENALIS_* from the environment, or 'aws:<region>:<prefix>' to read from AWS Parameter Store (default: 'env:')")
+	flag.BoolVar(&finalizeDB, "finalize-db", false,
+		"finalize Krenalis's PostgreSQL database, removing what only the previous release needs, and exit;"+
+			" use it only when no instance of an earlier release is running, otherwise the behavior is"+
+			" undefined and may be destructive; with -migrate-db, it finalizes right after migrating")
 	flag.BoolVar(&initDBIfEmpty, "init-db-if-empty", false, "initialize the PostgreSQL database, if it is empty")
 	flag.BoolVar(&initDockerMember, "init-docker-member", false,
 		"when initializing the PostgreSQL database, also initialize the Docker member;"+
 			" this flag is primarily intended for automated scenarios involving Docker and testing purposes")
+	flag.BoolVar(&migrateDB, "migrate-db", false,
+		"migrate Krenalis's PostgreSQL database to the current schema version, initializing it if it is empty,"+
+			" and exit; with -finalize-db, it also finalizes the database right after migrating it")
 	flag.BoolVar(&printVersion, "version", false, "print the Krenalis version and exit")
 	flag.Parse()
 	if flag.NArg() > 0 {
@@ -79,8 +88,12 @@ func Main(assets fs.FS) {
 		flag.Usage()
 		fatal(1, "the -init-docker-member flag can be provided only when the -init-db-if-empty flag is provided")
 	}
+	if (migrateDB || finalizeDB) && (initDBIfEmpty || initDockerMember) {
+		flag.Usage()
+		fatal(1, "-migrate-db and -finalize-db cannot be combined with -init-db-if-empty or -init-docker-member")
+	}
 
-	if embeddedAssets && assets != nil {
+	if !migrateDB && !finalizeDB && embeddedAssets && assets != nil {
 		assets, _ = fs.Sub(assets, "admin/assets")
 		_, err := fs.Stat(assets, "index.html.br")
 		if err != nil {
@@ -100,6 +113,24 @@ func Main(assets fs.FS) {
 	conf, err := loadConfig(ctx, configStore)
 	if err != nil {
 		fatal(1, err.Error())
+	}
+
+	// If the -migrate-db or the -finalize-db flag is provided, migrate or
+	// finalize the PostgreSQL database, or both, and exit.
+	if migrateDB || finalizeDB {
+		if migrateDB {
+			err = core.MigrateDB(ctx, conf.DB, conf.KMS)
+			if err != nil {
+				fatal(1, err.Error())
+			}
+		}
+		if finalizeDB {
+			err = core.FinalizeDB(ctx, conf.DB)
+			if err != nil {
+				fatal(1, err.Error())
+			}
+		}
+		return
 	}
 
 	// Unset the Krenalis environment variables, except for those intended for
