@@ -374,10 +374,9 @@ func convert(v any, st, dt types.Type, nullable bool, purpose Purpose) (any, err
 			}
 		case types.DecimalKind:
 			if dt.BitSize() == 32 {
-				f, _ := v.(decimal.Decimal).Float32()
-				n = float64(f)
+				n = float64(v.(decimal.Decimal).Float32())
 			} else {
-				n, _ = v.(decimal.Decimal).Float64()
+				n = v.(decimal.Decimal).Float64()
 			}
 		case types.JSONKind:
 			v := v.(json.Value)

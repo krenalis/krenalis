@@ -364,10 +364,9 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 			v = src
 		case decimal.Decimal:
 			if typ.BitSize() == 32 {
-				f, _ := src.Float32()
-				v = float64(f)
+				v = float64(src.Float32())
 			} else {
-				v, _ = src.Float64()
+				v = src.Float64()
 			}
 		case string:
 			v, err = strconv.ParseFloat(src, typ.BitSize())
