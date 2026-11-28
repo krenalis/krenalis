@@ -363,17 +363,11 @@ func normalize(name string, typ types.Type, src any, nullable bool, layouts *sta
 		case float64:
 			v = src
 		case decimal.Decimal:
-			var ok bool
 			if typ.BitSize() == 32 {
-				var f float32
-				f, ok = src.Float32()
+				f, _ := src.Float32()
 				v = float64(f)
 			} else {
-				v, ok = src.Float64()
-			}
-			if !ok {
-				return nil, inputValidationErrorf(name,
-					"has a decimal.Decimal value that cannot represent a float(%d) value", typ.BitSize())
+				v, _ = src.Float64()
 			}
 		case string:
 			v, err = strconv.ParseFloat(src, typ.BitSize())
