@@ -12,29 +12,47 @@ const useConnection = () => {
 	const [isLoading, setIsLoading] = useState<boolean>(true);
 	const [connection, setConnection] = useState<TransformedConnection>();
 
+	const [failedID, setFailedID] = useState<string | null>(null);
+	const [attempt, setAttempt] = useState(0);
 	const { api, handleError, showNotFound, connections } = useContext(AppContext);
 
 	const params = useParams();
 
 	useEffect(() => {
+		let isCancelled = false;
+		let dismissLoadError: (() => void) | undefined;
+		setFailedID(null);
 		const fetchData = async () => {
 			const connectionID = params.id ?? '';
 			let fetchedConnection: Connection;
 			try {
 				fetchedConnection = await api.workspaces.connections.get(connectionID);
 			} catch (err) {
+				if (isCancelled) {
+					return;
+				}
 				if (err instanceof NotFoundError) {
 					showNotFound();
 					return;
 				}
-				handleError(err);
+				setFailedID(connectionID);
+				dismissLoadError = handleError(err);
+				return;
+			}
+			if (isCancelled) {
 				return;
 			}
 			let pipelineTypes: PipelineType[];
 			try {
 				pipelineTypes = await api.workspaces.connections.pipelineTypes(connectionID);
 			} catch (err) {
-				handleError(err);
+				if (!isCancelled) {
+					setFailedID(connectionID);
+					dismissLoadError = handleError(err);
+				}
+				return;
+			}
+			if (isCancelled) {
 				return;
 			}
 			const providedConnection = connections.find((c) => c.id === connectionID);
@@ -69,13 +87,32 @@ const useConnection = () => {
 			}
 			setConnection(connection);
 			setTimeout(() => {
-				setIsLoading(false);
+				if (!isCancelled) {
+					setIsLoading(false);
+				}
 			}, 300);
 		};
 		fetchData();
-	}, [connections, params.id]);
+		return () => {
+			isCancelled = true;
+			dismissLoadError?.();
+		};
+	}, [connections, params.id, attempt]);
 
-	return { isLoading, connection, setConnection };
+	const retry = () => {
+		setFailedID(null);
+		setIsLoading(true);
+		setAttempt((previous) => previous + 1);
+	};
+	const needsConnection = isLoading || connection?.id !== params.id;
+	const hasFailed = needsConnection && failedID === params.id;
+	return {
+		isLoading: needsConnection && !hasFailed,
+		hasFailed,
+		retry,
+		connection,
+		setConnection,
+	};
 };
 
 export { useConnection };

@@ -14,9 +14,19 @@ test('Update the member email to disable passwordless login', async ({ page }) =
 	await page.click('.header__account-menu-item--profile'); // Account menu is automatically opened after passwordless login.
 	await page.getByRole('textbox', { name: 'email' }).fill('test@krenalis.com');
 	await page.click('.member__save-button');
-	await page.waitForTimeout(2000); // Add a timeout to ensure that the saving was completed.
+	await expect(page).toHaveURL(`${adminURL}/organization/members`);
+	await expect(
+		page.locator('wa-toast-item', { hasText: 'Team member information saved successfully' }),
+	).toBeVisible();
 	await logout(page);
 	await expect(page.locator(LOGIN_BUTTON_CLASS)).toBeAttached();
+});
+
+test('An invalid password reset link shows the expiry message on the login page', async ({ page }) => {
+	await page.goto(`${adminURL}/reset-password/expired-token`);
+	await expect(page).toHaveURL(`${adminURL}/`);
+	await expect(page.locator(LOGIN_BUTTON_CLASS)).toBeVisible();
+	await expect(page.locator('wa-toast-item', { hasText: 'This reset password request is expired' })).toBeVisible();
 });
 
 test('Try to access a page that requires authentication and check that it redirects to the login page', async ({

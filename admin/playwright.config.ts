@@ -55,7 +55,7 @@ export default defineConfig({
 		{
 			name: 'connections.spec.ts',
 			use: { ...devices['Desktop Chrome'] },
-			testMatch: ['tests/connections.spec.ts'],
+			testMatch: ['tests/connections.spec.ts', 'tests/connection-events.spec.ts'],
 		},
 		{
 			name: 'pipelines.spec.ts',

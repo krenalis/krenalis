@@ -3,6 +3,9 @@ import { NotFoundError, UnprocessableError } from '../lib/api/errors';
 import AppContext from '../context/AppContext';
 import { Event, CreateEventListenerResponse, EventListenerEventsResponse } from '../lib/api/types/responses';
 import { Filter, EventListenerConsents } from '../lib/api/types/pipeline';
+import { sleep } from '../utils/sleep';
+
+const MAX_DELETE_RETRY_DELAY = 30000;
 
 interface EventListenerEvent {
 	id: number;
@@ -12,19 +15,17 @@ interface EventListenerEvent {
 }
 
 const useEventListener = (
+	isListening: boolean,
 	setEvents: (events: EventListenerEvent[]) => void,
 	setOmitted?: React.Dispatch<React.SetStateAction<number>>,
 	connection?: string | null,
 	filter?: Filter,
 	requiredConsents?: EventListenerConsents | null,
 ) => {
-	const [isStarted, setIsStarted] = useState<boolean>(false);
 	const [isListenerNotFound, setIsListenerNotFound] = useState<boolean>(false);
 
 	const { api, handleError, redirect } = useContext(AppContext);
 
-	const eventListenerID = useRef<string | null>(null);
-	const eventIntervalID = useRef<number | null>(null);
 	const lastEventID = useRef<number | null>(0);
 
 	// requiredConsentsKey changes only when the content of requiredConsents
@@ -32,7 +33,7 @@ const useEventListener = (
 	const requiredConsentsKey = JSON.stringify(requiredConsents ?? null);
 
 	useEffect(() => {
-		if (!isStarted) {
+		if (!isListening) {
 			return;
 		}
 		if (isListenerNotFound) {
@@ -40,12 +41,40 @@ const useEventListener = (
 			return;
 		}
 		let isCancelled = false;
+		let listenerID: string;
+		let interval: number;
+		let dismissError: (() => void) | undefined;
+		const removeListener = async (id: string) => {
+			let delay = 1000;
+			for (;;) {
+				try {
+					await api.workspaces.eventListeners.delete(id);
+					return;
+				} catch (err) {
+					// A failed fetch leaves the outcome unknown. Deleting the same listener again is safe.
+					if (!(err.cause instanceof TypeError)) {
+						handleError(err);
+						return;
+					}
+				}
+				if (navigator.onLine) {
+					await sleep(delay);
+					delay = Math.min(delay * 2, MAX_DELETE_RETRY_DELAY);
+				} else {
+					await new Promise<void>((resolve) =>
+						window.addEventListener('online', () => resolve(), { once: true }),
+					);
+				}
+			}
+		};
 		const startListener = async () => {
 			let listener: CreateEventListenerResponse;
 			try {
 				listener = await api.workspaces.eventListeners.create(connection, 3, filter, requiredConsents);
 			} catch (err) {
-				setIsStarted(false);
+				if (isCancelled) {
+					return;
+				}
 				if (err instanceof UnprocessableError) {
 					if (err.code === 'ConnectionNotExist') {
 						redirect('connections');
@@ -53,35 +82,38 @@ const useEventListener = (
 						return;
 					}
 					if (err.code === 'TooManyListeners') {
-						handleError('Please note that the number of event listeners allowed has been exceeded');
+						dismissError = handleError(
+							'Please note that the number of event listeners allowed has been exceeded',
+						);
 						return;
 					}
 				}
-				handleError(err);
+				dismissError = handleError(err);
 				return;
 			}
 			if (isCancelled) {
 				// The listener has been stopped, or must be created again, while
 				// it was being created.
-				try {
-					await api.workspaces.eventListeners.delete(listener.id);
-				} catch (err) {
-					handleError(err);
-				}
+				removeListener(listener.id);
 				return;
 			}
-			const listenerID = listener.id;
-			eventListenerID.current = listener.id;
-			const interval = window.setInterval(async () => {
+			listenerID = listener.id;
+			interval = window.setInterval(async () => {
 				let res: EventListenerEventsResponse;
 				try {
 					res = await api.workspaces.eventListeners.events(listenerID);
 				} catch (err) {
+					if (isCancelled) {
+						return;
+					}
 					if (err instanceof NotFoundError) {
 						setIsListenerNotFound(true);
 						return;
 					}
-					handleError(err);
+					dismissError = handleError(err);
+					return;
+				}
+				if (isCancelled) {
 					return;
 				}
 				const newly: EventListenerEvent[] = [];
@@ -98,46 +130,17 @@ const useEventListener = (
 				setEvents(newly);
 				setOmitted && setOmitted((prevOmitted) => prevOmitted + res.omitted);
 			}, 2500);
-			eventIntervalID.current = interval;
 		};
 		startListener();
 		return () => {
 			isCancelled = true;
-			const removeListener = async () => {
-				try {
-					await api.workspaces.eventListeners.delete(eventListenerID.current);
-				} catch (err) {
-					handleError(err);
-					return;
-				}
-			};
-			if (eventListenerID.current == null) {
-				return;
+			clearInterval(interval);
+			dismissError?.();
+			if (listenerID != null) {
+				removeListener(listenerID);
 			}
-			removeListener();
-			clearInterval(eventIntervalID.current);
 		};
-	}, [isStarted, isListenerNotFound, requiredConsentsKey]);
-
-	const startListening = () => {
-		setIsStarted(true);
-	};
-
-	const stopListening = async () => {
-		if (eventListenerID.current == null) {
-			return;
-		}
-		try {
-			await api.workspaces.eventListeners.delete(eventListenerID.current);
-		} catch (err) {
-			handleError(err);
-			return;
-		}
-		clearInterval(eventIntervalID.current);
-		setIsStarted(false);
-	};
-
-	return { startListening, stopListening };
+	}, [isListening, isListenerNotFound, requiredConsentsKey]);
 };
 
 export default useEventListener;

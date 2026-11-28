@@ -41,23 +41,33 @@ const App = ({ onWorkOSLogout }: { onWorkOSLogout?: () => void } = {}) => {
 
 	const hasWorkOS = onWorkOSLogout != null;
 
-	const hideStatus = () => {
+	const hideVisibleStatus = () => {
 		toastRef.current?.querySelectorAll('wa-toast-item').forEach((item) => item.hide());
+	};
+
+	const hideStatus = () => {
+		clearTimeout(toastTimeoutRef.current);
+		hideVisibleStatus();
 	};
 
 	const showStatus = (status: Status) => {
 		if (toastRef.current == null) return;
-		hideStatus();
 		// Only the most recent status is shown, so that there is never more
 		// than one toast.
-		clearTimeout(toastTimeoutRef.current);
-		toastTimeoutRef.current = setTimeout(() => {
+		hideStatus();
+		const timeout = setTimeout(() => {
 			toastRef.current!.create(status.text, {
 				variant: status.variant === 'primary' ? 'brand' : status.variant,
 				icon: status.icon,
 				duration: 0,
 			});
 		}, 300);
+		toastTimeoutRef.current = timeout;
+		return () => {
+			if (toastTimeoutRef.current === timeout) {
+				hideStatus();
+			}
+		};
 	};
 
 	const logout = async () => {
@@ -82,16 +92,16 @@ const App = ({ onWorkOSLogout }: { onWorkOSLogout?: () => void } = {}) => {
 			logout();
 			return;
 		}
-		// If the organization is disabled, log out but do not return, so that
-		// the "organization disabled" error is also printed.
-		if (err instanceof UnprocessableError && err.code === 'OrganizationDisabled') {
-			logout();
-		}
-		showStatus({
+		const dismiss = showStatus({
 			variant: 'danger',
 			icon: icons.EXCLAMATION,
 			text: err instanceof Error ? err.message : err,
 		});
+		if (err instanceof UnprocessableError && err.code === 'OrganizationDisabled') {
+			logout();
+			return;
+		}
+		return dismiss;
 	};
 
 	const showNotFound = () => {
@@ -99,7 +109,7 @@ const App = ({ onWorkOSLogout }: { onWorkOSLogout?: () => void } = {}) => {
 	};
 
 	const redirect = (url: string) => {
-		hideStatus();
+		hideVisibleStatus();
 		const redirectURL = `${UI_BASE_PATH}${url}`;
 		if (redirectURL === location.pathname) {
 			setIsLoadingState(true);

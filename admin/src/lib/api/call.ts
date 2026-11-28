@@ -95,7 +95,7 @@ const call = async (
 		if (err.name === 'AbortError') {
 			throw err;
 		}
-		throw new Error(`error while fetching ${url}: ${err.message}`);
+		throw new Error(`error while fetching ${url}: ${err.message}`, { cause: err });
 	}
 
 	if (res.status !== 200) {

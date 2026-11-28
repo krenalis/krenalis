@@ -7,15 +7,16 @@ import AppContext from '../../../context/AppContext';
 import { Outlet } from 'react-router-dom';
 import ConnectionTabs from './ConnectionTabs';
 import { useConnection } from './useConnection';
+import WaButton from '@awesome.me/webawesome/dist/react/button/index.js';
 import WaSpinner from '@awesome.me/webawesome/dist/react/spinner/index.js';
 
 const ConnectionWrapper = () => {
 	const { setTitle } = useContext(AppContext);
 
-	const { isLoading, connection, setConnection } = useConnection();
+	const { isLoading, hasFailed, retry, connection, setConnection } = useConnection();
 
 	useEffect(() => {
-		if (isLoading) {
+		if (isLoading || hasFailed) {
 			setTitle('');
 			return;
 		}
@@ -26,8 +27,11 @@ const ConnectionWrapper = () => {
 				<StatusDot status={connection.status} />
 			</Flex>,
 		);
-	}, [isLoading, connection, setTitle]);
+	}, [isLoading, hasFailed, connection, setTitle]);
 
+	if (hasFailed) {
+		return <WaButton onClick={retry}>Retry</WaButton>;
+	}
 	if (isLoading) {
 		return (
 			<WaSpinner

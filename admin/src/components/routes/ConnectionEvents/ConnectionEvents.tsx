@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useContext, ReactNode } from 'react';
+import React, { useState, ReactNode } from 'react';
+import { useParams } from 'react-router-dom';
 import './ConnectionEvents.css';
 import IconWrapper from '../../base/IconWrapper/IconWrapper';
-import ConnectionContext from '../../../context/ConnectionContext';
 import SyntaxHighlight from '../../base/SyntaxHighlight/SyntaxHighlight';
 import useEventListener from '../../../hooks/useEventListener';
 import { EventListenerEvent } from '../../../hooks/useEventListener';
@@ -9,12 +9,19 @@ import JSONbig from 'json-bigint';
 import WaRelativeTime from '@awesome.me/webawesome/dist/react/relative-time/index.js';
 
 const ConnectionEvents = () => {
+	const { id } = useParams();
+	return <LiveEvents key={id} connectionID={id} />;
+};
+
+interface LiveEventsProps {
+	connectionID: string;
+}
+
+const LiveEvents = ({ connectionID }: LiveEventsProps) => {
 	const [events, setEvents] = useState<EventListenerEvent[]>([]);
 	const [selectedEvent, setSelectedEvent] = useState<EventListenerEvent>(null);
 	const [omitted, setOmitted] = useState<number>(0);
 	const [hideContent, setHideContent] = useState<boolean>(false);
-
-	const { connection: c } = useContext(ConnectionContext);
 
 	const collectEvents = (newly: EventListenerEvent[]) => {
 		for (const e of newly) {
@@ -24,11 +31,7 @@ const ConnectionEvents = () => {
 		setEvents((prevEvents) => [...prevEvents, ...newly]);
 	};
 
-	const { startListening } = useEventListener(collectEvents, setOmitted, c.id);
-
-	useEffect(() => {
-		startListening();
-	}, []);
+	useEventListener(true, collectEvents, setOmitted, connectionID);
 
 	const onEventClick = (event: EventListenerEvent) => {
 		if (event.id === selectedEvent?.id) {
