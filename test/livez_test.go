@@ -8,11 +8,12 @@ import (
 	"io"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/krenalis/krenalis/test/krenalistester"
 )
 
-// TestLivez tests the /livez endpoint.
+// TestLivez checks that /livez stays available during cleanup until Stop.
 func TestLivez(t *testing.T) {
 
 	// Test's header (copy-paste me in other tests).
@@ -21,26 +22,25 @@ func TestLivez(t *testing.T) {
 	}
 	k := krenalistester.NewKrenalisInstance(t)
 	k.Start()
-	defer k.Stop()
+	t.Cleanup(k.Stop)
 
-	req, err := http.NewRequestWithContext(t.Context(), "GET", "http://"+k.Addr()+"/livez", nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	res, err := http.DefaultClient.Do(req)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer res.Body.Close()
-	body, err := io.ReadAll(res.Body)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if res.StatusCode != http.StatusOK {
-		t.Fatalf("expected status %d, got %d", http.StatusOK, res.StatusCode)
-	}
-	if string(body) != "ok" {
-		t.Fatalf("expected body %q, got %q", "ok", body)
-	}
+	t.Cleanup(func() {
+		client := &http.Client{Timeout: 5 * time.Second}
+		res, err := client.Get("http://" + k.Addr() + "/livez")
+		if err != nil {
+			t.Fatalf("expected /livez response during cleanup, got %v", err)
+		}
+		defer res.Body.Close()
+		body, err := io.ReadAll(res.Body)
+		if err != nil {
+			t.Fatalf("expected readable /livez response, got %v", err)
+		}
+		if res.StatusCode != http.StatusOK {
+			t.Fatalf("expected status %d, got %d", http.StatusOK, res.StatusCode)
+		}
+		if string(body) != "ok" {
+			t.Fatalf("expected body %q, got %q", "ok", body)
+		}
+	})
 
 }
