@@ -52,6 +52,7 @@ import (
 	"math"
 	"math/big"
 	"reflect"
+	"strconv"
 	"strings"
 
 	"github.com/ericlagergren/decimal"
@@ -162,28 +163,38 @@ func (x Decimal) Equal(y Decimal) bool {
 	return x.b.Cmp(&y.b) == 0
 }
 
-// Float32 returns the float32 value closest to x and a bool indicating whether
-// the float32 represents exactly x. Overflow returns an infinity and false.
-func (x Decimal) Float32() (float32, bool) {
+// Float32 returns the float32 value closest to x. On overflow, it returns +Inf
+// for positive x and -Inf for negative x. Otherwise, the result is finite.
+func (x Decimal) Float32() float32 {
 	sign := x.b.Sign()
 	if sign == 0 {
-		return 0, true
+		return 0
 	}
 	// Avoid enormous powers of ten for values that round to infinity or zero.
 	order := x.b.Precision() - x.b.Scale()
 	if order > 39 {
-		return float32(math.Inf(sign)), false
+		return float32(math.Inf(sign))
 	}
 	if order < -45 {
-		return float32(math.Copysign(0, float64(sign))), false
+		return float32(math.Copysign(0, float64(sign)))
 	}
-	return x.b.Rat(nil).Float32()
+	f, _ := x.b.Rat(nil).Float32()
+	return f
 }
 
-// Float64 returns the float64 value closest to x and a bool indicating whether
-// the float64 represents exactly x.
-func (x Decimal) Float64() (float64, bool) {
-	return x.b.Float64()
+// Float64 returns the float64 value closest to x. On overflow, it returns +Inf
+// for positive x and -Inf for negative x. Otherwise, the result is finite.
+func (x Decimal) Float64() float64 {
+	scale := x.b.Scale()
+	// With a scale of zero, only the mantissa is rounded. Scaling also rounds
+	// just once if both operands are exact in float64, as 10^0 through 10^22 are.
+	if m, ok := x.b.Mantissa(); ok && (scale == 0 || m <= 1<<53 && scale >= -22 && scale <= 22) {
+		f, _ := x.b.Float64()
+		return f
+	}
+	// ParseFloat rounds the full decimal and returns a signed infinity on overflow.
+	f, _ := strconv.ParseFloat(x.b.String(), 64)
+	return f
 }
 
 // Format implements the fmt.Formatter interface.

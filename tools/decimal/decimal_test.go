@@ -79,41 +79,76 @@ func Test_Decimal_Cmp(t *testing.T) {
 
 }
 
-// Test_Decimal_Float32 checks rounding and exactness of float32 conversions.
+// Test_Decimal_Float32 checks rounding of float32 conversions.
 func Test_Decimal_Float32(t *testing.T) {
 
 	tests := []struct {
 		name     string
 		value    Decimal
 		expected float32
-		exact    bool
 	}{
-		{"zero", Decimal{}, 0, true},
-		{"scaled zero", New(0, MinScale), 0, true},
-		{"exact", MustParse("1.5"), 1.5, true},
-		{"no double rounding", MustParse("1.0000000596046448"), 1.0000001192092896, false},
-		{"negative no double rounding", MustParse("-1.0000000596046448"), -1.0000001192092896, false},
-		{"tie to even", MustParse("1.000000059604644775390625"), 1, false},
-		{"maximum", MustParse("340282346638528859811704183484516925440"), math.MaxFloat32, true},
-		{"overflow", MustParse("3.5e38"), float32(math.Inf(1)), false},
-		{"negative overflow", MustParse("-3.5e38"), float32(math.Inf(-1)), false},
-		{"minimum scale", New(1, MinScale), float32(math.Inf(1)), false},
-		{"negative minimum scale", New(-1, MinScale), float32(math.Inf(-1)), false},
-		{"exact subnormal", MustParse("1.40129846432481707092372958328991613128026194187651577175706828388979108268586060148663818836212158203125e-45"), math.SmallestNonzeroFloat32, true},
-		{"rounded subnormal", MustParse("9e-46"), math.SmallestNonzeroFloat32, false},
-		{"negative underflow", MustParse("-1e-46"), float32(math.Copysign(0, -1)), false},
-		{"maximum scale", New(1, MaxScale), 0, false},
-		{"negative maximum scale", New(-1, MaxScale), float32(math.Copysign(0, -1)), false},
+		{"zero", Decimal{}, 0},
+		{"scaled zero", New(0, MinScale), 0},
+		{"exact", MustParse("1.5"), 1.5},
+		{"no double rounding", MustParse("1.0000000596046448"), 1.0000001192092896},
+		{"negative no double rounding", MustParse("-1.0000000596046448"), -1.0000001192092896},
+		{"tie to even", MustParse("1.000000059604644775390625"), 1},
+		{"maximum", MustParse("340282346638528859811704183484516925440"), math.MaxFloat32},
+		{"overflow", MustParse("3.5e38"), float32(math.Inf(1))},
+		{"negative overflow", MustParse("-3.5e38"), float32(math.Inf(-1))},
+		{"minimum scale", New(1, MinScale), float32(math.Inf(1))},
+		{"negative minimum scale", New(-1, MinScale), float32(math.Inf(-1))},
+		{"exact subnormal", MustParse("1.40129846432481707092372958328991613128026194187651577175706828388979108268586060148663818836212158203125e-45"), math.SmallestNonzeroFloat32},
+		{"rounded subnormal", MustParse("9e-46"), math.SmallestNonzeroFloat32},
+		{"negative underflow", MustParse("-1e-46"), float32(math.Copysign(0, -1))},
+		{"maximum scale", New(1, MaxScale), 0},
+		{"negative maximum scale", New(-1, MaxScale), float32(math.Copysign(0, -1))},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got, exact := test.value.Float32()
+			got := test.value.Float32()
 			if math.Float32bits(got) != math.Float32bits(test.expected) {
 				t.Fatalf("expected %g, got %g", test.expected, got)
 			}
-			if exact != test.exact {
-				t.Fatalf("expected exact %t, got %t", test.exact, exact)
+		})
+	}
+
+}
+
+// Test_Decimal_Float64 checks float64 rounding, underflow, and overflow.
+func Test_Decimal_Float64(t *testing.T) {
+
+	tests := []struct {
+		name     string
+		value    Decimal
+		expected float64
+	}{
+		{"zero", Decimal{}, 0},
+		{"scaled zero", New(0, MinScale), 0},
+		{"negative finite", New(-1, 1), -0.1},
+		{"exact fraction", New(9007199254740995, 1), 900719925474099.5},
+		{"inexact divisor", New(1, 23), 1e-23},
+		{"tie to even down", MustParse("9007199254740993"), 9007199254740992},
+		{"tie to even up", MustParse("9007199254740995"), 9007199254740996},
+		{"just below midpoint", MustParse("1.00000000000000011102230246251565404236316680908203124"), 1},
+		{"exact midpoint", MustParse("1.00000000000000011102230246251565404236316680908203125"), 1},
+		{"just above midpoint", MustParse("1.00000000000000011102230246251565404236316680908203126"), math.Nextafter(1, 2)},
+		{"subnormal", MustParse("1e-310"), 1e-310},
+		{"rounded to smallest subnormal", MustParse("3e-324"), math.SmallestNonzeroFloat64},
+		{"negative underflow", MustParse("-2e-324"), math.Copysign(0, -1)},
+		{"rounded to largest finite", MustParse("1.7976931348623158e308"), math.MaxFloat64},
+		{"positive overflow", New(1, MinScale), math.Inf(1)},
+		{"negative overflow", MustParse("-1.7976931348623159e308"), math.Inf(-1)},
+		{"maximum scale", New(1, MaxScale), 0},
+		{"large exponent in input", MustParse("0." + strings.Repeat("0", 100000) + "3e100024"), 3e23},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := test.value.Float64()
+			if math.Float64bits(got) != math.Float64bits(test.expected) {
+				t.Fatalf("expected %g, got %g", test.expected, got)
 			}
 		})
 	}
