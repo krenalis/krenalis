@@ -140,6 +140,7 @@ func Test_normalize(t *testing.T) {
 		// float(64).
 		{types.Float(64), 12.7902743017496882, 12.7902743017496882, false, nil},
 		{types.Float(64), decimal.MustParse("9007199254740993"), float64(9007199254740992), false, nil},
+		{types.Float(64), decimal.New(9007199254740995, 1), 900719925474099.5, false, nil},
 		{types.Float(64), decimal.MustParse("1e500"), math.Inf(1), false, nil},
 		{types.Float(64), math.NaN(), math.NaN(), false, nil},
 		{types.Float(64), []byte(nil), nil, true, nil},

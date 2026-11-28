@@ -52,6 +52,7 @@ import (
 	"math"
 	"math/big"
 	"reflect"
+	"strconv"
 	"strings"
 
 	"github.com/ericlagergren/decimal"
@@ -184,7 +185,15 @@ func (x Decimal) Float32() float32 {
 // Float64 returns the float64 value closest to x. On overflow, it returns +Inf
 // for positive x and -Inf for negative x. Otherwise, the result is finite.
 func (x Decimal) Float64() float64 {
-	f, _ := x.b.Float64()
+	scale := x.b.Scale()
+	// With a scale of zero, only the mantissa is rounded. Scaling also rounds
+	// just once if both operands are exact in float64, as 10^0 through 10^22 are.
+	if m, ok := x.b.Mantissa(); ok && (scale == 0 || m <= 1<<53 && scale >= -22 && scale <= 22) {
+		f, _ := x.b.Float64()
+		return f
+	}
+	// ParseFloat rounds the full decimal and returns a signed infinity on overflow.
+	f, _ := strconv.ParseFloat(x.b.String(), 64)
 	return f
 }
 
