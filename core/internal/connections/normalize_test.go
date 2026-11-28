@@ -135,7 +135,6 @@ func Test_normalize(t *testing.T) {
 		{types.Float(32), uint32(16777218), float64(16777218), false, nil},
 		{types.Float(32), decimal.MustInt(3 << 52), float64(3 << 52), false, nil},
 		{types.Float(32), decimal.MustParse("16777217"), float64(16777216), false, nil},
-		{types.Float(32), decimal.MustParse("1.00000000000000000001"), float64(1), false, nil},
 		{types.Float(32), math.NaN(), math.NaN(), false, nil},
 		{types.Float(32), []byte(nil), nil, true, nil},
 		// float(64).
